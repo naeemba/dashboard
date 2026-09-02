@@ -1,8 +1,8 @@
 {
-  "name": "app",
-  "productName": "app",
+  "name": "dashboard",
+  "productName": "Dashboard",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Keyboard-first terminal dashboard",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
