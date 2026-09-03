@@ -7,7 +7,7 @@ export type DashboardBridge = {
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;
   onData(listener: (id: string, data: string) => void): void;
-  onExit(listener: (id: string) => void): void;
+  onExit(listener: (id: string, exitCode: number) => void): void;
 };
 
 declare global {

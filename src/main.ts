@@ -5,7 +5,7 @@ import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import { parseProjects } from './projects';
 import { pickShell } from './shell';
-import { TERMINAL_COUNT } from './shortcuts';
+import { TERMINAL_COUNT, terminalId } from './terminals';
 
 if (started) app.quit();
 
@@ -15,55 +15,49 @@ if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 const projects = parseProjects(process.env);
 const shellCommand = pickShell(process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
-const knownTerminalIds = new Set<string>();
+const terminalDirectories = new Map<string, string>();
 let mainWindow: BrowserWindow;
-let shellsSpawned = false;
-
-function terminalId(projectIndex: number, terminalIndex: number): string {
-  return `${projectIndex}:${terminalIndex}`;
-}
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
 }
 
-function spawnShell(id: string): void {
-  const projectIndex = Number(id.split(':')[0]);
+function spawnShell(id: string, cwd: string): void {
   const shellProcess = pty.spawn(shellCommand, [], {
     name: 'xterm-256color',
     cols: 80,
     rows: 24,
-    cwd: projects[projectIndex].path,
+    cwd,
     env: process.env as Record<string, string>,
   });
   shellProcess.onData((data) => sendToRenderer('pty:data', id, data));
-  shellProcess.onExit(() => {
+  shellProcess.onExit(({ exitCode }) => {
     shells.delete(id);
-    sendToRenderer('pty:exit', id);
+    sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, shellProcess);
 }
 
 function spawnAllShells(): void {
-  shellsSpawned = true;
   projects.forEach((project, projectIndex) => {
     if (project.missing) return;
     for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
       const id = terminalId(projectIndex, terminalIndex);
-      knownTerminalIds.add(id);
-      spawnShell(id);
+      terminalDirectories.set(id, project.path);
+      spawnShell(id, project.path);
     }
   });
 }
 
 ipcMain.handle('projects:get', () => {
-  if (!shellsSpawned) spawnAllShells();
+  if (terminalDirectories.size === 0) spawnAllShells();
   return projects;
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
 ipcMain.on('pty:restart', (_event, id: string) => {
-  if (knownTerminalIds.has(id) && !shells.has(id)) spawnShell(id);
+  const cwd = terminalDirectories.get(id);
+  if (cwd !== undefined && !shells.has(id)) spawnShell(id, cwd);
 });
 
 function createWindow(): void {

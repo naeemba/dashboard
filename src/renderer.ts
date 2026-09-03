@@ -2,7 +2,8 @@ import '@xterm/xterm/css/xterm.css';
 import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { mapShortcut, TERMINAL_COUNT, type Action } from './shortcuts';
+import { mapShortcut, type Action } from './shortcuts';
+import { TERMINAL_COUNT, terminalId } from './terminals';
 import type { Project } from './projects';
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
@@ -44,7 +45,6 @@ function showPage(index: number): void {
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
-  fitAllPages();
   focusTerminal(pages[activeIndex].focused);
 }
 
@@ -73,6 +73,7 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => {
+    if (page.focused === terminalIndex) return;
     page.focused = terminalIndex;
     renderStatus();
   });
@@ -89,7 +90,7 @@ function buildPage(project: Project, projectIndex: number): Page {
     return page;
   }
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
-    const id = `${projectIndex}:${terminalIndex}`;
+    const id = terminalId(projectIndex, terminalIndex);
     const pane = buildPane(page, id, terminalIndex);
     page.panes.push(pane);
     panesById.set(id, pane);
@@ -102,7 +103,9 @@ function apply(action: Action): void {
   switch (action.kind) {
     case 'project-next': return showPage(activeIndex + 1);
     case 'project-previous': return showPage(activeIndex - 1);
-    case 'project-jump': return action.index < pages.length ? showPage(action.index) : undefined;
+    case 'project-jump':
+      if (action.index < pages.length) showPage(action.index);
+      return;
     case 'terminal-focus': return focusTerminal(action.index);
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
@@ -118,16 +121,14 @@ window.addEventListener('keydown', (event) => {
   apply(action);
 }, true);
 
-window.addEventListener('resize', () => {
-  if (pages.length > 0) fitAllPages();
-});
+window.addEventListener('resize', fitAllPages);
 
 bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
-bridge.onExit((id) => {
+bridge.onExit((id, exitCode) => {
   const pane = panesById.get(id);
   if (!pane) return;
   pane.exited = true;
-  pane.terminal.write('\r\n[exited] press Enter to restart\r\n');
+  pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
 });
 
 async function start(): Promise<void> {
@@ -141,7 +142,10 @@ async function start(): Promise<void> {
     pages.push(page);
     pagesElement.append(page.element);
   });
+  fitAllPages();
   showPage(0);
 }
 
-start();
+start().catch((error: unknown) => {
+  statusElement.textContent = `Failed to start: ${String(error)}`;
+});

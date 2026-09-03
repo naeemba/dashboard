@@ -1,4 +1,4 @@
-export const TERMINAL_COUNT = 5;
+import { TERMINAL_COUNT } from './terminals';
 
 export type Action =
   | { kind: 'project-next' }

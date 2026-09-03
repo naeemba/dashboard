@@ -29,6 +29,11 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: 'ArrowLeft', metaKey: true }), true)).toEqual({ kind: 'terminal-previous' });
   });
 
+  it('ignores shifted non-digit keys', () => {
+    expect(mapShortcut(key({ key: '}', metaKey: true, shiftKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
+  });
+
   it('lets Ctrl through to the shell on macOS', () => {
     expect(mapShortcut(key({ key: 'c', ctrlKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), true)).toBeNull();
