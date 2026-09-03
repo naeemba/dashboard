@@ -3,14 +3,21 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
-import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
+    asar: { unpack: '**/node_modules/node-pty/**' },
+    // The Vite plugin's default ignore keeps only .vite/. node-pty is external, so copy it too.
+    ignore: (file) =>
+      file !== '' &&
+      !file.startsWith('/.vite') &&
+      file !== '/package.json' &&
+      file !== '/node_modules' &&
+      !file.startsWith('/node_modules/node-pty'),
   },
   rebuildConfig: {},
   makers: [
@@ -20,7 +27,6 @@ const config: ForgeConfig = {
     new MakerDeb({}),
   ],
   plugins: [
-    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.

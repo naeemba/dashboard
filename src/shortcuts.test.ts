@@ -30,7 +30,7 @@ describe('mapShortcut on macOS', () => {
   });
 
   it('ignores shifted non-digit keys', () => {
-    expect(mapShortcut(key({ key: '}', metaKey: true, shiftKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ key: ']', metaKey: true, shiftKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
   });
 

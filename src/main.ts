@@ -22,12 +22,12 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
 }
 
-function spawnShell(id: string, cwd: string): void {
+function spawnShell(id: string, directory: string): void {
   const shellProcess = pty.spawn(shellCommand, [], {
     name: 'xterm-256color',
     cols: 80,
     rows: 24,
-    cwd,
+    cwd: directory,
     env: process.env as Record<string, string>,
   });
   shellProcess.onData((data) => sendToRenderer('pty:data', id, data));
@@ -56,8 +56,8 @@ ipcMain.handle('projects:get', () => {
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
 ipcMain.on('pty:restart', (_event, id: string) => {
-  const cwd = terminalDirectories.get(id);
-  if (cwd !== undefined && !shells.has(id)) spawnShell(id, cwd);
+  const directory = terminalDirectories.get(id);
+  if (directory !== undefined && !shells.has(id)) spawnShell(id, directory);
 });
 
 function createWindow(): void {

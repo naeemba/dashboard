@@ -23,4 +23,9 @@ describe('parseProjects', () => {
     const projects = parseProjects({ PROJECTS: '/gone,/here' }, (path) => path === '/here');
     expect(projects.map((project) => project.missing)).toEqual([true, false]);
   });
+
+  it('treats a file path as missing', () => {
+    expect(parseProjects({ PROJECTS: __filename })[0].missing).toBe(true);
+    expect(parseProjects({ PROJECTS: __dirname })[0].missing).toBe(false);
+  });
 });
