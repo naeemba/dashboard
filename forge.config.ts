@@ -7,17 +7,28 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
+const nodePty = '/node_modules/node-pty';
+// build/Release, not prebuilds/: Forge rebuilds it for Electron and post-install makes spawn-helper
+// executable, while the prebuilt spawn-helper ships without its exec bit and fails posix_spawnp.
+const keep = [
+  '/.vite',
+  '/package.json',
+  `${nodePty}/package.json`,
+  `${nodePty}/lib`,
+  `${nodePty}/build/Release/pty.node`,
+  `${nodePty}/build/Release/spawn-helper`,
+];
+
 const config: ForgeConfig = {
   packagerConfig: {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
     asar: { unpack: '**/node_modules/node-pty/**' },
-    // The Vite plugin's default ignore keeps only .vite/. node-pty is external, so copy it too.
+    // The Vite plugin's default ignore keeps only .vite/. node-pty is external, so copy what it
+    // loads at runtime: package.json, lib/, and the native binary (~400 KB of 63 MB).
+    // A directory that is ignored is never entered, so ancestors of kept paths must be kept too.
     ignore: (file) =>
       file !== '' &&
-      !file.startsWith('/.vite') &&
-      file !== '/package.json' &&
-      file !== '/node_modules' &&
-      !file.startsWith('/node_modules/node-pty'),
+      !keep.some((path) => file.startsWith(path + '/') || (path + '/').startsWith(file + '/')),
   },
   rebuildConfig: {},
   makers: [
