@@ -34,6 +34,11 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), true)).toBeNull();
   });
 
+  it('lets Cmd+C and Cmd+V through for copy and paste', () => {
+    expect(mapShortcut(key({ key: 'c', metaKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ key: 'v', metaKey: true }), true)).toBeNull();
+  });
+
   it('ignores plain keys and Alt combinations', () => {
     expect(mapShortcut(key({ key: ']' }), true)).toBeNull();
     expect(mapShortcut(key({ key: ']', metaKey: true, altKey: true }), true)).toBeNull();

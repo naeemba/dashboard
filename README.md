@@ -19,6 +19,10 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Focus terminal N | Mod+1..5 |
 | Next / previous terminal | Mod+Right / Mod+Left |
 
+## Known limitations
+
+On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+[ (Escape in terminals and vim) and Ctrl+Left/Right (word movement), making them unavailable inside the shell. macOS is unaffected, since shortcuts use Cmd instead.
+
 ## Tests
 
     npm test

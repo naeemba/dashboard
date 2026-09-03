@@ -33,12 +33,27 @@ function focusTerminal(index: number): void {
   renderStatus();
 }
 
+// Hidden pages sit at `display:none`, where the fit addon clamps to 2x1, so only
+// the active page is fit; other pages' terminals are resized to match it directly.
+function fitAllPages(): void {
+  const active = pages[activeIndex];
+  if (active.panes.length === 0) return;
+  for (const pane of active.panes) pane.fit.fit();
+  for (const page of pages) {
+    if (page === active) continue;
+    page.panes.forEach((pane, index) => {
+      const reference = active.panes[index].terminal;
+      pane.terminal.resize(reference.cols, reference.rows);
+    });
+  }
+}
+
 function showPage(index: number): void {
   activeIndex = (index + pages.length) % pages.length;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
-  for (const pane of pages[activeIndex].panes) pane.fit.fit();
+  fitAllPages();
   focusTerminal(pages[activeIndex].focused);
   renderStatus();
 }
@@ -63,7 +78,7 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
       pane.exited = false;
       terminal.reset();
       bridge.restart(id);
-      fit.fit();
+      bridge.resize(id, terminal.cols, terminal.rows);
     }
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
@@ -114,7 +129,7 @@ window.addEventListener('keydown', (event) => {
 }, true);
 
 window.addEventListener('resize', () => {
-  for (const pane of pages[activeIndex]?.panes ?? []) pane.fit.fit();
+  if (pages.length > 0) fitAllPages();
 });
 
 bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
