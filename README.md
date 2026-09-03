@@ -8,6 +8,13 @@ Keyboard-first terminal dashboard. Each project gets a page with five shells in 
     npm install
     npm start
 
+## Install
+
+    npm run package
+    cp -R out/Dashboard-darwin-arm64/Dashboard.app /Applications/
+
+The installed app reads `~/.config/dashboard/.env` instead of the repo `.env`.
+
 ## Shortcuts
 
 Mod is Cmd on macOS, Ctrl on Linux and Windows.

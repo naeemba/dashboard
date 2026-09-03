@@ -9,7 +9,10 @@ import { TERMINAL_COUNT, terminalId } from './terminals';
 
 if (started) app.quit();
 
-const environmentFile = path.join(app.getAppPath(), '.env');
+// Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
+const environmentFile = app.isPackaged
+  ? path.join(app.getPath('home'), '.config', 'dashboard', '.env')
+  : path.join(app.getAppPath(), '.env');
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
 const projects = parseProjects(process.env);
