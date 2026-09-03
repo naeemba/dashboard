@@ -32,16 +32,16 @@ body {
   background: #444444;
 }
 
-.page[hidden] {
-  display: none;
-}
-
 .page.missing {
   display: flex;
   align-items: center;
   justify-content: center;
   color: #ff6666;
   background: #1e1e1e;
+}
+
+.page[hidden] {
+  display: none;
 }
 
 .pane {

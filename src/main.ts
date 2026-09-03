@@ -7,9 +7,6 @@ import { parseProjects } from './projects';
 import { pickShell } from './shell';
 import { TERMINAL_COUNT } from './shortcuts';
 
-declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
-declare const MAIN_WINDOW_VITE_NAME: string;
-
 if (started) app.quit();
 
 const environmentFile = path.join(app.getAppPath(), '.env');
