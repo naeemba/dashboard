@@ -1,9 +1,9 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { parseProjects } from './projects';
+import { parseProjects, projectFromPath, type Project } from './projects';
 import { pickShell } from './shell';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 
@@ -41,20 +41,30 @@ function spawnShell(id: string, directory: string): void {
   shells.set(id, shellProcess);
 }
 
-function spawnAllShells(): void {
-  projects.forEach((project, projectIndex) => {
-    if (project.missing) return;
-    for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
-      const id = terminalId(projectIndex, terminalIndex);
-      terminalDirectories.set(id, project.path);
-      spawnShell(id, project.path);
-    }
-  });
+function spawnProject(project: Project, projectIndex: number): void {
+  if (project.missing) return;
+  for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
+    const id = terminalId(projectIndex, terminalIndex);
+    terminalDirectories.set(id, project.path);
+    spawnShell(id, project.path);
+  }
 }
 
 ipcMain.handle('projects:get', () => {
-  if (terminalDirectories.size === 0) spawnAllShells();
+  if (terminalDirectories.size === 0) projects.forEach(spawnProject);
   return projects;
+});
+ipcMain.handle('projects:pick', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+  if (canceled) return null;
+  const directory = filePaths[0];
+  let index = projects.findIndex((project) => project.path === directory);
+  if (index === -1) {
+    index = projects.length;
+    projects.push(projectFromPath(directory));
+    spawnProject(projects[index], index);
+  }
+  return { index, project: projects[index] };
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));

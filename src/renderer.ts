@@ -3,7 +3,7 @@ import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
-import { TERMINAL_COUNT, terminalId } from './terminals';
+import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
@@ -18,6 +18,10 @@ const panesById = new Map<string, Pane>();
 let activeIndex = 0;
 
 function renderStatus(): void {
+  if (pages.length === 0) {
+    statusElement.textContent = 'Ctrl+S opens a project';
+    return;
+  }
   const page = pages[activeIndex];
   const names = pages
     .map((entry, index) => (index === activeIndex ? `[${entry.project.name}]` : entry.project.name))
@@ -41,6 +45,7 @@ function fitAllPages(): void {
 }
 
 function showPage(index: number): void {
+  if (pages.length === 0) return renderStatus();
   activeIndex = (index + pages.length) % pages.length;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
@@ -98,7 +103,26 @@ function buildPage(project: Project, projectIndex: number): Page {
   return page;
 }
 
+function addPage(project: Project, projectIndex: number): void {
+  const page = buildPage(project, projectIndex);
+  pages.push(page);
+  pagesElement.append(page.element);
+}
+
+// Pages mirror the main process's project list one-to-one, so a new index is always the next slot.
+async function pickProject(): Promise<void> {
+  const picked = await bridge.pickProject();
+  if (!picked) return;
+  if (picked.index === pages.length) {
+    addPage(picked.project, picked.index);
+    fitAllPages();
+  }
+  showPage(picked.index);
+}
+
 function apply(action: Action): void {
+  if (action.kind === 'project-pick') return void pickProject();
+  if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-next': return showPage(activeIndex + 1);
@@ -109,6 +133,7 @@ function apply(action: Action): void {
     case 'terminal-focus': return focusTerminal(action.index);
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
+    case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
   }
 }
 
@@ -133,15 +158,7 @@ bridge.onExit((id, exitCode) => {
 
 async function start(): Promise<void> {
   const projects = await bridge.getProjects();
-  if (projects.length === 0) {
-    pagesElement.textContent = 'No projects. Copy .env.example to .env and set PROJECTS.';
-    return;
-  }
-  projects.forEach((project, projectIndex) => {
-    const page = buildPage(project, projectIndex);
-    pages.push(page);
-    pagesElement.append(page.element);
-  });
+  projects.forEach(addPage);
   fitAllPages();
   showPage(0);
 }

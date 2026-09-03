@@ -4,7 +4,7 @@ Keyboard-first terminal dashboard. Each project gets a page with five shells in 
 
 ## Setup
 
-    cp .env.example .env   # set PROJECTS to your directories
+    cp .env.example .env   # optional: PROJECTS to open at launch
     npm install
     npm start
 
@@ -21,10 +21,12 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 
 | Action | Keys |
 |---|---|
+| Open a project folder | Ctrl+S |
 | Next / previous project | Mod+] / Mod+[ |
 | Jump to project N | Mod+Shift+1..9 |
 | Focus terminal N | Mod+1..5 |
 | Next / previous terminal | Mod+Right / Mod+Left |
+| Move to the pane left / down / up / right | Option+H / J / K / L (Alt elsewhere) |
 
 ## Known limitations
 

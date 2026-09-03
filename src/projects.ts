@@ -7,6 +7,10 @@ function isDirectory(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
 }
 
+export function projectFromPath(path: string, directoryExists: (path: string) => boolean = isDirectory): Project {
+  return { name: basename(path), path, missing: !directoryExists(path) };
+}
+
 export function parseProjects(
   environment: Record<string, string | undefined>,
   directoryExists: (path: string) => boolean = isDirectory,
@@ -15,5 +19,5 @@ export function parseProjects(
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
-    .map((path) => ({ name: basename(path), path, missing: !directoryExists(path) }));
+    .map((path) => projectFromPath(path, directoryExists));
 }
