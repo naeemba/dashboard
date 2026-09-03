@@ -21,10 +21,12 @@ body {
 #pages {
   flex: 1;
   min-height: 0;
+  position: relative;
 }
 
 .page {
-  height: 100%;
+  position: absolute;
+  inset: 0;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: 1fr 1fr;
@@ -40,8 +42,9 @@ body {
   background: #1e1e1e;
 }
 
+/* Visibility, not display: hidden pages keep their size so the fit addon can measure them. */
 .page[hidden] {
-  display: none;
+  visibility: hidden;
 }
 
 .pane {
@@ -57,7 +60,7 @@ body {
   outline-offset: -1px;
 }
 
-/* Two on top, three on bottom. Six columns divide evenly into both. */
+/* Two on top, three on bottom. Six columns divide evenly into both. Assumes TERMINAL_COUNT = 5. */
 .pane:nth-child(-n + 2) { grid-column: span 3; }
 .pane:nth-child(n + 3) { grid-column: span 2; }
 

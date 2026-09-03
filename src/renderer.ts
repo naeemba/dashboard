@@ -5,7 +5,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, TERMINAL_COUNT, type Action } from './shortcuts';
 import type { Project } from './projects';
 
-type Pane = { id: string; terminal: Terminal; fit: FitAddon; exited: boolean };
+type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
 type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number };
 
 const bridge = window.dashboard;
@@ -27,25 +27,16 @@ function renderStatus(): void {
 
 function focusTerminal(index: number): void {
   const page = pages[activeIndex];
-  if (page.panes.length === 0) return;
-  page.focused = (index + TERMINAL_COUNT) % TERMINAL_COUNT;
-  page.panes[page.focused].terminal.focus();
+  if (page.panes.length > 0) {
+    page.focused = (index + TERMINAL_COUNT) % TERMINAL_COUNT;
+    page.panes[page.focused].terminal.focus();
+  }
   renderStatus();
 }
 
-// Hidden pages sit at `display:none`, where the fit addon clamps to 2x1, so only
-// the active page is fit; other pages' terminals are resized to match it directly.
+// Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
-  const active = pages[activeIndex];
-  if (active.panes.length === 0) return;
-  for (const pane of active.panes) pane.fit.fit();
-  for (const page of pages) {
-    if (page === active) continue;
-    page.panes.forEach((pane, index) => {
-      const reference = active.panes[index].terminal;
-      pane.terminal.resize(reference.cols, reference.rows);
-    });
-  }
+  for (const page of pages) for (const pane of page.panes) pane.fit.fit();
 }
 
 function showPage(index: number): void {
@@ -55,7 +46,6 @@ function showPage(index: number): void {
   });
   fitAllPages();
   focusTerminal(pages[activeIndex].focused);
-  renderStatus();
 }
 
 function buildPane(page: Page, id: string, terminalIndex: number): Pane {
@@ -68,7 +58,7 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   terminal.loadAddon(fit);
   terminal.open(container);
 
-  const pane: Pane = { id, terminal, fit, exited: false };
+  const pane: Pane = { terminal, fit, exited: false };
   terminal.onData((data) => {
     if (!pane.exited) {
       bridge.sendInput(id, data);
