@@ -1,10 +1,42 @@
 import '@xterm/xterm/css/xterm.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
+import type { ITheme } from '@xterm/xterm';
+
+// Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt, #282c34 background,
+// white foreground, and its default 16-color palette. index.css copies the chrome colors by hand: keep them in sync.
+const FONT_NAME = 'JetBrains Mono';
+const FONT_SIZE = 13;
+const THEME: ITheme = {
+  background: '#282c34',
+  foreground: '#ffffff',
+  cursor: '#ffffff',
+  cursorAccent: '#282c34',
+  selectionBackground: '#ffffff',
+  selectionForeground: '#282c34',
+  black: '#1d1f21',
+  red: '#cc6666',
+  green: '#b5bd68',
+  yellow: '#f0c674',
+  blue: '#81a2be',
+  magenta: '#b294bb',
+  cyan: '#8abeb7',
+  white: '#c5c8c6',
+  brightBlack: '#666666',
+  brightRed: '#d54e53',
+  brightGreen: '#b9ca4a',
+  brightYellow: '#e7c547',
+  brightBlue: '#7aa6da',
+  brightMagenta: '#c397d8',
+  brightCyan: '#70c0b1',
+  brightWhite: '#eaeaea',
+};
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
 type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number };
@@ -58,7 +90,13 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   container.className = 'pane';
   page.element.append(container);
 
-  const terminal = new Terminal({ cursorBlink: true, fontSize: 13, fontFamily: 'Menlo, Monaco, monospace' });
+  const terminal = new Terminal({
+    cursorBlink: true,
+    fontSize: FONT_SIZE,
+    fontFamily: `"${FONT_NAME}", Menlo, Monaco, monospace`,
+    theme: THEME,
+    drawBoldTextInBrightColors: false,
+  });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.open(container);
@@ -157,7 +195,13 @@ bridge.onExit((id, exitCode) => {
 });
 
 async function start(): Promise<void> {
-  const projects = await bridge.getProjects();
+  // xterm measures cell size when a pane opens; both font weights must be in by then or glyphs misalign.
+  // Panes opened later via pickProject() rely on this having finished, which a native dialog round-trip guarantees.
+  const [projects] = await Promise.all([
+    bridge.getProjects(),
+    document.fonts.load(`${FONT_SIZE}px "${FONT_NAME}"`),
+    document.fonts.load(`bold ${FONT_SIZE}px "${FONT_NAME}"`),
+  ]);
   projects.forEach(addPage);
   fitAllPages();
   showPage(0);
