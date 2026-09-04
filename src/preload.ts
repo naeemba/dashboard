@@ -4,6 +4,7 @@ import type { DashboardBridge } from './bridge';
 const bridge: DashboardBridge = {
   platform: process.platform,
   getProjects: () => ipcRenderer.invoke('projects:get'),
+  pickProject: () => ipcRenderer.invoke('projects:pick'),
   sendInput: (id, data) => ipcRenderer.send('pty:input', id, data),
   resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
   restart: (id) => ipcRenderer.send('pty:restart', id),

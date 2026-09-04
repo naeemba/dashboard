@@ -4,9 +4,16 @@ Keyboard-first terminal dashboard. Each project gets a page with five shells in 
 
 ## Setup
 
-    cp .env.example .env   # set PROJECTS to your directories
+    cp .env.example .env   # optional: PROJECTS to open at launch
     npm install
     npm start
+
+## Install
+
+    npm run package
+    cp -R out/Dashboard-darwin-*/Dashboard.app /Applications/
+
+The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 
 ## Shortcuts
 
@@ -14,14 +21,16 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 
 | Action | Keys |
 |---|---|
+| Open a project folder | Mod+O |
 | Next / previous project | Mod+] / Mod+[ |
 | Jump to project N | Mod+Shift+1..9 |
 | Focus terminal N | Mod+1..5 |
 | Next / previous terminal | Mod+Right / Mod+Left |
+| Move to the pane left / down / up / right | Option+H / J / K / L (Alt elsewhere) |
 
 ## Known limitations
 
-On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+[ (Escape in terminals and vim) and Ctrl+Left/Right (word movement), making them unavailable inside the shell. macOS is unaffected, since shortcuts use Cmd instead.
+On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+[ (Escape in terminals and vim), Ctrl+O (readline's operate-and-get-next) and Ctrl+Left/Right (word movement), making them unavailable inside the shell. macOS is unaffected, since shortcuts use Cmd instead.
 
 ## Tests
 

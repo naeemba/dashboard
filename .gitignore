@@ -93,3 +93,4 @@ out/
 
 .superpowers/
 .codegraph/
+.vitest/

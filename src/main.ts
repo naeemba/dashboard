@@ -1,15 +1,19 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { parseProjects } from './projects';
+import { parseProjects, projectFromPath, replacesProject, type Project } from './projects';
 import { pickShell } from './shell';
+import { THEME } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 
 if (started) app.quit();
 
-const environmentFile = path.join(app.getAppPath(), '.env');
+// Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
+const environmentFile = app.isPackaged
+  ? path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'dashboard', '.env')
+  : path.join(app.getAppPath(), '.env');
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
 const projects = parseProjects(process.env);
@@ -38,20 +42,31 @@ function spawnShell(id: string, directory: string): void {
   shells.set(id, shellProcess);
 }
 
-function spawnAllShells(): void {
-  projects.forEach((project, projectIndex) => {
-    if (project.missing) return;
-    for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
-      const id = terminalId(projectIndex, terminalIndex);
-      terminalDirectories.set(id, project.path);
-      spawnShell(id, project.path);
-    }
-  });
+function spawnProject(project: Project, projectIndex: number): void {
+  if (project.missing) return;
+  for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
+    const id = terminalId(projectIndex, terminalIndex);
+    terminalDirectories.set(id, project.path);
+    spawnShell(id, project.path);
+  }
 }
 
 ipcMain.handle('projects:get', () => {
-  if (terminalDirectories.size === 0) spawnAllShells();
+  if (terminalDirectories.size === 0) projects.forEach(spawnProject);
   return projects;
+});
+ipcMain.handle('projects:pick', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+  if (canceled) return null;
+  const picked = projectFromPath(filePaths[0]);
+  const matchIndex = projects.findIndex((project) => project.path === picked.path);
+  const index = matchIndex === -1 ? projects.length : matchIndex;
+  const replaced = replacesProject(projects[index], picked);
+  if (replaced) {
+    projects[index] = picked;
+    spawnProject(picked, index);
+  }
+  return { index, project: projects[index], replaced };
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
@@ -68,6 +83,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    backgroundColor: THEME.background,
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

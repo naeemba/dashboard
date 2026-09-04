@@ -1,10 +1,21 @@
 import '@xterm/xterm/css/xterm.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
-import { TERMINAL_COUNT, terminalId } from './terminals';
+import { THEME } from './theme';
+import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
+
+// Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt with THEME's palette.
+const FONT_NAME = 'JetBrains Mono';
+const FONT_SIZE = 13;
+
+for (const [name, value] of Object.entries(THEME)) {
+  document.documentElement.style.setProperty(`--${name}`, String(value));
+}
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
 type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number };
@@ -18,6 +29,10 @@ const panesById = new Map<string, Pane>();
 let activeIndex = 0;
 
 function renderStatus(): void {
+  if (pages.length === 0) {
+    statusElement.textContent = `${isMac ? 'Cmd' : 'Ctrl'}+O opens a project`;
+    return;
+  }
   const page = pages[activeIndex];
   const names = pages
     .map((entry, index) => (index === activeIndex ? `[${entry.project.name}]` : entry.project.name))
@@ -41,6 +56,7 @@ function fitAllPages(): void {
 }
 
 function showPage(index: number): void {
+  if (pages.length === 0) return renderStatus();
   activeIndex = (index + pages.length) % pages.length;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
@@ -53,7 +69,13 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   container.className = 'pane';
   page.element.append(container);
 
-  const terminal = new Terminal({ cursorBlink: true, fontSize: 13, fontFamily: 'Menlo, Monaco, monospace' });
+  const terminal = new Terminal({
+    cursorBlink: true,
+    fontSize: FONT_SIZE,
+    fontFamily: `"${FONT_NAME}", Menlo, Monaco, monospace`,
+    theme: THEME,
+    drawBoldTextInBrightColors: false,
+  });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
   terminal.open(container);
@@ -98,7 +120,35 @@ function buildPage(project: Project, projectIndex: number): Page {
   return page;
 }
 
+// Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
+// live one once the folder exists.
+function setPage(project: Project, projectIndex: number): void {
+  const page = buildPage(project, projectIndex);
+  const existing = pages[projectIndex];
+  if (existing) existing.element.replaceWith(page.element);
+  else pagesElement.append(page.element);
+  pages[projectIndex] = page;
+}
+
+// Main owns the decision and reports it as `replaced`, so a page is only rebuilt when its shells were.
+async function pickProject(): Promise<void> {
+  const picked = await bridge.pickProject();
+  if (!picked) return;
+  if (picked.replaced) {
+    setPage(picked.project, picked.index);
+    fitAllPages();
+  }
+  showPage(picked.index);
+}
+
 function apply(action: Action): void {
+  if (action.kind === 'project-pick') {
+    pickProject().catch((error: unknown) => {
+      statusElement.textContent = `Failed to open project: ${String(error)}`;
+    });
+    return;
+  }
+  if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-next': return showPage(activeIndex + 1);
@@ -109,6 +159,7 @@ function apply(action: Action): void {
     case 'terminal-focus': return focusTerminal(action.index);
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
+    case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
   }
 }
 
@@ -132,16 +183,14 @@ bridge.onExit((id, exitCode) => {
 });
 
 async function start(): Promise<void> {
-  const projects = await bridge.getProjects();
-  if (projects.length === 0) {
-    pagesElement.textContent = 'No projects. Copy .env.example to .env and set PROJECTS.';
-    return;
-  }
-  projects.forEach((project, projectIndex) => {
-    const page = buildPage(project, projectIndex);
-    pages.push(page);
-    pagesElement.append(page.element);
-  });
+  // xterm measures cell size when a pane opens; both font weights must be in by then or glyphs misalign.
+  // Panes opened later via pickProject() rely on this having finished, which a native dialog round-trip guarantees.
+  const [projects] = await Promise.all([
+    bridge.getProjects(),
+    document.fonts.load(`${FONT_SIZE}px "${FONT_NAME}"`),
+    document.fonts.load(`bold ${FONT_SIZE}px "${FONT_NAME}"`),
+  ]);
+  projects.forEach(setPage);
   fitAllPages();
   showPage(0);
 }

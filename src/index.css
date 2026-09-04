@@ -1,9 +1,10 @@
+/* Colors come from THEME in theme.ts, which the renderer publishes as custom properties at startup. */
 html, body {
   height: 100%;
   margin: 0;
-  background: #1e1e1e;
-  color: #cccccc;
-  font: 12px Menlo, Monaco, monospace;
+  background: var(--background);
+  color: var(--white);
+  font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
 }
 
 body {
@@ -13,7 +14,7 @@ body {
 
 #status {
   padding: 4px 8px;
-  background: #2d2d2d;
+  background: var(--black);
   white-space: pre;
   user-select: none;
 }
@@ -31,15 +32,15 @@ body {
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: 1fr 1fr;
   gap: 2px;
-  background: #444444;
+  background: var(--black);
 }
 
 .page.missing {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ff6666;
-  background: #1e1e1e;
+  color: var(--red);
+  background: var(--background);
 }
 
 /* Visibility, not display: hidden pages keep their size so the fit addon can measure them. */
@@ -51,12 +52,12 @@ body {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #1e1e1e;
-  padding: 4px;
+  background: var(--background);
+  padding: 2px;
 }
 
 .pane:focus-within {
-  outline: 1px solid #4a9eff;
+  outline: 1px solid var(--blue);
   outline-offset: -1px;
 }
 
@@ -66,4 +67,10 @@ body {
 
 .pane .xterm {
   height: 100%;
+}
+
+/* xterm 6 still creates a legacy .xterm-viewport under the rows: black, with its own native scrollbar.
+   It shows through in the strip below the last row. Nothing scrolls with it anymore, so hide it. */
+.pane .xterm-viewport {
+  display: none;
 }

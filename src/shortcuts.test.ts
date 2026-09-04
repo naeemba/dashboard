@@ -34,6 +34,15 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
   });
 
+  it('opens the project picker with Cmd+O', () => {
+    expect(mapShortcut(key({ code: 'KeyO', key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
+    // Caps Lock uppercases `key` without setting shiftKey.
+    expect(mapShortcut(key({ code: 'KeyO', key: 'O', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
+    // Dvorak puts O on the physical S key, and R on the physical O key.
+    expect(mapShortcut(key({ code: 'KeyS', key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
+    expect(mapShortcut(key({ code: 'KeyO', key: 'r', metaKey: true }), true)).toBeNull();
+  });
+
   it('lets Ctrl through to the shell on macOS', () => {
     expect(mapShortcut(key({ key: 'c', ctrlKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), true)).toBeNull();
@@ -54,5 +63,33 @@ describe('mapShortcut elsewhere', () => {
   it('uses Ctrl as the modifier', () => {
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), false)).toEqual({ kind: 'project-next' });
     expect(mapShortcut(key({ key: ']', metaKey: true }), false)).toBeNull();
+  });
+
+  it('opens the project picker with Ctrl+O', () => {
+    expect(mapShortcut(key({ code: 'KeyO', key: 'o', ctrlKey: true }), false)).toEqual({ kind: 'project-pick' });
+  });
+});
+
+describe('mapShortcut on every platform', () => {
+  // Ctrl+S is the shell's XOFF and emacs' search, so it must never be a dashboard shortcut.
+  it('leaves Ctrl+S to the shell', () => {
+    expect(mapShortcut(key({ key: 's', ctrlKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ key: 's', ctrlKey: true }), false)).toBeNull();
+  });
+
+  it('moves between panes with Option+hjkl', () => {
+    expect(mapShortcut(key({ code: 'KeyH', key: '˙', altKey: true }), true))
+      .toEqual({ kind: 'terminal-move', direction: 'left' });
+    expect(mapShortcut(key({ code: 'KeyJ', key: '∆', altKey: true }), true))
+      .toEqual({ kind: 'terminal-move', direction: 'down' });
+    expect(mapShortcut(key({ code: 'KeyK', key: '˚', altKey: true }), true))
+      .toEqual({ kind: 'terminal-move', direction: 'up' });
+    expect(mapShortcut(key({ code: 'KeyL', key: '¬', altKey: true }), true))
+      .toEqual({ kind: 'terminal-move', direction: 'right' });
+    // Alt does not rewrite `key` off macOS, and the branch reads `code` either way.
+    expect(mapShortcut(key({ code: 'KeyH', key: 'h', altKey: true }), false))
+      .toEqual({ kind: 'terminal-move', direction: 'left' });
+    expect(mapShortcut(key({ code: 'KeyB', key: '∫', altKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyH', altKey: true, metaKey: true }), true)).toBeNull();
   });
 });
