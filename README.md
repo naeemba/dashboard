@@ -13,7 +13,7 @@ Keyboard-first terminal dashboard. Each project gets a page with five shells in 
     npm run package
     cp -R out/Dashboard-darwin-*/Dashboard.app /Applications/
 
-The installed app reads `~/.config/dashboard/.env` instead of the repo `.env`.
+The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 
 ## Shortcuts
 

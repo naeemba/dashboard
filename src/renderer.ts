@@ -2,41 +2,16 @@ import '@xterm/xterm/css/xterm.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
-import { Terminal, type ITheme } from '@xterm/xterm';
+import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
+import { THEME } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
 
-// Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt, #282c34 background,
-// white foreground, and its default 16-color palette. Every entry is also published as a CSS custom
-// property below, so index.css styles the chrome from the same values.
+// Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt with THEME's palette.
 const FONT_NAME = 'JetBrains Mono';
 const FONT_SIZE = 13;
-const THEME: ITheme = {
-  background: '#282c34',
-  foreground: '#ffffff',
-  cursor: '#ffffff',
-  cursorAccent: '#282c34',
-  selectionBackground: '#ffffff',
-  selectionForeground: '#282c34',
-  black: '#1d1f21',
-  red: '#cc6666',
-  green: '#b5bd68',
-  yellow: '#f0c674',
-  blue: '#81a2be',
-  magenta: '#b294bb',
-  cyan: '#8abeb7',
-  white: '#c5c8c6',
-  brightBlack: '#666666',
-  brightRed: '#d54e53',
-  brightGreen: '#b9ca4a',
-  brightYellow: '#e7c547',
-  brightBlue: '#7aa6da',
-  brightMagenta: '#c397d8',
-  brightCyan: '#70c0b1',
-  brightWhite: '#eaeaea',
-};
 
 for (const [name, value] of Object.entries(THEME)) {
   document.documentElement.style.setProperty(`--${name}`, String(value));
@@ -145,18 +120,23 @@ function buildPage(project: Project, projectIndex: number): Page {
   return page;
 }
 
-function addPage(project: Project, projectIndex: number): void {
+// Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
+// live one once the folder exists.
+function setPage(project: Project, projectIndex: number): void {
   const page = buildPage(project, projectIndex);
-  pages.push(page);
-  pagesElement.append(page.element);
+  const existing = pages[projectIndex];
+  if (existing) existing.element.replaceWith(page.element);
+  else pagesElement.append(page.element);
+  pages[projectIndex] = page;
 }
 
 // Pages mirror the main process's project list one-to-one, so a new index is always the next slot.
 async function pickProject(): Promise<void> {
   const picked = await bridge.pickProject();
   if (!picked) return;
-  if (picked.index === pages.length) {
-    addPage(picked.project, picked.index);
+  const existing = pages[picked.index];
+  if (!existing || (existing.project.missing && !picked.project.missing)) {
+    setPage(picked.project, picked.index);
     fitAllPages();
   }
   showPage(picked.index);
@@ -211,7 +191,7 @@ async function start(): Promise<void> {
     document.fonts.load(`${FONT_SIZE}px "${FONT_NAME}"`),
     document.fonts.load(`bold ${FONT_SIZE}px "${FONT_NAME}"`),
   ]);
-  projects.forEach(addPage);
+  projects.forEach(setPage);
   fitAllPages();
   showPage(0);
 }

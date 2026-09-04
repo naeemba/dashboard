@@ -5,13 +5,14 @@ import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import { parseProjects, projectFromPath, type Project } from './projects';
 import { pickShell } from './shell';
+import { THEME } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 
 if (started) app.quit();
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
 const environmentFile = app.isPackaged
-  ? path.join(process.env.XDG_CONFIG_HOME ?? path.join(app.getPath('home'), '.config'), 'dashboard', '.env')
+  ? path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'dashboard', '.env')
   : path.join(app.getAppPath(), '.env');
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
@@ -58,10 +59,11 @@ ipcMain.handle('projects:pick', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (canceled) return null;
   const picked = projectFromPath(filePaths[0]);
-  let index = projects.findIndex((project) => project.path === picked.path);
-  if (index === -1) {
-    index = projects.length;
-    projects.push(picked);
+  const match = projects.findIndex((project) => project.path === picked.path);
+  const index = match === -1 ? projects.length : match;
+  // The dialog only returns directories that exist, so a project that was missing at launch is real now.
+  if (match === -1 || projects[index].missing) {
+    projects[index] = picked;
     spawnProject(picked, index);
   }
   return { index, project: projects[index] };
@@ -81,6 +83,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
+    backgroundColor: THEME.background,
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

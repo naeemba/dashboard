@@ -1,4 +1,4 @@
-/* Colors come from THEME in renderer.ts, which publishes every entry as a custom property at startup. */
+/* Colors come from THEME in theme.ts, which the renderer publishes as custom properties at startup. */
 html, body {
   height: 100%;
   margin: 0;
