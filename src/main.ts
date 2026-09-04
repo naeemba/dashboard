@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { parseProjects, projectFromPath, type Project } from './projects';
+import { parseProjects, projectFromPath, replacesProject, type Project } from './projects';
 import { pickShell } from './shell';
 import { THEME } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
@@ -59,14 +59,14 @@ ipcMain.handle('projects:pick', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (canceled) return null;
   const picked = projectFromPath(filePaths[0]);
-  const match = projects.findIndex((project) => project.path === picked.path);
-  const index = match === -1 ? projects.length : match;
-  // The dialog only returns directories that exist, so a project that was missing at launch is real now.
-  if (match === -1 || projects[index].missing) {
+  const matchIndex = projects.findIndex((project) => project.path === picked.path);
+  const index = matchIndex === -1 ? projects.length : matchIndex;
+  const replaced = replacesProject(projects[index], picked);
+  if (replaced) {
     projects[index] = picked;
     spawnProject(picked, index);
   }
-  return { index, project: projects[index] };
+  return { index, project: projects[index], replaced };
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));

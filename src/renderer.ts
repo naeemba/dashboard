@@ -130,12 +130,11 @@ function setPage(project: Project, projectIndex: number): void {
   pages[projectIndex] = page;
 }
 
-// Pages mirror the main process's project list one-to-one, so a new index is always the next slot.
+// Main owns the decision and reports it as `replaced`, so a page is only rebuilt when its shells were.
 async function pickProject(): Promise<void> {
   const picked = await bridge.pickProject();
   if (!picked) return;
-  const existing = pages[picked.index];
-  if (!existing || (existing.project.missing && !picked.project.missing)) {
+  if (picked.replaced) {
     setPage(picked.project, picked.index);
     fitAllPages();
   }

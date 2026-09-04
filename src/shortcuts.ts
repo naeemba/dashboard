@@ -40,10 +40,10 @@ export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
   }
 
   if (input.shiftKey) return null;
-  // `code` because Caps Lock changes `key` ("o" becomes "O"). The rest are punctuation and arrows, where
-  // `key` is the right thing to read.
-  if (input.code === 'KeyO') return { kind: 'project-pick' };
+  // `key`, not `code`, so the picker follows the letter on Dvorak and Colemak. 'O' is Caps Lock, which
+  // uppercases `key` without setting shiftKey.
   switch (input.key) {
+    case 'o': case 'O': return { kind: 'project-pick' };
     case ']': return { kind: 'project-next' };
     case '[': return { kind: 'project-previous' };
     case 'ArrowRight': return { kind: 'terminal-next' };

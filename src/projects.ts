@@ -14,6 +14,13 @@ export function projectFromPath(path: string, directoryExists: (path: string) =>
   return { name: basename(directory), path: directory, missing: !directoryExists(directory) };
 }
 
+// A pick fills an empty slot, and upgrades a project that was missing at launch to the live one. It never
+// overwrites a project that already works — including with a missing pick, which only happens if the
+// folder is deleted between the dialog closing and the existence check.
+export function replacesProject(existing: Project | undefined, picked: Project): boolean {
+  return !existing || (existing.missing && !picked.missing);
+}
+
 export function parseProjects(
   environment: Record<string, string | undefined>,
   directoryExists: (path: string) => boolean = isDirectory,

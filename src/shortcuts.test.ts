@@ -38,6 +38,9 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ code: 'KeyO', key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
     // Caps Lock uppercases `key` without setting shiftKey.
     expect(mapShortcut(key({ code: 'KeyO', key: 'O', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
+    // Dvorak puts O on the physical S key, and R on the physical O key.
+    expect(mapShortcut(key({ code: 'KeyS', key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
+    expect(mapShortcut(key({ code: 'KeyO', key: 'r', metaKey: true }), true)).toBeNull();
   });
 
   it('lets Ctrl through to the shell on macOS', () => {
