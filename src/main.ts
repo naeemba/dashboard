@@ -11,7 +11,7 @@ if (started) app.quit();
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
 const environmentFile = app.isPackaged
-  ? path.join(app.getPath('home'), '.config', 'dashboard', '.env')
+  ? path.join(process.env.XDG_CONFIG_HOME ?? path.join(app.getPath('home'), '.config'), 'dashboard', '.env')
   : path.join(app.getAppPath(), '.env');
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
@@ -57,12 +57,12 @@ ipcMain.handle('projects:get', () => {
 ipcMain.handle('projects:pick', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
   if (canceled) return null;
-  const directory = filePaths[0];
-  let index = projects.findIndex((project) => project.path === directory);
+  const picked = projectFromPath(filePaths[0]);
+  let index = projects.findIndex((project) => project.path === picked.path);
   if (index === -1) {
     index = projects.length;
-    projects.push(projectFromPath(directory));
-    spawnProject(projects[index], index);
+    projects.push(picked);
+    spawnProject(picked, index);
   }
   return { index, project: projects[index] };
 });

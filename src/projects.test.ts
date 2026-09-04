@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseProjects } from './projects';
+import { parseProjects, projectFromPath } from './projects';
 
 const exists = () => true;
 
@@ -22,6 +22,11 @@ describe('parseProjects', () => {
   it('flags directories that do not exist', () => {
     const projects = parseProjects({ PROJECTS: '/gone,/here' }, (path) => path === '/here');
     expect(projects.map((project) => project.missing)).toEqual([true, false]);
+  });
+
+  it('normalises paths so a trailing slash is the same project as without one', () => {
+    expect(projectFromPath('/code/api/', exists)).toEqual(projectFromPath('/code/api', exists));
+    expect(projectFromPath('/code/api/', exists).name).toBe('api');
   });
 
   it('treats a file path as missing', () => {

@@ -2,15 +2,15 @@ import '@xterm/xterm/css/xterm.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
-import type { ITheme } from '@xterm/xterm';
 
 // Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt, #282c34 background,
-// white foreground, and its default 16-color palette. index.css copies the chrome colors by hand: keep them in sync.
+// white foreground, and its default 16-color palette. Every entry is also published as a CSS custom
+// property below, so index.css styles the chrome from the same values.
 const FONT_NAME = 'JetBrains Mono';
 const FONT_SIZE = 13;
 const THEME: ITheme = {
@@ -38,6 +38,10 @@ const THEME: ITheme = {
   brightWhite: '#eaeaea',
 };
 
+for (const [name, value] of Object.entries(THEME)) {
+  document.documentElement.style.setProperty(`--${name}`, String(value));
+}
+
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
 type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number };
 
@@ -51,7 +55,7 @@ let activeIndex = 0;
 
 function renderStatus(): void {
   if (pages.length === 0) {
-    statusElement.textContent = 'Ctrl+S opens a project';
+    statusElement.textContent = `${isMac ? 'Cmd' : 'Ctrl'}+O opens a project`;
     return;
   }
   const page = pages[activeIndex];
@@ -159,7 +163,12 @@ async function pickProject(): Promise<void> {
 }
 
 function apply(action: Action): void {
-  if (action.kind === 'project-pick') return void pickProject();
+  if (action.kind === 'project-pick') {
+    pickProject().catch((error: unknown) => {
+      statusElement.textContent = `Failed to open project: ${String(error)}`;
+    });
+    return;
+  }
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {

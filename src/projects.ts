@@ -1,5 +1,5 @@
 import { statSync } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 export type Project = { name: string; path: string; missing: boolean };
 
@@ -7,8 +7,11 @@ function isDirectory(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
 }
 
+// Resolve here so .env entries and dialog picks compare equal: a trailing slash or a relative
+// path must not turn one directory into two projects.
 export function projectFromPath(path: string, directoryExists: (path: string) => boolean = isDirectory): Project {
-  return { name: basename(path), path, missing: !directoryExists(path) };
+  const directory = resolve(path);
+  return { name: basename(directory), path: directory, missing: !directoryExists(directory) };
 }
 
 export function parseProjects(

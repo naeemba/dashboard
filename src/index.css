@@ -1,9 +1,9 @@
-/* Colors mirror THEME in renderer.ts (Ghostty defaults): #282c34 background, #1d1f21 black, #cc6666 red, #81a2be blue. */
+/* Colors come from THEME in renderer.ts, which publishes every entry as a custom property at startup. */
 html, body {
   height: 100%;
   margin: 0;
-  background: #282c34;
-  color: #c5c8c6;
+  background: var(--background);
+  color: var(--white);
   font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
 }
 
@@ -14,7 +14,7 @@ body {
 
 #status {
   padding: 4px 8px;
-  background: #1d1f21;
+  background: var(--black);
   white-space: pre;
   user-select: none;
 }
@@ -32,15 +32,15 @@ body {
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: 1fr 1fr;
   gap: 2px;
-  background: #1d1f21;
+  background: var(--black);
 }
 
 .page.missing {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #cc6666;
-  background: #282c34;
+  color: var(--red);
+  background: var(--background);
 }
 
 /* Visibility, not display: hidden pages keep their size so the fit addon can measure them. */
@@ -52,12 +52,12 @@ body {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #282c34;
+  background: var(--background);
   padding: 2px;
 }
 
 .pane:focus-within {
-  outline: 1px solid #81a2be;
+  outline: 1px solid var(--blue);
   outline-offset: -1px;
 }
 

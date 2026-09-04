@@ -23,9 +23,6 @@ export type KeyInput = {
 const VIM_DIRECTIONS: Record<string, Direction> = { KeyH: 'left', KeyJ: 'down', KeyK: 'up', KeyL: 'right' };
 
 export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
-  if (input.ctrlKey && !input.metaKey && !input.altKey && input.key === 's') {
-    return { kind: 'project-pick' };
-  }
   if (input.altKey && !input.metaKey && !input.ctrlKey && !input.shiftKey) {
     const direction = VIM_DIRECTIONS[input.code];
     return direction ? { kind: 'terminal-move', direction } : null;
@@ -44,6 +41,7 @@ export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
 
   if (input.shiftKey) return null;
   switch (input.key) {
+    case 'o': return { kind: 'project-pick' };
     case ']': return { kind: 'project-next' };
     case '[': return { kind: 'project-previous' };
     case 'ArrowRight': return { kind: 'terminal-next' };

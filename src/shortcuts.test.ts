@@ -34,10 +34,8 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
   });
 
-  it('opens the project picker with Ctrl+S on every platform', () => {
-    expect(mapShortcut(key({ key: 's', ctrlKey: true }), true)).toEqual({ kind: 'project-pick' });
-    expect(mapShortcut(key({ key: 's', ctrlKey: true }), false)).toEqual({ kind: 'project-pick' });
-    expect(mapShortcut(key({ key: 's', metaKey: true }), true)).toBeNull();
+  it('opens the project picker with Cmd+O', () => {
+    expect(mapShortcut(key({ key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
   });
 
   it('lets Ctrl through to the shell on macOS', () => {
@@ -48,6 +46,30 @@ describe('mapShortcut on macOS', () => {
   it('lets Cmd+C and Cmd+V through for copy and paste', () => {
     expect(mapShortcut(key({ key: 'c', metaKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ key: 'v', metaKey: true }), true)).toBeNull();
+  });
+
+  it('ignores plain keys and Alt combinations', () => {
+    expect(mapShortcut(key({ key: ']' }), true)).toBeNull();
+    expect(mapShortcut(key({ key: ']', metaKey: true, altKey: true }), true)).toBeNull();
+  });
+});
+
+describe('mapShortcut elsewhere', () => {
+  it('uses Ctrl as the modifier', () => {
+    expect(mapShortcut(key({ key: ']', ctrlKey: true }), false)).toEqual({ kind: 'project-next' });
+    expect(mapShortcut(key({ key: ']', metaKey: true }), false)).toBeNull();
+  });
+
+  it('opens the project picker with Ctrl+O', () => {
+    expect(mapShortcut(key({ key: 'o', ctrlKey: true }), false)).toEqual({ kind: 'project-pick' });
+  });
+});
+
+describe('mapShortcut on every platform', () => {
+  // Ctrl+S is the shell's XOFF and emacs' search, so it must never be a dashboard shortcut.
+  it('leaves Ctrl+S to the shell', () => {
+    expect(mapShortcut(key({ key: 's', ctrlKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ key: 's', ctrlKey: true }), false)).toBeNull();
   });
 
   it('moves between panes with Option+hjkl', () => {
@@ -61,17 +83,5 @@ describe('mapShortcut on macOS', () => {
       .toEqual({ kind: 'terminal-move', direction: 'right' });
     expect(mapShortcut(key({ code: 'KeyB', key: '∫', altKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ code: 'KeyH', altKey: true, metaKey: true }), true)).toBeNull();
-  });
-
-  it('ignores plain keys and Alt combinations', () => {
-    expect(mapShortcut(key({ key: ']' }), true)).toBeNull();
-    expect(mapShortcut(key({ key: ']', metaKey: true, altKey: true }), true)).toBeNull();
-  });
-});
-
-describe('mapShortcut elsewhere', () => {
-  it('uses Ctrl as the modifier', () => {
-    expect(mapShortcut(key({ key: ']', ctrlKey: true }), false)).toEqual({ kind: 'project-next' });
-    expect(mapShortcut(key({ key: ']', metaKey: true }), false)).toBeNull();
   });
 });

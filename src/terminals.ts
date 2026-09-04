@@ -3,7 +3,8 @@ export const TERMINAL_COUNT = 5;
 export type Direction = 'left' | 'right' | 'up' | 'down';
 
 // Matches the grid in index.css: two on top (0 1), three on bottom (2 3 4).
-// Edges stay put; up/down pick the pane under the same horizontal position.
+// Edges stay put; up/down pick the nearest pane by centre, so the bottom-middle pane (3) is only
+// reachable sideways and a move up does not always undo a move down.
 const NEIGHBORS: Record<Direction, number[]> = {
   left: [0, 0, 2, 2, 3],
   right: [1, 1, 3, 4, 4],

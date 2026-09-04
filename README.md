@@ -11,7 +11,7 @@ Keyboard-first terminal dashboard. Each project gets a page with five shells in 
 ## Install
 
     npm run package
-    cp -R out/Dashboard-darwin-arm64/Dashboard.app /Applications/
+    cp -R out/Dashboard-darwin-*/Dashboard.app /Applications/
 
 The installed app reads `~/.config/dashboard/.env` instead of the repo `.env`.
 
@@ -21,7 +21,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 
 | Action | Keys |
 |---|---|
-| Open a project folder | Ctrl+S |
+| Open a project folder | Mod+O |
 | Next / previous project | Mod+] / Mod+[ |
 | Jump to project N | Mod+Shift+1..9 |
 | Focus terminal N | Mod+1..5 |
@@ -30,7 +30,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 
 ## Known limitations
 
-On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+[ (Escape in terminals and vim) and Ctrl+Left/Right (word movement), making them unavailable inside the shell. macOS is unaffected, since shortcuts use Cmd instead.
+On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+[ (Escape in terminals and vim), Ctrl+O (readline's operate-and-get-next) and Ctrl+Left/Right (word movement), making them unavailable inside the shell. macOS is unaffected, since shortcuts use Cmd instead.
 
 ## Tests
 
