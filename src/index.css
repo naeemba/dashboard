@@ -68,3 +68,9 @@ body {
 .pane .xterm {
   height: 100%;
 }
+
+/* xterm 6 still creates a legacy .xterm-viewport under the rows: black, with its own native scrollbar.
+   It shows through in the strip below the last row. Nothing scrolls with it anymore, so hide it. */
+.pane .xterm-viewport {
+  display: none;
+}
