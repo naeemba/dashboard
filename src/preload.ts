@@ -1,8 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { DashboardBridge } from './bridge';
-
-// main resolves the shell after loading the .env file, so it can only reach here as a launch argument.
-const SHELL_COMMAND_FLAG = '--shell-command=';
+import { SHELL_COMMAND_FLAG } from './shell';
 
 const bridge: DashboardBridge = {
   platform: process.platform,

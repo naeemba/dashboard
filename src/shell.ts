@@ -35,3 +35,8 @@ export function quoteForShell(value: string, shellCommand: string): string {
     : value.replaceAll("'", "'\\''");
   return `'${escaped}'`;
 }
+
+// main resolves the shell after loading the .env file, so it can only reach the preload as a launch
+// argument. Both ends spell the flag from here, so a rename cannot leave the renderer quoting for the
+// wrong shell with nothing failing.
+export const SHELL_COMMAND_FLAG = '--shell-command=';

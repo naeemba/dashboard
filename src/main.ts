@@ -11,7 +11,7 @@ import {
   type Project,
 } from './projects';
 import { isOpenableLink } from './links';
-import { pickShell } from './shell';
+import { pickShell, SHELL_COMMAND_FLAG } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 
@@ -114,7 +114,7 @@ function createWindow(): void {
     }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      additionalArguments: [`--shell-command=${shellCommand}`],
+      additionalArguments: [`${SHELL_COMMAND_FLAG}${shellCommand}`],
     },
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
