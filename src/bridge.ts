@@ -2,6 +2,9 @@ import type { Project } from './projects';
 
 export type DashboardBridge = {
   platform: string;
+  // The shell a pane actually runs, which SHELL_COMMAND can point at another family entirely, so quoting
+  // a dropped path has to follow this rather than the platform.
+  shellCommand: string;
   getRecentProjects(): Promise<Project[]>;
   openProject(projectPath: string | null): Promise<{ index: number; project: Project; replaced: boolean } | null>;
   // Chrome stopped putting a path on File, so only the preload can say where a dropped file lives.

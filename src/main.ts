@@ -10,6 +10,7 @@ import {
   replacesProject,
   type Project,
 } from './projects';
+import { isOpenableLink } from './links';
 import { pickShell } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
@@ -83,12 +84,8 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   return { index, project: projects[index], replaced };
 });
-// The link came out of a shell's output, so it is only as trustworthy as whatever printed it. Handing
-// the operating system an arbitrary scheme is how a line of text opens a mail client or runs a handler,
-// so only pages get through.
 ipcMain.on('link:open', (_event, url: string) => {
-  const scheme = URL.parse(url)?.protocol;
-  if (scheme === 'http:' || scheme === 'https:') shell.openExternal(url);
+  if (isOpenableLink(url)) shell.openExternal(url);
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
@@ -115,7 +112,10 @@ function createWindow(): void {
       titleBarStyle: 'hidden' as const,
       trafficLightPosition: { x: 13, y: (TITLE_BAR_HEIGHT - 16) / 2 },
     }),
-    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      additionalArguments: [`--shell-command=${shellCommand}`],
+    },
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);

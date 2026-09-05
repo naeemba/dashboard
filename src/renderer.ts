@@ -127,11 +127,13 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   });
   // Dropping files types their absolute paths at the prompt, quoted, the way a terminal is expected to
   // take them. It goes through terminal.input so a dead pane ignores the drop like any other keystroke.
+  // The trailing space is what every terminal appends, so a second drop starts a new word instead of
+  // gluing itself onto the first path.
   container.addEventListener('drop', (event) => {
     const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
     if (paths.length === 0) return;
     terminal.focus();
-    terminal.input(paths.map((entry) => quoteForShell(entry, bridge.platform)).join(' '));
+    terminal.input(`${paths.map((entry) => quoteForShell(entry, bridge.shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => {

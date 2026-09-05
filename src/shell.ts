@@ -20,12 +20,18 @@ export function pickShell(
 // supposed to look like at a prompt.
 const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 
-// Both quote by wrapping in single quotes, and differ only on the one character single quotes cannot
-// hold. A POSIX shell has to close, escape and reopen; PowerShell doubles it instead, and reads the
-// POSIX form as a stray backslash. Keyed off the platform the way pickShell's fallback is, so a path
-// dropped on Windows survives the same way it does on a Mac.
-export function quoteForShell(value: string, platform: string): string {
+// PowerShell is the one shell here that does not quote the POSIX way. Both wrap the word in single
+// quotes and differ only on a literal quote inside it: a POSIX shell has to close, escape and reopen,
+// PowerShell doubles it, and each reads the other's form as garbage. Keyed off the shell that will
+// actually receive the word rather than the platform, because SHELL_COMMAND lets a Mac run pwsh and
+// Windows run git-bash. cmd.exe has no single-quote quoting at all and is not supported.
+const POWERSHELL = /^(powershell|pwsh)(\.exe)?$/i;
+
+export function quoteForShell(value: string, shellCommand: string): string {
   if (SHELL_SAFE.test(value)) return value;
-  const escaped = platform === 'win32' ? value.replaceAll("'", "''") : value.replaceAll("'", "'\\''");
+  const shellName = shellCommand.split(/[\\/]/).pop() ?? '';
+  const escaped = POWERSHELL.test(shellName)
+    ? value.replaceAll("'", "''")
+    : value.replaceAll("'", "'\\''");
   return `'${escaped}'`;
 }
