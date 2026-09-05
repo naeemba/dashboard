@@ -16,8 +16,8 @@ export type BoardOptions = {
   bridge: DashboardBridge;
   // The status bar names the column the selection is in, so it is redrawn whenever that can change.
   onChanged(): void;
-  // The empty string clears the last message: opening a board that reads cleanly must not leave the
-  // previous failure sitting on screen.
+  // The empty string clears the last message: a board that reads cleanly, or a write that lands, must
+  // not leave the previous failure sitting on screen.
   onError(message: string): void;
 };
 
@@ -45,11 +45,16 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the same object when nothing happened. This file is the DOM and the keys.
   let state: BoardState = initialBoardState();
   let editing = false;
+  // True while open() is awaiting the read. Focus is already on the board then, and the state the keys
+  // would act on is about to be replaced by what comes off disk, so the keys do nothing until it lands.
+  let loading = false;
 
   function save(): void {
-    options.bridge.writeBoard(options.projectPath, state.board).catch((error: unknown) => {
-      options.onError(`Board not saved: ${String(error)}`);
-    });
+    options.bridge.writeBoard(options.projectPath, state.board).then(
+      // A write that lands clears the failure it replaces; nothing else knows the message is stale.
+      () => options.onError(''),
+      (error: unknown) => options.onError(`Board not saved: ${String(error)}`),
+    );
   }
 
   // Redraws either way — a keystroke that changed nothing still has to put the screen back, such as
@@ -130,7 +135,7 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   element.addEventListener('keydown', (event) => {
     // The input owns every key while a title is being edited; its own handler ends the edit.
-    if (editing) return;
+    if (editing || loading) return;
     const direction = ARROW_DIRECTIONS[event.key];
     if (direction) {
       event.preventDefault();
@@ -164,13 +169,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     // Focus is taken before the read, not after: the terminals view is already hidden by the time
     // open() runs, so focus is sitting on the body and a keystroke typed straight after Ctrl+B would
     // land nowhere. Main's read is synchronous fs, which on a cold or network-mounted folder is
-    // comfortably longer than the gap between two keys.
+    // comfortably longer than the gap between two keys — so a key typed during the read is dropped
+    // rather than applied to the board that is about to be replaced.
     //
     // A failed read still has to leave the board on screen usable from the keyboard — render() runs
     // either way, on whatever board is already in memory, with the error in the status bar instead of
     // a fresh board. A control the keyboard can't reach is unfinished.
     async open(): Promise<void> {
       element.focus();
+      loading = true;
       let message = '';
       try {
         const read = await options.bridge.readBoard(options.projectPath);
@@ -179,6 +186,8 @@ export function createBoardView(options: BoardOptions): BoardView {
         if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
       } catch (error: unknown) {
         message = `Board not opened: ${String(error)}`;
+      } finally {
+        loading = false;
       }
       editing = false;
       options.onError(message);

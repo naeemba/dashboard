@@ -312,9 +312,11 @@ async function showPicker(): Promise<void> {
 }
 
 function report(task: Promise<void>): void {
-  task.catch((error: unknown) => {
-    showError(`Failed to open project: ${String(error)}`);
-  });
+  task.then(
+    // Each producer clears its own message: nothing else can tell whether the one on screen is stale.
+    () => showError(''),
+    (error: unknown) => showError(`Failed to open project: ${String(error)}`),
+  );
 }
 
 function apply(action: Action): void {
