@@ -1,3 +1,4 @@
+import { MODE_KEYS, type Mode } from './modes';
 import { TERMINAL_COUNT, type Direction } from './terminals';
 
 export type Action =
@@ -7,6 +8,7 @@ export type Action =
   | { kind: 'project-move'; index: number }
   | { kind: 'project-picker' }
   | { kind: 'project-last' }
+  | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
   | { kind: 'terminal-next' }
   | { kind: 'terminal-previous' }
@@ -32,36 +34,22 @@ function digitIndex(code: string): number | null {
   return digit ? Number(digit[1]) - 1 : null;
 }
 
-export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
-  // Everything about projects is plain Ctrl on every platform, macOS included, so the set stays one
-  // gesture. The shell never sees these: no XOFF, no emacs reverse search, no readline
-  // operate-and-get-next. An uppercase letter is Caps Lock, which does not set shiftKey.
-  if (input.ctrlKey && !input.metaKey && !input.altKey) {
-    const project = digitIndex(input.code);
-    if (project !== null) {
-      return input.shiftKey ? { kind: 'project-move', index: project } : { kind: 'project-jump', index: project };
-    }
-    if (input.shiftKey) return null;
-    if (input.key === 's' || input.key === 'S') return { kind: 'project-picker' };
-    if (input.key === 'o' || input.key === 'O') return { kind: 'project-last' };
-  }
-
+// Keys that address a pane. They only mean something while panes are on screen: in nvim and board mode
+// there is no grid to focus into and nothing to move between.
+function paneShortcut(input: KeyInput, isMac: boolean): Action | null {
   if (input.altKey && !input.metaKey && !input.ctrlKey && !input.shiftKey) {
     const direction = VIM_DIRECTIONS[input.code];
     return direction ? { kind: 'terminal-move', direction } : null;
   }
 
   const modifier = isMac ? input.metaKey : input.ctrlKey;
-  if (!modifier || input.altKey) return null;
+  if (!modifier || input.altKey || input.shiftKey) return null;
 
-  if (input.shiftKey) return null;
   const terminal = digitIndex(input.code);
   if (terminal !== null) return terminal < TERMINAL_COUNT ? { kind: 'terminal-focus', index: terminal } : null;
 
-  // `key`, not `code`, so the brackets follow the character on Dvorak and Colemak.
+  // `key`, not `code`, so the arrows and brackets follow the character on Dvorak and Colemak.
   switch (input.key) {
-    case ']': return { kind: 'project-next' };
-    case '[': return { kind: 'project-previous' };
     case 'ArrowRight': return { kind: 'terminal-next' };
     case 'ArrowLeft': return { kind: 'terminal-previous' };
     // Ghostty sends Ctrl+U for Cmd+Backspace, so the shell clears the line — zsh binds ^U to
@@ -71,4 +59,34 @@ export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
     case 'Backspace': return isMac ? { kind: 'terminal-input', data: '\x15' } : null;
     default: return null;
   }
+}
+
+export function mapShortcut(input: KeyInput, isMac: boolean, mode: Mode = 'terminals'): Action | null {
+  // Everything about projects and modes is plain Ctrl on every platform, macOS included, so the set
+  // stays one gesture. The shell never sees these: no XOFF, no emacs reverse search, no readline
+  // operate-and-get-next. An uppercase letter is Caps Lock, which does not set shiftKey.
+  if (input.ctrlKey && !input.metaKey && !input.altKey) {
+    const project = digitIndex(input.code);
+    if (project !== null) {
+      return input.shiftKey ? { kind: 'project-move', index: project } : { kind: 'project-jump', index: project };
+    }
+    if (input.shiftKey) return null;
+    const letter = input.key.toLowerCase();
+    if (letter === 's') return { kind: 'project-picker' };
+    if (letter === 'o') return { kind: 'project-last' };
+    const wanted = MODE_KEYS[letter];
+    // The key naming the mode you are already in belongs to whatever runs there. Ctrl+N completes a
+    // word in nvim and Ctrl+T transposes characters in the shell; taking those would cost more than
+    // the shortcut is worth. You leave a mode by naming a different one.
+    if (wanted !== undefined) return wanted === mode ? null : { kind: 'mode-set', mode: wanted };
+  }
+
+  // Cycling projects answers from every mode, so a board is never a dead end.
+  const modifier = isMac ? input.metaKey : input.ctrlKey;
+  if (modifier && !input.altKey && !input.shiftKey) {
+    if (input.key === ']') return { kind: 'project-next' };
+    if (input.key === '[') return { kind: 'project-previous' };
+  }
+
+  return mode === 'terminals' ? paneShortcut(input, isMac) : null;
 }

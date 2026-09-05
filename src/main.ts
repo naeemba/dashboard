@@ -14,6 +14,8 @@ import { isOpenableLink } from './links';
 import { pickShell, SHELL_COMMAND_FLAG } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
+import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import type { Board } from './board';
 
 if (started) app.quit();
 
@@ -29,36 +31,51 @@ const projects: Project[] = [];
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const shellCommand = pickShell(process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
-const terminalDirectories = new Map<string, string>();
+// What each terminal id runs and where. The nvim pane is registered here like any other, which is
+// what lets the renderer start it later through the ordinary restart path.
+const terminalCommands = new Map<string, { command: string; directory: string }>();
 let mainWindow: BrowserWindow;
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
 }
 
-function spawnShell(id: string, directory: string): void {
-  const shellProcess = pty.spawn(shellCommand, [], {
-    name: 'xterm-256color',
-    cols: 80,
-    rows: 24,
-    cwd: directory,
-    env: process.env as Record<string, string>,
-  });
-  shellProcess.onData((data) => sendToRenderer('pty:data', id, data));
-  shellProcess.onExit(({ exitCode }) => {
+function spawnTerminal(id: string): void {
+  const entry = terminalCommands.get(id);
+  if (entry === undefined) return;
+  let terminalProcess: pty.IPty;
+  try {
+    terminalProcess = pty.spawn(entry.command, [], {
+      name: 'xterm-256color',
+      cols: 80,
+      rows: 24,
+      cwd: entry.directory,
+      env: process.env as Record<string, string>,
+    });
+  } catch {
+    // nvim may simply not be installed. The pane shows the same exit line a dead shell shows,
+    // rather than the spawn taking the window down.
+    sendToRenderer('pty:exit', id, 127);
+    return;
+  }
+  terminalProcess.onData((data) => sendToRenderer('pty:data', id, data));
+  terminalProcess.onExit(({ exitCode }) => {
     shells.delete(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
-  shells.set(id, shellProcess);
+  shells.set(id, terminalProcess);
 }
 
+// The five shells start with the project. The editor is registered but not started: opening nine
+// projects should not launch nine editors, each with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
-    terminalDirectories.set(id, project.path);
-    spawnShell(id, project.path);
+    terminalCommands.set(id, { command: shellCommand, directory: project.path });
+    spawnTerminal(id);
   }
+  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT), { command: 'nvim', directory: project.path });
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -90,9 +107,21 @@ ipcMain.on('link:open', (_event, url: string) => {
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
 ipcMain.on('pty:restart', (_event, id: string) => {
-  const directory = terminalDirectories.get(id);
-  if (directory !== undefined && !shells.has(id)) spawnShell(id, directory);
+  if (!shells.has(id)) spawnTerminal(id);
 });
+// Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
+// is a convenience — writing the two explanation files — so a read-only project folder must not cost
+// the user a board.json that is sitting right there and perfectly readable.
+ipcMain.handle('board:read', (_event, projectPath: string) => {
+  try {
+    seedBoardDirectory(projectPath);
+  } catch {
+    // No explanation files this time.
+  }
+  return readBoard(projectPath);
+});
+// invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
+ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => writeBoard(projectPath, board));
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([

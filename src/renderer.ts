@@ -6,7 +6,9 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { mapShortcut, type Action } from './shortcuts';
+import { type Mode } from './modes';
 import { openPicker } from './picker';
+import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
@@ -21,8 +23,22 @@ for (const [name, value] of Object.entries(THEME)) {
 }
 document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
 
+// The editor is a sixth pty for the project, sitting one past the grid's five.
+const EDITOR_INDEX = TERMINAL_COUNT;
+
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
-type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number; slot: number };
+type Page = {
+  project: Project;
+  element: HTMLElement;
+  views: Record<Mode, HTMLElement>;
+  mode: Mode;
+  panes: Pane[];
+  focused: number;
+  slot: number;
+  editor: Pane | null;
+  editorStarted: boolean;
+  board: BoardView | null;
+};
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
@@ -34,7 +50,22 @@ const statusProjects = document.createElement('span');
 statusProjects.className = 'projects';
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-statusElement.append(statusProjects, statusTerminal);
+// Its own span, between the two, because renderStatus() rebuilds the tab strip on every keystroke.
+// A message written into that span is gone by the next arrow key, which is how the salvage notice
+// used to disappear before anyone could read it.
+const statusError = document.createElement('span');
+statusError.className = 'error';
+statusElement.append(statusProjects, statusError, statusTerminal);
+
+// Whoever wrote the message on screen owns it, and only that owner may clear it. Without the owner a
+// clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
+// look at another project's board and the message is gone while the card still is not on disk.
+let errorOwner = '';
+function showError(owner: string, message: string): void {
+  if (message === '' && errorOwner !== owner) return;
+  errorOwner = message === '' ? '' : owner;
+  statusError.textContent = message;
+}
 const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
@@ -43,6 +74,13 @@ let activeIndex = 0;
 // Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
+
+// The right-hand span says which view you are in, and for terminals which pane has the keyboard.
+function modeLabel(page: Page): string {
+  if (page.mode === 'nvim') return 'nvim';
+  if (page.mode === 'board') return `board · ${page.board?.columnName() ?? ''}`;
+  return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
+}
 
 function renderStatus(): void {
   if (pages.length === 0) {
@@ -61,7 +99,7 @@ function renderStatus(): void {
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
+  statusTerminal.textContent = modeLabel(page);
 }
 
 function focusTerminal(index: number): void {
@@ -73,30 +111,71 @@ function focusTerminal(index: number): void {
   renderStatus();
 }
 
+// Switching mode is per page, so each project keeps the view you left it on. A dead project has no
+// views to switch between and ignores the keys.
+function setMode(mode: Mode): void {
+  const page = pages[activeIndex];
+  if (page.project.missing) return;
+  page.mode = mode;
+  for (const [name, view] of Object.entries(page.views)) view.hidden = name !== mode;
+  focusMode(page, true);
+}
+
+// `entering` is true for a genuine arrival at the page's current mode — switching modes, or switching to
+// a different page — and false for merely reclaiming the keyboard, such as the picker closing on the
+// page you never left. Only a genuine arrival may start nvim or re-read the board: re-opening the board
+// on every refocus would throw away its undo step each time, since board.open() resets it.
+function focusMode(page: Page, entering: boolean): void {
+  if (page.mode === 'terminals') return focusTerminal(page.focused);
+  if (page.mode === 'nvim' && page.editor) {
+    // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
+    // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.
+    if (entering && !page.editorStarted) {
+      page.editorStarted = true;
+      bridge.restart(terminalId(page.slot, EDITOR_INDEX));
+      bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
+    }
+    page.editor.terminal.focus();
+  }
+  if (page.mode === 'board' && page.board) {
+    // open() never rejects — a failed read reports itself through onError and still renders — so no
+    // report() wrapper is needed here.
+    if (entering) void page.board.open();
+    else page.board.element.focus();
+  }
+  renderStatus();
+}
+
 function positionOfSlot(slot: number | null): number {
   return pages.findIndex((page) => page.slot === slot);
 }
 
 // Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
-  for (const page of pages) for (const pane of page.panes) pane.fit.fit();
+  for (const page of pages) {
+    for (const pane of page.panes) pane.fit.fit();
+    page.editor?.fit.fit();
+  }
 }
 
 function showPage(index: number): void {
   if (pages.length === 0) return renderStatus();
   const next = (index + pages.length) % pages.length;
-  if (next !== activeIndex) previousSlot = pages[activeIndex].slot;
+  // Landing back on the page you are already on — Escape closing the picker, a folder dialog cancelled —
+  // only needs its keyboard focus back, not a fresh arrival at its mode.
+  if (next === activeIndex) return focusMode(pages[activeIndex], false);
+  previousSlot = pages[activeIndex].slot;
   activeIndex = next;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
-  focusTerminal(pages[activeIndex].focused);
+  focusMode(pages[activeIndex], true);
 }
 
-function buildPane(page: Page, id: string, terminalIndex: number): Pane {
+function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
   const container = document.createElement('div');
   container.className = 'pane';
-  page.element.append(container);
+  view.append(container);
 
   const terminal = new Terminal({
     cursorBlink: true,
@@ -136,32 +215,57 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
     terminal.input(`${paths.map((entry) => quoteForShell(entry, bridge.shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
-  terminal.textarea?.addEventListener('focus', () => {
-    if (page.focused === terminalIndex) return;
-    page.focused = terminalIndex;
-    renderStatus();
-  });
+  terminal.textarea?.addEventListener('focus', () => onFocus?.());
   return pane;
 }
 
 function buildPage(project: Project, slot: number): Page {
   const element = document.createElement('section');
   element.className = 'page';
-  const page: Page = { project, element, panes: [], focused: 0, slot };
+  const views: Record<Mode, HTMLElement> = {
+    terminals: document.createElement('div'),
+    nvim: document.createElement('div'),
+    board: document.createElement('div'),
+  };
+  for (const [mode, view] of Object.entries(views)) {
+    view.className = `view view-${mode}`;
+    view.hidden = mode !== 'terminals';
+  }
+  const page: Page = {
+    project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null, editorStarted: false,
+    board: null,
+  };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
-  // instead of a blank one with no shells.
+  // instead of a blank one with no shells. A dead project has no views: there is nothing to run nvim in
+  // and nowhere to keep a board.
   if (project.missing) {
     element.classList.add('missing');
     element.textContent = `Directory not found: ${project.path}`;
     return page;
   }
+  element.append(...Object.values(views));
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(slot, terminalIndex);
-    const pane = buildPane(page, id, terminalIndex);
+    const pane = buildPane(views.terminals, id, () => {
+      if (page.focused === terminalIndex) return;
+      page.focused = terminalIndex;
+      renderStatus();
+    });
     page.panes.push(pane);
     panesById.set(id, pane);
   }
+  const editorId = terminalId(slot, EDITOR_INDEX);
+  page.editor = buildPane(views.nvim, editorId);
+  panesById.set(editorId, page.editor);
+  page.board = createBoardView({
+    projectPath: project.path,
+    bridge,
+    onChanged: renderStatus,
+    // A slot each, so one project's board never clears another one's failure.
+    onError: (message) => showError(`board:${slot}`, message),
+  });
+  views.board.append(page.board.element);
   return page;
 }
 
@@ -214,9 +318,12 @@ async function showPicker(): Promise<void> {
 }
 
 function report(task: Promise<void>): void {
-  task.catch((error: unknown) => {
-    statusProjects.textContent = `Failed to open project: ${String(error)}`;
-  });
+  task.then(
+    // Clears its own message and no one else's: a project that opens says nothing about a board that
+    // could not be written.
+    () => showError('project', ''),
+    (error: unknown) => showError('project', `Failed to open project: ${String(error)}`),
+  );
 }
 
 function apply(action: Action): void {
@@ -234,6 +341,7 @@ function apply(action: Action): void {
       if (action.index < pages.length) showPage(action.index);
       return;
     case 'project-move': return moveProject(action.index);
+    case 'mode-set': return setMode(action.mode);
     case 'terminal-focus': return focusTerminal(action.index);
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
@@ -245,9 +353,10 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker owns every key typed inside it. xterm's textarea is outside it, so a pane keeps its shortcuts.
-  if (event.target instanceof Element && event.target.closest('.picker')) return;
-  const action = mapShortcut(event, isMac);
+  // The picker and a card being edited own every key typed inside them. xterm's textarea is outside
+  // both, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest('.picker, .board-edit')) return;
+  const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
@@ -282,5 +391,5 @@ async function start(): Promise<void> {
 }
 
 start().catch((error: unknown) => {
-  statusProjects.textContent = `Failed to start: ${String(error)}`;
+  showError('start', `Failed to start: ${String(error)}`);
 });
