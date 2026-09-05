@@ -11,7 +11,7 @@ import {
   type Project,
 } from './projects';
 import { pickShell } from './shell';
-import { THEME } from './theme';
+import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 
 if (started) app.quit();
@@ -99,6 +99,10 @@ function createWindow(): void {
     width: 1400,
     height: 900,
     backgroundColor: THEME.background,
+    // The renderer draws its own title row, so the window chrome is dark all the way up, the way Ghostty
+    // looks. The traffic lights sit inside that row; their frame is 16px tall, so this centres them.
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 13, y: (TITLE_BAR_HEIGHT - 16) / 2 },
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

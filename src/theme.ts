@@ -4,6 +4,10 @@ import type { ITheme } from '@xterm/xterm';
 // default 16-color palette. The renderer publishes every entry as a CSS custom property so index.css styles
 // the chrome from the same values, and the main process paints the window with the background before the
 // renderer exists — otherwise the first frame is white.
+// Height of the title row. Main needs it to place the traffic lights inside the row; the renderer
+// publishes it as a custom property so index.css sizes the row from the same number.
+export const TITLE_BAR_HEIGHT = 36;
+
 export const THEME: ITheme = {
   background: '#282c34',
   foreground: '#ffffff',

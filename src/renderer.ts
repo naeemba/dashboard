@@ -6,7 +6,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
 import { openPicker } from './picker';
-import { THEME } from './theme';
+import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
 
@@ -17,6 +17,7 @@ const FONT_SIZE = 13;
 for (const [name, value] of Object.entries(THEME)) {
   document.documentElement.style.setProperty(`--${name}`, String(value));
 }
+document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
 type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number; slot: number };
@@ -26,8 +27,10 @@ const isMac = bridge.platform === 'darwin';
 const statusElement = document.getElementById('status') as HTMLElement;
 // Projects on the left, the focused pane pushed to the right, so the two are never read as one list.
 const statusProjects = document.createElement('span');
+statusProjects.className = 'projects';
 const statusTerminal = document.createElement('span');
 statusElement.append(statusProjects, statusTerminal);
+const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 const panesById = new Map<string, Pane>();
@@ -38,14 +41,21 @@ let previousSlot: number | null = null;
 
 function renderStatus(): void {
   if (pages.length === 0) {
+    // document.title already holds the app's name, so the empty title row does not spell it out again.
+    titleElement.textContent = `📁 ${document.title}`;
     statusProjects.textContent = 'Ctrl+S opens the project list';
     statusTerminal.textContent = '';
     return;
   }
   const page = pages[activeIndex];
-  statusProjects.textContent = pages
-    .map((entry, index) => (index === activeIndex ? `[${entry.project.name}]` : entry.project.name))
-    .join('  ');
+  titleElement.textContent = `📁 ${page.project.name}`;
+  // A span each: the open project is marked by a highlight, the way a tab strip marks one.
+  statusProjects.replaceChildren(...pages.map((entry, index) => {
+    const tab = document.createElement('span');
+    tab.className = index === activeIndex ? 'project active' : 'project';
+    tab.textContent = entry.project.name;
+    return tab;
+  }));
   statusTerminal.textContent = page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
 }
 

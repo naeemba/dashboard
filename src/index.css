@@ -12,14 +12,46 @@ body {
   flex-direction: column;
 }
 
-#status {
+/* The two rows of chrome above the terminals read as one dark bar, so they share its colour and its
+   refusal to be selected. */
+#title, #status {
   display: flex;
+  background: var(--black);
+  user-select: none;
+}
+
+/* Stands in for the system titlebar: the traffic lights overlay its left padding, and dragging it
+   moves the window. */
+#title {
+  align-items: center;
+  height: var(--title-bar-height);
+  padding-left: 80px;
+  color: var(--brightWhite);
+  font-weight: 700;
+  -webkit-app-region: drag;
+}
+
+#status {
   justify-content: space-between;
   gap: 16px;
   padding: 4px 8px;
-  background: var(--black);
   white-space: pre;
-  user-select: none;
+}
+
+.projects {
+  display: flex;
+  gap: 4px;
+}
+
+.project {
+  padding: 0 6px;
+}
+
+/* The open project, marked the way a tab strip marks one. */
+.project.active {
+  background: var(--brightBlack);
+  color: var(--brightWhite);
+  font-weight: 700;
 }
 
 /* The pane number is a detail about the current project, not another project in the list. */
