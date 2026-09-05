@@ -210,6 +210,8 @@ function apply(action: Action): void {
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
+    // Straight to the focused shell: onData already routes it to the pty.
+    case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
   }
 }
 
