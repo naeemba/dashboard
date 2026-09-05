@@ -71,9 +71,10 @@ export function mapShortcut(input: KeyInput, isMac: boolean, mode: Mode = 'termi
       return input.shiftKey ? { kind: 'project-move', index: project } : { kind: 'project-jump', index: project };
     }
     if (input.shiftKey) return null;
-    if (input.key === 's' || input.key === 'S') return { kind: 'project-picker' };
-    if (input.key === 'o' || input.key === 'O') return { kind: 'project-last' };
-    const wanted = MODE_KEYS[input.key.toLowerCase()];
+    const letter = input.key.toLowerCase();
+    if (letter === 's') return { kind: 'project-picker' };
+    if (letter === 'o') return { kind: 'project-last' };
+    const wanted = MODE_KEYS[letter];
     // The key naming the mode you are already in belongs to whatever runs there. Ctrl+N completes a
     // word in nvim and Ctrl+T transposes characters in the shell; taking those would cost more than
     // the shortcut is worth. You leave a mode by naming a different one.

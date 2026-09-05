@@ -35,7 +35,8 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 - \`cards\` is ordered. The first card is at the top of its column.
 - \`id\` is a UUID. Keep it stable when you edit a card. A card written without one is given an id
   the next time the app reads the file.
-- \`title\` is one line. A card with no \`title\` is dropped when the app reads the file.
+- \`title\` is one line. A card with no \`title\`, or a blank one, is dropped when the app reads
+  the file.
 - \`notes\` is free text. The app keeps it but has no editor for it yet.
 
 Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
@@ -64,8 +65,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
+// can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
 function parseCard(value: unknown, makeId: () => string): Card | null {
-  if (!isRecord(value) || typeof value.title !== 'string') return null;
+  if (!isRecord(value) || typeof value.title !== 'string' || value.title.trim() === '') return null;
   return {
     id: typeof value.id === 'string' ? value.id : makeId(),
     title: value.title,
@@ -82,9 +85,9 @@ function parseColumn(value: unknown, makeId: () => string): Column | null {
   };
 }
 
-// Throws where parseBoard falls back, so readBoard can tell "nothing here made sense" apart from
-// "no file at all" and only salvage the former.
-function parseBoardStrict(text: string, makeId: () => string): Board {
+// Throws rather than falling back, so readBoard can tell "nothing here made sense" apart from "no
+// file at all" and only salvage the former.
+export function parseBoard(text: string, makeId: () => string = () => crypto.randomUUID()): Board {
   const stored: unknown = JSON.parse(text);
   if (!isRecord(stored) || !Array.isArray(stored.columns)) throw new Error('Not a board');
   const columns = stored.columns
@@ -92,17 +95,6 @@ function parseBoardStrict(text: string, makeId: () => string): Board {
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
   return { columns };
-}
-
-// The board is written by the app, by hand, and by agents working in the repository, so reading it
-// keeps whatever it can and never throws. A file it cannot make sense of reads as a fresh board —
-// the alternative is a board that refuses to open because one card lost its title.
-export function parseBoard(text: string, makeId: () => string = () => crypto.randomUUID()): Board {
-  try {
-    return parseBoardStrict(text, makeId);
-  } catch {
-    return emptyBoard();
-  }
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but
@@ -118,7 +110,7 @@ export function readBoard(projectPath: string): BoardRead {
     return { board: emptyBoard(), brokenFile: null };
   }
   try {
-    return { board: parseBoardStrict(text, () => crypto.randomUUID()), brokenFile: null };
+    return { board: parseBoard(text), brokenFile: null };
   } catch {
     const brokenFile = brokenBoardPath(projectPath);
     try {

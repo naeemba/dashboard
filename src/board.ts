@@ -11,7 +11,7 @@ export type Selection = { column: number; card: number };
 // Every operation answers with both, because a card that moves takes the selection with it.
 export type Change = { board: Board; selection: Selection };
 
-export const DEFAULT_COLUMNS = ['Todo', 'Doing', 'Done'];
+const DEFAULT_COLUMNS = ['Todo', 'Doing', 'Done'];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };

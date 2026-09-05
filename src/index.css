@@ -62,6 +62,15 @@ body {
   font-weight: 700;
 }
 
+/* Failures land between the tab strip and the pane number, in the one span renderStatus() leaves
+   alone. It shrinks instead of pushing the tabs off the row when the message is a long path. */
+.error {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--red);
+}
+
 /* The pane number is a detail about the current project, not another project in the list. */
 .terminal {
   color: var(--brightBlack);

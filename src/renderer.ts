@@ -50,7 +50,17 @@ const statusProjects = document.createElement('span');
 statusProjects.className = 'projects';
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-statusElement.append(statusProjects, statusTerminal);
+// Its own span, between the two, because renderStatus() rebuilds the tab strip on every keystroke.
+// A message written into that span is gone by the next arrow key, which is how the salvage notice
+// used to disappear before anyone could read it.
+const statusError = document.createElement('span');
+statusError.className = 'error';
+statusElement.append(statusProjects, statusError, statusTerminal);
+
+// The empty string clears it: an error stays until it is replaced or a board opens cleanly.
+function showError(message: string): void {
+  statusError.textContent = message;
+}
 const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
@@ -247,7 +257,7 @@ function buildPage(project: Project, slot: number): Page {
     projectPath: project.path,
     bridge,
     onChanged: renderStatus,
-    onError: (message) => { statusProjects.textContent = message; },
+    onError: showError,
   });
   views.board.append(page.board.element);
   return page;
@@ -303,7 +313,7 @@ async function showPicker(): Promise<void> {
 
 function report(task: Promise<void>): void {
   task.catch((error: unknown) => {
-    statusProjects.textContent = `Failed to open project: ${String(error)}`;
+    showError(`Failed to open project: ${String(error)}`);
   });
 }
 
@@ -372,5 +382,5 @@ async function start(): Promise<void> {
 }
 
 start().catch((error: unknown) => {
-  statusProjects.textContent = `Failed to start: ${String(error)}`;
+  showError(`Failed to start: ${String(error)}`);
 });

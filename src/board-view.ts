@@ -1,14 +1,13 @@
+import { deleteCard, moveCard, moveSelection, type Change } from './board';
 import {
-  addCard,
-  deleteCard,
-  emptyBoard,
-  moveCard,
-  moveSelection,
-  renameCard,
-  type Board,
-  type Change,
-  type Selection,
-} from './board';
+  addBlankCard,
+  applyChange,
+  commitTitle,
+  initialBoardState,
+  loadBoard,
+  undoChange,
+  type BoardState,
+} from './board-state';
 import type { DashboardBridge } from './bridge';
 import type { Direction } from './terminals';
 
@@ -17,6 +16,8 @@ export type BoardOptions = {
   bridge: DashboardBridge;
   // The status bar names the column the selection is in, so it is redrawn whenever that can change.
   onChanged(): void;
+  // The empty string clears the last message: opening a board that reads cleanly must not leave the
+  // previous failure sitting on screen.
   onError(message: string): void;
 };
 
@@ -40,52 +41,33 @@ export function createBoardView(options: BoardOptions): BoardView {
   // selection rather than the browser's focus ring.
   element.tabIndex = 0;
 
-  let board: Board = emptyBoard();
-  let selection: Selection = { column: 0, card: 0 };
-  // One step, held in memory. `d` deletes on a single keystroke, so there has to be a way back from a
-  // mis-hit; anything deeper is a feature nobody asked for.
-  let previous: Board | null = null;
+  // Every rule about undo, the `n` pairing and no-op changes lives in board-state.ts, which hands back
+  // the same object when nothing happened. This file is the DOM and the keys.
+  let state: BoardState = initialBoardState();
   let editing = false;
-  // `n` is two changes — add the blank card, then commit the typed title — that must undo as one. Set
-  // while that pair is in flight so the second change keeps the first one's `previous` instead of
-  // overwriting it with the just-added blank card.
-  let addingCard = false;
 
   function save(): void {
-    options.bridge.writeBoard(options.projectPath, board).catch((error: unknown) => {
+    options.bridge.writeBoard(options.projectPath, state.board).catch((error: unknown) => {
       options.onError(`Board not saved: ${String(error)}`);
     });
   }
 
-  // Every operation in board.ts returns the same board object, unchanged, when it has nothing to do —
-  // moving the last card further down, deleting from an empty column. Without this check, that no-op
-  // still burns the undo step and rewrites the file, so a real change made just before it becomes
-  // unrecoverable for no reason.
-  function change(next: Change): void {
-    if (next.board === board) return;
-    if (!addingCard) previous = board;
-    addingCard = false;
-    board = next.board;
-    selection = next.selection;
+  // Redraws either way — a keystroke that changed nothing still has to put the screen back, such as
+  // Escape out of an edit — but only writes the file when the board actually moved.
+  function apply(next: BoardState): void {
+    if (next !== state) {
+      state = next;
+      save();
+    }
     render();
-    save();
   }
 
-  function undo(): void {
-    if (previous === null) return;
-    board = previous;
-    previous = null;
-    selection = {
-      column: Math.min(selection.column, board.columns.length - 1),
-      card: 0,
-    };
-    render();
-    save();
+  function change(next: Change): void {
+    apply(applyChange(state, next));
   }
 
   function startEditing(): void {
-    const card = board.columns[selection.column]?.cards[selection.card];
-    if (!card) return;
+    if (!state.board.columns[state.selection.column]?.cards[state.selection.card]) return;
     editing = true;
     render();
     const input = element.querySelector('.board-edit');
@@ -95,13 +77,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     }
   }
 
-  // Enter and Escape both commit: what you typed is what you meant, and there is no separate save key
-  // anywhere else in the app either. A card left with an empty title is dropped rather than kept as a
-  // blank row, which is the only way `n` can leave one behind.
   function commitEditing(title: string): void {
     editing = false;
-    const trimmed = title.trim();
-    change(trimmed === '' ? deleteCard(board, selection) : renameCard(board, selection, trimmed));
+    apply(commitTitle(state, title));
     element.focus();
   }
 
@@ -128,14 +106,14 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   function render(): void {
-    element.replaceChildren(...board.columns.map((column, columnIndex) => {
+    element.replaceChildren(...state.board.columns.map((column, columnIndex) => {
       const section = document.createElement('section');
       section.className = 'board-column';
       const heading = document.createElement('h2');
       heading.textContent = `${column.name} (${column.cards.length})`;
       const list = document.createElement('ul');
       list.append(...column.cards.map((card, cardIndex) =>
-        renderCard(card.title, columnIndex === selection.column && cardIndex === selection.card)));
+        renderCard(card.title, columnIndex === state.selection.column && cardIndex === state.selection.card)));
       if (column.cards.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'board-empty';
@@ -156,8 +134,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     const direction = ARROW_DIRECTIONS[event.key];
     if (direction) {
       event.preventDefault();
-      if (event.shiftKey) return change(moveCard(board, selection, direction));
-      selection = moveSelection(board, selection, direction);
+      if (event.shiftKey) return change(moveCard(state.board, state.selection, direction));
+      state = { ...state, selection: moveSelection(state.board, state.selection, direction) };
       return render();
     }
     if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -167,15 +145,14 @@ export function createBoardView(options: BoardOptions): BoardView {
         return startEditing();
       case 'n':
         event.preventDefault();
-        change(addCard(board, selection, crypto.randomUUID(), ''));
-        addingCard = true;
+        apply(addBlankCard(state, crypto.randomUUID()));
         return startEditing();
       case 'd':
         event.preventDefault();
-        return change(deleteCard(board, selection));
+        return change(deleteCard(state.board, state.selection));
       case 'u':
         event.preventDefault();
-        return undo();
+        return apply(undoChange(state));
     }
   });
 
@@ -184,27 +161,31 @@ export function createBoardView(options: BoardOptions): BoardView {
     // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
     // at the board is not picked up until you switch away and back. Watch the file if that bites.
     //
-    // A failed read still has to leave the board on screen usable from the keyboard — render() and
-    // focus() run either way, on whatever board is already in memory, with the error in the status bar
-    // instead of a fresh one. A control the keyboard can't reach is unfinished.
+    // Focus is taken before the read, not after: the terminals view is already hidden by the time
+    // open() runs, so focus is sitting on the body and a keystroke typed straight after Ctrl+B would
+    // land nowhere. Main's read is synchronous fs, which on a cold or network-mounted folder is
+    // comfortably longer than the gap between two keys.
+    //
+    // A failed read still has to leave the board on screen usable from the keyboard — render() runs
+    // either way, on whatever board is already in memory, with the error in the status bar instead of
+    // a fresh board. A control the keyboard can't reach is unfinished.
     async open(): Promise<void> {
+      element.focus();
+      let message = '';
       try {
         const read = await options.bridge.readBoard(options.projectPath);
-        board = read.board;
-        previous = null;
-        addingCard = false;
+        state = loadBoard(state, read.board);
         // The old file is still on disk under this name, so the cards are not gone — just not shown.
-        if (read.brokenFile) options.onError(`Board file was damaged; kept as ${read.brokenFile}`);
+        if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
       } catch (error: unknown) {
-        options.onError(`Board not opened: ${String(error)}`);
+        message = `Board not opened: ${String(error)}`;
       }
       editing = false;
-      selection = { column: Math.min(selection.column, board.columns.length - 1), card: 0 };
+      options.onError(message);
       render();
-      element.focus();
     },
     columnName(): string {
-      return board.columns[selection.column]?.name ?? '';
+      return state.board.columns[state.selection.column]?.name ?? '';
     },
   };
 }

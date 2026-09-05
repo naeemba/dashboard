@@ -21,16 +21,18 @@ describe('parseBoard', () => {
     expect(board.columns).toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n' }] }]);
   });
 
-  // A file edited by hand or by an agent must never stop the board opening.
-  it('falls back to an empty board on anything it cannot read', () => {
-    expect(columnNames(parseBoard('not json at all'))).toEqual(['Todo', 'Doing', 'Done']);
-    expect(columnNames(parseBoard('[]'))).toEqual(['Todo', 'Doing', 'Done']);
-    expect(columnNames(parseBoard('{"columns":"nope"}'))).toEqual(['Todo', 'Doing', 'Done']);
-    expect(columnNames(parseBoard('{"columns":[]}'))).toEqual(['Todo', 'Doing', 'Done']);
+  // readBoard turns each of these into the empty board and moves the file aside; parseBoard's job is
+  // only to say "this is not a board", loudly enough that readBoard can tell it apart from no file.
+  it('throws on anything that is not a board', () => {
+    expect(() => parseBoard('not json at all')).toThrow();
+    expect(() => parseBoard('[]')).toThrow();
+    expect(() => parseBoard('{"columns":"nope"}')).toThrow();
+    expect(() => parseBoard('{"columns":[]}')).toThrow();
   });
 
+  // A blank title counts as no title: kept, it would be a card you cannot see but can still select.
   it('drops a column with no name and a card with no title', () => {
-    const board = parseBoard('{"columns":[{"cards":[]},{"name":"Todo","cards":[{"id":"1"},{"id":"2","title":"a"}]}]}');
+    const board = parseBoard('{"columns":[{"cards":[]},{"name":"Todo","cards":[{"id":"1"},{"id":"2","title":"  "},{"id":"3","title":"a"}]}]}');
     expect(columnNames(board)).toEqual(['Todo']);
     expect(board.columns[0].cards.map((card) => card.title)).toEqual(['a']);
   });
