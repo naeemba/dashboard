@@ -3,7 +3,13 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { parseProjects, projectFromPath, replacesProject, type Project } from './projects';
+import {
+  projectFromPath,
+  readRecentPaths,
+  rememberRecentPath,
+  replacesProject,
+  type Project,
+} from './projects';
 import { pickShell } from './shell';
 import { THEME } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
@@ -16,7 +22,10 @@ const environmentFile = app.isPackaged
   : path.join(app.getAppPath(), '.env');
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
-const projects = parseProjects(process.env);
+// Empty at launch: every project comes from the picker, and the recents list remembers them across runs.
+const projects: Project[] = [];
+// The recently opened projects live next to the app's other per-user state.
+const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const shellCommand = pickShell(process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 const terminalDirectories = new Map<string, string>();
@@ -51,14 +60,17 @@ function spawnProject(project: Project, projectIndex: number): void {
   }
 }
 
-ipcMain.handle('projects:get', () => {
-  if (terminalDirectories.size === 0) projects.forEach(spawnProject);
-  return projects;
-});
-ipcMain.handle('projects:pick', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
-  if (canceled) return null;
-  const picked = projectFromPath(filePaths[0]);
+// Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
+ipcMain.handle('projects:recent', () =>
+  readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
+// A null path opens the folder dialog; a path from the picker skips it.
+ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
+  if (projectPath === null) {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+    if (canceled) return null;
+    projectPath = filePaths[0];
+  }
+  const picked = projectFromPath(projectPath);
   const matchIndex = projects.findIndex((project) => project.path === picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
@@ -66,6 +78,9 @@ ipcMain.handle('projects:pick', async () => {
     projects[index] = picked;
     spawnProject(picked, index);
   }
+  // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
+  // entry must not fail the open and strand them on a slot the renderer has no page for.
+  if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   return { index, project: projects[index], replaced };
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));

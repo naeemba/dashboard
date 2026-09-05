@@ -11,9 +11,8 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: '[', metaKey: true }), true)).toEqual({ kind: 'project-previous' });
   });
 
-  it('jumps to a project with Cmd+Shift+digit', () => {
-    expect(mapShortcut(key({ code: 'Digit3', key: '#', metaKey: true, shiftKey: true }), true))
-      .toEqual({ kind: 'project-jump', index: 2 });
+  it('leaves Cmd+digit to terminals, with nothing on Cmd+Shift+digit', () => {
+    expect(mapShortcut(key({ code: 'Digit3', key: '#', metaKey: true, shiftKey: true }), true)).toBeNull();
   });
 
   it('focuses a terminal with Cmd+1..5 and ignores Cmd+6..9', () => {
@@ -34,16 +33,7 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
   });
 
-  it('opens the project picker with Cmd+O', () => {
-    expect(mapShortcut(key({ code: 'KeyO', key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
-    // Caps Lock uppercases `key` without setting shiftKey.
-    expect(mapShortcut(key({ code: 'KeyO', key: 'O', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
-    // Dvorak puts O on the physical S key, and R on the physical O key.
-    expect(mapShortcut(key({ code: 'KeyS', key: 'o', metaKey: true }), true)).toEqual({ kind: 'project-pick' });
-    expect(mapShortcut(key({ code: 'KeyO', key: 'r', metaKey: true }), true)).toBeNull();
-  });
-
-  it('lets Ctrl through to the shell on macOS', () => {
+  it('lets Ctrl through to the shell on macOS, apart from the two project keys', () => {
     expect(mapShortcut(key({ key: 'c', ctrlKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), true)).toBeNull();
   });
@@ -65,16 +55,47 @@ describe('mapShortcut elsewhere', () => {
     expect(mapShortcut(key({ key: ']', metaKey: true }), false)).toBeNull();
   });
 
-  it('opens the project picker with Ctrl+O', () => {
-    expect(mapShortcut(key({ code: 'KeyO', key: 'o', ctrlKey: true }), false)).toEqual({ kind: 'project-pick' });
+  it('keeps the project keys on plain Ctrl', () => {
+    expect(mapShortcut(key({ code: 'KeyO', key: 'o', ctrlKey: true }), false)).toEqual({ kind: 'project-last' });
+    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true }), false)).toEqual({ kind: 'project-picker' });
   });
 });
 
 describe('mapShortcut on every platform', () => {
-  // Ctrl+S is the shell's XOFF and emacs' search, so it must never be a dashboard shortcut.
-  it('leaves Ctrl+S to the shell', () => {
-    expect(mapShortcut(key({ key: 's', ctrlKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ key: 's', ctrlKey: true }), false)).toBeNull();
+  // Ctrl+S opens the project list on both platforms, at the cost of the shell's XOFF and emacs' search.
+  it('goes back to the last project with Ctrl+O', () => {
+    expect(mapShortcut(key({ code: 'KeyO', key: 'o', ctrlKey: true }), true)).toEqual({ kind: 'project-last' });
+    // Caps Lock uppercases `key` without setting shiftKey.
+    expect(mapShortcut(key({ code: 'KeyO', key: 'O', ctrlKey: true }), true)).toEqual({ kind: 'project-last' });
+    // `key`, not `code`: on Dvorak the O character sits on the physical S key.
+    expect(mapShortcut(key({ code: 'KeyS', key: 'o', ctrlKey: true }), true)).toEqual({ kind: 'project-last' });
+    // Cmd+O opens nothing; the project list carries the folder dialog.
+    expect(mapShortcut(key({ code: 'KeyO', key: 'o', metaKey: true }), true)).toBeNull();
+  });
+
+  it('jumps to a project with Ctrl+1..9', () => {
+    expect(mapShortcut(key({ code: 'Digit3', key: '3', ctrlKey: true }), true)).toEqual({ kind: 'project-jump', index: 2 });
+    expect(mapShortcut(key({ code: 'Digit9', key: '9', ctrlKey: true }), false)).toEqual({ kind: 'project-jump', index: 8 });
+    // Ctrl+0 is not a project.
+    expect(mapShortcut(key({ code: 'Digit0', key: '0', ctrlKey: true }), true)).toBeNull();
+  });
+
+  it('moves the current project with Ctrl+Shift+1..9', () => {
+    // Shift rewrites `key` ("1" becomes "!"), so the branch reads `code`.
+    expect(mapShortcut(key({ code: 'Digit1', key: '!', ctrlKey: true, shiftKey: true }), true))
+      .toEqual({ kind: 'project-move', index: 0 });
+    expect(mapShortcut(key({ code: 'Digit4', key: '$', ctrlKey: true, shiftKey: true }), false))
+      .toEqual({ kind: 'project-move', index: 3 });
+  });
+
+  it('opens the project list with Ctrl+S', () => {
+    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true }), true)).toEqual({ kind: 'project-picker' });
+    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true }), false)).toEqual({ kind: 'project-picker' });
+    // Caps Lock uppercases `key` without setting shiftKey.
+    expect(mapShortcut(key({ code: 'KeyS', key: 'S', ctrlKey: true }), true)).toEqual({ kind: 'project-picker' });
+    // Cmd+S and Ctrl+Alt+S are not it.
+    expect(mapShortcut(key({ code: 'KeyS', key: 's', metaKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true, altKey: true }), true)).toBeNull();
   });
 
   it('moves between panes with Option+hjkl', () => {

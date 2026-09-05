@@ -13,10 +13,18 @@ body {
 }
 
 #status {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
   padding: 4px 8px;
   background: var(--black);
   white-space: pre;
   user-select: none;
+}
+
+/* The pane number is a detail about the current project, not another project in the list. */
+#status span:last-child {
+  color: var(--brightBlack);
 }
 
 #pages {
@@ -30,7 +38,7 @@ body {
   inset: 0;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 2fr 1fr;
   gap: 2px;
   background: var(--black);
 }
@@ -73,4 +81,77 @@ body {
    It shows through in the strip below the last row. Nothing scrolls with it anymore, so hide it. */
 .pane .xterm-viewport {
   display: none;
+}
+
+/* Project picker: a centred overlay above the pages. */
+.picker {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgb(0 0 0 / 50%);
+}
+
+.picker-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 90vw);
+  max-height: 60vh;
+  border: 1px solid var(--brightBlack);
+  background: var(--black);
+}
+
+.picker-search {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--brightBlack);
+  padding: 8px 10px;
+  outline: none;
+}
+
+.picker-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.picker-list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.picker-list li.highlighted {
+  background: var(--brightBlack);
+}
+
+.picker-name {
+  color: var(--brightWhite);
+}
+
+.picker-detail {
+  overflow: hidden;
+  color: var(--brightBlack);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker-list li.highlighted .picker-detail {
+  color: var(--white);
+}
+
+/* The last row opens the folder dialog; the rule sets it apart from the projects above it. */
+.picker-list li.picker-new {
+  border-top: 1px solid var(--brightBlack);
+}
+
+.picker-list li.picker-new .picker-name {
+  color: var(--blue);
 }

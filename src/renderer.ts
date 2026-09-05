@@ -5,6 +5,7 @@ import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { mapShortcut, type Action } from './shortcuts';
+import { openPicker } from './picker';
 import { THEME } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
@@ -18,27 +19,34 @@ for (const [name, value] of Object.entries(THEME)) {
 }
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
-type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number };
+type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number; slot: number };
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
 const statusElement = document.getElementById('status') as HTMLElement;
+// Projects on the left, the focused pane pushed to the right, so the two are never read as one list.
+const statusProjects = document.createElement('span');
+const statusTerminal = document.createElement('span');
+statusElement.append(statusProjects, statusTerminal);
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 const panesById = new Map<string, Pane>();
 let activeIndex = 0;
+// Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
+// Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
+let previousSlot: number | null = null;
 
 function renderStatus(): void {
   if (pages.length === 0) {
-    statusElement.textContent = `${isMac ? 'Cmd' : 'Ctrl'}+O opens a project`;
+    statusProjects.textContent = 'Ctrl+S opens the project list';
+    statusTerminal.textContent = '';
     return;
   }
   const page = pages[activeIndex];
-  const names = pages
+  statusProjects.textContent = pages
     .map((entry, index) => (index === activeIndex ? `[${entry.project.name}]` : entry.project.name))
     .join('  ');
-  const terminal = page.panes.length > 0 ? `   terminal ${page.focused + 1}` : '';
-  statusElement.textContent = names + terminal;
+  statusTerminal.textContent = page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
 }
 
 function focusTerminal(index: number): void {
@@ -50,6 +58,10 @@ function focusTerminal(index: number): void {
   renderStatus();
 }
 
+function positionOfSlot(slot: number | null): number {
+  return pages.findIndex((page) => page.slot === slot);
+}
+
 // Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
   for (const page of pages) for (const pane of page.panes) pane.fit.fit();
@@ -57,7 +69,9 @@ function fitAllPages(): void {
 
 function showPage(index: number): void {
   if (pages.length === 0) return renderStatus();
-  activeIndex = (index + pages.length) % pages.length;
+  const next = (index + pages.length) % pages.length;
+  if (next !== activeIndex) previousSlot = pages[activeIndex].slot;
+  activeIndex = next;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
@@ -102,17 +116,20 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   return pane;
 }
 
-function buildPage(project: Project, projectIndex: number): Page {
+function buildPage(project: Project, slot: number): Page {
   const element = document.createElement('section');
   element.className = 'page';
-  const page: Page = { project, element, panes: [], focused: 0 };
+  const page: Page = { project, element, panes: [], focused: 0, slot };
+  // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
+  // is deleting the folder between the dialog closing and the existence check. Then you get this page
+  // instead of a blank one with no shells.
   if (project.missing) {
     element.classList.add('missing');
     element.textContent = `Directory not found: ${project.path}`;
     return page;
   }
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
-    const id = terminalId(projectIndex, terminalIndex);
+    const id = terminalId(slot, terminalIndex);
     const pane = buildPane(page, id, terminalIndex);
     page.panes.push(pane);
     panesById.set(id, pane);
@@ -121,41 +138,74 @@ function buildPage(project: Project, projectIndex: number): Page {
 }
 
 // Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
-// live one once the folder exists.
-function setPage(project: Project, projectIndex: number): void {
-  const page = buildPage(project, projectIndex);
-  const existing = pages[projectIndex];
-  if (existing) existing.element.replaceWith(page.element);
-  else pagesElement.append(page.element);
-  pages[projectIndex] = page;
+// live one once the folder exists. A replacement keeps the old page's position in the list.
+function setPage(project: Project, slot: number): void {
+  const page = buildPage(project, slot);
+  const existing = positionOfSlot(slot);
+  if (existing === -1) {
+    pagesElement.append(page.element);
+    pages.push(page);
+    return;
+  }
+  pages[existing].element.replaceWith(page.element);
+  pages[existing] = page;
+}
+
+// Moves the project on screen to a position, the way you would drag a tab. Slots and shells are
+// untouched; only the order you cycle and jump through changes.
+function moveProject(index: number): void {
+  if (index >= pages.length) return;
+  pages.splice(index, 0, ...pages.splice(activeIndex, 1));
+  activeIndex = index;
+  renderStatus();
 }
 
 // Main owns the decision and reports it as `replaced`, so a page is only rebuilt when its shells were.
-async function pickProject(): Promise<void> {
-  const picked = await bridge.pickProject();
-  if (!picked) return;
-  if (picked.replaced) {
-    setPage(picked.project, picked.index);
+// A null path asks main for the folder dialog.
+async function openProject(projectPath: string | null): Promise<void> {
+  const opened = await bridge.openProject(projectPath);
+  if (!opened) return showPage(activeIndex);
+  if (opened.replaced) {
+    setPage(opened.project, opened.index);
     fitAllPages();
   }
-  showPage(picked.index);
+  const position = positionOfSlot(opened.index);
+  if (position !== -1) showPage(position);
+}
+
+// Projects already open come first and win the deduplication, so the picker shows the live page for one
+// that is also in the history.
+async function showPicker(): Promise<void> {
+  const recent = await bridge.getRecentProjects();
+  const byPath = new Map<string, Project>();
+  for (const page of pages) if (!page.project.missing) byPath.set(page.project.path, page.project);
+  for (const project of recent) if (!byPath.has(project.path)) byPath.set(project.path, project);
+  const choice = await openPicker([...byPath.values()]);
+  if (choice === undefined) return showPage(activeIndex);
+  await openProject(choice);
+}
+
+function report(task: Promise<void>): void {
+  task.catch((error: unknown) => {
+    statusProjects.textContent = `Failed to open project: ${String(error)}`;
+  });
 }
 
 function apply(action: Action): void {
-  if (action.kind === 'project-pick') {
-    pickProject().catch((error: unknown) => {
-      statusElement.textContent = `Failed to open project: ${String(error)}`;
-    });
-    return;
-  }
+  if (action.kind === 'project-picker') return report(showPicker());
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
+    case 'project-last': {
+      const position = positionOfSlot(previousSlot);
+      return position === -1 ? undefined : showPage(position);
+    }
     case 'project-next': return showPage(activeIndex + 1);
     case 'project-previous': return showPage(activeIndex - 1);
     case 'project-jump':
       if (action.index < pages.length) showPage(action.index);
       return;
+    case 'project-move': return moveProject(action.index);
     case 'terminal-focus': return focusTerminal(action.index);
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
@@ -165,6 +215,8 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
+  // The picker owns every key typed inside it. xterm's textarea is outside it, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest('.picker')) return;
   const action = mapShortcut(event, isMac);
   if (!action) return;
   event.preventDefault();
@@ -182,19 +234,17 @@ bridge.onExit((id, exitCode) => {
   pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
 });
 
+// The window opens with no projects; the picker makes the first one.
 async function start(): Promise<void> {
-  // xterm measures cell size when a pane opens; both font weights must be in by then or glyphs misalign.
-  // Panes opened later via pickProject() rely on this having finished, which a native dialog round-trip guarantees.
-  const [projects] = await Promise.all([
-    bridge.getProjects(),
+  renderStatus();
+  // xterm measures cell size when a pane opens, so both font weights must be in before openProject()
+  // builds one, or the glyphs misalign.
+  await Promise.all([
     document.fonts.load(`${FONT_SIZE}px "${FONT_NAME}"`),
     document.fonts.load(`bold ${FONT_SIZE}px "${FONT_NAME}"`),
   ]);
-  projects.forEach(setPage);
-  fitAllPages();
-  showPage(0);
 }
 
 start().catch((error: unknown) => {
-  statusElement.textContent = `Failed to start: ${String(error)}`;
+  statusProjects.textContent = `Failed to start: ${String(error)}`;
 });

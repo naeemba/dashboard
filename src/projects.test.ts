@@ -1,37 +1,27 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseProjects, projectFromPath, replacesProject } from './projects';
+import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
 
 const exists = () => true;
 
-describe('parseProjects', () => {
-  it('returns an empty list when PROJECTS is unset', () => {
-    expect(parseProjects({}, exists)).toEqual([]);
-  });
-
-  it('splits on commas and names each project by its last path segment', () => {
-    const projects = parseProjects({ PROJECTS: '/code/api,/code/web' }, exists);
-    expect(projects.map((project) => project.name)).toEqual(['api', 'web']);
-    expect(projects.map((project) => project.path)).toEqual(['/code/api', '/code/web']);
-  });
-
-  it('ignores whitespace and empty entries', () => {
-    const projects = parseProjects({ PROJECTS: ' /code/api , ,/code/web, ' }, exists);
-    expect(projects.map((project) => project.path)).toEqual(['/code/api', '/code/web']);
-  });
-
-  it('flags directories that do not exist', () => {
-    const projects = parseProjects({ PROJECTS: '/gone,/here' }, (path) => path === '/here');
-    expect(projects.map((project) => project.missing)).toEqual([true, false]);
+describe('projectFromPath', () => {
+  it('names a project by its last path segment', () => {
+    expect(projectFromPath('/code/api', exists).name).toBe('api');
   });
 
   it('normalises paths so a trailing slash is the same project as without one', () => {
     expect(projectFromPath('/code/api/', exists)).toEqual(projectFromPath('/code/api', exists));
-    expect(projectFromPath('/code/api/', exists).name).toBe('api');
+  });
+
+  it('flags a directory that does not exist', () => {
+    expect(projectFromPath('/gone', (path) => path === '/here').missing).toBe(true);
   });
 
   it('treats a file path as missing', () => {
-    expect(parseProjects({ PROJECTS: __filename })[0].missing).toBe(true);
-    expect(parseProjects({ PROJECTS: __dirname })[0].missing).toBe(false);
+    expect(projectFromPath(__filename).missing).toBe(true);
+    expect(projectFromPath(__dirname).missing).toBe(false);
   });
 });
 
@@ -53,5 +43,54 @@ describe('replacesProject', () => {
 
   it('does not downgrade a live project to a missing one', () => {
     expect(replacesProject(live, missing)).toBe(false);
+  });
+});
+
+describe('withRecentPath', () => {
+  it('puts the newest path first', () => {
+    expect(withRecentPath(['/code/web'], '/code/api')).toEqual(['/code/api', '/code/web']);
+  });
+
+  it('moves a path already in the list instead of repeating it', () => {
+    expect(withRecentPath(['/code/web', '/code/api'], '/code/api')).toEqual(['/code/api', '/code/web']);
+  });
+
+  it('keeps the twenty most recent', () => {
+    const paths = Array.from({ length: 25 }, (_unused, index) => `/code/${index}`);
+    const kept = withRecentPath(paths, '/code/new');
+    expect(kept).toHaveLength(20);
+    expect(kept.at(-1)).toBe('/code/18');
+  });
+});
+
+describe('the recents file', () => {
+  const file = () => join(mkdtempSync(join(tmpdir(), 'dashboard-')), 'recents.json');
+
+  it('returns nothing when the file is missing', () => {
+    expect(readRecentPaths('/does/not/exist.json')).toEqual([]);
+  });
+
+  it('returns nothing when the file is damaged', () => {
+    const path = file();
+    writeFileSync(path, '{ not json');
+    expect(readRecentPaths(path)).toEqual([]);
+  });
+
+  it('ignores entries that are not paths', () => {
+    const path = file();
+    writeFileSync(path, JSON.stringify(['/code/api', 7, null, { path: '/code/web' }]));
+    expect(readRecentPaths(path)).toEqual(['/code/api']);
+  });
+
+  it('does not throw when the file cannot be written', () => {
+    expect(() => rememberRecentPath('/does/not/exist/recents.json', '/code/api')).not.toThrow();
+  });
+
+  it('reads back what it wrote, newest first', () => {
+    const path = file();
+    rememberRecentPath(path, '/code/api');
+    rememberRecentPath(path, '/code/web');
+    rememberRecentPath(path, '/code/api');
+    expect(readRecentPaths(path)).toEqual(['/code/api', '/code/web']);
   });
 });
