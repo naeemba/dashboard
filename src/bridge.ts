@@ -4,6 +4,9 @@ export type DashboardBridge = {
   platform: string;
   getRecentProjects(): Promise<Project[]>;
   openProject(projectPath: string | null): Promise<{ index: number; project: Project; replaced: boolean } | null>;
+  // Chrome stopped putting a path on File, so only the preload can say where a dropped file lives.
+  getPathForFile(file: File): string;
+  openExternal(url: string): void;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
@@ -82,6 +82,13 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   return { index, project: projects[index], replaced };
+});
+// The link came out of a shell's output, so it is only as trustworthy as whatever printed it. Handing
+// the operating system an arbitrary scheme is how a line of text opens a mail client or runs a handler,
+// so only pages get through.
+ipcMain.on('link:open', (_event, url: string) => {
+  const scheme = URL.parse(url)?.protocol;
+  if (scheme === 'http:' || scheme === 'https:') shell.openExternal(url);
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
