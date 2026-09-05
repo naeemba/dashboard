@@ -12,18 +12,56 @@ body {
   flex-direction: column;
 }
 
-#status {
+/* The two rows of chrome above the terminals read as one dark bar, so they share its colour and its
+   refusal to be selected. */
+#title, #status {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 4px 8px;
   background: var(--black);
-  white-space: pre;
   user-select: none;
 }
 
+/* The app's own header row: it stands in for the system titlebar on macOS, and dragging it moves
+   the window. */
+#title {
+  align-items: center;
+  height: var(--title-bar-height);
+  padding-left: 8px;
+  color: var(--brightWhite);
+  font-weight: 700;
+  -webkit-app-region: drag;
+}
+
+/* Only macOS draws traffic lights over this row, so only there does the text step aside for them.
+   80px clears the three lights plus the 13px inset main.ts places them at. */
+.mac #title {
+  padding-left: 80px;
+}
+
+#status {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 8px;
+  white-space: pre;
+}
+
+.projects {
+  display: flex;
+  gap: 4px;
+}
+
+.project {
+  padding: 0 6px;
+}
+
+/* The open project, marked the way a tab strip marks one. */
+.project.active {
+  background: var(--brightBlack);
+  color: var(--brightWhite);
+  font-weight: 700;
+}
+
 /* The pane number is a detail about the current project, not another project in the list. */
-#status span:last-child {
+.terminal {
   color: var(--brightBlack);
 }
 
