@@ -4,7 +4,9 @@ export type Action =
   | { kind: 'project-next' }
   | { kind: 'project-previous' }
   | { kind: 'project-jump'; index: number }
-  | { kind: 'project-pick' }
+  | { kind: 'project-move'; index: number }
+  | { kind: 'project-picker' }
+  | { kind: 'project-last' }
   | { kind: 'terminal-focus'; index: number }
   | { kind: 'terminal-next' }
   | { kind: 'terminal-previous' }
@@ -22,7 +24,27 @@ export type KeyInput = {
 // Option+H/J/K/L moves between panes. `code` because Option changes `key` on macOS ("h" becomes "˙").
 const VIM_DIRECTIONS: Record<string, Direction> = { KeyH: 'left', KeyJ: 'down', KeyK: 'up', KeyL: 'right' };
 
+// 1..9 count from zero here. `code`, not `key`: Shift turns "1" into "!", and a layout can move the
+// character but not the number row. Zero is not a project or a terminal, so it has no index.
+function digitIndex(code: string): number | null {
+  const digit = /^Digit([1-9])$/.exec(code);
+  return digit ? Number(digit[1]) - 1 : null;
+}
+
 export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
+  // Everything about projects is plain Ctrl on every platform, macOS included, so the set stays one
+  // gesture. The shell never sees these: no XOFF, no emacs reverse search, no readline
+  // operate-and-get-next. An uppercase letter is Caps Lock, which does not set shiftKey.
+  if (input.ctrlKey && !input.metaKey && !input.altKey) {
+    const project = digitIndex(input.code);
+    if (project !== null) {
+      return input.shiftKey ? { kind: 'project-move', index: project } : { kind: 'project-jump', index: project };
+    }
+    if (input.shiftKey) return null;
+    if (input.key === 's' || input.key === 'S') return { kind: 'project-picker' };
+    if (input.key === 'o' || input.key === 'O') return { kind: 'project-last' };
+  }
+
   if (input.altKey && !input.metaKey && !input.ctrlKey && !input.shiftKey) {
     const direction = VIM_DIRECTIONS[input.code];
     return direction ? { kind: 'terminal-move', direction } : null;
@@ -31,19 +53,12 @@ export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
   const modifier = isMac ? input.metaKey : input.ctrlKey;
   if (!modifier || input.altKey) return null;
 
-  // Digits use `code` because Shift changes `key` ("1" becomes "!").
-  const digit = /^Digit([1-9])$/.exec(input.code);
-  if (digit) {
-    const index = Number(digit[1]) - 1;
-    if (input.shiftKey) return { kind: 'project-jump', index };
-    return index < TERMINAL_COUNT ? { kind: 'terminal-focus', index } : null;
-  }
-
   if (input.shiftKey) return null;
-  // `key`, not `code`, so the picker follows the letter on Dvorak and Colemak. 'O' is Caps Lock, which
-  // uppercases `key` without setting shiftKey.
+  const terminal = digitIndex(input.code);
+  if (terminal !== null) return terminal < TERMINAL_COUNT ? { kind: 'terminal-focus', index: terminal } : null;
+
+  // `key`, not `code`, so the brackets follow the character on Dvorak and Colemak.
   switch (input.key) {
-    case 'o': case 'O': return { kind: 'project-pick' };
     case ']': return { kind: 'project-next' };
     case '[': return { kind: 'project-previous' };
     case 'ArrowRight': return { kind: 'terminal-next' };

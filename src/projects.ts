@@ -1,4 +1,4 @@
-import { statSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 export type Project = { name: string; path: string; missing: boolean };
@@ -7,27 +7,38 @@ function isDirectory(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
 }
 
-// Resolve here so .env entries and dialog picks compare equal: a trailing slash or a relative
+// Resolve here so a picked folder and a stored recent compare equal: a trailing slash or a relative
 // path must not turn one directory into two projects.
 export function projectFromPath(path: string, directoryExists: (path: string) => boolean = isDirectory): Project {
   const directory = resolve(path);
   return { name: basename(directory), path: directory, missing: !directoryExists(directory) };
 }
 
-// A pick fills an empty slot, and upgrades a project that was missing at launch to the live one. It never
+// A pick fills an empty slot, and upgrades a dead page to the live one once its folder is back. It never
 // overwrites a project that already works — including with a missing pick, which only happens if the
 // folder is deleted between the dialog closing and the existence check.
 export function replacesProject(existing: Project | undefined, picked: Project): boolean {
   return !existing || (existing.missing && !picked.missing);
 }
 
-export function parseProjects(
-  environment: Record<string, string | undefined>,
-  directoryExists: (path: string) => boolean = isDirectory,
-): Project[] {
-  return (environment.PROJECTS ?? '')
-    .split(',')
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((path) => projectFromPath(path, directoryExists));
+// How many recently opened projects the picker offers.
+const RECENT_LIMIT = 20;
+
+// Most recent first, each path once.
+export function withRecentPath(paths: string[], projectPath: string): string[] {
+  return [projectPath, ...paths.filter((entry) => entry !== projectPath)].slice(0, RECENT_LIMIT);
+}
+
+// The history is a convenience, not state to recover: a missing or damaged file just means no history yet.
+export function readRecentPaths(file: string): string[] {
+  try {
+    const stored: unknown = JSON.parse(readFileSync(file, 'utf8'));
+    return Array.isArray(stored) ? stored.filter((entry) => typeof entry === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberRecentPath(file: string, projectPath: string): void {
+  writeFileSync(file, JSON.stringify(withRecentPath(readRecentPaths(file), projectPath)));
 }
