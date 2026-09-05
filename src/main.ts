@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
@@ -10,7 +10,8 @@ import {
   replacesProject,
   type Project,
 } from './projects';
-import { pickShell } from './shell';
+import { isOpenableLink } from './links';
+import { pickShell, SHELL_COMMAND_FLAG } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 
@@ -83,6 +84,9 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   return { index, project: projects[index], replaced };
 });
+ipcMain.on('link:open', (_event, url: string) => {
+  if (isOpenableLink(url)) shell.openExternal(url);
+});
 ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
 ipcMain.on('pty:restart', (_event, id: string) => {
@@ -108,7 +112,10 @@ function createWindow(): void {
       titleBarStyle: 'hidden' as const,
       trafficLightPosition: { x: 13, y: (TITLE_BAR_HEIGHT - 16) / 2 },
     }),
-    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      additionalArguments: [`${SHELL_COMMAND_FLAG}${shellCommand}`],
+    },
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);

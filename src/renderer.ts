@@ -4,8 +4,10 @@ import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 import { mapShortcut, type Action } from './shortcuts';
 import { openPicker } from './picker';
+import { quoteForShell } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
@@ -105,6 +107,9 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
   });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
+  // A URL in the output underlines under the pointer and opens in the real browser when clicked; main
+  // decides what is safe to hand the operating system.
+  terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
   terminal.open(container);
 
   const pane: Pane = { terminal, fit, exited: false };
@@ -119,6 +124,16 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
       bridge.restart(id);
       bridge.resize(id, terminal.cols, terminal.rows);
     }
+  });
+  // Dropping files types their absolute paths at the prompt, quoted, the way a terminal is expected to
+  // take them. It goes through terminal.input so a dead pane ignores the drop like any other keystroke.
+  // The trailing space is what every terminal appends, so a second drop starts a new word instead of
+  // gluing itself onto the first path.
+  container.addEventListener('drop', (event) => {
+    const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
+    if (paths.length === 0) return;
+    terminal.focus();
+    terminal.input(`${paths.map((entry) => quoteForShell(entry, bridge.shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => {
@@ -238,6 +253,12 @@ window.addEventListener('keydown', (event) => {
   event.stopPropagation();
   apply(action);
 }, true);
+
+// Both halves of a drop have to be cancelled here, and cancelling them at the window covers every pane
+// too, since the events bubble. Without it a file dropped on the page navigates the window to it,
+// replacing the whole dashboard with the file's contents, and no pane ever gets a drop at all.
+window.addEventListener('dragover', (event) => event.preventDefault());
+window.addEventListener('drop', (event) => event.preventDefault());
 
 window.addEventListener('resize', fitAllPages);
 
