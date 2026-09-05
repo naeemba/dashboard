@@ -102,6 +102,8 @@ function createWindow(): void {
     // The renderer draws its own title row, so the window chrome is dark all the way up, the way Ghostty
     // looks. macOS keeps its traffic lights over that row; their frame is 16px tall, so this centres them.
     // Windows and Linux draw no buttons once the title bar is hidden, so they keep the system one.
+    // The 13px inset here is what the 80px padding in the `.mac #title` rule of index.css clears; move
+    // one and the title text either overlaps the lights or floats away from them.
     ...(process.platform === 'darwin' && {
       titleBarStyle: 'hidden' as const,
       trafficLightPosition: { x: 13, y: (TITLE_BAR_HEIGHT - 16) / 2 },

@@ -31,6 +31,7 @@ const statusElement = document.getElementById('status') as HTMLElement;
 const statusProjects = document.createElement('span');
 statusProjects.className = 'projects';
 const statusTerminal = document.createElement('span');
+statusTerminal.className = 'terminal';
 statusElement.append(statusProjects, statusTerminal);
 const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;

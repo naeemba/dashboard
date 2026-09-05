@@ -61,7 +61,7 @@ body {
 }
 
 /* The pane number is a detail about the current project, not another project in the list. */
-#status > span:last-child {
+.terminal {
   color: var(--brightBlack);
 }
 
