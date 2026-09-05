@@ -102,6 +102,12 @@ describe('writeBoard', () => {
     expect(text.endsWith('\n')).toBe(true);
   });
 
+  it('leaves no temporary file behind once the rename lands', () => {
+    const path = project();
+    writeBoard(path, { columns: [{ name: 'Todo', cards: [] }] });
+    expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json.tmp'))).toBe(false);
+  });
+
   it('throws when the board cannot be written', () => {
     // A file where the folder should be: the write cannot succeed, and must say so rather than
     // pretend the cards were saved.

@@ -48,6 +48,8 @@ The board lives in `.dashboard/board.json` inside the project, alongside a `READ
 
 Inside the board: arrows move the selection, Enter edits a card's title, `n` adds one, `d` deletes it, `u` takes the last change back, and Shift with an arrow moves the card itself. Every change is written straight to disk; there is no save key.
 
+While a card's title is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global shortcut are dead until Enter or Escape ends the edit.
+
 The board is re-read whenever you enter it, so edits made to `board.json` from outside show up when you switch away and back — not while you are looking at it. If the board file is broken — truncated by a crash, broken by a hand-edit, or carrying a merge conflict marker — it is renamed to `board.json.broken` before showing an empty board, and the status bar says so. Your old cards are in the renamed file.
 
 ## Known limitations

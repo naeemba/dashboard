@@ -123,7 +123,9 @@ function focusMode(page: Page, entering: boolean): void {
     page.editor.terminal.focus();
   }
   if (page.mode === 'board' && page.board) {
-    if (entering) report(page.board.open(), 'Board not opened');
+    // open() never rejects — a failed read reports itself through onError and still renders — so no
+    // report() wrapper is needed here.
+    if (entering) void page.board.open();
     else page.board.element.focus();
   }
   renderStatus();

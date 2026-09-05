@@ -109,9 +109,15 @@ ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => she
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
 });
-// Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard.
+// Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
+// is a convenience — writing the two explanation files — so a read-only project folder must not cost
+// the user a board.json that is sitting right there and perfectly readable.
 ipcMain.handle('board:read', (_event, projectPath: string) => {
-  seedBoardDirectory(projectPath);
+  try {
+    seedBoardDirectory(projectPath);
+  } catch {
+    // No explanation files this time.
+  }
   return readBoard(projectPath);
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.

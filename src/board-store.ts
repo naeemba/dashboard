@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { emptyBoard, type Board, type Card, type Column } from './board';
 
@@ -133,9 +133,26 @@ export function readBoard(projectPath: string): BoardRead {
 
 // Unlike reading, a failed write is reported. Swallowing it would show cards on screen that are not
 // on disk, and the next launch would silently lose them.
+//
+// Written to a temporary file first, then renamed over board.json: a rename within a directory is
+// atomic on every platform this app runs on, so a crash or a full disk mid-write leaves either the
+// old file or the new one, never a truncated one. Without this, the app itself would be the main
+// producer of the corruption the salvage path in readBoard exists to clean up after.
 export function writeBoard(projectPath: string, board: Board): void {
-  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
-  writeFileSync(boardPath(projectPath), `${JSON.stringify(board, null, 2)}\n`);
+  const directory = join(projectPath, BOARD_DIRECTORY);
+  mkdirSync(directory, { recursive: true });
+  const temporaryPath = join(directory, `${BOARD_FILE}.tmp`);
+  writeFileSync(temporaryPath, `${JSON.stringify(board, null, 2)}\n`);
+  try {
+    renameSync(temporaryPath, boardPath(projectPath));
+  } catch (error: unknown) {
+    try {
+      unlinkSync(temporaryPath);
+    } catch {
+      // Best effort: the rename error below is the one that matters.
+    }
+    throw error;
+  }
 }
 
 // Written once, when the folder first appears. Neither file is regenerated, so an edited CLAUDE.md

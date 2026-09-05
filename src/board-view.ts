@@ -183,17 +183,25 @@ export function createBoardView(options: BoardOptions): BoardView {
     element,
     // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
     // at the board is not picked up until you switch away and back. Watch the file if that bites.
+    //
+    // A failed read still has to leave the board on screen usable from the keyboard — render() and
+    // focus() run either way, on whatever board is already in memory, with the error in the status bar
+    // instead of a fresh one. A control the keyboard can't reach is unfinished.
     async open(): Promise<void> {
-      const read = await options.bridge.readBoard(options.projectPath);
-      board = read.board;
-      previous = null;
-      addingCard = false;
+      try {
+        const read = await options.bridge.readBoard(options.projectPath);
+        board = read.board;
+        previous = null;
+        addingCard = false;
+        // The old file is still on disk under this name, so the cards are not gone — just not shown.
+        if (read.brokenFile) options.onError(`Board file was damaged; kept as ${read.brokenFile}`);
+      } catch (error: unknown) {
+        options.onError(`Board not opened: ${String(error)}`);
+      }
       editing = false;
       selection = { column: Math.min(selection.column, board.columns.length - 1), card: 0 };
       render();
       element.focus();
-      // The old file is still on disk under this name, so the cards are not gone — just not shown.
-      if (read.brokenFile) options.onError(`Board file was damaged; kept as ${read.brokenFile}`);
     },
     columnName(): string {
       return board.columns[selection.column]?.name ?? '';
