@@ -67,9 +67,11 @@ describe('renameCard', () => {
     expect(result.board.columns[0].cards[0]).toEqual({ id: 'x', title: 'new', notes: 'why' });
   });
 
-  it('does nothing on an empty column', () => {
+  it('does nothing on an empty column, and hands back the same board', () => {
     const start = board([]);
-    expect(renameCard(start, { column: 0, card: 0 }, 'new').board).toEqual(start);
+    // The board-view undo step depends on a no-op returning the identical object, not just an
+    // equal one, so it can tell "nothing happened" from "happened to end up the same".
+    expect(renameCard(start, { column: 0, card: 0 }, 'new').board).toBe(start);
   });
 });
 
@@ -85,9 +87,11 @@ describe('deleteCard', () => {
     expect(result.selection).toEqual({ column: 0, card: 0 });
   });
 
-  it('does nothing on an empty column', () => {
+  it('does nothing on an empty column, and hands back the same board', () => {
     const start = board([]);
-    expect(deleteCard(start, { column: 0, card: 0 })).toEqual({ board: start, selection: { column: 0, card: 0 } });
+    const result = deleteCard(start, { column: 0, card: 0 });
+    expect(result).toEqual({ board: start, selection: { column: 0, card: 0 } });
+    expect(result.board).toBe(start);
   });
 });
 
@@ -98,11 +102,14 @@ describe('moveCard', () => {
     expect(result.selection).toEqual({ column: 0, card: 1 });
   });
 
-  it('stays put at the top and the bottom', () => {
+  it('stays put at the top and the bottom, and hands back the same board', () => {
     const start = board(['a', 'b']);
-    expect(moveCard(start, { column: 0, card: 0 }, 'up')).toEqual({ board: start, selection: { column: 0, card: 0 } });
-    expect(moveCard(start, { column: 0, card: 1 }, 'down'))
-      .toEqual({ board: start, selection: { column: 0, card: 1 } });
+    const up = moveCard(start, { column: 0, card: 0 }, 'up');
+    expect(up).toEqual({ board: start, selection: { column: 0, card: 0 } });
+    expect(up.board).toBe(start);
+    const down = moveCard(start, { column: 0, card: 1 }, 'down');
+    expect(down).toEqual({ board: start, selection: { column: 0, card: 1 } });
+    expect(down.board).toBe(start);
   });
 
   // A card sent sideways keeps its row rather than dropping to the bottom of the next column.
@@ -118,15 +125,20 @@ describe('moveCard', () => {
     expect(result.selection).toEqual({ column: 1, card: 1 });
   });
 
-  it('stays put at the outer columns', () => {
+  it('stays put at the outer columns, and hands back the same board', () => {
     const start = board(['a'], ['b']);
-    expect(moveCard(start, { column: 0, card: 0 }, 'left')).toEqual({ board: start, selection: { column: 0, card: 0 } });
-    expect(moveCard(start, { column: 1, card: 0 }, 'right'))
-      .toEqual({ board: start, selection: { column: 1, card: 0 } });
+    const left = moveCard(start, { column: 0, card: 0 }, 'left');
+    expect(left).toEqual({ board: start, selection: { column: 0, card: 0 } });
+    expect(left.board).toBe(start);
+    const right = moveCard(start, { column: 1, card: 0 }, 'right');
+    expect(right).toEqual({ board: start, selection: { column: 1, card: 0 } });
+    expect(right.board).toBe(start);
   });
 
-  it('does nothing on an empty column', () => {
+  it('does nothing on an empty column, and hands back the same board', () => {
     const start = board([], ['a']);
-    expect(moveCard(start, { column: 0, card: 0 }, 'right')).toEqual({ board: start, selection: { column: 0, card: 0 } });
+    const result = moveCard(start, { column: 0, card: 0 }, 'right');
+    expect(result).toEqual({ board: start, selection: { column: 0, card: 0 } });
+    expect(result.board).toBe(start);
   });
 });

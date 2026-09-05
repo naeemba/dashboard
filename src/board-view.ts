@@ -46,6 +46,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // mis-hit; anything deeper is a feature nobody asked for.
   let previous: Board | null = null;
   let editing = false;
+  // `n` is two changes — add the blank card, then commit the typed title — that must undo as one. Set
+  // while that pair is in flight so the second change keeps the first one's `previous` instead of
+  // overwriting it with the just-added blank card.
+  let addingCard = false;
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, board).catch((error: unknown) => {
@@ -53,8 +57,14 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
+  // Every operation in board.ts returns the same board object, unchanged, when it has nothing to do —
+  // moving the last card further down, deleting from an empty column. Without this check, that no-op
+  // still burns the undo step and rewrites the file, so a real change made just before it becomes
+  // unrecoverable for no reason.
   function change(next: Change): void {
-    previous = board;
+    if (next.board === board) return;
+    if (!addingCard) previous = board;
+    addingCard = false;
     board = next.board;
     selection = next.selection;
     render();
@@ -158,6 +168,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       case 'n':
         event.preventDefault();
         change(addCard(board, selection, crypto.randomUUID(), ''));
+        addingCard = true;
         return startEditing();
       case 'd':
         event.preventDefault();
@@ -176,6 +187,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       const read = await options.bridge.readBoard(options.projectPath);
       board = read.board;
       previous = null;
+      addingCard = false;
       editing = false;
       selection = { column: Math.min(selection.column, board.columns.length - 1), card: 0 };
       render();

@@ -103,22 +103,29 @@ function setMode(mode: Mode): void {
   if (page.project.missing) return;
   page.mode = mode;
   for (const [name, view] of Object.entries(page.views)) view.hidden = name !== mode;
-  focusMode(page);
+  focusMode(page, true);
 }
 
-function focusMode(page: Page): void {
+// `entering` is true for a genuine arrival at the page's current mode — switching modes, or switching to
+// a different page — and false for merely reclaiming the keyboard, such as the picker closing on the
+// page you never left. Only a genuine arrival may start nvim or re-read the board: re-opening the board
+// on every refocus would throw away its undo step each time, since board.open() resets it.
+function focusMode(page: Page, entering: boolean): void {
   if (page.mode === 'terminals') return focusTerminal(page.focused);
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
     // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.
-    if (!page.editorStarted) {
+    if (entering && !page.editorStarted) {
       page.editorStarted = true;
       bridge.restart(terminalId(page.slot, EDITOR_INDEX));
       bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
     }
     page.editor.terminal.focus();
   }
-  if (page.mode === 'board' && page.board) report(page.board.open(), 'Board not opened');
+  if (page.mode === 'board' && page.board) {
+    if (entering) report(page.board.open(), 'Board not opened');
+    else page.board.element.focus();
+  }
   renderStatus();
 }
 
@@ -137,12 +144,15 @@ function fitAllPages(): void {
 function showPage(index: number): void {
   if (pages.length === 0) return renderStatus();
   const next = (index + pages.length) % pages.length;
-  if (next !== activeIndex) previousSlot = pages[activeIndex].slot;
+  // Landing back on the page you are already on — Escape closing the picker, a folder dialog cancelled —
+  // only needs its keyboard focus back, not a fresh arrival at its mode.
+  if (next === activeIndex) return focusMode(pages[activeIndex], false);
+  previousSlot = pages[activeIndex].slot;
   activeIndex = next;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
-  focusMode(pages[activeIndex]);
+  focusMode(pages[activeIndex], true);
 }
 
 function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
