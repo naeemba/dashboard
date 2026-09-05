@@ -6,6 +6,7 @@ import {
   moveSelection,
   renameCard,
   type Board,
+  type Change,
   type Selection,
 } from './board';
 import type { DashboardBridge } from './bridge';
@@ -52,7 +53,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
-  function change(next: { board: Board; selection: Selection }): void {
+  function change(next: Change): void {
     previous = board;
     board = next.board;
     selection = next.selection;
@@ -172,12 +173,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
     // at the board is not picked up until you switch away and back. Watch the file if that bites.
     async open(): Promise<void> {
-      board = await options.bridge.readBoard(options.projectPath);
+      const read = await options.bridge.readBoard(options.projectPath);
+      board = read.board;
       previous = null;
       editing = false;
       selection = { column: Math.min(selection.column, board.columns.length - 1), card: 0 };
       render();
       element.focus();
+      // The old file is still on disk under this name, so the cards are not gone — just not shown.
+      if (read.brokenFile) options.onError(`Board file was damaged; kept as ${read.brokenFile}`);
     },
     columnName(): string {
       return board.columns[selection.column]?.name ?? '';

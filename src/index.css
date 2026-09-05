@@ -5,6 +5,8 @@ html, body {
   background: var(--background);
   color: var(--white);
   font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
+  /* Where the keyboard is, on a pane or on a card: one outline, defined once. */
+  --focus-outline: 1px solid var(--blue);
 }
 
 body {
@@ -140,7 +142,7 @@ body {
 
 /* Where the keyboard is. The board has one selection, not one per column. */
 .board-card.selected {
-  outline: 1px solid var(--blue);
+  outline: var(--focus-outline);
   outline-offset: -1px;
   background: var(--brightBlack);
   color: var(--brightWhite);
@@ -182,7 +184,7 @@ body {
 }
 
 .pane:focus-within {
-  outline: 1px solid var(--blue);
+  outline: var(--focus-outline);
   outline-offset: -1px;
 }
 

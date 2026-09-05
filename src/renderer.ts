@@ -118,7 +118,7 @@ function focusMode(page: Page): void {
     }
     page.editor.terminal.focus();
   }
-  if (page.mode === 'board' && page.board) report(page.board.open());
+  if (page.mode === 'board' && page.board) report(page.board.open(), 'Board not opened');
   renderStatus();
 }
 
@@ -289,14 +289,14 @@ async function showPicker(): Promise<void> {
   await openProject(choice);
 }
 
-function report(task: Promise<void>): void {
+function report(task: Promise<void>, failure: string): void {
   task.catch((error: unknown) => {
-    statusProjects.textContent = `Failed to open project: ${String(error)}`;
+    statusProjects.textContent = `${failure}: ${String(error)}`;
   });
 }
 
 function apply(action: Action): void {
-  if (action.kind === 'project-picker') return report(showPicker());
+  if (action.kind === 'project-picker') return report(showPicker(), 'Failed to open project');
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {

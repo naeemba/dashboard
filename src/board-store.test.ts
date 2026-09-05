@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY, parseBoard, readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { BOARD_DIRECTORY, BROKEN_BOARD_FILE, parseBoard, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), 'dashboard-board-'));
@@ -51,19 +51,45 @@ describe('parseBoard', () => {
 
 describe('readBoard', () => {
   it('returns an empty board when the project has no .dashboard folder', () => {
-    expect(columnNames(readBoard(project()))).toEqual(['Todo', 'Doing', 'Done']);
+    expect(columnNames(readBoard(project()).board)).toEqual(['Todo', 'Doing', 'Done']);
   });
 
   it('reads back what writeBoard wrote', () => {
     const path = project();
     writeBoard(path, { columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '' }] }] });
-    expect(columnNames(readBoard(path))).toEqual(['Later']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Later']);
   });
 
   it('survives a damaged file', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    expect(columnNames(readBoard(path))).toEqual(['Todo', 'Doing', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Doing', 'Done']);
+  });
+
+  // A missing file is not damage: there is nothing to salvage, so no .broken file appears.
+  it('does not treat a missing file as broken', () => {
+    const path = project();
+    expect(readBoard(path).brokenFile).toBeNull();
+    expect(existsSync(join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE))).toBe(false);
+  });
+
+  it('moves a damaged file aside and says where it went', () => {
+    const path = project();
+    writeRaw(path, '{"columns": [');
+    const brokenPath = join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE);
+    const result = readBoard(path);
+    expect(result.brokenFile).toBe(brokenPath);
+    expect(readFileSync(brokenPath, 'utf8')).toBe('{"columns": [');
+  });
+
+  it('takes the plain no-file path on the read after a salvage', () => {
+    const path = project();
+    writeRaw(path, '{"columns": [');
+    readBoard(path);
+    expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json'))).toBe(false);
+    const second = readBoard(path);
+    expect(second.brokenFile).toBeNull();
+    expect(columnNames(second.board)).toEqual(['Todo', 'Doing', 'Done']);
   });
 });
 
