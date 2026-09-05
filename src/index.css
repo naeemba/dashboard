@@ -20,15 +20,21 @@ body {
   user-select: none;
 }
 
-/* Stands in for the system titlebar: the traffic lights overlay its left padding, and dragging it
-   moves the window. */
+/* The app's own header row: it stands in for the system titlebar on macOS, and dragging it moves
+   the window. */
 #title {
   align-items: center;
   height: var(--title-bar-height);
-  padding-left: 80px;
+  padding-left: 8px;
   color: var(--brightWhite);
   font-weight: 700;
   -webkit-app-region: drag;
+}
+
+/* Only macOS draws traffic lights over this row, so only there does the text step aside for them.
+   80px clears the three lights plus the 13px inset main.ts places them at. */
+.mac #title {
+  padding-left: 80px;
 }
 
 #status {
@@ -55,7 +61,7 @@ body {
 }
 
 /* The pane number is a detail about the current project, not another project in the list. */
-#status span:last-child {
+#status > span:last-child {
   color: var(--brightBlack);
 }
 

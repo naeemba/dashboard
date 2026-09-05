@@ -24,6 +24,8 @@ type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: nu
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
+// Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
+document.documentElement.classList.toggle('mac', isMac);
 const statusElement = document.getElementById('status') as HTMLElement;
 // Projects on the left, the focused pane pushed to the right, so the two are never read as one list.
 const statusProjects = document.createElement('span');
