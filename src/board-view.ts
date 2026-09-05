@@ -16,8 +16,9 @@ export type BoardOptions = {
   bridge: DashboardBridge;
   // The status bar names the column the selection is in, so it is redrawn whenever that can change.
   onChanged(): void;
-  // The empty string clears the last message: a board that reads cleanly, or a write that lands, must
-  // not leave the previous failure sitting on screen.
+  // The empty string clears this board's last message — a board that reads cleanly, or a write that
+  // lands, must not leave its own previous failure sitting on screen. Another producer's message is
+  // not this board's to clear, which the renderer enforces.
   onError(message: string): void;
 };
 
@@ -45,9 +46,13 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the same object when nothing happened. This file is the DOM and the keys.
   let state: BoardState = initialBoardState();
   let editing = false;
-  // True while open() is awaiting the read. Focus is already on the board then, and the state the keys
-  // would act on is about to be replaced by what comes off disk, so the keys do nothing until it lands.
-  let loading = false;
+  // One number per read, because Ctrl+B Ctrl+T Ctrl+B can leave two reads running at once. The keys are
+  // dead until the newest read lands (`landedRead !== latestRead`), and a read that is no longer the
+  // newest throws its result away. A single flag let the first read clear it, the keys go live, and the
+  // second, older result then put back a card deleted in between — with `previous` nulled, so undo could
+  // not get it back either.
+  let latestRead = 0;
+  let landedRead = 0;
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
@@ -135,7 +140,7 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   element.addEventListener('keydown', (event) => {
     // The input owns every key while a title is being edited; its own handler ends the edit.
-    if (editing || loading) return;
+    if (editing || landedRead !== latestRead) return;
     const direction = ARROW_DIRECTIONS[event.key];
     if (direction) {
       event.preventDefault();
@@ -177,18 +182,21 @@ export function createBoardView(options: BoardOptions): BoardView {
     // a fresh board. A control the keyboard can't reach is unfinished.
     async open(): Promise<void> {
       element.focus();
-      loading = true;
+      const token = ++latestRead;
       let message = '';
+      let next = state;
       try {
         const read = await options.bridge.readBoard(options.projectPath);
-        state = loadBoard(state, read.board);
+        next = loadBoard(state, read.board);
         // The old file is still on disk under this name, so the cards are not gone — just not shown.
         if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
       } catch (error: unknown) {
         message = `Board not opened: ${String(error)}`;
-      } finally {
-        loading = false;
       }
+      // A read another open() has overtaken says nothing: the newer one is the board you asked for.
+      if (token !== latestRead) return;
+      landedRead = token;
+      state = next;
       editing = false;
       options.onError(message);
       render();

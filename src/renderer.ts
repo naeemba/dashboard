@@ -57,8 +57,13 @@ const statusError = document.createElement('span');
 statusError.className = 'error';
 statusElement.append(statusProjects, statusError, statusTerminal);
 
-// The empty string clears it: an error stays until it is replaced or a board opens cleanly.
-function showError(message: string): void {
+// Whoever wrote the message on screen owns it, and only that owner may clear it. Without the owner a
+// clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
+// look at another project's board and the message is gone while the card still is not on disk.
+let errorOwner = '';
+function showError(owner: string, message: string): void {
+  if (message === '' && errorOwner !== owner) return;
+  errorOwner = message === '' ? '' : owner;
   statusError.textContent = message;
 }
 const titleElement = document.getElementById('title') as HTMLElement;
@@ -257,7 +262,8 @@ function buildPage(project: Project, slot: number): Page {
     projectPath: project.path,
     bridge,
     onChanged: renderStatus,
-    onError: showError,
+    // A slot each, so one project's board never clears another one's failure.
+    onError: (message) => showError(`board:${slot}`, message),
   });
   views.board.append(page.board.element);
   return page;
@@ -313,9 +319,10 @@ async function showPicker(): Promise<void> {
 
 function report(task: Promise<void>): void {
   task.then(
-    // Each producer clears its own message: nothing else can tell whether the one on screen is stale.
-    () => showError(''),
-    (error: unknown) => showError(`Failed to open project: ${String(error)}`),
+    // Clears its own message and no one else's: a project that opens says nothing about a board that
+    // could not be written.
+    () => showError('project', ''),
+    (error: unknown) => showError('project', `Failed to open project: ${String(error)}`),
   );
 }
 
@@ -384,5 +391,5 @@ async function start(): Promise<void> {
 }
 
 start().catch((error: unknown) => {
-  showError(`Failed to start: ${String(error)}`);
+  showError('start', `Failed to start: ${String(error)}`);
 });
