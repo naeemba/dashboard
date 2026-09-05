@@ -128,3 +128,56 @@ describe('mapShortcut on every platform', () => {
     expect(mapShortcut(key({ code: 'KeyH', altKey: true, metaKey: true }), true)).toBeNull();
   });
 });
+
+describe('mode keys', () => {
+  it('switches mode with Ctrl+T, Ctrl+N and Ctrl+B', () => {
+    expect(mapShortcut(key({ key: 'n', ctrlKey: true }), true, 'terminals'))
+      .toEqual({ kind: 'mode-set', mode: 'nvim' });
+    expect(mapShortcut(key({ key: 'b', ctrlKey: true }), true, 'terminals'))
+      .toEqual({ kind: 'mode-set', mode: 'board' });
+    expect(mapShortcut(key({ key: 't', ctrlKey: true }), true, 'board'))
+      .toEqual({ kind: 'mode-set', mode: 'terminals' });
+  });
+
+  // The whole point of the rule: Ctrl+N is nvim's autocomplete, so nvim keeps it.
+  it('leaves the key for the current mode to whatever is running there', () => {
+    expect(mapShortcut(key({ key: 'n', ctrlKey: true }), true, 'nvim')).toBeNull();
+    expect(mapShortcut(key({ key: 't', ctrlKey: true }), true, 'terminals')).toBeNull();
+    expect(mapShortcut(key({ key: 'b', ctrlKey: true }), true, 'board')).toBeNull();
+  });
+
+  it('reads a Caps Lock letter as the same key', () => {
+    expect(mapShortcut(key({ key: 'B', ctrlKey: true }), true, 'terminals'))
+      .toEqual({ kind: 'mode-set', mode: 'board' });
+  });
+
+  it('assumes terminals when no mode is given', () => {
+    expect(mapShortcut(key({ key: 'b', ctrlKey: true }), true))
+      .toEqual({ kind: 'mode-set', mode: 'board' });
+  });
+
+  it('ignores Ctrl+Shift+letter', () => {
+    expect(mapShortcut(key({ key: 'b', ctrlKey: true, shiftKey: true }), true, 'terminals')).toBeNull();
+  });
+});
+
+describe('keys that only mean something in terminals mode', () => {
+  it('drops Cmd+digit outside terminals mode', () => {
+    expect(mapShortcut(key({ code: 'Digit1', key: '1', metaKey: true }), true, 'board')).toBeNull();
+    expect(mapShortcut(key({ code: 'Digit1', key: '1', metaKey: true }), true, 'nvim')).toBeNull();
+  });
+
+  it('drops the pane movement keys outside terminals mode', () => {
+    expect(mapShortcut(key({ code: 'KeyJ', altKey: true }), true, 'board')).toBeNull();
+    expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true }), true, 'nvim')).toBeNull();
+    expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), true, 'board')).toBeNull();
+  });
+
+  // Project keys are how you get out of a mode, so they answer from all three.
+  it('keeps the project keys working from every mode', () => {
+    expect(mapShortcut(key({ key: ']', metaKey: true }), true, 'board')).toEqual({ kind: 'project-next' });
+    expect(mapShortcut(key({ code: 'Digit2', key: '2', ctrlKey: true }), true, 'nvim'))
+      .toEqual({ kind: 'project-jump', index: 1 });
+    expect(mapShortcut(key({ key: 's', ctrlKey: true }), true, 'board')).toEqual({ kind: 'project-picker' });
+  });
+});
