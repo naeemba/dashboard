@@ -22,6 +22,9 @@ for (const [name, value] of Object.entries(THEME)) {
 }
 document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
 
+// The editor is a sixth pty for the project, sitting one past the grid's five.
+const EDITOR_INDEX = TERMINAL_COUNT;
+
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
 type Page = {
   project: Project;
@@ -31,6 +34,8 @@ type Page = {
   panes: Pane[];
   focused: number;
   slot: number;
+  editor: Pane | null;
+  editorStarted: boolean;
 };
 
 const bridge = window.dashboard;
@@ -101,6 +106,16 @@ function setMode(mode: Mode): void {
 
 function focusMode(page: Page): void {
   if (page.mode === 'terminals') return focusTerminal(page.focused);
+  if (page.mode === 'nvim' && page.editor) {
+    // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
+    // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.
+    if (!page.editorStarted) {
+      page.editorStarted = true;
+      bridge.restart(terminalId(page.slot, EDITOR_INDEX));
+      bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
+    }
+    page.editor.terminal.focus();
+  }
   renderStatus();
 }
 
@@ -110,7 +125,10 @@ function positionOfSlot(slot: number | null): number {
 
 // Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
-  for (const page of pages) for (const pane of page.panes) pane.fit.fit();
+  for (const page of pages) {
+    for (const pane of page.panes) pane.fit.fit();
+    page.editor?.fit.fit();
+  }
 }
 
 function showPage(index: number): void {
@@ -183,7 +201,9 @@ function buildPage(project: Project, slot: number): Page {
     view.className = `view view-${mode}`;
     view.hidden = mode !== 'terminals';
   }
-  const page: Page = { project, element, views, mode: 'terminals', panes: [], focused: 0, slot };
+  const page: Page = {
+    project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null, editorStarted: false,
+  };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
   // instead of a blank one with no shells. A dead project has no views: there is nothing to run nvim in
@@ -204,6 +224,9 @@ function buildPage(project: Project, slot: number): Page {
     page.panes.push(pane);
     panesById.set(id, pane);
   }
+  const editorId = terminalId(slot, EDITOR_INDEX);
+  page.editor = buildPane(views.nvim, editorId);
+  panesById.set(editorId, page.editor);
   return page;
 }
 

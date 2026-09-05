@@ -96,6 +96,11 @@ body {
   gap: 2px;
 }
 
+/* One pane, the whole page. Splits are nvim's business, not the dashboard's. */
+.view-nvim {
+  display: grid;
+}
+
 .page.missing {
   display: flex;
   align-items: center;
