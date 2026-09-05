@@ -1,4 +1,5 @@
 import type { Project } from './projects';
+import type { Board } from './board';
 
 export type DashboardBridge = {
   platform: string;
@@ -15,6 +16,8 @@ export type DashboardBridge = {
   restart(id: string): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
+  readBoard(projectPath: string): Promise<Board>;
+  writeBoard(projectPath: string, board: Board): Promise<void>;
 };
 
 declare global {

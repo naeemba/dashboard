@@ -14,6 +14,8 @@ import { isOpenableLink } from './links';
 import { pickShell, SHELL_COMMAND_FLAG } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
+import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import type { Board } from './board';
 
 if (started) app.quit();
 
@@ -107,6 +109,13 @@ ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => she
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
 });
+// Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard.
+ipcMain.handle('board:read', (_event, projectPath: string) => {
+  seedBoardDirectory(projectPath);
+  return readBoard(projectPath);
+});
+// invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
+ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => writeBoard(projectPath, board));
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([

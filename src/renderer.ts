@@ -8,6 +8,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
+import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
@@ -36,6 +37,7 @@ type Page = {
   slot: number;
   editor: Pane | null;
   editorStarted: boolean;
+  board: BoardView | null;
 };
 
 const bridge = window.dashboard;
@@ -61,7 +63,7 @@ let previousSlot: number | null = null;
 // The right-hand span says which view you are in, and for terminals which pane has the keyboard.
 function modeLabel(page: Page): string {
   if (page.mode === 'nvim') return 'nvim';
-  if (page.mode === 'board') return 'board';
+  if (page.mode === 'board') return `board · ${page.board?.columnName() ?? ''}`;
   return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
 }
 
@@ -116,6 +118,7 @@ function focusMode(page: Page): void {
     }
     page.editor.terminal.focus();
   }
+  if (page.mode === 'board' && page.board) report(page.board.open());
   renderStatus();
 }
 
@@ -203,6 +206,7 @@ function buildPage(project: Project, slot: number): Page {
   }
   const page: Page = {
     project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null, editorStarted: false,
+    board: null,
   };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -227,6 +231,13 @@ function buildPage(project: Project, slot: number): Page {
   const editorId = terminalId(slot, EDITOR_INDEX);
   page.editor = buildPane(views.nvim, editorId);
   panesById.set(editorId, page.editor);
+  page.board = createBoardView({
+    projectPath: project.path,
+    bridge,
+    onChanged: renderStatus,
+    onError: (message) => { statusProjects.textContent = message; },
+  });
+  views.board.append(page.board.element);
   return page;
 }
 
@@ -311,8 +322,9 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker owns every key typed inside it. xterm's textarea is outside it, so a pane keeps its shortcuts.
-  if (event.target instanceof Element && event.target.closest('.picker')) return;
+  // The picker and a card being edited own every key typed inside them. xterm's textarea is outside
+  // both, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest('.picker, .board-edit')) return;
   const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();

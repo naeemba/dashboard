@@ -101,6 +101,65 @@ body {
   display: grid;
 }
 
+.board {
+  display: flex;
+  gap: 2px;
+  height: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  overflow: hidden;
+  outline: none;
+}
+
+.board-column {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--background);
+}
+
+.board-column h2 {
+  margin: 0 0 8px;
+  color: var(--brightWhite);
+  font-size: inherit;
+}
+
+.board-column ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-card {
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  background: var(--black);
+  overflow-wrap: anywhere;
+}
+
+/* Where the keyboard is. The board has one selection, not one per column. */
+.board-card.selected {
+  outline: 1px solid var(--blue);
+  outline-offset: -1px;
+  background: var(--brightBlack);
+  color: var(--brightWhite);
+}
+
+.board-edit {
+  width: 100%;
+  font: inherit;
+  color: var(--brightWhite);
+  background: none;
+  border: none;
+  outline: none;
+}
+
+.board-empty {
+  margin: 0;
+  color: var(--brightBlack);
+}
+
 .page.missing {
   display: flex;
   align-items: center;
