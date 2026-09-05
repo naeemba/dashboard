@@ -29,7 +29,8 @@ export function withRecentPath(paths: string[], projectPath: string): string[] {
   return [projectPath, ...paths.filter((entry) => entry !== projectPath)].slice(0, RECENT_LIMIT);
 }
 
-// The history is a convenience, not state to recover: a missing or damaged file just means no history yet.
+// The history is a convenience, not state to recover, reading and writing alike: a missing or damaged file
+// just means no history yet, and a write that fails must not take down whatever the caller was doing.
 export function readRecentPaths(file: string): string[] {
   try {
     const stored: unknown = JSON.parse(readFileSync(file, 'utf8'));
@@ -40,5 +41,9 @@ export function readRecentPaths(file: string): string[] {
 }
 
 export function rememberRecentPath(file: string, projectPath: string): void {
-  writeFileSync(file, JSON.stringify(withRecentPath(readRecentPaths(file), projectPath)));
+  try {
+    writeFileSync(file, JSON.stringify(withRecentPath(readRecentPaths(file), projectPath)));
+  } catch {
+    // No history entry this time.
+  }
 }

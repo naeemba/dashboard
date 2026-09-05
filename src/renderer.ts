@@ -120,6 +120,9 @@ function buildPage(project: Project, slot: number): Page {
   const element = document.createElement('section');
   element.className = 'page';
   const page: Page = { project, element, panes: [], focused: 0, slot };
+  // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
+  // is deleting the folder between the dialog closing and the existence check. Then you get this page
+  // instead of a blank one with no shells.
   if (project.missing) {
     element.classList.add('missing');
     element.textContent = `Directory not found: ${project.path}`;

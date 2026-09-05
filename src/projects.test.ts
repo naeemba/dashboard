@@ -82,6 +82,10 @@ describe('the recents file', () => {
     expect(readRecentPaths(path)).toEqual(['/code/api']);
   });
 
+  it('does not throw when the file cannot be written', () => {
+    expect(() => rememberRecentPath('/does/not/exist/recents.json', '/code/api')).not.toThrow();
+  });
+
   it('reads back what it wrote, newest first', () => {
     const path = file();
     rememberRecentPath(path, '/code/api');

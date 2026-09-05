@@ -78,6 +78,8 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
     projects[index] = picked;
     spawnProject(picked, index);
   }
+  // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
+  // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   return { index, project: projects[index], replaced };
 });

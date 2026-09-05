@@ -26,9 +26,9 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Open the project list | Ctrl+S |
 | Back to the last project | Ctrl+O |
 | Jump to project N | Ctrl+1..9 |
-| Move the current project to slot N | Ctrl+Shift+1..9 |
+| Move the current project to position N | Ctrl+Shift+1..9 |
 | Next / previous project | Mod+] / Mod+[ |
-| Focus terminal N | Mod+1..5 |
+| Focus terminal N | Mod+1..5 (macOS only — see below) |
 | Next / previous terminal | Mod+Right / Mod+Left |
 | Move to the pane left / down / up / right | Option+H / J / K / L (Alt elsewhere) |
 
