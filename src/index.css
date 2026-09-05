@@ -74,11 +74,26 @@ body {
 .page {
   position: absolute;
   inset: 0;
+}
+
+/* One view is on screen at a time. Visibility, not display, for the same reason pages use it: a view
+   you have not looked at yet still has a size, so the fit addon can measure its panes. */
+.view {
+  position: absolute;
+  inset: 0;
+  background: var(--black);
+}
+
+.view[hidden] {
+  visibility: hidden;
+}
+
+/* The five shells. Six columns divide evenly into two on top and three below. */
+.view-terminals {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: 2fr 1fr;
   gap: 2px;
-  background: var(--black);
 }
 
 .page.missing {

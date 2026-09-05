@@ -6,6 +6,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { mapShortcut, type Action } from './shortcuts';
+import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { quoteForShell } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
@@ -22,7 +23,15 @@ for (const [name, value] of Object.entries(THEME)) {
 document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
 
 type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
-type Page = { project: Project; element: HTMLElement; panes: Pane[]; focused: number; slot: number };
+type Page = {
+  project: Project;
+  element: HTMLElement;
+  views: Record<Mode, HTMLElement>;
+  mode: Mode;
+  panes: Pane[];
+  focused: number;
+  slot: number;
+};
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
@@ -44,6 +53,13 @@ let activeIndex = 0;
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
 
+// The right-hand span says which view you are in, and for terminals which pane has the keyboard.
+function modeLabel(page: Page): string {
+  if (page.mode === 'nvim') return 'nvim';
+  if (page.mode === 'board') return 'board';
+  return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
+}
+
 function renderStatus(): void {
   if (pages.length === 0) {
     // document.title already holds the app's name, so the empty title row does not spell it out again.
@@ -61,7 +77,7 @@ function renderStatus(): void {
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
+  statusTerminal.textContent = modeLabel(page);
 }
 
 function focusTerminal(index: number): void {
@@ -70,6 +86,21 @@ function focusTerminal(index: number): void {
     page.focused = (index + TERMINAL_COUNT) % TERMINAL_COUNT;
     page.panes[page.focused].terminal.focus();
   }
+  renderStatus();
+}
+
+// Switching mode is per page, so each project keeps the view you left it on. A dead project has no
+// views to switch between and ignores the keys.
+function setMode(mode: Mode): void {
+  const page = pages[activeIndex];
+  if (page.project.missing) return;
+  page.mode = mode;
+  for (const [name, view] of Object.entries(page.views)) view.hidden = name !== mode;
+  focusMode(page);
+}
+
+function focusMode(page: Page): void {
+  if (page.mode === 'terminals') return focusTerminal(page.focused);
   renderStatus();
 }
 
@@ -90,13 +121,13 @@ function showPage(index: number): void {
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
-  focusTerminal(pages[activeIndex].focused);
+  focusMode(pages[activeIndex]);
 }
 
-function buildPane(page: Page, id: string, terminalIndex: number): Pane {
+function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
   const container = document.createElement('div');
   container.className = 'pane';
-  page.element.append(container);
+  view.append(container);
 
   const terminal = new Terminal({
     cursorBlink: true,
@@ -136,29 +167,40 @@ function buildPane(page: Page, id: string, terminalIndex: number): Pane {
     terminal.input(`${paths.map((entry) => quoteForShell(entry, bridge.shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
-  terminal.textarea?.addEventListener('focus', () => {
-    if (page.focused === terminalIndex) return;
-    page.focused = terminalIndex;
-    renderStatus();
-  });
+  terminal.textarea?.addEventListener('focus', () => onFocus?.());
   return pane;
 }
 
 function buildPage(project: Project, slot: number): Page {
   const element = document.createElement('section');
   element.className = 'page';
-  const page: Page = { project, element, panes: [], focused: 0, slot };
+  const views: Record<Mode, HTMLElement> = {
+    terminals: document.createElement('div'),
+    nvim: document.createElement('div'),
+    board: document.createElement('div'),
+  };
+  for (const [mode, view] of Object.entries(views)) {
+    view.className = `view view-${mode}`;
+    view.hidden = mode !== 'terminals';
+  }
+  const page: Page = { project, element, views, mode: 'terminals', panes: [], focused: 0, slot };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
-  // instead of a blank one with no shells.
+  // instead of a blank one with no shells. A dead project has no views: there is nothing to run nvim in
+  // and nowhere to keep a board.
   if (project.missing) {
     element.classList.add('missing');
     element.textContent = `Directory not found: ${project.path}`;
     return page;
   }
+  element.append(...Object.values(views));
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(slot, terminalIndex);
-    const pane = buildPane(page, id, terminalIndex);
+    const pane = buildPane(views.terminals, id, () => {
+      if (page.focused === terminalIndex) return;
+      page.focused = terminalIndex;
+      renderStatus();
+    });
     page.panes.push(pane);
     panesById.set(id, pane);
   }
@@ -234,6 +276,7 @@ function apply(action: Action): void {
       if (action.index < pages.length) showPage(action.index);
       return;
     case 'project-move': return moveProject(action.index);
+    case 'mode-set': return setMode(action.mode);
     case 'terminal-focus': return focusTerminal(action.index);
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
@@ -247,7 +290,7 @@ function apply(action: Action): void {
 window.addEventListener('keydown', (event) => {
   // The picker owns every key typed inside it. xterm's textarea is outside it, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest('.picker')) return;
-  const action = mapShortcut(event, isMac);
+  const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
