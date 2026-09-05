@@ -301,14 +301,14 @@ async function showPicker(): Promise<void> {
   await openProject(choice);
 }
 
-function report(task: Promise<void>, failure: string): void {
+function report(task: Promise<void>): void {
   task.catch((error: unknown) => {
-    statusProjects.textContent = `${failure}: ${String(error)}`;
+    statusProjects.textContent = `Failed to open project: ${String(error)}`;
   });
 }
 
 function apply(action: Action): void {
-  if (action.kind === 'project-picker') return report(showPicker(), 'Failed to open project');
+  if (action.kind === 'project-picker') return report(showPicker());
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {

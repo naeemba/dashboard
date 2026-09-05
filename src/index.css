@@ -73,24 +73,23 @@ body {
   position: relative;
 }
 
-.page {
+/* One project is on screen at a time, and within it one view. Both stack in the same place. */
+.page, .view {
   display: block;
   position: absolute;
   inset: 0;
 }
 
-/* One view is on screen at a time. Visibility, not display, for the same reason pages use it: a view
-   you have not looked at yet still has a size, so the fit addon can measure its panes. `display: block`
-   has to be set here rather than left to view-terminals/view-nvim/board's own grid or flex rules, or a
-   view that ever drops its layout declaration would go back to `display: none` the moment it is hidden. */
 .view {
-  display: block;
-  position: absolute;
-  inset: 0;
   background: var(--black);
 }
 
-.view[hidden] {
+/* Visibility, not display: what is hidden keeps its size, so the fit addon can still measure the panes
+   inside it. `display: block` above is what makes this work — left to view-terminals, view-nvim and
+   board's own grid and flex rules, a view that ever dropped its layout declaration would fall back to
+   the browser's own `display: none` for [hidden] the moment it was hidden, and its panes would measure
+   zero. A pane measured at zero comes back as an 80x24 terminal in a full-width window. */
+.page[hidden], .view[hidden] {
   visibility: hidden;
 }
 
@@ -172,11 +171,6 @@ body {
   justify-content: center;
   color: var(--red);
   background: var(--background);
-}
-
-/* Visibility, not display: hidden pages keep their size so the fit addon can measure them. */
-.page[hidden] {
-  visibility: hidden;
 }
 
 .pane {
