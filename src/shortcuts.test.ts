@@ -41,8 +41,11 @@ describe('mapShortcut on macOS', () => {
   it('turns Cmd+Backspace into Ctrl+U, the way Ghostty does', () => {
     expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), true))
       .toEqual({ kind: 'terminal-input', data: '\x15' });
-    expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), false)).toBeNull();
     expect(mapShortcut(key({ key: 'Backspace' }), true)).toBeNull();
+    // Shift keeps the plain backspace; Ctrl rides along with Cmd and still clears the line.
+    expect(mapShortcut(key({ key: 'Backspace', metaKey: true, shiftKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ key: 'Backspace', metaKey: true, ctrlKey: true }), true))
+      .toEqual({ kind: 'terminal-input', data: '\x15' });
   });
 
   it('lets Cmd+C and Cmd+V through for copy and paste', () => {
@@ -60,6 +63,10 @@ describe('mapShortcut elsewhere', () => {
   it('uses Ctrl as the modifier', () => {
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), false)).toEqual({ kind: 'project-next' });
     expect(mapShortcut(key({ key: ']', metaKey: true }), false)).toBeNull();
+  });
+
+  it('leaves Cmd+Backspace alone, since Ctrl+U already reaches the shell', () => {
+    expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), false)).toBeNull();
   });
 
   it('keeps the project keys on plain Ctrl', () => {

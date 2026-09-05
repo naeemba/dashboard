@@ -64,9 +64,10 @@ export function mapShortcut(input: KeyInput, isMac: boolean): Action | null {
     case '[': return { kind: 'project-previous' };
     case 'ArrowRight': return { kind: 'terminal-next' };
     case 'ArrowLeft': return { kind: 'terminal-previous' };
-    // Ghostty sends Ctrl+U for Cmd+Backspace, so the shell erases back to the start of the line;
-    // xterm.js sends a plain backspace, which eats one character. Elsewhere Ctrl+U already reaches
-    // the shell on its own, so there is nothing to stand in for.
+    // Ghostty sends Ctrl+U for Cmd+Backspace, so the shell clears the line — zsh binds ^U to
+    // kill-whole-line, so anything after the cursor goes too. xterm.js sends a plain backspace,
+    // which eats one character. Elsewhere Ctrl+U already reaches the shell on its own, so there is
+    // nothing to stand in for.
     case 'Backspace': return isMac ? { kind: 'terminal-input', data: '\x15' } : null;
     default: return null;
   }

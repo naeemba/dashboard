@@ -30,6 +30,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Next / previous project | Mod+] / Mod+[ |
 | Focus terminal N | Mod+1..5 (macOS only — see below) |
 | Next / previous terminal | Mod+Right / Mod+Left |
+| Clear the shell's current line | Cmd+Backspace (macOS only — see below) |
 | Move to the pane left / down / up / right | Option+H / J / K / L (Alt elsewhere) |
 
 ## Known limitations
@@ -39,6 +40,8 @@ The project list is keyboard-only by design: type to filter, Up and Down move, E
 Ctrl+O returns to the project you were on before this one, so two projects toggle back and forth. Ctrl+Shift+1..9 reorders the projects: the one on screen takes that position and the rest shift along, the way dragging a tab works. Its shells keep running throughout; only the order you cycle and jump through changes.
 
 Ctrl+S and Ctrl+O are plain Ctrl on every platform, macOS included, so the shell never receives them: no XOFF, no emacs reverse search, no readline operate-and-get-next inside a pane.
+
+Cmd+Backspace sends Ctrl+U to the shell, which clears the whole line, not just the part before the cursor — zsh binds ^U to kill-whole-line. It is macOS only: on Linux and Windows Ctrl+U already reaches the shell on its own.
 
 On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+[ (Escape in terminals and vim) and Ctrl+Left/Right (word movement), making them unavailable inside the shell. Ctrl+1..9 belongs to the projects everywhere, so on those platforms Mod+1..5 cannot reach the terminals — use Mod+Left/Right or Option+HJKL instead. macOS keeps both, since its shortcuts use Cmd.
 
