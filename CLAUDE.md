@@ -26,6 +26,16 @@ In practice: a new choice belongs in a list the arrow keys already walk over,
 not in a button beside it. If something new needs a click, it needs a key too,
 and the key is the part that has to work.
 
+## Mode keys pass through — Hard Rule
+
+Ctrl+T, Ctrl+N and Ctrl+B switch modes, except when they name the mode you are
+already in. There they are ignored, and the pane gets the keystroke.
+
+That is not an oversight. Ctrl+N is nvim's autocomplete and Ctrl+T is the
+shell's transpose. Take them and pressing Ctrl+N mid-word throws you out to the
+terminal grid instead of completing the word. You leave a mode by naming a
+different one.
+
 ## Checks
 
     npm test        # vitest
