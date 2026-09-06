@@ -73,6 +73,18 @@ export function addCard(board: Board, selection: Selection, id: string, title: s
   };
 }
 
+// What `n` does inside an open card. The child lands in the parent's column, at the bottom: a
+// subtask starts wherever its parent is, and you move it from there like any other card.
+export function addChildCard(board: Board, selection: Selection, id: string, title: string): Change {
+  const parent = cardAt(board, selection);
+  if (!parent) return { board, selection };
+  const cards = [...board.columns[selection.column].cards, { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: parent.id }];
+  return {
+    board: replaceColumn(board, selection.column, cards),
+    selection: { column: selection.column, card: cards.length - 1 },
+  };
+}
+
 // Rename, notes and priority all change one field of the selected card and leave the selection where
 // it is, so they are one operation with the field passed in.
 function editCard(board: Board, selection: Selection, fields: Partial<Card>): Change {

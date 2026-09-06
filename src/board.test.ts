@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PRIORITY,
   addCard,
+  addChildCard,
   attachToCardAbove,
   childColumns,
   childrenOf,
@@ -91,6 +92,24 @@ describe('addCard', () => {
     const original = board(['a']);
     addCard(original, { column: 0, card: 0 }, 'new', 'b');
     expect(titles(original)).toEqual([['a']]);
+  });
+});
+
+describe('addChildCard', () => {
+  it('adds the card to the parent\'s column, at the bottom, pointing at the parent', () => {
+    const result = addChildCard(board(['a'], ['x']), { column: 0, card: 0 }, 'new', 'a subtask');
+    expect(titles(result.board)).toEqual([['a', 'a subtask'], ['x']]);
+    expect(parents(result.board)['new']).toBe('a');
+  });
+
+  it('selects the card it added', () => {
+    const result = addChildCard(board(['a']), { column: 0, card: 0 }, 'new', 'a subtask');
+    expect(result.selection).toEqual({ column: 0, card: 1 });
+  });
+
+  it('does nothing in an empty column', () => {
+    const start = board(['a'], []);
+    expect(addChildCard(start, { column: 1, card: 0 }, 'new', 'a subtask').board).toBe(start);
   });
 });
 

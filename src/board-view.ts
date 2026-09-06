@@ -13,6 +13,7 @@ import {
   type Card,
   type Change,
 } from './board';
+import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
   applyChange,
@@ -232,6 +233,26 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
+  // The dialog changes the board as you add subtasks, so each change goes through apply() as it
+  // happens — same undo step, same write to disk as a change made on the board itself. It closes on
+  // the card you asked for, or on the subtask you pressed Enter on.
+  function openDetail(): void {
+    if (!cardAt(state.board, state.selection)) return;
+    openCardDetail({
+      board: state.board,
+      selection: state.selection,
+      makeId: () => crypto.randomUUID(),
+      onChange: (next) => {
+        change(next);
+        return state.board;
+      },
+    }).then((selection) => {
+      state = { ...state, selection };
+      element.focus();
+      render();
+    });
+  }
+
   element.addEventListener('keydown', (event) => {
     // The input owns every key while a title is being edited; its own handler ends the edit.
     if (editing || landedRead !== latestRead) return;
@@ -276,6 +297,9 @@ export function createBoardView(options: BoardOptions): BoardView {
       case 'd':
         event.preventDefault();
         return confirmDelete();
+      case 'o':
+        event.preventDefault();
+        return openDetail();
       case 'u':
         event.preventDefault();
         return apply(undoChange(state));

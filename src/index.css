@@ -287,10 +287,12 @@ textarea.board-edit {
   display: none;
 }
 
-/* Project picker, help and the delete confirmation: a centred overlay above the pages. */
+/* Project picker, help, the delete confirmation and the card detail dialog: a centred overlay above
+   the pages. */
 .picker,
 .help,
-.confirm {
+.confirm,
+.card-detail {
   position: fixed;
   inset: 0;
   display: flex;
@@ -301,7 +303,8 @@ textarea.board-edit {
 
 .picker-dialog,
 .help-dialog,
-.confirm-dialog {
+.confirm-dialog,
+.card-detail-dialog {
   display: flex;
   flex-direction: column;
   width: min(560px, 90vw);
@@ -323,6 +326,45 @@ textarea.board-edit {
 .confirm-keys {
   margin: 0;
   font-size: 12px;
+  opacity: 0.6;
+}
+
+.card-detail-dialog {
+  max-width: 520px;
+}
+
+.card-detail-meta,
+.card-detail-footer,
+.card-detail-empty {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.card-detail-notes {
+  margin: 12px 0;
+  white-space: pre-wrap;
+}
+
+.card-detail-children {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-detail-children li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.card-detail-children li.highlighted {
+  background: rgb(255 255 255 / 10%);
+}
+
+.card-detail-child-where {
+  flex: 0 0 auto;
   opacity: 0.6;
 }
 
@@ -380,7 +422,8 @@ textarea.board-edit {
   color: var(--brightBlack);
 }
 
-.picker-search {
+.picker-search,
+.card-detail-add {
   font: inherit;
   color: inherit;
   background: none;
@@ -388,6 +431,12 @@ textarea.board-edit {
   border-bottom: 1px solid var(--brightBlack);
   padding: 8px 10px;
   outline: none;
+}
+
+.card-detail-add {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0;
 }
 
 .picker-list {

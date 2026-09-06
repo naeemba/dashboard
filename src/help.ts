@@ -47,6 +47,7 @@ const BOARD_SHORTCUTS: Shortcut[] = [
   { keys: 'Shift+Tab', action: 'Cut this card loose from its parent' },
   { keys: 'Enter', action: "Edit the card's title" },
   { keys: 'e', action: "Edit the card's description" },
+  { keys: 'o', action: "Open the card: its notes, its parent, its subtasks" },
   { keys: 'n', action: 'Add a card' },
   { keys: 'd', action: 'Delete the card and its subtasks, after a confirmation' },
   { keys: 'p', action: "Cycle the card's priority" },
