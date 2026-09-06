@@ -45,7 +45,7 @@ down here. Take Ctrl+N in the card detail dialog and pressing it mid-word opens 
 "Subtask title" box. Take Enter with Cmd in the delete confirmation and a stray
 Cmd+Enter deletes a card and its whole family.
 
-Two keys are read before that guard, both on purpose:
+Three keys are read before that guard, all on purpose:
 
 - Shift+Arrow moves a card, so the board grid matches the arrows first. That is a
   binding that wants its modifier, not one leaking through.
@@ -53,8 +53,18 @@ Two keys are read before that guard, both on purpose:
   swallows every Tab because nothing else in it is focusable and Shift+Tab would
   drop focus into the pane behind the overlay. The grid takes bare Tab and lets
   Ctrl/Cmd/Alt+Tab fall through, because that one belongs to the window switcher.
+- Every key, in the settings screen, while a row is armed. A row waiting for a
+  binding has to read Ctrl, Cmd, Alt and Shift, or those four are the only keys
+  you could never bind. It is one keystroke long and puts the guard back
+  immediately after.
 
 If a handler reads a modified key anywhere else, it is stealing it.
+
+The mode keys are not `MODE_KEYS` any more. They are three rows in
+`src/actions.ts` like any other action, which means they can be rebound, and
+the pass-through check above runs against the action rather than the key —
+so if Ctrl+T becomes something else, the something else is what gets passed
+through, not the key that used to be Ctrl+T.
 
 ## A refusal is explained where it is decided — Hard Rule
 
@@ -80,10 +90,9 @@ no dialog, because it is believed.
 
 Two halves, both yours to keep true:
 
-- The keys. The mode rows read `MODE_KEYS`, so those look after themselves. The
-  board rows and the project rows are written out by hand, because the keys they
-  name live in a switch in `board-view.ts` and in `mapShortcut`. Change one of
-  those, change the row.
+- The keys. Every row is printed from the one table in `src/actions.ts`, so
+  adding a shortcut means adding a row to that table and nothing else — the
+  handler, the help dialog and the settings screen all read it.
 - The blurb. Each section opens with a sentence or two saying what that screen
   is. If a task changes what a screen does — not just how you drive it — the
   blurb is stale too.

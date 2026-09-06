@@ -408,10 +408,11 @@ textarea.board-edit {
 }
 
 /* Fixed column so the keys line up down the dialog and the eye can scan one side of it. Wide enough for
-   the longest row there is, "Ctrl+Right / Ctrl+Left", which wraps and breaks the column if it does not fit. */
+   the longest binding a person could produce, "Ctrl+Cmd+Alt+Shift+Backspace", which wraps and breaks the
+   column if it does not fit. */
 .help-keys {
   flex: none;
-  width: 22ch;
+  width: 29ch;
   color: var(--brightWhite);
 }
 
