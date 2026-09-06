@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { helpSections } from './help';
 import { mapShortcut, type Action, type KeyInput } from './shortcuts';
+import { defaultSettings } from './settings';
 import { key } from './test-key';
 
 // The Projects rows are written out by hand, because mapShortcut reads `code` on the digits and `key` on
@@ -8,11 +9,11 @@ import { key } from './test-key';
 // here presses the key it names: rename or drop a project shortcut and this fails, instead of leaving
 // Ctrl+H quietly telling someone to press a key that does nothing.
 const PROJECT_ROWS: { keys: string; press: Partial<KeyInput>; kind: Action['kind'] }[] = [
-  { keys: 'Ctrl+S', press: { key: 's', ctrlKey: true }, kind: 'project-picker' },
-  { keys: 'Ctrl+O', press: { key: 'o', ctrlKey: true }, kind: 'project-last' },
-  { keys: 'Ctrl+1…9', press: { code: 'Digit1', key: '1', ctrlKey: true }, kind: 'project-jump' },
-  { keys: 'Ctrl+Shift+1…9', press: { code: 'Digit1', key: '!', ctrlKey: true, shiftKey: true }, kind: 'project-move' },
-  { keys: 'Cmd+] / Cmd+[', press: { key: ']', metaKey: true }, kind: 'project-next' },
+  { keys: 'Ctrl+S', press: { code: 'KeyS', ctrlKey: true }, kind: 'project-picker' },
+  { keys: 'Ctrl+O', press: { code: 'KeyO', ctrlKey: true }, kind: 'project-last' },
+  { keys: 'Ctrl+1…9', press: { code: 'Digit1', ctrlKey: true }, kind: 'project-jump' },
+  { keys: 'Ctrl+Shift+1…9', press: { code: 'Digit1', ctrlKey: true, shiftKey: true }, kind: 'project-move' },
+  { keys: 'Cmd+] / Cmd+[', press: { code: 'BracketRight', metaKey: true }, kind: 'project-next' },
 ];
 
 describe('helpSections', () => {
@@ -33,7 +34,7 @@ describe('helpSections', () => {
     const projects = helpSections('board', true).find((section) => section.title === 'Projects');
     expect(projects?.shortcuts.map((shortcut) => shortcut.keys)).toEqual(PROJECT_ROWS.map((row) => row.keys));
     for (const row of PROJECT_ROWS) {
-      expect(mapShortcut(key(row.press), true, 'board')).toMatchObject({ kind: row.kind });
+      expect(mapShortcut(key(row.press), defaultSettings(true).keys, 'board')).toMatchObject({ kind: row.kind });
     }
   });
 

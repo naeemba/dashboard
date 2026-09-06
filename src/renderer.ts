@@ -47,7 +47,6 @@ const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
 // Replaced by the real file in start(), before any pane is built. Held here rather than passed down
 // because a settings change has to reach every pane on every page at once.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- read starting Task 8, when the font name comes from it
 let settings: Settings = defaultSettings(isMac);
 // What a dropped path is quoted for. Resolved by main from the settings, so it follows a shell change
 // without a restart.
@@ -385,10 +384,16 @@ function showHelp(): void {
   openHelp(pages[activeIndex]?.mode ?? 'terminals', isMac).then(() => showPage(activeIndex));
 }
 
+// A placeholder until the settings screen exists: for now Ctrl+, just redraws the page you are on.
+function showSettings(): void {
+  showPage(activeIndex);
+}
+
 function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   // Before the empty check: not knowing the keys is likeliest with nothing open yet.
   if (action.kind === 'help') return showHelp();
+  if (action.kind === 'settings') return showSettings();
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
@@ -409,6 +414,9 @@ function apply(action: Action): void {
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
+    // The board answers its own keys. It is reached from here rather than from its own listener so
+    // that one lookup decides every key on every screen.
+    default: return page.board?.runAction(action);
   }
 }
 
@@ -418,7 +426,7 @@ window.addEventListener('keydown', (event) => {
   // edited own every key typed inside them. xterm's textarea is outside all five, so a pane keeps
   // its shortcuts.
   if (event.target instanceof Element && event.target.closest('.picker, .help, .confirm, .card-detail, .board-edit')) return;
-  const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
+  const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();

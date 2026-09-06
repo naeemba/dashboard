@@ -15,6 +15,7 @@ import {
   type Card,
   type Change,
 } from './board';
+import type { Action } from './actions';
 import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
@@ -49,6 +50,9 @@ export type BoardView = {
   // What the status bar says about the board: the column the selection is in, and the priority of the
   // card it is on. The colour down a card's edge is the fast read; this is the one that names it.
   statusLabel(): string;
+  // The board's own keys, once the renderer's own lookup finds them and hands them here instead of
+  // this element's own keydown listener answering them.
+  runAction(action: Action): void;
 };
 
 const ARROW_DIRECTIONS: Record<string, Direction> = {
@@ -357,5 +361,8 @@ export function createBoardView(options: BoardOptions): BoardView {
       const card = cardAt(state.board, state.selection);
       return card ? `${column.name} · ${card.priority}` : column.name;
     },
+    // The board's own key handling moves in here next; until then the lookup finds these actions but
+    // nothing answers them.
+    runAction(): void {},
   };
 }
