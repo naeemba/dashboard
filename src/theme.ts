@@ -1,9 +1,8 @@
 import type { ITheme } from '@xterm/xterm';
 
-// Ghostty's stock look (`ghostty +show-config --default`): #282c34 background, white foreground, and its
-// default 16-color palette. The renderer publishes every entry as a CSS custom property so index.css styles
-// the chrome from the same values, and the main process paints the window with the background before the
-// renderer exists — otherwise the first frame is white.
+// The theme the app ships with: Ghostty's stock look (`ghostty +show-config --default`) — #282c34
+// background, white foreground, and its default 16-color palette. settings.json overrides any colour
+// in here; this is only what a fresh install, or a settings file with no `theme` key, paints with.
 export const THEME: ITheme = {
   background: '#282c34',
   foreground: '#ffffff',
