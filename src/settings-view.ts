@@ -2,7 +2,7 @@ import { actionByName } from './actions';
 import { formatBinding, keystrokeOf } from './binding';
 import { confirmOverlay, openOverlay } from './overlay';
 import {
-  bindKey, defaultSettings, holderOfBinding, resetKeys, type Settings,
+  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, resetKeys, type Settings,
 } from './settings';
 import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
 import { isModified } from './shortcuts';
@@ -24,7 +24,7 @@ export function openSettings(
     // which every other dialog refuses to do — reading them is the whole job. CLAUDE.md names it.
     let armed: string | null = null;
     let message = '';
-    const editor: HTMLInputElement | null = null;
+    let editor: HTMLInputElement | null = null;
 
     function close(): void {
       remove();
@@ -114,9 +114,59 @@ export function openSettings(
       if (editor !== null) editor.focus();
     }
 
-    // A stub: the text rows are not editable yet.
+    // Enter opens a box in the row, Escape commits — the same gesture the board uses for a card title.
+    // Enter commits too: unlike a card description there is never a newline to type here.
     function startEditing(row: SettingsRow): void {
-      void row;
+      if (row.kind === 'heading' || row.kind === 'key'
+        || row.kind === 'reset-keys' || row.kind === 'reset-all') return;
+      const input = document.createElement('input');
+      input.className = 'settings-edit';
+      input.value = row.value;
+      editor = input;
+      // Replaces the value in the row that is already on screen, so nothing moves under your hand.
+      const item = dialog.querySelectorAll('.settings-row, .settings-heading')[selected];
+      item?.querySelector('.settings-value')?.replaceChildren(input);
+      input.focus();
+      input.select();
+
+      function finish(save: boolean): void {
+        editor = null;
+        if (!save) {
+          dialog.focus();
+          return render();
+        }
+        const text = input.value.trim();
+        dialog.focus();
+        if (row.kind === 'color') {
+          if (!isHexColor(text)) return say(`"${text}" is not a colour. Write it as #cc6666.`);
+          return commit({ ...settings, theme: { ...settings.theme, [row.name]: text } });
+        }
+        if (row.kind === 'font-size') {
+          if (!isFontSize(text)) return say(`"${text}" is not a font size. Anything from 6 to 72.`);
+          return commit({ ...settings, font: { ...settings.font, size: Number(text) } });
+        }
+        if (row.kind === 'font-name') {
+          // A font the machine does not have is not something this can check: the browser reports no
+          // error and xterm falls back to Menlo. An empty name means the one it shipped with.
+          const name = text === '' ? defaultSettings(isMac).font.name : text;
+          return commit({ ...settings, font: { ...settings.font, name } });
+        }
+        // The shell. Empty is the file saying "work it out from the environment", which is a real
+        // answer rather than a blank, so there is nothing to refuse.
+        commit({ ...settings, shellCommand: text });
+      }
+
+      input.addEventListener('keydown', (event) => {
+        // A dialog has focus, so no pane can hear this anyway, and Cmd+Enter is not a commit.
+        if (isModified(event)) return;
+        if (event.key !== 'Enter' && event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        // Enter and Escape both commit, exactly as the board's title editor does. Two screens that
+        // disagreed about what Escape means would be worse than either answer.
+        finish(true);
+      });
+      input.addEventListener('blur', () => finish(true));
     }
 
     function activate(row: SettingsRow): void {

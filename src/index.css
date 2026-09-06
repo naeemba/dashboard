@@ -543,6 +543,18 @@ textarea.board-edit {
   vertical-align: text-bottom;
 }
 
+/* The row's own text box, sized to the value column so the list does not jump when one opens. */
+.settings-edit {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--blue);
+  background: transparent;
+  font: inherit;
+  color: var(--brightWhite);
+  outline: none;
+}
+
 .settings-footer {
   margin: 10px 0 0;
   padding: 8px 12px 0;

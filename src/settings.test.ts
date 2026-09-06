@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bindKey, defaultSettings, holderOfBinding, parseSettings, resetKeys,
+  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, parseSettings, resetKeys,
 } from './settings';
 import { ACTIONS } from './actions';
 import { THEME } from './theme';
@@ -107,5 +107,27 @@ describe('resetKeys', () => {
     const reset = resetKeys(changed, true);
     expect(reset.keys).toEqual(defaultSettings(true).keys);
     expect(reset.shellCommand).toBe('/bin/fish');
+  });
+});
+
+describe('the two refusals the settings screen prints', () => {
+  it('takes a six-digit hex colour and nothing else', () => {
+    expect(isHexColor('#cc6666')).toBe(true);
+    expect(isHexColor('#CC6666')).toBe(true);
+    expect(isHexColor('#ccc')).toBe(false);
+    expect(isHexColor('cc6666')).toBe(false);
+    expect(isHexColor('red')).toBe(false);
+    expect(isHexColor('')).toBe(false);
+  });
+
+  // Outside this range you get a window of panes you cannot read and no way to see the screen that
+  // would put it back.
+  it('takes a font size between 6 and 72', () => {
+    expect(isFontSize('13')).toBe(true);
+    expect(isFontSize('13.5')).toBe(true);
+    expect(isFontSize('5')).toBe(false);
+    expect(isFontSize('73')).toBe(false);
+    expect(isFontSize('big')).toBe(false);
+    expect(isFontSize('')).toBe(false);
   });
 });

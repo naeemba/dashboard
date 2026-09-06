@@ -26,6 +26,14 @@ export function isHexColor(value: unknown): value is string {
   return typeof value === 'string' && HEX_COLOR.test(value);
 }
 
+// The same range parseSettings holds a stored size to. Exported because the settings screen prints the
+// message: one place decides the refusal and another shows it, so they must not each hold their own idea
+// of what is allowed.
+export function isFontSize(value: string): boolean {
+  const size = Number(value);
+  return value.trim() !== '' && Number.isFinite(size) && size >= 6 && size <= 72;
+}
+
 export function defaultSettings(isMac: boolean): Settings {
   return {
     shellCommand: '',
@@ -69,8 +77,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
         ? storedFont.name : defaults.font.name,
       // A size outside this range gives you a window of unreadable panes and no way to see the screen
       // that would fix it.
-      size: typeof storedFont.size === 'number' && Number.isFinite(storedFont.size)
-        && storedFont.size >= 6 && storedFont.size <= 72
+      size: typeof storedFont.size === 'number' && isFontSize(String(storedFont.size))
         ? storedFont.size : defaults.font.size,
     },
     theme: Object.fromEntries(THEME_COLORS.map((name) => [
