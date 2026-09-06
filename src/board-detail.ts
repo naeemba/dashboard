@@ -17,8 +17,8 @@ export type CardDetailOptions = {
 export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
   return new Promise<Selection>((resolve) => {
     let board = options.board;
-    // Which child is highlighted, or -1 when the card has none. Not a Selection: these are rows in
-    // this list, not positions on the board.
+    // A row in the children list, not a Selection — these are positions in this list, not on the
+    // board. Clamped into range on every render, so it reads as 0 on a card with no children.
     let highlighted = 0;
     let adding = false;
 
@@ -106,6 +106,13 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           render();
           dialog.focus();
         };
+        // Clicking away from the input leaves it blurred with the dialog focused. Without this the
+        // dialog would still think a subtask was being named, and every key after that does nothing.
+        input.onblur = () => {
+          if (!adding) return;
+          adding = false;
+          render();
+        };
         parts.push(input);
       }
 
@@ -115,6 +122,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       parts.push(footer);
 
       dialog.replaceChildren(...parts);
+      list.children[highlighted]?.scrollIntoView({ block: 'nearest' });
       if (adding) dialog.querySelector<HTMLInputElement>('.card-detail-add')?.focus();
       else dialog.focus();
     }

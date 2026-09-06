@@ -111,6 +111,12 @@ describe('addChildCard', () => {
     const start = board(['a'], []);
     expect(addChildCard(start, { column: 1, card: 0 }, 'new', 'a subtask').board).toBe(start);
   });
+
+  it('leaves the board it was given alone', () => {
+    const original = board(['a']);
+    addChildCard(original, { column: 0, card: 0 }, 'new', 'a subtask');
+    expect(titles(original)).toEqual([['a']]);
+  });
 });
 
 describe('renameCard', () => {

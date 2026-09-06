@@ -331,6 +331,8 @@ textarea.board-edit {
 
 .card-detail-dialog {
   max-width: 520px;
+  padding: 16px 20px;
+  overflow-y: auto;
 }
 
 .card-detail-meta,
