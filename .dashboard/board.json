@@ -1,0 +1,60 @@
+{
+  "columns": [
+    {
+      "name": "Todo",
+      "cards": [
+        {
+          "id": "e18e837c-34f1-4c95-9096-7ccb07ace4d0",
+          "title": "Ctrl+H opens help for the screen you are on",
+          "notes": "Every screen has keys you have to already know. Ctrl+H should pop up a dialog listing the shortcuts for that window: the terminal grid, nvim, and the board each have their own set.",
+          "priority": "high"
+        },
+        {
+          "id": "a350c135-4cf6-4e14-a180-d84e487c653f",
+          "title": "Give board cards subtasks",
+          "notes": "A card is one line and a description today. Subtasks need somewhere to live and a way for the arrow keys to reach them. Not designed yet.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Done",
+      "cards": [
+        {
+          "id": "16db2233-dab5-48b9-82e2-1341331ff7f7",
+          "title": "Give the editor pane the PATH the terminals already have",
+          "notes": "Ctrl+N only ever showed [exited 1]. The pane spawned nvim by name, and an app launched from the Dock has no Homebrew on PATH. nvim now runs through a login shell. PR #8.",
+          "priority": "urgent"
+        },
+        {
+          "id": "2bc566ed-dfab-4758-bf13-6aabe750fa31",
+          "title": "Ask before closing the window",
+          "notes": "Closing killed every shell on every page, including anything still running. The window asks first, with Cancel as the default. PR #8.",
+          "priority": "high"
+        },
+        {
+          "id": "7ad53d2c-11ea-461e-bb42-97fc36d5e1f6",
+          "title": "Open on the projects the last run was left on",
+          "notes": "The layout is saved to session.json and read back at startup: same projects, same order, same view, same focused pane. The shells still start empty. PR #8.",
+          "priority": "high"
+        },
+        {
+          "id": "0c17eaf8-1352-40c9-b497-8f971b2f7c7e",
+          "title": "Give board cards a priority",
+          "notes": "urgent, high, medium or low. p cycles it, a colour down the card's left edge shows it, the status bar names it, and s sorts the column urgent first. Sorting is stable, so Shift+up and Shift+down still hold within a priority.",
+          "priority": "medium"
+        },
+        {
+          "id": "ad957245-bbb3-4dc0-8b92-b98ba44b9c23",
+          "title": "Give board cards a description",
+          "notes": "e opens the card's notes in a textarea. Enter is a newline, Escape commits. The description shows on the card, dimmed, under the title.",
+          "priority": "medium"
+        }
+      ]
+    }
+  ]
+}

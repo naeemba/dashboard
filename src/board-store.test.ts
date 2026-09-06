@@ -18,7 +18,8 @@ const columnNames = (board: { columns: { name: string }[] }) => board.columns.ma
 describe('parseBoard', () => {
   it('reads a well-formed board', () => {
     const board = parseBoard('{"columns":[{"name":"Later","cards":[{"id":"1","title":"a","notes":"n"}]}]}');
-    expect(board.columns).toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n' }] }]);
+    expect(board.columns)
+      .toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium' }] }]);
   });
 
   // readBoard turns each of these into the empty board and moves the file aside; parseBoard's job is
@@ -45,9 +46,21 @@ describe('parseBoard', () => {
 
   // An agent writing a card by hand will forget the id, and losing the card would be worse than
   // giving it one.
+  // A hand-edited file is the likely source of a priority that is not one, and losing the card over it
+  // would be worse than losing the colour.
+  it('reads a priority back, and falls to medium for one it does not know', () => {
+    const stored = '{"columns":[{"name":"Todo","cards":['
+      + '{"id":"1","title":"a","priority":"urgent"},'
+      + '{"id":"2","title":"b","priority":"screaming"},'
+      + '{"id":"3","title":"c"}]}]}';
+    expect(parseBoard(stored).columns[0].cards.map((card) => card.priority))
+      .toEqual(['urgent', 'medium', 'medium']);
+  });
+
   it('gives a card without an id one of its own', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"title":"a"}]}]}', () => 'generated');
-    expect(board.columns[0].cards[0]).toEqual({ id: 'generated', title: 'a', notes: '' });
+    expect(board.columns[0].cards[0])
+      .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium' });
   });
 });
 
@@ -58,7 +71,9 @@ describe('readBoard', () => {
 
   it('reads back what writeBoard wrote', () => {
     const path = project();
-    writeBoard(path, { columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '' }] }] });
+    writeBoard(path, {
+      columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium' }] }],
+    });
     expect(columnNames(readBoard(path).board)).toEqual(['Later']);
   });
 

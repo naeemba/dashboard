@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
+import { DEFAULT_PRIORITY, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
 import {
   addBlankCard,
   applyChange,
@@ -14,7 +14,7 @@ function board(...columns: string[][]): Board {
   return {
     columns: columns.map((cardTitles, index) => ({
       name: `Column ${index}`,
-      cards: cardTitles.map((title) => ({ id: title, title, notes: '' })),
+      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY })),
     })),
   };
 }

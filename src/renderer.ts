@@ -79,7 +79,7 @@ let previousSlot: number | null = null;
 // The right-hand span says which view you are in, and for terminals which pane has the keyboard.
 function modeLabel(page: Page): string {
   if (page.mode === 'nvim') return 'nvim';
-  if (page.mode === 'board') return `board · ${page.board?.columnName() ?? ''}`;
+  if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
   return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
 }
 
