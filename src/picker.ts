@@ -1,6 +1,7 @@
 import { fuzzyScore } from './fuzzy';
 import { openOverlay } from './overlay';
 import type { Project } from './projects';
+import { isModified } from './shortcuts';
 
 // A path opens that project, null means "open a new project", undefined means the picker was dismissed.
 export type PickerChoice = string | null | undefined;
@@ -72,9 +73,12 @@ export function openPicker(projects: Project[]): Promise<PickerChoice> {
       render();
     });
     search.addEventListener('keydown', (event) => {
+      // Nothing else in the dialog is focusable, so Tab would drop focus into the pane behind the
+      // overlay — and so would Shift+Tab, which is why this comes before the modified keys are
+      // handed back.
+      if (event.key === 'Tab') return event.preventDefault();
+      if (isModified(event)) return;
       switch (event.key) {
-        // Nothing else in the dialog is focusable, so Tab would drop focus into the pane behind the overlay.
-        case 'Tab': return event.preventDefault();
         case 'Escape': return finish(undefined);
         case 'Enter': return finish(rows[highlighted].choice);
         case 'ArrowDown': event.preventDefault(); return move(1);

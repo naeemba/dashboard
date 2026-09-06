@@ -1,5 +1,6 @@
 import { MODE_KEYS, type Mode } from './modes';
 import { openOverlay } from './overlay';
+import { isModified } from './shortcuts';
 
 // One row of the help dialog: the keys you press, and what they do.
 export type Shortcut = { keys: string; action: string };
@@ -153,6 +154,7 @@ export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
     dialog.focus();
 
     dialog.addEventListener('keydown', (event) => {
+      if (isModified(event)) return;
       if (event.key !== 'Escape' && event.key !== 'Enter') return;
       event.preventDefault();
       close();

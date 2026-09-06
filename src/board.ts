@@ -138,8 +138,25 @@ export function attachToCardAbove(board: Board, selection: Selection): Change {
   const above = board.columns[selection.column]?.cards[selection.card - 1];
   if (!card || !above) return { board, selection };
   if (above.id === card.parent) return { board, selection };
-  if (isDescendantOf(board, above.id, card.id)) return { board, selection };
+  if (attachmentRing(board, selection)) return { board, selection };
   return editCard(board, selection, { parent: above.id });
+}
+
+// The card above, when attaching to it would make a ring, and null when Tab would go through. The
+// view prints a message about this one refusal and attachToCardAbove acts on it, so both ask here
+// rather than each re-deriving the test: a message decided apart from the refusal drifts from it.
+export function attachmentRing(board: Board, selection: Selection): Card | null {
+  const card = cardAt(board, selection);
+  const above = board.columns[selection.column]?.cards[selection.card - 1];
+  if (!card || !above) return null;
+  return isDescendantOf(board, above.id, card.id) ? above : null;
+}
+
+// Whether blanking this card's title would strand a family. commitTitle refuses on it and the view
+// says why on it, for the same reason attachmentRing exists.
+export function hasSubtasks(board: Board, selection: Selection): boolean {
+  const card = cardAt(board, selection);
+  return card !== undefined && childrenOf(board, card.id).length > 0;
 }
 
 // Shift+Tab. The card keeps its own children: they point at its id, and nothing about that changed.

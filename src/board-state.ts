@@ -1,8 +1,8 @@
 import {
   addCard,
   cardAt,
-  childrenOf,
   deleteCard,
+  hasSubtasks,
   emptyBoard,
   renameCard,
   setNotes,
@@ -64,8 +64,7 @@ export function addBlankCard(state: BoardState, id: string): BoardState {
 export function commitTitle(state: BoardState, title: string): BoardState {
   const trimmed = title.trim();
   if (trimmed === '') {
-    const card = cardAt(state.board, state.selection);
-    if (card && childrenOf(state.board, card.id).length > 0) return state;
+    if (hasSubtasks(state.board, state.selection)) return state;
     return applyChange(state, deleteCard(state.board, state.selection));
   }
   // Both sides trimmed: parseCard keeps a title exactly as it is written, so a hand-edited

@@ -1,14 +1,14 @@
 import {
   attachToCardAbove,
+  attachmentRing,
   cardAt,
   cardById,
   childColumns,
-  childrenOf,
   cyclePriority,
   deleteCardAndDescendants,
   descendantsOf,
   detachCard,
-  isDescendantOf,
+  hasSubtasks,
   moveCard,
   moveSelection,
   sortColumn,
@@ -28,6 +28,7 @@ import {
 } from './board-state';
 import type { DashboardBridge } from './bridge';
 import { confirmOverlay } from './overlay';
+import { isModified } from './shortcuts';
 import type { Direction } from './terminals';
 
 export type BoardOptions = {
@@ -121,7 +122,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // confirmation must not strand a family. Without a word here the card simply springs back to its
     // old title and nothing says why, which reads as the keyboard having missed the keystroke.
     const card = cardAt(state.board, state.selection);
-    if (field === 'title' && value.trim() === '' && card && childrenOf(state.board, card.id).length > 0) {
+    if (field === 'title' && value.trim() === '' && card && hasSubtasks(state.board, state.selection)) {
       options.onError(`"${card.title}" has subtasks — delete it with d`);
     }
     apply(field === 'title' ? commitTitle(state, value) : commitNotes(state, value));
@@ -273,17 +274,17 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
       if (event.shiftKey) return change(detachCard(state.board, state.selection));
-      const above = state.board.columns[state.selection.column]?.cards[state.selection.card - 1];
-      const card = cardAt(state.board, state.selection);
       // The one refusal worth explaining. The others — no card above, nothing selected — are obvious
-      // from the screen, and a message for those would be noise.
-      if (card && above && isDescendantOf(state.board, above.id, card.id)) {
-        options.onError(`"${above.title}" is already a subtask of this card`);
+      // from the screen, and a message for those would be noise. attachToCardAbove decides it on the
+      // same call, so the message cannot say one thing while the board does another.
+      const ring = attachmentRing(state.board, state.selection);
+      if (ring) {
+        options.onError(`"${ring.title}" is already a subtask of this card`);
         return;
       }
       return change(attachToCardAbove(state.board, state.selection));
     }
-    if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isModified(event)) return;
     switch (event.key) {
       case 'Enter':
         event.preventDefault();

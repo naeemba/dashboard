@@ -108,6 +108,26 @@ describe('parseBoard', () => {
     expect(board.columns[0].cards[0])
       .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium', parent: null });
   });
+
+  // Copying the block above is how a similar card gets hand-written, and that copies the id. Left
+  // alone, `d` on either copy deletes both while the confirmation names one.
+  it('gives the second card with a taken id a fresh one', () => {
+    const board = parseBoard(
+      '{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]},{"name":"Doing","cards":[{"id":"1","title":"b"}]}]}',
+      () => 'generated',
+    );
+    expect(board.columns.flatMap((column) => column.cards).map((card) => card.id)).toEqual(['1', 'generated']);
+  });
+
+  // The first copy keeps the id, so a parent written against it still names a card on the board.
+  it('leaves a parent pointing at the first copy alone', () => {
+    const board = parseBoard(
+      '{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"},{"id":"1","title":"b"},'
+      + '{"id":"2","title":"c","parent":"1"}]}]}',
+      () => 'generated',
+    );
+    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, null, '1']);
+  });
 });
 
 describe('readBoard', () => {

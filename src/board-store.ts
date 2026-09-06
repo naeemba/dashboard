@@ -41,8 +41,9 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 
 - \`columns\` is ordered. The first column is the leftmost on screen.
 - \`cards\` is ordered. The first card is at the top of its column.
-- \`id\` is a UUID. Keep it stable when you edit a card. A card written without one is given an id
-  the next time the app reads the file.
+- \`id\` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
+  written without one, or with an id another card already used, is given a fresh one the next time
+  the app reads the file.
 - \`title\` is one line. A card with no \`title\`, or a blank one, is dropped when the app reads
   the file.
 - \`notes\` is the card's description, free text over as many lines as you like. \`e\` opens it.
@@ -109,15 +110,32 @@ function parseColumn(value: unknown, makeId: () => string): Column | null {
   };
 }
 
-// A hand-edited file can say two things the rest of the code cannot survive: a parent naming a card
-// that is not there, and a ring where a card is its own ancestor. Both are repaired rather than
-// rejected — throwing would send readBoard down the salvage path and cost someone every card over one
-// bad id.
+// A hand-edited file can say three things the rest of the code cannot survive: two cards sharing an
+// id, a parent naming a card that is not there, and a ring where a card is its own ancestor. All are
+// repaired rather than rejected — throwing would send readBoard down the salvage path and cost
+// someone every card over one bad id.
+//
+// The duplicate goes first, because everything after it looks a card up by id. Copying the block
+// above is how a similar card gets hand-written, and that copies the id with it: without this, `d` on
+// either copy deletes both, and the confirmation names only one. The second copy is the one given a
+// fresh id, so a `parent` naming the first keeps working.
 //
 // ponytail: walks up from each card, O(cards × depth). A board deep enough for that to show is a
 // board nobody can read anyway.
-function repairParents(columns: Column[]): Column[] {
-  const cards = columns.flatMap((column) => column.cards);
+function repairCards(columns: Column[], makeId: () => string): Column[] {
+  const taken = new Set<string>();
+  const unique = columns.map((column) => ({
+    ...column,
+    cards: column.cards.map((card) => {
+      if (!taken.has(card.id)) {
+        taken.add(card.id);
+        return card;
+      }
+      return { ...card, id: makeId() };
+    }),
+  }));
+
+  const cards = unique.flatMap((column) => column.cards);
   const byId = new Map(cards.map((card) => [card.id, card]));
 
   function isSafe(card: Card): boolean {
@@ -134,8 +152,8 @@ function repairParents(columns: Column[]): Column[] {
   }
 
   const broken = new Set(cards.filter((card) => !isSafe(card)).map((card) => card.id));
-  if (broken.size === 0) return columns;
-  return columns.map((column) => ({
+  if (broken.size === 0) return unique;
+  return unique.map((column) => ({
     ...column,
     cards: column.cards.map((card) => (broken.has(card.id) ? { ...card, parent: null } : card)),
   }));
@@ -150,7 +168,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return { columns: repairParents(columns) };
+  return { columns: repairCards(columns, makeId) };
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but

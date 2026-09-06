@@ -1,5 +1,6 @@
 import { addChildCard, cardAt, cardById, childrenOf, selectionOf, type Board, type Change, type Selection } from './board';
 import { openOverlay } from './overlay';
+import { isModified } from './shortcuts';
 
 export type CardDetailOptions = {
   board: Board;
@@ -85,6 +86,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
         // onkeydown rather than addEventListener, for the same reason board-view.ts uses it: the tag
         // declares it as taking a KeyboardEvent, which the listener overloads do not.
         input.onkeydown = (event) => {
+          if (isModified(event)) return;
           if (event.key !== 'Enter' && event.key !== 'Escape') return;
           event.preventDefault();
           event.stopPropagation();
@@ -128,6 +130,9 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
     dialog.addEventListener('keydown', (event) => {
       // The input owns every key while a subtask is being named; its own handler ends that.
       if (adding) return;
+      // Nothing else claims a modified key here: renderer.ts hands every key typed inside
+      // .card-detail to this dialog, so without this Ctrl+N opens the subtask box instead of nvim.
+      if (isModified(event)) return;
       const card = cardAt(board, options.selection);
       const children = card ? childrenOf(board, card.id) : [];
       switch (event.key) {

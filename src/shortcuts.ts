@@ -25,6 +25,13 @@ export type KeyInput = {
   altKey: boolean;
 };
 
+// Where every keydown handler in the app starts. A key with a modifier held is on its way to whoever
+// owns that combination — Ctrl+N is the mode key, not `n` — so a handler that reads `event.key`
+// without asking this first steals it. Dialogs included: they are the two that got it wrong.
+export function isModified(input: KeyInput): boolean {
+  return input.shiftKey || input.metaKey || input.ctrlKey || input.altKey;
+}
+
 // Option+H/J/K/L moves between panes. `code` because Option changes `key` on macOS ("h" becomes "˙").
 const VIM_DIRECTIONS: Record<string, Direction> = { KeyH: 'left', KeyJ: 'down', KeyK: 'up', KeyL: 'right' };
 

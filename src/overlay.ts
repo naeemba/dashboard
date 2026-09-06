@@ -1,3 +1,5 @@
+import { isModified } from './shortcuts';
+
 // The picker and the help dialog are the same thing on screen: a dark sheet over the pages with one box
 // centred in it. Only what goes in the box, and what the box answers with, differ — so the sheet is here
 // and they keep their own contents. The class names match the CSS, where the two already share a rule.
@@ -43,6 +45,8 @@ export function confirmOverlay(message: string): Promise<boolean> {
     dialog.focus();
 
     dialog.addEventListener('keydown', (event) => {
+      // Cmd+Enter is not an answer to a question about deleting a card and its whole family.
+      if (isModified(event)) return;
       if (event.key !== 'Enter' && event.key !== 'Escape') return;
       event.preventDefault();
       close(event.key === 'Enter');

@@ -36,6 +36,28 @@ shell's transpose. Take them and pressing Ctrl+N mid-word throws you out to the
 terminal grid instead of completing the word. You leave a mode by naming a
 different one.
 
+Dialogs are not exempt, and two of them got this wrong before the rule was
+written down here. **Every keydown handler starts with `if (isModified(event))
+return;`**, before it looks at `event.key` at all. Take Ctrl+N in the card detail
+dialog and pressing it mid-word opens a "Subtask title" box instead of going to
+nvim. Take Enter with Cmd in the delete confirmation and a stray Cmd+Enter
+deletes a card and its whole family.
+
+## A refusal is explained where it is decided — Hard Rule
+
+When one place decides to refuse something and another prints the message, the
+two drift. Export the predicate from the file that enforces the refusal and call
+it from the file that displays it.
+
+What the drift looks like: someone changes `commitTitle` to refuse only while a
+subtask is unfinished. You blank the title of a card whose subtasks are all in
+Done. The card is deleted — and the status bar says `"Ship it" has subtasks —
+delete it with d`. You read that, assume the card survived, and it is gone. No
+test fails.
+
+`hasSubtasks` and `attachmentRing` in `board.ts` are the two predicates that
+exist. A third refusal worth a message wants a third.
+
 ## The help dialog is part of the change — Hard Rule
 
 **Every task that adds, removes or changes a key, a mode, or what a screen does

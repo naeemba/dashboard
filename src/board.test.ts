@@ -4,6 +4,8 @@ import {
   addCard,
   addChildCard,
   attachToCardAbove,
+  attachmentRing,
+  cardById,
   childColumns,
   childrenOf,
   cyclePriority,
@@ -12,10 +14,12 @@ import {
   descendantsOf,
   detachCard,
   emptyBoard,
+  hasSubtasks,
   isDescendantOf,
   moveCard,
   moveSelection,
   renameCard,
+  selectionOf,
   setNotes,
   sortColumn,
   type Board,
@@ -400,6 +404,62 @@ describe('attachToCardAbove', () => {
   it('moves a card that already has a parent to the new one', () => {
     const start = withParents(board(['a', 'b', 'c']), { c: 'a' });
     expect(parents(attachToCardAbove(start, { column: 0, card: 2 }).board).c).toBe('b');
+  });
+
+  // The no-op that costs something if it goes: rebuilding the board here would spend the undo step
+  // on a board identical to the one on screen, and `u` would no longer reach the move before it.
+  it('does nothing when the card above is already the parent', () => {
+    const start = withParents(board(['a', 'b']), { b: 'a' });
+    expect(attachToCardAbove(start, { column: 0, card: 1 }).board).toBe(start);
+  });
+});
+
+describe('cardById', () => {
+  it('finds a card in any column', () => {
+    expect(cardById(board(['a'], ['b']), 'b')?.title).toBe('b');
+  });
+
+  it('is undefined for an id no card has', () => {
+    expect(cardById(board(['a']), 'z')).toBeUndefined();
+  });
+});
+
+describe('selectionOf', () => {
+  it('gives the column and row a card sits at', () => {
+    expect(selectionOf(board(['a'], ['b', 'c']), 'c')).toEqual({ column: 1, card: 1 });
+  });
+
+  // board-detail.ts falls back to the card you opened on this, so null is the half that matters.
+  it('is null for an id no card has', () => {
+    expect(selectionOf(board(['a']), 'z')).toBe(null);
+  });
+});
+
+describe('attachmentRing', () => {
+  // a is b's parent, and b sits above a: attaching a to b would make each the other's ancestor.
+  it('names the card above when attaching would make a ring', () => {
+    const start = withParents(board(['b', 'a']), { b: 'a' });
+    expect(attachmentRing(start, { column: 0, card: 1 })?.title).toBe('b');
+  });
+
+  it('is null when the attachment would go through', () => {
+    expect(attachmentRing(board(['a', 'b']), { column: 0, card: 1 })).toBe(null);
+  });
+
+  it('is null on the top card of a column', () => {
+    expect(attachmentRing(board(['a', 'b']), { column: 0, card: 0 })).toBe(null);
+  });
+});
+
+describe('hasSubtasks', () => {
+  it('is true for a card something points at', () => {
+    const start = withParents(board(['a'], ['b']), { b: 'a' });
+    expect(hasSubtasks(start, { column: 0, card: 0 })).toBe(true);
+  });
+
+  it('is false for a leaf card and for an empty column', () => {
+    expect(hasSubtasks(board(['a', 'b']), { column: 0, card: 1 })).toBe(false);
+    expect(hasSubtasks(board(['a'], []), { column: 1, card: 0 })).toBe(false);
   });
 });
 
