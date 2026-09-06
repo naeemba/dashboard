@@ -5,6 +5,7 @@ import './index.css';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
@@ -366,8 +367,16 @@ function report(task: Promise<void>): void {
   );
 }
 
+// The keys for the screen in front of you, so it answers with an empty window open too — there the
+// mode is the one a project would open as.
+function showHelp(): void {
+  openHelp(pages[activeIndex]?.mode ?? 'terminals', isMac).then(() => showPage(activeIndex));
+}
+
 function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
+  // Before the empty check: not knowing the keys is likeliest with nothing open yet.
+  if (action.kind === 'help') return showHelp();
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
@@ -393,9 +402,9 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker and a card being edited own every key typed inside them. xterm's textarea is outside
-  // both, so a pane keeps its shortcuts.
-  if (event.target instanceof Element && event.target.closest('.picker, .board-edit')) return;
+  // The picker, the help dialog and a card being edited own every key typed inside them. xterm's
+  // textarea is outside all three, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest('.picker, .help, .board-edit')) return;
   const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();

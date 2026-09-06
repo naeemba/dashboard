@@ -245,8 +245,9 @@ textarea.board-edit {
   display: none;
 }
 
-/* Project picker: a centred overlay above the pages. */
-.picker {
+/* Project picker and help: a centred overlay above the pages. */
+.picker,
+.help {
   position: fixed;
   inset: 0;
   display: flex;
@@ -255,13 +256,59 @@ textarea.board-edit {
   background: rgb(0 0 0 / 50%);
 }
 
-.picker-dialog {
+.picker-dialog,
+.help-dialog {
   display: flex;
   flex-direction: column;
   width: min(560px, 90vw);
   max-height: 60vh;
   border: 1px solid var(--brightBlack);
   background: var(--black);
+}
+
+/* Help: sections of key/action rows, scrolling as one if the screen is short. */
+.help-dialog {
+  overflow-y: auto;
+  padding: 10px 0;
+  outline: none;
+}
+
+.help-dialog h2 {
+  margin: 8px 0 4px;
+  padding: 0 12px;
+  color: var(--blue);
+  font-size: inherit;
+  font-weight: normal;
+}
+
+.help-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-list li {
+  display: flex;
+  gap: 12px;
+  padding: 2px 12px;
+}
+
+/* Fixed column so the keys line up down the dialog and the eye can scan one side of it. */
+.help-keys {
+  flex: none;
+  width: 15ch;
+  color: var(--brightWhite);
+}
+
+.help-action {
+  color: var(--white);
+}
+
+.help-footer {
+  margin: 10px 0 0;
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--brightBlack);
+  color: var(--brightBlack);
 }
 
 .picker-search {

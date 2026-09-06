@@ -8,6 +8,7 @@ export type Action =
   | { kind: 'project-move'; index: number }
   | { kind: 'project-picker' }
   | { kind: 'project-last' }
+  | { kind: 'help' }
   | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
   | { kind: 'terminal-next' }
@@ -74,6 +75,9 @@ export function mapShortcut(input: KeyInput, isMac: boolean, mode: Mode = 'termi
     const letter = input.key.toLowerCase();
     if (letter === 's') return { kind: 'project-picker' };
     if (letter === 'o') return { kind: 'project-last' };
+    // Answers from every mode, because the screen you cannot remember the keys for is the one you are
+    // on. The cost is that Ctrl+H no longer reaches the shell or nvim as a backspace.
+    if (letter === 'h') return { kind: 'help' };
     const wanted = MODE_KEYS[letter];
     // The key naming the mode you are already in belongs to whatever runs there. Ctrl+N completes a
     // word in nvim and Ctrl+T transposes characters in the shell; taking those would cost more than
