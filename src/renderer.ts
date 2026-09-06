@@ -17,6 +17,7 @@ import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
+import { openSettings } from './settings-view';
 
 // The editor is a sixth pty for the project, sitting one past the grid's five.
 const EDITOR_INDEX = TERMINAL_COUNT;
@@ -406,9 +407,12 @@ function showHelp(): void {
     .then(() => showPage(activeIndex));
 }
 
-// A placeholder until the settings screen exists: for now Ctrl+, just redraws the page you are on.
 function showSettings(): void {
-  showPage(activeIndex);
+  openSettings(settings, isMac, (next) => {
+    settings = next;
+    bridge.saveSettings(next);
+    applyAppearance();
+  }).then(() => showPage(activeIndex));
 }
 
 function apply(action: Action): void {
@@ -444,10 +448,12 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker, the help dialog, the delete confirmation, the card detail dialog and a card being
-  // edited own every key typed inside them. xterm's textarea is outside all five, so a pane keeps
-  // its shortcuts.
-  if (event.target instanceof Element && event.target.closest('.picker, .help, .confirm, .card-detail, .board-edit')) return;
+  // The picker, the help dialog, the delete confirmation, the card detail dialog, a card being
+  // edited and the settings screen own every key typed inside them. xterm's textarea is outside all
+  // six, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest(
+    '.picker, .help, .confirm, .card-detail, .board-edit, .settings',
+  )) return;
   const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();

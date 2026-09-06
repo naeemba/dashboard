@@ -26,7 +26,7 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
 // The third thing built on the sheet, after the picker and the help dialog. Enter confirms, Escape
 // cancels, and clicking the dark margin cancels — a dialog that appears under your hand must not
 // treat a stray click as yes.
-export function confirmOverlay(message: string): Promise<boolean> {
+export function confirmOverlay(message: string, keysLine = 'Enter deletes. Escape keeps it.'): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     function close(answer: boolean): void {
       remove();
@@ -40,7 +40,7 @@ export function confirmOverlay(message: string): Promise<boolean> {
     question.textContent = message;
     const keys = document.createElement('p');
     keys.className = 'confirm-keys';
-    keys.textContent = 'Enter deletes. Escape keeps it.';
+    keys.textContent = keysLine;
     dialog.append(question, keys);
     dialog.focus();
 
