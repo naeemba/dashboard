@@ -208,7 +208,9 @@ body {
   background: #3fa45b;
 }
 
-.board-progress-count {
+/* A span inside .board-progress, so it inherits the segment rule above and has to out-specify it, not
+   merely follow it — hence the extra .board-progress ancestor in the selector. */
+.board-progress .board-progress-count {
   flex: 0 0 auto;
   height: auto;
   margin-left: 4px;

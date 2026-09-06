@@ -226,6 +226,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     }
     if (event.key === 'Tab') {
       event.preventDefault();
+      // Every Tab press answers the previous one: a refusal that no longer applies must not sit in
+      // the status bar just because the next press happened to change nothing either.
+      options.onError('');
       if (event.shiftKey) return change(detachCard(state.board, state.selection));
       const above = state.board.columns[state.selection.column]?.cards[state.selection.card - 1];
       const card = cardAt(state.board, state.selection);
