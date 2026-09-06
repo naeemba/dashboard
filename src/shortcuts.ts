@@ -25,9 +25,10 @@ export type KeyInput = {
   altKey: boolean;
 };
 
-// Where every keydown handler in the app starts. A key with a modifier held is on its way to whoever
-// owns that combination — Ctrl+N is the mode key, not `n` — so a handler that reads `event.key`
-// without asking this first steals it. Dialogs included: they are the two that got it wrong.
+// What every keydown handler asks before it acts on `event.key`. A key with a modifier held is on its
+// way to whoever owns that combination — Ctrl+N is the mode key, not `n` — so a handler that reads
+// `event.key` without asking this first steals it. Dialogs included: they are the two that got it
+// wrong. Shift+Arrow on the board and Tab in the picker are read ahead of it, and CLAUDE.md says why.
 export function isModified(input: KeyInput): boolean {
   return input.shiftKey || input.metaKey || input.ctrlKey || input.altKey;
 }

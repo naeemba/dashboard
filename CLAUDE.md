@@ -36,12 +36,25 @@ shell's transpose. Take them and pressing Ctrl+N mid-word throws you out to the
 terminal grid instead of completing the word. You leave a mode by naming a
 different one.
 
-Dialogs are not exempt, and two of them got this wrong before the rule was
-written down here. **Every keydown handler starts with `if (isModified(event))
-return;`**, before it looks at `event.key` at all. Take Ctrl+N in the card detail
-dialog and pressing it mid-word opens a "Subtask title" box instead of going to
-nvim. Take Enter with Cmd in the delete confirmation and a stray Cmd+Enter
-deletes a card and its whole family.
+Inside an overlay the key goes nowhere at all. A dialog has focus, so no pane can
+receive the keystroke anyway, and the mode keys are turned away at the window
+listener before they are even read. **So every keydown handler reaches `if
+(isModified(event)) return;` before it acts on `event.key`, and a modified key in
+a dialog does nothing.** Two of them got this wrong before the rule was written
+down here. Take Ctrl+N in the card detail dialog and pressing it mid-word opens a
+"Subtask title" box. Take Enter with Cmd in the delete confirmation and a stray
+Cmd+Enter deletes a card and its whole family.
+
+Two keys are read before that guard, both on purpose:
+
+- Shift+Arrow moves a card, so the board grid matches the arrows first. That is a
+  binding that wants its modifier, not one leaking through.
+- Tab, in the picker and in the board grid, for opposite reasons. The picker
+  swallows every Tab because nothing else in it is focusable and Shift+Tab would
+  drop focus into the pane behind the overlay. The grid takes bare Tab and lets
+  Ctrl/Cmd/Alt+Tab fall through, because that one belongs to the window switcher.
+
+If a handler reads a modified key anywhere else, it is stealing it.
 
 ## A refusal is explained where it is decided — Hard Rule
 

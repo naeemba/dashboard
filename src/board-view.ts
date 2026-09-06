@@ -139,6 +139,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     // onkeydown rather than addEventListener: both tags declare it as taking a KeyboardEvent, which the
     // union of the two does not do for the listener overloads.
     input.onkeydown = (event) => {
+      // Returning without preventDefault, so Cmd+A and Cmd+V still do what they do in any text box.
+      if (isModified(event)) return;
       const commits = field === 'title' ? event.key === 'Enter' || event.key === 'Escape' : event.key === 'Escape';
       if (!commits) return;
       event.preventDefault();

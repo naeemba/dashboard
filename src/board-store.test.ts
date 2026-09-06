@@ -119,6 +119,18 @@ describe('parseBoard', () => {
     expect(board.columns.flatMap((column) => column.cards).map((card) => card.id)).toEqual(['1', 'generated']);
   });
 
+  // The generated id is a card id like any other, so the card further down that already carries it
+  // has to be moved off it too. Otherwise splitting one pair just makes another.
+  it('gives a fresh id that a later card already carries', () => {
+    let issued = 0;
+    const board = parseBoard(
+      '{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"},{"id":"1","title":"b"},'
+      + '{"id":"fresh-1","title":"c"}]}]}',
+      () => `fresh-${++issued}`,
+    );
+    expect(board.columns[0].cards.map((card) => card.id)).toEqual(['1', 'fresh-1', 'fresh-2']);
+  });
+
   // The first copy keeps the id, so a parent written against it still names a card on the board.
   it('leaves a parent pointing at the first copy alone', () => {
     const board = parseBoard(

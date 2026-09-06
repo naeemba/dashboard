@@ -131,7 +131,11 @@ function repairCards(columns: Column[], makeId: () => string): Column[] {
         taken.add(card.id);
         return card;
       }
-      return { ...card, id: makeId() };
+      // Into `taken` as well: a generated id can land on one a later card already carries, and
+      // without this that later card keeps it and the pair this function exists to split is back.
+      const fresh = makeId();
+      taken.add(fresh);
+      return { ...card, id: fresh };
     }),
   }));
 
