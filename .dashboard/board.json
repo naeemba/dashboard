@@ -4,12 +4,6 @@
       "name": "Todo",
       "cards": [
         {
-          "id": "e18e837c-34f1-4c95-9096-7ccb07ace4d0",
-          "title": "Ctrl+H opens help for the screen you are on",
-          "notes": "Every screen has keys you have to already know. Ctrl+H should pop up a dialog listing the shortcuts for that window: the terminal grid, nvim, and the board each have their own set.",
-          "priority": "high"
-        },
-        {
           "id": "a350c135-4cf6-4e14-a180-d84e487c653f",
           "title": "Give board cards subtasks",
           "notes": "A card is one line and a description today. Subtasks need somewhere to live and a way for the arrow keys to reach them. Not designed yet.",
@@ -34,12 +28,6 @@
           "priority": "medium"
         },
         {
-          "id": "0e01b8ac-bc0e-4e7d-bf70-c70ce57fcb49",
-          "title": "Add a manager page as the first tab, giving an overview across projects",
-          "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
-          "priority": "medium"
-        },
-        {
           "id": "4052e317-fdca-4fb4-a302-9842aaeb1c05",
           "title": "Notify when something in a pane is waiting on us",
           "notes": "Out of the app: a system notification when something needs attention, like a Claude session waiting on an answer. In the app: a small in-app notification, and highlight the tab that is waiting.",
@@ -54,6 +42,12 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "e18e837c-34f1-4c95-9096-7ccb07ace4d0",
+          "title": "Ctrl+H opens help for the screen you are on",
+          "notes": "Ctrl+H pops up a dialog listing the shortcuts for the screen you are on: the terminal grid, nvim and the board each have their own set. PR #9.",
+          "priority": "high"
+        },
         {
           "id": "16db2233-dab5-48b9-82e2-1341331ff7f7",
           "title": "Give the editor pane the PATH the terminals already have",
