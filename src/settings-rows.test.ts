@@ -34,11 +34,43 @@ describe('settingsRows', () => {
 });
 
 describe('stepSelection', () => {
-  it('skips the headings in both directions', () => {
-    const forward = stepSelection(rows, 1, 1);
-    expect(rows[forward].kind).not.toBe('heading');
-    const backward = stepSelection(rows, forward, -1);
-    expect(backward).toBe(1);
+  it('skips a heading in both directions', () => {
+    // Found from the rows rather than written as a literal index: the row counts shift the moment
+    // anyone adds an action to a group, and a test pinned to "index 4" would stop meaning anything
+    // the day that happens without anyone noticing.
+    const headingIndex = rows.findIndex((row, index) => (
+      row.kind === 'heading' && index > 0 && rows[index - 1].kind !== 'heading'
+      && index + 1 < rows.length && rows[index + 1].kind !== 'heading'
+    ));
+    expect(headingIndex).toBeGreaterThan(-1);
+    const before = headingIndex - 1;
+    const after = headingIndex + 1;
+    expect(stepSelection(rows, before, 1)).toBe(after);
+    expect(stepSelection(rows, after, -1)).toBe(before);
+  });
+
+  it('never lands on a heading, walking the whole list either way', () => {
+    // One hop can pass by luck even with the skip removed, if the row it happens to land on is not a
+    // heading anyway. Walking every stop from one end to the other is what actually shows the loop
+    // keeps going past a heading rather than landing on it, and that it eventually stops moving.
+    function walk(direction: 1 | -1): number[] {
+      const start = direction === 1 ? stepSelection(rows, 0, 0) : stepSelection(rows, rows.length - 1, 0);
+      const visited = [start];
+      let at = start;
+      for (;;) {
+        const next = stepSelection(rows, at, direction);
+        if (next === at) break;
+        visited.push(next);
+        at = next;
+      }
+      return visited;
+    }
+
+    const forward = walk(1);
+    const backward = walk(-1);
+    for (const index of forward) expect(rows[index].kind).not.toBe('heading');
+    // Walked from the other end, the same stops come back in reverse.
+    expect([...backward].reverse()).toEqual(forward);
   });
 
   it('stops at the ends rather than wrapping, so a long list has a top and a bottom', () => {
