@@ -25,6 +25,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 
 | Action | Keys |
 |---|---|
+| Shortcuts for the screen you are on | Ctrl+H |
 | Terminals mode | Ctrl+T |
 | Nvim mode | Ctrl+N |
 | Board mode | Ctrl+B |
@@ -42,6 +43,12 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Cycle a card's priority | `p` (board mode) |
 | Sort a column by priority | `s` (board mode) |
 | Undo the last board change | `u` (board mode) |
+
+Ctrl+H lists them: the screen in front of you first, then the modes, then the projects. Each section
+opens with a sentence saying what that screen is — five shells that keep running, an nvim that has not
+started yet, a board with no save key — and then names its keys. Escape or Enter closes it. It is the
+one shortcut no mode passes through, so the cost is that Ctrl+H no longer reaches a shell or nvim as a
+backspace.
 
 ## Modes
 

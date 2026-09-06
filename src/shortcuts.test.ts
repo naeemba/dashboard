@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mapShortcut, type KeyInput } from './shortcuts';
-
-function key(overrides: Partial<KeyInput>): KeyInput {
-  return { key: '', code: '', shiftKey: false, metaKey: false, ctrlKey: false, altKey: false, ...overrides };
-}
+import { mapShortcut } from './shortcuts';
+import { key } from './test-key';
 
 describe('mapShortcut on macOS', () => {
   it('cycles projects with Cmd+] and Cmd+[', () => {
@@ -33,7 +30,16 @@ describe('mapShortcut on macOS', () => {
     expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
   });
 
-  it('lets Ctrl through to the shell on macOS, apart from the two project keys', () => {
+  // Ctrl+H is taken in every mode, including the one you are in: the screen whose keys you cannot
+  // remember is the screen you are looking at.
+  it('opens help on Ctrl+H from every mode', () => {
+    expect(mapShortcut(key({ key: 'h', ctrlKey: true }), true, 'terminals')).toEqual({ kind: 'help' });
+    expect(mapShortcut(key({ key: 'h', ctrlKey: true }), true, 'nvim')).toEqual({ kind: 'help' });
+    expect(mapShortcut(key({ key: 'h', ctrlKey: true }), false, 'board')).toEqual({ kind: 'help' });
+    expect(mapShortcut(key({ key: 'h', ctrlKey: true, shiftKey: true }), true)).toBeNull();
+  });
+
+  it('lets Ctrl through to the shell on macOS, apart from the project and help keys', () => {
     expect(mapShortcut(key({ key: 'c', ctrlKey: true }), true)).toBeNull();
     expect(mapShortcut(key({ key: ']', ctrlKey: true }), true)).toBeNull();
   });

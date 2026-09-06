@@ -36,6 +36,25 @@ shell's transpose. Take them and pressing Ctrl+N mid-word throws you out to the
 terminal grid instead of completing the word. You leave a mode by naming a
 different one.
 
+## The help dialog is part of the change — Hard Rule
+
+**Every task that adds, removes or changes a key, a mode, or what a screen does
+updates `src/help.ts` in the same change.** Ctrl+H is where anyone finds out what
+this app can do; a dialog that describes the version before yours is worse than
+no dialog, because it is believed.
+
+Two halves, both yours to keep true:
+
+- The keys. The mode rows read `MODE_KEYS`, so those look after themselves. The
+  board rows and the project rows are written out by hand, because the keys they
+  name live in a switch in `board-view.ts` and in `mapShortcut`. Change one of
+  those, change the row.
+- The blurb. Each section opens with a sentence or two saying what that screen
+  is. If a task changes what a screen does — not just how you drive it — the
+  blurb is stale too.
+
+A change is not done until Ctrl+H would tell the truth about it.
+
 ## Checks
 
     npm test        # vitest
