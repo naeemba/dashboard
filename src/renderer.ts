@@ -41,11 +41,24 @@ const isMac = bridge.platform === 'darwin';
 // Replaced by the real file in start(), before any pane is built. Held here rather than passed down
 // because a settings change has to reach every pane on every page at once.
 let settings: Settings = defaultSettings(isMac);
-// What a dropped path is quoted for. Resolved by main from the settings, so it follows a shell change
-// without a restart.
+// What a dropped path is quoted for when settings.shellCommand is empty, i.e. "work it out from the
+// environment". Set once, at launch, to what main resolved from that same environment — main never
+// re-resolves it either, so there is nothing here to go stale. A settings.shellCommand the user typed
+// in wins over this and is read fresh every time, so that one does follow a shell change.
 let shellCommand = '';
 
 document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
+
+// Every colour as a CSS custom property, which index.css styles the chrome from. Published for the
+// shipped theme immediately, at module load, before start() has awaited anything — a status bar
+// reporting a failed start needs its colours already on the document, since nothing later is
+// guaranteed to run.
+function publishTheme(theme: Settings['theme']): void {
+  for (const [name, value] of Object.entries(theme)) {
+    document.documentElement.style.setProperty(`--${name}`, value);
+  }
+}
+publishTheme(settings.theme);
 
 function fontFamily(): string {
   return `"${settings.font.name}", Menlo, Monaco, monospace`;
@@ -148,9 +161,7 @@ function saveSession(): void {
 // The window's own background is not here. Main paints it before the renderer exists, so it keeps the
 // old colour until the next launch — visible only in the margin around the panes.
 function applyAppearance(): void {
-  for (const [name, value] of Object.entries(settings.theme)) {
-    document.documentElement.style.setProperty(`--${name}`, value);
-  }
+  publishTheme(settings.theme);
   for (const pane of panesById.values()) {
     // A plain record of hex strings on the way in; xterm names the colours it knows. parseSettings
     // has already dropped anything that is not one of them, so the shapes agree.
@@ -286,7 +297,8 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
     if (paths.length === 0) return;
     terminal.focus();
-    terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
+    const shell = settings.shellCommand || shellCommand;
+    terminal.input(`${paths.map((entry) => quoteForShell(entry, shell)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => onFocus?.());
@@ -527,11 +539,17 @@ async function start(): Promise<void> {
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();
   // xterm measures cell size when a pane opens, so both weights must be in before openProject()
-  // builds one, or the glyphs misalign.
-  await Promise.all([
-    document.fonts.load(`${settings.font.size}px "${settings.font.name}"`),
-    document.fonts.load(`bold ${settings.font.size}px "${settings.font.name}"`),
-  ]);
+  // builds one, or the glyphs misalign. A font name the browser cannot parse — anything typed into
+  // the settings screen, which does not check — rejects here instead of resolving; xterm falls back
+  // to Menlo on its own, so losing the preload must cost only that fallback, not the whole session.
+  try {
+    await Promise.all([
+      document.fonts.load(`${settings.font.size}px "${settings.font.name}"`),
+      document.fonts.load(`bold ${settings.font.size}px "${settings.font.name}"`),
+    ]);
+  } catch {
+    // Fallen through to whatever xterm renders instead.
+  }
   applyAppearance();
   await restore(session);
 }

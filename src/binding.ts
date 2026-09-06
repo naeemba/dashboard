@@ -52,7 +52,9 @@ const MODIFIERS = ['Ctrl', 'Cmd', 'Alt', 'Shift'] as const;
 
 export function parseBinding(text: string): Keystroke | null {
   const parts = text.split('+').map((part) => part.trim()).filter((part) => part !== '');
-  // A lone "+" splits to nothing, and "Ctrl+" to one part that is a modifier with no key after it.
+  // A lone "+" (or an empty string) splits to no parts at all. "Ctrl+" is not caught here — it
+  // survives as the one part "Ctrl" — and is rejected below instead, when codeOfName does not
+  // recognise it as a key name.
   if (parts.length === 0) return null;
   const keystroke: Keystroke = { code: '', ctrl: false, meta: false, alt: false, shift: false };
   for (const part of parts.slice(0, -1)) {

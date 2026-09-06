@@ -43,7 +43,11 @@ const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
-const terminalCommands = new Map<string, { args: string[]; directory: string }>();
+// The editor's args are the literal string 'editor' rather than a precomputed array: they depend on the
+// shell in force, and a project can sit open for a long time before its nvim key is ever pressed. Baking
+// editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
+// the shell afterwards and a project already open would still launch nvim through the old one.
+const terminalCommands = new Map<string, { args: string[] | 'editor'; directory: string }>();
 let mainWindow: BrowserWindow;
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
@@ -53,9 +57,10 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
   if (entry === undefined) return;
+  const args = entry.args === 'editor' ? editorArguments(shellCommand) : entry.args;
   let terminalProcess: pty.IPty;
   try {
-    terminalProcess = pty.spawn(shellCommand, entry.args, {
+    terminalProcess = pty.spawn(shellCommand, args, {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -86,8 +91,7 @@ function spawnProject(project: Project, projectIndex: number): void {
     terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
-  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT),
-    { args: editorArguments(shellCommand), directory: project.path });
+  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT), { args: 'editor', directory: project.path });
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.

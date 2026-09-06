@@ -203,8 +203,6 @@ export const ACTIONS: readonly ActionEntry[] = [
   },
 ];
 
-export type ActionName = (typeof ACTIONS)[number]['name'];
-
 export function defaultBinding(entry: ActionEntry, isMac: boolean): string | null {
   return isMac ? entry.mac : entry.other;
 }

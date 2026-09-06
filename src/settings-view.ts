@@ -111,7 +111,6 @@ export function openSettings(
       if (message !== '') footer.classList.add('settings-message');
       dialog.replaceChildren(list, footer);
       list.children[selected]?.scrollIntoView({ block: 'nearest' });
-      if (editor !== null) editor.focus();
     }
 
     // Enter opens a box in the row, Escape commits — the same gesture the board uses for a card title.
@@ -132,13 +131,8 @@ export function openSettings(
       // Setting editor to null first, and moving the focus change to the very end, is what keeps this
       // safe to call twice: dialog.focus() fires this same input's blur synchronously, and the blur
       // listener below only re-enters finish while editor still points at the input it belongs to.
-      function finish(save: boolean): void {
+      function finish(): void {
         editor = null;
-        if (!save) {
-          render();
-          dialog.focus();
-          return;
-        }
         const text = input.value.trim();
         if (row.kind === 'color') {
           if (!isHexColor(text)) say(`"${text}" is not a colour. Write it as #cc6666.`);
@@ -167,13 +161,13 @@ export function openSettings(
         event.stopPropagation();
         // Enter and Escape both commit, exactly as the board's title editor does. Two screens that
         // disagreed about what Escape means would be worse than either answer.
-        finish(true);
+        finish();
       });
       // Guarded the same way the board guards its own editors: dialog.focus() inside finish moves focus
       // off this input, which fires this listener before finish has returned. Without the check that
       // re-entry runs the whole commit a second time for one keystroke.
       input.addEventListener('blur', () => {
-        if (editor === input) finish(true);
+        if (editor === input) finish();
       });
     }
 
