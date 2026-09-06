@@ -177,6 +177,48 @@ body {
   overflow: hidden;
 }
 
+.board-parent {
+  margin: 0 0 4px;
+  font-size: 11px;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-progress {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin: 6px 0 0;
+}
+
+.board-progress span {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 12%);
+}
+
+.board-progress span.underway {
+  background: #d0a215;
+}
+
+.board-progress span.done {
+  background: #3fa45b;
+}
+
+/* A span inside .board-progress, so it inherits the segment rule above and has to out-specify it, not
+   merely follow it — hence the extra .board-progress ancestor in the selector. */
+.board-progress .board-progress-count {
+  flex: 0 0 auto;
+  height: auto;
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: 0.55;
+  background: none;
+}
+
 /* Where the keyboard is. The board has one selection, not one per column, and it is marked by the same
    blue outline a focused pane gets. The card keeps its own background: lightening it to --brightBlack
    drew the low-priority stripe in its own colour, so the one card your cursor was on was the one card
@@ -245,9 +287,12 @@ textarea.board-edit {
   display: none;
 }
 
-/* Project picker and help: a centred overlay above the pages. */
+/* Project picker, help, the delete confirmation and the card detail dialog: a centred overlay above
+   the pages. */
 .picker,
-.help {
+.help,
+.confirm,
+.card-detail {
   position: fixed;
   inset: 0;
   display: flex;
@@ -257,13 +302,72 @@ textarea.board-edit {
 }
 
 .picker-dialog,
-.help-dialog {
+.help-dialog,
+.confirm-dialog,
+.card-detail-dialog {
   display: flex;
   flex-direction: column;
   width: min(560px, 90vw);
   max-height: 60vh;
   border: 1px solid var(--brightBlack);
   background: var(--black);
+}
+
+.confirm-dialog {
+  max-width: 420px;
+  padding: 20px 24px;
+}
+
+.confirm-question {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.confirm-keys {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.card-detail-dialog {
+  max-width: 520px;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.card-detail-meta,
+.card-detail-footer,
+.card-detail-empty {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.card-detail-notes {
+  margin: 12px 0;
+  white-space: pre-wrap;
+}
+
+.card-detail-children {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-detail-children li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.card-detail-children li.highlighted {
+  background: rgb(255 255 255 / 10%);
+}
+
+.card-detail-child-where {
+  flex: 0 0 auto;
+  opacity: 0.6;
 }
 
 /* Help: sections of key/action rows, scrolling as one if the screen is short. */
@@ -320,7 +424,8 @@ textarea.board-edit {
   color: var(--brightBlack);
 }
 
-.picker-search {
+.picker-search,
+.card-detail-add {
   font: inherit;
   color: inherit;
   background: none;
@@ -328,6 +433,12 @@ textarea.board-edit {
   border-bottom: 1px solid var(--brightBlack);
   padding: 8px 10px;
   outline: none;
+}
+
+.card-detail-add {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0;
 }
 
 .picker-list {

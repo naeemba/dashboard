@@ -402,9 +402,10 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker, the help dialog and a card being edited own every key typed inside them. xterm's
-  // textarea is outside all three, so a pane keeps its shortcuts.
-  if (event.target instanceof Element && event.target.closest('.picker, .help, .board-edit')) return;
+  // The picker, the help dialog, the delete confirmation, the card detail dialog and a card being
+  // edited own every key typed inside them. xterm's textarea is outside all five, so a pane keeps
+  // its shortcuts.
+  if (event.target instanceof Element && event.target.closest('.picker, .help, .confirm, .card-detail, .board-edit')) return;
   const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();

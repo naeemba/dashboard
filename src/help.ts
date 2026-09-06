@@ -1,5 +1,6 @@
 import { MODE_KEYS, type Mode } from './modes';
 import { openOverlay } from './overlay';
+import { isModified } from './shortcuts';
 
 // One row of the help dialog: the keys you press, and what they do.
 export type Shortcut = { keys: string; action: string };
@@ -38,15 +39,18 @@ function terminalShortcuts(isMac: boolean): Shortcut[] {
 
 // Written out rather than read off a table: the board's keys live in a switch in board-view.ts, and
 // they have reasons to stay there — a title and a description commit on different keys, and an arrow
-// means something else with Shift held. Nine rows do not pay for the table that would keep them in
+// means something else with Shift held. Twelve rows do not pay for the table that would keep them in
 // step, so adding a board key means adding a row here too.
 const BOARD_SHORTCUTS: Shortcut[] = [
   { keys: 'Arrows', action: 'Move the selection' },
   { keys: 'Shift+Arrows', action: 'Move the card itself' },
+  { keys: 'Tab', action: 'Make this card a subtask of the one above' },
+  { keys: 'Shift+Tab', action: 'Cut this card loose from its parent' },
   { keys: 'Enter', action: "Edit the card's title" },
   { keys: 'e', action: "Edit the card's description" },
+  { keys: 'o', action: "Open the card: its notes, its parent, its subtasks" },
   { keys: 'n', action: 'Add a card' },
-  { keys: 'd', action: 'Delete the card' },
+  { keys: 'd', action: 'Delete the card and its subtasks, after a confirmation' },
   { keys: 'p', action: "Cycle the card's priority" },
   { keys: 's', action: 'Sort the column, urgent first' },
   { keys: 'u', action: 'Undo the last board change' },
@@ -68,7 +72,9 @@ const SCREEN_BLURBS: Record<Mode, string> = {
     + 'launch. Quit it and the pane says it exited; Enter starts it again.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
     + 'straight to disk, so there is no save key and u is the only way back. The file is re-read each '
-    + 'time you enter the board, not while you are looking at it.',
+    + 'time you enter the board, not while you are looking at it. A card can be a subtask of another '
+    + 'card: it stays an ordinary card in whatever column you put it in, shows a badge naming its '
+    + 'parent, and counts towards the bar on that parent.',
 };
 
 function screenShortcuts(mode: Mode, isMac: boolean): Shortcut[] {
@@ -118,8 +124,6 @@ export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
     }
 
     const { dialog, remove } = openOverlay('help', close);
-    // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up.
-    dialog.tabIndex = -1;
 
     for (const section of helpSections(mode, isMac)) {
       const heading = document.createElement('h2');
@@ -150,6 +154,7 @@ export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
     dialog.focus();
 
     dialog.addEventListener('keydown', (event) => {
+      if (isModified(event)) return;
       if (event.key !== 'Escape' && event.key !== 'Enter') return;
       event.preventDefault();
       close();

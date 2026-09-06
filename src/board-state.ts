@@ -3,6 +3,7 @@ import {
   cardAt,
   deleteCard,
   emptyBoard,
+  hasSubtasks,
   renameCard,
   setNotes,
   type Board,
@@ -56,9 +57,16 @@ export function addBlankCard(state: BoardState, id: string): BoardState {
 // dropped rather than kept as a blank row, which is the only way `n` can leave one behind. Opening a
 // title and closing it unchanged is not a change at all — otherwise reading a card would spend the
 // undo step that the move you just made is sitting in.
+//
+// A card with subtasks is the exception: blanking its title is two keystrokes with no confirmation,
+// unlike `d`, and dropping the card would leave every subtask pointing at an id no longer on the
+// board. So this hands the state back unchanged instead, and the title stays whatever it was.
 export function commitTitle(state: BoardState, title: string): BoardState {
   const trimmed = title.trim();
-  if (trimmed === '') return applyChange(state, deleteCard(state.board, state.selection));
+  if (trimmed === '') {
+    if (hasSubtasks(state.board, state.selection)) return state;
+    return applyChange(state, deleteCard(state.board, state.selection));
+  }
   // Both sides trimmed: parseCard keeps a title exactly as it is written, so a hand-edited
   // `"title": "Ship it "` would otherwise never compare equal, and merely opening that card would spend
   // the undo step belonging to the move you made just before it.

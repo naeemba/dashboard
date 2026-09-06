@@ -1,13 +1,21 @@
 import {
+  attachToCardAbove,
+  attachmentRing,
   cardAt,
+  cardById,
+  childColumns,
   cyclePriority,
-  deleteCard,
+  deleteCardAndDescendants,
+  descendantsOf,
+  detachCard,
+  hasSubtasks,
   moveCard,
   moveSelection,
   sortColumn,
   type Card,
   type Change,
 } from './board';
+import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
   applyChange,
@@ -19,6 +27,8 @@ import {
   type BoardState,
 } from './board-state';
 import type { DashboardBridge } from './bridge';
+import { confirmOverlay } from './overlay';
+import { isModified } from './shortcuts';
 import type { Direction } from './terminals';
 
 export type BoardOptions = {
@@ -108,6 +118,13 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   function commitEditing(field: EditableField, value: string): void {
     editing = null;
+    // Clearing the title of a card that has subtasks keeps the card, because two keystrokes with no
+    // confirmation must not strand a family. Without a word here the card simply springs back to its
+    // old title and nothing says why, which reads as the keyboard having missed the keystroke.
+    const card = cardAt(state.board, state.selection);
+    if (field === 'title' && value.trim() === '' && card && hasSubtasks(state.board, state.selection)) {
+      options.onError(`"${card.title}" has subtasks — delete it with d`);
+    }
     apply(field === 'title' ? commitTitle(state, value) : commitNotes(state, value));
     element.focus();
   }
@@ -122,6 +139,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     // onkeydown rather than addEventListener: both tags declare it as taking a KeyboardEvent, which the
     // union of the two does not do for the listener overloads.
     input.onkeydown = (event) => {
+      // Returning without preventDefault, so Cmd+A and Cmd+V still do what they do in any text box.
+      if (isModified(event)) return;
       const commits = field === 'title' ? event.key === 'Enter' || event.key === 'Escape' : event.key === 'Escape';
       if (!commits) return;
       event.preventDefault();
@@ -141,6 +160,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     const item = document.createElement('li');
     // The priority rides on the card as a class so index.css owns which colour each one is.
     item.className = `board-card priority-${card.priority}${selected ? ' selected' : ''}`;
+    // Which piece of work this card belongs to. Invisible from the column otherwise: a subtask is an
+    // ordinary card sitting in an ordinary column, and nothing else on it says so.
+    const parent = card.parent === null ? undefined : cardById(state.board, card.parent);
+    if (parent) {
+      const badge = document.createElement('p');
+      badge.className = 'board-parent';
+      badge.textContent = parent.title;
+      item.append(badge);
+    }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
     // A description shows on the card rather than behind a keystroke: the point of writing one down is
     // reading it without asking. A card with none takes no room for it.
@@ -151,6 +179,25 @@ export function createBoardView(options: BoardOptions): BoardView {
       notes.className = 'board-notes';
       notes.textContent = card.notes;
       item.append(notes);
+    }
+    // One segment per child, coloured by the column it is in: the last column is finished, the first
+    // has not been started, everything between is under way. Position rather than name, so renaming a
+    // column does not change what the bar says.
+    const columns = childColumns(state.board, card.id);
+    if (columns.length > 0) {
+      const last = state.board.columns.length - 1;
+      const bar = document.createElement('p');
+      bar.className = 'board-progress';
+      for (const columnIndex of columns) {
+        const segment = document.createElement('span');
+        segment.className = columnIndex === last ? 'done' : columnIndex === 0 ? 'waiting' : 'underway';
+        bar.append(segment);
+      }
+      const count = document.createElement('span');
+      count.className = 'board-progress-count';
+      count.textContent = `${columns.filter((columnIndex) => columnIndex === last).length}/${columns.length}`;
+      bar.append(count);
+      item.append(bar);
     }
     return item;
   }
@@ -178,6 +225,42 @@ export function createBoardView(options: BoardOptions): BoardView {
     options.onChanged();
   }
 
+  // The count is descendants, not direct children, because that is how many cards vanish — and most
+  // of them are in columns you are not looking at. A leaf card gets the same dialog without the
+  // second clause: one key that always behaves the same way is worth more than a saved keystroke.
+  function confirmDelete(): void {
+    const card = cardAt(state.board, state.selection);
+    if (!card) return;
+    const family = descendantsOf(state.board, card.id).length;
+    const question = family === 0
+      ? `Delete "${card.title}"?`
+      : `Delete "${card.title}" and its ${family} subtask${family === 1 ? '' : 's'}?`;
+    confirmOverlay(question).then((confirmed) => {
+      element.focus();
+      if (confirmed) change(deleteCardAndDescendants(state.board, state.selection));
+    });
+  }
+
+  // The dialog changes the board as you add subtasks, so each change goes through apply() as it
+  // happens — same undo step, same write to disk as a change made on the board itself. It closes on
+  // the card you asked for, or on the subtask you pressed Enter on.
+  function openDetail(): void {
+    if (!cardAt(state.board, state.selection)) return;
+    openCardDetail({
+      board: state.board,
+      selection: state.selection,
+      makeId: () => crypto.randomUUID(),
+      onChange: (next) => {
+        change(next);
+        return state.board;
+      },
+    }).then((selection) => {
+      state = { ...state, selection };
+      element.focus();
+      render();
+    });
+  }
+
   element.addEventListener('keydown', (event) => {
     // The input owns every key while a title is being edited; its own handler ends the edit.
     if (editing || landedRead !== latestRead) return;
@@ -188,7 +271,22 @@ export function createBoardView(options: BoardOptions): BoardView {
       state = { ...state, selection: moveSelection(state.board, state.selection, direction) };
       return render();
     }
-    if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+    // Only bare Tab and Shift+Tab attach or detach — Ctrl/Cmd/Alt+Tab are the OS's window switcher and
+    // must fall through to the bail-out below rather than be swallowed here.
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      if (event.shiftKey) return change(detachCard(state.board, state.selection));
+      // The one refusal worth explaining. The others — no card above, nothing selected — are obvious
+      // from the screen, and a message for those would be noise. attachToCardAbove decides it on the
+      // same call, so the message cannot say one thing while the board does another.
+      const ring = attachmentRing(state.board, state.selection);
+      if (ring) {
+        options.onError(`"${ring.title}" is already a subtask of this card`);
+        return;
+      }
+      return change(attachToCardAbove(state.board, state.selection));
+    }
+    if (isModified(event)) return;
     switch (event.key) {
       case 'Enter':
         event.preventDefault();
@@ -208,7 +306,10 @@ export function createBoardView(options: BoardOptions): BoardView {
         return startEditing('title');
       case 'd':
         event.preventDefault();
-        return change(deleteCard(state.board, state.selection));
+        return confirmDelete();
+      case 'o':
+        event.preventDefault();
+        return openDetail();
       case 'u':
         event.preventDefault();
         return apply(undoChange(state));

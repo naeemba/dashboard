@@ -36,6 +36,41 @@ shell's transpose. Take them and pressing Ctrl+N mid-word throws you out to the
 terminal grid instead of completing the word. You leave a mode by naming a
 different one.
 
+Inside an overlay the key goes nowhere at all. A dialog has focus, so no pane can
+receive the keystroke anyway, and the mode keys are turned away at the window
+listener before they are even read. **So every keydown handler reaches `if
+(isModified(event)) return;` before it acts on `event.key`, and a modified key in
+a dialog does nothing.** Two of them got this wrong before the rule was written
+down here. Take Ctrl+N in the card detail dialog and pressing it mid-word opens a
+"Subtask title" box. Take Enter with Cmd in the delete confirmation and a stray
+Cmd+Enter deletes a card and its whole family.
+
+Two keys are read before that guard, both on purpose:
+
+- Shift+Arrow moves a card, so the board grid matches the arrows first. That is a
+  binding that wants its modifier, not one leaking through.
+- Tab, in the picker and in the board grid, for opposite reasons. The picker
+  swallows every Tab because nothing else in it is focusable and Shift+Tab would
+  drop focus into the pane behind the overlay. The grid takes bare Tab and lets
+  Ctrl/Cmd/Alt+Tab fall through, because that one belongs to the window switcher.
+
+If a handler reads a modified key anywhere else, it is stealing it.
+
+## A refusal is explained where it is decided — Hard Rule
+
+When one place decides to refuse something and another prints the message, the
+two drift. Export the predicate from the file that enforces the refusal and call
+it from the file that displays it.
+
+What the drift looks like: someone changes `commitTitle` to refuse only while a
+subtask is unfinished. You blank the title of a card whose subtasks are all in
+Done. The card is deleted — and the status bar says `"Ship it" has subtasks —
+delete it with d`. You read that, assume the card survived, and it is gone. No
+test fails.
+
+`hasSubtasks` and `attachmentRing` in `board.ts` are the two predicates that
+exist. A third refusal worth a message wants a third.
+
 ## The help dialog is part of the change — Hard Rule
 
 **Every task that adds, removes or changes a key, a mode, or what a screen does

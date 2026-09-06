@@ -28,7 +28,44 @@ describe('parseBoard', () => {
   it('reads a well-formed board', () => {
     const board = parseBoard('{"columns":[{"name":"Later","cards":[{"id":"1","title":"a","notes":"n"}]}]}');
     expect(board.columns)
-      .toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium' }] }]);
+      .toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium', parent: null }] }]);
+  });
+
+  it('keeps a parent that names a card on the board', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":['
+      + '{"id":"1","title":"a"},{"id":"2","title":"b","parent":"1"}]}]}');
+    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, '1']);
+  });
+
+  // A board written before subtasks existed. Every card is top-level, which is what it is.
+  it('reads a card with no parent field as top-level', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}');
+    expect(board.columns[0].cards[0].parent).toBe(null);
+  });
+
+  // The parent was deleted by hand, or the id was mistyped. Losing one relationship is the right
+  // price; throwing would cost the whole board, which readBoard would then move aside.
+  it('drops a parent that names no card', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","parent":"nobody"}]}]}');
+    expect(board.columns[0].cards[0].parent).toBe(null);
+  });
+
+  it('drops a parent that is not a string', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","parent":7}]}]}');
+    expect(board.columns[0].cards[0].parent).toBe(null);
+  });
+
+  it('refuses to let a card be its own parent', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","parent":"1"}]}]}');
+    expect(board.columns[0].cards[0].parent).toBe(null);
+  });
+
+  // Without this, drawing the board or counting a card's children recurses until the stack runs out.
+  it('breaks a ring of parents', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":['
+      + '{"id":"1","title":"a","parent":"2"},{"id":"2","title":"b","parent":"3"},'
+      + '{"id":"3","title":"c","parent":"1"}]}]}');
+    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, null, null]);
   });
 
   // readBoard turns each of these into the empty board and moves the file aside; parseBoard's job is
@@ -69,7 +106,39 @@ describe('parseBoard', () => {
   it('gives a card without an id one of its own', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"title":"a"}]}]}', () => 'generated');
     expect(board.columns[0].cards[0])
-      .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium' });
+      .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium', parent: null });
+  });
+
+  // Copying the block above is how a similar card gets hand-written, and that copies the id. Left
+  // alone, `d` on either copy deletes both while the confirmation names one.
+  it('gives the second card with a taken id a fresh one', () => {
+    const board = parseBoard(
+      '{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]},{"name":"Doing","cards":[{"id":"1","title":"b"}]}]}',
+      () => 'generated',
+    );
+    expect(board.columns.flatMap((column) => column.cards).map((card) => card.id)).toEqual(['1', 'generated']);
+  });
+
+  // The generated id is a card id like any other, so the card further down that already carries it
+  // has to be moved off it too. Otherwise splitting one pair just makes another.
+  it('gives a fresh id that a later card already carries', () => {
+    let issued = 0;
+    const board = parseBoard(
+      '{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"},{"id":"1","title":"b"},'
+      + '{"id":"fresh-1","title":"c"}]}]}',
+      () => `fresh-${++issued}`,
+    );
+    expect(board.columns[0].cards.map((card) => card.id)).toEqual(['1', 'fresh-1', 'fresh-2']);
+  });
+
+  // The first copy keeps the id, so a parent written against it still names a card on the board.
+  it('leaves a parent pointing at the first copy alone', () => {
+    const board = parseBoard(
+      '{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"},{"id":"1","title":"b"},'
+      + '{"id":"2","title":"c","parent":"1"}]}]}',
+      () => 'generated',
+    );
+    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, null, '1']);
   });
 });
 
@@ -81,7 +150,7 @@ describe('readBoard', () => {
   it('reads back what writeBoard wrote', () => {
     const path = project();
     writeBoard(path, {
-      columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium' }] }],
+      columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium', parent: null }] }],
     });
     expect(columnNames(readBoard(path).board)).toEqual(['Later']);
   });
@@ -140,6 +209,15 @@ describe('writeBoard', () => {
     const path = project();
     writeFileSync(join(path, BOARD_DIRECTORY), 'in the way');
     expect(() => writeBoard(path, { columns: [] })).toThrow();
+  });
+
+  it('keeps a parent through a write and a read', () => {
+    const path = project();
+    writeBoard(path, { columns: [{ name: 'Todo', cards: [
+      { id: '1', title: 'a', notes: '', priority: 'medium', parent: null },
+      { id: '2', title: 'b', notes: '', priority: 'medium', parent: '1' },
+    ] }] });
+    expect(readBoard(path).board.columns[0].cards[1].parent).toBe('1');
   });
 });
 

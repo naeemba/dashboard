@@ -31,7 +31,8 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
               "id": "0f6a2c5e-...",
               "title": "Fix the resize race",
               "notes": "",
-              "priority": "high"
+              "priority": "high",
+              "parent": null
             }
           ]
         }
@@ -40,13 +41,18 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 
 - \`columns\` is ordered. The first column is the leftmost on screen.
 - \`cards\` is ordered. The first card is at the top of its column.
-- \`id\` is a UUID. Keep it stable when you edit a card. A card written without one is given an id
-  the next time the app reads the file.
+- \`id\` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
+  written without one, or with an id another card already used, is given a fresh one the next time
+  the app reads the file.
 - \`title\` is one line. A card with no \`title\`, or a blank one, is dropped when the app reads
   the file.
 - \`notes\` is the card's description, free text over as many lines as you like. \`e\` opens it.
 - \`priority\` is one of \`urgent\`, \`high\`, \`medium\`, \`low\`. Anything else, or nothing, reads as
   \`medium\`. It colours the card's left edge, and \`s\` sorts a column by it, urgent first.
+- \`parent\` is the \`id\` of another card, or \`null\`. It is the only thing that makes a card a
+  subtask: subtasks are ordinary cards that live in whatever column they are in, and a parent keeps
+  no list of its children. A \`parent\` naming a card that is not on the board, or a ring of cards
+  that are each other's ancestors, is reset to \`null\` when the app reads the file.
 
 Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
 away from the board and back to see your changes. The app rewrites the whole file on every edit and
@@ -89,6 +95,9 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
     // A card written without one, or with a word that is not a priority, is medium. Only the title is
     // worth dropping a card over.
     priority: isPriority(value.priority) ? value.priority : DEFAULT_PRIORITY,
+    // Repaired after the whole board is read, not here: whether an id names a real card cannot be
+    // known while the cards are still being parsed one at a time.
+    parent: typeof value.parent === 'string' ? value.parent : null,
   };
 }
 
@@ -101,6 +110,59 @@ function parseColumn(value: unknown, makeId: () => string): Column | null {
   };
 }
 
+// A hand-edited file can say three things the rest of the code cannot survive: two cards sharing an
+// id, a parent naming a card that is not there, and a ring where a card is its own ancestor. All are
+// repaired rather than rejected — throwing would send readBoard down the salvage path and cost
+// someone every card over one bad id.
+//
+// The duplicate goes first, because everything after it looks a card up by id. Copying the block
+// above is how a similar card gets hand-written, and that copies the id with it: without this, `d` on
+// either copy deletes both, and the confirmation names only one. The second copy is the one given a
+// fresh id, so a `parent` naming the first keeps working.
+//
+// ponytail: walks up from each card, O(cards × depth). A board deep enough for that to show is a
+// board nobody can read anyway.
+function repairCards(columns: Column[], makeId: () => string): Column[] {
+  const taken = new Set<string>();
+  const unique = columns.map((column) => ({
+    ...column,
+    cards: column.cards.map((card) => {
+      if (!taken.has(card.id)) {
+        taken.add(card.id);
+        return card;
+      }
+      // Into `taken` as well: a generated id can land on one a later card already carries, and
+      // without this that later card keeps it and the pair this function exists to split is back.
+      const fresh = makeId();
+      taken.add(fresh);
+      return { ...card, id: fresh };
+    }),
+  }));
+
+  const cards = unique.flatMap((column) => column.cards);
+  const byId = new Map(cards.map((card) => [card.id, card]));
+
+  function isSafe(card: Card): boolean {
+    const seen = new Set<string>([card.id]);
+    let parentId = card.parent;
+    while (parentId !== null) {
+      if (seen.has(parentId)) return false;
+      const parent = byId.get(parentId);
+      if (parent === undefined) return false;
+      seen.add(parentId);
+      parentId = parent.parent;
+    }
+    return true;
+  }
+
+  const broken = new Set(cards.filter((card) => !isSafe(card)).map((card) => card.id));
+  if (broken.size === 0) return unique;
+  return unique.map((column) => ({
+    ...column,
+    cards: column.cards.map((card) => (broken.has(card.id) ? { ...card, parent: null } : card)),
+  }));
+}
+
 // Throws rather than falling back, so readBoard can tell "nothing here made sense" apart from "no
 // file at all" and only salvage the former.
 export function parseBoard(text: string, makeId: () => string = () => crypto.randomUUID()): Board {
@@ -110,7 +172,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return { columns };
+  return { columns: repairCards(columns, makeId) };
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but

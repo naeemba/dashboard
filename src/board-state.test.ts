@@ -15,7 +15,7 @@ function board(...columns: string[][]): Board {
   return {
     columns: columns.map((cardTitles, index) => ({
       name: `Column ${index}`,
-      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY })),
+      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY, parent: null })),
     })),
   };
 }
@@ -91,6 +91,22 @@ describe('commitTitle', () => {
     expect(titles(commitTitle(start, ''))).toEqual([['a']]);
   });
 
+  // Blanking the title of a card with subtasks would orphan them, and unlike `d` there was never a
+  // confirmation for it — so the keystroke costs nothing rather than stranding the family.
+  it('keeps a card with subtasks when its title is blanked', () => {
+    const withChild: Board = {
+      columns: [{
+        name: 'Column 0',
+        cards: [
+          { id: 'a', title: 'a', notes: '', priority: DEFAULT_PRIORITY, parent: null },
+          { id: 'child', title: 'child', notes: '', priority: DEFAULT_PRIORITY, parent: 'a' },
+        ],
+      }],
+    };
+    const parentSelected = state(withChild, { column: 0, card: 0 });
+    expect(commitTitle(parentSelected, '')).toBe(parentSelected);
+  });
+
   // Opening a title to read it and pressing Escape must not spend the undo step on the move made
   // just before it — renameCard builds a fresh board even when the text is identical.
   it('is not a change when the title comes back unchanged', () => {
@@ -108,8 +124,8 @@ describe('untrimmed text already on the card', () => {
     columns: [{
       name: 'Todo',
       cards: [
-        { id: 'a', title: 'a', notes: '', priority: DEFAULT_PRIORITY },
-        { id: 'b', title: 'b ', notes: 'Check the logs\n', priority: DEFAULT_PRIORITY },
+        { id: 'a', title: 'a', notes: '', priority: DEFAULT_PRIORITY, parent: null },
+        { id: 'b', title: 'b ', notes: 'Check the logs\n', priority: DEFAULT_PRIORITY, parent: null },
       ],
     }],
   };
