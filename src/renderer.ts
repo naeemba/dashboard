@@ -224,6 +224,10 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     fontFamily: `"${FONT_NAME}", Menlo, Monaco, monospace`,
     theme: THEME,
     drawBoldTextInBrightColors: false,
+    // Option+key sends Esc+key, the way every terminal on macOS does. Without it xterm hands the pane
+    // the composed character instead — Option+L arrives as "Â¬", and nvim's <A-l> never fires. The
+    // cost is that Option no longer types accented characters into a pane.
+    macOptionIsMeta: true,
   });
   const fit = new FitAddon();
   terminal.loadAddon(fit);
