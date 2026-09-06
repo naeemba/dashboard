@@ -140,10 +140,6 @@ export function createBoardView(options: BoardOptions): BoardView {
       const commits = field === 'title' ? event.key === 'Enter' || event.key === 'Escape' : event.key === 'Escape';
       if (!commits) return;
       event.preventDefault();
-      // The board listens on the element this input sits inside, and the key that ends the edit would
-      // carry on up to it. Enter would land on the branch that starts an edit and re-open the title you
-      // just committed, with the whole thing selected and the next letter you type replacing it.
-      event.stopPropagation();
       commitEditing(field, input.value);
     };
     input.onblur = () => {

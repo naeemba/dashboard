@@ -1,8 +1,8 @@
 import { isModified } from './shortcuts';
 
-// The picker and the help dialog are the same thing on screen: a dark sheet over the pages with one box
+// Every dialog in this app is the same thing on screen: a dark sheet over the pages with one box
 // centred in it. Only what goes in the box, and what the box answers with, differ — so the sheet is here
-// and they keep their own contents. The class names match the CSS, where the two already share a rule.
+// and each dialog keeps its own contents. The class names match the CSS, where all of them share a rule.
 export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDivElement; remove: () => void } {
   const overlay = document.createElement('div');
   overlay.className = name;
@@ -23,9 +23,9 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
   return { dialog, remove: () => overlay.remove() };
 }
 
-// The third thing built on the sheet, after the picker and the help dialog. Enter confirms, Escape
-// cancels, and clicking the dark margin cancels — a dialog that appears under your hand must not
-// treat a stray click as yes.
+// Built on the same sheet as the picker and the help dialog. Enter confirms, Escape cancels, and
+// clicking the dark margin cancels — a dialog that appears under your hand must not treat a stray
+// click as yes.
 export function confirmOverlay(message: string, keysLine = 'Enter deletes. Escape keeps it.'): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     function close(answer: boolean): void {
