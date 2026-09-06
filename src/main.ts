@@ -11,7 +11,7 @@ import {
   type Project,
 } from './projects';
 import { isOpenableLink } from './links';
-import { pickShell, SHELL_COMMAND_FLAG } from './shell';
+import { editorArguments, pickShell, SHELL_COMMAND_FLAG } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
@@ -31,9 +31,10 @@ const projects: Project[] = [];
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const shellCommand = pickShell(process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
-// What each terminal id runs and where. The nvim pane is registered here like any other, which is
-// what lets the renderer start it later through the ordinary restart path.
-const terminalCommands = new Map<string, { command: string; directory: string }>();
+// What each terminal id runs and where. Every pane is the same shell and differs only in what it is
+// asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
+// any other, which is what lets the renderer start it later through the ordinary restart path.
+const terminalCommands = new Map<string, { args: string[]; directory: string }>();
 let mainWindow: BrowserWindow;
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
@@ -45,7 +46,7 @@ function spawnTerminal(id: string): void {
   if (entry === undefined) return;
   let terminalProcess: pty.IPty;
   try {
-    terminalProcess = pty.spawn(entry.command, [], {
+    terminalProcess = pty.spawn(shellCommand, entry.args, {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -53,8 +54,9 @@ function spawnTerminal(id: string): void {
       env: process.env as Record<string, string>,
     });
   } catch {
-    // nvim may simply not be installed. The pane shows the same exit line a dead shell shows,
-    // rather than the spawn taking the window down.
+    // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
+    // a dead shell shows, rather than the spawn taking the window down. A missing nvim is not this case:
+    // the shell starts, fails to find it, and exits 127 on its own.
     sendToRenderer('pty:exit', id, 127);
     return;
   }
@@ -72,10 +74,11 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
-    terminalCommands.set(id, { command: shellCommand, directory: project.path });
+    terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
-  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT), { command: 'nvim', directory: project.path });
+  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT),
+    { args: editorArguments(shellCommand), directory: project.path });
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
