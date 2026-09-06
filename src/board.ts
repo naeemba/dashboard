@@ -161,10 +161,15 @@ export function deleteCardAndDescendants(board: Board, selection: Selection): Ch
     ...column,
     cards: column.cards.filter((entry) => !doomed.has(entry.id)),
   }));
+  // Cards above the selected one can be descendants too, and those shift everything below them up.
+  // Counting the survivors above is the only reading of "where the cursor was" that survives that.
+  const survivorsAbove = board.columns[selection.column].cards
+    .slice(0, selection.card)
+    .filter((entry) => !doomed.has(entry.id)).length;
   const remaining = columns[selection.column].cards.length;
   return {
     board: withColumns(board, columns),
-    selection: { column: selection.column, card: clamp(selection.card, Math.max(0, remaining - 1)) },
+    selection: { column: selection.column, card: clamp(survivorsAbove, Math.max(0, remaining - 1)) },
   };
 }
 

@@ -163,6 +163,15 @@ describe('deleteCardAndDescendants', () => {
     const start = board(['a'], []);
     expect(deleteCardAndDescendants(start, { column: 1, card: 0 }).board).toBe(start);
   });
+
+  // A child can sit above its parent once someone has reordered the column. Both go, so every
+  // surviving row below shifts up — and the cursor has to shift with them.
+  it('lands on the card that took the deleted card\'s place, even when a subtask above it went too', () => {
+    const start = withParents(board(['child', 'parent', 'other', 'other2']), { child: 'parent' });
+    const result = deleteCardAndDescendants(start, { column: 0, card: 1 });
+    expect(titles(result.board)).toEqual([['other', 'other2']]);
+    expect(result.selection).toEqual({ column: 0, card: 0 });
+  });
 });
 
 describe('moveCard', () => {
