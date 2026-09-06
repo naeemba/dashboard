@@ -31,7 +31,8 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
               "id": "0f6a2c5e-...",
               "title": "Fix the resize race",
               "notes": "",
-              "priority": "high"
+              "priority": "high",
+              "parent": null
             }
           ]
         }
@@ -47,6 +48,10 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 - \`notes\` is the card's description, free text over as many lines as you like. \`e\` opens it.
 - \`priority\` is one of \`urgent\`, \`high\`, \`medium\`, \`low\`. Anything else, or nothing, reads as
   \`medium\`. It colours the card's left edge, and \`s\` sorts a column by it, urgent first.
+- \`parent\` is the \`id\` of another card, or \`null\`. It is the only thing that makes a card a
+  subtask: subtasks are ordinary cards that live in whatever column they are in, and a parent keeps
+  no list of its children. A \`parent\` naming a card that is not on the board, or a ring of cards
+  that are each other's ancestors, is reset to \`null\` when the app reads the file.
 
 Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
 away from the board and back to see your changes. The app rewrites the whole file on every edit and
@@ -89,9 +94,9 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
     // A card written without one, or with a word that is not a priority, is medium. Only the title is
     // worth dropping a card over.
     priority: isPriority(value.priority) ? value.priority : DEFAULT_PRIORITY,
-    // Read properly in a later change. Null here only so the type is satisfied: whether an id names a
-    // real card cannot be known while the cards are still being parsed one at a time.
-    parent: null,
+    // Repaired after the whole board is read, not here: whether an id names a real card cannot be
+    // known while the cards are still being parsed one at a time.
+    parent: typeof value.parent === 'string' ? value.parent : null,
   };
 }
 
@@ -104,6 +109,38 @@ function parseColumn(value: unknown, makeId: () => string): Column | null {
   };
 }
 
+// A hand-edited file can say two things the rest of the code cannot survive: a parent naming a card
+// that is not there, and a ring where a card is its own ancestor. Both are repaired rather than
+// rejected — throwing would send readBoard down the salvage path and cost someone every card over one
+// bad id.
+//
+// ponytail: walks up from each card, O(cards × depth). A board deep enough for that to show is a
+// board nobody can read anyway.
+function repairParents(columns: Column[]): Column[] {
+  const cards = columns.flatMap((column) => column.cards);
+  const byId = new Map(cards.map((card) => [card.id, card]));
+
+  function isSafe(card: Card): boolean {
+    const seen = new Set<string>([card.id]);
+    let parentId = card.parent;
+    while (parentId !== null) {
+      if (seen.has(parentId)) return false;
+      const parent = byId.get(parentId);
+      if (parent === undefined) return false;
+      seen.add(parentId);
+      parentId = parent.parent;
+    }
+    return true;
+  }
+
+  const broken = new Set(cards.filter((card) => !isSafe(card)).map((card) => card.id));
+  if (broken.size === 0) return columns;
+  return columns.map((column) => ({
+    ...column,
+    cards: column.cards.map((card) => (broken.has(card.id) ? { ...card, parent: null } : card)),
+  }));
+}
+
 // Throws rather than falling back, so readBoard can tell "nothing here made sense" apart from "no
 // file at all" and only salvage the former.
 export function parseBoard(text: string, makeId: () => string = () => crypto.randomUUID()): Board {
@@ -113,7 +150,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return { columns };
+  return { columns: repairParents(columns) };
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but
