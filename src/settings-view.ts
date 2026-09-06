@@ -129,31 +129,34 @@ export function openSettings(
       input.focus();
       input.select();
 
+      // Setting editor to null first, and moving the focus change to the very end, is what keeps this
+      // safe to call twice: dialog.focus() fires this same input's blur synchronously, and the blur
+      // listener below only re-enters finish while editor still points at the input it belongs to.
       function finish(save: boolean): void {
         editor = null;
         if (!save) {
+          render();
           dialog.focus();
-          return render();
+          return;
         }
         const text = input.value.trim();
-        dialog.focus();
         if (row.kind === 'color') {
-          if (!isHexColor(text)) return say(`"${text}" is not a colour. Write it as #cc6666.`);
-          return commit({ ...settings, theme: { ...settings.theme, [row.name]: text } });
-        }
-        if (row.kind === 'font-size') {
-          if (!isFontSize(text)) return say(`"${text}" is not a font size. Anything from 6 to 72.`);
-          return commit({ ...settings, font: { ...settings.font, size: Number(text) } });
-        }
-        if (row.kind === 'font-name') {
+          if (!isHexColor(text)) say(`"${text}" is not a colour. Write it as #cc6666.`);
+          else commit({ ...settings, theme: { ...settings.theme, [row.name]: text } });
+        } else if (row.kind === 'font-size') {
+          if (!isFontSize(text)) say(`"${text}" is not a font size. Anything from 6 to 72.`);
+          else commit({ ...settings, font: { ...settings.font, size: Number(text) } });
+        } else if (row.kind === 'font-name') {
           // A font the machine does not have is not something this can check: the browser reports no
           // error and xterm falls back to Menlo. An empty name means the one it shipped with.
           const name = text === '' ? defaultSettings(isMac).font.name : text;
-          return commit({ ...settings, font: { ...settings.font, name } });
+          commit({ ...settings, font: { ...settings.font, name } });
+        } else {
+          // The shell. Empty is the file saying "work it out from the environment", which is a real
+          // answer rather than a blank, so there is nothing to refuse.
+          commit({ ...settings, shellCommand: text });
         }
-        // The shell. Empty is the file saying "work it out from the environment", which is a real
-        // answer rather than a blank, so there is nothing to refuse.
-        commit({ ...settings, shellCommand: text });
+        dialog.focus();
       }
 
       input.addEventListener('keydown', (event) => {
@@ -166,7 +169,12 @@ export function openSettings(
         // disagreed about what Escape means would be worse than either answer.
         finish(true);
       });
-      input.addEventListener('blur', () => finish(true));
+      // Guarded the same way the board guards its own editors: dialog.focus() inside finish moves focus
+      // off this input, which fires this listener before finish has returned. Without the check that
+      // re-entry runs the whole commit a second time for one keystroke.
+      input.addEventListener('blur', () => {
+        if (editor === input) finish(true);
+      });
     }
 
     function activate(row: SettingsRow): void {
