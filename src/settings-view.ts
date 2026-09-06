@@ -114,7 +114,7 @@ export function openSettings(
       if (editor !== null) editor.focus();
     }
 
-    // Task 10 fills this in — the text rows are not editable yet.
+    // A stub: the text rows are not editable yet.
     function startEditing(row: SettingsRow): void {
       void row;
     }
