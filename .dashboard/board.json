@@ -26,6 +26,12 @@
           "title": "Notify when something in a pane is waiting on us",
           "notes": "Out of the app: a system notification when something needs attention, like a Claude session waiting on an answer. In the app: a small in-app notification, and highlight the tab that is waiting.",
           "priority": "medium"
+        },
+        {
+          "id": "7a3daeb0-8c7f-4e61-8dd7-78ac2c8ff72b",
+          "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
+          "notes": "Ctrl+S -> \"Open a new project...\" shows a native folder sheet. Closing the window while it is up runs the close handler's dialog.showMessageBoxSync (\"Quit Dashboard?\"), which blocks the main process. The folder panel can never finish, so the projects:open handler never settles and the renderer shows: Failed to open project: Error: Error invoking remote method 'projects:open': reply was never sent. Nothing breaks beyond the project not opening.",
+          "priority": "medium"
         }
       ]
     },
