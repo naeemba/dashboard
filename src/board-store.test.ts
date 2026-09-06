@@ -28,7 +28,7 @@ describe('parseBoard', () => {
   it('reads a well-formed board', () => {
     const board = parseBoard('{"columns":[{"name":"Later","cards":[{"id":"1","title":"a","notes":"n"}]}]}');
     expect(board.columns)
-      .toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium' }] }]);
+      .toEqual([{ name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium', parent: null }] }]);
   });
 
   // readBoard turns each of these into the empty board and moves the file aside; parseBoard's job is
@@ -69,7 +69,7 @@ describe('parseBoard', () => {
   it('gives a card without an id one of its own', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"title":"a"}]}]}', () => 'generated');
     expect(board.columns[0].cards[0])
-      .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium' });
+      .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium', parent: null });
   });
 });
 
@@ -81,7 +81,7 @@ describe('readBoard', () => {
   it('reads back what writeBoard wrote', () => {
     const path = project();
     writeBoard(path, {
-      columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium' }] }],
+      columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium', parent: null }] }],
     });
     expect(columnNames(readBoard(path).board)).toEqual(['Later']);
   });

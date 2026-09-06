@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PRIORITY,
   addCard,
+  childColumns,
+  childrenOf,
   cyclePriority,
   deleteCard,
+  descendantsOf,
   emptyBoard,
+  isDescendantOf,
   moveCard,
   moveSelection,
   renameCard,
@@ -18,7 +22,17 @@ function board(...columns: string[][]): Board {
   return {
     columns: columns.map((titles, index) => ({
       name: `Column ${index}`,
-      cards: titles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY })),
+      cards: titles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY, parent: null })),
+    })),
+  };
+}
+
+// The test boards use the title as the id, so a relation reads as "b's parent is a".
+function withParents(source: Board, parents: Record<string, string>): Board {
+  return {
+    columns: source.columns.map((column) => ({
+      ...column,
+      cards: column.cards.map((card) => ({ ...card, parent: parents[card.id] ?? null })),
     })),
   };
 }
@@ -76,10 +90,10 @@ describe('addCard', () => {
 describe('renameCard', () => {
   it('replaces the title and keeps the id and notes', () => {
     const start: Board = {
-      columns: [{ name: 'Todo', cards: [{ id: 'x', title: 'old', notes: 'why', priority: 'high' }] }],
+      columns: [{ name: 'Todo', cards: [{ id: 'x', title: 'old', notes: 'why', priority: 'high', parent: null }] }],
     };
     const result = renameCard(start, { column: 0, card: 0 }, 'new');
-    expect(result.board.columns[0].cards[0]).toEqual({ id: 'x', title: 'new', notes: 'why', priority: 'high' });
+    expect(result.board.columns[0].cards[0]).toEqual({ id: 'x', title: 'new', notes: 'why', priority: 'high', parent: null });
   });
 
   it('does nothing on an empty column, and hands back the same board', () => {
@@ -163,7 +177,7 @@ function priorityBoard(...priorities: Priority[]): Board {
   return {
     columns: [{
       name: 'Todo',
-      cards: priorities.map((priority, index) => ({ id: `${index}`, title: `${index}`, notes: '', priority })),
+      cards: priorities.map((priority, index) => ({ id: `${index}`, title: `${index}`, notes: '', priority, parent: null })),
     }],
   };
 }
@@ -190,10 +204,10 @@ describe('cyclePriority', () => {
 describe('setNotes', () => {
   it('replaces the notes and leaves everything else alone', () => {
     const start: Board = {
-      columns: [{ name: 'Todo', cards: [{ id: 'x', title: 't', notes: 'old', priority: 'low' }] }],
+      columns: [{ name: 'Todo', cards: [{ id: 'x', title: 't', notes: 'old', priority: 'low', parent: null }] }],
     };
     expect(setNotes(start, { column: 0, card: 0 }, 'new').board.columns[0].cards[0])
-      .toEqual({ id: 'x', title: 't', notes: 'new', priority: 'low' });
+      .toEqual({ id: 'x', title: 't', notes: 'new', priority: 'low', parent: null });
   });
 });
 
@@ -225,5 +239,61 @@ describe('sortColumn', () => {
   it('does nothing on an empty column, and hands back the same board', () => {
     const start = board([]);
     expect(sortColumn(start, { column: 0, card: 0 }).board).toBe(start);
+  });
+});
+
+describe('childrenOf', () => {
+  const family = withParents(board(['a', 'b'], ['c'], ['d']), { b: 'a', c: 'a', d: 'c' });
+
+  it('finds the cards that name a card as their parent', () => {
+    expect(childrenOf(family, 'a').map((card) => card.title)).toEqual(['b', 'c']);
+  });
+
+  it('reads children across columns, left to right then top to bottom', () => {
+    const spread = withParents(board(['a', 'x'], ['y'], ['z']), { x: 'a', y: 'a', z: 'a' });
+    expect(childrenOf(spread, 'a').map((card) => card.title)).toEqual(['x', 'y', 'z']);
+  });
+
+  it('is empty for a card nobody points at', () => {
+    expect(childrenOf(family, 'd')).toEqual([]);
+  });
+});
+
+describe('descendantsOf', () => {
+  const family = withParents(board(['a', 'b'], ['c'], ['d']), { b: 'a', c: 'a', d: 'c' });
+
+  it('goes all the way down, not just one level', () => {
+    expect(descendantsOf(family, 'a').map((card) => card.title)).toEqual(['b', 'c', 'd']);
+  });
+
+  it('leaves the card itself out', () => {
+    expect(descendantsOf(family, 'a').some((card) => card.id === 'a')).toBe(false);
+  });
+});
+
+describe('isDescendantOf', () => {
+  const family = withParents(board(['a', 'b'], ['c'], ['d']), { b: 'a', c: 'a', d: 'c' });
+
+  it('is true for a grandchild', () => {
+    expect(isDescendantOf(family, 'd', 'a')).toBe(true);
+  });
+
+  it('is false the other way round', () => {
+    expect(isDescendantOf(family, 'a', 'd')).toBe(false);
+  });
+
+  it('is false for a card and itself', () => {
+    expect(isDescendantOf(family, 'a', 'a')).toBe(false);
+  });
+});
+
+describe('childColumns', () => {
+  it('says which column each child sits in, in the order children are read', () => {
+    const spread = withParents(board(['a', 'x'], ['y'], ['z']), { x: 'a', y: 'a', z: 'a' });
+    expect(childColumns(spread, 'a')).toEqual([0, 1, 2]);
+  });
+
+  it('is empty for a card with no children', () => {
+    expect(childColumns(board(['a']), 'a')).toEqual([]);
   });
 });

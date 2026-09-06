@@ -15,7 +15,7 @@ function board(...columns: string[][]): Board {
   return {
     columns: columns.map((cardTitles, index) => ({
       name: `Column ${index}`,
-      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY })),
+      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY, parent: null })),
     })),
   };
 }
@@ -108,8 +108,8 @@ describe('untrimmed text already on the card', () => {
     columns: [{
       name: 'Todo',
       cards: [
-        { id: 'a', title: 'a', notes: '', priority: DEFAULT_PRIORITY },
-        { id: 'b', title: 'b ', notes: 'Check the logs\n', priority: DEFAULT_PRIORITY },
+        { id: 'a', title: 'a', notes: '', priority: DEFAULT_PRIORITY, parent: null },
+        { id: 'b', title: 'b ', notes: 'Check the logs\n', priority: DEFAULT_PRIORITY, parent: null },
       ],
     }],
   };

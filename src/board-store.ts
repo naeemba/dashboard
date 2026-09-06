@@ -89,6 +89,9 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
     // A card written without one, or with a word that is not a priority, is medium. Only the title is
     // worth dropping a card over.
     priority: isPriority(value.priority) ? value.priority : DEFAULT_PRIORITY,
+    // Read properly in a later change. Null here only so the type is satisfied: whether an id names a
+    // real card cannot be known while the cards are still being parsed one at a time.
+    parent: null,
   };
 }
 

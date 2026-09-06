@@ -7,7 +7,15 @@ export type Priority = typeof PRIORITIES[number];
 // sorted and a card always draws its colour.
 export const DEFAULT_PRIORITY: Priority = 'medium';
 
-export type Card = { id: string; title: string; notes: string; priority: Priority };
+export type Card = {
+  id: string;
+  title: string;
+  notes: string;
+  priority: Priority;
+  // The id of the card this one belongs to, or null. This single field is the whole relation: a
+  // parent keeps no list of its children, because two halves that have to agree eventually will not.
+  parent: string | null;
+};
 export type Column = { name: string; cards: Card[] };
 export type Board = { columns: Column[] };
 
@@ -58,7 +66,7 @@ export function moveSelection(board: Board, selection: Selection, direction: Dir
 }
 
 export function addCard(board: Board, selection: Selection, id: string, title: string): Change {
-  const cards = [...board.columns[selection.column].cards, { id, title, notes: '', priority: DEFAULT_PRIORITY }];
+  const cards = [...board.columns[selection.column].cards, { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: null }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
@@ -152,4 +160,35 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
     return column;
   });
   return { board: withColumns(board, columns), selection: { column: target, card: row } };
+}
+
+// Every card on the board, columns left to right and rows top to bottom. That order is what children
+// are read in, so a subtask's place in the list is the place you already put it with Shift+Up.
+function allCards(board: Board): Card[] {
+  return board.columns.flatMap((column) => column.cards);
+}
+
+export function childrenOf(board: Board, id: string): Card[] {
+  return allCards(board).filter((card) => card.parent === id);
+}
+
+// Depth first, so a child is followed by its own children rather than by its next sibling. This is the
+// order a card's family is deleted in and the order the detail dialog would show a deep tree in.
+export function descendantsOf(board: Board, id: string): Card[] {
+  return childrenOf(board, id).flatMap((child) => [child, ...descendantsOf(board, child.id)]);
+}
+
+// Asked before Tab attaches a card, because making a card the child of its own descendant is a ring,
+// and a ring makes descendantsOf recurse until the stack runs out.
+export function isDescendantOf(board: Board, id: string, ancestorId: string): boolean {
+  return descendantsOf(board, ancestorId).some((card) => card.id === id);
+}
+
+// The column index of each child, in the order childrenOf reads them. The bar on a parent card is
+// drawn from this: position, not column name, decides the colour.
+export function childColumns(board: Board, id: string): number[] {
+  return board.columns
+    .flatMap((column, index) => column.cards.map((card) => ({ card, index })))
+    .filter((entry) => entry.card.parent === id)
+    .map((entry) => entry.index);
 }
