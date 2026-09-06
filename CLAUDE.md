@@ -87,8 +87,15 @@ Done. The card is deleted — and the status bar says `"Ship it" has subtasks �
 delete it with d`. You read that, assume the card survived, and it is gone. No
 test fails.
 
-`hasSubtasks` and `attachmentRing` in `board.ts` are the two predicates that
-exist. A third refusal worth a message wants a third.
+It already happened once, smaller: before `isFontSize` existed, `parseSettings`
+held its own copy of the 6-to-72 range. A size the settings screen accepted
+could still get silently discarded the next time the file was read, with
+nothing on screen saying why.
+
+Five predicates exist for this reason: `hasSubtasks` and `attachmentRing` in
+`board.ts`, and `holderOfBinding`, `isHexColor` and `isFontSize` in
+`settings.ts`. A refusal worth a message reuses one of these or adds a sixth —
+never a second copy of the condition.
 
 ## The help dialog is part of the change — Hard Rule
 
