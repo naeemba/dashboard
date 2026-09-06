@@ -32,6 +32,12 @@
           "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
           "notes": "Ctrl+S -> \"Open a new project...\" shows a native folder sheet. Closing the window while it is up runs the close handler's dialog.showMessageBoxSync (\"Quit Dashboard?\"), which blocks the main process. The folder panel can never finish, so the projects:open handler never settles and the renderer shows: Failed to open project: Error: Error invoking remote method 'projects:open': reply was never sent. Nothing breaks beyond the project not opening.",
           "priority": "medium"
+        },
+        {
+          "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
+          "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
+          "notes": "Hit Ctrl+S to select a project, then click \"Open a new project...\". Nothing happens - no folder dialog, no error.",
+          "priority": "medium"
         }
       ]
     },
