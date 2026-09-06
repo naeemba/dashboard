@@ -177,6 +177,46 @@ body {
   overflow: hidden;
 }
 
+.board-parent {
+  margin: 0 0 4px;
+  font-size: 11px;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-progress {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  margin: 6px 0 0;
+}
+
+.board-progress span {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 12%);
+}
+
+.board-progress span.underway {
+  background: #d0a215;
+}
+
+.board-progress span.done {
+  background: #3fa45b;
+}
+
+.board-progress-count {
+  flex: 0 0 auto;
+  height: auto;
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: 0.55;
+  background: none;
+}
+
 /* Where the keyboard is. The board has one selection, not one per column, and it is marked by the same
    blue outline a focused pane gets. The card keeps its own background: lightening it to --brightBlack
    drew the low-priority stripe in its own colour, so the one card your cursor was on was the one card

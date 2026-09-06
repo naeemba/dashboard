@@ -43,6 +43,8 @@ function terminalShortcuts(isMac: boolean): Shortcut[] {
 const BOARD_SHORTCUTS: Shortcut[] = [
   { keys: 'Arrows', action: 'Move the selection' },
   { keys: 'Shift+Arrows', action: 'Move the card itself' },
+  { keys: 'Tab', action: 'Make this card a subtask of the one above' },
+  { keys: 'Shift+Tab', action: 'Cut this card loose from its parent' },
   { keys: 'Enter', action: "Edit the card's title" },
   { keys: 'e', action: "Edit the card's description" },
   { keys: 'n', action: 'Add a card' },
@@ -68,7 +70,9 @@ const SCREEN_BLURBS: Record<Mode, string> = {
     + 'launch. Quit it and the pane says it exited; Enter starts it again.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
     + 'straight to disk, so there is no save key and u is the only way back. The file is re-read each '
-    + 'time you enter the board, not while you are looking at it.',
+    + 'time you enter the board, not while you are looking at it. A card can be a subtask of another '
+    + 'card: it stays an ordinary card in whatever column you put it in, shows a badge naming its '
+    + 'parent, and counts towards the bar on that parent.',
 };
 
 function screenShortcuts(mode: Mode, isMac: boolean): Shortcut[] {

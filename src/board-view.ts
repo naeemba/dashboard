@@ -1,7 +1,11 @@
 import {
+  attachToCardAbove,
   cardAt,
+  childColumns,
   cyclePriority,
   deleteCardAndDescendants,
+  detachCard,
+  isDescendantOf,
   moveCard,
   moveSelection,
   sortColumn,
@@ -70,6 +74,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // not get it back either.
   let latestRead = 0;
   let landedRead = 0;
+
+  function cardById(id: string): Card | undefined {
+    return state.board.columns.flatMap((column) => column.cards).find((card) => card.id === id);
+  }
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
@@ -141,6 +149,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     const item = document.createElement('li');
     // The priority rides on the card as a class so index.css owns which colour each one is.
     item.className = `board-card priority-${card.priority}${selected ? ' selected' : ''}`;
+    // Which piece of work this card belongs to. Invisible from the column otherwise: a subtask is an
+    // ordinary card sitting in an ordinary column, and nothing else on it says so.
+    const parent = card.parent === null ? undefined : cardById(card.parent);
+    if (parent) {
+      const badge = document.createElement('p');
+      badge.className = 'board-parent';
+      badge.textContent = parent.title;
+      item.append(badge);
+    }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
     // A description shows on the card rather than behind a keystroke: the point of writing one down is
     // reading it without asking. A card with none takes no room for it.
@@ -151,6 +168,25 @@ export function createBoardView(options: BoardOptions): BoardView {
       notes.className = 'board-notes';
       notes.textContent = card.notes;
       item.append(notes);
+    }
+    // One segment per child, coloured by the column it is in: the last column is finished, the first
+    // has not been started, everything between is under way. Position rather than name, so renaming a
+    // column does not change what the bar says.
+    const columns = childColumns(state.board, card.id);
+    if (columns.length > 0) {
+      const last = state.board.columns.length - 1;
+      const bar = document.createElement('p');
+      bar.className = 'board-progress';
+      for (const columnIndex of columns) {
+        const segment = document.createElement('span');
+        segment.className = columnIndex === last ? 'done' : columnIndex === 0 ? 'waiting' : 'underway';
+        bar.append(segment);
+      }
+      const count = document.createElement('span');
+      count.className = 'board-progress-count';
+      count.textContent = `${columns.filter((columnIndex) => columnIndex === last).length}/${columns.length}`;
+      bar.append(count);
+      item.append(bar);
     }
     return item;
   }
@@ -187,6 +223,19 @@ export function createBoardView(options: BoardOptions): BoardView {
       if (event.shiftKey) return change(moveCard(state.board, state.selection, direction));
       state = { ...state, selection: moveSelection(state.board, state.selection, direction) };
       return render();
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      if (event.shiftKey) return change(detachCard(state.board, state.selection));
+      const above = state.board.columns[state.selection.column]?.cards[state.selection.card - 1];
+      const card = cardAt(state.board, state.selection);
+      // The one refusal worth explaining. The others — no card above, nothing selected — are obvious
+      // from the screen, and a message for those would be noise.
+      if (card && above && isDescendantOf(state.board, above.id, card.id)) {
+        options.onError(`"${above.title}" is already a subtask of this card`);
+        return;
+      }
+      return change(attachToCardAbove(state.board, state.selection));
     }
     if (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
     switch (event.key) {
