@@ -36,23 +36,32 @@ shell's transpose. Take them and pressing Ctrl+N mid-word throws you out to the
 terminal grid instead of completing the word. You leave a mode by naming a
 different one.
 
-Inside an overlay the key goes nowhere at all. A dialog has focus, so no pane can
-receive the keystroke anyway, and the mode keys are turned away at the window
-listener before they are even read. **So every keydown handler reaches `if
-(isModified(event)) return;` before it acts on `event.key`, and a modified key in
-a dialog does nothing.** Two of them got this wrong before the rule was written
-down here. Take Ctrl+N in the card detail dialog and pressing it mid-word opens a
-"Subtask title" box. Take Enter with Cmd in the delete confirmation and a stray
-Cmd+Enter deletes a card and its whole family.
+Inside an overlay the key goes nowhere at all. A dialog has focus, so no pane
+can receive the keystroke anyway.
 
-Three keys are read before that guard, all on purpose:
+**Every dialog that reads `event.key` for itself must check `if
+(isModified(event)) return;` first, or a modified key does something in it
+that it was never meant to.** That is the help dialog, the card detail
+dialog, the delete confirmation, the picker's search box, the settings
+screen, and the card title and description editor. Two of them got this
+wrong before the rule was written down here. Take Ctrl+N in the card detail
+dialog and pressing it mid-word opens a "Subtask title" box. Take Enter with
+Cmd in the delete confirmation and a stray Cmd+Enter deletes a card and its
+whole family.
 
-- Shift+Arrow moves a card, so the board grid matches the arrows first. That is a
-  binding that wants its modifier, not one leaking through.
-- Tab, in the picker and in the board grid, for opposite reasons. The picker
-  swallows every Tab because nothing else in it is focusable and Shift+Tab would
-  drop focus into the pane behind the overlay. The grid takes bare Tab and lets
-  Ctrl/Cmd/Alt+Tab fall through, because that one belongs to the window switcher.
+The window listener in `renderer.ts` is not one of these and never needed the
+guard: it does not read `event.key` at all. It hands the whole keystroke to
+`mapShortcut`, which matches every modifier exactly, so a key held with Ctrl
+can only fire an action someone actually bound to that exact combination.
+Shift+Arrow, which moves a card, and Tab, which attaches one, are ordinary
+rows in `src/actions.ts` now — not special cases written into a handler. A
+plain `Tab` binding simply cannot match `Ctrl+Tab`, so the window switcher
+still gets it, and nobody had to write code to let it past.
+
+Two real exceptions read a key before the guard, both on purpose:
+
+- Tab, in the picker's search box. Nothing else in that dialog is focusable,
+  so Tab and Shift+Tab would drop focus into the pane behind the overlay.
 - Every key, in the settings screen, while a row is armed. A row waiting for a
   binding has to read Ctrl, Cmd, Alt and Shift, or those four are the only keys
   you could never bind. It is one keystroke long and puts the guard back
@@ -62,9 +71,9 @@ If a handler reads a modified key anywhere else, it is stealing it.
 
 The mode keys are not `MODE_KEYS` any more. They are three rows in
 `src/actions.ts` like any other action, which means they can be rebound, and
-the pass-through check above runs against the action rather than the key —
-so if Ctrl+T becomes something else, the something else is what gets passed
-through, not the key that used to be Ctrl+T.
+the pass-through check at the top of this section runs against the action
+rather than the key — so if Ctrl+T becomes something else, the something else
+is what gets passed through, not the key that used to be Ctrl+T.
 
 ## A refusal is explained where it is decided — Hard Rule
 
