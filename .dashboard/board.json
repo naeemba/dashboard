@@ -32,6 +32,12 @@
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium"
+        },
+        {
+          "id": "0e01b8ac-bc0e-4e7d-bf70-c70ce57fcb49",
+          "title": "Add a manager page as the first tab, giving an overview across projects",
+          "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
+          "priority": "medium"
         }
       ]
     },
