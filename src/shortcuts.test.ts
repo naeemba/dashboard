@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mapShortcut } from './shortcuts';
+import { ACTIONS } from './actions';
+import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
 import { key } from './test-key';
 
@@ -106,6 +108,24 @@ describe('mapShortcut', () => {
       expect(mapShortcut(key({ code: 'ArrowRight', metaKey: true }), mac, mode)).toBeNull();
       expect(mapShortcut(key({ code: 'ArrowLeft', metaKey: true }), mac, mode)).toBeNull();
       expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, mode)).toBeNull();
+    }
+  });
+});
+
+describe('every shipped default reaches its own action', () => {
+  it('holds for the board, where the keys used to live in a switch', () => {
+    const keys = defaultSettings(true).keys;
+    for (const entry of ACTIONS) {
+      if (entry.scope !== 'board') continue;
+      const stroke = parseBinding(keys[entry.name]!)!;
+      const pressed = key({
+        code: stroke.code,
+        ctrlKey: stroke.ctrl,
+        metaKey: stroke.meta,
+        altKey: stroke.alt,
+        shiftKey: stroke.shift,
+      });
+      expect(mapShortcut(pressed, keys, 'board'), entry.name).toEqual(entry.action);
     }
   });
 });
