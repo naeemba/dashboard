@@ -433,8 +433,11 @@ async function restore(session: Session): Promise<void> {
       // layout still opens, and only the one that threw is dropped from this run.
       try {
         await openProject(entry.path);
-      } catch {
-        // dropped from this run
+      } catch (error: unknown) {
+        // Said out loud, because the save below rewrites session.json without this project: grant the
+        // folder back next week and it is not in the layout any more. Last failure wins the span, which
+        // is the difference between "it is gone" and "it is gone and I have no idea why".
+        showError('start', `Failed to open ${entry.path}: ${String(error)}`);
       }
     }
     for (const entry of session.pages) {
