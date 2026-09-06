@@ -149,6 +149,19 @@ function createWindow(): void {
       additionalArguments: [`${SHELL_COMMAND_FLAG}${shellCommand}`],
     },
   });
+  // Closing the window kills every shell on every page, and there is no getting a long-running task
+  // back. Cancel is the default button, so Enter and Escape both mean "I hit that by accident".
+  mainWindow.on('close', (event) => {
+    const cancelled = dialog.showMessageBoxSync(mainWindow, {
+      type: 'question',
+      buttons: ['Cancel', 'Quit'],
+      defaultId: 0,
+      cancelId: 0,
+      message: 'Quit Dashboard?',
+      detail: 'Every shell in every open project is killed, including anything still running in one.',
+    }) === 0;
+    if (cancelled) event.preventDefault();
+  });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
