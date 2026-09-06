@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { emptyBoard, type Board, type Card, type Column } from './board';
+import { DEFAULT_PRIORITY, PRIORITIES, emptyBoard, type Board, type Card, type Column, type Priority } from './board';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.
@@ -14,7 +14,9 @@ export const BROKEN_BOARD_FILE = 'board.json.broken';
 // nothing needed salvaging — including the ordinary case of no board.json existing yet.
 export type BoardRead = { board: Board; brokenFile: string | null };
 
-const EXPLANATION_FOR_AGENTS = `# .dashboard
+// Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
+// writes a file that is not there, so those copies would otherwise drift the moment this text changes.
+export const EXPLANATION_FOR_AGENTS = `# .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B.
 
@@ -25,7 +27,12 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
         {
           "name": "Todo",
           "cards": [
-            { "id": "0f6a2c5e-...", "title": "Fix the resize race", "notes": "" }
+            {
+              "id": "0f6a2c5e-...",
+              "title": "Fix the resize race",
+              "notes": "",
+              "priority": "high"
+            }
           ]
         }
       ]
@@ -37,14 +44,16 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   the next time the app reads the file.
 - \`title\` is one line. A card with no \`title\`, or a blank one, is dropped when the app reads
   the file.
-- \`notes\` is free text. The app keeps it but has no editor for it yet.
+- \`notes\` is the card's description, free text over as many lines as you like. \`e\` opens it.
+- \`priority\` is one of \`urgent\`, \`high\`, \`medium\`, \`low\`. Anything else, or nothing, reads as
+  \`medium\`. It colours the card's left edge, and \`s\` sorts a column by it, urgent first.
 
 Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
 away from the board and back to see your changes. The app rewrites the whole file on every edit and
 drops any field not listed above.
 `;
 
-const EXPLANATION_FOR_PEOPLE = `# .dashboard
+export const EXPLANATION_FOR_PEOPLE = `# .dashboard
 
 Project state for the Dashboard app. \`board.json\` holds this project's kanban board.
 
@@ -67,12 +76,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 // A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
 // can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
+function isPriority(value: unknown): value is Priority {
+  return PRIORITIES.some((priority) => priority === value);
+}
+
 function parseCard(value: unknown, makeId: () => string): Card | null {
   if (!isRecord(value) || typeof value.title !== 'string' || value.title.trim() === '') return null;
   return {
     id: typeof value.id === 'string' ? value.id : makeId(),
     title: value.title,
     notes: typeof value.notes === 'string' ? value.notes : '',
+    // A card written without one, or with a word that is not a priority, is medium. Only the title is
+    // worth dropping a card over.
+    priority: isPriority(value.priority) ? value.priority : DEFAULT_PRIORITY,
   };
 }
 

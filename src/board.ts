@@ -1,6 +1,13 @@
 import type { Direction } from './terminals';
 
-export type Card = { id: string; title: string; notes: string };
+// Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
+export const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const;
+export type Priority = typeof PRIORITIES[number];
+// What a new card gets. Every card has one rather than an optional none, so a column can always be
+// sorted and a card always draws its colour.
+export const DEFAULT_PRIORITY: Priority = 'medium';
+
+export type Card = { id: string; title: string; notes: string; priority: Priority };
 export type Column = { name: string; cards: Card[] };
 export type Board = { columns: Column[] };
 
@@ -10,6 +17,12 @@ export type Selection = { column: number; card: number };
 
 // Every operation answers with both, because a card that moves takes the selection with it.
 export type Change = { board: Board; selection: Selection };
+
+// An empty column still selects row zero, so this is undefined as often as not. Everything that reads
+// the selected card goes through here rather than spelling the two lookups out again.
+export function cardAt(board: Board, selection: Selection): Card | undefined {
+  return board.columns[selection.column]?.cards[selection.card];
+}
 
 const DEFAULT_COLUMNS = ['Todo', 'Doing', 'Done'];
 
@@ -45,19 +58,56 @@ export function moveSelection(board: Board, selection: Selection, direction: Dir
 }
 
 export function addCard(board: Board, selection: Selection, id: string, title: string): Change {
-  const cards = [...board.columns[selection.column].cards, { id, title, notes: '' }];
+  const cards = [...board.columns[selection.column].cards, { id, title, notes: '', priority: DEFAULT_PRIORITY }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
   };
 }
 
-export function renameCard(board: Board, selection: Selection, title: string): Change {
+// Rename, notes and priority all change one field of the selected card and leave the selection where
+// it is, so they are one operation with the field passed in.
+function editCard(board: Board, selection: Selection, fields: Partial<Card>): Change {
   const cards = board.columns[selection.column].cards;
   if (cards.length === 0) return { board, selection };
   return {
-    board: replaceColumn(board, selection.column, cards.map((card, at) => (at === selection.card ? { ...card, title } : card))),
+    board: replaceColumn(board, selection.column, cards.map((card, at) => (at === selection.card ? { ...card, ...fields } : card))),
     selection,
+  };
+}
+
+export function renameCard(board: Board, selection: Selection, title: string): Change {
+  return editCard(board, selection, { title });
+}
+
+export function setNotes(board: Board, selection: Selection, notes: string): Change {
+  return editCard(board, selection, { notes });
+}
+
+// Cycles rather than sets, so one key reaches all four. Wraps from the bottom back to the top.
+export function cyclePriority(board: Board, selection: Selection): Change {
+  const card = cardAt(board, selection);
+  if (!card) return { board, selection };
+  const next = PRIORITIES[(PRIORITIES.indexOf(card.priority) + 1) % PRIORITIES.length];
+  return editCard(board, selection, { priority: next });
+}
+
+// Sorts the selected column, urgent first. Stable, so cards of equal priority keep the order you put
+// them in with Shift+up and Shift+down — sorting is a thing you ask for, not a rule the column enforces.
+// A column already in order hands back the same board, which is what keeps the undo step and the file
+// alone when the key changed nothing.
+export function sortColumn(board: Board, selection: Selection): Change {
+  const cards = board.columns[selection.column].cards;
+  if (cards.length === 0) return { board, selection };
+  const rank = (card: Card): number => PRIORITIES.indexOf(card.priority);
+  const sorted = [...cards].sort((left, right) => rank(left) - rank(right));
+  if (sorted.every((card, at) => card === cards[at])) return { board, selection };
+  const selected = cards[selection.card];
+  return {
+    board: replaceColumn(board, selection.column, sorted),
+    // The selection follows the card it was on rather than the row, so sorting never moves your cursor
+    // onto someone else's card.
+    selection: { column: selection.column, card: Math.max(0, sorted.indexOf(selected)) },
   };
 }
 

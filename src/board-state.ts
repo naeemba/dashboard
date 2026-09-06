@@ -1,4 +1,14 @@
-import { addCard, deleteCard, emptyBoard, renameCard, type Board, type Change, type Selection } from './board';
+import {
+  addCard,
+  cardAt,
+  deleteCard,
+  emptyBoard,
+  renameCard,
+  setNotes,
+  type Board,
+  type Change,
+  type Selection,
+} from './board';
 
 // One step back, held in memory. `d` deletes on a single keystroke, so there has to be a way back
 // from a mis-hit; anything deeper is a feature nobody asked for. The selection is kept with the
@@ -49,8 +59,20 @@ export function addBlankCard(state: BoardState, id: string): BoardState {
 export function commitTitle(state: BoardState, title: string): BoardState {
   const trimmed = title.trim();
   if (trimmed === '') return applyChange(state, deleteCard(state.board, state.selection));
-  if (trimmed === state.board.columns[state.selection.column]?.cards[state.selection.card]?.title) return state;
+  // Both sides trimmed: parseCard keeps a title exactly as it is written, so a hand-edited
+  // `"title": "Ship it "` would otherwise never compare equal, and merely opening that card would spend
+  // the undo step belonging to the move you made just before it.
+  if (trimmed === cardAt(state.board, state.selection)?.title.trim()) return state;
   return applyChange(state, renameCard(state.board, state.selection, trimmed));
+}
+
+// Escape commits, because Enter is a newline in a description. An empty one is allowed and simply
+// clears the card's notes — unlike a title, a card with no description is an ordinary card. Closing a
+// description unchanged is not a change, for the same reason reading a title is not.
+export function commitNotes(state: BoardState, notes: string): BoardState {
+  const trimmed = notes.trim();
+  if (trimmed === cardAt(state.board, state.selection)?.notes.trim()) return state;
+  return applyChange(state, setNotes(state.board, state.selection, trimmed));
 }
 
 // A board read from disk starts fresh: nothing on it can be undone back to what was in memory. The

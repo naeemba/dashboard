@@ -13,6 +13,7 @@ import { quoteForShell } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
+import type { Session } from './session';
 
 // Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt with THEME's palette.
 const FONT_NAME = 'JetBrains Mono';
@@ -78,7 +79,7 @@ let previousSlot: number | null = null;
 // The right-hand span says which view you are in, and for terminals which pane has the keyboard.
 function modeLabel(page: Page): string {
   if (page.mode === 'nvim') return 'nvim';
-  if (page.mode === 'board') return `board · ${page.board?.columnName() ?? ''}`;
+  if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
   return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
 }
 
@@ -100,6 +101,36 @@ function renderStatus(): void {
     return tab;
   }));
   statusTerminal.textContent = modeLabel(page);
+  saveSession();
+}
+
+// Hung off renderStatus because the two answer the same question: everything that changes which project
+// is in front, which view it shows, or which pane has the keyboard already redraws the status bar.
+// True until restore() has put every project back, so the partial layouts it passes through on the
+// way are never the one on disk.
+let restoring = true;
+let lastSaved = '';
+function saveSession(): void {
+  // A restore opens the projects one at a time, and each one redraws. Saving those would leave the file
+  // holding two of your five projects for the whole of startup, so an app killed while it was still
+  // opening them would come back next time with the three missing for good.
+  if (restoring || pages.length === 0) return;
+  // A project whose folder went away is not written back. It stays on screen for this run — nothing
+  // closes a page — but the next launch starts without it, instead of reopening the same dead tab and
+  // saving it again forever. The project list already works this way: a missing project is neither
+  // offered by Ctrl+S nor remembered as a recent.
+  const live = pages.filter((page) => !page.project.missing);
+  const session: Session = {
+    // Counted in the filtered list: a dead page sitting before the active one would otherwise shift it,
+    // and the active page may itself be the dead one, which lands on the first survivor.
+    activeIndex: Math.max(0, live.indexOf(pages[activeIndex])),
+    pages: live.map((page) => ({ path: page.project.path, mode: page.mode, focused: page.focused })),
+  };
+  // Typing a card title redraws the status bar on every keystroke and changes nothing here.
+  const encoded = JSON.stringify(session);
+  if (encoded === lastSaved) return;
+  lastSaved = encoded;
+  bridge.saveSession(session);
 }
 
 function focusTerminal(index: number): void {
@@ -113,11 +144,17 @@ function focusTerminal(index: number): void {
 
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
 // views to switch between and ignores the keys.
+// The mode and which view is on screen are one fact, so they only ever move together. Restoring a page
+// sets them without arriving at it, which is why this is not simply the top of setMode.
+function showMode(page: Page, mode: Mode): void {
+  page.mode = mode;
+  for (const [name, view] of Object.entries(page.views)) view.hidden = name !== mode;
+}
+
 function setMode(mode: Mode): void {
   const page = pages[activeIndex];
   if (page.project.missing) return;
-  page.mode = mode;
-  for (const [name, view] of Object.entries(page.views)) view.hidden = name !== mode;
+  showMode(page, mode);
   focusMode(page, true);
 }
 
@@ -158,12 +195,15 @@ function fitAllPages(): void {
   }
 }
 
-function showPage(index: number): void {
+// `arriving` forces the landing to count as a genuine arrival even when the page is already the active
+// one. Only the restore needs it: it lands on a page nobody has visited yet this run, so nvim has to
+// start and the board has to be read, exactly as if you had just switched to it.
+function showPage(index: number, arriving = false): void {
   if (pages.length === 0) return renderStatus();
   const next = (index + pages.length) % pages.length;
   // Landing back on the page you are already on — Escape closing the picker, a folder dialog cancelled —
   // only needs its keyboard focus back, not a fresh arrival at its mode.
-  if (next === activeIndex) return focusMode(pages[activeIndex], false);
+  if (next === activeIndex) return focusMode(pages[activeIndex], arriving);
   previousSlot = pages[activeIndex].slot;
   activeIndex = next;
   pages.forEach((page, pageIndex) => {
@@ -379,15 +419,59 @@ bridge.onExit((id, exitCode) => {
   pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
 });
 
-// The window opens with no projects; the picker makes the first one.
+// Puts back what the last run was left on: the same projects in the same order, each on the view it was
+// showing, with the same pane focused. One at a time, because main hands out a slot per project in the
+// order they are opened and that order is the tab strip.
+async function restore(session: Session): Promise<void> {
+  // Best-effort: one project that cannot be opened at all — a folder you have lost read permission on,
+  // so the main process throws rather than reporting it missing — must not leave `restoring` set for
+  // the rest of the run. That would silently stop every later save, and a day's work would open
+  // tomorrow as yesterday's layout. Half the layout back and saving is better than neither.
+  try {
+    for (const entry of session.pages) {
+      // One folder you cannot stat must not cost you the projects saved behind it: the rest of the
+      // layout still opens, and only the one that threw is dropped from this run.
+      try {
+        await openProject(entry.path);
+      } catch (error: unknown) {
+        // Said out loud, because the save below rewrites session.json without this project: grant the
+        // folder back next week and it is not in the layout any more. Last failure wins the span, which
+        // is the difference between "it is gone" and "it is gone and I have no idea why".
+        showError('start', `Failed to open ${entry.path}: ${String(error)}`);
+      }
+    }
+    for (const entry of session.pages) {
+      // By path, not position: an entry that failed to open has no page, so the two lists no longer
+      // line up and index 3 would hand project 4's view to project 5.
+      const page = pages.find((candidate) => candidate.project.path === entry.path);
+      // A folder that went away while the app was closed comes back as the same dead page it would have
+      // become had it gone away mid-run. There is no view on it to restore.
+      if (!page || page.project.missing) continue;
+      showMode(page, entry.mode);
+      page.focused = entry.focused;
+    }
+  } finally {
+    // Saving again from here on, so the landing below is what writes the restored layout back — with any
+    // project whose folder has gone missing already dropped from it.
+    restoring = false;
+    const activePath = session.pages[session.activeIndex]?.path;
+    const landing = pages.findIndex((page) => page.project.path === activePath);
+    showPage(landing === -1 ? 0 : landing, true);
+  }
+}
+
+// The window opens with whatever was open last time; with nothing saved, the picker makes the first one.
 async function start(): Promise<void> {
   renderStatus();
+  // Read before anything is on screen, because the first page to open starts saving over it.
+  const session = await bridge.getSession();
   // xterm measures cell size when a pane opens, so both font weights must be in before openProject()
   // builds one, or the glyphs misalign.
   await Promise.all([
     document.fonts.load(`${FONT_SIZE}px "${FONT_NAME}"`),
     document.fonts.load(`bold ${FONT_SIZE}px "${FONT_NAME}"`),
   ]);
+  await restore(session);
 }
 
 start().catch((error: unknown) => {

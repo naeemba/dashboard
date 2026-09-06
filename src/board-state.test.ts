@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
+import { DEFAULT_PRIORITY, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
 import {
   addBlankCard,
   applyChange,
+  commitNotes,
   commitTitle,
   initialBoardState,
   loadBoard,
@@ -14,7 +15,7 @@ function board(...columns: string[][]): Board {
   return {
     columns: columns.map((cardTitles, index) => ({
       name: `Column ${index}`,
-      cards: cardTitles.map((title) => ({ id: title, title, notes: '' })),
+      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY })),
     })),
   };
 }
@@ -97,6 +98,32 @@ describe('commitTitle', () => {
     const same = commitTitle(moved, 'b');
     expect(same).toBe(moved);
     expect(titles(undoChange(same))).toEqual([['a', 'b']]);
+  });
+});
+
+// parseCard keeps a title and a description exactly as they are written, so a card hand-edited (or
+// written by an agent) with trailing whitespace is the case both commits have to compare against.
+describe('untrimmed text already on the card', () => {
+  const written: Board = {
+    columns: [{
+      name: 'Todo',
+      cards: [
+        { id: 'a', title: 'a', notes: '', priority: DEFAULT_PRIORITY },
+        { id: 'b', title: 'b ', notes: 'Check the logs\n', priority: DEFAULT_PRIORITY },
+      ],
+    }],
+  };
+  const selection: Selection = { column: 0, card: 1 };
+  const moved = applyChange(state(written, selection), moveCard(written, selection, 'up'));
+
+  // Move a card, press `e` to read its description, Escape straight back out: without the trim the
+  // file is rewritten and `u` no longer undoes the move.
+  it('opening and closing an untrimmed description is not a change', () => {
+    expect(commitNotes(moved, 'Check the logs')).toBe(moved);
+  });
+
+  it('opening and closing an untrimmed title is not a change', () => {
+    expect(commitTitle(moved, 'b')).toBe(moved);
   });
 });
 

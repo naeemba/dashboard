@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pickShell, quoteForShell } from './shell';
+import { editorArguments, pickShell, quoteForShell } from './shell';
 
 describe('pickShell', () => {
   it('prefers SHELL_COMMAND', () => {
@@ -46,5 +46,20 @@ describe('quoteForShell', () => {
 
   it('quotes the POSIX way when the shell is unknown', () => {
     expect(quoteForShell("/tmp/it's here", '')).toBe("'/tmp/it'\\''s here'");
+  });
+});
+
+describe('editorArguments', () => {
+  // Login and interactive both: -l is where a Mac PATH picks up Homebrew, -i is where it picks up the
+  // version managers the terminal panes already have. Spawn nvim directly and the pane dies with an exit
+  // code instead of opening an editor; drop -i and its language servers cannot find node.
+  it('runs nvim through a login interactive POSIX shell', () => {
+    expect(editorArguments('/bin/zsh')).toEqual(['-lic', 'exec nvim']);
+    expect(editorArguments('/opt/homebrew/bin/fish')).toEqual(['-lic', 'exec nvim']);
+  });
+
+  it('uses the PowerShell spelling for PowerShell', () => {
+    expect(editorArguments('powershell.exe')).toEqual(['-Command', 'nvim']);
+    expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe')).toEqual(['-Command', 'nvim']);
   });
 });

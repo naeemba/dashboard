@@ -150,13 +150,40 @@ body {
   margin-bottom: 4px;
   background: var(--black);
   overflow-wrap: anywhere;
+  /* The priority reads as a stripe down the edge, so it is legible at a glance across four columns
+     without spending a word of the card on it. The status bar names the one you are on. */
+  border-left: 3px solid;
 }
 
-/* Where the keyboard is. The board has one selection, not one per column. */
+.priority-urgent { border-left-color: var(--brightRed); }
+.priority-high { border-left-color: var(--yellow); }
+.priority-medium { border-left-color: var(--blue); }
+.priority-low { border-left-color: var(--brightBlack); }
+
+/* The description sits on the card rather than behind a keystroke, dimmed so a column still scans as a
+   list of titles. Its own newlines are kept: it is written as lines, so it reads as lines. */
+.board-notes {
+  margin: 4px 0 0;
+  opacity: 0.75;
+  white-space: pre-wrap;
+}
+
+/* A long description on an unselected card would push every card below it off the screen, and the
+   column would stop reading as a list. Three lines here, all of it on the card you are actually on. */
+.board-card:not(.selected) .board-notes {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Where the keyboard is. The board has one selection, not one per column, and it is marked by the same
+   blue outline a focused pane gets. The card keeps its own background: lightening it to --brightBlack
+   drew the low-priority stripe in its own colour, so the one card your cursor was on was the one card
+   with no stripe — which reads as "no priority" rather than "low". */
 .board-card.selected {
   outline: var(--focus-outline);
   outline-offset: -1px;
-  background: var(--brightBlack);
   color: var(--brightWhite);
 }
 
@@ -167,6 +194,15 @@ body {
   background: none;
   border: none;
   outline: none;
+  /* A textarea is inline by default, which leaves a gap under it. */
+  display: block;
+}
+
+textarea.board-edit {
+  margin-top: 4px;
+  min-height: 4em;
+  /* The grab handle a textarea comes with is a control the keyboard cannot reach. */
+  resize: none;
 }
 
 .board-empty {

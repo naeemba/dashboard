@@ -1,11 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { addCard, deleteCard, emptyBoard, moveCard, moveSelection, renameCard, type Board } from './board';
+import {
+  DEFAULT_PRIORITY,
+  addCard,
+  cyclePriority,
+  deleteCard,
+  emptyBoard,
+  moveCard,
+  moveSelection,
+  renameCard,
+  setNotes,
+  sortColumn,
+  type Board,
+  type Priority,
+} from './board';
 
 function board(...columns: string[][]): Board {
   return {
     columns: columns.map((titles, index) => ({
       name: `Column ${index}`,
-      cards: titles.map((title) => ({ id: title, title, notes: '' })),
+      cards: titles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY })),
     })),
   };
 }
@@ -62,9 +75,11 @@ describe('addCard', () => {
 
 describe('renameCard', () => {
   it('replaces the title and keeps the id and notes', () => {
-    const start: Board = { columns: [{ name: 'Todo', cards: [{ id: 'x', title: 'old', notes: 'why' }] }] };
+    const start: Board = {
+      columns: [{ name: 'Todo', cards: [{ id: 'x', title: 'old', notes: 'why', priority: 'high' }] }],
+    };
     const result = renameCard(start, { column: 0, card: 0 }, 'new');
-    expect(result.board.columns[0].cards[0]).toEqual({ id: 'x', title: 'new', notes: 'why' });
+    expect(result.board.columns[0].cards[0]).toEqual({ id: 'x', title: 'new', notes: 'why', priority: 'high' });
   });
 
   it('does nothing on an empty column, and hands back the same board', () => {
@@ -140,5 +155,75 @@ describe('moveCard', () => {
     const result = moveCard(start, { column: 0, card: 0 }, 'right');
     expect(result).toEqual({ board: start, selection: { column: 0, card: 0 } });
     expect(result.board).toBe(start);
+  });
+});
+
+// Cards named by their priority, so a sorted column reads as its own expectation.
+function priorityBoard(...priorities: Priority[]): Board {
+  return {
+    columns: [{
+      name: 'Todo',
+      cards: priorities.map((priority, index) => ({ id: `${index}`, title: `${index}`, notes: '', priority })),
+    }],
+  };
+}
+
+const order = (result: Board): Priority[] => result.columns[0].cards.map((card) => card.priority);
+
+describe('cyclePriority', () => {
+  it('walks all four and wraps back to the top', () => {
+    let cycled = priorityBoard('urgent');
+    const seen: string[] = [];
+    for (let step = 0; step < 4; step++) {
+      cycled = cyclePriority(cycled, { column: 0, card: 0 }).board;
+      seen.push(cycled.columns[0].cards[0].priority);
+    }
+    expect(seen).toEqual(['high', 'medium', 'low', 'urgent']);
+  });
+
+  it('does nothing on an empty column, and hands back the same board', () => {
+    const start = board([]);
+    expect(cyclePriority(start, { column: 0, card: 0 }).board).toBe(start);
+  });
+});
+
+describe('setNotes', () => {
+  it('replaces the notes and leaves everything else alone', () => {
+    const start: Board = {
+      columns: [{ name: 'Todo', cards: [{ id: 'x', title: 't', notes: 'old', priority: 'low' }] }],
+    };
+    expect(setNotes(start, { column: 0, card: 0 }, 'new').board.columns[0].cards[0])
+      .toEqual({ id: 'x', title: 't', notes: 'new', priority: 'low' });
+  });
+});
+
+describe('sortColumn', () => {
+  it('puts urgent first and low last', () => {
+    const result = sortColumn(priorityBoard('low', 'urgent', 'medium', 'high'), { column: 0, card: 0 });
+    expect(order(result.board)).toEqual(['urgent', 'high', 'medium', 'low']);
+  });
+
+  // Shift+up and Shift+down are the only way to order cards within a priority, so a sort must not
+  // undo that work.
+  it('keeps the order you put equal cards in', () => {
+    const start = priorityBoard('high', 'high', 'urgent');
+    const result = sortColumn(start, { column: 0, card: 0 });
+    expect(result.board.columns[0].cards.map((card) => card.id)).toEqual(['2', '0', '1']);
+  });
+
+  it('follows the selected card to its new row', () => {
+    // Row 0 is the only low card, and sorting sends it to the bottom.
+    const result = sortColumn(priorityBoard('low', 'urgent', 'high'), { column: 0, card: 0 });
+    expect(result.selection).toEqual({ column: 0, card: 2 });
+  });
+
+  it('hands back the same board when the column is already in order', () => {
+    const start = priorityBoard('urgent', 'high', 'low');
+    expect(sortColumn(start, { column: 0, card: 0 }).board).toBe(start);
+  });
+
+  it('does nothing on an empty column, and hands back the same board', () => {
+    const start = board([]);
+    expect(sortColumn(start, { column: 0, card: 0 }).board).toBe(start);
   });
 });
