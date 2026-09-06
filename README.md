@@ -15,7 +15,7 @@ Keyboard-first terminal dashboard. Each project gets a page, shown three ways: f
 
 The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 
-The window opens on the projects the last run was left on — the same order, each on the view it was showing, with the same pane focused; the layout lives in `session.json` under the app's data directory, next to `recents.json`. A project whose folder has since gone away is dropped rather than reopened. With nothing saved the window opens empty. Ctrl+S lists the projects you opened before and offers a folder dialog for a new one.
+The window opens on the projects the last run was left on — the same order, each on the view it was showing, with the same pane focused; the layout lives in `session.json` under the app's data directory, next to `recents.json`. A project whose folder has since gone away comes back once as a dead tab and is then forgotten, so it costs you the tab on one launch rather than every launch. With nothing saved the window opens empty. Ctrl+S lists the projects you opened before and offers a folder dialog for a new one.
 
 Closing the window asks first, because it kills every shell in every project and there is no getting a long-running task back. Cancel is the default, so Enter and Escape both mean "I hit that by accident".
 

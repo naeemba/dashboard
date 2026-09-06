@@ -428,20 +428,32 @@ async function restore(session: Session): Promise<void> {
   // the rest of the run. That would silently stop every later save, and a day's work would open
   // tomorrow as yesterday's layout. Half the layout back and saving is better than neither.
   try {
-    for (const entry of session.pages) await openProject(entry.path);
-    session.pages.forEach((entry, index) => {
-      const page = pages[index];
+    for (const entry of session.pages) {
+      // One folder you cannot stat must not cost you the projects saved behind it: the rest of the
+      // layout still opens, and only the one that threw is dropped from this run.
+      try {
+        await openProject(entry.path);
+      } catch {
+        // dropped from this run
+      }
+    }
+    for (const entry of session.pages) {
+      // By path, not position: an entry that failed to open has no page, so the two lists no longer
+      // line up and index 3 would hand project 4's view to project 5.
+      const page = pages.find((candidate) => candidate.project.path === entry.path);
       // A folder that went away while the app was closed comes back as the same dead page it would have
       // become had it gone away mid-run. There is no view on it to restore.
-      if (!page || page.project.missing) return;
+      if (!page || page.project.missing) continue;
       showMode(page, entry.mode);
       page.focused = entry.focused;
-    });
+    }
   } finally {
     // Saving again from here on, so the landing below is what writes the restored layout back — with any
     // project whose folder has gone missing already dropped from it.
     restoring = false;
-    showPage(session.activeIndex, true);
+    const activePath = session.pages[session.activeIndex]?.path;
+    const landing = pages.findIndex((page) => page.project.path === activePath);
+    showPage(landing === -1 ? 0 : landing, true);
   }
 }
 
