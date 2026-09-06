@@ -1,4 +1,5 @@
 import { MODE_KEYS, type Mode } from './modes';
+import { openOverlay } from './overlay';
 
 // One row of the help dialog: the keys you press, and what they do.
 export type Shortcut = { keys: string; action: string };
@@ -19,17 +20,17 @@ function modifier(isMac: boolean): string {
 function modeShortcuts(mode: Mode): Shortcut[] {
   return Object.entries(MODE_KEYS).map(([letter, named]) => ({
     keys: `Ctrl+${letter.toUpperCase()}`,
-    action: named === mode ? `already here — goes to ${MODE_NAMES[mode]} instead` : `${MODE_NAMES[named]} mode`,
+    action: named === mode ? 'already here — the screen gets the keystroke' : `${MODE_NAMES[named]} mode`,
   }));
 }
 
 function terminalShortcuts(isMac: boolean): Shortcut[] {
-  const mod = modifier(isMac);
+  const modifierName = modifier(isMac);
   return [
     // Ctrl+1..9 belongs to the projects everywhere, so off macOS there is no Mod left to reach a pane by
     // number. Listing a key that cannot work would be worse than leaving it out.
     ...(isMac ? [{ keys: 'Cmd+1…5', action: 'Focus a terminal' }] : []),
-    { keys: `${mod}+Right / ${mod}+Left`, action: 'Next / previous terminal' },
+    { keys: `${modifierName}+Right / ${modifierName}+Left`, action: 'Next / previous terminal' },
     { keys: `${isMac ? 'Option' : 'Alt'}+H J K L`, action: 'Move to the pane left, down, up, right' },
     ...(isMac ? [{ keys: 'Cmd+Backspace', action: "Clear the shell's current line" }] : []),
   ];
@@ -79,7 +80,7 @@ function screenShortcuts(mode: Mode, isMac: boolean): Shortcut[] {
 // The screen you are on comes first: it is what you pressed Ctrl+H to ask about. The keys that answer
 // from everywhere follow, since they are the ones you already half know.
 export function helpSections(mode: Mode, isMac: boolean): Section[] {
-  const mod = modifier(isMac);
+  const modifierName = modifier(isMac);
   return [
     { title: MODE_NAMES[mode], blurb: SCREEN_BLURBS[mode], shortcuts: screenShortcuts(mode, isMac) },
     {
@@ -101,7 +102,7 @@ export function helpSections(mode: Mode, isMac: boolean): Section[] {
         { keys: 'Ctrl+O', action: 'Back to the last project' },
         { keys: 'Ctrl+1…9', action: 'Jump to a project' },
         { keys: 'Ctrl+Shift+1…9', action: 'Move this project to that position' },
-        { keys: `${mod}+] / ${mod}+[`, action: 'Next / previous project' },
+        { keys: `${modifierName}+] / ${modifierName}+[`, action: 'Next / previous project' },
       ],
     },
   ];
@@ -110,57 +111,48 @@ export function helpSections(mode: Mode, isMac: boolean): Section[] {
 // Read-only, so there is nothing to walk over: Escape or Enter closes it and the arrows scroll a list
 // too long for the dialog.
 export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
-  const overlay = document.createElement('div');
-  overlay.className = 'help';
-  const dialog = document.createElement('div');
-  dialog.className = 'help-dialog';
-  // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up.
-  dialog.tabIndex = -1;
-
-  for (const section of helpSections(mode, isMac)) {
-    const heading = document.createElement('h2');
-    heading.textContent = section.title;
-    const blurb = document.createElement('p');
-    blurb.className = 'help-blurb';
-    blurb.textContent = section.blurb;
-    const list = document.createElement('ul');
-    list.className = 'help-list';
-    list.append(...section.shortcuts.map((shortcut) => {
-      const row = document.createElement('li');
-      const keys = document.createElement('span');
-      keys.className = 'help-keys';
-      keys.textContent = shortcut.keys;
-      const action = document.createElement('span');
-      action.className = 'help-action';
-      action.textContent = shortcut.action;
-      row.append(keys, action);
-      return row;
-    }));
-    dialog.append(heading, blurb, list);
-  }
-
-  const footer = document.createElement('p');
-  footer.className = 'help-footer';
-  footer.textContent = 'Ctrl+H opens this. Escape closes it.';
-  dialog.append(footer);
-  overlay.append(dialog);
-  document.body.append(overlay);
-  dialog.focus();
-
   return new Promise<void>((resolve) => {
     function close(): void {
-      overlay.remove();
+      remove();
       resolve();
     }
+
+    const { dialog, remove } = openOverlay('help', close);
+    // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up.
+    dialog.tabIndex = -1;
+
+    for (const section of helpSections(mode, isMac)) {
+      const heading = document.createElement('h2');
+      heading.textContent = section.title;
+      const blurb = document.createElement('p');
+      blurb.className = 'help-blurb';
+      blurb.textContent = section.blurb;
+      const list = document.createElement('ul');
+      list.className = 'help-list';
+      list.append(...section.shortcuts.map((shortcut) => {
+        const row = document.createElement('li');
+        const keys = document.createElement('span');
+        keys.className = 'help-keys';
+        keys.textContent = shortcut.keys;
+        const action = document.createElement('span');
+        action.className = 'help-action';
+        action.textContent = shortcut.action;
+        row.append(keys, action);
+        return row;
+      }));
+      dialog.append(heading, blurb, list);
+    }
+
+    const footer = document.createElement('p');
+    footer.className = 'help-footer';
+    footer.textContent = 'Ctrl+H opens this. Escape or Enter closes it.';
+    dialog.append(footer);
+    dialog.focus();
+
     dialog.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape' && event.key !== 'Enter') return;
       event.preventDefault();
       close();
-    });
-    // Only the dark margin around the dialog dismisses it, the same as the picker. Without the check a
-    // click meant to select a key name closes the dialog under the pointer.
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) close();
     });
   });
 }

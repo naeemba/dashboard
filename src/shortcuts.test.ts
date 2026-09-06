@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { mapShortcut, type KeyInput } from './shortcuts';
-
-function key(overrides: Partial<KeyInput>): KeyInput {
-  return { key: '', code: '', shiftKey: false, metaKey: false, ctrlKey: false, altKey: false, ...overrides };
-}
+import { mapShortcut } from './shortcuts';
+import { key } from './test-key';
 
 describe('mapShortcut on macOS', () => {
   it('cycles projects with Cmd+] and Cmd+[', () => {

@@ -1,4 +1,5 @@
 import { fuzzyScore } from './fuzzy';
+import { openOverlay } from './overlay';
 import type { Project } from './projects';
 
 // A path opens that project, null means "open a new project", undefined means the picker was dismissed.
@@ -23,28 +24,23 @@ export function pickerRows(projects: Project[], query: string): Row[] {
 }
 
 export function openPicker(projects: Project[]): Promise<PickerChoice> {
-  const overlay = document.createElement('div');
-  overlay.className = 'picker';
-  const dialog = document.createElement('div');
-  dialog.className = 'picker-dialog';
-  const search = document.createElement('input');
-  search.className = 'picker-search';
-  search.placeholder = 'Search projects';
-  const list = document.createElement('ul');
-  list.className = 'picker-list';
-  dialog.append(search, list);
-  overlay.append(dialog);
-  document.body.append(overlay);
-  search.focus();
-
   let rows: Row[] = [];
   let highlighted = 0;
 
   return new Promise<PickerChoice>((resolve) => {
     function finish(choice: PickerChoice): void {
-      overlay.remove();
+      remove();
       resolve(choice);
     }
+
+    const { dialog, remove } = openOverlay('picker', () => finish(undefined));
+    const search = document.createElement('input');
+    search.className = 'picker-search';
+    search.placeholder = 'Search projects';
+    const list = document.createElement('ul');
+    list.className = 'picker-list';
+    dialog.append(search, list);
+    search.focus();
 
     function render(): void {
       rows = pickerRows(projects, search.value);
@@ -85,10 +81,6 @@ export function openPicker(projects: Project[]): Promise<PickerChoice> {
         case 'ArrowUp': event.preventDefault(); return move(-1);
       }
     });
-    overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) finish(undefined);
-    });
-
     render();
   });
 }

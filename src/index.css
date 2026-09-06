@@ -301,10 +301,11 @@ textarea.board-edit {
   padding: 2px 12px;
 }
 
-/* Fixed column so the keys line up down the dialog and the eye can scan one side of it. */
+/* Fixed column so the keys line up down the dialog and the eye can scan one side of it. Wide enough for
+   the longest row there is, "Ctrl+Right / Ctrl+Left", which wraps and breaks the column if it does not fit. */
 .help-keys {
   flex: none;
-  width: 15ch;
+  width: 22ch;
   color: var(--brightWhite);
 }
 

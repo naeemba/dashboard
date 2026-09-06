@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { helpSections } from './help';
+import { mapShortcut, type Action, type KeyInput } from './shortcuts';
+import { key } from './test-key';
+
+// The Projects rows are written out by hand, because mapShortcut reads `code` on the digits and `key` on
+// the brackets and there is no table to read back. Nothing else stops the two drifting apart, so each row
+// here presses the key it names: rename or drop a project shortcut and this fails, instead of leaving
+// Ctrl+H quietly telling someone to press a key that does nothing.
+const PROJECT_ROWS: { keys: string; press: Partial<KeyInput>; kind: Action['kind'] }[] = [
+  { keys: 'Ctrl+S', press: { key: 's', ctrlKey: true }, kind: 'project-picker' },
+  { keys: 'Ctrl+O', press: { key: 'o', ctrlKey: true }, kind: 'project-last' },
+  { keys: 'Ctrl+1…9', press: { code: 'Digit1', key: '1', ctrlKey: true }, kind: 'project-jump' },
+  { keys: 'Ctrl+Shift+1…9', press: { code: 'Digit1', key: '!', ctrlKey: true, shiftKey: true }, kind: 'project-move' },
+  { keys: 'Cmd+] / Cmd+[', press: { key: ']', metaKey: true }, kind: 'project-next' },
+];
 
 describe('helpSections', () => {
   it('puts the screen you are on first', () => {
@@ -12,13 +26,14 @@ describe('helpSections', () => {
     const modes = helpSections('board', true)[1];
     expect(modes.shortcuts).toContainEqual({ keys: 'Ctrl+T', action: 'Terminals mode' });
     expect(modes.shortcuts.find((shortcut) => shortcut.keys === 'Ctrl+B')?.action)
-      .toBe('already here — goes to Board instead');
+      .toBe('already here — the screen gets the keystroke');
   });
 
-  // A key list on its own teaches the gestures and not the thing. Every section says what it is first.
-  it('gives every section a blurb', () => {
-    for (const mode of ['terminals', 'nvim', 'board'] as const) {
-      for (const section of helpSections(mode, true)) expect(section.blurb).not.toBe('');
+  it('lists exactly the project keys mapShortcut answers to', () => {
+    const projects = helpSections('board', true).find((section) => section.title === 'Projects');
+    expect(projects?.shortcuts.map((shortcut) => shortcut.keys)).toEqual(PROJECT_ROWS.map((row) => row.keys));
+    for (const row of PROJECT_ROWS) {
+      expect(mapShortcut(key(row.press), true, 'board')).toMatchObject({ kind: row.kind });
     }
   });
 
