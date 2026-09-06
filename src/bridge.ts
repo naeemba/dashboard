@@ -1,6 +1,7 @@
 import type { Project } from './projects';
 import type { Board } from './board';
 import type { BoardRead } from './board-store';
+import type { Session } from './session';
 
 export type DashboardBridge = {
   platform: string;
@@ -17,6 +18,8 @@ export type DashboardBridge = {
   restart(id: string): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
+  getSession(): Promise<Session>;
+  saveSession(session: Session): void;
   readBoard(projectPath: string): Promise<BoardRead>;
   writeBoard(projectPath: string, board: Board): Promise<void>;
 };

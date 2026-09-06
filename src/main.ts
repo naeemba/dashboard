@@ -15,6 +15,7 @@ import { editorArguments, pickShell, SHELL_COMMAND_FLAG } from './shell';
 import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { readSession, writeSession, type Session } from './session';
 import type { Board } from './board';
 
 if (started) app.quit();
@@ -27,8 +28,10 @@ if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
 // Empty at launch: every project comes from the picker, and the recents list remembers them across runs.
 const projects: Project[] = [];
-// The recently opened projects live next to the app's other per-user state.
+// The recently opened projects live next to the app's other per-user state, and so does the layout the
+// last run was left in.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
+const sessionFile = path.join(app.getPath('userData'), 'session.json');
 const shellCommand = pickShell(process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
@@ -104,6 +107,10 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   return { index, project: projects[index], replaced };
 });
+// Read once at startup and written back whenever the layout changes, so a crash loses at most the
+// change you were making rather than every project you had open.
+ipcMain.handle('session:read', () => readSession(sessionFile));
+ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, session));
 ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
 });
