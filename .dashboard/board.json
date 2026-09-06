@@ -38,6 +38,12 @@
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium"
+        },
+        {
+          "id": "4052e317-fdca-4fb4-a302-9842aaeb1c05",
+          "title": "Notify when something in a pane is waiting on us",
+          "notes": "Out of the app: a system notification when something needs attention, like a Claude session waiting on an answer. In the app: a small in-app notification, and highlight the tab that is waiting.",
+          "priority": "medium"
         }
       ]
     },
