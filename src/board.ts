@@ -32,6 +32,21 @@ export function cardAt(board: Board, selection: Selection): Card | undefined {
   return board.columns[selection.column]?.cards[selection.card];
 }
 
+// The two ways to reach a card by id, kept next to cardAt because they are its inverse: cardAt asks
+// where, these ask who and where-is. A subtask names its parent by id and can sit in any column, so
+// nothing that draws or opens one can assume it knows the column already.
+export function cardById(board: Board, id: string): Card | undefined {
+  return allCards(board).find((card) => card.id === id);
+}
+
+export function selectionOf(board: Board, id: string): Selection | null {
+  for (const [column, entry] of board.columns.entries()) {
+    const card = entry.cards.findIndex((candidate) => candidate.id === id);
+    if (card !== -1) return { column, card };
+  }
+  return null;
+}
+
 const DEFAULT_COLUMNS = ['Todo', 'Doing', 'Done'];
 
 export function emptyBoard(): Board {
@@ -220,7 +235,7 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
 
 // Every card on the board, columns left to right and rows top to bottom. That order is what children
 // are read in, so a subtask's place in the list is the place you already put it with Shift+Up.
-function allCards(board: Board): Card[] {
+export function allCards(board: Board): Card[] {
   return board.columns.flatMap((column) => column.cards);
 }
 

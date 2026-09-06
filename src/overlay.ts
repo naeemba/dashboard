@@ -6,6 +6,9 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
   overlay.className = name;
   const dialog = document.createElement('div');
   dialog.className = `${name}-dialog`;
+  // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up. Every
+  // dialog built on this sheet needs it, and one that forgets it is silently unusable by keyboard.
+  dialog.tabIndex = -1;
   overlay.append(dialog);
   document.body.append(overlay);
 
@@ -29,7 +32,6 @@ export function confirmOverlay(message: string): Promise<boolean> {
     }
 
     const { dialog, remove } = openOverlay('confirm', () => close(false));
-    dialog.tabIndex = -1;
 
     const question = document.createElement('p');
     question.className = 'confirm-question';

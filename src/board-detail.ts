@@ -1,4 +1,4 @@
-import { addChildCard, cardAt, childrenOf, type Board, type Change, type Selection } from './board';
+import { addChildCard, cardAt, cardById, childrenOf, selectionOf, type Board, type Change, type Selection } from './board';
 import { openOverlay } from './overlay';
 
 export type CardDetailOptions = {
@@ -8,7 +8,9 @@ export type CardDetailOptions = {
   makeId(): string;
   // Adding a child changes the board, and the board is written to disk on every change everywhere
   // else — so the dialog hands each change straight out rather than batching them until it closes.
-  // The board that comes back is the one the dialog keeps drawing from.
+  // The board that comes back is the one the dialog keeps drawing from, so this must apply the change
+  // and return the result synchronously. Return the board from before the change and the next subtask
+  // is built on a board missing this one.
   onChange(change: Change): Board;
 };
 
@@ -28,15 +30,6 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
     }
 
     const { dialog, remove } = openOverlay('card-detail', () => close(options.selection));
-    dialog.tabIndex = -1;
-
-    function selectionOf(id: string): Selection | null {
-      for (const [column, entry] of board.columns.entries()) {
-        const card = entry.cards.findIndex((candidate) => candidate.id === id);
-        if (card !== -1) return { column, card };
-      }
-      return null;
-    }
 
     function render(): void {
       const card = cardAt(board, options.selection);
@@ -49,8 +42,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
 
       const meta = document.createElement('p');
       meta.className = 'card-detail-meta';
-      const parent = card.parent === null ? null : board.columns.flatMap((column) => column.cards)
-        .find((candidate) => candidate.id === card.parent);
+      const parent = card.parent === null ? null : cardById(board, card.parent);
       meta.textContent = parent
         ? `${card.priority} · subtask of ${parent.title}`
         : card.priority;
@@ -65,7 +57,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
         title.textContent = child.title;
         const where = document.createElement('span');
         where.className = 'card-detail-child-where';
-        const at = selectionOf(child.id);
+        const at = selectionOf(board, child.id);
         where.textContent = at ? `${board.columns[at.column].name} · ${child.priority}` : child.priority;
         row.append(title, where);
         return row;
@@ -154,7 +146,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           event.preventDefault();
           const child = children[highlighted];
           if (!child) return;
-          return close(selectionOf(child.id) ?? options.selection);
+          return close(selectionOf(board, child.id) ?? options.selection);
         }
         case 'n':
           event.preventDefault();

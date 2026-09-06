@@ -1,7 +1,9 @@
 import {
   attachToCardAbove,
   cardAt,
+  cardById,
   childColumns,
+  childrenOf,
   cyclePriority,
   deleteCardAndDescendants,
   descendantsOf,
@@ -78,10 +80,6 @@ export function createBoardView(options: BoardOptions): BoardView {
   let latestRead = 0;
   let landedRead = 0;
 
-  function cardById(id: string): Card | undefined {
-    return state.board.columns.flatMap((column) => column.cards).find((card) => card.id === id);
-  }
-
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
       // A write that lands clears the failure it replaces; nothing else knows the message is stale.
@@ -119,6 +117,13 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   function commitEditing(field: EditableField, value: string): void {
     editing = null;
+    // Clearing the title of a card that has subtasks keeps the card, because two keystrokes with no
+    // confirmation must not strand a family. Without a word here the card simply springs back to its
+    // old title and nothing says why, which reads as the keyboard having missed the keystroke.
+    const card = cardAt(state.board, state.selection);
+    if (field === 'title' && value.trim() === '' && card && childrenOf(state.board, card.id).length > 0) {
+      options.onError(`"${card.title}" has subtasks — delete it with d`);
+    }
     apply(field === 'title' ? commitTitle(state, value) : commitNotes(state, value));
     element.focus();
   }
@@ -154,7 +159,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     item.className = `board-card priority-${card.priority}${selected ? ' selected' : ''}`;
     // Which piece of work this card belongs to. Invisible from the column otherwise: a subtask is an
     // ordinary card sitting in an ordinary column, and nothing else on it says so.
-    const parent = card.parent === null ? undefined : cardById(card.parent);
+    const parent = card.parent === null ? undefined : cardById(state.board, card.parent);
     if (parent) {
       const badge = document.createElement('p');
       badge.className = 'board-parent';

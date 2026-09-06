@@ -123,8 +123,6 @@ export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
     }
 
     const { dialog, remove } = openOverlay('help', close);
-    // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up.
-    dialog.tabIndex = -1;
 
     for (const section of helpSections(mode, isMac)) {
       const heading = document.createElement('h2');
