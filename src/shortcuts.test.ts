@@ -74,4 +74,38 @@ describe('mapShortcut', () => {
     const unbound = bindKey(defaultSettings(true), 'help', null).keys;
     expect(mapShortcut(key({ code: 'KeyH', ctrlKey: true }), unbound, 'board')).toBeNull();
   });
+
+  // A binding names an exact keystroke. Loosen it and a modifier held along the way fires the same
+  // action as the plain keystroke, which is another way of saying two shortcuts can never share a key.
+  it('requires the exact modifiers a binding names, with none extra', () => {
+    expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, 'terminals'))
+      .toEqual({ kind: 'terminal-input', data: '\x15' });
+    expect(mapShortcut(key({ code: 'Backspace', metaKey: true, ctrlKey: true }), mac, 'terminals')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true }), mac)).toEqual({ kind: 'project-picker' });
+    expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true, altKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true, shiftKey: true }), mac)).toBeNull();
+  });
+
+  it('leaves an unbound combination alone, so copy, paste and the window switcher still work', () => {
+    expect(mapShortcut(key({ code: 'KeyC', metaKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyV', metaKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'BracketRight', metaKey: true, altKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyH', ctrlKey: true, shiftKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyB', altKey: true }), mac, 'terminals')).toBeNull();
+  });
+
+  it('opens the project list and goes back to the last project from every mode', () => {
+    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+      expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true }), mac, mode)).toEqual({ kind: 'project-picker' });
+      expect(mapShortcut(key({ code: 'KeyO', ctrlKey: true }), mac, mode)).toEqual({ kind: 'project-last' });
+    }
+  });
+
+  it('keeps terminal-scoped actions off the screens that have no panes', () => {
+    for (const mode of ['nvim', 'board'] as const) {
+      expect(mapShortcut(key({ code: 'ArrowRight', metaKey: true }), mac, mode)).toBeNull();
+      expect(mapShortcut(key({ code: 'ArrowLeft', metaKey: true }), mac, mode)).toBeNull();
+      expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, mode)).toBeNull();
+    }
+  });
 });
