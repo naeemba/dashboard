@@ -1,5 +1,8 @@
+import { type KeyInput } from './binding';
 import { MODE_KEYS, type Mode } from './modes';
 import { TERMINAL_COUNT, type Direction } from './terminals';
+
+export type { KeyInput };
 
 export type Action =
   | { kind: 'project-next' }
@@ -15,15 +18,6 @@ export type Action =
   | { kind: 'terminal-previous' }
   | { kind: 'terminal-move'; direction: Direction }
   | { kind: 'terminal-input'; data: string };
-
-export type KeyInput = {
-  key: string;
-  code: string;
-  shiftKey: boolean;
-  metaKey: boolean;
-  ctrlKey: boolean;
-  altKey: boolean;
-};
 
 // What every keydown handler asks before it acts on `event.key`. A key with a modifier held is on its
 // way to whoever owns that combination — Ctrl+N is the mode key, not `n` — so a handler that reads
