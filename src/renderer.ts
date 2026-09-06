@@ -381,7 +381,8 @@ function report(task: Promise<void>): void {
 // The keys for the screen in front of you, so it answers with an empty window open too — there the
 // mode is the one a project would open as.
 function showHelp(): void {
-  openHelp(pages[activeIndex]?.mode ?? 'terminals', isMac).then(() => showPage(activeIndex));
+  openHelp(pages[activeIndex]?.mode ?? 'terminals', settings.keys, isMac)
+    .then(() => showPage(activeIndex));
 }
 
 // A placeholder until the settings screen exists: for now Ctrl+, just redraws the page you are on.

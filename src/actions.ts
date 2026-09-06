@@ -49,6 +49,10 @@ export type ActionEntry = {
   // What it ships with, per platform. null means it ships unbound.
   mac: string | null;
   other: string | null;
+  // The rows the help dialog may print as one, and the sentence it prints for them. Only the numbered
+  // runs have these: nine rows saying "Jump to project 4" is not a help dialog, it is a list.
+  family?: string;
+  familyDescription?: string;
 };
 
 const DIRECTIONS: Direction[] = ['left', 'down', 'up', 'right'];
@@ -84,12 +88,14 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'projects', scope: 'global',
     action: { kind: 'project-jump', index: number - 1 },
     mac: `Ctrl+${number}`, other: `Ctrl+${number}`,
+    family: 'project-jump', familyDescription: 'Jump to a project',
   })),
   ...range(9).map((number): ActionEntry => ({
     name: `project-move-${number}`, description: `Move this project to position ${number}`,
     group: 'projects', scope: 'global',
     action: { kind: 'project-move', index: number - 1 },
     mac: `Ctrl+Shift+${number}`, other: `Ctrl+Shift+${number}`,
+    family: 'project-move', familyDescription: 'Move this project to that position',
   })),
   {
     name: 'help', description: 'Open this dialog', group: 'app', scope: 'global',
@@ -118,6 +124,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-focus', index: number - 1 },
     mac: `Cmd+${number}`, other: null,
+    family: 'terminal-focus', familyDescription: 'Focus a terminal',
   })),
   {
     name: 'terminal-next', description: 'Next terminal', group: 'terminals', scope: 'terminals',

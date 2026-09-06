@@ -1,54 +1,115 @@
 import { describe, expect, it } from 'vitest';
 import { helpSections } from './help';
-import { mapShortcut, type Action, type KeyInput } from './shortcuts';
-import { defaultSettings } from './settings';
+import { mapShortcut } from './shortcuts';
+import { ACTIONS } from './actions';
+import { parseBinding } from './binding';
+import { bindKey, defaultSettings } from './settings';
 import { key } from './test-key';
 
-// The Projects rows are written out by hand, because mapShortcut reads `code` on the digits and `key` on
-// the brackets and there is no table to read back. Nothing else stops the two drifting apart, so each row
-// here presses the key it names: rename or drop a project shortcut and this fails, instead of leaving
-// Ctrl+H quietly telling someone to press a key that does nothing.
-const PROJECT_ROWS: { keys: string; press: Partial<KeyInput>; kind: Action['kind'] }[] = [
-  { keys: 'Ctrl+S', press: { code: 'KeyS', ctrlKey: true }, kind: 'project-picker' },
-  { keys: 'Ctrl+O', press: { code: 'KeyO', ctrlKey: true }, kind: 'project-last' },
-  { keys: 'Ctrl+1…9', press: { code: 'Digit1', ctrlKey: true }, kind: 'project-jump' },
-  { keys: 'Ctrl+Shift+1…9', press: { code: 'Digit1', ctrlKey: true, shiftKey: true }, kind: 'project-move' },
-  { keys: 'Cmd+] / Cmd+[', press: { code: 'BracketRight', metaKey: true }, kind: 'project-next' },
-];
+const mac = defaultSettings(true).keys;
+
+function titles(mode: 'terminals' | 'nvim' | 'board', keys = mac, isMac = true): string[] {
+  return helpSections(mode, keys, isMac).map((section) => section.title);
+}
+
+function rows(mode: 'terminals' | 'nvim' | 'board', keys = mac, isMac = true) {
+  return helpSections(mode, keys, isMac).flatMap((section) => section.shortcuts);
+}
 
 describe('helpSections', () => {
   it('puts the screen you are on first', () => {
-    expect(helpSections('board', true)[0].title).toBe('Board');
-    expect(helpSections('nvim', true)[0].title).toBe('nvim');
-    expect(helpSections('terminals', true)[0].title).toBe('Terminals');
+    expect(titles('board')[0]).toBe('Board');
+    expect(titles('nvim')[0]).toBe('nvim');
+    expect(titles('terminals')[0]).toBe('Terminals');
+  });
+
+  it('gives every section a blurb, because a key list teaches the gesture and not the thing', () => {
+    for (const section of helpSections('board', mac, true)) {
+      expect(section.blurb.length, section.title).toBeGreaterThan(0);
+    }
   });
 
   it('says the mode key you are already on is passed through', () => {
-    const modes = helpSections('board', true)[1];
+    const modes = helpSections('board', mac, true).find((section) => section.title === 'Modes')!;
     expect(modes.shortcuts).toContainEqual({ keys: 'Ctrl+T', action: 'Terminals mode' });
     expect(modes.shortcuts.find((shortcut) => shortcut.keys === 'Ctrl+B')?.action)
       .toBe('already here — the screen gets the keystroke');
   });
 
-  it('lists exactly the project keys mapShortcut answers to', () => {
-    const projects = helpSections('board', true).find((section) => section.title === 'Projects');
-    expect(projects?.shortcuts.map((shortcut) => shortcut.keys)).toEqual(PROJECT_ROWS.map((row) => row.keys));
-    for (const row of PROJECT_ROWS) {
-      expect(mapShortcut(key(row.press), defaultSettings(true).keys, 'board')).toMatchObject({ kind: row.kind });
+  // The drift this whole change exists to remove: every key the dialog names must be a key the
+  // handler answers to, on the screen the row is printed for.
+  it('names only keys mapShortcut actually answers to', () => {
+    for (const mode of ['terminals', 'board'] as const) {
+      for (const section of helpSections(mode, mac, true)) {
+        for (const shortcut of section.shortcuts) {
+          // The mode key you are already on is listed precisely because it does nothing here.
+          if (shortcut.action.startsWith('already here')) continue;
+          // A collapsed family names its first and last key; both ends must work.
+          for (const text of shortcut.keys.split('…')) {
+            const stroke = parseBinding(text);
+            if (stroke === null) continue;
+            const pressed = key({
+              code: stroke.code,
+              ctrlKey: stroke.ctrl,
+              metaKey: stroke.meta,
+              altKey: stroke.alt,
+              shiftKey: stroke.shift,
+            });
+            expect(mapShortcut(pressed, mac, mode), `${mode}: ${text}`).not.toBeNull();
+          }
+        }
+      }
     }
   });
 
-  it('names Cmd on macOS and Ctrl elsewhere', () => {
-    const keys = (isMac: boolean): string[] =>
-      helpSections('terminals', isMac).flatMap((section) => section.shortcuts.map((shortcut) => shortcut.keys));
-    expect(keys(true)).toContain('Cmd+] / Cmd+[');
-    expect(keys(false)).toContain('Ctrl+] / Ctrl+[');
+  it('follows a rebinding', () => {
+    const rebound = bindKey(defaultSettings(true), 'board-undo', 'Ctrl+Z').keys;
+    const undo = rows('board', rebound).find((shortcut) => shortcut.action.startsWith('Undo'));
+    expect(undo?.keys).toBe('Ctrl+Z');
+  });
+
+  it('leaves out an action with no key, because you cannot press it', () => {
+    const unbound = bindKey(defaultSettings(true), 'board-undo', null).keys;
+    expect(rows('board', unbound).some((shortcut) => shortcut.action.startsWith('Undo'))).toBe(false);
+  });
+
+  it('collapses a numbered run while every one of them is untouched', () => {
+    expect(rows('terminals')).toContainEqual({ keys: 'Ctrl+1…Ctrl+9', action: 'Jump to a project' });
+  });
+
+  it('spells the run out once one of them has moved, because the range would be a lie', () => {
+    const rebound = bindKey(defaultSettings(true), 'project-jump-5', 'F5').keys;
+    const listed = rows('terminals', rebound).map((shortcut) => shortcut.keys);
+    expect(listed).toContain('F5');
+    expect(listed).toContain('Ctrl+4');
+    expect(listed).not.toContain('Ctrl+1…Ctrl+9');
   });
 
   // Ctrl+1..9 is the projects on every platform, so off macOS there is no modifier left to reach a
-  // pane by number and Cmd+Backspace does not exist at all.
+  // pane by number, and those five ship unbound.
   it('leaves out the macOS-only terminal keys off macOS', () => {
-    const keys = helpSections('terminals', false)[0].shortcuts.map((shortcut) => shortcut.keys);
-    expect(keys).toEqual(['Ctrl+Right / Ctrl+Left', 'Alt+H J K L']);
+    const listed = rows('terminals', defaultSettings(false).keys, false).map((shortcut) => shortcut.action);
+    expect(listed).not.toContain('Focus a terminal');
+    expect(listed).not.toContain("Clear the shell's current line");
+    expect(listed).toContain('Next terminal');
+  });
+
+  it('lists help and settings under their own heading, on every screen', () => {
+    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+      const app = helpSections(mode, mac, true).find((section) => section.title === 'Dashboard')!;
+      expect(app.shortcuts).toContainEqual({ keys: 'Ctrl+H', action: 'Open this dialog' });
+      expect(app.shortcuts).toContainEqual({ keys: 'Ctrl+,', action: 'Open the settings screen' });
+    }
+  });
+
+  it('has a home for every action in the table', () => {
+    const printed = new Set(
+      (['terminals', 'nvim', 'board'] as const).flatMap((mode) => rows(mode).map((row) => row.action)),
+    );
+    for (const entry of ACTIONS) {
+      const named = printed.has(entry.description)
+        || (entry.familyDescription !== undefined && printed.has(entry.familyDescription));
+      expect(named, entry.name).toBe(true);
+    }
   });
 });
