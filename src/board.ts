@@ -130,9 +130,10 @@ export function cyclePriority(board: Board, selection: Selection): Change {
 // Tab. The card above in the same column becomes this card's parent — there is no separate "pick a
 // parent" step, because the card you want is nearly always the one you just typed above it.
 //
-// Three things hand back the same board, which is how a no-op stays out of the undo step: nothing
-// selected, nothing above, and an attachment that would make a ring. The ring case is the one that
-// matters — a card that is its own ancestor makes descendantsOf recurse forever.
+// Four things hand back the same board, which is how a no-op stays out of the undo step: nothing
+// selected, nothing above, the card above already being the parent, and an attachment that would
+// make a ring. The ring case is the one that matters — a card that is its own ancestor makes
+// descendantsOf recurse forever.
 export function attachToCardAbove(board: Board, selection: Selection): Change {
   const card = cardAt(board, selection);
   const above = board.columns[selection.column]?.cards[selection.card - 1];
