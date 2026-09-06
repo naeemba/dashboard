@@ -14,6 +14,18 @@
           "title": "Give board cards subtasks",
           "notes": "A card is one line and a description today. Subtasks need somewhere to live and a way for the arrow keys to reach them. Not designed yet.",
           "priority": "medium"
+        },
+        {
+          "id": "6e0e1fa2-bca5-4dac-91b0-4feed94f2c9c",
+          "title": "A settings screen, with the keyboard shortcuts in it",
+          "notes": "Nothing is configurable today: the shell comes from SHELL_COMMAND, the keys are hard-coded in shortcuts.ts, and the theme is a constant. Needs somewhere to change them and somewhere to keep them. The shortcuts are the part worth doing first -- rebinding a key means the help dialog and the mode-key rules read from the same place the handler does, not from three copies.",
+          "priority": "medium"
+        },
+        {
+          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
+          "title": "Check what happens to right-to-left text in a terminal pane",
+          "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
+          "priority": "low"
         }
       ]
     },
