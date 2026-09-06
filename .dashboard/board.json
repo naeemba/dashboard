@@ -4,12 +4,6 @@
       "name": "Todo",
       "cards": [
         {
-          "id": "a350c135-4cf6-4e14-a180-d84e487c653f",
-          "title": "Give board cards subtasks",
-          "notes": "A card is one line and a description today. Subtasks need somewhere to live and a way for the arrow keys to reach them. Not designed yet.",
-          "priority": "medium"
-        },
-        {
           "id": "6e0e1fa2-bca5-4dac-91b0-4feed94f2c9c",
           "title": "A settings screen, with the keyboard shortcuts in it",
           "notes": "Nothing is configurable today: the shell comes from SHELL_COMMAND, the keys are hard-coded in shortcuts.ts, and the theme is a constant. Needs somewhere to change them and somewhere to keep them. The shortcuts are the part worth doing first -- rebinding a key means the help dialog and the mode-key rules read from the same place the handler does, not from three copies.",
@@ -42,6 +36,13 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "a350c135-4cf6-4e14-a180-d84e487c653f",
+          "title": "Give board cards subtasks",
+          "notes": "Any card can name another as its parent. A subtask is an ordinary card with its own column, priority and subtasks. Tab attaches, Shift+Tab detaches, o opens a card to see and add its children, and a parent shows a bar of where its subtasks have got to.",
+          "priority": "medium",
+          "parent": null
+        },
         {
           "id": "e18e837c-34f1-4c95-9096-7ccb07ace4d0",
           "title": "Ctrl+H opens help for the screen you are on",

@@ -38,7 +38,7 @@ function terminalShortcuts(isMac: boolean): Shortcut[] {
 
 // Written out rather than read off a table: the board's keys live in a switch in board-view.ts, and
 // they have reasons to stay there — a title and a description commit on different keys, and an arrow
-// means something else with Shift held. Nine rows do not pay for the table that would keep them in
+// means something else with Shift held. Twelve rows do not pay for the table that would keep them in
 // step, so adding a board key means adding a row here too.
 const BOARD_SHORTCUTS: Shortcut[] = [
   { keys: 'Arrows', action: 'Move the selection' },
