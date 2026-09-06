@@ -253,7 +253,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     statusLabel(): string {
       const column = state.board.columns[state.selection.column];
       if (!column) return '';
-      const card = column.cards[state.selection.card];
+      const card = cardAt(state.board, state.selection);
       return card ? `${column.name} · ${card.priority}` : column.name;
     },
   };

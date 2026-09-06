@@ -14,7 +14,9 @@ export const BROKEN_BOARD_FILE = 'board.json.broken';
 // nothing needed salvaging — including the ordinary case of no board.json existing yet.
 export type BoardRead = { board: Board; brokenFile: string | null };
 
-const EXPLANATION_FOR_AGENTS = `# .dashboard
+// Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
+// writes a file that is not there, so those copies would otherwise drift the moment this text changes.
+export const EXPLANATION_FOR_AGENTS = `# .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B.
 
@@ -51,7 +53,7 @@ away from the board and back to see your changes. The app rewrites the whole fil
 drops any field not listed above.
 `;
 
-const EXPLANATION_FOR_PEOPLE = `# .dashboard
+export const EXPLANATION_FOR_PEOPLE = `# .dashboard
 
 Project state for the Dashboard app. \`board.json\` holds this project's kanban board.
 

@@ -2,7 +2,16 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY, BROKEN_BOARD_FILE, parseBoard, readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import {
+  BOARD_DIRECTORY,
+  BROKEN_BOARD_FILE,
+  EXPLANATION_FOR_AGENTS,
+  EXPLANATION_FOR_PEOPLE,
+  parseBoard,
+  readBoard,
+  seedBoardDirectory,
+  writeBoard,
+} from './board-store';
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), 'dashboard-board-'));
@@ -148,5 +157,16 @@ describe('seedBoardDirectory', () => {
     writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'mine');
     seedBoardDirectory(path);
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe('mine');
+  });
+});
+
+// This repository has its own board, so its `.dashboard` docs are checked in — and seeding only writes
+// a file that is not there, so the app will never refresh them. Add a field to a card above and every
+// other project gets the new docs on first open while this one keeps the old text forever, which is the
+// text an agent working on this codebase reads. This fails the moment the two drift apart.
+describe('the .dashboard docs checked into this repository', () => {
+  it('still say what a freshly seeded project would be told', () => {
+    expect(readFileSync(join(BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
+    expect(readFileSync(join(BOARD_DIRECTORY, 'README.md'), 'utf8')).toBe(EXPLANATION_FOR_PEOPLE);
   });
 });

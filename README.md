@@ -15,7 +15,9 @@ Keyboard-first terminal dashboard. Each project gets a page, shown three ways: f
 
 The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 
-The window opens empty. Ctrl+S lists the projects you opened before and offers a folder dialog for a new one; the list lives in `recents.json` under the app's data directory.
+The window opens on the projects the last run was left on — the same order, each on the view it was showing, with the same pane focused; the layout lives in `session.json` under the app's data directory, next to `recents.json`. A project whose folder has since gone away is dropped rather than reopened. With nothing saved the window opens empty. Ctrl+S lists the projects you opened before and offers a folder dialog for a new one.
+
+Closing the window asks first, because it kills every shell in every project and there is no getting a long-running task back. Cancel is the default, so Enter and Escape both mean "I hit that by accident".
 
 ## Shortcuts
 
@@ -35,6 +37,11 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Next / previous terminal | Mod+Right / Mod+Left (terminals mode) |
 | Clear the shell's current line | Cmd+Backspace (macOS only — see below) |
 | Move to the pane left / down / up / right | Option+H / J / K / L (Alt elsewhere, terminals mode) |
+| Edit a card's title / description | Enter / `e` (board mode) |
+| Add / delete a card | `n` / `d` (board mode) |
+| Cycle a card's priority | `p` (board mode) |
+| Sort a column by priority | `s` (board mode) |
+| Undo the last board change | `u` (board mode) |
 
 ## Modes
 
@@ -46,9 +53,9 @@ Nvim starts the first time you press Ctrl+N for that project, not at launch. Qui
 
 The board lives in `.dashboard/board.json` inside the project, alongside a `README.md` and a `CLAUDE.md` describing the format. The folder is created the first time you open the board. Committing it is your call — nothing touches `.gitignore`.
 
-Inside the board: arrows move the selection, Enter edits a card's title, `n` adds one, `d` deletes it, `u` takes the last change back, and Shift with an arrow moves the card itself. Every change is written straight to disk; there is no save key.
+Inside the board: arrows move the selection, Shift with an arrow moves the card itself, and the keys in the table above do the rest. A card carries a title, a description, and one of four priorities — `urgent`, `high`, `medium`, `low` — shown as a coloured stripe down its left edge and named in the status bar. `p` walks through the four, `s` sorts the column you are on with the urgent cards at the top. Every change is written straight to disk; there is no save key.
 
-While a card's title is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global shortcut are dead until Enter or Escape ends the edit.
+While a card is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global shortcut are dead until the edit ends. A title ends on Enter or Escape. A description ends on Escape only — Enter there is a newline, since a description is written as lines.
 
 The board is re-read whenever you enter it, so edits made to `board.json` from outside show up when you switch away and back — not while you are looking at it. If the board file is broken — truncated by a crash, broken by a hand-edit, or carrying a merge conflict marker — it is renamed to `board.json.broken` before showing an empty board, and the status bar says so. Your old cards are in the renamed file.
 

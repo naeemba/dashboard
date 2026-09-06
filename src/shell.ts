@@ -49,10 +49,14 @@ export const SHELL_COMMAND_FLAG = '--shell-command=';
 // The editor pane runs nvim, and nvim has to be found on PATH. An app launched from the Dock inherits
 // almost none of one — /usr/bin and /bin, no Homebrew — so the exec fails and the pane shows "[exited 1]"
 // before it ever draws. Running nvim through the shell is what gives it a PATH the user recognises.
-// A login shell, not an interactive one: `brew shellenv` lives in .zprofile, which -l reads, and -i
-// would instead source the whole .zshrc — three quarters of a second building a prompt nvim paints over,
-// plus whatever daemons the rc starts, every time you open the pane. `exec` leaves nvim as the pane's
-// only process rather than parking a shell above it for as long as the pane is open.
+// Login and interactive, because the PATH is split across both halves and nvim needs all of it:
+// `brew shellenv` lives in .zprofile, which only -l reads, while fnm, nvm, rbenv, pyenv and mise all
+// initialise from .zshrc, which only -i reads. Take just one and nvim's language servers fail with
+// "node: command not found" while the terminal pane beside them runs node fine. The five panes spawn an
+// interactive shell, so -i is also what makes this the same PATH they have, as advertised. The rc file
+// costs about three quarters of a second, paid once when you first press Ctrl+N for a project, not per
+// keystroke. `exec` leaves nvim as the pane's only process rather than parking a shell above it for as
+// long as the pane is open.
 export function editorArguments(shellCommand: string): string[] {
-  return isPowerShell(shellCommand) ? ['-Command', 'nvim'] : ['-lc', 'exec nvim'];
+  return isPowerShell(shellCommand) ? ['-Command', 'nvim'] : ['-lic', 'exec nvim'];
 }

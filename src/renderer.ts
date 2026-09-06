@@ -115,9 +115,16 @@ function saveSession(): void {
   // holding two of your five projects for the whole of startup, so an app killed while it was still
   // opening them would come back next time with the three missing for good.
   if (restoring || pages.length === 0) return;
+  // A project whose folder went away is not written back. It stays on screen for this run — nothing
+  // closes a page — but the next launch starts without it, instead of reopening the same dead tab and
+  // saving it again forever. The project list already works this way: a missing project is neither
+  // offered by Ctrl+S nor remembered as a recent.
+  const live = pages.filter((page) => !page.project.missing);
   const session: Session = {
-    activeIndex,
-    pages: pages.map((page) => ({ path: page.project.path, mode: page.mode, focused: page.focused })),
+    // Counted in the filtered list: a dead page sitting before the active one would otherwise shift it,
+    // and the active page may itself be the dead one, which lands on the first survivor.
+    activeIndex: Math.max(0, live.indexOf(pages[activeIndex])),
+    pages: live.map((page) => ({ path: page.project.path, mode: page.mode, focused: page.focused })),
   };
   // Typing a card title redraws the status bar on every keystroke and changes nothing here.
   const encoded = JSON.stringify(session);
@@ -416,19 +423,26 @@ bridge.onExit((id, exitCode) => {
 // showing, with the same pane focused. One at a time, because main hands out a slot per project in the
 // order they are opened and that order is the tab strip.
 async function restore(session: Session): Promise<void> {
-  for (const entry of session.pages) await openProject(entry.path);
-  session.pages.forEach((entry, index) => {
-    const page = pages[index];
-    // A folder that went away while the app was closed comes back as the same dead page it would have
-    // become had it gone away mid-run. There is no view on it to restore.
-    if (!page || page.project.missing) return;
-    showMode(page, entry.mode);
-    page.focused = entry.focused;
-  });
-  // Saving again from here on, so the landing below is what writes the restored layout back — with any
-  // project whose folder has gone missing already dropped from it.
-  restoring = false;
-  showPage(session.activeIndex, true);
+  // Best-effort: one project that cannot be opened at all — a folder you have lost read permission on,
+  // so the main process throws rather than reporting it missing — must not leave `restoring` set for
+  // the rest of the run. That would silently stop every later save, and a day's work would open
+  // tomorrow as yesterday's layout. Half the layout back and saving is better than neither.
+  try {
+    for (const entry of session.pages) await openProject(entry.path);
+    session.pages.forEach((entry, index) => {
+      const page = pages[index];
+      // A folder that went away while the app was closed comes back as the same dead page it would have
+      // become had it gone away mid-run. There is no view on it to restore.
+      if (!page || page.project.missing) return;
+      showMode(page, entry.mode);
+      page.focused = entry.focused;
+    });
+  } finally {
+    // Saving again from here on, so the landing below is what writes the restored layout back — with any
+    // project whose folder has gone missing already dropped from it.
+    restoring = false;
+    showPage(session.activeIndex, true);
+  }
 }
 
 // The window opens with whatever was open last time; with nothing saved, the picker makes the first one.

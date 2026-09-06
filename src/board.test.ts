@@ -172,11 +172,11 @@ const order = (result: Board): Priority[] => result.columns[0].cards.map((card) 
 
 describe('cyclePriority', () => {
   it('walks all four and wraps back to the top', () => {
-    let board = priorityBoard('urgent');
+    let cycled = priorityBoard('urgent');
     const seen: string[] = [];
     for (let step = 0; step < 4; step++) {
-      board = cyclePriority(board, { column: 0, card: 0 }).board;
-      seen.push(board.columns[0].cards[0].priority);
+      cycled = cyclePriority(cycled, { column: 0, card: 0 }).board;
+      seen.push(cycled.columns[0].cards[0].priority);
     }
     expect(seen).toEqual(['high', 'medium', 'low', 'urgent']);
   });

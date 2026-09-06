@@ -177,11 +177,13 @@ body {
   overflow: hidden;
 }
 
-/* Where the keyboard is. The board has one selection, not one per column. */
+/* Where the keyboard is. The board has one selection, not one per column, and it is marked by the same
+   blue outline a focused pane gets. The card keeps its own background: lightening it to --brightBlack
+   drew the low-priority stripe in its own colour, so the one card your cursor was on was the one card
+   with no stripe — which reads as "no priority" rather than "low". */
 .board-card.selected {
   outline: var(--focus-outline);
   outline-offset: -1px;
-  background: var(--brightBlack);
   color: var(--brightWhite);
 }
 

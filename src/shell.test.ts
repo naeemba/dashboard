@@ -50,11 +50,12 @@ describe('quoteForShell', () => {
 });
 
 describe('editorArguments', () => {
-  // A login shell, because that is where a Mac PATH picks up Homebrew: spawn nvim directly and the
-  // pane dies with an exit code instead of opening an editor.
-  it('runs nvim through a login POSIX shell', () => {
-    expect(editorArguments('/bin/zsh')).toEqual(['-lc', 'exec nvim']);
-    expect(editorArguments('/opt/homebrew/bin/fish')).toEqual(['-lc', 'exec nvim']);
+  // Login and interactive both: -l is where a Mac PATH picks up Homebrew, -i is where it picks up the
+  // version managers the terminal panes already have. Spawn nvim directly and the pane dies with an exit
+  // code instead of opening an editor; drop -i and its language servers cannot find node.
+  it('runs nvim through a login interactive POSIX shell', () => {
+    expect(editorArguments('/bin/zsh')).toEqual(['-lic', 'exec nvim']);
+    expect(editorArguments('/opt/homebrew/bin/fish')).toEqual(['-lic', 'exec nvim']);
   });
 
   it('uses the PowerShell spelling for PowerShell', () => {

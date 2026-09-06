@@ -59,7 +59,10 @@ export function addBlankCard(state: BoardState, id: string): BoardState {
 export function commitTitle(state: BoardState, title: string): BoardState {
   const trimmed = title.trim();
   if (trimmed === '') return applyChange(state, deleteCard(state.board, state.selection));
-  if (trimmed === cardAt(state.board, state.selection)?.title) return state;
+  // Both sides trimmed: parseCard keeps a title exactly as it is written, so a hand-edited
+  // `"title": "Ship it "` would otherwise never compare equal, and merely opening that card would spend
+  // the undo step belonging to the move you made just before it.
+  if (trimmed === cardAt(state.board, state.selection)?.title.trim()) return state;
   return applyChange(state, renameCard(state.board, state.selection, trimmed));
 }
 
@@ -68,7 +71,7 @@ export function commitTitle(state: BoardState, title: string): BoardState {
 // description unchanged is not a change, for the same reason reading a title is not.
 export function commitNotes(state: BoardState, notes: string): BoardState {
   const trimmed = notes.trim();
-  if (trimmed === cardAt(state.board, state.selection)?.notes) return state;
+  if (trimmed === cardAt(state.board, state.selection)?.notes.trim()) return state;
   return applyChange(state, setNotes(state.board, state.selection, trimmed));
 }
 
