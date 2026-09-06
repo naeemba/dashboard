@@ -1,13 +1,19 @@
+import type { Settings } from './settings';
+
 const platformDefault: Record<string, string> = {
   darwin: '/bin/zsh',
   win32: 'powershell.exe',
 };
 
+// The settings file wins, then the two environment variables, then the platform. An empty
+// shellCommand is the file saying "work it out", which is what it holds until someone sets one.
 export function pickShell(
+  settings: Settings,
   environment: Record<string, string | undefined>,
   platform: string,
 ): string {
   return (
+    settings.shellCommand ||
     environment.SHELL_COMMAND ||
     environment.SHELL ||
     platformDefault[platform] ||
@@ -40,11 +46,6 @@ export function quoteForShell(value: string, shellCommand: string): string {
     : value.replaceAll("'", "'\\''");
   return `'${escaped}'`;
 }
-
-// main resolves the shell after loading the .env file, so it can only reach the preload as a launch
-// argument. Both ends spell the flag from here, so a rename cannot leave the renderer quoting for the
-// wrong shell with nothing failing.
-export const SHELL_COMMAND_FLAG = '--shell-command=';
 
 // The editor pane runs nvim, and nvim has to be found on PATH. An app launched from the Dock inherits
 // almost none of one — /usr/bin and /bin, no Homebrew — so the exec fails and the pane shows "[exited 1]"

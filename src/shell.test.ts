@@ -1,19 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { editorArguments, pickShell, quoteForShell } from './shell';
+import { defaultSettings } from './settings';
 
 describe('pickShell', () => {
   it('prefers SHELL_COMMAND', () => {
-    expect(pickShell({ SHELL_COMMAND: '/opt/fish', SHELL: '/bin/zsh' }, 'darwin')).toBe('/opt/fish');
+    expect(pickShell(defaultSettings(true), { SHELL_COMMAND: '/opt/fish', SHELL: '/bin/zsh' }, 'darwin'))
+      .toBe('/opt/fish');
   });
 
   it('falls back to SHELL', () => {
-    expect(pickShell({ SHELL: '/bin/zsh' }, 'linux')).toBe('/bin/zsh');
+    expect(pickShell(defaultSettings(true), { SHELL: '/bin/zsh' }, 'linux')).toBe('/bin/zsh');
   });
 
   it('falls back per platform', () => {
-    expect(pickShell({}, 'darwin')).toBe('/bin/zsh');
-    expect(pickShell({}, 'linux')).toBe('/bin/bash');
-    expect(pickShell({}, 'win32')).toBe('powershell.exe');
+    expect(pickShell(defaultSettings(true), {}, 'darwin')).toBe('/bin/zsh');
+    expect(pickShell(defaultSettings(true), {}, 'linux')).toBe('/bin/bash');
+    expect(pickShell(defaultSettings(true), {}, 'win32')).toBe('powershell.exe');
+  });
+
+  it('lets the settings file beat both environment variables', () => {
+    const settings = { ...defaultSettings(true), shellCommand: '/opt/homebrew/bin/fish' };
+    expect(pickShell(settings, { SHELL_COMMAND: '/bin/zsh', SHELL: '/bin/bash' }, 'darwin'))
+      .toBe('/opt/homebrew/bin/fish');
   });
 });
 

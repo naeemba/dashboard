@@ -2,12 +2,10 @@ import type { Project } from './projects';
 import type { Board } from './board';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
+import type { Settings } from './settings';
 
 export type DashboardBridge = {
   platform: string;
-  // The shell a pane actually runs, which SHELL_COMMAND can point at another family entirely, so quoting
-  // a dropped path has to follow this rather than the platform.
-  shellCommand: string;
   getRecentProjects(): Promise<Project[]>;
   openProject(projectPath: string | null): Promise<{ index: number; project: Project; replaced: boolean } | null>;
   // Chrome stopped putting a path on File, so only the preload can say where a dropped file lives.
@@ -22,6 +20,10 @@ export type DashboardBridge = {
   saveSession(session: Session): void;
   readBoard(projectPath: string): Promise<BoardRead>;
   writeBoard(projectPath: string, board: Board): Promise<void>;
+  // The settings, and the shell that was resolved from them. One call, because the renderer needs
+  // both before it builds a pane and they are decided together.
+  getSettings(): Promise<{ settings: Settings; shellCommand: string }>;
+  saveSettings(settings: Settings): void;
 };
 
 declare global {

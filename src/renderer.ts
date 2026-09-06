@@ -15,6 +15,7 @@ import { THEME, TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
+import { defaultSettings, type Settings } from './settings';
 
 // Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt with THEME's palette.
 const FONT_NAME = 'JetBrains Mono';
@@ -44,6 +45,13 @@ type Page = {
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
+// Replaced by the real file in start(), before any pane is built. Held here rather than passed down
+// because a settings change has to reach every pane on every page at once.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- read starting Task 8, when the font name comes from it
+let settings: Settings = defaultSettings(isMac);
+// What a dropped path is quoted for. Resolved by main from the settings, so it follows a shell change
+// without a restart.
+let shellCommand = '';
 // Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
 document.documentElement.classList.toggle('mac', isMac);
 const statusElement = document.getElementById('status') as HTMLElement;
@@ -257,7 +265,7 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
     if (paths.length === 0) return;
     terminal.focus();
-    terminal.input(`${paths.map((entry) => quoteForShell(entry, bridge.shellCommand)).join(' ')} `);
+    terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => onFocus?.());
@@ -477,6 +485,9 @@ async function restore(session: Session): Promise<void> {
 // The window opens with whatever was open last time; with nothing saved, the picker makes the first one.
 async function start(): Promise<void> {
   renderStatus();
+  const loaded = await bridge.getSettings();
+  settings = loaded.settings;
+  shellCommand = loaded.shellCommand;
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();
   // xterm measures cell size when a pane opens, so both font weights must be in before openProject()
