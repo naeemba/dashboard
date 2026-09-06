@@ -151,6 +151,23 @@ export function deleteCard(board: Board, selection: Selection): Change {
   };
 }
 
+// What `d` does. The descendants are spread across every column, so this rebuilds the whole board
+// rather than one column, and it is one Change so `u` brings the whole family back in one press.
+export function deleteCardAndDescendants(board: Board, selection: Selection): Change {
+  const card = cardAt(board, selection);
+  if (!card) return { board, selection };
+  const doomed = new Set([card.id, ...descendantsOf(board, card.id).map((entry) => entry.id)]);
+  const columns = board.columns.map((column) => ({
+    ...column,
+    cards: column.cards.filter((entry) => !doomed.has(entry.id)),
+  }));
+  const remaining = columns[selection.column].cards.length;
+  return {
+    board: withColumns(board, columns),
+    selection: { column: selection.column, card: clamp(selection.card, Math.max(0, remaining - 1)) },
+  };
+}
+
 export function moveCard(board: Board, selection: Selection, direction: Direction): Change {
   const cards = board.columns[selection.column].cards;
   if (cards.length === 0) return { board, selection };

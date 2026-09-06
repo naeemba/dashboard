@@ -1,7 +1,7 @@
 import {
   cardAt,
   cyclePriority,
-  deleteCard,
+  deleteCardAndDescendants,
   moveCard,
   moveSelection,
   sortColumn,
@@ -208,7 +208,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         return startEditing('title');
       case 'd':
         event.preventDefault();
-        return change(deleteCard(state.board, state.selection));
+        return change(deleteCardAndDescendants(state.board, state.selection));
       case 'u':
         event.preventDefault();
         return apply(undoChange(state));

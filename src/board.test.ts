@@ -7,6 +7,7 @@ import {
   childrenOf,
   cyclePriority,
   deleteCard,
+  deleteCardAndDescendants,
   descendantsOf,
   detachCard,
   emptyBoard,
@@ -127,6 +128,40 @@ describe('deleteCard', () => {
     const result = deleteCard(start, { column: 0, card: 0 });
     expect(result).toEqual({ board: start, selection: { column: 0, card: 0 } });
     expect(result.board).toBe(start);
+  });
+});
+
+describe('deleteCardAndDescendants', () => {
+  it('takes children in other columns with it', () => {
+    const start = withParents(board(['a', 'z'], ['b'], ['c']), { b: 'a', c: 'b' });
+    const result = deleteCardAndDescendants(start, { column: 0, card: 0 });
+    expect(titles(result.board)).toEqual([['z'], [], []]);
+  });
+
+  it('leaves a sibling alone', () => {
+    const start = withParents(board(['a', 'b'], ['c']), { c: 'a' });
+    const result = deleteCardAndDescendants(start, { column: 0, card: 1 });
+    expect(titles(result.board)).toEqual([['a'], ['c']]);
+  });
+
+  it('leaves the parent of the deleted card alone', () => {
+    const start = withParents(board(['a', 'b']), { b: 'a' });
+    expect(titles(deleteCardAndDescendants(start, { column: 0, card: 1 }).board)).toEqual([['a']]);
+  });
+
+  it('puts the selection on the card that took its place', () => {
+    const result = deleteCardAndDescendants(board(['a', 'b', 'c']), { column: 0, card: 1 });
+    expect(result.selection).toEqual({ column: 0, card: 1 });
+  });
+
+  it('clamps the selection when the last card of a column goes', () => {
+    const result = deleteCardAndDescendants(board(['a', 'b']), { column: 0, card: 1 });
+    expect(result.selection).toEqual({ column: 0, card: 0 });
+  });
+
+  it('does nothing in an empty column', () => {
+    const start = board(['a'], []);
+    expect(deleteCardAndDescendants(start, { column: 1, card: 0 }).board).toBe(start);
   });
 });
 
