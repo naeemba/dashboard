@@ -15,6 +15,13 @@ describe('helpSections', () => {
       .toBe('already here — goes to Board instead');
   });
 
+  // A key list on its own teaches the gestures and not the thing. Every section says what it is first.
+  it('gives every section a blurb', () => {
+    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+      for (const section of helpSections(mode, true)) expect(section.blurb).not.toBe('');
+    }
+  });
+
   it('names Cmd on macOS and Ctrl elsewhere', () => {
     const keys = (isMac: boolean): string[] =>
       helpSections('terminals', isMac).flatMap((section) => section.shortcuts.map((shortcut) => shortcut.keys));

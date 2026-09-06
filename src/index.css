@@ -281,6 +281,14 @@ textarea.board-edit {
   font-weight: normal;
 }
 
+/* Sits between the heading and its keys, so the section says what it is before it says how to work it. */
+.help-blurb {
+  margin: 0 0 6px;
+  padding: 0 12px;
+  color: var(--brightBlack);
+  max-width: 62ch;
+}
+
 .help-list {
   margin: 0;
   padding: 0;

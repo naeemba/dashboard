@@ -2,7 +2,9 @@ import { MODE_KEYS, type Mode } from './modes';
 
 // One row of the help dialog: the keys you press, and what they do.
 export type Shortcut = { keys: string; action: string };
-export type Section = { title: string; shortcuts: Shortcut[] };
+// The blurb says what the screen is; the shortcuts say how to work it. A key list on its own teaches
+// someone the gestures and not the thing they are gestures for.
+export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 const MODE_NAMES: Record<Mode, string> = { terminals: 'Terminals', nvim: 'nvim', board: 'Board' };
 
@@ -55,6 +57,19 @@ const NVIM_SHORTCUTS: Shortcut[] = [
   { keys: 'Everything else', action: 'Goes straight to nvim' },
 ];
 
+// What each screen is, for the person who has not been told. The things worth knowing here are the ones
+// that are not visible on screen: that a shell survives leaving the page, that nvim is not running yet,
+// that the board has no save key.
+const SCREEN_BLURBS: Record<Mode, string> = {
+  terminals: 'Five shells in a fixed grid. They keep running while you are on another project or another '
+    + 'view, so a long job is still going when you come back.',
+  nvim: 'One nvim filling the window. It starts the first time you press Ctrl+N for this project, not at '
+    + 'launch. Quit it and the pane says it exited; Enter starts it again.',
+  board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
+    + 'straight to disk, so there is no save key and u is the only way back. The file is re-read each '
+    + 'time you enter the board, not while you are looking at it.',
+};
+
 function screenShortcuts(mode: Mode, isMac: boolean): Shortcut[] {
   if (mode === 'board') return BOARD_SHORTCUTS;
   if (mode === 'nvim') return NVIM_SHORTCUTS;
@@ -66,13 +81,21 @@ function screenShortcuts(mode: Mode, isMac: boolean): Shortcut[] {
 export function helpSections(mode: Mode, isMac: boolean): Section[] {
   const mod = modifier(isMac);
   return [
-    { title: MODE_NAMES[mode], shortcuts: screenShortcuts(mode, isMac) },
-    { title: 'Modes', shortcuts: modeShortcuts(mode) },
+    { title: MODE_NAMES[mode], blurb: SCREEN_BLURBS[mode], shortcuts: screenShortcuts(mode, isMac) },
+    {
+      title: 'Modes',
+      blurb: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
+        + 'lands you back in the same view.',
+      shortcuts: modeShortcuts(mode),
+    },
     {
       // Written out for the same reason as the board keys: mapShortcut has to read `code` on the digits
       // and `key` on the brackets, and swaps modifier by platform, so there is no table to read back.
       // A project key added there needs a row added here.
       title: 'Projects',
+      blurb: 'One page per project, in the order along the top. The window opens on the projects the '
+        + 'last run was left on, and closing it asks first, because it kills every shell in every '
+        + 'project.',
       shortcuts: [
         { keys: 'Ctrl+S', action: 'Open the project list' },
         { keys: 'Ctrl+O', action: 'Back to the last project' },
@@ -97,6 +120,9 @@ export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
   for (const section of helpSections(mode, isMac)) {
     const heading = document.createElement('h2');
     heading.textContent = section.title;
+    const blurb = document.createElement('p');
+    blurb.className = 'help-blurb';
+    blurb.textContent = section.blurb;
     const list = document.createElement('ul');
     list.className = 'help-list';
     list.append(...section.shortcuts.map((shortcut) => {
@@ -110,7 +136,7 @@ export function openHelp(mode: Mode, isMac: boolean): Promise<void> {
       row.append(keys, action);
       return row;
     }));
-    dialog.append(heading, list);
+    dialog.append(heading, blurb, list);
   }
 
   const footer = document.createElement('p');
