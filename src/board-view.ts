@@ -4,6 +4,7 @@ import {
   childColumns,
   cyclePriority,
   deleteCardAndDescendants,
+  descendantsOf,
   detachCard,
   isDescendantOf,
   moveCard,
@@ -23,6 +24,7 @@ import {
   type BoardState,
 } from './board-state';
 import type { DashboardBridge } from './bridge';
+import { confirmOverlay } from './overlay';
 import type { Direction } from './terminals';
 
 export type BoardOptions = {
@@ -214,6 +216,22 @@ export function createBoardView(options: BoardOptions): BoardView {
     options.onChanged();
   }
 
+  // The count is descendants, not direct children, because that is how many cards vanish — and most
+  // of them are in columns you are not looking at. A leaf card gets the same dialog without the
+  // second clause: one key that always behaves the same way is worth more than a saved keystroke.
+  function confirmDelete(): void {
+    const card = cardAt(state.board, state.selection);
+    if (!card) return;
+    const family = descendantsOf(state.board, card.id).length;
+    const question = family === 0
+      ? `Delete "${card.title}"?`
+      : `Delete "${card.title}" and its ${family} subtask${family === 1 ? '' : 's'}?`;
+    confirmOverlay(question).then((confirmed) => {
+      element.focus();
+      if (confirmed) change(deleteCardAndDescendants(state.board, state.selection));
+    });
+  }
+
   element.addEventListener('keydown', (event) => {
     // The input owns every key while a title is being edited; its own handler ends the edit.
     if (editing || landedRead !== latestRead) return;
@@ -257,7 +275,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         return startEditing('title');
       case 'd':
         event.preventDefault();
-        return change(deleteCardAndDescendants(state.board, state.selection));
+        return confirmDelete();
       case 'u':
         event.preventDefault();
         return apply(undoChange(state));

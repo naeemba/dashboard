@@ -48,7 +48,7 @@ const BOARD_SHORTCUTS: Shortcut[] = [
   { keys: 'Enter', action: "Edit the card's title" },
   { keys: 'e', action: "Edit the card's description" },
   { keys: 'n', action: 'Add a card' },
-  { keys: 'd', action: 'Delete the card' },
+  { keys: 'd', action: 'Delete the card and its subtasks, after a confirmation' },
   { keys: 'p', action: "Cycle the card's priority" },
   { keys: 's', action: 'Sort the column, urgent first' },
   { keys: 'u', action: 'Undo the last board change' },
