@@ -100,8 +100,14 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           adding = false;
           // An empty title adds nothing, the same way a blank card is dropped on the board.
           if (event.key === 'Enter' && title !== '') {
-            board = options.onChange(addChildCard(board, options.selection, options.makeId(), title));
-            highlighted = childrenOf(board, cardAt(board, options.selection)?.id ?? '').length - 1;
+            const id = options.makeId();
+            board = options.onChange(addChildCard(board, options.selection, id, title));
+            // childrenOf orders by column, not by when a card was added, and addChildCard puts the new
+            // card in the parent's column rather than at the end of this list — so the new card's row
+            // has to be found by id, the same as any other lookup here, clamped rather than trusted.
+            const newRow = childrenOf(board, cardAt(board, options.selection)?.id ?? '')
+              .findIndex((child) => child.id === id);
+            highlighted = Math.max(0, newRow);
           }
           render();
           dialog.focus();

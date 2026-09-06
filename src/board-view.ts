@@ -263,7 +263,9 @@ export function createBoardView(options: BoardOptions): BoardView {
       state = { ...state, selection: moveSelection(state.board, state.selection, direction) };
       return render();
     }
-    if (event.key === 'Tab') {
+    // Only bare Tab and Shift+Tab attach or detach — Ctrl/Cmd/Alt+Tab are the OS's window switcher and
+    // must fall through to the bail-out below rather than be swallowed here.
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
       if (event.shiftKey) return change(detachCard(state.board, state.selection));
       const above = state.board.columns[state.selection.column]?.cards[state.selection.card - 1];
