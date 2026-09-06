@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PRIORITY,
   addCard,
+  attachToCardAbove,
   childColumns,
   childrenOf,
   cyclePriority,
   deleteCard,
   descendantsOf,
+  detachCard,
   emptyBoard,
   isDescendantOf,
   moveCard,
@@ -39,6 +41,10 @@ function withParents(source: Board, parents: Record<string, string>): Board {
 
 function titles(result: Board): string[][] {
   return result.columns.map((column) => column.cards.map((card) => card.title));
+}
+
+function parents(result: Board): Record<string, string | null> {
+  return Object.fromEntries(result.columns.flatMap((column) => column.cards.map((card) => [card.id, card.parent])));
 }
 
 describe('emptyBoard', () => {
@@ -295,5 +301,60 @@ describe('childColumns', () => {
 
   it('is empty for a card with no children', () => {
     expect(childColumns(board(['a']), 'a')).toEqual([]);
+  });
+});
+
+describe('attachToCardAbove', () => {
+  it('makes the selected card a child of the card directly above it', () => {
+    const result = attachToCardAbove(board(['a', 'b']), { column: 0, card: 1 });
+    expect(parents(result.board).b).toBe('a');
+    expect(result.selection).toEqual({ column: 0, card: 1 });
+  });
+
+  it('does nothing on the top card of a column', () => {
+    const start = board(['a', 'b']);
+    expect(attachToCardAbove(start, { column: 0, card: 0 }).board).toBe(start);
+  });
+
+  it('does nothing in an empty column', () => {
+    const start = board(['a'], []);
+    expect(attachToCardAbove(start, { column: 1, card: 0 }).board).toBe(start);
+  });
+
+  // a is b's parent, and b sits above a. Attaching a to b would make each the other's ancestor, and
+  // descendantsOf would then never finish.
+  it('refuses to attach a card to its own descendant', () => {
+    const start = withParents(board(['b', 'a']), { b: 'a' });
+    expect(attachToCardAbove(start, { column: 0, card: 1 }).board).toBe(start);
+  });
+
+  it('moves a card that already has a parent to the new one', () => {
+    const start = withParents(board(['a', 'b', 'c']), { c: 'a' });
+    expect(parents(attachToCardAbove(start, { column: 0, card: 2 }).board).c).toBe('b');
+  });
+});
+
+describe('detachCard', () => {
+  it('clears the parent and leaves the card where it is', () => {
+    const start = withParents(board(['a', 'b']), { b: 'a' });
+    const result = detachCard(start, { column: 0, card: 1 });
+    expect(parents(result.board).b).toBe(null);
+    expect(titles(result.board)).toEqual([['a', 'b']]);
+  });
+
+  it('does nothing to a card that has no parent', () => {
+    const start = board(['a', 'b']);
+    expect(detachCard(start, { column: 0, card: 1 }).board).toBe(start);
+  });
+
+  it('does nothing in an empty column', () => {
+    const start = board(['a'], []);
+    expect(detachCard(start, { column: 1, card: 0 }).board).toBe(start);
+  });
+
+  // The children of a detached card follow it: they point at its id, which has not changed.
+  it('leaves the detached card its own children', () => {
+    const start = withParents(board(['a', 'b', 'c']), { b: 'a', c: 'b' });
+    expect(parents(detachCard(start, { column: 0, card: 1 }).board).c).toBe('b');
   });
 });

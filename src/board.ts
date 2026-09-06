@@ -100,6 +100,28 @@ export function cyclePriority(board: Board, selection: Selection): Change {
   return editCard(board, selection, { priority: next });
 }
 
+// Tab. The card above in the same column becomes this card's parent — there is no separate "pick a
+// parent" step, because the card you want is nearly always the one you just typed above it.
+//
+// Three things hand back the same board, which is how a no-op stays out of the undo step: nothing
+// selected, nothing above, and an attachment that would make a ring. The ring case is the one that
+// matters — a card that is its own ancestor makes descendantsOf recurse forever.
+export function attachToCardAbove(board: Board, selection: Selection): Change {
+  const card = cardAt(board, selection);
+  const above = board.columns[selection.column]?.cards[selection.card - 1];
+  if (!card || !above) return { board, selection };
+  if (above.id === card.parent) return { board, selection };
+  if (isDescendantOf(board, above.id, card.id)) return { board, selection };
+  return editCard(board, selection, { parent: above.id });
+}
+
+// Shift+Tab. The card keeps its own children: they point at its id, and nothing about that changed.
+export function detachCard(board: Board, selection: Selection): Change {
+  const card = cardAt(board, selection);
+  if (!card || card.parent === null) return { board, selection };
+  return editCard(board, selection, { parent: null });
+}
+
 // Sorts the selected column, urgent first. Stable, so cards of equal priority keep the order you put
 // them in with Shift+up and Shift+down — sorting is a thing you ask for, not a rule the column enforces.
 // A column already in order hands back the same board, which is what keeps the undo step and the file
