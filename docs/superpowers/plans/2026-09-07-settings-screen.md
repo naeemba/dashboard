@@ -1601,6 +1601,8 @@ describe('helpSections', () => {
     for (const mode of ['terminals', 'board'] as const) {
       for (const section of helpSections(mode, mac, true)) {
         for (const shortcut of section.shortcuts) {
+          // The mode key you are already on is listed precisely because it does nothing here.
+          if (shortcut.action.startsWith('already here')) continue;
           // A collapsed family names its first and last key; both ends must work.
           for (const text of shortcut.keys.split('…')) {
             const stroke = parseBinding(text);
