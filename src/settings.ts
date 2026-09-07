@@ -70,7 +70,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedFont = (typeof raw.font === 'object' && raw.font !== null)
     ? raw.font as Record<string, unknown>
     : {};
-  return {
+  return withoutDuplicates({
     shellCommand: typeof raw.shellCommand === 'string' ? raw.shellCommand : '',
     font: {
       name: typeof storedFont.name === 'string' && storedFont.name.trim() !== ''
@@ -83,28 +83,30 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [
       name, isHexColor(storedTheme[name]) ? storedTheme[name] : defaults.theme[name],
     ])),
-    keys: withoutDuplicates(Object.fromEntries(ACTIONS.map((entry) => [
+    keys: Object.fromEntries(ACTIONS.map((entry) => [
       entry.name,
       Object.hasOwn(storedKeys, entry.name)
         ? toBinding(storedKeys[entry.name], entry, isMac)
         : defaults.keys[entry.name],
-    ]))),
-  };
+    ])),
+  });
 }
 
 // A hand-edited file can give two clashing actions the same key; the settings screen never can, because
 // bindKey displaces whoever held it. mapShortcut answers with the first match, so the later action would
 // silently never fire while the screen and the help dialog both printed its key. It loses the key here
-// instead, and shows as unbound — a state the screen could have produced itself.
-function withoutDuplicates(keys: Settings['keys']): Settings['keys'] {
-  const kept: Settings['keys'] = {};
+// instead and shows as unbound — a state the screen could have produced itself.
+function withoutDuplicates(settings: Settings): Settings {
+  const keys: Settings['keys'] = {};
+  // The same predicate the screen refuses with, asked against the rows decided so far: nothing later
+  // is in `keys` yet, so it answers "who already holds this key" rather than "who else has it".
+  const sofar: Settings = { ...settings, keys };
   for (const entry of ACTIONS) {
-    const binding = keys[entry.name];
-    const taken = binding !== null
-      && ACTIONS.some((other) => kept[other.name] === binding && scopesOverlap(entry, other));
-    kept[entry.name] = taken ? null : binding;
+    const binding = settings.keys[entry.name];
+    keys[entry.name] = binding !== null && holderOfBinding(sofar, entry.name, binding) !== null
+      ? null : binding;
   }
-  return kept;
+  return sofar;
 }
 
 // Two actions clash when they hear the same key on the same screen. A global action is heard on every
