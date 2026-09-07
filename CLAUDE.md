@@ -97,6 +97,13 @@ Five predicates exist for this reason: `hasSubtasks` and `attachmentRing` in
 `settings.ts`. A refusal worth a message reuses one of these or adds a sixth —
 never a second copy of the condition.
 
+The prose counts too. A comment that restates a rule living in another file is a
+second copy that no test can catch — the code stays right while the sentence goes
+stale. The bell handler in `renderer.ts` spelled out `marksWaiting`'s rule beside
+the call to it; loosen the rule in `waiting.ts` and the handler still reads as if
+it never changed. Say what the wiring does, and let the module say what the rule
+is.
+
 ## The help dialog is part of the change — Hard Rule
 
 **Every task that adds, removes or changes a key, a mode, or what a screen does

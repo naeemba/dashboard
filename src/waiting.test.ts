@@ -18,29 +18,34 @@ describe('marksWaiting', () => {
 
 describe('raisesNotification', () => {
   it('stays quiet while the window is in front', () => {
-    expect(raisesNotification(true, false)).toBe(false);
+    expect(raisesNotification(true, 'quiet')).toBe(false);
+    expect(raisesNotification(true, 'waiting')).toBe(false);
   });
 
   it('raises one banner for the first bell', () => {
-    expect(raisesNotification(false, false)).toBe(true);
+    expect(raisesNotification(false, 'quiet')).toBe(true);
   });
 
   it('does not repeat itself while the mark is still up', () => {
-    expect(raisesNotification(false, true)).toBe(false);
+    expect(raisesNotification(false, 'notified')).toBe(false);
+  });
+
+  it('still banners a pane that was marked while you were in the app', () => {
+    expect(raisesNotification(false, 'waiting')).toBe(true);
   });
 });
 
 describe('waitingNames', () => {
   it('names every pane that is asking, in pane order', () => {
     expect(waitingNames([
-      { waiting: false, name: 'terminal 1' },
-      { waiting: true, name: 'terminal 2' },
-      { waiting: false, name: 'terminal 3' },
-      { waiting: true, name: 'nvim' },
+      { bell: 'quiet', name: 'terminal 1' },
+      { bell: 'waiting', name: 'terminal 2' },
+      { bell: 'quiet', name: 'terminal 3' },
+      { bell: 'notified', name: 'nvim' },
     ])).toEqual(['terminal 2', 'nvim']);
   });
 
   it('says nothing when no pane is asking', () => {
-    expect(waitingNames([{ waiting: false, name: 'terminal 1' }])).toEqual([]);
+    expect(waitingNames([{ bell: 'quiet', name: 'terminal 1' }])).toEqual([]);
   });
 });

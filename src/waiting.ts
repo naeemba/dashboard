@@ -10,16 +10,22 @@ export function marksWaiting(windowFocused: boolean, isFocusedPane: boolean): bo
   return !windowFocused || !isFocusedPane;
 }
 
+// A pane is in one of three states, not two independent flags: it is quiet, or it is asking, or it is
+// asking and has already had its banner. One field, because 'notified but not asking' is not a state a
+// pane can be in — and arriving at the pane puts it back to 'quiet' in a single write, so there is no
+// pair of flags anyone has to remember to clear together.
+export type Bell = 'quiet' | 'waiting' | 'notified';
+
 // The banner is only worth raising when the window is behind something else, and only once per mark.
 // Without the second half, a watcher that rings on every failing run leaves a stack of the same
-// sentence in Notification Center. The flag is cleared with the mark, so a pane marked while you were
-// in the app still gets its banner when it rings again after you have walked away.
-export function raisesNotification(windowFocused: boolean, alreadyNotified: boolean): boolean {
-  return !windowFocused && !alreadyNotified;
+// sentence in Notification Center. A pane marked while you were in the app is still only 'waiting', so
+// it does get its banner when it rings again after you have walked away.
+export function raisesNotification(windowFocused: boolean, bell: Bell): boolean {
+  return !windowFocused && bell !== 'notified';
 }
 
 // The tab strip only has room for the project name, so the panes are named in the right-hand span
 // instead — otherwise arriving at a yellow project tells you nothing about which of its six panes rang.
-export function waitingNames(panes: readonly { waiting: boolean; name: string }[]): string[] {
-  return panes.filter((pane) => pane.waiting).map((pane) => pane.name);
+export function waitingNames(panes: readonly { bell: Bell; name: string }[]): string[] {
+  return panes.filter((pane) => pane.bell !== 'quiet').map((pane) => pane.name);
 }

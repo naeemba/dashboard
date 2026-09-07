@@ -18,20 +18,20 @@ import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
-import { marksWaiting, raisesNotification, waitingNames } from './waiting';
+import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
 
 // The editor is a sixth pty for the project, sitting one past the grid's five.
 const EDITOR_INDEX = TERMINAL_COUNT;
 
-// `name` is what the status bar and the bell's notification call the pane; `notified` remembers that
-// this mark already raised a banner, so a pane that rings ten times does not raise ten of them.
+// `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
+// is asking for you and whether its banner has already gone out, so a pane that rings ten times does
+// not raise ten of them.
 type Pane = {
   terminal: Terminal;
   fit: FitAddon;
   exited: boolean;
   name: string;
-  waiting: boolean;
-  notified: boolean;
+  bell: Bell;
 };
 type Page = {
   project: Project;
@@ -121,7 +121,7 @@ function allPanes(page: Page): Pane[] {
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the
 // project name, so without the names here you would arrive at a yellow project and have to walk all
 // six panes watching for the yellow to go out.
-function statusLabel(page: Page): string {
+function terminalStatus(page: Page): string {
   const names = waitingNames(allPanes(page));
   if (names.length === 0) return modeLabel(page);
   return `${modeLabel(page)} · ${names.join(', ')} waiting`;
@@ -147,7 +147,7 @@ function renderStatus(): void {
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = statusLabel(page);
+  statusTerminal.textContent = terminalStatus(page);
   saveSession();
 }
 
@@ -302,7 +302,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
   terminal.open(container);
 
-  const pane: Pane = { terminal, fit, exited: false, name, waiting: false, notified: false };
+  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet' };
   terminal.onData((data) => {
     if (!pane.exited) {
       bridge.sendInput(id, data);
@@ -328,26 +328,21 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
   // to listen for: no reading the output, no guessing from how long it has been quiet.
-  // A bell from the pane you are looking at is not news — you are already there, and a shell rings it
-  // for ordinary things like an ambiguous tab-completion — so only a pane you are not in is marked.
   // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
   // the document who has focus answers both "is this page in front" and "is this the focused pane" at
-  // once, and answers it right on the board, where no pane has the keyboard at all.
-  // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
-  // the document who has focus answers both "is this page in front" and "is this the focused pane" at
-  // once, and answers it right on the board, where no pane has the keyboard at all. Both rules live in
-  // waiting.ts with their tests; this only reads the two flags and draws the answer.
+  // once, and answers it right on the board, where no pane has the keyboard at all. What the states of
+  // the bell mean is waiting.ts's job; this only reads them and draws the answer.
   terminal.onBell(() => {
     const windowFocused = document.hasFocus();
     if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
     // Only a bell that changes something redraws: renderStatus() rebuilds every tab and writes the
     // session file, and a pane that rings once a second is already marked after the first one.
-    if (!pane.waiting) {
-      pane.waiting = true;
+    if (pane.bell === 'quiet') {
+      pane.bell = 'waiting';
       renderStatus();
     }
-    if (raisesNotification(windowFocused, pane.notified)) {
-      pane.notified = true;
+    if (raisesNotification(windowFocused, pane.bell)) {
+      pane.bell = 'notified';
       new Notification(page.project.name, { body: `${pane.name} is waiting` });
     }
   });
@@ -357,11 +352,10 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
   // before it would save a session naming the pane you just left.
   terminal.textarea?.addEventListener('focus', () => {
-    const wasWaiting = pane.waiting;
-    pane.waiting = false;
-    pane.notified = false;
+    const wasRinging = pane.bell !== 'quiet';
+    pane.bell = 'quiet';
     onFocus?.();
-    if (wasWaiting) renderStatus();
+    if (wasRinging) renderStatus();
   });
   return pane;
 }
