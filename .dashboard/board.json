@@ -8,21 +8,21 @@
           "title": "Find a pane by what is in it",
           "notes": "Type `dev`, land in the pane running the dev server, whichever project it belongs to. The picker, but over panes rather than projects. Thirty panes across five projects is the size where a list stops working and a search starts.\n\nfuzzy.ts and the picker overlay are already there, so the work is small. It depends on the naming card: without names there is nothing to match on but `terminal 3`.\n\nWeigh it against the manager page first. If that page already lists every pane by name with Enter to jump, this is the same feature with a filter box on it, and the answer may be to put the filter there rather than build a second way in.",
           "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+          "parent": null
         },
         {
           "id": "d0e0ed2d-b63b-434e-80ac-34c63156db93",
           "title": "Search every open project at once",
-          "notes": "One box, ripgrep over every open project's folder, results grouped by project. Enter on a result opens that project's nvim at the line. Today `where did I write that` costs a guess about which project, a tab switch, and a search once you are there.\n\nSpawning ripgrep is the easy half. The results list is the work: grouping, showing the matching line, and what to do about four hundred hits. It also needs ripgrep on the machine, or something slower behind it.\n\nWorth settling early whether this lives on the manager page or is an overlay you can open from anywhere. Searching is something you want from the pane you are in, not somewhere you navigate to first -- but the manager is where the cross-project things live.\n\nWhat it adds over `rg` in a pane, which already works and which your fingers know, is only the across-projects part. That is worth something with five open and nothing when you already know which one.",
+          "notes": "One box, ripgrep over every open project's folder, results grouped by project. Enter on a result opens that project's nvim at the line. Today `where did I write that` costs a guess about which project, a tab switch, and a search once you are there.\n\nSpawning ripgrep is the easy half. The results list is the work: grouping, showing the matching line, and what to do about four hundred hits. It also needs ripgrep on the machine, or something slower behind it.\n\nAn overlay you open from anywhere, like the picker -- not a corner of the manager page. Searching is something you want from the pane you are in, not somewhere you navigate to first.\n\nWhat it adds over `rg` in a pane, which already works and which your fingers know, is only the across-projects part. That is worth something with five open and nothing when you already know which one.",
           "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+          "parent": null
         },
         {
           "id": "7d2ec2d4-45b9-4964-9d06-e78c9b4dc73e",
           "title": "A project remembers what its panes should be running",
           "notes": "Pane 1 runs the dev server, pane 2 the test watcher, pane 3 claude, stored with the project. The session card put the layout back and left this out on purpose -- same projects, same order, same view, same focused pane, and five empty shells. So every morning the same three commands go into the same three panes by hand.\n\nSending a command to a pane is plumbing that already exists. The new parts are where the commands are kept and when they fire: on launch, on opening the project, or only when asked.\n\nThe question that decides the design is what happens when something is already running. Reopen a project that is already open and `npm run dev` must not go into the pane that is running it -- you get a port already in use, or worse, two of them. Knowing whether a pane is busy is the same thing the send-to-many-panes card needs and does not have.\n\nOnly the last bit belongs to the manager page -- start all, stop all, one place to see what is up. The storing and running half stands on its own.",
           "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+          "parent": null
         },
         {
           "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
