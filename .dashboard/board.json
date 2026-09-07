@@ -4,6 +4,13 @@
       "name": "Todo",
       "cards": [
         {
+          "id": "7b6df78b-baa7-4f03-a65a-5ae35b3317ab",
+          "title": "Find a pane by what is in it",
+          "notes": "Type `dev`, land in the pane running the dev server, whichever project it belongs to. The picker, but over panes rather than projects. Thirty panes across five projects is the size where a list stops working and a search starts.\n\nfuzzy.ts and the picker overlay are already there, so the work is small. It depends on the naming card: without names there is nothing to match on but `terminal 3`.\n\nWeigh it against the manager page first. If that page already lists every pane by name with Enter to jump, this is the same feature with a filter box on it, and the answer may be to put the filter there rather than build a second way in.",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+        },
+        {
           "id": "d0e0ed2d-b63b-434e-80ac-34c63156db93",
           "title": "Search every open project at once",
           "notes": "One box, ripgrep over every open project's folder, results grouped by project. Enter on a result opens that project's nvim at the line. Today `where did I write that` costs a guess about which project, a tab switch, and a search once you are there.\n\nSpawning ripgrep is the easy half. The results list is the work: grouping, showing the matching line, and what to do about four hundred hits. It also needs ripgrep on the machine, or something slower behind it.\n\nWorth settling early whether this lives on the manager page or is an overlay you can open from anywhere. Searching is something you want from the pane you are in, not somewhere you navigate to first -- but the manager is where the cross-project things live.\n\nWhat it adds over `rg` in a pane, which already works and which your fingers know, is only the across-projects part. That is worth something with five open and nothing when you already know which one.",
