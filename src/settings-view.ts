@@ -50,6 +50,13 @@ export function openSettings(
     // nobody could read back or type again.
     async function capture(event: KeyboardEvent): Promise<void> {
       if (MODIFIER_CODES.test(event.code)) return;
+      // Bare Escape backs out of an armed row rather than becoming its key, the way it does in every
+      // other dialog here. The cost is that bare Escape cannot be bound to anything; Ctrl+Escape and
+      // friends still can, so only the lone key is spoken for.
+      if (event.code === 'Escape' && !isModified(event)) {
+        armed = null;
+        return say('');
+      }
       const name = armed!;
       armed = null;
       const binding = formatBinding(keystrokeOf(event));
@@ -106,8 +113,8 @@ export function openSettings(
       const footer = document.createElement('p');
       footer.className = 'settings-footer';
       footer.textContent = message !== '' ? message
-        : 'Enter changes the row. x unbinds a key. Escape closes. '
-          + 'Kept in ~/.config/dashboard/settings.json.';
+        : 'Enter changes the row. x unbinds a key. Escape closes, or backs out of a row waiting '
+          + 'for a key. Kept in ~/.config/dashboard/settings.json.';
       if (message !== '') footer.classList.add('settings-message');
       dialog.replaceChildren(list, footer);
       list.children[selected]?.scrollIntoView({ block: 'nearest' });
