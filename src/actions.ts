@@ -1,5 +1,5 @@
 import type { Mode } from './modes';
-import type { Direction } from './terminals';
+import { TERMINAL_COUNT, type Direction } from './terminals';
 
 // What a shortcut does once it has fired. The renderer answers the first three groups; the board view
 // answers the board kinds. Moved here from shortcuts.ts so the table can name the action beside its key.
@@ -119,7 +119,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   },
   // Ctrl+1..9 belongs to the projects on every platform, so off macOS there is no modifier left to
   // reach a pane by number. Shipping unbound is better than shipping a key that cannot work.
-  ...range(5).map((number): ActionEntry => ({
+  ...range(TERMINAL_COUNT).map((number): ActionEntry => ({
     name: `terminal-focus-${number}`, description: `Focus terminal ${number}`,
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-focus', index: number - 1 },
