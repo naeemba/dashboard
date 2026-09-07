@@ -317,8 +317,8 @@ textarea.board-edit {
   display: none;
 }
 
-/* Project picker, help, the delete confirmation, the card detail dialog and settings: a centred
-   overlay above the pages. */
+/* Every dialog openOverlay() builds: a dark sheet over the pages with one centred box in it. The
+   per-dialog rules further down only override what that dialog needs differently. */
 .overlay {
   position: fixed;
   inset: 0;
@@ -328,11 +328,7 @@ textarea.board-edit {
   background: rgb(0 0 0 / 50%);
 }
 
-.picker-dialog,
-.help-dialog,
-.confirm-dialog,
-.card-detail-dialog,
-.settings-dialog {
+.overlay-dialog {
   display: flex;
   flex-direction: column;
   width: min(560px, 90vw);

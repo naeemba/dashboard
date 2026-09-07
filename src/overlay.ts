@@ -1,7 +1,8 @@
 import { isModified } from './shortcuts';
 
 // The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
-// nobody has to keep a list of the dialogs in step by hand.
+// nobody has to keep a list of the dialogs in step by hand. The box inside it carries the same name
+// with `-dialog`, so the shape every dialog shares is one CSS rule and not a list to keep in step either.
 const OVERLAY_CLASS = 'overlay';
 
 // Every dialog in this app is the same thing on screen: a dark sheet over the pages with one box
@@ -11,7 +12,7 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
   const overlay = document.createElement('div');
   overlay.className = `${OVERLAY_CLASS} ${name}`;
   const dialog = document.createElement('div');
-  dialog.className = `${name}-dialog`;
+  dialog.className = `${OVERLAY_CLASS}-dialog ${name}-dialog`;
   // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up. Every
   // dialog built on this sheet needs it, and one that forgets it is silently unusable by keyboard.
   dialog.tabIndex = -1;
