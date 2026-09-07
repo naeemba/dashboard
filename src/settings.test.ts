@@ -52,6 +52,20 @@ describe('parseSettings', () => {
     expect(settings.keys).not.toHaveProperty('no-such-action');
   });
 
+  // The screen cannot make this state — bindKey displaces whoever held the key — but a hand-edited
+  // file can, and then one of the two silently never fires while both print their key.
+  it('takes a clashing key off whichever action comes second', () => {
+    const settings = parseSettings({ keys: { 'board-sort': 'U', 'board-undo': 'U' } }, true);
+    expect(settings.keys['board-sort']).toBe('U');
+    expect(settings.keys['board-undo']).toBeNull();
+  });
+
+  it('leaves a key shared by two screens that never meet alone', () => {
+    const settings = parseSettings({ keys: { 'board-sort': 'U', 'terminal-next': 'U' } }, true);
+    expect(settings.keys['board-sort']).toBe('U');
+    expect(settings.keys['terminal-next']).toBe('U');
+  });
+
   it('ships different key defaults per platform', () => {
     expect(defaultSettings(true).keys['project-next']).toBe('Cmd+]');
     expect(defaultSettings(false).keys['project-next']).toBe('Ctrl+]');

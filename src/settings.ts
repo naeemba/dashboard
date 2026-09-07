@@ -83,13 +83,28 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [
       name, isHexColor(storedTheme[name]) ? storedTheme[name] : defaults.theme[name],
     ])),
-    keys: Object.fromEntries(ACTIONS.map((entry) => [
+    keys: withoutDuplicates(Object.fromEntries(ACTIONS.map((entry) => [
       entry.name,
       Object.hasOwn(storedKeys, entry.name)
         ? toBinding(storedKeys[entry.name], entry, isMac)
         : defaults.keys[entry.name],
-    ])),
+    ]))),
   };
+}
+
+// A hand-edited file can give two clashing actions the same key; the settings screen never can, because
+// bindKey displaces whoever held it. mapShortcut answers with the first match, so the later action would
+// silently never fire while the screen and the help dialog both printed its key. It loses the key here
+// instead, and shows as unbound — a state the screen could have produced itself.
+function withoutDuplicates(keys: Settings['keys']): Settings['keys'] {
+  const kept: Settings['keys'] = {};
+  for (const entry of ACTIONS) {
+    const binding = keys[entry.name];
+    const taken = binding !== null
+      && ACTIONS.some((other) => kept[other.name] === binding && scopesOverlap(entry, other));
+    kept[entry.name] = taken ? null : binding;
+  }
+  return kept;
 }
 
 // Two actions clash when they hear the same key on the same screen. A global action is heard on every
