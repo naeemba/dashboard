@@ -17,7 +17,7 @@ const bridge: DashboardBridge = {
   readBoard: (projectPath) => ipcRenderer.invoke('board:read', projectPath),
   writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),
   getSettings: () => ipcRenderer.invoke('settings:read'),
-  saveSettings: (settings) => ipcRenderer.send('settings:write', settings),
+  saveSettings: (settings) => ipcRenderer.invoke('settings:write', settings),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

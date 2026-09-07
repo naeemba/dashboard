@@ -23,7 +23,9 @@ export type DashboardBridge = {
   // The settings, and the shell that was resolved from them. One call, because the renderer needs
   // both before it builds a pane and they are decided together.
   getSettings(): Promise<{ settings: Settings; shellCommand: string }>;
-  saveSettings(settings: Settings): void;
+  // Answers with the shell main resolved from the new settings, which is the one a dropped path is
+  // quoted for.
+  saveSettings(settings: Settings): Promise<string>;
 };
 
 declare global {

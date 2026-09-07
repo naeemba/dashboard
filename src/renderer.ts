@@ -41,10 +41,9 @@ const isMac = bridge.platform === 'darwin';
 // Replaced by the real file in start(), before any pane is built. Held here rather than passed down
 // because a settings change has to reach every pane on every page at once.
 let settings: Settings = defaultSettings(isMac);
-// What a dropped path is quoted for when settings.shellCommand is empty, i.e. "work it out from the
-// environment". Set once, at launch, to what main resolved from that same environment — main never
-// re-resolves it either, so there is nothing here to go stale. A settings.shellCommand the user typed
-// in wins over this and is read fresh every time, so that one does follow a shell change.
+// What a dropped path is quoted for. Main decides it — pickShell weighs the settings file, SHELL_COMMAND,
+// SHELL and the platform — and hands the answer back here at launch and again on every save, so this
+// file never holds a second copy of that precedence to get out of step with.
 let shellCommand = '';
 
 document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
@@ -297,8 +296,7 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
     if (paths.length === 0) return;
     terminal.focus();
-    const shell = settings.shellCommand || shellCommand;
-    terminal.input(`${paths.map((entry) => quoteForShell(entry, shell)).join(' ')} `);
+    terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => onFocus?.());
@@ -422,7 +420,7 @@ function showHelp(): void {
 function showSettings(): void {
   openSettings(settings, isMac, (next) => {
     settings = next;
-    bridge.saveSettings(next);
+    void bridge.saveSettings(next).then((shell) => { shellCommand = shell; });
     applyAppearance();
   }).then(() => showPage(activeIndex));
 }

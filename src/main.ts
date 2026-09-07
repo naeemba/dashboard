@@ -125,12 +125,15 @@ ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFi
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
 ipcMain.handle('settings:read', () => ({ settings, shellCommand }));
-ipcMain.on('settings:write', (_event, next: Settings) => {
+// Answers with the newly resolved shell so the renderer never has to re-derive pickShell's precedence
+// to know which family of shell a dropped path is quoted for.
+ipcMain.handle('settings:write', (_event, next: Settings) => {
   settings = next;
   // Panes already running keep the shell they started with. Nothing here kills one: there are
   // long-running jobs in them, and a settings change is not a reason to lose one.
   shellCommand = pickShell(settings, process.env, process.platform);
   writeSettings(settingsFile, settings);
+  return shellCommand;
 });
 ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
