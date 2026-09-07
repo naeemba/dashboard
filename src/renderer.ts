@@ -13,7 +13,7 @@ import { openPicker } from './picker';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { TERMINAL_COUNT, neighbor, paneLabel, terminalId } from './terminals';
+import { TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
@@ -343,7 +343,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     }
     if (raisesNotification(windowFocused, pane.bell)) {
       pane.bell = 'notified';
-      bridge.notify(page.project.name, `${pane.name} is waiting`);
+      bridge.notify(page.project.name, `${pane.name} is waiting`, id);
     }
   });
   // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
@@ -535,6 +535,22 @@ window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', (event) => event.preventDefault());
 
 window.addEventListener('resize', fitAllPages);
+
+// Clicking the banner lands you on the pane that raised it. The page has to be put on the right view
+// and told which pane is focused before it is shown, because showPage lands on whatever the page was
+// already showing. A slot with no page any more — the project was closed while the banner sat there —
+// is nowhere to go.
+bridge.onNotificationClick((paneId) => {
+  const { slot, index } = paneFromId(paneId);
+  const position = positionOfSlot(slot);
+  if (position === -1) return;
+  const page = pages[position];
+  const mode = modeOfPane(index);
+  showMode(page, mode);
+  // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
+  if (mode === 'terminals') page.focused = index;
+  showPage(position, true);
+});
 
 bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
 bridge.onExit((id, exitCode) => {

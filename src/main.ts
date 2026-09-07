@@ -138,8 +138,13 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings);
   return shellCommand;
 });
-ipcMain.on('notification:show', (_event, title: string, body: string) => {
-  new Notification({ title, body }).show();
+// Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
+// to land on. Without that half you arrive at whatever project you were last on and go looking for the
+// pane the banner had already named.
+ipcMain.on('notification:show', (_event, title: string, body: string, paneId: string) => {
+  const notification = new Notification({ title, body });
+  notification.on('click', () => sendToRenderer('notification:click', paneId));
+  notification.show();
 });
 
 ipcMain.on('link:open', (_event, url: string) => {

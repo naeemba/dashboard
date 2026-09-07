@@ -12,8 +12,11 @@ export type DashboardBridge = {
   getPathForFile(file: File): string;
   openExternal(url: string): void;
   // The banner a ringing pane raises. An OS notification belongs to main, the way openExternal does:
-  // main is the side macOS knows the app by.
-  notify(title: string, body: string): void;
+  // main is the side macOS knows the app by. The pane's id travels with it so a click on the banner
+  // can be answered with the pane it was raised for.
+  notify(title: string, body: string, paneId: string): void;
+  // A click on that banner, coming back with the id it was raised for.
+  onNotificationClick(listener: (paneId: string) => void): void;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;

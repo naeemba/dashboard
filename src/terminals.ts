@@ -1,3 +1,5 @@
+import type { Mode } from './modes';
+
 export const TERMINAL_COUNT = 5;
 
 export type Direction = 'left' | 'right' | 'up' | 'down';
@@ -24,4 +26,18 @@ export function neighbor(index: number, direction: Direction): number {
 // second literal in either place is a name that goes stale the day the panes are renamed.
 export function paneLabel(index: number): string {
   return `terminal ${index + 1}`;
+}
+
+// The inverse of terminalId. A notification is raised for one pane and carries that pane's id back
+// when it is clicked, so this is what turns the id on the wire into somewhere to land.
+export function paneFromId(id: string): { slot: number; index: number } {
+  const [slot, index] = id.split(':').map(Number);
+  return { slot, index };
+}
+
+// Which view a pane is on. The editor sits one past the grid and is the only pane not in it, so
+// landing on the editor means switching the page to nvim first — otherwise you arrive at a project
+// showing five shells with the pane you were sent to nowhere on screen.
+export function modeOfPane(index: number): Mode {
+  return index === TERMINAL_COUNT ? 'nvim' : 'terminals';
 }
