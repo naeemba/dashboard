@@ -19,3 +19,9 @@ export function terminalId(projectIndex: number, terminalIndex: number): string 
 export function neighbor(index: number, direction: Direction): number {
   return NEIGHBORS[direction][index];
 }
+
+// The one spelling of a pane's name. The status bar and the bell's notification both say it, and a
+// second literal in either place is a name that goes stale the day the panes are renamed.
+export function paneLabel(index: number): string {
+  return `terminal ${index + 1}`;
+}

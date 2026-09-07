@@ -97,6 +97,13 @@ Five predicates exist for this reason: `hasSubtasks` and `attachmentRing` in
 `settings.ts`. A refusal worth a message reuses one of these or adds a sixth —
 never a second copy of the condition.
 
+The prose counts too. A comment that restates a rule living in another file is a
+second copy that no test can catch — the code stays right while the sentence goes
+stale. The bell handler in `renderer.ts` spelled out `marksWaiting`'s rule beside
+the call to it; loosen the rule in `waiting.ts` and the handler still reads as if
+it never changed. Say what the wiring does, and let the module say what the rule
+is.
+
 ## The help dialog is part of the change — Hard Rule
 
 **Every task that adds, removes or changes a key, a mode, or what a screen does
@@ -120,3 +127,14 @@ A change is not done until Ctrl+H would tell the truth about it.
     npm test        # vitest
     npx tsc --noEmit
     npx eslint .
+
+## A decision gets its own module and a test
+
+`renderer.ts` is wiring: it reads the browser, calls a function, draws the
+answer. A rule with branches in it — *window focused? is this the pane I am in?
+do I notify?* — goes in a small module beside a `.test.ts`, the way `session.ts`,
+`board-state.ts`, `terminals.ts`, `shell.ts` and `waiting.ts` already do.
+
+Left inline, nothing pins it. Someone swaps `document.hasFocus()` for a window
+flag, every test still passes, and a bell from the pane you are staring at
+starts turning your own project yellow.

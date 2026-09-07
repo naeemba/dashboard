@@ -13,16 +13,26 @@ import { openPicker } from './picker';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
+import { TERMINAL_COUNT, neighbor, paneLabel, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
+import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
 
 // The editor is a sixth pty for the project, sitting one past the grid's five.
 const EDITOR_INDEX = TERMINAL_COUNT;
 
-type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
+// `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
+// is asking for you and whether its banner has already gone out, so a pane that rings ten times does
+// not raise ten of them.
+type Pane = {
+  terminal: Terminal;
+  fit: FitAddon;
+  exited: boolean;
+  name: string;
+  bell: Bell;
+};
 type Page = {
   project: Project;
   element: HTMLElement;
@@ -100,7 +110,21 @@ let previousSlot: number | null = null;
 function modeLabel(page: Page): string {
   if (page.mode === 'nvim') return 'nvim';
   if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
-  return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
+  return page.panes.length > 0 ? paneLabel(page.focused) : '';
+}
+
+// The grid's five and the editor, which rings its bell like any other pane.
+function allPanes(page: Page): Pane[] {
+  return page.editor === null ? page.panes : [...page.panes, page.editor];
+}
+
+// The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the
+// project name, so without the names here you would arrive at a yellow project and have to walk all
+// six panes watching for the yellow to go out.
+function terminalStatus(page: Page): string {
+  const names = waitingNames(allPanes(page));
+  if (names.length === 0) return modeLabel(page);
+  return `${modeLabel(page)} · ${names.join(', ')} waiting`;
 }
 
 function renderStatus(): void {
@@ -113,14 +137,17 @@ function renderStatus(): void {
   }
   const page = pages[activeIndex];
   titleElement.textContent = `📁 ${page.project.name}`;
-  // A span each: the open project is marked by a highlight, the way a tab strip marks one.
+  // A span each: the open project is marked by a highlight, the way a tab strip marks one, and a
+  // project with a pane ringing its bell is marked again so you can see it from another page.
   statusProjects.replaceChildren(...pages.map((entry, index) => {
     const tab = document.createElement('span');
-    tab.className = index === activeIndex ? 'project active' : 'project';
+    tab.className = 'project';
+    tab.classList.toggle('active', index === activeIndex);
+    tab.classList.toggle('waiting', waitingNames(allPanes(entry)).length > 0);
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = modeLabel(page);
+  statusTerminal.textContent = terminalStatus(page);
   saveSession();
 }
 
@@ -252,7 +279,7 @@ function showPage(index: number, arriving = false): void {
   focusMode(pages[activeIndex], true);
 }
 
-function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
+function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFocus?: () => void): Pane {
   const container = document.createElement('div');
   container.className = 'pane';
   view.append(container);
@@ -275,7 +302,7 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
   terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
   terminal.open(container);
 
-  const pane: Pane = { terminal, fit, exited: false };
+  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet' };
   terminal.onData((data) => {
     if (!pane.exited) {
       bridge.sendInput(id, data);
@@ -299,7 +326,37 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
-  terminal.textarea?.addEventListener('focus', () => onFocus?.());
+  // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
+  // to listen for: no reading the output, no guessing from how long it has been quiet.
+  // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
+  // the document who has focus answers both "is this page in front" and "is this the focused pane" at
+  // once, and answers it right on the board, where no pane has the keyboard at all. What the states of
+  // the bell mean is waiting.ts's job; this only reads them and draws the answer.
+  terminal.onBell(() => {
+    const windowFocused = document.hasFocus();
+    if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
+    // Only a bell that changes something redraws: renderStatus() rebuilds every tab and writes the
+    // session file, and a pane that rings once a second is already marked after the first one.
+    if (pane.bell === 'quiet') {
+      pane.bell = 'waiting';
+      renderStatus();
+    }
+    if (raisesNotification(windowFocused, pane.bell)) {
+      pane.bell = 'notified';
+      new Notification(page.project.name, { body: `${pane.name} is waiting` });
+    }
+  });
+  // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
+  // than in the focus handlers: this fires for every way in, including landing back on the pane the
+  // page already called focused, which the caller's onFocus deliberately ignores.
+  // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
+  // before it would save a session naming the pane you just left.
+  terminal.textarea?.addEventListener('focus', () => {
+    const wasRinging = pane.bell !== 'quiet';
+    pane.bell = 'quiet';
+    onFocus?.();
+    if (wasRinging) renderStatus();
+  });
   return pane;
 }
 
@@ -331,7 +388,7 @@ function buildPage(project: Project, slot: number): Page {
   element.append(...Object.values(views));
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(slot, terminalIndex);
-    const pane = buildPane(views.terminals, id, () => {
+    const pane = buildPane(views.terminals, id, page, paneLabel(terminalIndex), () => {
       if (page.focused === terminalIndex) return;
       page.focused = terminalIndex;
       renderStatus();
@@ -340,7 +397,7 @@ function buildPage(project: Project, slot: number): Page {
     panesById.set(id, pane);
   }
   const editorId = terminalId(slot, EDITOR_INDEX);
-  page.editor = buildPane(views.nvim, editorId);
+  page.editor = buildPane(views.nvim, editorId, page, 'nvim');
   panesById.set(editorId, page.editor);
   page.board = createBoardView({
     projectPath: project.path,
