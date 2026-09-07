@@ -69,6 +69,29 @@ body {
   font-weight: 700;
 }
 
+/* Yellow text alone is easy to miss in a row of tabs, so the tab also grows a dot that moves. Motion
+   is what the eye catches from across the room; the colour only tells you which tab once you look. */
+.project.waiting::before {
+  content: '\25CF';
+  color: var(--red);
+  margin-right: 5px;
+  animation: waiting-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes waiting-pulse {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+/* A dot that never stops moving is the kind of thing people turn off at the system level. Asked to
+   stop, it stops and stays visible, which is the half that was doing the work. */
+@media (prefers-reduced-motion: reduce) {
+  .project.waiting::before {
+    animation: none;
+  }
+}
+
 /* Failures land between the tab strip and the pane number, in the one span renderStatus() leaves
    alone. It shrinks instead of pushing the tabs off the row when the message is a long path. */
 .error {

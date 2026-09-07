@@ -11,6 +11,9 @@ export type DashboardBridge = {
   // Chrome stopped putting a path on File, so only the preload can say where a dropped file lives.
   getPathForFile(file: File): string;
   openExternal(url: string): void;
+  // The banner a ringing pane raises. Main shows it, not the renderer's own Notification: that one
+  // never reached macOS, which had never so much as heard of the app.
+  notify(title: string, body: string): void;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;

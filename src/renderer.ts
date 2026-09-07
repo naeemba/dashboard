@@ -343,7 +343,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     }
     if (raisesNotification(windowFocused, pane.bell)) {
       pane.bell = 'notified';
-      new Notification(page.project.name, { body: `${pane.name} is waiting` });
+      bridge.notify(page.project.name, `${pane.name} is waiting`);
     }
   });
   // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather

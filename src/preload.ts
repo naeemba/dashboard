@@ -7,6 +7,7 @@ const bridge: DashboardBridge = {
   openProject: (projectPath) => ipcRenderer.invoke('projects:open', projectPath),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openExternal: (url) => ipcRenderer.send('link:open', url),
+  notify: (title, body) => ipcRenderer.send('notify:show', title, body),
   sendInput: (id, data) => ipcRenderer.send('pty:input', id, data),
   resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
   restart: (id) => ipcRenderer.send('pty:restart', id),
