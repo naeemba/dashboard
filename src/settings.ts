@@ -70,6 +70,13 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedFont = (typeof raw.font === 'object' && raw.font !== null)
     ? raw.font as Record<string, unknown>
     : {};
+  // The lines the file spells out and spells correctly. Handed to withoutDuplicates so it settles those
+  // first: a typo falls back to a default, and a default must not then take the key off a line someone
+  // did write.
+  const written = new Set(Object.keys(storedKeys).filter((name) => {
+    const value = storedKeys[name];
+    return typeof value === 'string' && parseBinding(value) !== null;
+  }));
   return withoutDuplicates({
     shellCommand: typeof raw.shellCommand === 'string' ? raw.shellCommand : '',
     font: {
@@ -89,24 +96,33 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
         ? toBinding(storedKeys[entry.name], entry, isMac)
         : defaults.keys[entry.name],
     ])),
-  });
+  }, written);
 }
 
 // A hand-edited file can give two clashing actions the same key; the settings screen never can, because
 // bindKey displaces whoever held it. mapShortcut answers with the first match, so the later action would
 // silently never fire while the screen and the help dialog both printed its key. It loses the key here
 // instead and shows as unbound — a state the screen could have produced itself.
-function withoutDuplicates(settings: Settings): Settings {
-  const keys: Settings['keys'] = {};
-  // The same predicate the screen refuses with, asked against the rows decided so far: nothing later
-  // is in `keys` yet, so it answers "who already holds this key" rather than "who else has it".
-  const sofar: Settings = { ...settings, keys };
-  for (const entry of ACTIONS) {
+// A binding the file names beats one it does not. Every action holds a binding by now — the file's where a
+// line was written, the shipped default everywhere else — so settling them in table order would let a
+// default nobody typed take the key off a line someone did, with the row order in ACTIONS deciding it.
+// `written` names the lines the file spelled out. They are settled first, so a default can only lose.
+function withoutDuplicates(settings: Settings, written: Set<string>): Settings {
+  // Seeded in table order so the file this is written back to keeps its rows where a hand-editor left
+  // them, whatever order the loop settles them in. An unsettled row reads as unbound, which is what makes
+  // the predicate below answer "who already holds this key" rather than "who else has it".
+  const keys: Settings['keys'] = Object.fromEntries(ACTIONS.map((entry) => [entry.name, null]));
+  // The same predicate the screen refuses with, asked against the rows decided so far.
+  const soFar: Settings = { ...settings, keys };
+  const order = [...ACTIONS].sort(
+    (one, other) => Number(written.has(other.name)) - Number(written.has(one.name)),
+  );
+  for (const entry of order) {
     const binding = settings.keys[entry.name];
-    keys[entry.name] = binding !== null && holderOfBinding(sofar, entry.name, binding) !== null
+    keys[entry.name] = binding !== null && holderOfBinding(soFar, entry.name, binding) !== null
       ? null : binding;
   }
-  return sofar;
+  return soFar;
 }
 
 // Two actions clash when they hear the same key on the same screen. A global action is heard on every

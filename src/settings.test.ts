@@ -60,6 +60,25 @@ describe('parseSettings', () => {
     expect(settings.keys['board-undo']).toBeNull();
   });
 
+  // Otherwise the row order in ACTIONS decides it: `board-sort` is listed first, so the default nobody
+  // typed would keep S and the line that was typed would come back unbound with nothing saying why.
+  it('lets a written binding take a key off a default, whichever is listed first', () => {
+    const undo = parseSettings({ keys: { 'board-undo': 'S' } }, true);
+    expect(undo.keys['board-undo']).toBe('S');
+    expect(undo.keys['board-sort']).toBeNull();
+    const help = parseSettings({ keys: { help: 'Ctrl+B' } }, true);
+    expect(help.keys.help).toBe('Ctrl+B');
+    expect(help.keys['mode-board']).toBeNull();
+  });
+
+  // One typo costs one setting: `help` falls back to Ctrl+H, and that fallback must not then unbind the
+  // Ctrl+H the file deliberately gave undo.
+  it('does not let a typo fall back onto a key another line asked for', () => {
+    const settings = parseSettings({ keys: { help: 'Hyper+J', 'board-undo': 'Ctrl+H' } }, true);
+    expect(settings.keys['board-undo']).toBe('Ctrl+H');
+    expect(settings.keys.help).toBeNull();
+  });
+
   it('leaves a key shared by two screens that never meet alone', () => {
     const settings = parseSettings({ keys: { 'board-sort': 'U', 'terminal-next': 'U' } }, true);
     expect(settings.keys['board-sort']).toBe('U');
