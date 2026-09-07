@@ -92,6 +92,13 @@
           "notes": "A card carries `createdAt` and `updatedAt`. Nothing in the app knows today whether a card was written this morning or last March, so nothing can ever be sorted, aged or reported on.\n\nThe trap: the whole file is rewritten on every edit, so `updatedAt` must mean this card's own fields changed. Bump it on a write and every card on the board is stamped with the moment you renamed one of them, which is the same as having no timestamps at all. Decide too whether moving a card between columns counts as changing it -- the column is not a field of the card, but it is the change people most want the date for.\n\nA hand-edited or older file has neither field, and that has to stay legal: `.dashboard/CLAUDE.md` promises agents they can write a card by hand. Missing means unknown rather than now, or every board reads as if it were created the first time this version opened it.\n\nThe format is documented in two places that must move together: `.dashboard/CLAUDE.md` and the copy of it in board-store.ts. A test already pins the two against each other.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "275095b6-3632-4cfb-a7c7-31330d1ee0fc",
+          "title": "Start a card in its own worktree, in one of the project's panes",
+          "notes": "A key on a card in Doing makes a git worktree and a branch for it, and puts one of the project's five panes into that worktree. You work the card there while the other panes stay on the main checkout. No stashing, and two cards can be in flight at once without standing on each other.\n\nNot a project tab of its own: that would mean a second entry in the session, a second row in the tab strip and a second install of everything, for a checkout that lives a few days.\n\nThe pane has to say which branch it is on. Five panes that all read `terminal 3` with two of them in worktrees is how a command lands in the wrong checkout. That is the naming card, and this needs it.\n\nDecide how a pane is pointed at the worktree. Sending it `cd` keeps whatever was in the pane and leaves its shell where the project started; restarting it there is cleaner and throws away the scrollback. Also decide which pane -- picked by you, or a free one, and nothing yet knows which panes are free.\n\nThe lifecycle is the work, not the git command. When is the worktree removed, what happens with uncommitted changes in it, what happens when the branch merges, and what stops fifteen stale checkouts collecting on disk. The nvim pane stays on the main checkout unless something says otherwise.",
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
