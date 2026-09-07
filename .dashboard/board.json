@@ -138,13 +138,6 @@
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium"
-        },
-        {
-          "id": "34779370-126a-4250-b003-271d50914593",
-          "title": "Clicking a notification takes you to the pane that rang",
-          "notes": "The banner says `api . terminal 3 is waiting`, you click it, and the app comes forward on that project with that pane focused. Today the click brings the app up and then you go and find the pane yourself, which is the part the banner was supposed to save you.\n\nSmall: the notification is raised from main and already knows which pane it is about -- that is the text in the message. What is missing is a click handler on it and a message down to the renderer saying where to land. The renderer already knows how to show a page and focus a pane.\n\nFinishes the waiting-pane feature rather than adding one.",
-          "priority": "medium",
-          "parent": null
         }
       ]
     },
@@ -218,6 +211,13 @@
           "title": "Give board cards a description",
           "notes": "e opens the card's notes in a textarea. Enter is a newline, Escape commits. The description shows on the card, dimmed, under the title.",
           "priority": "medium"
+        },
+        {
+          "id": "34779370-126a-4250-b003-271d50914593",
+          "title": "Clicking a notification takes you to the pane that rang",
+          "notes": "The banner says `api . terminal 3 is waiting`, you click it, and the app comes forward on that project with that pane focused. Today the click brings the app up and then you go and find the pane yourself, which is the part the banner was supposed to save you.\n\nShipped: the pane's id travels with the notification, main hangs a click handler on it, and the renderer sets the view and the focused pane before showing the page. A slot whose project has since been closed is nowhere to go. paneFromId and modeOfPane moved into terminals.ts with tests. PR #15.",
+          "priority": "medium",
+          "parent": null
         }
       ]
     }
