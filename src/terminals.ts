@@ -1,4 +1,10 @@
+import type { Mode } from './modes';
+
 export const TERMINAL_COUNT = 5;
+
+// The editor is a sixth pty for the project, sitting one past the grid's five. The one place that
+// says so: move the editor and every caller follows.
+export const EDITOR_INDEX = TERMINAL_COUNT;
 
 export type Direction = 'left' | 'right' | 'up' | 'down';
 
@@ -12,8 +18,10 @@ const NEIGHBORS: Record<Direction, number[]> = {
   down: [2, 4, 2, 3, 4],
 };
 
-export function terminalId(projectIndex: number, terminalIndex: number): string {
-  return `${projectIndex}:${terminalIndex}`;
+// `slot` and `index` all the way through: the same pair paneFromId gives back and the same pair the
+// renderer's pages carry, so one id is never described in two vocabularies.
+export function terminalId(slot: number, index: number): string {
+  return `${slot}:${index}`;
 }
 
 export function neighbor(index: number, direction: Direction): number {
@@ -24,4 +32,18 @@ export function neighbor(index: number, direction: Direction): number {
 // second literal in either place is a name that goes stale the day the panes are renamed.
 export function paneLabel(index: number): string {
   return `terminal ${index + 1}`;
+}
+
+// The inverse of terminalId. A notification is raised for one pane and carries that pane's id back
+// when it is clicked, so this is what turns the id on the wire into somewhere to land.
+export function paneFromId(id: string): { slot: number; index: number } {
+  const [slot, index] = id.split(':').map(Number);
+  return { slot, index };
+}
+
+// Which view a pane is on. The editor is the only pane not in the grid, so landing on it means
+// switching the page to nvim first — otherwise you arrive at a project showing five shells with the
+// pane you were sent to nowhere on screen.
+export function modeOfPane(index: number): Mode {
+  return index === EDITOR_INDEX ? 'nvim' : 'terminals';
 }

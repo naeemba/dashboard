@@ -13,15 +13,13 @@ import { openPicker } from './picker';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { TERMINAL_COUNT, neighbor, paneLabel, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
+import { OVERLAY_SELECTOR } from './overlay';
 import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
-
-// The editor is a sixth pty for the project, sitting one past the grid's five.
-const EDITOR_INDEX = TERMINAL_COUNT;
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
 // is asking for you and whether its banner has already gone out, so a pane that rings ten times does
@@ -263,8 +261,10 @@ function fitAllPages(): void {
 }
 
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
-// one. Only the restore needs it: it lands on a page nobody has visited yet this run, so nvim has to
-// start and the board has to be read, exactly as if you had just switched to it.
+// one. Two callers pass it. The restore needs it: it lands on a page nobody has visited yet this run,
+// so nvim has to start and the board has to be read, exactly as if you had just switched to it. A
+// notification click passes it as insurance — the pane had to be running to ring, so nothing it would
+// start is not started already — and keeps the two landings on one path rather than two.
 function showPage(index: number, arriving = false): void {
   if (pages.length === 0) return renderStatus();
   const next = (index + pages.length) % pages.length;
@@ -343,7 +343,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     }
     if (raisesNotification(windowFocused, pane.bell)) {
       pane.bell = 'notified';
-      bridge.notify(page.project.name, `${pane.name} is waiting`);
+      bridge.notify(page.project.name, `${pane.name} is waiting`, id);
     }
   });
   // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
@@ -515,12 +515,9 @@ function apply(action: Action): void {
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker, the help dialog, the delete confirmation, the card detail dialog, a card being
-  // edited and the settings screen own every key typed inside them. xterm's textarea is outside all
-  // six, so a pane keeps its shortcuts.
-  if (event.target instanceof Element && event.target.closest(
-    '.picker, .help, .confirm, .card-detail, .board-edit, .settings',
-  )) return;
+  // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
+  // inside none of them, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
   const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();
@@ -535,6 +532,25 @@ window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', (event) => event.preventDefault());
 
 window.addEventListener('resize', fitAllPages);
+
+// Clicking the banner lands you on the pane that raised it. The page has to be put on the right view
+// and told which pane is focused before it is shown, because showPage lands on whatever the page was
+// already showing. A slot with no page any more — the project was closed while the banner sat there —
+// is nowhere to go.
+bridge.onNotificationClick((paneId) => {
+  // A dialog owns the keyboard while it is up. Move the page out from under one and the sheet stays
+  // drawn with the keystrokes going to a shell behind it.
+  if (document.querySelector(OVERLAY_SELECTOR)) return;
+  const { slot, index } = paneFromId(paneId);
+  const position = positionOfSlot(slot);
+  if (position === -1) return;
+  const page = pages[position];
+  const mode = modeOfPane(index);
+  showMode(page, mode);
+  // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
+  if (mode === 'terminals') page.focused = index;
+  showPage(position, true);
+});
 
 bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
 bridge.onExit((id, exitCode) => {

@@ -13,7 +13,7 @@ import {
 import { isOpenableLink } from './links';
 import { editorArguments, pickShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { TERMINAL_COUNT, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, writeSettings } from './settings-store';
@@ -94,7 +94,7 @@ function spawnProject(project: Project, projectIndex: number): void {
     terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
-  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT), { args: 'editor', directory: project.path });
+  terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -138,8 +138,24 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings);
   return shellCommand;
 });
-ipcMain.on('notification:show', (_event, title: string, body: string) => {
-  new Notification({ title, body }).show();
+// Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
+// to land on. Without that half you arrive at whatever project you were last on and go looking for the
+// pane the banner had already named.
+ipcMain.on('notification:show', (_event, title: string, body: string, paneId: string) => {
+  const notification = new Notification({ title, body });
+  notification.on('click', () => {
+    // Landing on the pane is no use behind a window that is not on screen. macOS activates the app
+    // for a click but leaves a minimized window in the Dock, and on Windows and Linux nothing
+    // activates it at all, so ask for the window every time. show() is the hidden-to-shown
+    // transition; coming back from the Dock is restore()'s, so both are needed.
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    sendToRenderer('notification:click', paneId);
+  });
+  notification.show();
 });
 
 ipcMain.on('link:open', (_event, url: string) => {

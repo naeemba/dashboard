@@ -1,13 +1,18 @@
 import { isModified } from './shortcuts';
 
+// The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
+// nobody has to keep a list of the dialogs in step by hand. The box inside it carries the same name
+// with `-dialog`, so the shape every dialog shares is one CSS rule and not a list to keep in step either.
+const OVERLAY_CLASS = 'overlay';
+
 // Every dialog in this app is the same thing on screen: a dark sheet over the pages with one box
 // centred in it. Only what goes in the box, and what the box answers with, differ — so the sheet is here
-// and each dialog keeps its own contents. The class names match the CSS, where all of them share a rule.
+// and each dialog keeps its own contents. `name` is the dialog's own class, on top of the shared one.
 export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDivElement; remove: () => void } {
   const overlay = document.createElement('div');
-  overlay.className = name;
+  overlay.className = `${OVERLAY_CLASS} ${name}`;
   const dialog = document.createElement('div');
-  dialog.className = `${name}-dialog`;
+  dialog.className = `${OVERLAY_CLASS}-dialog ${name}-dialog`;
   // Not reachable by Tab, but focusable, so the dialog can take the keyboard while it is up. Every
   // dialog built on this sheet needs it, and one that forgets it is silently unusable by keyboard.
   dialog.tabIndex = -1;
@@ -54,3 +59,9 @@ export function confirmOverlay(message: string, keysLine: string): Promise<boole
     });
   });
 }
+
+// What "a dialog owns the keyboard" matches, for asking either way round: is this keystroke inside a
+// dialog, and is any dialog up at all. It lives here because this is where a sheet gets its class, so
+// a new dialog opened through openOverlay is covered without a second list to keep in step.
+// .board-edit is spelled out: it is not a sheet, it is an input inside a card (board-view.ts).
+export const OVERLAY_SELECTOR = `.${OVERLAY_CLASS}, .board-edit`;
