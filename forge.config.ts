@@ -23,6 +23,21 @@ const config: ForgeConfig = {
   packagerConfig: {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
     asar: { unpack: '**/node_modules/node-pty/**' },
+    // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,
+    // which still calls itself com.github.Electron while Info.plist says com.electron.dashboard.
+    // macOS files an app with Notification Center under the *signing* name, so a Dashboard that
+    // disagrees with itself never appears in System Settings > Notifications and every banner it
+    // raises is dropped, with no error anywhere to say why. Ad hoc, because there is no Developer ID
+    // on this machine; identityValidation off is what stops the signer looking one up and failing.
+    // hardenedRuntime off: it turns on library validation, and an ad hoc signature has no team
+    // identity, so the ad hoc app binary is refused the ad hoc Electron Framework and the app dies
+    // at launch with "different Team IDs". Hardened runtime only buys notarization, which an ad hoc
+    // build cannot have anyway.
+    osxSign: {
+      identity: '-',
+      identityValidation: false,
+      optionsForFile: () => ({ hardenedRuntime: false }),
+    },
     // The Vite plugin's default ignore keeps only .vite/. node-pty is external, so copy what it
     // loads at runtime: package.json, lib/, and the native binary (~400 KB of 63 MB).
     // A directory that is ignored is never entered, so ancestors of kept paths must be kept too.

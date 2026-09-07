@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
@@ -135,6 +135,10 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings);
   return shellCommand;
 });
+ipcMain.on('notification:show', (_event, title: string, body: string) => {
+  new Notification({ title, body }).show();
+});
+
 ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
 });

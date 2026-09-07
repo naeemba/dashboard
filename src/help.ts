@@ -18,9 +18,9 @@ const MODE_NAMES: Record<Mode, string> = { terminals: 'Terminals', nvim: 'nvim',
 const BLURBS: Record<Mode | ActionGroup, string> = {
   terminals: 'Five shells in a fixed grid. They keep running while you are on another project or '
     + 'another view, so a long job is still going when you come back. A pane that rings the terminal '
-    + 'bell to ask for you turns its project yellow along the top and is named on the right, and '
-    + 'raises a system notification once if the window is behind something else. Going to the pane '
-    + 'clears it.',
+    + 'bell to ask for you puts a pulsing red dot on its project along the top, turns that name '
+    + 'yellow and says which pane on the right, and raises a system notification once if the window '
+    + 'is behind something else. Going to the pane clears it.',
   nvim: 'One nvim filling the window. It starts the first time you press the nvim key for this '
     + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
