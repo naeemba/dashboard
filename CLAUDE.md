@@ -139,6 +139,14 @@ Left inline, nothing pins it. Someone swaps `document.hasFocus()` for a window
 flag, every test still passes, and a bell from the pane you are staring at
 starts turning your own project yellow.
 
+The main-process event handlers in `main.ts` are exempt. The quit guard is the
+example: `askingToQuit` has no branch of its own to test — it only says whether
+the dialog is already up. What could actually break is Electron's plumbing
+around it, and every piece of that is Electron's, not ours: `preventDefault` on
+`close`, a promise from `dialog.showMessageBox`, `destroy()` raising no second
+close. A test for it is a test of mocks, which passes whatever we do to the real
+handler. So these stay inline, and a change to one is read rather than run.
+
 ## IPC channels are `<noun>:<verb>`
 
 The thing first, then what you do to it: `link:open`, `session:write`,

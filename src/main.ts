@@ -203,8 +203,12 @@ function createWindow(): void {
       message: 'Quit Dashboard?',
       detail: 'Every shell in every open project is killed, including anything still running in one.',
     }).then(({ response }) => {
-      askingToQuit = false;
       if (response === 1) mainWindow.destroy();
+    }).finally(() => {
+      // Reset on the rejection path too. Leave it true after a failed dialog and every later close
+      // is cancelled before it asks anything: the window can only be shut by Force Quit, which is
+      // the one exit that kills the shells without asking.
+      askingToQuit = false;
     });
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
