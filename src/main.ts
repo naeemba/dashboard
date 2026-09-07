@@ -49,6 +49,9 @@ const shells = new Map<string, pty.IPty>();
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, { args: string[] | 'editor'; directory: string }>();
 let mainWindow: BrowserWindow;
+// True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q
+// stacks a question per keypress and you answer the same one five times.
+let askingToQuit = false;
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
@@ -185,16 +188,28 @@ function createWindow(): void {
   });
   // Closing the window kills every shell on every page, and there is no getting a long-running task
   // back. Cancel is the default button, so Enter and Escape both mean "I hit that by accident".
+  // Asked without blocking: showMessageBoxSync stops the whole main process, so anything already
+  // waiting there — a folder panel, a board write — can never finish while the question is up. The
+  // close is stopped every time; destroy() is what actually goes, and it raises no close to answer.
   mainWindow.on('close', (event) => {
-    const cancelled = dialog.showMessageBoxSync(mainWindow, {
+    event.preventDefault();
+    if (askingToQuit) return;
+    askingToQuit = true;
+    void dialog.showMessageBox(mainWindow, {
       type: 'question',
       buttons: ['Cancel', 'Quit'],
       defaultId: 0,
       cancelId: 0,
       message: 'Quit Dashboard?',
       detail: 'Every shell in every open project is killed, including anything still running in one.',
-    }) === 0;
-    if (cancelled) event.preventDefault();
+    }).then(({ response }) => {
+      if (response === 1) mainWindow.destroy();
+    }).finally(() => {
+      // Reset on the rejection path too. Leave it true after a failed dialog and every later close
+      // is cancelled before it asks anything: the window can only be shut by Force Quit, which is
+      // the one exit that kills the shells without asking.
+      askingToQuit = false;
+    });
   });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
