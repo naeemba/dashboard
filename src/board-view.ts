@@ -15,6 +15,7 @@ import {
   type Card,
   type Change,
 } from './board';
+import type { Action } from './actions';
 import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
@@ -29,7 +30,6 @@ import {
 import type { DashboardBridge } from './bridge';
 import { confirmOverlay } from './overlay';
 import { isModified } from './shortcuts';
-import type { Direction } from './terminals';
 
 export type BoardOptions = {
   projectPath: string;
@@ -49,13 +49,9 @@ export type BoardView = {
   // What the status bar says about the board: the column the selection is in, and the priority of the
   // card it is on. The colour down a card's edge is the fast read; this is the one that names it.
   statusLabel(): string;
-};
-
-const ARROW_DIRECTIONS: Record<string, Direction> = {
-  ArrowLeft: 'left',
-  ArrowRight: 'right',
-  ArrowUp: 'up',
-  ArrowDown: 'down',
+  // The board's own keys, once the renderer's own lookup finds them and hands them here instead of
+  // this element's own keydown listener answering them.
+  runAction(action: Action): void;
 };
 
 type EditableField = 'title' | 'notes';
@@ -144,10 +140,6 @@ export function createBoardView(options: BoardOptions): BoardView {
       const commits = field === 'title' ? event.key === 'Enter' || event.key === 'Escape' : event.key === 'Escape';
       if (!commits) return;
       event.preventDefault();
-      // The board listens on the element this input sits inside, and the key that ends the edit would
-      // carry on up to it. Enter would land on the branch that starts an edit and re-open the title you
-      // just committed, with the whole thing selected and the next letter you type replacing it.
-      event.stopPropagation();
       commitEditing(field, input.value);
     };
     input.onblur = () => {
@@ -235,7 +227,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const question = family === 0
       ? `Delete "${card.title}"?`
       : `Delete "${card.title}" and its ${family} subtask${family === 1 ? '' : 's'}?`;
-    confirmOverlay(question).then((confirmed) => {
+    confirmOverlay(question, 'Enter deletes. Escape keeps it.').then((confirmed) => {
       element.focus();
       if (confirmed) change(deleteCardAndDescendants(state.board, state.selection));
     });
@@ -260,61 +252,6 @@ export function createBoardView(options: BoardOptions): BoardView {
       render();
     });
   }
-
-  element.addEventListener('keydown', (event) => {
-    // The input owns every key while a title is being edited; its own handler ends the edit.
-    if (editing || landedRead !== latestRead) return;
-    const direction = ARROW_DIRECTIONS[event.key];
-    if (direction) {
-      event.preventDefault();
-      if (event.shiftKey) return change(moveCard(state.board, state.selection, direction));
-      state = { ...state, selection: moveSelection(state.board, state.selection, direction) };
-      return render();
-    }
-    // Only bare Tab and Shift+Tab attach or detach — Ctrl/Cmd/Alt+Tab are the OS's window switcher and
-    // must fall through to the bail-out below rather than be swallowed here.
-    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      event.preventDefault();
-      if (event.shiftKey) return change(detachCard(state.board, state.selection));
-      // The one refusal worth explaining. The others — no card above, nothing selected — are obvious
-      // from the screen, and a message for those would be noise. attachToCardAbove decides it on the
-      // same call, so the message cannot say one thing while the board does another.
-      const ring = attachmentRing(state.board, state.selection);
-      if (ring) {
-        options.onError(`"${ring.title}" is already a subtask of this card`);
-        return;
-      }
-      return change(attachToCardAbove(state.board, state.selection));
-    }
-    if (isModified(event)) return;
-    switch (event.key) {
-      case 'Enter':
-        event.preventDefault();
-        return startEditing('title');
-      case 'e':
-        event.preventDefault();
-        return startEditing('notes');
-      case 'p':
-        event.preventDefault();
-        return change(cyclePriority(state.board, state.selection));
-      case 's':
-        event.preventDefault();
-        return change(sortColumn(state.board, state.selection));
-      case 'n':
-        event.preventDefault();
-        apply(addBlankCard(state, crypto.randomUUID()));
-        return startEditing('title');
-      case 'd':
-        event.preventDefault();
-        return confirmDelete();
-      case 'o':
-        event.preventDefault();
-        return openDetail();
-      case 'u':
-        event.preventDefault();
-        return apply(undoChange(state));
-    }
-  });
 
   return {
     element,
@@ -356,6 +293,39 @@ export function createBoardView(options: BoardOptions): BoardView {
       if (!column) return '';
       const card = cardAt(state.board, state.selection);
       return card ? `${column.name} · ${card.priority}` : column.name;
+    },
+    // Every key on this screen is found by the window's one lookup and handed here. The board keeps no
+    // key handling of its own, which is what stops a board key and its help row drifting apart.
+    runAction(action: Action): void {
+      // A read is in flight and the board on screen is about to be replaced. Applying a keystroke to
+      // the board that is going away would be applying it to cards you are not looking at.
+      if (editing || landedRead !== latestRead) return;
+      switch (action.kind) {
+        case 'board-select':
+          state = { ...state, selection: moveSelection(state.board, state.selection, action.direction) };
+          return render();
+        case 'board-move': return change(moveCard(state.board, state.selection, action.direction));
+        case 'board-attach': {
+          // The one refusal worth explaining. The others — no card above, nothing selected — are
+          // obvious from the screen. attachmentRing decides it on the same call, so the message cannot
+          // say one thing while the board does another.
+          const ring = attachmentRing(state.board, state.selection);
+          if (ring) return options.onError(`"${ring.title}" is already a subtask of this card`);
+          return change(attachToCardAbove(state.board, state.selection));
+        }
+        case 'board-detach': return change(detachCard(state.board, state.selection));
+        case 'board-edit': return startEditing(action.field);
+        case 'board-priority': return change(cyclePriority(state.board, state.selection));
+        case 'board-sort': return change(sortColumn(state.board, state.selection));
+        case 'board-add':
+          apply(addBlankCard(state, crypto.randomUUID()));
+          return startEditing('title');
+        case 'board-delete': return confirmDelete();
+        case 'board-open': return openDetail();
+        case 'board-undo': return apply(undoChange(state));
+        // Everything else belongs to the renderer and never gets here.
+        default: return;
+      }
     },
   };
 }

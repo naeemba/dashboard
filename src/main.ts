@@ -11,11 +11,13 @@ import {
   type Project,
 } from './projects';
 import { isOpenableLink } from './links';
-import { editorArguments, pickShell, SHELL_COMMAND_FLAG } from './shell';
-import { THEME, TITLE_BAR_HEIGHT } from './theme';
+import { editorArguments, pickShell } from './shell';
+import { TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
+import { readSettings, settingsFilePath, writeSettings } from './settings-store';
+import type { Settings } from './settings';
 import type { Board } from './board';
 
 if (started) app.quit();
@@ -32,12 +34,20 @@ const projects: Project[] = [];
 // last run was left in.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const sessionFile = path.join(app.getPath('userData'), 'session.json');
-const shellCommand = pickShell(process.env, process.platform);
+const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
+// Read before the window exists: the background colour paints the first frame, and the shell command
+// spawns the first pane. Both are needed before the renderer has run a line.
+let settings = readSettings(settingsFile, process.platform === 'darwin');
+let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
-const terminalCommands = new Map<string, { args: string[]; directory: string }>();
+// The editor's args are the literal string 'editor' rather than a precomputed array: they depend on the
+// shell in force, and a project can sit open for a long time before its nvim key is ever pressed. Baking
+// editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
+// the shell afterwards and a project already open would still launch nvim through the old one.
+const terminalCommands = new Map<string, { args: string[] | 'editor'; directory: string }>();
 let mainWindow: BrowserWindow;
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
@@ -47,9 +57,10 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
   if (entry === undefined) return;
+  const args = entry.args === 'editor' ? editorArguments(shellCommand) : entry.args;
   let terminalProcess: pty.IPty;
   try {
-    terminalProcess = pty.spawn(shellCommand, entry.args, {
+    terminalProcess = pty.spawn(shellCommand, args, {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -80,8 +91,7 @@ function spawnProject(project: Project, projectIndex: number): void {
     terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
-  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT),
-    { args: editorArguments(shellCommand), directory: project.path });
+  terminalCommands.set(terminalId(projectIndex, TERMINAL_COUNT), { args: 'editor', directory: project.path });
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -111,6 +121,20 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
 // change you were making rather than every project you had open.
 ipcMain.handle('session:read', () => readSession(sessionFile));
 ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, session));
+// The resolved shell travels with the settings, because the renderer needs to know which family of
+// shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
+// `shellCommand: ""` in the file does not say which.
+ipcMain.handle('settings:read', () => ({ settings, shellCommand }));
+// Answers with the newly resolved shell so the renderer never has to re-derive pickShell's precedence
+// to know which family of shell a dropped path is quoted for.
+ipcMain.handle('settings:write', (_event, next: Settings) => {
+  settings = next;
+  // Panes already running keep the shell they started with. Nothing here kills one: there are
+  // long-running jobs in them, and a settings change is not a reason to lose one.
+  shellCommand = pickShell(settings, process.env, process.platform);
+  writeSettings(settingsFile, settings);
+  return shellCommand;
+});
 ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
 });
@@ -141,7 +165,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    backgroundColor: THEME.background,
+    backgroundColor: settings.theme.background,
     // The renderer draws its own title row, so the window chrome is dark all the way up, the way Ghostty
     // looks. macOS keeps its traffic lights over that row; their frame is 16px tall, so this centres them.
     // Windows and Linux draw no buttons once the title bar is hidden, so they keep the system one.
@@ -153,7 +177,6 @@ function createWindow(): void {
     }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      additionalArguments: [`${SHELL_COMMAND_FLAG}${shellCommand}`],
     },
   });
   // Closing the window kills every shell on every page, and there is no getting a long-running task

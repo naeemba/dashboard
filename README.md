@@ -50,6 +50,16 @@ started yet, a board with no save key — and then names its keys. Escape or Ent
 one shortcut no mode passes through, so the cost is that Ctrl+H no longer reaches a shell or nvim as a
 backspace.
 
+## Settings
+
+Ctrl+, opens a settings screen for every key, the theme, the font and the shell. It writes to
+`~/.config/dashboard/settings.json` (or `$XDG_CONFIG_HOME/dashboard/settings.json`), which you can also
+edit by hand. Every field is optional — leave one out and it falls back to what the app ships with.
+
+A key binding is written the way you would say it, `Ctrl+Shift+K`, matching the physical key rather than
+whatever character the keyboard reports for it, so Option+H is Option+H on any layout. `null` means no
+key at all. Delete the file and everything — keys, theme, font, shell — goes back to how it shipped.
+
 ## Modes
 
 Each project remembers its own mode, so Ctrl+2 lands on project 2 in whatever view you left it in. The project keys work from all three; nothing else does — Mod+1..5 and Option+HJKL only mean something when the terminals are on screen.

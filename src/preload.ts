@@ -1,12 +1,8 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { DashboardBridge } from './bridge';
-import { SHELL_COMMAND_FLAG } from './shell';
 
 const bridge: DashboardBridge = {
   platform: process.platform,
-  shellCommand: process.argv
-    .find((argument) => argument.startsWith(SHELL_COMMAND_FLAG))
-    ?.slice(SHELL_COMMAND_FLAG.length) ?? '',
   getRecentProjects: () => ipcRenderer.invoke('projects:recent'),
   openProject: (projectPath) => ipcRenderer.invoke('projects:open', projectPath),
   getPathForFile: (file) => webUtils.getPathForFile(file),
@@ -20,6 +16,8 @@ const bridge: DashboardBridge = {
   saveSession: (session) => ipcRenderer.send('session:write', session),
   readBoard: (projectPath) => ipcRenderer.invoke('board:read', projectPath),
   writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),
+  getSettings: () => ipcRenderer.invoke('settings:read'),
+  saveSettings: (settings) => ipcRenderer.invoke('settings:write', settings),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

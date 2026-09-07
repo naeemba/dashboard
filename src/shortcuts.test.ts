@@ -1,189 +1,131 @@
 import { describe, expect, it } from 'vitest';
 import { mapShortcut } from './shortcuts';
+import { ACTIONS } from './actions';
+import { parseBinding } from './binding';
+import { bindKey, defaultSettings } from './settings';
 import { key } from './test-key';
 
-describe('mapShortcut on macOS', () => {
-  it('cycles projects with Cmd+] and Cmd+[', () => {
-    expect(mapShortcut(key({ key: ']', metaKey: true }), true)).toEqual({ kind: 'project-next' });
-    expect(mapShortcut(key({ key: '[', metaKey: true }), true)).toEqual({ kind: 'project-previous' });
+const mac = defaultSettings(true).keys;
+const other = defaultSettings(false).keys;
+
+describe('mapShortcut', () => {
+  it('cycles projects, with the platform its own default decided', () => {
+    expect(mapShortcut(key({ code: 'BracketRight', metaKey: true }), mac))
+      .toEqual({ kind: 'project-next' });
+    expect(mapShortcut(key({ code: 'BracketLeft', ctrlKey: true }), other))
+      .toEqual({ kind: 'project-previous' });
+    // The other platform's key is not bound here, so it does nothing rather than doing both.
+    expect(mapShortcut(key({ code: 'BracketRight', ctrlKey: true }), mac)).toBeNull();
   });
 
-  it('leaves Cmd+digit to terminals, with nothing on Cmd+Shift+digit', () => {
-    expect(mapShortcut(key({ code: 'Digit3', key: '#', metaKey: true, shiftKey: true }), true)).toBeNull();
+  it('reads the physical digit, whatever character Shift made of it', () => {
+    expect(mapShortcut(key({ code: 'Digit3', key: '3', ctrlKey: true }), mac))
+      .toEqual({ kind: 'project-jump', index: 2 });
+    expect(mapShortcut(key({ code: 'Digit3', key: '#', ctrlKey: true, shiftKey: true }), mac))
+      .toEqual({ kind: 'project-move', index: 2 });
   });
 
-  it('focuses a terminal with Cmd+1..5 and ignores Cmd+6..9', () => {
-    expect(mapShortcut(key({ code: 'Digit1', key: '1', metaKey: true }), true))
+  it('focuses a pane by number on macOS only, and only in terminals mode', () => {
+    expect(mapShortcut(key({ code: 'Digit1', metaKey: true }), mac, 'terminals'))
       .toEqual({ kind: 'terminal-focus', index: 0 });
-    expect(mapShortcut(key({ code: 'Digit5', key: '5', metaKey: true }), true))
-      .toEqual({ kind: 'terminal-focus', index: 4 });
-    expect(mapShortcut(key({ code: 'Digit6', key: '6', metaKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ code: 'Digit1', metaKey: true }), mac, 'board')).toBeNull();
+    expect(mapShortcut(key({ code: 'Digit1', metaKey: true }), other, 'terminals')).toBeNull();
   });
 
-  it('cycles terminals with Cmd+Right and Cmd+Left', () => {
-    expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true }), true)).toEqual({ kind: 'terminal-next' });
-    expect(mapShortcut(key({ key: 'ArrowLeft', metaKey: true }), true)).toEqual({ kind: 'terminal-previous' });
-  });
-
-  it('ignores shifted non-digit keys', () => {
-    expect(mapShortcut(key({ key: ']', metaKey: true, shiftKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true, shiftKey: true }), true)).toBeNull();
-  });
-
-  // Ctrl+H is taken in every mode, including the one you are in: the screen whose keys you cannot
-  // remember is the screen you are looking at.
-  it('opens help on Ctrl+H from every mode', () => {
-    expect(mapShortcut(key({ key: 'h', ctrlKey: true }), true, 'terminals')).toEqual({ kind: 'help' });
-    expect(mapShortcut(key({ key: 'h', ctrlKey: true }), true, 'nvim')).toEqual({ kind: 'help' });
-    expect(mapShortcut(key({ key: 'h', ctrlKey: true }), false, 'board')).toEqual({ kind: 'help' });
-    expect(mapShortcut(key({ key: 'h', ctrlKey: true, shiftKey: true }), true)).toBeNull();
-  });
-
-  it('lets Ctrl through to the shell on macOS, apart from the project and help keys', () => {
-    expect(mapShortcut(key({ key: 'c', ctrlKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ key: ']', ctrlKey: true }), true)).toBeNull();
-  });
-
-  it('turns Cmd+Backspace into Ctrl+U, the way Ghostty does', () => {
-    expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), true))
-      .toEqual({ kind: 'terminal-input', data: '\x15' });
-    expect(mapShortcut(key({ key: 'Backspace' }), true)).toBeNull();
-    // Shift keeps the plain backspace; Ctrl rides along with Cmd and still clears the line.
-    expect(mapShortcut(key({ key: 'Backspace', metaKey: true, shiftKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ key: 'Backspace', metaKey: true, ctrlKey: true }), true))
-      .toEqual({ kind: 'terminal-input', data: '\x15' });
-  });
-
-  it('lets Cmd+C and Cmd+V through for copy and paste', () => {
-    expect(mapShortcut(key({ key: 'c', metaKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ key: 'v', metaKey: true }), true)).toBeNull();
-  });
-
-  it('ignores plain keys and Alt combinations', () => {
-    expect(mapShortcut(key({ key: ']' }), true)).toBeNull();
-    expect(mapShortcut(key({ key: ']', metaKey: true, altKey: true }), true)).toBeNull();
-  });
-});
-
-describe('mapShortcut elsewhere', () => {
-  it('uses Ctrl as the modifier', () => {
-    expect(mapShortcut(key({ key: ']', ctrlKey: true }), false)).toEqual({ kind: 'project-next' });
-    expect(mapShortcut(key({ key: ']', metaKey: true }), false)).toBeNull();
-  });
-
-  it('leaves Cmd+Backspace alone, since Ctrl+U already reaches the shell', () => {
-    expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), false)).toBeNull();
-  });
-
-  it('keeps the project keys on plain Ctrl', () => {
-    expect(mapShortcut(key({ code: 'KeyO', key: 'o', ctrlKey: true }), false)).toEqual({ kind: 'project-last' });
-    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true }), false)).toEqual({ kind: 'project-picker' });
-  });
-});
-
-describe('mapShortcut on every platform', () => {
-  // Ctrl+S opens the project list on both platforms, at the cost of the shell's XOFF and emacs' search.
-  it('goes back to the last project with Ctrl+O', () => {
-    expect(mapShortcut(key({ code: 'KeyO', key: 'o', ctrlKey: true }), true)).toEqual({ kind: 'project-last' });
-    // Caps Lock uppercases `key` without setting shiftKey.
-    expect(mapShortcut(key({ code: 'KeyO', key: 'O', ctrlKey: true }), true)).toEqual({ kind: 'project-last' });
-    // `key`, not `code`: on Dvorak the O character sits on the physical S key.
-    expect(mapShortcut(key({ code: 'KeyS', key: 'o', ctrlKey: true }), true)).toEqual({ kind: 'project-last' });
-    // Cmd+O opens nothing; the project list carries the folder dialog.
-    expect(mapShortcut(key({ code: 'KeyO', key: 'o', metaKey: true }), true)).toBeNull();
-  });
-
-  it('jumps to a project with Ctrl+1..9', () => {
-    expect(mapShortcut(key({ code: 'Digit3', key: '3', ctrlKey: true }), true)).toEqual({ kind: 'project-jump', index: 2 });
-    expect(mapShortcut(key({ code: 'Digit9', key: '9', ctrlKey: true }), false)).toEqual({ kind: 'project-jump', index: 8 });
-    // Ctrl+0 is not a project.
-    expect(mapShortcut(key({ code: 'Digit0', key: '0', ctrlKey: true }), true)).toBeNull();
-  });
-
-  it('moves the current project with Ctrl+Shift+1..9', () => {
-    // Shift rewrites `key` ("1" becomes "!"), so the branch reads `code`.
-    expect(mapShortcut(key({ code: 'Digit1', key: '!', ctrlKey: true, shiftKey: true }), true))
-      .toEqual({ kind: 'project-move', index: 0 });
-    expect(mapShortcut(key({ code: 'Digit4', key: '$', ctrlKey: true, shiftKey: true }), false))
-      .toEqual({ kind: 'project-move', index: 3 });
-  });
-
-  it('opens the project list with Ctrl+S', () => {
-    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true }), true)).toEqual({ kind: 'project-picker' });
-    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true }), false)).toEqual({ kind: 'project-picker' });
-    // Caps Lock uppercases `key` without setting shiftKey.
-    expect(mapShortcut(key({ code: 'KeyS', key: 'S', ctrlKey: true }), true)).toEqual({ kind: 'project-picker' });
-    // Cmd+S and Ctrl+Alt+S are not it.
-    expect(mapShortcut(key({ code: 'KeyS', key: 's', metaKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ code: 'KeyS', key: 's', ctrlKey: true, altKey: true }), true)).toBeNull();
-  });
-
-  it('moves between panes with Option+hjkl', () => {
-    expect(mapShortcut(key({ code: 'KeyH', key: '˙', altKey: true }), true))
+  it('moves between panes on Option+HJKL, whatever character Option made of the key', () => {
+    expect(mapShortcut(key({ code: 'KeyH', key: '˙', altKey: true }), mac, 'terminals'))
       .toEqual({ kind: 'terminal-move', direction: 'left' });
-    expect(mapShortcut(key({ code: 'KeyJ', key: '∆', altKey: true }), true))
-      .toEqual({ kind: 'terminal-move', direction: 'down' });
-    expect(mapShortcut(key({ code: 'KeyK', key: '˚', altKey: true }), true))
-      .toEqual({ kind: 'terminal-move', direction: 'up' });
-    expect(mapShortcut(key({ code: 'KeyL', key: '¬', altKey: true }), true))
-      .toEqual({ kind: 'terminal-move', direction: 'right' });
-    // Alt does not rewrite `key` off macOS, and the branch reads `code` either way.
-    expect(mapShortcut(key({ code: 'KeyH', key: 'h', altKey: true }), false))
-      .toEqual({ kind: 'terminal-move', direction: 'left' });
-    expect(mapShortcut(key({ code: 'KeyB', key: '∫', altKey: true }), true)).toBeNull();
-    expect(mapShortcut(key({ code: 'KeyH', altKey: true, metaKey: true }), true)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyH', key: '˙', altKey: true }), mac, 'nvim')).toBeNull();
   });
-});
 
-describe('mode keys', () => {
-  it('switches mode with Ctrl+T, Ctrl+N and Ctrl+B', () => {
-    expect(mapShortcut(key({ key: 'n', ctrlKey: true }), true, 'terminals'))
+  // The screen whose keys you cannot remember is the screen you are looking at.
+  it('opens help and settings from every mode', () => {
+    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+      expect(mapShortcut(key({ code: 'KeyH', ctrlKey: true }), mac, mode)).toEqual({ kind: 'help' });
+      expect(mapShortcut(key({ code: 'Comma', ctrlKey: true }), mac, mode)).toEqual({ kind: 'settings' });
+    }
+  });
+
+  // Ctrl+N is nvim's autocomplete and Ctrl+T is the shell's transpose. You leave a mode by naming a
+  // different one.
+  it('passes the mode key you are already on through to the screen', () => {
+    expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), mac, 'nvim')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), mac, 'board'))
       .toEqual({ kind: 'mode-set', mode: 'nvim' });
-    expect(mapShortcut(key({ key: 'b', ctrlKey: true }), true, 'terminals'))
-      .toEqual({ kind: 'mode-set', mode: 'board' });
-    expect(mapShortcut(key({ key: 't', ctrlKey: true }), true, 'board'))
-      .toEqual({ kind: 'mode-set', mode: 'terminals' });
   });
 
-  // The whole point of the rule: Ctrl+N is nvim's autocomplete, so nvim keeps it.
-  it('leaves the key for the current mode to whatever is running there', () => {
-    expect(mapShortcut(key({ key: 'n', ctrlKey: true }), true, 'nvim')).toBeNull();
-    expect(mapShortcut(key({ key: 't', ctrlKey: true }), true, 'terminals')).toBeNull();
-    expect(mapShortcut(key({ key: 'b', ctrlKey: true }), true, 'board')).toBeNull();
+  it('keeps the board keys on the board, so a bare D never reaches a shell', () => {
+    expect(mapShortcut(key({ code: 'KeyD' }), mac, 'board')).toEqual({ kind: 'board-delete' });
+    expect(mapShortcut(key({ code: 'KeyD' }), mac, 'terminals')).toBeNull();
+    expect(mapShortcut(key({ code: 'ArrowUp' }), mac, 'board'))
+      .toEqual({ kind: 'board-select', direction: 'up' });
+    expect(mapShortcut(key({ code: 'ArrowUp', shiftKey: true }), mac, 'board'))
+      .toEqual({ kind: 'board-move', direction: 'up' });
+    expect(mapShortcut(key({ code: 'ArrowUp' }), mac, 'terminals')).toBeNull();
   });
 
-  it('reads a Caps Lock letter as the same key', () => {
-    expect(mapShortcut(key({ key: 'B', ctrlKey: true }), true, 'terminals'))
-      .toEqual({ kind: 'mode-set', mode: 'board' });
+  it('follows a rebinding, and the pass-through rule follows it too', () => {
+    const rebound = bindKey(defaultSettings(true), 'mode-nvim', 'Ctrl+J').keys;
+    expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), rebound, 'board')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyJ', ctrlKey: true }), rebound, 'board'))
+      .toEqual({ kind: 'mode-set', mode: 'nvim' });
+    expect(mapShortcut(key({ code: 'KeyJ', ctrlKey: true }), rebound, 'nvim')).toBeNull();
   });
 
-  it('assumes terminals when no mode is given', () => {
-    expect(mapShortcut(key({ key: 'b', ctrlKey: true }), true))
-      .toEqual({ kind: 'mode-set', mode: 'board' });
+  it('never fires an action with no key', () => {
+    const unbound = bindKey(defaultSettings(true), 'help', null).keys;
+    expect(mapShortcut(key({ code: 'KeyH', ctrlKey: true }), unbound, 'board')).toBeNull();
   });
 
-  it('ignores Ctrl+Shift+letter', () => {
-    expect(mapShortcut(key({ key: 'b', ctrlKey: true, shiftKey: true }), true, 'terminals')).toBeNull();
+  // A binding names an exact keystroke. Loosen it and a modifier held along the way fires the same
+  // action as the plain keystroke, which is another way of saying two shortcuts can never share a key.
+  it('requires the exact modifiers a binding names, with none extra', () => {
+    expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, 'terminals'))
+      .toEqual({ kind: 'terminal-input', data: '\x15' });
+    expect(mapShortcut(key({ code: 'Backspace', metaKey: true, ctrlKey: true }), mac, 'terminals')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true }), mac)).toEqual({ kind: 'project-picker' });
+    expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true, altKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true, shiftKey: true }), mac)).toBeNull();
+  });
+
+  it('leaves an unbound combination alone, so copy, paste and the window switcher still work', () => {
+    expect(mapShortcut(key({ code: 'KeyC', metaKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyV', metaKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'BracketRight', metaKey: true, altKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyH', ctrlKey: true, shiftKey: true }), mac)).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyB', altKey: true }), mac, 'terminals')).toBeNull();
+  });
+
+  it('opens the project list and goes back to the last project from every mode', () => {
+    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+      expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true }), mac, mode)).toEqual({ kind: 'project-picker' });
+      expect(mapShortcut(key({ code: 'KeyO', ctrlKey: true }), mac, mode)).toEqual({ kind: 'project-last' });
+    }
+  });
+
+  it('keeps terminal-scoped actions off the screens that have no panes', () => {
+    for (const mode of ['nvim', 'board'] as const) {
+      expect(mapShortcut(key({ code: 'ArrowRight', metaKey: true }), mac, mode)).toBeNull();
+      expect(mapShortcut(key({ code: 'ArrowLeft', metaKey: true }), mac, mode)).toBeNull();
+      expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, mode)).toBeNull();
+    }
   });
 });
 
-describe('keys that only mean something in terminals mode', () => {
-  it('drops Cmd+digit outside terminals mode', () => {
-    expect(mapShortcut(key({ code: 'Digit1', key: '1', metaKey: true }), true, 'board')).toBeNull();
-    expect(mapShortcut(key({ code: 'Digit1', key: '1', metaKey: true }), true, 'nvim')).toBeNull();
-  });
-
-  it('drops the pane movement keys outside terminals mode', () => {
-    expect(mapShortcut(key({ code: 'KeyJ', altKey: true }), true, 'board')).toBeNull();
-    expect(mapShortcut(key({ key: 'ArrowRight', metaKey: true }), true, 'nvim')).toBeNull();
-    expect(mapShortcut(key({ key: 'Backspace', metaKey: true }), true, 'board')).toBeNull();
-  });
-
-  // Project keys are how you get out of a mode, so they answer from all three.
-  it('keeps the project keys working from every mode', () => {
-    expect(mapShortcut(key({ key: ']', metaKey: true }), true, 'board')).toEqual({ kind: 'project-next' });
-    expect(mapShortcut(key({ code: 'Digit2', key: '2', ctrlKey: true }), true, 'nvim'))
-      .toEqual({ kind: 'project-jump', index: 1 });
-    expect(mapShortcut(key({ key: 's', ctrlKey: true }), true, 'board')).toEqual({ kind: 'project-picker' });
+describe('every shipped default reaches its own action', () => {
+  it('holds for the board, where the keys used to live in a switch', () => {
+    const keys = defaultSettings(true).keys;
+    for (const entry of ACTIONS) {
+      if (entry.scope !== 'board') continue;
+      const stroke = parseBinding(keys[entry.name]!)!;
+      const pressed = key({
+        code: stroke.code,
+        ctrlKey: stroke.ctrl,
+        metaKey: stroke.meta,
+        altKey: stroke.alt,
+        shiftKey: stroke.shift,
+      });
+      expect(mapShortcut(pressed, keys, 'board'), entry.name).toEqual(entry.action);
+    }
   });
 });

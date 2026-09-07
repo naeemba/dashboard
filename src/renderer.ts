@@ -3,6 +3,7 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import { Terminal } from '@xterm/xterm';
+import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { openHelp } from './help';
@@ -11,19 +12,12 @@ import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
-import { THEME, TITLE_BAR_HEIGHT } from './theme';
+import { TITLE_BAR_HEIGHT } from './theme';
 import { TERMINAL_COUNT, neighbor, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
-
-// Ghostty's stock look (`ghostty +show-config --default`): JetBrains Mono at 13pt with THEME's palette.
-const FONT_NAME = 'JetBrains Mono';
-const FONT_SIZE = 13;
-
-for (const [name, value] of Object.entries(THEME)) {
-  document.documentElement.style.setProperty(`--${name}`, String(value));
-}
-document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
+import { defaultSettings, type Settings } from './settings';
+import { openSettings } from './settings-view';
 
 // The editor is a sixth pty for the project, sitting one past the grid's five.
 const EDITOR_INDEX = TERMINAL_COUNT;
@@ -44,6 +38,31 @@ type Page = {
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
+// Replaced by the real file in start(), before any pane is built. Held here rather than passed down
+// because a settings change has to reach every pane on every page at once.
+let settings: Settings = defaultSettings(isMac);
+// What a dropped path is quoted for. Main decides it — pickShell weighs the settings file, SHELL_COMMAND,
+// SHELL and the platform — and hands the answer back here at launch and again on every save, so this
+// file never holds a second copy of that precedence to get out of step with.
+let shellCommand = '';
+
+document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
+
+// Every colour as a CSS custom property, which index.css styles the chrome from. Published for the
+// shipped theme immediately, at module load, before start() has awaited anything — a status bar
+// reporting a failed start needs its colours already on the document, since nothing later is
+// guaranteed to run.
+function publishTheme(theme: Settings['theme']): void {
+  for (const [name, value] of Object.entries(theme)) {
+    document.documentElement.style.setProperty(`--${name}`, value);
+  }
+}
+publishTheme(settings.theme);
+
+function fontFamily(): string {
+  return `"${settings.font.name}", Menlo, Monaco, monospace`;
+}
+
 // Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
 document.documentElement.classList.toggle('mac', isMac);
 const statusElement = document.getElementById('status') as HTMLElement;
@@ -134,6 +153,26 @@ function saveSession(): void {
   bridge.saveSession(session);
 }
 
+// Every colour goes out twice: as a CSS custom property, which index.css styles the chrome from, and
+// into every pane's own palette. Both have to move together or the board sits on one background while
+// the shell beside it sits on another.
+//
+// The window's own background is not here. Main paints it before the renderer exists, so it keeps the
+// old colour until the next launch — visible only in the margin around the panes.
+function applyAppearance(): void {
+  publishTheme(settings.theme);
+  for (const pane of panesById.values()) {
+    // A plain record of hex strings on the way in; xterm names the colours it knows. parseSettings
+    // has already dropped anything that is not one of them, so the shapes agree.
+    pane.terminal.options.theme = settings.theme as ITheme;
+    pane.terminal.options.fontFamily = fontFamily();
+    pane.terminal.options.fontSize = settings.font.size;
+  }
+  // The cell size changes with the font, so every pane has to be measured again or the grid keeps the
+  // old one and the last row is cut off.
+  fitAllPages();
+}
+
 function focusTerminal(index: number): void {
   const page = pages[activeIndex];
   if (page.panes.length > 0) {
@@ -220,9 +259,9 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
 
   const terminal = new Terminal({
     cursorBlink: true,
-    fontSize: FONT_SIZE,
-    fontFamily: `"${FONT_NAME}", Menlo, Monaco, monospace`,
-    theme: THEME,
+    fontSize: settings.font.size,
+    fontFamily: fontFamily(),
+    theme: settings.theme as ITheme,
     drawBoldTextInBrightColors: false,
     // Option+key sends Esc+key, the way every terminal on macOS does. Without it xterm hands the pane
     // the composed character instead — Option+L arrives as "Â¬", and nvim's <A-l> never fires. The
@@ -257,7 +296,7 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
     if (paths.length === 0) return;
     terminal.focus();
-    terminal.input(`${paths.map((entry) => quoteForShell(entry, bridge.shellCommand)).join(' ')} `);
+    terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
   terminal.textarea?.addEventListener('focus', () => onFocus?.());
@@ -374,13 +413,23 @@ function report(task: Promise<void>): void {
 // The keys for the screen in front of you, so it answers with an empty window open too — there the
 // mode is the one a project would open as.
 function showHelp(): void {
-  openHelp(pages[activeIndex]?.mode ?? 'terminals', isMac).then(() => showPage(activeIndex));
+  openHelp(pages[activeIndex]?.mode ?? 'terminals', settings.keys, isMac)
+    .then(() => showPage(activeIndex));
+}
+
+function showSettings(): void {
+  openSettings(settings, isMac, (next) => {
+    settings = next;
+    void bridge.saveSettings(next).then((shell) => { shellCommand = shell; });
+    applyAppearance();
+  }).then(() => showPage(activeIndex));
 }
 
 function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   // Before the empty check: not knowing the keys is likeliest with nothing open yet.
   if (action.kind === 'help') return showHelp();
+  if (action.kind === 'settings') return showSettings();
   if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
@@ -401,16 +450,21 @@ function apply(action: Action): void {
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
+    // The board answers its own keys. It is reached from here rather than from its own listener so
+    // that one lookup decides every key on every screen.
+    default: return page.board?.runAction(action);
   }
 }
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker, the help dialog, the delete confirmation, the card detail dialog and a card being
-  // edited own every key typed inside them. xterm's textarea is outside all five, so a pane keeps
-  // its shortcuts.
-  if (event.target instanceof Element && event.target.closest('.picker, .help, .confirm, .card-detail, .board-edit')) return;
-  const action = mapShortcut(event, isMac, pages[activeIndex]?.mode);
+  // The picker, the help dialog, the delete confirmation, the card detail dialog, a card being
+  // edited and the settings screen own every key typed inside them. xterm's textarea is outside all
+  // six, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest(
+    '.picker, .help, .confirm, .card-detail, .board-edit, .settings',
+  )) return;
+  const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
@@ -477,14 +531,24 @@ async function restore(session: Session): Promise<void> {
 // The window opens with whatever was open last time; with nothing saved, the picker makes the first one.
 async function start(): Promise<void> {
   renderStatus();
+  const loaded = await bridge.getSettings();
+  settings = loaded.settings;
+  shellCommand = loaded.shellCommand;
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();
-  // xterm measures cell size when a pane opens, so both font weights must be in before openProject()
-  // builds one, or the glyphs misalign.
-  await Promise.all([
-    document.fonts.load(`${FONT_SIZE}px "${FONT_NAME}"`),
-    document.fonts.load(`bold ${FONT_SIZE}px "${FONT_NAME}"`),
-  ]);
+  // xterm measures cell size when a pane opens, so both weights must be in before openProject()
+  // builds one, or the glyphs misalign. A font name the browser cannot parse — anything typed into
+  // the settings screen, which does not check — rejects here instead of resolving; xterm falls back
+  // to Menlo on its own, so losing the preload must cost only that fallback, not the whole session.
+  try {
+    await Promise.all([
+      document.fonts.load(`${settings.font.size}px "${settings.font.name}"`),
+      document.fonts.load(`bold ${settings.font.size}px "${settings.font.name}"`),
+    ]);
+  } catch {
+    // Fallen through to whatever xterm renders instead.
+  }
+  applyAppearance();
   await restore(session);
 }
 

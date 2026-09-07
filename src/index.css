@@ -287,12 +287,13 @@ textarea.board-edit {
   display: none;
 }
 
-/* Project picker, help, the delete confirmation and the card detail dialog: a centred overlay above
-   the pages. */
+/* Project picker, help, the delete confirmation, the card detail dialog and settings: a centred
+   overlay above the pages. */
 .picker,
 .help,
 .confirm,
-.card-detail {
+.card-detail,
+.settings {
   position: fixed;
   inset: 0;
   display: flex;
@@ -304,7 +305,8 @@ textarea.board-edit {
 .picker-dialog,
 .help-dialog,
 .confirm-dialog,
-.card-detail-dialog {
+.card-detail-dialog,
+.settings-dialog {
   display: flex;
   flex-direction: column;
   width: min(560px, 90vw);
@@ -406,10 +408,11 @@ textarea.board-edit {
 }
 
 /* Fixed column so the keys line up down the dialog and the eye can scan one side of it. Wide enough for
-   the longest row there is, "Ctrl+Right / Ctrl+Left", which wraps and breaks the column if it does not fit. */
+   the longest binding a person could produce, "Ctrl+Cmd+Alt+Shift+Backspace", which wraps and breaks the
+   column if it does not fit. */
 .help-keys {
   flex: none;
-  width: 22ch;
+  width: 29ch;
   color: var(--brightWhite);
 }
 
@@ -483,4 +486,86 @@ textarea.board-edit {
 
 .picker-list li.picker-new .picker-name {
   color: var(--blue);
+}
+
+/* Settings: one row per thing you can change, walked with the arrows. Taller than the help dialog
+   because the list is every action there is, not only the ones with a key. */
+.settings-dialog {
+  padding: 10px 0;
+  outline: none;
+  max-height: 74vh;
+}
+
+/* The list scrolls, not the dialog, so the footer that prints every refusal stays on screen. The
+   picker does the same thing with its search box, two rules up. */
+.settings-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-heading {
+  margin: 8px 0 4px;
+  padding: 0 12px;
+  color: var(--blue);
+}
+
+.settings-row {
+  display: flex;
+  gap: 12px;
+  padding: 2px 12px;
+}
+
+.settings-row.selected {
+  background: var(--brightBlack);
+}
+
+.settings-label {
+  flex: 1;
+  color: var(--white);
+}
+
+/* Fixed column so every value lines up down the right and the eye can scan one side of it. */
+.settings-value {
+  flex: none;
+  width: 24ch;
+  color: var(--brightWhite);
+}
+
+.settings-value.unbound {
+  color: var(--brightBlack);
+}
+
+.settings-swatch {
+  display: inline-block;
+  width: 1ch;
+  height: 1em;
+  margin-right: 1ch;
+  border: 1px solid var(--brightBlack);
+  vertical-align: text-bottom;
+}
+
+/* The row's own text box, sized to the value column so the list does not jump when one opens. */
+.settings-edit {
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--blue);
+  background: transparent;
+  font: inherit;
+  color: var(--brightWhite);
+  outline: none;
+}
+
+.settings-footer {
+  margin: 10px 0 0;
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--brightBlack);
+  color: var(--brightBlack);
+}
+
+.settings-message {
+  color: var(--yellow);
 }
