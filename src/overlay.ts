@@ -25,8 +25,9 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
 
 // Built on the same sheet as the picker and the help dialog. Enter confirms, Escape cancels, and
 // clicking the dark margin cancels — a dialog that appears under your hand must not treat a stray
-// click as yes.
-export function confirmOverlay(message: string, keysLine = 'Enter deletes. Escape keeps it.'): Promise<boolean> {
+// click as yes. The keys line is the caller's to write: this file knows nothing about what is being
+// confirmed, and a default here would put the board's delete wording over someone else's question.
+export function confirmOverlay(message: string, keysLine: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     function close(answer: boolean): void {
       remove();

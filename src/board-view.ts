@@ -227,7 +227,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const question = family === 0
       ? `Delete "${card.title}"?`
       : `Delete "${card.title}" and its ${family} subtask${family === 1 ? '' : 's'}?`;
-    confirmOverlay(question).then((confirmed) => {
+    confirmOverlay(question, 'Enter deletes. Escape keeps it.').then((confirmed) => {
       element.focus();
       if (confirmed) change(deleteCardAndDescendants(state.board, state.selection));
     });
