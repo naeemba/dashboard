@@ -62,5 +62,5 @@ export function stepSelection(rows: SettingsRow[], index: number, step: number):
   }
   // Nothing further that way: stay put. A list this long is easier to keep your place in when the top
   // and the bottom are ends rather than a loop back round.
-  return rows[index]?.kind === 'heading' ? stepSelection(rows, index, forward ? 1 : -1) : index;
+  return index;
 }
