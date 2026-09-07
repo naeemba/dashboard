@@ -120,3 +120,14 @@ A change is not done until Ctrl+H would tell the truth about it.
     npm test        # vitest
     npx tsc --noEmit
     npx eslint .
+
+## A decision gets its own module and a test
+
+`renderer.ts` is wiring: it reads the browser, calls a function, draws the
+answer. A rule with branches in it — *window focused? is this the pane I am in?
+do I notify?* — goes in a small module beside a `.test.ts`, the way `session.ts`,
+`board-state.ts`, `terminals.ts`, `shell.ts` and `waiting.ts` already do.
+
+Left inline, nothing pins it. Someone swaps `document.hasFocus()` for a window
+flag, every test still passes, and a bell from the pane you are staring at
+starts turning your own project yellow.
