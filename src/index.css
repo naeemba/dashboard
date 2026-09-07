@@ -491,13 +491,16 @@ textarea.board-edit {
 /* Settings: one row per thing you can change, walked with the arrows. Taller than the help dialog
    because the list is every action there is, not only the ones with a key. */
 .settings-dialog {
-  overflow-y: auto;
   padding: 10px 0;
   outline: none;
   max-height: 74vh;
 }
 
+/* The list scrolls, not the dialog, so the footer that prints every refusal stays on screen. The
+   picker does the same thing with its search box, two rules up. */
 .settings-list {
+  flex: 1;
+  overflow-y: auto;
   margin: 0;
   padding: 0;
   list-style: none;
