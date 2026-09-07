@@ -4,6 +4,27 @@
       "name": "Todo",
       "cards": [
         {
+          "id": "88501b70-e5fe-4b73-831f-9b74828ed37d",
+          "title": "Cards across projects, and Enter jumps to the card",
+          "notes": "Below the waiting list: every project's Doing cards, then urgent and high in Todo, each row saying which project it belongs to. readBoard already parses a board.json; this reads several. Enter opens that project's board with the card selected. Open question to settle first: open projects only (free), or every recent project (reads folders that have no page and may be gone).",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+        },
+        {
+          "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
+          "title": "The waiting list, and Enter jumps to the pane",
+          "notes": "Top of the page: every pane asking for you, named by project and pane -- `api . terminal 3`. The renderer already holds each pane's bell state, so this is a read of what is there. Enter on a row lands you in that pane, which is the whole point: a yellow tab says some project wants you and cannot say which of its six panes.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+        },
+        {
+          "id": "251a424c-0e3c-429b-93ed-915201bc057c",
+          "title": "A first tab that is not a project",
+          "notes": "The manager sits where a project sits, but it has no folder, no five shells and no slot of ptys. Today a page is a project: buildPage spawns six panes, session.json keys a page by its path, and the tab strip is drawn from that same list. Make room for a page with none of that, without every other part learning about a special case. Also decide how you reach it -- it is the first tab, so Ctrl+1 lands on it, and whether it is ever the tab a fresh launch opens on.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+        },
+        {
           "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
