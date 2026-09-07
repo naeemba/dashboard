@@ -4,12 +4,6 @@
       "name": "Todo",
       "cards": [
         {
-          "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
-          "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
-          "notes": "Hit Ctrl+S to select a project, then click \"Open a new project...\". Nothing happens - no folder dialog, no error.\n\nLooked at on 2026-09-07 alongside the deadlock card. The renderer and the picker are fine: the row resolves null, the renderer passes it on, main asks for the folder. No independent cause found, and it would not reproduce on its own. The one thing that is proven to swallow a folder panel is the freeze in the deadlock card, and PR #14 removes it. Recheck after that ships, and if a fresh app still does nothing, note whether a quit question had been asked earlier in the same run.",
-          "priority": "medium"
-        },
-        {
           "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
@@ -30,6 +24,12 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
+          "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
+          "notes": "Hit Ctrl+S, click \"Open a new project...\", and the folder dialog opens. Confirmed by hand on 2026-09-07 in a build carrying PR #14. There was never a second cause: the quit question was asked with showMessageBoxSync, which stopped the whole main process, so a folder panel already open could never finish. PR #14 asks it with the async showMessageBox and the panel comes back. No code of its own.",
+          "priority": "medium"
+        },
         {
           "id": "7a3daeb0-8c7f-4e61-8dd7-78ac2c8ff72b",
           "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
