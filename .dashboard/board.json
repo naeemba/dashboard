@@ -71,6 +71,13 @@
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
           "priority": "low"
+        },
+        {
+          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
+          "title": "A fourth mode: notes, one page of them per project",
+          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.",
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
