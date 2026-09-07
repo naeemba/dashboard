@@ -4,6 +4,12 @@
       "name": "Todo",
       "cards": [
         {
+          "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
+          "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
+          "notes": "Hit Ctrl+S to select a project, then click \"Open a new project...\". Nothing happens - no folder dialog, no error.\n\nLooked at on 2026-09-07 alongside the deadlock card. The renderer and the picker are fine: the row resolves null, the renderer passes it on, main asks for the folder. No independent cause found, and it would not reproduce on its own. The one thing that is proven to swallow a folder panel is the freeze in the deadlock card, and PR #14 removes it. Recheck after that ships, and if a fresh app still does nothing, note whether a quit question had been asked earlier in the same run.",
+          "priority": "medium"
+        },
+        {
           "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
@@ -13,18 +19,6 @@
           "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
-          "priority": "medium"
-        },
-        {
-          "id": "7a3daeb0-8c7f-4e61-8dd7-78ac2c8ff72b",
-          "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
-          "notes": "Ctrl+S -> \"Open a new project...\" shows a native folder sheet. Closing the window while it is up runs the close handler's dialog.showMessageBoxSync (\"Quit Dashboard?\"), which blocks the main process. The folder panel can never finish, so the projects:open handler never settles and the renderer shows: Failed to open project: Error: Error invoking remote method 'projects:open': reply was never sent. Nothing breaks beyond the project not opening.",
-          "priority": "medium"
-        },
-        {
-          "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
-          "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
-          "notes": "Hit Ctrl+S to select a project, then click \"Open a new project...\". Nothing happens - no folder dialog, no error.",
           "priority": "medium"
         }
       ]
@@ -36,6 +30,12 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "7a3daeb0-8c7f-4e61-8dd7-78ac2c8ff72b",
+          "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
+          "notes": "The quit question was asked with showMessageBoxSync, which stops the whole main process until it is answered. A folder panel already open could never finish, so projects:open never replied and the renderer showed \"reply was never sent\". Measured: the main process sat dead for 4.3 seconds in a stripped-down copy of the window. It now asks with the async showMessageBox: the close is always stopped, and answering Quit calls destroy(), which raises no close to answer again. A second close request while the question is up is ignored instead of stacking another question. PR #14.",
+          "priority": "medium"
+        },
         {
           "id": "4052e317-fdca-4fb4-a302-9842aaeb1c05",
           "title": "Notify when something in a pane is waiting on us",
