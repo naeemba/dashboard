@@ -319,11 +319,7 @@ textarea.board-edit {
 
 /* Project picker, help, the delete confirmation, the card detail dialog and settings: a centred
    overlay above the pages. */
-.picker,
-.help,
-.confirm,
-.card-detail,
-.settings {
+.overlay {
   position: fixed;
   inset: 0;
   display: flex;

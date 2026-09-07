@@ -18,6 +18,7 @@ import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
+import { OVERLAY_SELECTOR } from './overlay';
 import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
@@ -512,14 +513,10 @@ function apply(action: Action): void {
   }
 }
 
-// The picker, the help dialog, the delete confirmation, the card detail dialog, a card being edited
-// and the settings screen own the keyboard while they are up. One spelling of the six, because a
-// second copy is a dialog that keeps its keys here and loses them somewhere else.
-const OVERLAY_SELECTOR = '.picker, .help, .confirm, .card-detail, .board-edit, .settings';
-
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // xterm's textarea is outside all six, so a pane keeps its shortcuts.
+  // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
+  // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
   const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
   if (!action) return;

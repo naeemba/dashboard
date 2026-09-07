@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
 
 describe('neighbor', () => {
   it('moves along a row and stops at the edge', () => {
@@ -37,6 +37,6 @@ describe('modeOfPane', () => {
   it('puts the grid on terminals and the editor on nvim', () => {
     expect(modeOfPane(0)).toBe('terminals');
     expect(modeOfPane(TERMINAL_COUNT - 1)).toBe('terminals');
-    expect(modeOfPane(TERMINAL_COUNT)).toBe('nvim');
+    expect(modeOfPane(EDITOR_INDEX)).toBe('nvim');
   });
 });
