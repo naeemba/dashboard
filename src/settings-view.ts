@@ -217,7 +217,10 @@ export function openSettings(
         case 'Enter':
           event.preventDefault();
           return activate(row);
+        // Caps Lock makes event.key "X" with shiftKey false, so the lower-case case alone switches the
+        // unbind key off. Every other letter in this app reads event.code for the same reason.
         case 'x':
+        case 'X':
           if (row.kind !== 'key') return;
           event.preventDefault();
           return commit(bindKey(settings, row.name, null));
