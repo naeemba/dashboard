@@ -4,6 +4,13 @@
       "name": "Todo",
       "cards": [
         {
+          "id": "7d2ec2d4-45b9-4964-9d06-e78c9b4dc73e",
+          "title": "A project remembers what its panes should be running",
+          "notes": "Pane 1 runs the dev server, pane 2 the test watcher, pane 3 claude, stored with the project. The session card put the layout back and left this out on purpose -- same projects, same order, same view, same focused pane, and five empty shells. So every morning the same three commands go into the same three panes by hand.\n\nSending a command to a pane is plumbing that already exists. The new parts are where the commands are kept and when they fire: on launch, on opening the project, or only when asked.\n\nThe question that decides the design is what happens when something is already running. Reopen a project that is already open and `npm run dev` must not go into the pane that is running it -- you get a port already in use, or worse, two of them. Knowing whether a pane is busy is the same thing the send-to-many-panes card needs and does not have.\n\nOnly the last bit belongs to the manager page -- start all, stop all, one place to see what is up. The storing and running half stands on its own.",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+        },
+        {
           "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
           "title": "Run a task across projects and collect the results",
           "notes": "A named task -- `npm audit`, `npm outdated`, the test suite -- run over the projects you pick, with the answers gathered back onto the manager page. One row per project: how it exited and what it last said. Ask once whether anything has a vulnerability and read five answers in one place.\n\nNot the same as sending a command to panes, and it must not use them: a task that borrows your shells throws away whatever was in them. Main spawns a process per project and keeps its output, which is new -- today it only spawns ptys that belong to a pane.\n\nStart with a task being a name and a command, and show the exit code and the last line. Reading the output properly -- 3 high, 0 moderate -- means a parser per task, and every tool words it differently.",
