@@ -8,7 +8,12 @@
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
           "priority": "low"
-        },
+        }
+      ]
+    },
+    {
+      "name": "Doing",
+      "cards": [
         {
           "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "title": "Add a manager page as the first tab, giving an overview across projects",
@@ -16,10 +21,6 @@
           "priority": "medium"
         }
       ]
-    },
-    {
-      "name": "Doing",
-      "cards": []
     },
     {
       "name": "Done",
