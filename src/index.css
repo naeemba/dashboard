@@ -62,6 +62,13 @@ body {
   font-weight: 700;
 }
 
+/* A pane on this project rang its bell and nobody has been to look. Written after .project.active so
+   it also shows on the project you are on, where the bell came from a pane you are not in. */
+.project.waiting {
+  color: var(--yellow);
+  font-weight: 700;
+}
+
 /* Failures land between the tab strip and the pane number, in the one span renderStatus() leaves
    alone. It shrinks instead of pushing the tabs off the row when the message is a long path. */
 .error {

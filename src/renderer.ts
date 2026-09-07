@@ -22,7 +22,7 @@ import { openSettings } from './settings-view';
 // The editor is a sixth pty for the project, sitting one past the grid's five.
 const EDITOR_INDEX = TERMINAL_COUNT;
 
-type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean };
+type Pane = { terminal: Terminal; fit: FitAddon; exited: boolean; waiting: boolean };
 type Page = {
   project: Project;
   element: HTMLElement;
@@ -103,6 +103,12 @@ function modeLabel(page: Page): string {
   return page.panes.length > 0 ? `terminal ${page.focused + 1}` : '';
 }
 
+// A project wants you if any one of its panes does, the editor included. The tab strip has no room to
+// say which pane it is, and the system notification already did.
+function isWaiting(page: Page): boolean {
+  return page.panes.some((pane) => pane.waiting) || page.editor?.waiting === true;
+}
+
 function renderStatus(): void {
   if (pages.length === 0) {
     // document.title already holds the app's name, so the empty title row does not spell it out again.
@@ -113,10 +119,13 @@ function renderStatus(): void {
   }
   const page = pages[activeIndex];
   titleElement.textContent = `📁 ${page.project.name}`;
-  // A span each: the open project is marked by a highlight, the way a tab strip marks one.
+  // A span each: the open project is marked by a highlight, the way a tab strip marks one, and a
+  // project with a pane ringing its bell is marked again so you can see it from another page.
   statusProjects.replaceChildren(...pages.map((entry, index) => {
     const tab = document.createElement('span');
-    tab.className = index === activeIndex ? 'project active' : 'project';
+    tab.className = 'project';
+    tab.classList.toggle('active', index === activeIndex);
+    tab.classList.toggle('waiting', isWaiting(entry));
     tab.textContent = entry.project.name;
     return tab;
   }));
@@ -252,7 +261,13 @@ function showPage(index: number, arriving = false): void {
   focusMode(pages[activeIndex], true);
 }
 
-function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
+function buildPane(
+  view: HTMLElement,
+  id: string,
+  projectName: string,
+  paneName: string,
+  onFocus?: () => void,
+): Pane {
   const container = document.createElement('div');
   container.className = 'pane';
   view.append(container);
@@ -275,7 +290,7 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
   terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
   terminal.open(container);
 
-  const pane: Pane = { terminal, fit, exited: false };
+  const pane: Pane = { terminal, fit, exited: false, waiting: false };
   terminal.onData((data) => {
     if (!pane.exited) {
       bridge.sendInput(id, data);
@@ -299,7 +314,30 @@ function buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane {
     terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
   });
   terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
-  terminal.textarea?.addEventListener('focus', () => onFocus?.());
+  // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
+  // to listen for: no reading the output, no guessing from how long it has been quiet.
+  // A bell from the pane you are looking at is not news — you are already there, and a shell rings it
+  // for ordinary things like an ambiguous tab-completion — so only a pane you are not in is marked.
+  // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
+  // the document who has focus answers both "is this page in front" and "is this the focused pane" at
+  // once, and answers it right on the board, where no pane has the keyboard at all.
+  terminal.onBell(() => {
+    const windowFocused = document.hasFocus();
+    if (windowFocused && terminal.textarea === document.activeElement) return;
+    pane.waiting = true;
+    renderStatus();
+    if (!windowFocused) new Notification(projectName, { body: `${paneName} is waiting` });
+  });
+  // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
+  // than in the focus handlers: this fires for every way in, including landing back on the pane the
+  // page already called focused, which the caller's onFocus deliberately ignores.
+  terminal.textarea?.addEventListener('focus', () => {
+    if (pane.waiting) {
+      pane.waiting = false;
+      renderStatus();
+    }
+    onFocus?.();
+  });
   return pane;
 }
 
@@ -331,7 +369,7 @@ function buildPage(project: Project, slot: number): Page {
   element.append(...Object.values(views));
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(slot, terminalIndex);
-    const pane = buildPane(views.terminals, id, () => {
+    const pane = buildPane(views.terminals, id, project.name, `Terminal ${terminalIndex + 1}`, () => {
       if (page.focused === terminalIndex) return;
       page.focused = terminalIndex;
       renderStatus();
@@ -340,7 +378,7 @@ function buildPage(project: Project, slot: number): Page {
     panesById.set(id, pane);
   }
   const editorId = terminalId(slot, EDITOR_INDEX);
-  page.editor = buildPane(views.nvim, editorId);
+  page.editor = buildPane(views.nvim, editorId, project.name, 'nvim');
   panesById.set(editorId, page.editor);
   page.board = createBoardView({
     projectPath: project.path,
