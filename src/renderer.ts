@@ -13,15 +13,12 @@ import { openPicker } from './picker';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
 import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
-
-// The editor is a sixth pty for the project, sitting one past the grid's five.
-const EDITOR_INDEX = TERMINAL_COUNT;
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
 // is asking for you and whether its banner has already gone out, so a pane that rings ten times does
@@ -263,8 +260,10 @@ function fitAllPages(): void {
 }
 
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
-// one. Only the restore needs it: it lands on a page nobody has visited yet this run, so nvim has to
-// start and the board has to be read, exactly as if you had just switched to it.
+// one. Two callers pass it. The restore needs it: it lands on a page nobody has visited yet this run,
+// so nvim has to start and the board has to be read, exactly as if you had just switched to it. A
+// notification click passes it as insurance — the pane had to be running to ring, so nothing it would
+// start is not started already — and keeps the two landings on one path rather than two.
 function showPage(index: number, arriving = false): void {
   if (pages.length === 0) return renderStatus();
   const next = (index + pages.length) % pages.length;
@@ -513,14 +512,15 @@ function apply(action: Action): void {
   }
 }
 
+// The picker, the help dialog, the delete confirmation, the card detail dialog, a card being edited
+// and the settings screen own the keyboard while they are up. One spelling of the six, because a
+// second copy is a dialog that keeps its keys here and loses them somewhere else.
+const OVERLAY_SELECTOR = '.picker, .help, .confirm, .card-detail, .board-edit, .settings';
+
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  // The picker, the help dialog, the delete confirmation, the card detail dialog, a card being
-  // edited and the settings screen own every key typed inside them. xterm's textarea is outside all
-  // six, so a pane keeps its shortcuts.
-  if (event.target instanceof Element && event.target.closest(
-    '.picker, .help, .confirm, .card-detail, .board-edit, .settings',
-  )) return;
+  // xterm's textarea is outside all six, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
   const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
   if (!action) return;
   event.preventDefault();
@@ -541,6 +541,9 @@ window.addEventListener('resize', fitAllPages);
 // already showing. A slot with no page any more — the project was closed while the banner sat there —
 // is nowhere to go.
 bridge.onNotificationClick((paneId) => {
+  // A dialog owns the keyboard while it is up. Move the page out from under one and the sheet stays
+  // drawn with the keystrokes going to a shell behind it.
+  if (document.querySelector(OVERLAY_SELECTOR)) return;
   const { slot, index } = paneFromId(paneId);
   const position = positionOfSlot(slot);
   if (position === -1) return;
