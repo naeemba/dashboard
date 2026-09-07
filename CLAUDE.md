@@ -138,3 +138,13 @@ do I notify?* — goes in a small module beside a `.test.ts`, the way `session.t
 Left inline, nothing pins it. Someone swaps `document.hasFocus()` for a window
 flag, every test still passes, and a bell from the pane you are staring at
 starts turning your own project yellow.
+
+## IPC channels are `<noun>:<verb>`
+
+The thing first, then what you do to it: `link:open`, `session:write`,
+`board:read`, `pty:resize`, `notification:show`. Every channel in
+`src/preload.ts` follows it.
+
+`notify:show` did not — two verbs, nothing named. Grep for the channels that
+touch notifications and it does not sort next to them, so the next person adds
+`alert:send` and now there are three spellings of one idea.

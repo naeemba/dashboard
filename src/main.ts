@@ -135,7 +135,7 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings);
   return shellCommand;
 });
-ipcMain.on('notify:show', (_event, title: string, body: string) => {
+ipcMain.on('notification:show', (_event, title: string, body: string) => {
   new Notification({ title, body }).show();
 });
 
