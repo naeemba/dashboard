@@ -14,6 +14,10 @@ export type Settings = {
   keys: Record<string, string | null>;
 };
 
+// One line of the file's `keys`, read. `written` travels with the binding because the two answers come
+// from the same look at the stored value; see toBinding.
+type Binding = { binding: string | null; written: boolean };
+
 export const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
@@ -46,12 +50,16 @@ export function defaultSettings(isMac: boolean): Settings {
 // A binding written by hand is tidied on the way in, so `shift+ctrl+j` is stored and shown as
 // `Ctrl+Shift+J` and the file, the screen and the help dialog all spell it the same way. A string that
 // cannot be read is a typo: it costs that one shortcut, which goes back to its default.
-function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): string | null {
-  // Explicit null is the user saying "no key at all". Missing is the user saying nothing.
-  if (stored === null) return null;
-  if (typeof stored !== 'string') return defaultBinding(entry, isMac);
-  const parsed = parseBinding(stored);
-  return parsed === null ? defaultBinding(entry, isMac) : formatBinding(parsed);
+// `written` says the file named a key here and named it readably — the only lines that outrank a default
+// when two want the same key. It comes back from here rather than being worked out a second time
+// elsewhere, because the second copy would be the same condition spelled again.
+function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): Binding {
+  // Explicit null is the user saying "no key at all". Missing is the user saying nothing. Neither names a
+  // key, so neither can take one off anybody and the ordering never sees them.
+  if (stored === null) return { binding: null, written: false };
+  const parsed = typeof stored === 'string' ? parseBinding(stored) : null;
+  if (parsed === null) return { binding: defaultBinding(entry, isMac), written: false };
+  return { binding: formatBinding(parsed), written: true };
 }
 
 export function parseSettings(stored: unknown, isMac: boolean): Settings {
@@ -70,12 +78,11 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedFont = (typeof raw.font === 'object' && raw.font !== null)
     ? raw.font as Record<string, unknown>
     : {};
-  // The lines the file spells out and spells correctly. Handed to withoutDuplicates so it settles those
-  // first: a typo falls back to a default, and a default must not then take the key off a line someone
-  // did write.
-  const written = new Set(Object.keys(storedKeys).filter((name) => {
-    const value = storedKeys[name];
-    return typeof value === 'string' && parseBinding(value) !== null;
+  // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
+  // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
+  // typed cannot take one off a line someone did.
+  const bindings = ACTIONS.map((entry) => ({
+    entry, ...toBinding(storedKeys[entry.name], entry, isMac),
   }));
   return withoutDuplicates({
     shellCommand: typeof raw.shellCommand === 'string' ? raw.shellCommand : '',
@@ -90,13 +97,8 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [
       name, isHexColor(storedTheme[name]) ? storedTheme[name] : defaults.theme[name],
     ])),
-    keys: Object.fromEntries(ACTIONS.map((entry) => [
-      entry.name,
-      Object.hasOwn(storedKeys, entry.name)
-        ? toBinding(storedKeys[entry.name], entry, isMac)
-        : defaults.keys[entry.name],
-    ])),
-  }, written);
+    keys: Object.fromEntries(bindings.map(({ entry, binding }) => [entry.name, binding])),
+  }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 
 // A hand-edited file can give two clashing actions the same key; the settings screen never can, because

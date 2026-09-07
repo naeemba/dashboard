@@ -85,6 +85,14 @@ describe('parseSettings', () => {
     expect(settings.keys['terminal-next']).toBe('U');
   });
 
+  // The file is written back from this object, so its row order is the order a hand-editor sees next time.
+  // Settling a clash reorders the loop, not the result: without the seed, the two lines below come back
+  // last and the whole file shuffles under someone who only edited one key.
+  it('keeps the rows in table order however the clashes were settled', () => {
+    const settings = parseSettings({ keys: { 'board-undo': 'S', help: 'Ctrl+B' } }, true);
+    expect(Object.keys(settings.keys)).toEqual(ACTIONS.map((entry) => entry.name));
+  });
+
   it('ships different key defaults per platform', () => {
     expect(defaultSettings(true).keys['project-next']).toBe('Cmd+]');
     expect(defaultSettings(false).keys['project-next']).toBe('Ctrl+]');
