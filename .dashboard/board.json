@@ -113,6 +113,12 @@
           "notes": "`api . dev server` instead of `api . terminal 3`. One small change and everything else reads better: the waiting list, the notification banner, the status bar, and which pane is on which worktree.\n\nMostly automatic, from three sources, best first:\n\n1. The program names itself. A terminal title is an escape sequence any program can print -- `printf '\\033]0;dev server\\007'` -- and xterm.js already parses it and fires an event nobody listens to. Shells set it on every prompt. Claude Code can be told to set it to whatever it is working on, from a line in the project's CLAUDE.md, and then the pane says so while it works.\n2. The command it was started with. When the startup commands put `npm run dev` in pane 2, the name is already known.\n3. A name you typed, which beats both -- otherwise the next prompt wipes it.\n\nA title is a hint, not a label: shells rewrite it on every command, so taken blindly the name flickers with every `ls`. Take it only when nothing better is set.\n\n`paneLabel` is already the one place a pane's name is spelled and every other part of the app reads it from there, so this is that function preferring a stored name. An unnamed pane still says `terminal 3` -- lose the numbering and the focus keys stop making sense.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
+          "title": "Manager tab: board mode showing tasks from all open projects",
+          "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
+          "priority": "medium"
         }
       ]
     },
@@ -133,7 +139,7 @@
         {
           "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
           "title": "Cards remember when they were made and when they last changed",
-          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows \u2014 a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
+          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows — a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
           "priority": "medium",
           "parent": null,
           "branch": "card-timestamps-and-branch",
