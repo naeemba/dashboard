@@ -10,7 +10,9 @@ import {
   detachCard,
   hasSubtasks,
   moveCard,
+  flightParts,
   moveSelection,
+  pullRequestFrom,
   sortColumn,
   type Card,
   type Change,
@@ -20,7 +22,9 @@ import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
   applyChange,
+  commitBranch,
   commitNotes,
+  commitPullRequest,
   commitTitle,
   initialBoardState,
   loadBoard,
@@ -54,7 +58,18 @@ export type BoardView = {
   runAction(action: Action): void;
 };
 
-type EditableField = 'title' | 'notes';
+// Read off the action rather than spelled out again: a field the table can ask for and this file has
+// never heard of would otherwise be a key that does nothing.
+type EditableField = Extract<Action, { kind: 'board-edit' }>['field'];
+
+// Which commit rule each field ends on. Every one of them hands back the same state when nothing
+// changed, which is what keeps opening a field and closing it from spending the undo step.
+const COMMITS: Record<EditableField, (state: BoardState, value: string) => BoardState> = {
+  title: commitTitle,
+  notes: commitNotes,
+  branch: commitBranch,
+  pullRequest: commitPullRequest,
+};
 
 export function createBoardView(options: BoardOptions): BoardView {
   const element = document.createElement('div');
@@ -106,10 +121,11 @@ export function createBoardView(options: BoardOptions): BoardView {
     const input = element.querySelector('.board-edit');
     if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return;
     input.focus();
-    // A title is opened to replace, so it comes up selected and one keystroke retypes it. A description
-    // is opened to add a line to, and selecting it would let that keystroke wipe what is already there.
-    if (field === 'title') input.select();
-    else input.setSelectionRange(input.value.length, input.value.length);
+    // A title, a branch and a pull request number are opened to replace, so they come up selected and
+    // one keystroke retypes them. A description is opened to add a line to, and selecting it would let
+    // that keystroke wipe what is already there.
+    if (field === 'notes') input.setSelectionRange(input.value.length, input.value.length);
+    else input.select();
   }
 
   function commitEditing(field: EditableField, value: string): void {
@@ -121,7 +137,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (field === 'title' && value.trim() === '' && card && hasSubtasks(state.board, state.selection)) {
       options.onError(`"${card.title}" has subtasks — delete it with d`);
     }
-    apply(field === 'title' ? commitTitle(state, value) : commitNotes(state, value));
+    // The other refusal worth a word: the card keeps the number it had, and nothing on screen would
+    // say so. commitPullRequest asks pullRequestFrom on the same text, so the two agree by construction.
+    if (field === 'pullRequest' && value.trim() !== '' && pullRequestFrom(value) === null) {
+      options.onError(`"${value.trim()}" is not a pull request number — write 14 or #14`);
+    }
+    apply(COMMITS[field](state, value));
     element.focus();
   }
 
@@ -129,7 +150,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // function: a title is one line and Enter ends it, a description is many and Enter is a newline in it.
   function renderEditor(field: EditableField, value: string): HTMLElement {
     const input: HTMLInputElement | HTMLTextAreaElement =
-      field === 'title' ? document.createElement('input') : document.createElement('textarea');
+      field === 'notes' ? document.createElement('textarea') : document.createElement('input');
     input.className = 'board-edit';
     input.value = value;
     // onkeydown rather than addEventListener: both tags declare it as taking a KeyboardEvent, which the
@@ -137,7 +158,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     input.onkeydown = (event) => {
       // Returning without preventDefault, so Cmd+A and Cmd+V still do what they do in any text box.
       if (isModified(event)) return;
-      const commits = field === 'title' ? event.key === 'Enter' || event.key === 'Escape' : event.key === 'Escape';
+      const commits = field === 'notes' ? event.key === 'Escape' : event.key === 'Enter' || event.key === 'Escape';
       if (!commits) return;
       event.preventDefault();
       commitEditing(field, input.value);
@@ -171,6 +192,21 @@ export function createBoardView(options: BoardOptions): BoardView {
       notes.className = 'board-notes';
       notes.textContent = card.notes;
       item.append(notes);
+    }
+    // What the card is in flight as: the branch, then the pull request it opened. Both are typed in,
+    // and a card with neither takes no room for them. Without this the board can list a Doing column
+    // and still not say which of those cards has anything on a branch.
+    if (selected && (editing === 'branch' || editing === 'pullRequest')) {
+      // The number goes into the box bare: you type 14, and flightParts is what puts the # back.
+      item.append(renderEditor(editing, String(card[editing] ?? '')));
+    } else {
+      const flight = flightParts(card);
+      if (flight.length > 0) {
+        const line = document.createElement('p');
+        line.className = 'board-flight';
+        line.textContent = flight.join(' · ');
+        item.append(line);
+      }
     }
     // One segment per child, coloured by the column it is in: the last column is finished, the first
     // has not been started, everything between is under way. Position rather than name, so renaming a

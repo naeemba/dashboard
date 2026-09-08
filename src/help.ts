@@ -28,7 +28,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'straight to disk, so there is no save key and undo is the only way back. The file is re-read '
     + 'each time you enter the board, not while you are looking at it. A card can be a subtask of '
     + 'another card: it stays an ordinary card in whatever column you put it in, shows a badge naming '
-    + 'its parent, and counts towards the bar on that parent.',
+    + 'its parent, and counts towards the bar on that parent. A card also carries the branch and pull '
+    + 'request its work is on, which you type in, and the dates it was written and last changed, which '
+    + 'the app keeps for you and shows when you open the card.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view.',
   projects: 'One page per project, in the order along the top. The window opens on the projects the '

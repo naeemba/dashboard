@@ -1,6 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_PRIORITY, PRIORITIES, emptyBoard, type Board, type Card, type Column, type Priority } from './board';
+import {
+  DEFAULT_PRIORITY,
+  PRIORITIES,
+  emptyBoard,
+  isPullRequestNumber,
+  type Board,
+  type Card,
+  type Column,
+  type Priority,
+} from './board';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.
@@ -32,7 +41,11 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
               "title": "Fix the resize race",
               "notes": "",
               "priority": "high",
-              "parent": null
+              "parent": null,
+              "createdAt": "2026-09-08T09:12:44.017Z",
+              "updatedAt": "2026-09-08T09:12:44.017Z",
+              "branch": "fix-resize-race",
+              "pullRequest": 14
             }
           ]
         }
@@ -53,6 +66,13 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   subtask: subtasks are ordinary cards that live in whatever column they are in, and a parent keeps
   no list of its children. A \`parent\` naming a card that is not on the board, or a ring of cards
   that are each other's ancestors, is reset to \`null\` when the app reads the file.
+- \`createdAt\` and \`updatedAt\` are ISO dates, or absent. Absent means unknown, not now: a card written
+  before these fields existed, or written by hand without them, stays that way and the app never
+  fills them in on read. \`updatedAt\` moves when one of that card's own fields changes, and when the
+  card moves to another column — reordering a column leaves it alone.
+- \`branch\` is the git branch the work is on, or absent. \`pullRequest\` is the pull request's number,
+  a whole number above zero written without the \`#\`, or absent. Both are typed in — \`b\` edits the
+  branch and \`r\` the pull request — and nothing fetches or refreshes them.
 
 Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
 away from the board and back to see your changes. The app rewrites the whole file on every edit and
@@ -86,6 +106,14 @@ function isPriority(value: unknown): value is Priority {
   return PRIORITIES.some((priority) => priority === value);
 }
 
+// undefined rather than a default, for the four fields that mean "nobody knows". A blank string is
+// the same as absent: a hand-written `"branch": ""` should not draw an empty badge on the card.
+function optionalText(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
 function parseCard(value: unknown, makeId: () => string): Card | null {
   if (!isRecord(value) || typeof value.title !== 'string' || value.title.trim() === '') return null;
   return {
@@ -98,6 +126,12 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
     // Repaired after the whole board is read, not here: whether an id names a real card cannot be
     // known while the cards are still being parsed one at a time.
     parent: typeof value.parent === 'string' ? value.parent : null,
+    // Kept as written, not checked against a date format. relativeAge says nothing about text it
+    // cannot parse, so `"createdAt": "last tuesday"` costs the line on the card and nothing else.
+    createdAt: optionalText(value.createdAt),
+    updatedAt: optionalText(value.updatedAt),
+    branch: optionalText(value.branch),
+    pullRequest: isPullRequestNumber(value.pullRequest) ? value.pullRequest : undefined,
   };
 }
 

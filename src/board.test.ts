@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_PRIORITY,
   addCard,
@@ -18,6 +18,7 @@ import {
   isDescendantOf,
   moveCard,
   moveSelection,
+  pullRequestFrom,
   renameCard,
   selectionOf,
   setNotes,
@@ -129,7 +130,8 @@ describe('renameCard', () => {
       columns: [{ name: 'Todo', cards: [{ id: 'x', title: 'old', notes: 'why', priority: 'high', parent: null }] }],
     };
     const result = renameCard(start, { column: 0, card: 0 }, 'new');
-    expect(result.board.columns[0].cards[0]).toEqual({ id: 'x', title: 'new', notes: 'why', priority: 'high', parent: null });
+    expect(result.board.columns[0].cards[0])
+      .toEqual({ id: 'x', title: 'new', notes: 'why', priority: 'high', parent: null, updatedAt: expect.any(String) });
   });
 
   it('does nothing on an empty column, and hands back the same board', () => {
@@ -286,7 +288,7 @@ describe('setNotes', () => {
       columns: [{ name: 'Todo', cards: [{ id: 'x', title: 't', notes: 'old', priority: 'low', parent: null }] }],
     };
     expect(setNotes(start, { column: 0, card: 0 }, 'new').board.columns[0].cards[0])
-      .toEqual({ id: 'x', title: 't', notes: 'new', priority: 'low', parent: null });
+      .toEqual({ id: 'x', title: 't', notes: 'new', priority: 'low', parent: null, updatedAt: expect.any(String) });
   });
 });
 
@@ -485,5 +487,68 @@ describe('detachCard', () => {
   it('leaves the detached card its own children', () => {
     const start = withParents(board(['a', 'b', 'c']), { b: 'a', c: 'b' });
     expect(parents(detachCard(start, { column: 0, card: 1 }).board).c).toBe('b');
+  });
+});
+
+describe('card timestamps', () => {
+  const first = { column: 0, card: 0 };
+  const january = '2026-01-01T00:00:00.000Z';
+  const march = '2026-03-01T00:00:00.000Z';
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  function madeInJanuary(): Board {
+    vi.setSystemTime(new Date(january));
+    return addCard(board([]), first, 'x', 'Ship it').board;
+  }
+
+  it('stamps a new card with when it was written', () => {
+    const card = madeInJanuary().columns[0].cards[0];
+    expect(card.createdAt).toBe(january);
+    expect(card.updatedAt).toBe(january);
+  });
+
+  it('ages a card whose own field changed, and leaves createdAt where it was', () => {
+    const start = madeInJanuary();
+    vi.setSystemTime(new Date(march));
+    const card = setNotes(start, first, 'why').board.columns[0].cards[0];
+    expect(card.createdAt).toBe(january);
+    expect(card.updatedAt).toBe(march);
+  });
+
+  // The whole file is rewritten on every edit. If this fails, every card on the board carries the
+  // moment you renamed one of them, which is the same as having no timestamps at all.
+  it('ages only the card that changed', () => {
+    const start = board(['a', 'b']);
+    const cards = renameCard(start, first, 'new').board.columns[0].cards;
+    expect(cards[0].updatedAt).toEqual(expect.any(String));
+    expect(cards[1].updatedAt).toBe(undefined);
+  });
+
+  it('ages a card that moves to another column', () => {
+    vi.setSystemTime(new Date(march));
+    const moved = moveCard(board(['a'], []), first, 'right').board;
+    expect(moved.columns[1].cards[0].updatedAt).toBe(march);
+  });
+
+  // Reordering a list is not touching the work.
+  it('does not age a card moved up or down its own column', () => {
+    const moved = moveCard(board(['a', 'b']), first, 'down').board;
+    expect(moved.columns[0].cards.map((card) => card.updatedAt)).toEqual([undefined, undefined]);
+  });
+});
+
+describe('pullRequestFrom', () => {
+  it('reads a number written with or without the hash', () => {
+    expect(pullRequestFrom('14')).toBe(14);
+    expect(pullRequestFrom('#14')).toBe(14);
+    expect(pullRequestFrom('  #14 ')).toBe(14);
+  });
+
+  it('refuses anything that is not a pull request number', () => {
+    for (const text of ['', 'fourteen', '0', '-3', '1.5', '#', 'PR 14', '0x10', '1e3', '0b1010']) {
+      expect(pullRequestFrom(text)).toBe(null);
+    }
   });
 });

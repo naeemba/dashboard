@@ -207,14 +207,20 @@ body {
   overflow: hidden;
 }
 
-.board-parent {
-  margin: 0 0 4px;
+/* The parent badge above the title, and the branch and its pull request below it. One line each: a
+   long branch name or a long parent title must not turn a card into three rows and push the column
+   out of shape. */
+.board-parent,
+.board-flight {
   font-size: 11px;
   opacity: 0.55;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.board-parent { margin: 0 0 4px; }
+.board-flight { margin: 4px 0 0; }
 
 .board-progress {
   display: flex;

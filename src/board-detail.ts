@@ -1,4 +1,16 @@
-import { addChildCard, cardAt, cardById, childrenOf, selectionOf, type Board, type Change, type Selection } from './board';
+import {
+  addChildCard,
+  cardAt,
+  cardById,
+  childrenOf,
+  flightParts,
+  selectionOf,
+  type Board,
+  type Card,
+  type Change,
+  type Selection,
+} from './board';
+import { relativeAge } from './age';
 import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
@@ -14,6 +26,26 @@ export type CardDetailOptions = {
   // is built on a board missing this one.
   onChange(change: Change): Board;
 };
+
+// The line under the card's title: what it is, what it belongs to, what it is in flight as, and how
+// old it is. Exported and pure so the rules in it are pinned by a test — the same reason help.ts
+// hands out helpSections rather than only a dialog.
+export function cardMeta(board: Board, card: Card, now?: number): string {
+  const parent = card.parent === null ? null : cardById(board, card.parent);
+  // A card written before timestamps existed has none, and a hand-written date the clock cannot read
+  // says nothing rather than "Invalid Date". Both come back null and drop out of the line.
+  const added = card.createdAt === undefined ? null : relativeAge(card.createdAt, now);
+  const edited = card.updatedAt === undefined ? null : relativeAge(card.updatedAt, now);
+  return [
+    card.priority,
+    parent ? `subtask of ${parent.title}` : null,
+    ...flightParts(card),
+    added === null ? null : `added ${added}`,
+    // The words, not the stamps: a card is stamped when `n` makes it and again when you finish
+    // typing its title, so no card ever carries two equal stamps to compare.
+    edited === null || edited === added ? null : `edited ${edited}`,
+  ].filter((part): part is string => part !== null).join(' · ');
+}
 
 // Resolves with the card to select when the dialog closes: the one you opened, or the child you
 // pressed Enter on.
@@ -43,10 +75,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
 
       const meta = document.createElement('p');
       meta.className = 'card-detail-meta';
-      const parent = card.parent === null ? null : cardById(board, card.parent);
-      meta.textContent = parent
-        ? `${card.priority} · subtask of ${parent.title}`
-        : card.priority;
+      meta.textContent = cardMeta(board, card);
 
       const list = document.createElement('ul');
       list.className = 'card-detail-children';

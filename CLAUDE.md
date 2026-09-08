@@ -92,10 +92,10 @@ held its own copy of the 6-to-72 range. A size the settings screen accepted
 could still get silently discarded the next time the file was read, with
 nothing on screen saying why.
 
-Five predicates exist for this reason: `hasSubtasks` and `attachmentRing` in
-`board.ts`, and `holderOfBinding`, `isHexColor` and `isFontSize` in
-`settings.ts`. A refusal worth a message reuses one of these or adds a sixth —
-never a second copy of the condition.
+Six predicates exist for this reason: `hasSubtasks`, `attachmentRing` and
+`pullRequestFrom` in `board.ts`, and `holderOfBinding`, `isHexColor` and
+`isFontSize` in `settings.ts`. A refusal worth a message reuses one of these or
+adds a seventh — never a second copy of the condition.
 
 The prose counts too. A comment that restates a rule living in another file is a
 second copy that no test can catch — the code stays right while the sentence goes
