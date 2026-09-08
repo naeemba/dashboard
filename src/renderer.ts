@@ -20,6 +20,8 @@ import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
 import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
+import { MANAGER_PROJECT, MANAGER_SLOT, createManagerView } from './manager';
+import { actionByName } from './actions';
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
 // is asking for you and whether its banner has already gone out, so a pane that rings ten times does
@@ -34,7 +36,9 @@ type Pane = {
 type Page = {
   project: Project;
   element: HTMLElement;
-  views: Record<Mode, HTMLElement>;
+  // Only the views this page actually has. A project has three; the manager has one; a dead project
+  // has none, and that is what stops the mode keys switching it to a view that was never built.
+  views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
   panes: Pane[];
   focused: number;
@@ -104,8 +108,31 @@ let activeIndex = 0;
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
 
+// Which pages are projects, and so what the session file remembers, what the picker can open, and what
+// you can drag along the tab strip. Asked of the mode rather than of the project behind it: the manager
+// is the only page with that mode — setMode only ever picks a view a page has, and it is the only page
+// with that view — and it is also the only page with no project behind it.
+function isProjectPage(page: Page): boolean {
+  return page.mode !== 'manager';
+}
+
+function projectPages(): Page[] {
+  return pages.filter(isProjectPage);
+}
+
+// The manager is where a launch with nothing saved lands, and with no project open there is nothing on
+// screen saying how to open one. Both halves are read fresh on every redraw, so rebinding the key or
+// rewording the action rewrites the sentence rather than leaving it naming a key that now does
+// something else.
+function managerLabel(): string {
+  if (projectPages().length > 0) return '';
+  const name = 'project-picker';
+  return `${settings.keys[name] ?? 'Nothing'} · ${actionByName(name)?.description ?? ''}`;
+}
+
 // The right-hand span says which view you are in, and for terminals which pane has the keyboard.
 function modeLabel(page: Page): string {
+  if (page.mode === 'manager') return managerLabel();
   if (page.mode === 'nvim') return 'nvim';
   if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
   return page.panes.length > 0 ? paneLabel(page.focused) : '';
@@ -125,14 +152,8 @@ function terminalStatus(page: Page): string {
   return `${modeLabel(page)} · ${names.join(', ')} waiting`;
 }
 
+// The manager page is pushed before the first call, so there is always a page to draw.
 function renderStatus(): void {
-  if (pages.length === 0) {
-    // document.title already holds the app's name, so the empty title row does not spell it out again.
-    titleElement.textContent = `📁 ${document.title}`;
-    statusProjects.textContent = 'Ctrl+S opens the project list';
-    statusTerminal.textContent = '';
-    return;
-  }
   const page = pages[activeIndex];
   titleElement.textContent = `📁 ${page.project.name}`;
   // A span each: the open project is marked by a highlight, the way a tab strip marks one, and a
@@ -164,7 +185,9 @@ function saveSession(): void {
   // closes a page — but the next launch starts without it, instead of reopening the same dead tab and
   // saving it again forever. The project list already works this way: a missing project is neither
   // offered by Ctrl+S nor remembered as a recent.
-  const live = pages.filter((page) => !page.project.missing);
+  // The manager goes with it: it has no folder to name, and a page with no path is one parseSession
+  // throws away on the way back in, which would shift activeIndex past the project it points at.
+  const live = projectPages().filter((page) => !page.project.missing);
   const session: Session = {
     // Counted in the filtered list: a dead page sitting before the active one would otherwise shift it,
     // and the active page may itself be the dead one, which lands on the first survivor.
@@ -213,12 +236,15 @@ function focusTerminal(index: number): void {
 // sets them without arriving at it, which is why this is not simply the top of setMode.
 function showMode(page: Page, mode: Mode): void {
   page.mode = mode;
-  for (const [name, view] of Object.entries(page.views)) view.hidden = name !== mode;
+  for (const [name, view] of Object.entries(page.views)) if (view) view.hidden = name !== mode;
 }
 
 function setMode(mode: Mode): void {
   const page = pages[activeIndex];
-  if (page.project.missing) return;
+  // A page only switches to a view it has. A dead project has none, and the manager has only its own,
+  // so on both the mode keys do nothing rather than leaving the status bar naming a view that is not
+  // on screen.
+  if (!page.views[mode]) return;
   showMode(page, mode);
   focusMode(page, true);
 }
@@ -228,6 +254,7 @@ function setMode(mode: Mode): void {
 // page you never left. Only a genuine arrival may start nvim or re-read the board: re-opening the board
 // on every refocus would throw away its undo step each time, since board.open() resets it.
 function focusMode(page: Page, entering: boolean): void {
+  if (page.mode === 'manager') page.views.manager?.focus();
   if (page.mode === 'terminals') return focusTerminal(page.focused);
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
@@ -266,7 +293,6 @@ function fitAllPages(): void {
 // notification click passes it as insurance — the pane had to be running to ring, so nothing it would
 // start is not started already — and keeps the two landings on one path rather than two.
 function showPage(index: number, arriving = false): void {
-  if (pages.length === 0) return renderStatus();
   const next = (index + pages.length) % pages.length;
   // Landing back on the page you are already on — Escape closing the picker, a folder dialog cancelled —
   // only needs its keyboard focus back, not a fresh arrival at its mode.
@@ -360,10 +386,23 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   return pane;
 }
 
+// The one page with no folder behind it, so none of what buildPage makes: no shells, no editor, no
+// board, and one view it never leaves.
+function buildManagerPage(): Page {
+  const element = document.createElement('section');
+  element.className = 'page';
+  const view = createManagerView();
+  element.append(view);
+  return {
+    project: MANAGER_PROJECT, element, views: { manager: view }, mode: 'manager', panes: [], focused: 0,
+    slot: MANAGER_SLOT, editor: null, editorStarted: false, board: null,
+  };
+}
+
 function buildPage(project: Project, slot: number): Page {
   const element = document.createElement('section');
   element.className = 'page';
-  const views: Record<Mode, HTMLElement> = {
+  const views: Record<'terminals' | 'nvim' | 'board', HTMLElement> = {
     terminals: document.createElement('div'),
     nvim: document.createElement('div'),
     board: document.createElement('div'),
@@ -373,8 +412,8 @@ function buildPage(project: Project, slot: number): Page {
     view.hidden = mode !== 'terminals';
   }
   const page: Page = {
-    project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null, editorStarted: false,
-    board: null,
+    project, element, views: {}, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
+    editorStarted: false, board: null,
   };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -385,6 +424,8 @@ function buildPage(project: Project, slot: number): Page {
     element.textContent = `Directory not found: ${project.path}`;
     return page;
   }
+  // Only from here on does the page have views: everything above returns a page you cannot switch.
+  page.views = views;
   element.append(...Object.values(views));
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(slot, terminalIndex);
@@ -426,10 +467,15 @@ function setPage(project: Project, slot: number): void {
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are
 // untouched; only the order you cycle and jump through changes.
+// Nothing goes in front of the manager and the manager itself does not move, so its jump key stays its
+// own and a project dragged to the front lands second.
+const FIRST_PROJECT_POSITION = 1;
+
 function moveProject(index: number): void {
-  if (index >= pages.length) return;
-  pages.splice(index, 0, ...pages.splice(activeIndex, 1));
-  activeIndex = index;
+  if (index >= pages.length || !isProjectPage(pages[activeIndex])) return;
+  const target = Math.max(index, FIRST_PROJECT_POSITION);
+  pages.splice(target, 0, ...pages.splice(activeIndex, 1));
+  activeIndex = target;
   renderStatus();
 }
 
@@ -451,7 +497,9 @@ async function openProject(projectPath: string | null): Promise<void> {
 async function showPicker(): Promise<void> {
   const recent = await bridge.getRecentProjects();
   const byPath = new Map<string, Project>();
-  for (const page of pages) if (!page.project.missing) byPath.set(page.project.path, page.project);
+  for (const page of projectPages()) {
+    if (!page.project.missing) byPath.set(page.project.path, page.project);
+  }
   for (const project of recent) if (!byPath.has(project.path)) byPath.set(project.path, project);
   const choice = await openPicker([...byPath.values()]);
   if (choice === undefined) return showPage(activeIndex);
@@ -467,10 +515,10 @@ function report(task: Promise<void>): void {
   );
 }
 
-// The keys for the screen in front of you, so it answers with an empty window open too — there the
-// mode is the one a project would open as.
+// The keys for the screen in front of you. With no project open that screen is the manager, which is
+// a page like any other and has its own section in the dialog.
 function showHelp(): void {
-  openHelp(pages[activeIndex]?.mode ?? 'terminals', settings.keys, isMac)
+  openHelp(pages[activeIndex].mode, settings.keys, isMac)
     .then(() => showPage(activeIndex));
 }
 
@@ -484,10 +532,8 @@ function showSettings(): void {
 
 function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
-  // Before the empty check: not knowing the keys is likeliest with nothing open yet.
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (pages.length === 0) return;
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-last': {
@@ -518,7 +564,7 @@ window.addEventListener('keydown', (event) => {
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
-  const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
+  const action = mapShortcut(event, settings.keys, pages[activeIndex].mode);
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
@@ -596,13 +642,22 @@ async function restore(session: Session): Promise<void> {
     // project whose folder has gone missing already dropped from it.
     restoring = false;
     const activePath = session.pages[session.activeIndex]?.path;
-    const landing = pages.findIndex((page) => page.project.path === activePath);
-    showPage(landing === -1 ? 0 : landing, true);
+    const saved = pages.findIndex((page) => page.project.path === activePath);
+    // The project the last run was left on. If its folder went away the first project takes it, and
+    // only a launch with no project at all lands on the manager.
+    const firstProject = pages.findIndex(isProjectPage);
+    showPage(saved === -1 ? Math.max(firstProject, 0) : saved, true);
   }
 }
 
-// The window opens with whatever was open last time; with nothing saved, the picker makes the first one.
+// The window opens with whatever was open last time, behind the manager tab; with nothing saved, the
+// manager is all there is and the picker makes the first project.
 async function start(): Promise<void> {
+  // First, and before anything draws: the tab strip is `pages` in order, so this is what puts the
+  // manager at the front of it, and renderStatus below has a page to draw.
+  const manager = buildManagerPage();
+  pagesElement.append(manager.element);
+  pages.push(manager);
   renderStatus();
   const loaded = await bridge.getSettings();
   settings = loaded.settings;

@@ -5,14 +5,18 @@ import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
 import { key } from './test-key';
+import type { Mode } from './modes';
 
 const mac = defaultSettings(true).keys;
+// Every screen the dialog can be opened on. A new mode belongs here, or the tests below stop asking
+// about the screen it added.
+const SCREENS: Mode[] = ['terminals', 'nvim', 'board', 'manager'];
 
-function titles(mode: 'terminals' | 'nvim' | 'board', keys = mac, isMac = true): string[] {
+function titles(mode: Mode, keys = mac, isMac = true): string[] {
   return helpSections(mode, keys, isMac).map((section) => section.title);
 }
 
-function rows(mode: 'terminals' | 'nvim' | 'board', keys = mac, isMac = true) {
+function rows(mode: Mode, keys = mac, isMac = true) {
   return helpSections(mode, keys, isMac).flatMap((section) => section.shortcuts);
 }
 
@@ -21,11 +25,22 @@ describe('helpSections', () => {
     expect(titles('board')[0]).toBe('Board');
     expect(titles('nvim')[0]).toBe('nvim');
     expect(titles('terminals')[0]).toBe('Terminals');
+    expect(titles('manager')[0]).toBe('Manager');
   });
 
   it('gives every section a blurb, because a key list teaches the gesture and not the thing', () => {
-    for (const section of helpSections('board', mac, true)) {
-      expect(section.blurb.length, section.title).toBeGreaterThan(0);
+    for (const mode of SCREENS) {
+      for (const section of helpSections(mode, mac, true)) {
+        expect(section.blurb.length, `${mode}: ${section.title}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  // A screen with no keys of its own still answers "what can I press here". An empty list under the
+  // heading reads as a dialog that broke rather than as an answer.
+  it('never prints a screen with an empty key list', () => {
+    for (const mode of SCREENS) {
+      expect(helpSections(mode, mac, true)[0].shortcuts.length, mode).toBeGreaterThan(0);
     }
   });
 
@@ -95,7 +110,7 @@ describe('helpSections', () => {
   });
 
   it('lists help and settings under their own heading, on every screen', () => {
-    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+    for (const mode of SCREENS) {
       const app = helpSections(mode, mac, true).find((section) => section.title === 'Dashboard')!;
       expect(app.shortcuts).toContainEqual({ keys: 'Ctrl+H', action: 'Open this dialog' });
       expect(app.shortcuts).toContainEqual({ keys: 'Ctrl+,', action: 'Open the settings screen' });
@@ -104,7 +119,7 @@ describe('helpSections', () => {
 
   it('has a home for every action in the table', () => {
     const printed = new Set(
-      (['terminals', 'nvim', 'board'] as const).flatMap((mode) => rows(mode).map((row) => row.action)),
+      SCREENS.flatMap((mode) => rows(mode).map((row) => row.action)),
     );
     for (const entry of ACTIONS) {
       const named = printed.has(entry.description)

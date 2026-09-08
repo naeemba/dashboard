@@ -81,13 +81,6 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "251a424c-0e3c-429b-93ed-915201bc057c",
-          "title": "A first tab that is not a project",
-          "notes": "The manager sits where a project sits, but it has no folder, no five shells and no slot of ptys. Today a page is a project: buildPage spawns six panes, session.json keys a page by its path, and the tab strip is drawn from that same list. Make room for a page with none of that, without every other part learning about a special case. Also decide how you reach it -- it is the first tab, so Ctrl+1 lands on it, and whether it is ever the tab a fresh launch opens on.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
@@ -124,6 +117,14 @@
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium"
+        },
+        {
+          "id": "251a424c-0e3c-429b-93ed-915201bc057c",
+          "title": "A first tab that is not a project",
+          "notes": "The manager sits where a project sits, but it has no folder, no five shells and no slot of ptys. Today a page is a project: buildPage spawns six panes, session.json keys a page by its path, and the tab strip is drawn from that same list. Make room for a page with none of that, without every other part learning about a special case. Also decide how you reach it -- it is the first tab, so Ctrl+1 lands on it, and whether it is ever the tab a fresh launch opens on.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T09:21:43.462Z"
         }
       ]
     },
@@ -133,7 +134,7 @@
         {
           "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
           "title": "Cards remember when they were made and when they last changed",
-          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows \u2014 a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
+          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows — a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
           "priority": "medium",
           "parent": null,
           "branch": "card-timestamps-and-branch",
