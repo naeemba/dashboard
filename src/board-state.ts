@@ -4,8 +4,11 @@ import {
   deleteCard,
   emptyBoard,
   hasSubtasks,
+  pullRequestFrom,
   renameCard,
+  setBranch,
   setNotes,
+  setPullRequest,
   type Board,
   type Change,
   type Selection,
@@ -93,4 +96,22 @@ export function loadBoard(state: BoardState, board: Board): BoardState {
     previous: null,
     addingCard: false,
   };
+}
+
+// Enter and Escape both commit, as with a title. An empty box means the card has no branch, which is
+// an ordinary state for a card — so it clears the field rather than refusing.
+export function commitBranch(state: BoardState, branch: string): BoardState {
+  const trimmed = branch.trim();
+  if (trimmed === (cardAt(state.board, state.selection)?.branch ?? '')) return state;
+  return applyChange(state, setBranch(state.board, state.selection, trimmed === '' ? undefined : trimmed));
+}
+
+// An empty box clears the number, the same as a branch. Anything else that is not a pull request
+// number leaves the card as it was — the view asks pullRequestFrom on the same text and says why, so
+// what is refused here and what is explained there cannot come apart.
+export function commitPullRequest(state: BoardState, text: string): BoardState {
+  const current = cardAt(state.board, state.selection)?.pullRequest;
+  const number = text.trim() === '' ? undefined : pullRequestFrom(text);
+  if (number === null || number === current) return state;
+  return applyChange(state, setPullRequest(state.board, state.selection, number));
 }

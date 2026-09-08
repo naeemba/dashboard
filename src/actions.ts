@@ -22,7 +22,7 @@ export type Action =
   | { kind: 'board-move'; direction: Direction }
   | { kind: 'board-attach' }
   | { kind: 'board-detach' }
-  | { kind: 'board-edit'; field: 'title' | 'notes' }
+  | { kind: 'board-edit'; field: 'title' | 'notes' | 'branch' | 'pullRequest' }
   | { kind: 'board-open' }
   | { kind: 'board-add' }
   | { kind: 'board-delete' }
@@ -176,6 +176,14 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'board-edit-notes', description: "Edit the card's description",
     group: 'board', scope: 'board', action: { kind: 'board-edit', field: 'notes' }, mac: 'E', other: 'E',
+  },
+  {
+    name: 'board-edit-branch', description: "Edit the card's branch",
+    group: 'board', scope: 'board', action: { kind: 'board-edit', field: 'branch' }, mac: 'B', other: 'B',
+  },
+  {
+    name: 'board-edit-pull-request', description: "Edit the card's pull request number",
+    group: 'board', scope: 'board', action: { kind: 'board-edit', field: 'pullRequest' }, mac: 'R', other: 'R',
   },
   {
     name: 'board-open', description: 'Open the card: its notes, its parent, its subtasks',

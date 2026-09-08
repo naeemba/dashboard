@@ -14,7 +14,11 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
               "title": "Fix the resize race",
               "notes": "",
               "priority": "high",
-              "parent": null
+              "parent": null,
+              "createdAt": "2026-09-08T09:12:44.017Z",
+              "updatedAt": "2026-09-08T09:12:44.017Z",
+              "branch": "fix-resize-race",
+              "pullRequest": 14
             }
           ]
         }
@@ -35,6 +39,13 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   subtask: subtasks are ordinary cards that live in whatever column they are in, and a parent keeps
   no list of its children. A `parent` naming a card that is not on the board, or a ring of cards
   that are each other's ancestors, is reset to `null` when the app reads the file.
+- `createdAt` and `updatedAt` are ISO dates, or absent. Absent means unknown, not now: a card written
+  before these fields existed, or written by hand without them, stays that way and the app never
+  fills them in on read. `updatedAt` moves when one of that card's own fields changes, and when the
+  card moves to another column — reordering a column leaves it alone.
+- `branch` is the git branch the work is on, or absent. `pullRequest` is the pull request's number,
+  a whole number above zero written without the `#`, or absent. Both are typed in — `b` edits the
+  branch and `r` the pull request — and nothing fetches or refreshes them.
 
 Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
 away from the board and back to see your changes. The app rewrites the whole file on every edit and

@@ -1,4 +1,16 @@
-import { addChildCard, cardAt, cardById, childrenOf, selectionOf, type Board, type Change, type Selection } from './board';
+import {
+  addChildCard,
+  cardAt,
+  cardById,
+  childrenOf,
+  flightParts,
+  selectionOf,
+  type Board,
+  type Card,
+  type Change,
+  type Selection,
+} from './board';
+import { relativeAge } from './age';
 import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
@@ -14,6 +26,29 @@ export type CardDetailOptions = {
   // is built on a board missing this one.
   onChange(change: Change): Board;
 };
+
+// A card written before timestamps existed has none, and a hand-written date the clock cannot read
+// says nothing rather than "Invalid Date". Both come back null and drop out of the line.
+function aged(word: string, iso: string | undefined, now: number | undefined): string | null {
+  if (iso === undefined) return null;
+  const said = relativeAge(iso, now);
+  return said === null ? null : `${word} ${said}`;
+}
+
+// The line under the card's title: what it is, what it belongs to, what it is in flight as, and how
+// old it is. Exported and pure so the rules in it are pinned by a test — the same reason help.ts
+// hands out helpSections rather than only a dialog.
+export function cardMeta(board: Board, card: Card, now?: number): string {
+  const parent = card.parent === null ? null : cardById(board, card.parent);
+  return [
+    card.priority,
+    parent ? `subtask of ${parent.title}` : null,
+    ...flightParts(card),
+    aged('added', card.createdAt, now),
+    // A card nobody has touched since it was written would otherwise say the same thing twice.
+    card.updatedAt === card.createdAt ? null : aged('edited', card.updatedAt, now),
+  ].filter((part): part is string => part !== null).join(' · ');
+}
 
 // Resolves with the card to select when the dialog closes: the one you opened, or the child you
 // pressed Enter on.
@@ -43,10 +78,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
 
       const meta = document.createElement('p');
       meta.className = 'card-detail-meta';
-      const parent = card.parent === null ? null : cardById(board, card.parent);
-      meta.textContent = parent
-        ? `${card.priority} · subtask of ${parent.title}`
-        : card.priority;
+      meta.textContent = cardMeta(board, card);
 
       const list = document.createElement('ul');
       list.className = 'card-detail-children';

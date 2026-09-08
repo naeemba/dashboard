@@ -101,23 +101,9 @@
           "parent": null
         },
         {
-          "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
-          "title": "Cards remember when they were made and when they last changed",
-          "notes": "A card carries `createdAt` and `updatedAt`. Nothing in the app knows today whether a card was written this morning or last March, so nothing can ever be sorted, aged or reported on.\n\nThe trap: the whole file is rewritten on every edit, so `updatedAt` must mean this card's own fields changed. Bump it on a write and every card on the board is stamped with the moment you renamed one of them, which is the same as having no timestamps at all. Decide too whether moving a card between columns counts as changing it -- the column is not a field of the card, but it is the change people most want the date for.\n\nA hand-edited or older file has neither field, and that has to stay legal: `.dashboard/CLAUDE.md` promises agents they can write a card by hand. Missing means unknown rather than now, or every board reads as if it were created the first time this version opened it.\n\nThe format is documented in two places that must move together: `.dashboard/CLAUDE.md` and the copy of it in board-store.ts. A test already pins the two against each other.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "275095b6-3632-4cfb-a7c7-31330d1ee0fc",
           "title": "Start a card in its own worktree, in one of the project's panes",
           "notes": "A key on a card in Doing makes a git worktree and a branch for it, and puts one of the project's five panes into that worktree. You work the card there while the other panes stay on the main checkout. No stashing, and two cards can be in flight at once without standing on each other.\n\nNot a project tab of its own: that would mean a second entry in the session, a second row in the tab strip and a second install of everything, for a checkout that lives a few days.\n\nThe pane has to say which branch it is on. Five panes that all read `terminal 3` with two of them in worktrees is how a command lands in the wrong checkout. That is the naming card, and this needs it.\n\nDecide how a pane is pointed at the worktree. Sending it `cd` keeps whatever was in the pane and leaves its shell where the project started; restarting it there is cleaner and throws away the scrollback. Also decide which pane -- picked by you, or a free one, and nothing yet knows which panes are free.\n\nThe lifecycle is the work, not the git command. When is the worktree removed, what happens with uncommitted changes in it, what happens when the branch merges, and what stops fifteen stale checkouts collecting on disk. The nvim pane stays on the main checkout unless something says otherwise.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "c4eb9028-3fca-4693-a957-cab74e70ddb6",
-          "title": "A card knows its branch and its pull request",
-          "notes": "Two fields on a card, so the board can say which cards are actually in flight: `\"Fix the picker\" -- fix-open-project-dialog, PR #14`. It is written by hand today -- half the Done cards on this board end with a PR number typed into the notes.\n\nThe worktree card fills the branch in for nothing, since it is the thing that creates the branch. The PR number is either typed or fetched with `gh`, and fetching brings auth, the network and a question about when it refreshes -- so start with typed.\n\nWhat it buys once the fields exist: `d` on a card whose branch still has unmerged commits can stop and say so, and a card whose PR has merged can offer to move itself to Done.\n\nSame format contract as the timestamps card: `.dashboard/CLAUDE.md` and the copy in board-store.ts move together, a hand-written card without the fields stays legal, and a board.json from an older version must not be treated as damaged.",
           "priority": "medium",
           "parent": null
         },
@@ -138,6 +124,20 @@
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium"
+        },
+        {
+          "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
+          "title": "Cards remember when they were made and when they last changed",
+          "notes": "A card carries `createdAt` and `updatedAt`. Nothing in the app knows today whether a card was written this morning or last March, so nothing can ever be sorted, aged or reported on.\n\nThe trap: the whole file is rewritten on every edit, so `updatedAt` must mean this card's own fields changed. Bump it on a write and every card on the board is stamped with the moment you renamed one of them, which is the same as having no timestamps at all. Decide too whether moving a card between columns counts as changing it -- the column is not a field of the card, but it is the change people most want the date for.\n\nA hand-edited or older file has neither field, and that has to stay legal: `.dashboard/CLAUDE.md` promises agents they can write a card by hand. Missing means unknown rather than now, or every board reads as if it were created the first time this version opened it.\n\nThe format is documented in two places that must move together: `.dashboard/CLAUDE.md` and the copy of it in board-store.ts. A test already pins the two against each other.",
+          "priority": "medium",
+          "parent": null
+        },
+        {
+          "id": "c4eb9028-3fca-4693-a957-cab74e70ddb6",
+          "title": "A card knows its branch and its pull request",
+          "notes": "Two fields on a card, so the board can say which cards are actually in flight: `\"Fix the picker\" -- fix-open-project-dialog, PR #14`. It is written by hand today -- half the Done cards on this board end with a PR number typed into the notes.\n\nThe worktree card fills the branch in for nothing, since it is the thing that creates the branch. The PR number is either typed or fetched with `gh`, and fetching brings auth, the network and a question about when it refreshes -- so start with typed.\n\nWhat it buys once the fields exist: `d` on a card whose branch still has unmerged commits can stop and say so, and a card whose PR has merged can offer to move itself to Done.\n\nSame format contract as the timestamps card: `.dashboard/CLAUDE.md` and the copy in board-store.ts move together, a hand-written card without the fields stays legal, and a board.json from an older version must not be treated as damaged.",
+          "priority": "medium",
+          "parent": null
         }
       ]
     },

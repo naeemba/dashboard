@@ -3,7 +3,9 @@ import { DEFAULT_PRIORITY, deleteCard, moveCard, renameCard, type Board, type Se
 import {
   addBlankCard,
   applyChange,
+  commitBranch,
   commitNotes,
+  commitPullRequest,
   commitTitle,
   initialBoardState,
   loadBoard,
@@ -157,5 +159,57 @@ describe('loadBoard', () => {
   it('pulls the selection back onto a board with fewer columns', () => {
     const start = state(board(['a'], ['b'], ['c']), { column: 2, card: 4 });
     expect(loadBoard(start, board(['x'])).selection).toEqual({ column: 0, card: 0 });
+  });
+});
+
+describe('commitBranch', () => {
+  const first = { column: 0, card: 0 };
+
+  it('puts the branch on the card', () => {
+    const next = commitBranch(state(board(['a']), first), '  fix-the-picker ');
+    expect(next.board.columns[0].cards[0].branch).toBe('fix-the-picker');
+  });
+
+  // A card with no branch is an ordinary card, so an empty box clears it rather than refusing.
+  it('clears the branch when the box is emptied', () => {
+    const start = commitBranch(state(board(['a']), first), 'fix-the-picker');
+    expect(commitBranch(start, '').board.columns[0].cards[0].branch).toBe(undefined);
+  });
+
+  // Opening a field and closing it unchanged must not spend the undo step belonging to the move you
+  // made just before it.
+  it('is not a change when the branch is what it already was', () => {
+    const start = commitBranch(state(board(['a']), first), 'fix-the-picker');
+    expect(commitBranch(start, ' fix-the-picker ')).toBe(start);
+    // Identity, not equality: the point is that no undo step was spent, and a freshly built copy of
+    // the same board would have spent one.
+    const branchless = state(board(['a']), first);
+    expect(commitBranch(branchless, '')).toBe(branchless);
+  });
+});
+
+describe('commitPullRequest', () => {
+  const first = { column: 0, card: 0 };
+
+  it('reads a number written with or without the hash', () => {
+    expect(commitPullRequest(state(board(['a']), first), '#14').board.columns[0].cards[0].pullRequest).toBe(14);
+    expect(commitPullRequest(state(board(['a']), first), '14').board.columns[0].cards[0].pullRequest).toBe(14);
+  });
+
+  // The card keeps the number it had. board-view says so on the same condition.
+  it('refuses anything that is not a pull request number', () => {
+    const start = commitPullRequest(state(board(['a']), first), '14');
+    expect(commitPullRequest(start, 'fourteen')).toBe(start);
+    expect(start.board.columns[0].cards[0].pullRequest).toBe(14);
+  });
+
+  it('clears the number when the box is emptied', () => {
+    const start = commitPullRequest(state(board(['a']), first), '14');
+    expect(commitPullRequest(start, '  ').board.columns[0].cards[0].pullRequest).toBe(undefined);
+  });
+
+  it('is not a change when the number is what it already was', () => {
+    const start = commitPullRequest(state(board(['a']), first), '14');
+    expect(commitPullRequest(start, '#14')).toBe(start);
   });
 });

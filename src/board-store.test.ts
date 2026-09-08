@@ -60,6 +60,50 @@ describe('parseBoard', () => {
     expect(board.columns[0].cards[0].parent).toBe(null);
   });
 
+  it('reads the branch, the pull request and the timestamps', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a",'
+      + '"createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-03-01T00:00:00.000Z",'
+      + '"branch":"fix-the-picker","pullRequest":14}]}]}');
+    expect(board.columns[0].cards[0]).toMatchObject({
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-03-01T00:00:00.000Z',
+      branch: 'fix-the-picker',
+      pullRequest: 14,
+    });
+  });
+
+  // A board written before these fields existed. Filled in on read, every card would claim to have
+  // been created the first time this version opened the file.
+  it('leaves a card without them unknown rather than stamping it', () => {
+    const card = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}').columns[0].cards[0];
+    expect(card.createdAt).toBe(undefined);
+    expect(card.updatedAt).toBe(undefined);
+    expect(card.branch).toBe(undefined);
+    expect(card.pullRequest).toBe(undefined);
+  });
+
+  it('drops a pull request that is not a whole number above zero', () => {
+    for (const written of ['"#14"', '0', '-3', '1.5', 'null']) {
+      const board = parseBoard(`{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","pullRequest":${written}}]}]}`);
+      expect(board.columns[0].cards[0].pullRequest).toBe(undefined);
+    }
+  });
+
+  // An empty branch would otherwise draw an empty line under the card.
+  it('reads a blank branch as no branch', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","branch":"  "}]}]}');
+    expect(board.columns[0].cards[0].branch).toBe(undefined);
+  });
+
+  // Without this, every card on this repo's own board grows four nulls it never had.
+  it('writes nothing for the fields a card does not have', () => {
+    const projectPath = project();
+    writeBoard(projectPath, parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}'));
+    const written = readFileSync(join(projectPath, BOARD_DIRECTORY, 'board.json'), 'utf8');
+    expect(written).not.toContain('createdAt');
+    expect(written).not.toContain('pullRequest');
+  });
+
   // Without this, drawing the board or counting a card's children recurses until the stack runs out.
   it('breaks a ring of parents', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":['

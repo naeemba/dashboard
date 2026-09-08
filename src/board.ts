@@ -15,6 +15,16 @@ export type Card = {
   // The id of the card this one belongs to, or null. This single field is the whole relation: a
   // parent keeps no list of its children, because two halves that have to agree eventually will not.
   parent: string | null;
+  // When the card was written, and when one of its own fields last changed. Both ISO strings, and
+  // both absent rather than null when nothing knows: a board written before these existed, or a card
+  // hand-written without them, must read as unknown. Fill them in on read and every card on an old
+  // board claims to have been created the first time this version opened it.
+  createdAt?: string;
+  updatedAt?: string;
+  // The branch the work is on, and the pull request it opened. Typed, not fetched — asking `gh` for
+  // the number brings auth, the network and a question about when it refreshes.
+  branch?: string;
+  pullRequest?: number;
 };
 export type Column = { name: string; cards: Card[] };
 export type Board = { columns: Column[] };
@@ -81,7 +91,9 @@ export function moveSelection(board: Board, selection: Selection, direction: Dir
 }
 
 export function addCard(board: Board, selection: Selection, id: string, title: string): Change {
-  const cards = [...board.columns[selection.column].cards, { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: null }];
+  const now = stamp();
+  const cards = [...board.columns[selection.column].cards,
+    { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: null, createdAt: now, updatedAt: now }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
@@ -93,20 +105,33 @@ export function addCard(board: Board, selection: Selection, id: string, title: s
 export function addChildCard(board: Board, selection: Selection, id: string, title: string): Change {
   const parent = cardAt(board, selection);
   if (!parent) return { board, selection };
-  const cards = [...board.columns[selection.column].cards, { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: parent.id }];
+  const now = stamp();
+  const cards = [...board.columns[selection.column].cards,
+    { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: parent.id, createdAt: now, updatedAt: now }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
   };
 }
 
+function stamp(): string {
+  return new Date().toISOString();
+}
+
 // Rename, notes and priority all change one field of the selected card and leave the selection where
 // it is, so they are one operation with the field passed in.
+//
+// This is the one funnel every field change goes through, which is what makes `updatedAt` mean this
+// card and not the board. The whole file is rewritten on every edit, so stamping at the write instead
+// would mark all thirty cards with the moment you renamed one of them — the same as having no
+// timestamps at all. Callers that hand back an unchanged board never reach here, so opening a title
+// and closing it unchanged does not age the card either.
 function editCard(board: Board, selection: Selection, fields: Partial<Card>): Change {
   const cards = board.columns[selection.column].cards;
   if (cards.length === 0) return { board, selection };
+  const edited = { ...fields, updatedAt: stamp() };
   return {
-    board: replaceColumn(board, selection.column, cards.map((card, at) => (at === selection.card ? { ...card, ...fields } : card))),
+    board: replaceColumn(board, selection.column, cards.map((card, at) => (at === selection.card ? { ...card, ...edited } : card))),
     selection,
   };
 }
@@ -117,6 +142,39 @@ export function renameCard(board: Board, selection: Selection, title: string): C
 
 export function setNotes(board: Board, selection: Selection, notes: string): Change {
   return editCard(board, selection, { notes });
+}
+
+export function setBranch(board: Board, selection: Selection, branch: string | undefined): Change {
+  return editCard(board, selection, { branch });
+}
+
+export function setPullRequest(board: Board, selection: Selection, pullRequest: number | undefined): Change {
+  return editCard(board, selection, { pullRequest });
+}
+
+// What counts as a pull request number. parseCard asks it of whatever was in the file, and the board
+// view asks it of what you typed before refusing and saying why — one condition, so a number the
+// settings box accepts cannot be the one the file quietly drops.
+export function isPullRequestNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+// How the branch and the pull request read on screen, in that order, and empty when the card carries
+// neither. The card on the board and the dialog behind `o` both ask here: two copies of `#${number}`
+// is how one screen ends up saying "PR 14" about the card the other one calls "#14".
+export function flightParts(card: Card): string[] {
+  const parts: string[] = [];
+  if (card.branch !== undefined) parts.push(card.branch);
+  if (card.pullRequest !== undefined) parts.push(`#${card.pullRequest}`);
+  return parts;
+}
+
+// The number a typed pull request means, or null when what was typed is not one. Written with or
+// without the `#`. The commit and the message explaining the refusal both ask here, so a box that
+// says "not a pull request number" cannot be one the card quietly accepted.
+export function pullRequestFrom(text: string): number | null {
+  const number = Number(text.trim().replace(/^#/, ''));
+  return isPullRequestNumber(number) ? number : null;
 }
 
 // Cycles rather than sets, so one key reaches all four. Wraps from the bottom back to the top.
@@ -241,7 +299,10 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
   // card sent sideways stays roughly where your eye left it.
   const row = Math.min(selection.card, board.columns[target].cards.length);
   const arriving = [...board.columns[target].cards];
-  arriving.splice(row, 0, card);
+  // A column is not a field of the card, but Todo to Doing is the change people most want a date for
+  // — "when did this start" and "when did it ship" are both this move. So it ages the card. Moving a
+  // card up and down within its column does not: that is reordering a list, not touching the work.
+  arriving.splice(row, 0, { ...card, updatedAt: stamp() });
   const leaving = cards.filter((_entry, at) => at !== selection.card);
   const columns = board.columns.map((column, at) => {
     if (at === selection.column) return { ...column, cards: leaving };
