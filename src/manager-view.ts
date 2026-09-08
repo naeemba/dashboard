@@ -102,10 +102,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   }
 
   // Enter and a click both land here, and the redraw is here rather than inside toggle so that a row
-  // which opens nothing still redraws. A click has already moved the selection onto that row, and
-  // moving the selection is itself a change you have to be able to see: without this, clicking a quiet
-  // project leaves the highlight on the row you came from while the keyboard is on the row you
-  // clicked, and the next Enter or Down comes from a row that is not lit.
+  // which opens nothing still redraws.
   function open(): void {
     const line = lines[selected];
     if (!line) return;
@@ -122,10 +119,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       empty.hidden = rows.length > 0;
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
-        // A click moves the selection to the row first and then does what Enter does there. Acting on
-        // the clicked row while the highlight stayed put would leave the pointer and the keyboard
-        // naming two different rows, and the highlight is the only thing on screen that says where the
-        // keyboard is.
+        // A click moves the selection to the row first and then does what Enter does there.
         item.addEventListener('click', () => {
           setSelection(index);
           open();
