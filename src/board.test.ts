@@ -547,7 +547,7 @@ describe('pullRequestFrom', () => {
   });
 
   it('refuses anything that is not a pull request number', () => {
-    for (const text of ['', 'fourteen', '0', '-3', '1.5', '#', 'PR 14']) {
+    for (const text of ['', 'fourteen', '0', '-3', '1.5', '#', 'PR 14', '0x10', '1e3', '0b1010']) {
       expect(pullRequestFrom(text)).toBe(null);
     }
   });
