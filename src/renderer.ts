@@ -369,7 +369,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
     // Only a bell that changes something redraws: renderStatus() rebuilds every tab and writes the
     // session file, and a pane that rings once a second is already marked after the first one.
-    if (pane.bell === 'quiet') {
+    if (!isRinging(pane.bell)) {
       pane.bell = 'waiting';
       renderStatus();
     }

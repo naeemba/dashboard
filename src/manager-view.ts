@@ -87,33 +87,38 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     if (!canOpen(row)) return;
     if (opened.has(row.slot)) opened.delete(row.slot);
     else opened.add(row.slot);
-    options.onChanged();
   }
 
   // Where the selection is and what it is on, always written together: set one without the other and
   // the next redraw hunts for a line the highlight is no longer on and drags it back.
-  function select(index: number): void {
+  function setSelection(index: number): void {
     selected = index;
     selectedKey = lines[index] ? lineKey(lines[index]) : '';
   }
 
   function move(direction: 'up' | 'down'): void {
-    select(clampLine(lines.length, selected + (direction === 'down' ? 1 : -1)));
+    setSelection(clampLine(lines.length, selected + (direction === 'down' ? 1 : -1)));
     options.onChanged();
   }
 
+  // Enter and a click both land here, and the redraw is here rather than inside toggle so that a row
+  // which opens nothing still redraws. A click has already moved the selection onto that row, and
+  // moving the selection is itself a change you have to be able to see: without this, clicking a quiet
+  // project leaves the highlight on the row you came from while the keyboard is on the row you
+  // clicked, and the next Enter or Down comes from a row that is not lit.
   function open(): void {
     const line = lines[selected];
     if (!line) return;
     if (line.kind === 'pane') return options.onJump(line.slot, line.alert.index);
     toggle(line.row);
+    options.onChanged();
   }
 
   return {
     element,
     render(rows: readonly ManagerRow[]): void {
       lines = managerLines(rows, opened);
-      select(selectedLine(lines, selectedKey, selected));
+      setSelection(selectedLine(lines, selectedKey, selected));
       empty.hidden = rows.length > 0;
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
@@ -122,7 +127,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         // naming two different rows, and the highlight is the only thing on screen that says where the
         // keyboard is.
         item.addEventListener('click', () => {
-          select(index);
+          setSelection(index);
           open();
         });
         if (index === selected) item.classList.add('highlighted');

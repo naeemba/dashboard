@@ -33,6 +33,12 @@ the highlight sits on another leaves the pointer and the keyboard naming two
 different rows. You click `web` to open it, press Enter, and `api` collapses —
 you opened one project and closed another.
 
+That holds on a row where Enter does nothing too — the selection still moves,
+and you still have to see it move. A quiet project has nothing to open, so the
+click does only the moving; if the screen is not redrawn for it, the highlight
+stays on `api` while the keyboard is on `web`, and the next Enter or Down comes
+from a row you cannot see.
+
 ## Mode keys pass through — Hard Rule
 
 Ctrl+T, Ctrl+N and Ctrl+B switch modes, except when they name the mode you are
