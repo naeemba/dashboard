@@ -114,6 +114,12 @@
           "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "3b766e7b-6178-487e-86f8-7fd98d65655e",
+          "title": "One clamp, not three: board.ts, board-detail.ts and manager.ts each hold a copy",
+          "notes": "board.ts:66 has a private clamp(value, limit). board-detail.ts:71 writes the same expression inline. manager.ts:126 adds clampLine(count, index), which is clamp(index, count - 1). Nothing breaks today - it is arithmetic and all three agree. The cost is the next screen with a list, which makes it four, and none of them is the one to change. This repo already keeps modules this small (links.ts is 7 lines, fuzzy.ts is 14), so a clamp.ts holding one function beside one test is in keeping, and the three callers then read the same. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/18",
+          "priority": "low"
         }
       ]
     },
