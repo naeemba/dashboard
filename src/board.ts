@@ -1,4 +1,4 @@
-import { clamp } from './clamp';
+import { clampIndex } from './clamp-index';
 import type { Direction } from './terminals';
 
 // Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
@@ -80,11 +80,11 @@ function replaceColumn(board: Board, index: number, cards: Card[]): Board {
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {
   if (direction === 'up' || direction === 'down') {
     const step = direction === 'down' ? 1 : -1;
-    return { ...selection, card: clamp(selection.card + step, lastRow(board.columns[selection.column])) };
+    return { ...selection, card: clampIndex(selection.card + step, lastRow(board.columns[selection.column])) };
   }
   const step = direction === 'right' ? 1 : -1;
-  const column = clamp(selection.column + step, board.columns.length - 1);
-  return { column, card: clamp(selection.card, lastRow(board.columns[column])) };
+  const column = clampIndex(selection.column + step, board.columns.length - 1);
+  return { column, card: clampIndex(selection.card, lastRow(board.columns[column])) };
 }
 
 export function addCard(board: Board, selection: Selection, id: string, title: string): Change {
@@ -250,7 +250,7 @@ export function deleteCard(board: Board, selection: Selection): Change {
   const remaining = cards.filter((_card, at) => at !== selection.card);
   return {
     board: replaceColumn(board, selection.column, remaining),
-    selection: { column: selection.column, card: clamp(selection.card, remaining.length - 1) },
+    selection: { column: selection.column, card: clampIndex(selection.card, remaining.length - 1) },
   };
 }
 
@@ -272,7 +272,7 @@ export function deleteCardAndDescendants(board: Board, selection: Selection): Ch
   const remaining = columns[selection.column].cards.length;
   return {
     board: withColumns(board, columns),
-    selection: { column: selection.column, card: clamp(survivorsAbove, remaining - 1) },
+    selection: { column: selection.column, card: clampIndex(survivorsAbove, remaining - 1) },
   };
 }
 

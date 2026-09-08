@@ -11,7 +11,7 @@ import {
   type Selection,
 } from './board';
 import { relativeAge } from './age';
-import { clamp } from './clamp';
+import { clampIndex } from './clamp-index';
 import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
@@ -69,7 +69,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       const card = cardAt(board, options.selection);
       if (!card) return close(options.selection);
       const children = childrenOf(board, card.id);
-      highlighted = clamp(highlighted, children.length - 1);
+      highlighted = clampIndex(highlighted, children.length - 1);
 
       const heading = document.createElement('h2');
       heading.textContent = card.title;
@@ -171,11 +171,11 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           return close(options.selection);
         case 'ArrowDown':
           event.preventDefault();
-          highlighted = clamp(highlighted + 1, children.length - 1);
+          highlighted = clampIndex(highlighted + 1, children.length - 1);
           return render();
         case 'ArrowUp':
           event.preventDefault();
-          highlighted = clamp(highlighted - 1, children.length - 1);
+          highlighted = clampIndex(highlighted - 1, children.length - 1);
           return render();
         case 'Enter': {
           event.preventDefault();

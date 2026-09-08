@@ -1,4 +1,4 @@
-import { clamp } from './clamp';
+import { clampIndex } from './clamp-index';
 import type { Mode } from './modes';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
@@ -131,5 +131,5 @@ export function lineKey(line: ManagerLine): string {
 // the project was closed — leaves the selection at the position it held, not back at the top.
 export function selectedLine(lines: readonly ManagerLine[], key: string, previous: number): number {
   const found = lines.findIndex((line) => lineKey(line) === key);
-  return found === -1 ? clamp(previous, lines.length - 1) : found;
+  return found === -1 ? clampIndex(previous, lines.length - 1) : found;
 }
