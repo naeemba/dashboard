@@ -93,12 +93,6 @@
           "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "3b766e7b-6178-487e-86f8-7fd98d65655e",
-          "title": "One clamp, not three: board.ts, board-detail.ts and manager.ts each hold a copy",
-          "notes": "board.ts:66 has a private clamp(value, limit). board-detail.ts:71 writes the same expression inline. manager.ts:126 adds clampLine(count, index), which is clamp(index, count - 1). Nothing breaks today - it is arithmetic and all three agree. The cost is the next screen with a list, which makes it four, and none of them is the one to change. This repo already keeps modules this small (links.ts is 7 lines, fuzzy.ts is 14), so a clamp.ts holding one function beside one test is in keeping, and the three callers then read the same. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/18",
-          "priority": "low"
         }
       ]
     },
@@ -140,7 +134,7 @@
         {
           "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
           "title": "One row per project, and the lists live inside it",
-          "notes": "Shipped. One row per open project carrying what its panes want — `dashboard · 2 waiting · 1 exited`, or `quiet`. Enter opens a project to name those panes, Enter on a pane lands you there: right tab, right view, keyboard in the pane, and the bell clears on arrival as it always did. Up and Down walk the flat list. The rules are in manager.ts beside a test — managerRows, alertSummary, managerLines, canOpen, clampLine, selectedLine — and the DOM is in manager-view.ts, the split board.ts and board-view.ts already have. canOpen is the one place deciding a quiet project cannot expand, so the arrow, the drawn lines and the key cannot disagree. The selection is held as what it is on rather than where it is, so a pane that starts asking pushes the highlight along instead of sliding it onto a different pane. Three ordinary rows in the action table under a new manager scope, so they rebind and the help dialog and settings screen print them untold. No age on the row yet — that needs a per-second redraw and belongs with the last-line card. PR #18.",
+          "notes": "Shipped. One row per open project carrying what its panes want — `dashboard · 2 waiting · 1 exited`, or `quiet`. Enter opens a project to name those panes, Enter on a pane lands you there: right tab, right view, keyboard in the pane, and the bell clears on arrival as it always did. Up and Down walk the flat list. The rules are in manager.ts beside a test — managerRows, alertSummary, managerLines, canOpen, selectedLine — and the DOM is in manager-view.ts, the split board.ts and board-view.ts already have. canOpen is the one place deciding a quiet project cannot expand, so the arrow, the drawn lines and the key cannot disagree. The selection is held as what it is on rather than where it is, so a pane that starts asking pushes the highlight along instead of sliding it onto a different pane. Three ordinary rows in the action table under a new manager scope, so they rebind and the help dialog and settings screen print them untold. No age on the row yet — that needs a per-second redraw and belongs with the last-line card. PR #18.",
           "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "updatedAt": "2026-09-08T10:35:01.361Z",
@@ -258,6 +252,13 @@
           "notes": "The banner says `api . terminal 3 is waiting`, you click it, and the app comes forward on that project with that pane focused. Today the click brings the app up and then you go and find the pane yourself, which is the part the banner was supposed to save you.\n\nShipped: the pane's id travels with the notification, main hangs a click handler on it, and the renderer sets the view and the focused pane before showing the page. A slot whose project has since been closed is nowhere to go. paneFromId and modeOfPane moved into terminals.ts with tests. PR #15.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "3b766e7b-6178-487e-86f8-7fd98d65655e",
+          "title": "One clamp, not three: board.ts, board-detail.ts and manager.ts each hold a copy",
+          "notes": "Shipped. src/clamp-index.ts holds one clampIndex(value, lastIndex) beside one test, and every list in the app reads it: board.ts, board-detail.ts (both the redraw and the arrow keys), manager.ts, manager-view.ts, picker.ts and board-state.ts. The three copies the issue named plus three more found on the way - picker.ts and board-state.ts were the same shape as the others and now read the same, and the card detail dialog wrote the two halves by hand a hundred lines below the copy it shared. The guards that only fed the old clamp are gone too: lastRow and deleteCard no longer floor a number their callers already floor. The “lists here do not wrap” sentence moved onto move() in manager-view.ts, which decides it. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/20",
+          "priority": "low",
+          "updatedAt": "2026-09-08T11:16:25.893760Z"
         }
       ]
     }

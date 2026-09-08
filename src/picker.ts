@@ -1,3 +1,4 @@
+import { clampIndex } from './clamp-index';
 import { fuzzyScore } from './fuzzy';
 import { openOverlay } from './overlay';
 import type { Project } from './projects';
@@ -45,7 +46,7 @@ export function openPicker(projects: Project[]): Promise<PickerChoice> {
 
     function render(): void {
       rows = pickerRows(projects, search.value);
-      highlighted = Math.min(highlighted, rows.length - 1);
+      highlighted = clampIndex(highlighted, rows.length - 1);
       list.replaceChildren(...rows.map((row, index) => {
         const item = document.createElement('li');
         if (index === highlighted) item.classList.add('highlighted');

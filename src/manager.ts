@@ -1,3 +1,4 @@
+import { clampIndex } from './clamp-index';
 import type { Mode } from './modes';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
@@ -125,16 +126,10 @@ export function lineKey(line: ManagerLine): string {
   return line.kind === 'project' ? `${line.row.slot}` : terminalId(line.slot, line.alert.index);
 }
 
-// Never past either end. The list does not wrap: holding Down stops on the last pane rather than
-// carrying you back to the first project, which would be a jump you did not ask for.
-export function clampLine(count: number, index: number): number {
-  return Math.max(0, Math.min(index, count - 1));
-}
-
 // Where the selection lands once the page has been redrawn: on the same line it was on, wherever a
 // pane that has just started asking has pushed it to. A line that is gone — the pane stopped asking,
 // the project was closed — leaves the selection at the position it held, not back at the top.
 export function selectedLine(lines: readonly ManagerLine[], key: string, previous: number): number {
   const found = lines.findIndex((line) => lineKey(line) === key);
-  return found === -1 ? clampLine(lines.length, previous) : found;
+  return found === -1 ? clampIndex(previous, lines.length - 1) : found;
 }

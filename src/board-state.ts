@@ -13,6 +13,7 @@ import {
   type Change,
   type Selection,
 } from './board';
+import { clampIndex } from './clamp-index';
 
 // One step back, held in memory. `d` deletes on a single keystroke, so there has to be a way back
 // from a mis-hit; anything deeper is a feature nobody asked for. The selection is kept with the
@@ -92,7 +93,7 @@ export function commitNotes(state: BoardState, notes: string): BoardState {
 export function loadBoard(state: BoardState, board: Board): BoardState {
   return {
     board,
-    selection: { column: Math.min(state.selection.column, board.columns.length - 1), card: 0 },
+    selection: { column: clampIndex(state.selection.column, board.columns.length - 1), card: 0 },
     previous: null,
     addingCard: false,
   };

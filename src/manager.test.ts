@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  alertSummary, canOpen, clampLine, isProjectPage, landingPosition, lineKey, managerLines,
+  alertSummary, canOpen, isProjectPage, landingPosition, lineKey, managerLines,
   managerRows, projectPosition, selectedLine,
   type PaneAlert,
 } from './manager';
@@ -129,17 +129,6 @@ describe('lineKey', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
     expect(lineKey({ kind: 'pane', slot: 2, alert: { index: 0, name: 'terminal 1', state: 'waiting' } }))
       .toBe('2:0');
-  });
-});
-
-describe('clampLine', () => {
-  it('stops at both ends rather than wrapping round', () => {
-    expect(clampLine(3, 3)).toBe(2);
-    expect(clampLine(3, -1)).toBe(0);
-  });
-
-  it('answers 0 for a page with nothing on it', () => {
-    expect(clampLine(0, 4)).toBe(0);
   });
 });
 
