@@ -1,6 +1,7 @@
 // A page shows one of these at a time. A project opens as terminals and moves between the first three;
 // the manager page has only its own and never leaves it.
-export type Mode = 'terminals' | 'nvim' | 'board' | 'manager';
+export const MODES = ['terminals', 'nvim', 'board', 'manager'] as const;
+export type Mode = typeof MODES[number];
 
 // Not what the handler reads any more — the three mode actions in actions.ts can be rebound, and
 // mapShortcut matches those. This is what session.ts checks a saved mode against before restoring it,

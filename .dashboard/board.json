@@ -53,31 +53,10 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "9ec3aa79-428a-4c8f-9d92-25284434e79d",
-          "title": "Say which panes have died",
-          "notes": "The renderer already marks a pane exited and writes `[exited 1] press Enter to restart` into it. Nothing else ever says so: the bell does not ring on exit and no tab goes yellow. Your build fails in api . terminal 2 and you find out forty minutes later when you wander over. The cheapest useful thing on the page -- the flag is already there, it just needs somewhere to show.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
-          "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
-          "title": "One row per project, and the lists live inside it",
-          "notes": "The shape of the page, so settle it before the lists are built. A row per project carrying its counts -- 1 waiting, 1 exited, 2 doing, and how long since anything was printed. Enter expands a row, Enter on a child jumps to it. Two flat lists read fine at three projects and become forty unreadable rows at ten; rows keep the page the same size as the number of projects.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "88501b70-e5fe-4b73-831f-9b74828ed37d",
           "title": "Cards across projects, and Enter jumps to the card",
           "notes": "Each project's Doing cards, then urgent and high in Todo, under that project's row. readBoard already parses a board.json; this reads several. Enter opens that project's board with the card selected. Open question to settle first: open projects only (free), or every recent project (reads folders that have no page and may be gone).",
           "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
-          "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
-          "title": "The waiting list, and Enter jumps to the pane",
-          "notes": "Every pane asking for you, named by project and pane -- `api . terminal 3`, inside its project's row. The renderer already holds each pane's bell state, so this is a read of what is there. Enter on a row lands you in that pane, which is the whole point: a yellow tab says some project wants you and cannot say which of its six panes.",
-          "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
@@ -138,6 +117,36 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
+          "title": "The waiting list, and Enter jumps to the pane",
+          "notes": "Shipped. Every pane asking for you, named under its project on the manager page, with Enter landing you in it. goToPane is one function now, shared with the notification click, so the two ways into a pane from elsewhere cannot land differently. isRinging moved to waiting.ts and both the tab strip and this list ask it — before, the rule was written twice and dropping `notified` from one would have stopped the tab going yellow while the manager still listed the pane. PR #18.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T10:35:01.361Z",
+          "branch": "manager-page-rows",
+          "pullRequest": 18
+        },
+        {
+          "id": "9ec3aa79-428a-4c8f-9d92-25284434e79d",
+          "title": "Say which panes have died",
+          "notes": "Shipped. A pane that exits now shows up on the manager page as `terminal 1 · exited`, red, and Enter on that row takes you to it to press Enter again. The exited flag has always existed and nothing ever read it; onExit redraws now, which is the whole of what was missing. Dead beats asking: a shell that rings on its way out is listed as exited, not waiting, because answering it finds nothing to answer. The tab does not go yellow for a dead pane — yellow means asking today, and giving it a second meaning is a change to the terminals screen, not this page. PR #18.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T10:35:01.361Z",
+          "branch": "manager-page-rows",
+          "pullRequest": 18
+        },
+        {
+          "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
+          "title": "One row per project, and the lists live inside it",
+          "notes": "Shipped. One row per open project carrying what its panes want — `dashboard · 2 waiting · 1 exited`, or `quiet`. Enter opens a project to name those panes, Enter on a pane lands you there: right tab, right view, keyboard in the pane, and the bell clears on arrival as it always did. Up and Down walk the flat list. The rules are in manager.ts beside a test — managerRows, alertSummary, managerLines, canOpen, clampLine, selectedLine — and the DOM is in manager-view.ts, the split board.ts and board-view.ts already have. canOpen is the one place deciding a quiet project cannot expand, so the arrow, the drawn lines and the key cannot disagree. The selection is held as what it is on rather than where it is, so a pane that starts asking pushes the highlight along instead of sliding it onto a different pane. Three ordinary rows in the action table under a new manager scope, so they rebind and the help dialog and settings screen print them untold. No age on the row yet — that needs a per-second redraw and belongs with the last-line card. PR #18.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T10:35:01.361Z",
+          "branch": "manager-page-rows",
+          "pullRequest": 18
+        },
         {
           "id": "251a424c-0e3c-429b-93ed-915201bc057c",
           "title": "A first tab that is not a project",

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isProjectPage, landingPosition, projectPosition } from './manager';
+import {
+  alertSummary, canOpen, clampLine, isProjectPage, landingPosition, lineKey, managerLines,
+  managerRows, projectPosition, selectedLine,
+  type PaneAlert,
+} from './manager';
+import type { Bell } from './waiting';
 
 describe('isProjectPage', () => {
   it('says the manager is not one, so it never moves and is never saved', () => {
@@ -35,5 +40,130 @@ describe('landingPosition', () => {
 
   it('lands on the manager only when no project survived', () => {
     expect(landingPosition(-1, -1)).toBe(0);
+  });
+});
+
+describe('managerRows', () => {
+  const page = (name: string, slot: number, panes: { name: string; bell: Bell; exited: boolean }[]) => (
+    { project: { name }, slot, panes }
+  );
+  const pane = (name: string, bell: Bell = 'quiet', exited = false) => ({ name, bell, exited });
+
+  it('gives a project one row, whatever its panes are doing', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
+    expect(rows).toEqual([{ slot: 3, name: 'api', alerts: [] }]);
+  });
+
+  it('names the panes that are asking and the panes that have died', () => {
+    const rows = managerRows([page('api', 0, [
+      pane('terminal 1'),
+      pane('terminal 2', 'waiting'),
+      pane('terminal 3', 'quiet', true),
+      pane('nvim', 'notified'),
+    ])]);
+    expect(rows[0].alerts).toEqual([
+      { index: 1, name: 'terminal 2', state: 'waiting' },
+      { index: 2, name: 'terminal 3', state: 'exited' },
+      { index: 3, name: 'nvim', state: 'waiting' },
+    ]);
+  });
+
+  it('calls a pane that died while it was asking dead, since restarting it is what it needs', () => {
+    const rows = managerRows([page('api', 0, [pane('terminal 1', 'waiting', true)])]);
+    expect(rows[0].alerts).toEqual([{ index: 0, name: 'terminal 1', state: 'exited' }]);
+  });
+
+  it('keeps a project with no panes at all, so a dead project still has a row', () => {
+    expect(managerRows([page('gone', 2, [])])).toEqual([{ slot: 2, name: 'gone', alerts: [] }]);
+  });
+});
+
+describe('alertSummary', () => {
+  const alert = (state: 'waiting' | 'exited') => ({ index: 0, name: 'terminal 1', state });
+
+  it('says so when nothing on the project wants anything', () => {
+    expect(alertSummary([])).toBe('quiet');
+  });
+
+  it('counts each kind, asking first', () => {
+    expect(alertSummary([alert('exited'), alert('waiting'), alert('waiting')]))
+      .toBe('2 waiting · 1 exited');
+  });
+
+  it('leaves out the kind that has none', () => {
+    expect(alertSummary([alert('exited')])).toBe('1 exited');
+  });
+});
+
+describe('managerLines', () => {
+  const row = (slot: number, name: string, alerts: PaneAlert[] = []) => ({ slot, name, alerts });
+  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const };
+
+  it('lists the projects and nothing else while every row is shut', () => {
+    const lines = managerLines([row(0, 'api', [alert]), row(1, 'web')], new Set());
+    expect(lines).toEqual([
+      { kind: 'project', row: row(0, 'api', [alert]), open: false },
+      { kind: 'project', row: row(1, 'web'), open: false },
+    ]);
+  });
+
+  it('puts an open project’s panes under it', () => {
+    const lines = managerLines([row(0, 'api', [alert]), row(1, 'web')], new Set([0]));
+    expect(lines).toEqual([
+      { kind: 'project', row: row(0, 'api', [alert]), open: true },
+      { kind: 'pane', slot: 0, alert },
+      { kind: 'project', row: row(1, 'web'), open: false },
+    ]);
+  });
+
+  it('shows a quiet project as shut however it was left, since it has nothing to show', () => {
+    const lines = managerLines([row(1, 'web')], new Set([1]));
+    expect(lines).toEqual([{ kind: 'project', row: row(1, 'web'), open: false }]);
+  });
+});
+
+describe('lineKey', () => {
+  const row = { slot: 2, name: 'api', alerts: [] };
+
+  it('tells a project from the panes under it', () => {
+    expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
+    expect(lineKey({ kind: 'pane', slot: 2, alert: { index: 0, name: 'terminal 1', state: 'waiting' } }))
+      .toBe('2:0');
+  });
+});
+
+describe('clampLine', () => {
+  it('stops at both ends rather than wrapping round', () => {
+    expect(clampLine(3, 3)).toBe(2);
+    expect(clampLine(3, -1)).toBe(0);
+  });
+
+  it('answers 0 for a page with nothing on it', () => {
+    expect(clampLine(0, 4)).toBe(0);
+  });
+});
+
+describe('selectedLine', () => {
+  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const };
+  const lines = managerLines([{ slot: 0, name: 'api', alerts: [alert] }], new Set([0]));
+
+  it('follows the line it was on when a row appears above it', () => {
+    expect(selectedLine(lines, '0:1', 0)).toBe(1);
+  });
+
+  it('stays where it was when the line it was on has gone', () => {
+    expect(selectedLine(lines, '9:9', 1)).toBe(1);
+  });
+
+  it('never points past the end after the lines it was on disappear', () => {
+    expect(selectedLine([], '9:9', 4)).toBe(0);
+  });
+});
+
+describe('canOpen', () => {
+  it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
+    expect(canOpen({ slot: 0, name: 'api', alerts: [] })).toBe(false);
+    expect(canOpen({ slot: 0, name: 'api', alerts: [{ index: 0, name: 'terminal 1', state: 'exited' }] }))
+      .toBe(true);
   });
 });

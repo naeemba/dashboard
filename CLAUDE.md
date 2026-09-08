@@ -26,6 +26,19 @@ In practice: a new choice belongs in a list the arrow keys already walk over,
 not in a button beside it. If something new needs a click, it needs a key too,
 and the key is the part that has to work.
 
+The other half, once a list has both: **a click on a row moves the selection to
+that row and then does what Enter does there.** The highlight is the only thing
+on screen saying where the keyboard is, so a click that acts on one row while
+the highlight sits on another leaves the pointer and the keyboard naming two
+different rows. You click `web` to open it, press Enter, and `api` collapses —
+you opened one project and closed another.
+
+That holds on a row where Enter does nothing too — the selection still moves,
+and you still have to see it move. A quiet project has nothing to open, so the
+click does only the moving; if the screen is not redrawn for it, the highlight
+stays on `api` while the keyboard is on `web`, and the next Enter or Down comes
+from a row you cannot see.
+
 ## Mode keys pass through — Hard Rule
 
 Ctrl+T, Ctrl+N and Ctrl+B switch modes, except when they name the mode you are

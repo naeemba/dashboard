@@ -3,6 +3,7 @@ import { mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
+import { MODES } from './modes';
 import { key } from './test-key';
 
 const mac = defaultSettings(true).keys;
@@ -40,7 +41,7 @@ describe('mapShortcut', () => {
 
   // The screen whose keys you cannot remember is the screen you are looking at.
   it('opens help and settings from every mode', () => {
-    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+    for (const mode of MODES) {
       expect(mapShortcut(key({ code: 'KeyH', ctrlKey: true }), mac, mode)).toEqual({ kind: 'help' });
       expect(mapShortcut(key({ code: 'Comma', ctrlKey: true }), mac, mode)).toEqual({ kind: 'settings' });
     }
@@ -97,14 +98,14 @@ describe('mapShortcut', () => {
   });
 
   it('opens the project list and goes back to the last project from every mode', () => {
-    for (const mode of ['terminals', 'nvim', 'board'] as const) {
+    for (const mode of MODES) {
       expect(mapShortcut(key({ code: 'KeyS', ctrlKey: true }), mac, mode)).toEqual({ kind: 'project-picker' });
       expect(mapShortcut(key({ code: 'KeyO', ctrlKey: true }), mac, mode)).toEqual({ kind: 'project-last' });
     }
   });
 
   it('keeps terminal-scoped actions off the screens that have no panes', () => {
-    for (const mode of ['nvim', 'board'] as const) {
+    for (const mode of MODES.filter((mode) => mode !== 'terminals')) {
       expect(mapShortcut(key({ code: 'ArrowRight', metaKey: true }), mac, mode)).toBeNull();
       expect(mapShortcut(key({ code: 'ArrowLeft', metaKey: true }), mac, mode)).toBeNull();
       expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, mode)).toBeNull();
@@ -113,10 +114,13 @@ describe('mapShortcut', () => {
 });
 
 describe('every shipped default reaches its own action', () => {
-  it('holds for the board, where the keys used to live in a switch', () => {
+  // Every screen-scoped key, driven from its own scope: the board, whose keys used to live in a
+  // switch, and every screen added since. A default typed as a key name the parser does not know is
+  // otherwise green everywhere — unique name, non-empty description, no clash — until you press it.
+  it('holds for every key that belongs to one screen', () => {
     const keys = defaultSettings(true).keys;
     for (const entry of ACTIONS) {
-      if (entry.scope !== 'board') continue;
+      if (entry.scope === 'global') continue;
       const stroke = parseBinding(keys[entry.name]!)!;
       const pressed = key({
         code: stroke.code,
@@ -125,7 +129,7 @@ describe('every shipped default reaches its own action', () => {
         altKey: stroke.alt,
         shiftKey: stroke.shift,
       });
-      expect(mapShortcut(pressed, keys, 'board'), entry.name).toEqual(entry.action);
+      expect(mapShortcut(pressed, keys, entry.scope), entry.name).toEqual(entry.action);
     }
   });
 });

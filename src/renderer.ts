@@ -19,10 +19,11 @@ import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
-import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
+import { type Bell, isRinging, marksWaiting, raisesNotification, waitingNames } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, createManagerView, isProjectPage, landingPosition, projectPosition,
+  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
 } from './manager';
+import { createManagerView, type ManagerView } from './manager-view';
 import { actionByName } from './actions';
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
@@ -48,6 +49,8 @@ type Page = {
   editor: Pane | null;
   editorStarted: boolean;
   board: BoardView | null;
+  // Only the manager page has one, the way only a project page has a board.
+  manager: ManagerView | null;
 };
 
 const bridge = window.dashboard;
@@ -118,15 +121,15 @@ function projectPages(): Page[] {
 // screen saying how to open one. Both halves are read fresh on every redraw, so rebinding the key or
 // rewording the action rewrites the sentence rather than leaving it naming a key that now does
 // something else.
-function managerLabel(): string {
-  if (projectPages().length > 0) return '';
+function managerLabel(page: Page): string {
+  if (projectPages().length > 0) return page.manager?.statusLabel() ?? '';
   const name = 'project-picker';
   return `${settings.keys[name] ?? 'Nothing'} · ${actionByName(name)?.description ?? ''}`;
 }
 
 // The right-hand span says which view you are in, and for terminals which pane has the keyboard.
 function modeLabel(page: Page): string {
-  if (page.mode === 'manager') return managerLabel();
+  if (page.mode === 'manager') return managerLabel(page);
   if (page.mode === 'nvim') return 'nvim';
   if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
   return page.panes.length > 0 ? paneLabel(page.focused) : '';
@@ -149,6 +152,15 @@ function terminalStatus(page: Page): string {
 // The manager page is pushed before the first call, so there is always a page to draw.
 function renderStatus(): void {
   const page = pages[activeIndex];
+  // Before the status bar reads its label off the selection. The rows are the pages themselves, so a
+  // bell, an exit or a project opening all reach the manager through the redraw they already cause —
+  // and only while you are looking at it, since arriving redraws too and typing a card title on a
+  // board should not rebuild a list nobody can see.
+  if (page.mode === 'manager') {
+    page.manager?.render(managerRows(projectPages().map((entry) => ({
+      project: entry.project, slot: entry.slot, panes: allPanes(entry),
+    }))));
+  }
   titleElement.textContent = `📁 ${page.project.name}`;
   // A span each: the open project is marked by a highlight, the way a tab strip marks one, and a
   // project with a pane ringing its bell is marked again so you can see it from another page.
@@ -357,7 +369,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
     // Only a bell that changes something redraws: renderStatus() rebuilds every tab and writes the
     // session file, and a pane that rings once a second is already marked after the first one.
-    if (pane.bell === 'quiet') {
+    if (!isRinging(pane.bell)) {
       pane.bell = 'waiting';
       renderStatus();
     }
@@ -372,7 +384,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
   // before it would save a session naming the pane you just left.
   terminal.textarea?.addEventListener('focus', () => {
-    const wasRinging = pane.bell !== 'quiet';
+    const wasRinging = isRinging(pane.bell);
     pane.bell = 'quiet';
     onFocus?.();
     if (wasRinging) renderStatus();
@@ -385,11 +397,11 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
 function buildManagerPage(): Page {
   const element = document.createElement('section');
   element.className = 'page';
-  const view = createManagerView();
-  element.append(view);
+  const manager = createManagerView({ onJump: goToPane, onChanged: renderStatus });
+  element.append(manager.element);
   return {
-    project: MANAGER_PROJECT, element, views: { manager: view }, mode: 'manager', panes: [], focused: 0,
-    slot: MANAGER_SLOT, editor: null, editorStarted: false, board: null,
+    project: MANAGER_PROJECT, element, views: { manager: manager.element }, mode: 'manager', panes: [],
+    focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false, board: null, manager,
   };
 }
 
@@ -407,7 +419,7 @@ function buildPage(project: Project, slot: number): Page {
   }
   const page: Page = {
     project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-    editorStarted: false, board: null,
+    editorStarted: false, board: null, manager: null,
   };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -543,9 +555,10 @@ function apply(action: Action): void {
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
-    // The board answers its own keys. It is reached from here rather than from its own listener so
-    // that one lookup decides every key on every screen.
-    default: return page.board?.runAction(action);
+    // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
+    // rather than from each view's own listener, so one lookup decides every key on every screen —
+    // and a fifth screen costs nothing but its mode.
+    default: return (page.mode === 'manager' ? page.manager : page.board)?.runAction(action);
   }
 }
 
@@ -578,6 +591,12 @@ bridge.onNotificationClick((paneId) => {
   // drawn with the keystrokes going to a shell behind it.
   if (document.querySelector(OVERLAY_SELECTOR)) return;
   const { slot, index } = paneFromId(paneId);
+  goToPane(slot, index);
+});
+
+// The two ways to be sent to a pane you are not on: clicking its notification, and pressing Enter on
+// its row in the manager. One function, so the second never lands somewhere the first would not.
+function goToPane(slot: number, index: number): void {
   const position = positionOfSlot(slot);
   if (position === -1) return;
   const page = pages[position];
@@ -586,7 +605,7 @@ bridge.onNotificationClick((paneId) => {
   // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
   if (mode === 'terminals') page.focused = index;
   showPage(position, true);
-});
+}
 
 bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
 bridge.onExit((id, exitCode) => {
@@ -594,6 +613,9 @@ bridge.onExit((id, exitCode) => {
   if (!pane) return;
   pane.exited = true;
   pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
+  // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
+  // find out about a pane on a project you are not on.
+  renderStatus();
 });
 
 // Puts back what the last run was left on: the same projects in the same order, each on the view it was
