@@ -10,8 +10,9 @@ export type Session = { pages: SessionPage[]; activeIndex: number };
 
 const EMPTY: Session = { pages: [], activeIndex: 0 };
 
-// The modes are already spelled once, as what the three mode keys select. Reading them back off that
-// list is what keeps a new mode from being restorable everywhere except out of this file.
+// The modes a project can be left on are already spelled once, as what the three mode keys select.
+// Reading them back off that list is what keeps a new mode from being restorable everywhere except out
+// of this file, and what keeps the manager's mode — which no project can be on — out of a saved page.
 function isMode(value: unknown): value is Mode {
   return Object.values(MODE_KEYS).some((mode) => mode === value);
 }
