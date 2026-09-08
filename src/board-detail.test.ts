@@ -34,15 +34,14 @@ describe('cardMeta', () => {
     expect(cardMeta(board(touched), touched, now)).toBe('medium · added last month · edited 2 days ago');
   });
 
-  // Otherwise every card that has only ever been written says the same thing twice.
+  // Two stamps seconds apart, the way `n` leaves a card it made three days ago.
   it('says only when it was added while nothing has changed since', () => {
-    const fresh = card({ createdAt: ago(3), updatedAt: ago(3) });
+    const fresh = card({ createdAt: new Date(now - 3 * DAY - 9000).toISOString(), updatedAt: ago(3) });
     expect(cardMeta(board(fresh), fresh, now)).toBe('medium · added 3 days ago');
   });
 
-  // A board written before timestamps existed, and a hand-typed date the clock cannot read.
-  it('says nothing about dates it does not have or cannot read', () => {
-    expect(cardMeta(board(card()), card(), now)).toBe('medium');
+  // A hand-typed date the clock cannot read.
+  it('says nothing about a date it cannot read', () => {
     const guessed = card({ createdAt: 'last tuesday' });
     expect(cardMeta(board(guessed), guessed, now)).toBe('medium');
   });

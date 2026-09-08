@@ -173,7 +173,10 @@ export function flightParts(card: Card): string[] {
 // without the `#`. The commit and the message explaining the refusal both ask here, so a box that
 // says "not a pull request number" cannot be one the card quietly accepted.
 export function pullRequestFrom(text: string): number | null {
-  const number = Number(text.trim().replace(/^#/, ''));
+  // Digits only, not Number(): it reads every JavaScript literal, so "0x10" would land on the card
+  // as #16 with nothing on screen saying so.
+  const digits = text.trim().replace(/^#/, '');
+  const number = /^\d+$/.test(digits) ? Number(digits) : NaN;
   return isPullRequestNumber(number) ? number : null;
 }
 

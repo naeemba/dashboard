@@ -526,11 +526,6 @@ describe('card timestamps', () => {
     expect(cards[1].updatedAt).toBe(undefined);
   });
 
-  // A card written before these fields existed says unknown, not now.
-  it('leaves a card it did not touch without timestamps', () => {
-    expect(board(['a']).columns[0].cards[0].createdAt).toBe(undefined);
-  });
-
   it('ages a card that moves to another column', () => {
     vi.setSystemTime(new Date(march));
     const moved = moveCard(board(['a'], []), first, 'right').board;

@@ -27,26 +27,23 @@ export type CardDetailOptions = {
   onChange(change: Change): Board;
 };
 
-// A card written before timestamps existed has none, and a hand-written date the clock cannot read
-// says nothing rather than "Invalid Date". Both come back null and drop out of the line.
-function aged(word: string, iso: string | undefined, now: number | undefined): string | null {
-  if (iso === undefined) return null;
-  const said = relativeAge(iso, now);
-  return said === null ? null : `${word} ${said}`;
-}
-
 // The line under the card's title: what it is, what it belongs to, what it is in flight as, and how
 // old it is. Exported and pure so the rules in it are pinned by a test — the same reason help.ts
 // hands out helpSections rather than only a dialog.
 export function cardMeta(board: Board, card: Card, now?: number): string {
   const parent = card.parent === null ? null : cardById(board, card.parent);
+  // A card written before timestamps existed has none, and a hand-written date the clock cannot read
+  // says nothing rather than "Invalid Date". Both come back null and drop out of the line.
+  const added = card.createdAt === undefined ? null : relativeAge(card.createdAt, now);
+  const edited = card.updatedAt === undefined ? null : relativeAge(card.updatedAt, now);
   return [
     card.priority,
     parent ? `subtask of ${parent.title}` : null,
     ...flightParts(card),
-    aged('added', card.createdAt, now),
-    // A card nobody has touched since it was written would otherwise say the same thing twice.
-    card.updatedAt === card.createdAt ? null : aged('edited', card.updatedAt, now),
+    added === null ? null : `added ${added}`,
+    // The words, not the stamps: a card is stamped when `n` makes it and again when you finish
+    // typing its title, so no card ever carries two equal stamps to compare.
+    edited === null || edited === added ? null : `edited ${edited}`,
   ].filter((part): part is string => part !== null).join(' · ');
 }
 

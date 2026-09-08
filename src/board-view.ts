@@ -198,7 +198,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // and still not say which of those cards has anything on a branch.
     if (selected && (editing === 'branch' || editing === 'pullRequest')) {
       // The number goes into the box bare: you type 14, and flightParts is what puts the # back.
-      item.append(renderEditor(editing, editing === 'branch' ? card.branch ?? '' : String(card.pullRequest ?? '')));
+      item.append(renderEditor(editing, String(card[editing] ?? '')));
     } else {
       const flight = flightParts(card);
       if (flight.length > 0) {
