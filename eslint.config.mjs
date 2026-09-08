@@ -3,7 +3,7 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  { ignores: ['.vite/', 'out/'] },
+  { ignores: ['.vite/', 'dist/', 'out/'] },
   eslint.configs.recommended,
   tseslint.configs.recommended,
 );

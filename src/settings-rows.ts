@@ -19,9 +19,10 @@ const GROUP_TITLES: Record<ActionGroup, string> = {
   projects: 'Projects',
   terminals: 'Terminals',
   board: 'Board',
+  manager: 'Manager',
 };
 
-const GROUP_ORDER: ActionGroup[] = ['app', 'modes', 'projects', 'terminals', 'board'];
+const GROUP_ORDER: ActionGroup[] = ['app', 'modes', 'projects', 'manager', 'terminals', 'board'];
 
 export function settingsRows(settings: Settings): SettingsRow[] {
   const rows: SettingsRow[] = [];

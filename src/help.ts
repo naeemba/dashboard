@@ -35,8 +35,10 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'the app keeps for you and shows when you open the card.',
   manager: 'The first tab, and the only page that is not a project: no folder, no shells, no board, '
     + 'so the view keys do nothing here. It is where the window lands when nothing was open last time. '
-    + 'It will show what is going on across every open project — what is waiting for you, what has '
-    + 'died, what each pane last printed. Nothing is on it yet.',
+    + 'It lists every open project and what its panes want from you — one asking a question, one that '
+    + 'has died and needs starting again. Enter on a project shows those panes by name, and Enter on '
+    + 'one of them takes you straight there. A project with nothing to report says quiet and has '
+    + 'nothing to open.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
@@ -53,12 +55,6 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
 // even though the list is empty.
 const NVIM_SHORTCUTS: Shortcut[] = [
   { keys: 'Everything else', action: 'Goes straight to nvim' },
-];
-
-// The manager has no keys of its own yet. An empty list under the heading reads as a dialog that broke,
-// so it says where the answer is instead.
-const MANAGER_SHORTCUTS: Shortcut[] = [
-  { keys: 'None of its own', action: 'The keys below work here as they do everywhere' },
 ];
 
 function isUntouched(entries: ActionEntry[], keys: Settings['keys'], isMac: boolean): boolean {
@@ -108,10 +104,9 @@ function groupShortcuts(
   return rows;
 }
 
-// The two screens with no keys of their own say so; the rest print the group named after them.
+// nvim has no keys of its own and says so; every other screen prints the group named after it.
 function screenShortcuts(mode: Mode, keys: Settings['keys'], isMac: boolean): Shortcut[] {
   if (mode === 'nvim') return NVIM_SHORTCUTS;
-  if (mode === 'manager') return MANAGER_SHORTCUTS;
   return groupShortcuts(mode, mode, keys, isMac);
 }
 

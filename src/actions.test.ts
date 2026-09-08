@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIONS, defaultBinding } from './actions';
 import { formatBinding, parseBinding } from './binding';
+import { MODES } from './modes';
+import { hears } from './shortcuts';
 
 describe('the action table', () => {
   it('names every action exactly once, because the name is the key in settings.json', () => {
@@ -23,26 +25,21 @@ describe('the action table', () => {
     for (const entry of ACTIONS) expect(entry.description.length, entry.name).toBeGreaterThan(0);
   });
 
-  it('ships no two actions on the same key, on either platform', () => {
+  it('ships no two actions on the same key, on any screen', () => {
+    // Asked screen by screen, of the same function the handler asks. Two keys only clash if one screen
+    // hears them both, which is what lets the board's Up and the manager's Up ship as they are — and
+    // what would catch a new scope heard on a screen that already has that key.
     for (const isMac of [true, false]) {
-      const taken = new Map<string, string>();
-      for (const entry of ACTIONS) {
-        const binding = defaultBinding(entry, isMac);
-        if (binding === null) continue;
-        // Scope keeps a board key and a terminal key apart: neither fires on the other's screen.
-        const held = `${entry.scope}:${binding}`;
-        expect(taken.get(held), `${entry.name} and ${taken.get(held)} both ship on ${binding}`)
-          .toBeUndefined();
-        // A global action is heard on every screen, so it clashes with the scoped ones in both
-        // directions — whichever row the table happens to list first.
-        const alsoHeld = entry.scope === 'global'
-          ? ['terminals', 'board'] : ['global'];
-        for (const scope of alsoHeld) {
-          expect(taken.get(`${scope}:${binding}`), `${entry.name} clashes with ${taken.get(`${scope}:${binding}`)}`)
+      for (const mode of MODES) {
+        const taken = new Map<string, string>();
+        for (const entry of ACTIONS) {
+          if (!hears(entry.scope, mode)) continue;
+          const binding = defaultBinding(entry, isMac);
+          if (binding === null) continue;
+          expect(taken.get(binding), `${entry.name} and ${taken.get(binding)} both ship on ${binding} in ${mode}`)
             .toBeUndefined();
+          taken.set(binding, entry.name);
         }
-        taken.set(held, entry.name);
-        for (const scope of alsoHeld) taken.set(`${scope}:${binding}`, entry.name);
       }
     }
   });

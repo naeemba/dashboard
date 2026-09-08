@@ -24,8 +24,15 @@ export function raisesNotification(windowFocused: boolean, bell: Bell): boolean 
   return !windowFocused && bell !== 'notified';
 }
 
+// Whether a pane is asking for you at all, which both states other than 'quiet' mean: 'notified' is
+// 'waiting' that has already had its banner. One place says so, so the tab strip going yellow and the
+// manager listing the pane can never disagree about which panes are asking.
+export function isRinging(bell: Bell): boolean {
+  return bell !== 'quiet';
+}
+
 // The tab strip only has room for the project name, so the panes are named in the right-hand span
 // instead — otherwise arriving at a yellow project tells you nothing about which of its six panes rang.
 export function waitingNames(panes: readonly { bell: Bell; name: string }[]): string[] {
-  return panes.filter((pane) => pane.bell !== 'quiet').map((pane) => pane.name);
+  return panes.filter((pane) => isRinging(pane.bell)).map((pane) => pane.name);
 }

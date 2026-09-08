@@ -15,7 +15,7 @@ export function isModified(input: KeyInput): boolean {
 
 // `global` is heard on every screen, including while a shell has the keyboard. The other two are heard
 // only on their own, which is what lets the board keep a bare D that a terminal never sees.
-function hears(scope: ActionScope, mode: Mode): boolean {
+export function hears(scope: ActionScope, mode: Mode): boolean {
   return scope === 'global' || scope === mode;
 }
 

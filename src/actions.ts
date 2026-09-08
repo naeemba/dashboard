@@ -29,15 +29,17 @@ export type Action =
   | { kind: 'board-delete' }
   | { kind: 'board-priority' }
   | { kind: 'board-sort' }
-  | { kind: 'board-undo' };
+  | { kind: 'board-undo' }
+  | { kind: 'manager-select'; direction: 'up' | 'down' }
+  | { kind: 'manager-open' };
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard;
 // the other two only on their own screen, so the board's bare `D` never reaches a terminal.
-export type ActionScope = 'global' | 'terminals' | 'board';
+export type ActionScope = 'global' | 'terminals' | 'board' | 'manager';
 
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.
-export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board';
+export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager';
 
 export type ActionEntry = {
   // Stable: it is the key in settings.json, so renaming one loses whatever the user had bound to it.
@@ -216,6 +218,18 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'board-undo', description: 'Undo the last board change',
     group: 'board', scope: 'board', action: { kind: 'board-undo' }, mac: 'U', other: 'U',
+  },
+  // Bare arrows and a bare Enter, which only this screen hears: nothing on the manager takes typing,
+  // so there is no shell or text box for them to be stolen from.
+  ...(['up', 'down'] as const).map((direction): ActionEntry => ({
+    name: `manager-select-${direction}`, description: `Move the selection ${direction}`,
+    group: 'manager', scope: 'manager',
+    action: { kind: 'manager-select', direction },
+    mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],
+  })),
+  {
+    name: 'manager-open', description: "Show a project's panes, or go to the pane",
+    group: 'manager', scope: 'manager', action: { kind: 'manager-open' }, mac: 'Enter', other: 'Enter',
   },
 ];
 

@@ -168,6 +168,54 @@ body {
   max-width: 70ch;
 }
 
+.manager-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-width: 70ch;
+}
+
+.manager-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.manager-list li.highlighted {
+  background: rgb(255 255 255 / 10%);
+}
+
+.manager-project .manager-name {
+  color: var(--brightWhite);
+  font-weight: 700;
+  /* The marker is a character wide, so a project with nothing to open lines up with one that has. */
+  white-space: pre;
+}
+
+/* Indented under the project it belongs to, and the marker's width again so the names line up. */
+.manager-pane .manager-name {
+  padding-left: 2ch;
+}
+
+.manager-summary,
+.manager-state {
+  flex: 0 0 auto;
+}
+
+.manager-summary {
+  opacity: 0.6;
+}
+
+.manager-waiting {
+  color: var(--yellow);
+}
+
+.manager-exited {
+  color: var(--red);
+}
+
 .board {
   display: flex;
   gap: 2px;

@@ -53,31 +53,10 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "9ec3aa79-428a-4c8f-9d92-25284434e79d",
-          "title": "Say which panes have died",
-          "notes": "The renderer already marks a pane exited and writes `[exited 1] press Enter to restart` into it. Nothing else ever says so: the bell does not ring on exit and no tab goes yellow. Your build fails in api . terminal 2 and you find out forty minutes later when you wander over. The cheapest useful thing on the page -- the flag is already there, it just needs somewhere to show.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
-          "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
-          "title": "One row per project, and the lists live inside it",
-          "notes": "The shape of the page, so settle it before the lists are built. A row per project carrying its counts -- 1 waiting, 1 exited, 2 doing, and how long since anything was printed. Enter expands a row, Enter on a child jumps to it. Two flat lists read fine at three projects and become forty unreadable rows at ten; rows keep the page the same size as the number of projects.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "88501b70-e5fe-4b73-831f-9b74828ed37d",
           "title": "Cards across projects, and Enter jumps to the card",
           "notes": "Each project's Doing cards, then urgent and high in Todo, under that project's row. readBoard already parses a board.json; this reads several. Enter opens that project's board with the card selected. Open question to settle first: open projects only (free), or every recent project (reads folders that have no page and may be gone).",
           "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
-          "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
-          "title": "The waiting list, and Enter jumps to the pane",
-          "notes": "Every pane asking for you, named by project and pane -- `api . terminal 3`, inside its project's row. The renderer already holds each pane's bell state, so this is a read of what is there. Enter on a row lands you in that pane, which is the whole point: a yellow tab says some project wants you and cannot say which of its six panes.",
-          "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
@@ -126,6 +105,33 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
+          "title": "One row per project, and the lists live inside it",
+          "notes": "The shape of the page, so settle it before the lists are built. A row per project carrying its counts -- 1 waiting, 1 exited, 2 doing, and how long since anything was printed. Enter expands a row, Enter on a child jumps to it. Two flat lists read fine at three projects and become forty unreadable rows at ten; rows keep the page the same size as the number of projects.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T10:20:41.465Z",
+          "branch": "manager-page-rows"
+        },
+        {
+          "id": "9ec3aa79-428a-4c8f-9d92-25284434e79d",
+          "title": "Say which panes have died",
+          "notes": "The renderer already marks a pane exited and writes `[exited 1] press Enter to restart` into it. Nothing else ever says so: the bell does not ring on exit and no tab goes yellow. Your build fails in api . terminal 2 and you find out forty minutes later when you wander over. The cheapest useful thing on the page -- the flag is already there, it just needs somewhere to show.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T10:20:41.465Z",
+          "branch": "manager-page-rows"
+        },
+        {
+          "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
+          "title": "The waiting list, and Enter jumps to the pane",
+          "notes": "Every pane asking for you, named by project and pane -- `api . terminal 3`, inside its project's row. The renderer already holds each pane's bell state, so this is a read of what is there. Enter on a row lands you in that pane, which is the whole point: a yellow tab says some project wants you and cannot say which of its six panes.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-08T10:20:41.465Z",
+          "branch": "manager-page-rows"
         }
       ]
     },
