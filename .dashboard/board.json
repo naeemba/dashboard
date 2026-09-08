@@ -84,7 +84,8 @@
           "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
           "title": "Check what happens to right-to-left text in a terminal pane",
           "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         },
         {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
@@ -111,7 +112,8 @@
           "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
           "title": "Manager tab: board mode showing tasks from all open projects",
           "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
@@ -122,7 +124,8 @@
           "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
@@ -161,19 +164,22 @@
           "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
           "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
           "notes": "Hit Ctrl+S, click \"Open a new project...\", and the folder dialog opens. Confirmed by hand on 2026-09-07 in a build carrying PR #14. There was never a second cause: the quit question was asked with showMessageBoxSync, which stopped the whole main process, so a folder panel already open could never finish. PR #14 asks it with the async showMessageBox and the panel comes back. No code of its own.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "7a3daeb0-8c7f-4e61-8dd7-78ac2c8ff72b",
           "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
           "notes": "The quit question was asked with showMessageBoxSync, which stops the whole main process until it is answered. A folder panel already open could never finish, so projects:open never replied and the renderer showed \"reply was never sent\". Measured: the main process sat dead for 4.3 seconds in a stripped-down copy of the window. It now asks with the async showMessageBox: the close is always stopped, and answering Quit calls destroy(), which raises no close to answer again. A second close request while the question is up is ignored instead of stacking another question. PR #14.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "4052e317-fdca-4fb4-a302-9842aaeb1c05",
           "title": "Notify when something in a pane is waiting on us",
           "notes": "Out of the app: a system notification when something needs attention, like a Claude session waiting on an answer. In the app: a small in-app notification, and highlight the tab that is waiting. Shipped: the packaged app is re-signed ad hoc so macOS registers it with Notification Center under the same name as its Info.plist, the banner is raised from main instead of the renderer, and a waiting project gets a pulsing red dot on its tab that stops pulsing under reduced motion. PR #13.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "6e0e1fa2-bca5-4dac-91b0-4feed94f2c9c",
@@ -193,37 +199,43 @@
           "id": "e18e837c-34f1-4c95-9096-7ccb07ace4d0",
           "title": "Ctrl+H opens help for the screen you are on",
           "notes": "Ctrl+H pops up a dialog listing the shortcuts for the screen you are on: the terminal grid, nvim and the board each have their own set. PR #9.",
-          "priority": "high"
+          "priority": "high",
+          "parent": null
         },
         {
           "id": "16db2233-dab5-48b9-82e2-1341331ff7f7",
           "title": "Give the editor pane the PATH the terminals already have",
           "notes": "Ctrl+N only ever showed [exited 1]. The pane spawned nvim by name, and an app launched from the Dock has no Homebrew on PATH. nvim now runs through a login shell. PR #8.",
-          "priority": "urgent"
+          "priority": "urgent",
+          "parent": null
         },
         {
           "id": "2bc566ed-dfab-4758-bf13-6aabe750fa31",
           "title": "Ask before closing the window",
           "notes": "Closing killed every shell on every page, including anything still running. The window asks first, with Cancel as the default. PR #8.",
-          "priority": "high"
+          "priority": "high",
+          "parent": null
         },
         {
           "id": "7ad53d2c-11ea-461e-bb42-97fc36d5e1f6",
           "title": "Open on the projects the last run was left on",
           "notes": "The layout is saved to session.json and read back at startup: same projects, same order, same view, same focused pane. The shells still start empty. PR #8.",
-          "priority": "high"
+          "priority": "high",
+          "parent": null
         },
         {
           "id": "0c17eaf8-1352-40c9-b497-8f971b2f7c7e",
           "title": "Give board cards a priority",
           "notes": "urgent, high, medium or low. p cycles it, a colour down the card's left edge shows it, the status bar names it, and s sorts the column urgent first. Sorting is stable, so Shift+up and Shift+down still hold within a priority.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "ad957245-bbb3-4dc0-8b92-b98ba44b9c23",
           "title": "Give board cards a description",
           "notes": "e opens the card's notes in a textarea. Enter is a newline, Escape commits. The description shows on the card, dimmed, under the title.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "34779370-126a-4250-b003-271d50914593",

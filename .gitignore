@@ -94,3 +94,6 @@ out/
 .superpowers/
 .codegraph/
 .vitest/
+
+# Vite build output
+dist/
