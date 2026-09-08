@@ -166,7 +166,6 @@ body {
 .view-manager p {
   margin: 0;
   max-width: 70ch;
-  color: var(--brightBlack);
 }
 
 .board {

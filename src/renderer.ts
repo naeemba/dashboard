@@ -20,7 +20,9 @@ import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
 import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
-import { MANAGER_PROJECT, MANAGER_SLOT, createManagerView } from './manager';
+import {
+  MANAGER_PROJECT, MANAGER_SLOT, createManagerView, isProjectPage, landingPosition, projectPosition,
+} from './manager';
 import { actionByName } from './actions';
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
@@ -108,14 +110,6 @@ let activeIndex = 0;
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
 
-// Which pages are projects, and so what the session file remembers, what the picker can open, and what
-// you can drag along the tab strip. Asked of the mode rather than of the project behind it: the manager
-// is the only page with that mode — setMode only ever picks a view a page has, and it is the only page
-// with that view — and it is also the only page with no project behind it.
-function isProjectPage(page: Page): boolean {
-  return page.mode !== 'manager';
-}
-
 function projectPages(): Page[] {
   return pages.filter(isProjectPage);
 }
@@ -180,7 +174,7 @@ function saveSession(): void {
   // A restore opens the projects one at a time, and each one redraws. Saving those would leave the file
   // holding two of your five projects for the whole of startup, so an app killed while it was still
   // opening them would come back next time with the three missing for good.
-  if (restoring || pages.length === 0) return;
+  if (restoring) return;
   // A project whose folder went away is not written back. It stays on screen for this run — nothing
   // closes a page — but the next launch starts without it, instead of reopening the same dead tab and
   // saving it again forever. The project list already works this way: a missing project is neither
@@ -412,20 +406,19 @@ function buildPage(project: Project, slot: number): Page {
     view.hidden = mode !== 'terminals';
   }
   const page: Page = {
-    project, element, views: {}, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
+    project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
     editorStarted: false, board: null,
   };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
-  // instead of a blank one with no shells. A dead project has no views: there is nothing to run nvim in
-  // and nowhere to keep a board.
+  // instead of a blank one with no shells.
   if (project.missing) {
     element.classList.add('missing');
     element.textContent = `Directory not found: ${project.path}`;
+    // A dead project has no views: there is nothing to run nvim in and nowhere to keep a board.
+    page.views = {};
     return page;
   }
-  // Only from here on does the page have views: everything above returns a page you cannot switch.
-  page.views = views;
   element.append(...Object.values(views));
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(slot, terminalIndex);
@@ -466,14 +459,11 @@ function setPage(project: Project, slot: number): void {
 }
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are
-// untouched; only the order you cycle and jump through changes.
-// Nothing goes in front of the manager and the manager itself does not move, so its jump key stays its
-// own and a project dragged to the front lands second.
-const FIRST_PROJECT_POSITION = 1;
-
+// untouched; only the order you cycle and jump through changes. Where it may land, and whether the page
+// you are on may move at all, are manager.ts's to answer.
 function moveProject(index: number): void {
   if (index >= pages.length || !isProjectPage(pages[activeIndex])) return;
-  const target = Math.max(index, FIRST_PROJECT_POSITION);
+  const target = projectPosition(index);
   pages.splice(target, 0, ...pages.splice(activeIndex, 1));
   activeIndex = target;
   renderStatus();
@@ -643,10 +633,7 @@ async function restore(session: Session): Promise<void> {
     restoring = false;
     const activePath = session.pages[session.activeIndex]?.path;
     const saved = pages.findIndex((page) => page.project.path === activePath);
-    // The project the last run was left on. If its folder went away the first project takes it, and
-    // only a launch with no project at all lands on the manager.
-    const firstProject = pages.findIndex(isProjectPage);
-    showPage(saved === -1 ? Math.max(firstProject, 0) : saved, true);
+    showPage(landingPosition(saved, pages.findIndex(isProjectPage)), true);
   }
 }
 

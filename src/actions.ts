@@ -1,3 +1,4 @@
+import { projectPosition } from './manager';
 import type { Mode } from './modes';
 import { TERMINAL_COUNT, type Direction } from './terminals';
 
@@ -50,7 +51,7 @@ export type ActionEntry = {
   mac: string | null;
   other: string | null;
   // The rows the help dialog may print as one, and the sentence it prints for them. Only the numbered
-  // runs have these: nine rows saying "Jump to project 4" is not a help dialog, it is a list.
+  // runs have these: nine rows saying "Jump to tab 4" is not a help dialog, it is a list.
   family?: string;
   familyDescription?: string;
 };
@@ -84,19 +85,26 @@ export const ACTIONS: readonly ActionEntry[] = [
     action: { kind: 'project-previous' }, mac: 'Cmd+[', other: 'Ctrl+[',
   },
   ...range(9).map((number): ActionEntry => ({
-    name: `project-jump-${number}`, description: `Jump to project ${number}`,
+    // Counted the way the tab strip is, where tab 1 is the manager rather than a project.
+    name: `project-jump-${number}`, description: `Jump to tab ${number}`,
     group: 'projects', scope: 'global',
     action: { kind: 'project-jump', index: number - 1 },
     mac: `Ctrl+${number}`, other: `Ctrl+${number}`,
-    family: 'project-jump', familyDescription: 'Jump to a project',
+    family: 'project-jump', familyDescription: 'Jump to a tab',
   })),
-  ...range(9).map((number): ActionEntry => ({
-    name: `project-move-${number}`, description: `Move this project to position ${number}`,
-    group: 'projects', scope: 'global',
-    action: { kind: 'project-move', index: number - 1 },
-    mac: `Ctrl+Shift+${number}`, other: `Ctrl+Shift+${number}`,
-    family: 'project-move', familyDescription: 'Move this project to that position',
-  })),
+  ...range(9).map((number): ActionEntry => {
+    const index = number - 1;
+    return {
+      name: `project-move-${number}`,
+      // Where the key actually lands it, asked of the same function the move itself asks: the manager
+      // owns tab 1, so the first two keys both land a project in tab 2 and both say so.
+      description: `Move this project to tab ${projectPosition(index) + 1}`,
+      group: 'projects', scope: 'global',
+      action: { kind: 'project-move', index },
+      mac: `Ctrl+Shift+${number}`, other: `Ctrl+Shift+${number}`,
+      family: 'project-move', familyDescription: 'Move this project to that tab',
+    };
+  }),
   {
     name: 'help', description: 'Open this dialog', group: 'app', scope: 'global',
     action: { kind: 'help' }, mac: 'Ctrl+H', other: 'Ctrl+H',

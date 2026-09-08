@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { helpSections } from './help';
+import { MODE_NAMES, helpSections } from './help';
 import { mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
@@ -8,9 +8,9 @@ import { key } from './test-key';
 import type { Mode } from './modes';
 
 const mac = defaultSettings(true).keys;
-// Every screen the dialog can be opened on. A new mode belongs here, or the tests below stop asking
-// about the screen it added.
-const SCREENS: Mode[] = ['terminals', 'nvim', 'board', 'manager'];
+// Every screen the dialog can be opened on, read back from the table help.ts prints from, so a new mode
+// cannot be added without the tests below asking about it.
+const SCREENS = Object.keys(MODE_NAMES) as Mode[];
 
 function titles(mode: Mode, keys = mac, isMac = true): string[] {
   return helpSections(mode, keys, isMac).map((section) => section.title);
@@ -89,7 +89,7 @@ describe('helpSections', () => {
   });
 
   it('collapses a numbered run while every one of them is untouched', () => {
-    expect(rows('terminals')).toContainEqual({ keys: 'Ctrl+1…Ctrl+9', action: 'Jump to a project' });
+    expect(rows('terminals')).toContainEqual({ keys: 'Ctrl+1…Ctrl+9', action: 'Jump to a tab' });
   });
 
   it('spells the run out once one of them has moved, because the range would be a lie', () => {

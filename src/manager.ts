@@ -1,3 +1,4 @@
+import type { Mode } from './modes';
 import type { Project } from './projects';
 
 // Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
@@ -25,4 +26,29 @@ export function createManagerView(): HTMLElement {
     + 'pane last printed will be listed here, across every open project.';
   view.append(heading, blurb);
   return view;
+}
+
+// The manager holds the first tab, so the earliest position a project can take is the one behind it.
+const FIRST_PROJECT_POSITION = 1;
+
+// Which pages are projects, and so what the session file remembers, what the picker can open, what you
+// can drag along the tab strip, and which page is allowed to move at all. Asked of the mode rather than
+// of the project behind it: the manager is the only page with that mode — setMode only ever picks a view
+// a page has, and it is the only page with that view — and it is also the only page with no project
+// behind it.
+export function isProjectPage(page: { mode: Mode }): boolean {
+  return page.mode !== 'manager';
+}
+
+// Where a project asked for position `index` actually lands. Nothing goes in front of the manager, so a
+// project dragged to the front lands second, and the two keys that ask for the front both say tab 2.
+export function projectPosition(index: number): number {
+  return Math.max(index, FIRST_PROJECT_POSITION);
+}
+
+// Where the window lands once everything saved is back. `saved` is -1 when the project the last run was
+// left on is gone; the first project takes it, and only a launch with no project at all — `firstProject`
+// of -1 too — lands on the manager.
+export function landingPosition(saved: number, firstProject: number): number {
+  return saved === -1 ? Math.max(firstProject, 0) : saved;
 }

@@ -10,7 +10,7 @@ export type Shortcut = { keys: string; action: string };
 // someone the gestures and not the thing they are gestures for.
 export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
-const MODE_NAMES: Record<Mode, string> = {
+export const MODE_NAMES: Record<Mode, string> = {
   terminals: 'Terminals', nvim: 'nvim', board: 'Board', manager: 'Manager',
 };
 
@@ -39,8 +39,10 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'died, what each pane last printed. Nothing is on it yet.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view.',
-  projects: 'One page per project, in the order along the top. The window opens on the projects the '
-    + 'last run was left on, and closing it asks first, because it kills every shell in every project.',
+  projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
+    + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
+    + 'keys both land it in tab 2. The window opens on the projects the last run was left on, and '
+    + 'closing it asks first, because it kills every shell in every project.',
   app: 'Every key on this list can be changed, and so can the colours, the font and the shell. They '
     + 'are kept in ~/.config/dashboard/settings.json, which you can also edit by hand — delete it and '
     + 'everything is back to how it shipped.',
