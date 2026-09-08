@@ -19,7 +19,7 @@ import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
-import { type Bell, marksWaiting, raisesNotification, waitingNames } from './waiting';
+import { type Bell, isRinging, marksWaiting, raisesNotification, waitingNames } from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
 } from './manager';
@@ -384,7 +384,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
   // before it would save a session naming the pane you just left.
   terminal.textarea?.addEventListener('focus', () => {
-    const wasRinging = pane.bell !== 'quiet';
+    const wasRinging = isRinging(pane.bell);
     pane.bell = 'quiet';
     onFocus?.();
     if (wasRinging) renderStatus();

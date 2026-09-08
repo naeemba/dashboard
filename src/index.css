@@ -181,6 +181,7 @@ body {
   gap: 12px;
   padding: 4px 8px;
   border-radius: 4px;
+  cursor: pointer;
 }
 
 .manager-list li.highlighted {

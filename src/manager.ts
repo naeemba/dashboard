@@ -41,7 +41,11 @@ export function landingPosition(saved: number, firstProject: number): number {
 // What a pane somewhere else can want from you. Two things are worth crossing the app for: a pane is
 // asking a question, or it has died and needs starting again. Everything else is a pane getting on
 // with its work, and the manager says nothing about it.
-export type PaneState = 'waiting' | 'exited';
+// Asking comes first wherever they are listed: a pane waiting on an answer is the one you can do
+// something about right now. The order of this array is that order, so a state added here is counted
+// and printed without anyone remembering a second list.
+export const PANE_STATES = ['waiting', 'exited'] as const;
+export type PaneState = typeof PANE_STATES[number];
 
 // `index` is the pane's place in its project's panes with the editor last, which is the number
 // focusTerminal and modeOfPane already take. Carrying it means a row can be jumped to without anyone
@@ -78,11 +82,10 @@ export function managerRows(pages: readonly ManagerPage[]): ManagerRow[] {
   }));
 }
 
-// What the row says about the project beside its name. Asking comes first: a pane waiting on an answer
-// is the one you can do something about right now.
+// What the row says about the project beside its name.
 export function alertSummary(alerts: readonly PaneAlert[]): string {
   const parts: string[] = [];
-  for (const state of ['waiting', 'exited'] as const) {
+  for (const state of PANE_STATES) {
     const count = alerts.filter((alert) => alert.state === state).length;
     if (count > 0) parts.push(`${count} ${state}`);
   }
@@ -102,8 +105,9 @@ export function canOpen(row: ManagerRow): boolean {
 }
 
 // The rows flattened to what is actually on screen, which is what the selection counts and what Enter
-// acts on. A quiet project is drawn shut however it was left: opening it would show an empty gap, and
-// leaving it open would mean the page silently grew a row the moment a pane rang.
+// acts on. A quiet project is drawn shut whatever `open` says, because there is nothing to put under
+// it — but it is still in the set, so a project you opened and never shut comes back open by itself
+// the next time one of its panes rings. That is the point: a row you asked to see stays asked for.
 export function managerLines(rows: readonly ManagerRow[], open: ReadonlySet<number>): ManagerLine[] {
   return rows.flatMap((row): ManagerLine[] => {
     const isOpen = open.has(row.slot) && canOpen(row);

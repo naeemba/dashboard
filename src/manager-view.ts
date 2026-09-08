@@ -61,7 +61,6 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     state.className = `manager-state manager-${line.alert.state}`;
     state.textContent = line.alert.state;
     item.append(name, state);
-    item.addEventListener('click', () => options.onJump(line.slot, line.alert.index));
     return item;
   }
 
@@ -78,12 +77,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     summary.className = 'manager-summary';
     summary.textContent = alertSummary(line.row.alerts);
     item.append(name, summary);
-    item.addEventListener('click', () => toggle(line.row));
     return item;
   }
 
-  // Shut a project that has nothing to show and it stays shut, which is what stops a row you opened
-  // while it was quiet springing open by itself the moment one of its panes rings.
+  // Only a project with something to show can be opened or shut: on a quiet row the key does nothing
+  // rather than opening an empty gap. A row left open stays in the set while the project is quiet, so
+  // it draws itself open again when one of its panes rings.
   function toggle(row: ManagerRow): void {
     if (!canOpen(row)) return;
     if (opened.has(row.slot)) opened.delete(row.slot);
@@ -91,9 +90,15 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     options.onChanged();
   }
 
+  // Where the selection is and what it is on, always written together: set one without the other and
+  // the next redraw hunts for a line the highlight is no longer on and drags it back.
+  function select(index: number): void {
+    selected = index;
+    selectedKey = lines[index] ? lineKey(lines[index]) : '';
+  }
+
   function move(direction: 'up' | 'down'): void {
-    selected = clampLine(lines.length, selected + (direction === 'down' ? 1 : -1));
-    selectedKey = lines[selected] ? lineKey(lines[selected]) : '';
+    select(clampLine(lines.length, selected + (direction === 'down' ? 1 : -1)));
     options.onChanged();
   }
 
@@ -108,11 +113,18 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     element,
     render(rows: readonly ManagerRow[]): void {
       lines = managerLines(rows, opened);
-      selected = selectedLine(lines, selectedKey, selected);
-      selectedKey = lines[selected] ? lineKey(lines[selected]) : '';
+      select(selectedLine(lines, selectedKey, selected));
       empty.hidden = rows.length > 0;
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
+        // A click moves the selection to the row first and then does what Enter does there. Acting on
+        // the clicked row while the highlight stayed put would leave the pointer and the keyboard
+        // naming two different rows, and the highlight is the only thing on screen that says where the
+        // keyboard is.
+        item.addEventListener('click', () => {
+          select(index);
+          open();
+        });
         if (index === selected) item.classList.add('highlighted');
         return item;
       }));
