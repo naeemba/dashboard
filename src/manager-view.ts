@@ -1,6 +1,7 @@
 import type { Action } from './actions';
+import { clamp } from './clamp';
 import {
-  alertSummary, canOpen, clampLine, lineKey, managerLines, selectedLine,
+  alertSummary, canOpen, lineKey, managerLines, selectedLine,
   type ManagerLine, type ManagerRow,
 } from './manager';
 
@@ -96,8 +97,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     selectedKey = lines[index] ? lineKey(lines[index]) : '';
   }
 
+  // The list does not wrap: holding Down stops on the last pane rather than carrying you back to the
+  // first project, which would be a jump you did not ask for. The picker wraps; this does not.
   function move(direction: 'up' | 'down'): void {
-    setSelection(clampLine(lines.length, selected + (direction === 'down' ? 1 : -1)));
+    setSelection(clamp(selected + (direction === 'down' ? 1 : -1), lines.length - 1));
     options.onChanged();
   }
 

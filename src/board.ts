@@ -1,3 +1,4 @@
+import { clamp } from './clamp';
 import type { Direction } from './terminals';
 
 // Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
@@ -63,12 +64,8 @@ export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
 }
 
-function clamp(value: number, limit: number): number {
-  return Math.max(0, Math.min(value, limit));
-}
-
 function lastRow(column: Column | undefined): number {
-  return Math.max(0, (column?.cards.length ?? 1) - 1);
+  return (column?.cards.length ?? 0) - 1;
 }
 
 // Operations copy rather than mutate so the caller can keep the previous board as its undo step.
@@ -253,7 +250,7 @@ export function deleteCard(board: Board, selection: Selection): Change {
   const remaining = cards.filter((_card, at) => at !== selection.card);
   return {
     board: replaceColumn(board, selection.column, remaining),
-    selection: { column: selection.column, card: clamp(selection.card, Math.max(0, remaining.length - 1)) },
+    selection: { column: selection.column, card: clamp(selection.card, remaining.length - 1) },
   };
 }
 
@@ -275,7 +272,7 @@ export function deleteCardAndDescendants(board: Board, selection: Selection): Ch
   const remaining = columns[selection.column].cards.length;
   return {
     board: withColumns(board, columns),
-    selection: { column: selection.column, card: clamp(survivorsAbove, Math.max(0, remaining - 1)) },
+    selection: { column: selection.column, card: clamp(survivorsAbove, remaining - 1) },
   };
 }
 
