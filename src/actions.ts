@@ -73,15 +73,15 @@ export const ACTIONS: readonly ActionEntry[] = [
     action: { kind: 'project-picker' }, mac: 'Ctrl+S', other: 'Ctrl+S',
   },
   {
-    name: 'project-last', description: 'Back to the last project', group: 'projects', scope: 'global',
+    name: 'project-last', description: 'Back to the last tab', group: 'projects', scope: 'global',
     action: { kind: 'project-last' }, mac: 'Ctrl+O', other: 'Ctrl+O',
   },
   {
-    name: 'project-next', description: 'Next project', group: 'projects', scope: 'global',
+    name: 'project-next', description: 'Next tab', group: 'projects', scope: 'global',
     action: { kind: 'project-next' }, mac: 'Cmd+]', other: 'Ctrl+]',
   },
   {
-    name: 'project-previous', description: 'Previous project', group: 'projects', scope: 'global',
+    name: 'project-previous', description: 'Previous tab', group: 'projects', scope: 'global',
     action: { kind: 'project-previous' }, mac: 'Cmd+[', other: 'Ctrl+[',
   },
   ...range(9).map((number): ActionEntry => ({

@@ -41,8 +41,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'lands you back in the same view.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
     + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
-    + 'keys both land it in tab 2. The window opens on the projects the last run was left on, and '
-    + 'closing it asks first, because it kills every shell in every project.',
+    + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '
+    + 'through the manager on the way round. The window opens on the projects the last run was left '
+    + 'on, and closing it asks first, because it kills every shell in every project.',
   app: 'Every key on this list can be changed, and so can the colours, the font and the shell. They '
     + 'are kept in ~/.config/dashboard/settings.json, which you can also edit by hand — delete it and '
     + 'everything is back to how it shipped.',
