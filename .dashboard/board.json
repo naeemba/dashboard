@@ -124,26 +124,30 @@
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium"
-        },
-        {
-          "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
-          "title": "Cards remember when they were made and when they last changed",
-          "notes": "A card carries `createdAt` and `updatedAt`. Nothing in the app knows today whether a card was written this morning or last March, so nothing can ever be sorted, aged or reported on.\n\nThe trap: the whole file is rewritten on every edit, so `updatedAt` must mean this card's own fields changed. Bump it on a write and every card on the board is stamped with the moment you renamed one of them, which is the same as having no timestamps at all. Decide too whether moving a card between columns counts as changing it -- the column is not a field of the card, but it is the change people most want the date for.\n\nA hand-edited or older file has neither field, and that has to stay legal: `.dashboard/CLAUDE.md` promises agents they can write a card by hand. Missing means unknown rather than now, or every board reads as if it were created the first time this version opened it.\n\nThe format is documented in two places that must move together: `.dashboard/CLAUDE.md` and the copy of it in board-store.ts. A test already pins the two against each other.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "c4eb9028-3fca-4693-a957-cab74e70ddb6",
-          "title": "A card knows its branch and its pull request",
-          "notes": "Two fields on a card, so the board can say which cards are actually in flight: `\"Fix the picker\" -- fix-open-project-dialog, PR #14`. It is written by hand today -- half the Done cards on this board end with a PR number typed into the notes.\n\nThe worktree card fills the branch in for nothing, since it is the thing that creates the branch. The PR number is either typed or fetched with `gh`, and fetching brings auth, the network and a question about when it refreshes -- so start with typed.\n\nWhat it buys once the fields exist: `d` on a card whose branch still has unmerged commits can stop and say so, and a card whose PR has merged can offer to move itself to Done.\n\nSame format contract as the timestamps card: `.dashboard/CLAUDE.md` and the copy in board-store.ts move together, a hand-written card without the fields stays legal, and a board.json from an older version must not be treated as damaged.",
-          "priority": "medium",
-          "parent": null
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
+          "title": "Cards remember when they were made and when they last changed",
+          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows \u2014 a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
+          "priority": "medium",
+          "parent": null,
+          "branch": "card-timestamps-and-branch",
+          "pullRequest": 16
+        },
+        {
+          "id": "c4eb9028-3fca-4693-a957-cab74e70ddb6",
+          "title": "A card knows its branch and its pull request",
+          "notes": "Shipped. `branch` and `pullRequest` on a card, typed in with `b` and `r`, shown under the card's title so a Doing column says which of its cards is in flight. The number is a whole number above zero written with or without the `#`; isPullRequestNumber decides that for the file parser and for pullRequestFrom, which the commit and the message explaining the refusal both call. flightParts is the one place that says how the pair reads. Nothing fetches them. PR #16.",
+          "priority": "medium",
+          "parent": null,
+          "branch": "card-timestamps-and-branch",
+          "pullRequest": 16
+        },
         {
           "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
           "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
