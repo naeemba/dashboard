@@ -105,12 +105,6 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "3b766e7b-6178-487e-86f8-7fd98d65655e",
-          "title": "One clamp, not three: board.ts, board-detail.ts and manager.ts each hold a copy",
-          "notes": "board.ts:66 has a private clamp(value, limit). board-detail.ts:71 writes the same expression inline. manager.ts:126 adds clampLine(count, index), which is clamp(index, count - 1). Nothing breaks today - it is arithmetic and all three agree. The cost is the next screen with a list, which makes it four, and none of them is the one to change. This repo already keeps modules this small (links.ts is 7 lines, fuzzy.ts is 14), so a clamp.ts holding one function beside one test is in keeping, and the three callers then read the same. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/18",
-          "priority": "low"
         }
       ]
     },
@@ -258,6 +252,13 @@
           "notes": "The banner says `api . terminal 3 is waiting`, you click it, and the app comes forward on that project with that pane focused. Today the click brings the app up and then you go and find the pane yourself, which is the part the banner was supposed to save you.\n\nShipped: the pane's id travels with the notification, main hangs a click handler on it, and the renderer sets the view and the focused pane before showing the page. A slot whose project has since been closed is nowhere to go. paneFromId and modeOfPane moved into terminals.ts with tests. PR #15.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "3b766e7b-6178-487e-86f8-7fd98d65655e",
+          "title": "One clamp, not three: board.ts, board-detail.ts and manager.ts each hold a copy",
+          "notes": "Shipped. src/clamp.ts holds one clamp(value, limit) beside one test, and every list in the app reads it: board.ts, board-detail.ts (both the redraw and the arrow keys), manager.ts, manager-view.ts, picker.ts and board-state.ts. The three copies the issue named plus three more found on the way - picker.ts and board-state.ts had dropped the floor at 0, and the card detail dialog wrote the two halves by hand a hundred lines below the copy it shared. The guards that only fed the old clamp are gone too: lastRow and deleteCard no longer floor a number their callers already floor. The “lists here do not wrap” sentence moved onto move() in manager-view.ts, which decides it - the picker wraps on purpose, so it was never clamp's rule to state. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/20",
+          "priority": "low",
+          "updatedAt": "2026-09-08T11:16:25.893760Z"
         }
       ]
     }
