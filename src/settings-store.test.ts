@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readSettings, settingsFilePath, writeSettings } from './settings-store';
+import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import { bindKey, defaultSettings } from './settings';
 
 function file(): string {
@@ -79,5 +79,56 @@ describe('writeSettings', () => {
     writeSettings(path, bindKey(defaultSettings(true), 'help', 'Ctrl+Shift+K'), true);
     expect(readSettings(path, false).keys)
       .toEqual({ ...defaultSettings(false).keys, help: 'Ctrl+Shift+K' });
+  });
+});
+
+describe('tidySettingsFile', () => {
+  // The file an older build wrote: every shipped key and colour spelled out as if you had picked them,
+  // which is what stopped a default we later moved from ever reaching these people.
+  it('takes out the lines that match what this build ships', () => {
+    const path = file();
+    const shipped = defaultSettings(true);
+    writeFileSync(path, JSON.stringify({ ...shipped, font: { name: 'Menlo', size: shipped.font.size } }));
+    tidySettingsFile(path, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')))
+      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {} });
+  });
+
+  // You meant 13.0 and typed 130, and #fff instead of #ffffff. Both are refused when the file is read,
+  // so the panes come up shipped-size and shipped-colour and you open the file to find the mistake. It
+  // has to still be there.
+  it('leaves a line it cannot read exactly where you typed it', () => {
+    const path = file();
+    writeFileSync(path, JSON.stringify({ font: { size: 130 }, theme: { background: '#fff' } }));
+    tidySettingsFile(path, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')))
+      .toEqual({ font: { size: 130 }, theme: { background: '#fff' }, keys: {} });
+  });
+
+  // Two actions on one key: reading the file takes the key off the loser, and writing that back would
+  // say in the file that you asked for no key there. Then you fix the clash and it still does nothing.
+  it('keeps both sides of a clash, so fixing one gives the other its key back', () => {
+    const path = file();
+    writeFileSync(path, JSON.stringify({ keys: { help: 'Ctrl+J', 'board-open': 'Ctrl+J' } }));
+    tidySettingsFile(path, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')).keys)
+      .toEqual({ help: 'Ctrl+J', 'board-open': 'Ctrl+J' });
+  });
+
+  it('keeps a field this build knows nothing about', () => {
+    const path = file();
+    writeFileSync(path, JSON.stringify({ somethingLater: 'mine' }));
+    tidySettingsFile(path, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')).somethingLater).toBe('mine');
+  });
+
+  it('leaves a damaged file and a missing one alone', () => {
+    const path = file();
+    writeFileSync(path, '{ this is not json');
+    tidySettingsFile(path, true);
+    expect(readFileSync(path, 'utf8')).toBe('{ this is not json');
+    const missing = file();
+    tidySettingsFile(missing, true);
+    expect(existsSync(missing)).toBe(false);
   });
 });

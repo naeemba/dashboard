@@ -62,22 +62,21 @@ function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): Binding
   return { binding: formatBinding(parsed), written: true };
 }
 
+// Anything that is not a plain object reads as one with nothing in it. Every check that follows a call
+// to this already rejects undefined, so a file holding a number, a list or null where an object belongs
+// falls through to the defaults instead of throwing.
+function asRecord(value: unknown): Record<string, unknown> {
+  return (typeof value === 'object' && value !== null && !Array.isArray(value))
+    ? value as Record<string, unknown>
+    : {};
+}
+
 export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const defaults = defaultSettings(isMac);
-  // Destructuring anything that is not an object gives undefined fields, and every check below already
-  // rejects undefined, so the only shape worth guarding against is the one that would throw.
-  const raw = (typeof stored === 'object' && stored !== null && !Array.isArray(stored))
-    ? stored as Record<string, unknown>
-    : {};
-  const storedKeys = (typeof raw.keys === 'object' && raw.keys !== null)
-    ? raw.keys as Record<string, unknown>
-    : {};
-  const storedTheme = (typeof raw.theme === 'object' && raw.theme !== null)
-    ? raw.theme as Record<string, unknown>
-    : {};
-  const storedFont = (typeof raw.font === 'object' && raw.font !== null)
-    ? raw.font as Record<string, unknown>
-    : {};
+  const raw = asRecord(stored);
+  const storedKeys = asRecord(raw.keys);
+  const storedTheme = asRecord(raw.theme);
+  const storedFont = asRecord(raw.font);
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
@@ -197,5 +196,24 @@ export function chosenSettings(settings: Settings, isMac: boolean): FileSettings
     },
     theme: chosenFrom(settings.theme, shipped.theme),
     keys: chosenFrom(settings.keys, shipped.keys),
+  };
+}
+
+// The launch tidy. Same rule as chosenSettings — a line equal to what this build ships comes out — but
+// read off the file's own JSON rather than the parsed settings, and that difference is the whole point.
+// parseSettings repairs what it cannot accept, and writing those repairs back deletes what you typed:
+// you write "size": 130 meaning 13.0, launch to find the panes unchanged, open the file to look for the
+// typo, and the line is gone. Comparing the raw value instead, 130 is not 13, so it stays where you put
+// it. Everything else the file holds is passed through untouched, a field this build has never heard of
+// included: it is not ours to throw away.
+export function withoutShipped(stored: unknown, isMac: boolean): Record<string, unknown> {
+  const shipped = defaultSettings(isMac);
+  const raw = asRecord(stored);
+  return {
+    ...raw,
+    shellCommand: raw.shellCommand === shipped.shellCommand ? undefined : raw.shellCommand,
+    font: chosenFrom<unknown>(asRecord(raw.font), shipped.font),
+    theme: chosenFrom<unknown>(asRecord(raw.theme), shipped.theme),
+    keys: chosenFrom<unknown>(asRecord(raw.keys), shipped.keys),
   };
 }

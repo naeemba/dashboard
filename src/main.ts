@@ -16,7 +16,7 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
-import { readSettings, settingsFilePath, writeSettings } from './settings-store';
+import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import type { Settings } from './settings';
 import type { Board } from './board';
 
@@ -40,11 +40,11 @@ const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFI
 const isMac = process.platform === 'darwin';
 let settings = readSettings(settingsFile, isMac);
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
-// nothing strips those lines until the settings screen is next opened. Rewriting it once here drops
+// nothing strips those lines until the settings screen is next opened. Tidying it once here drops
 // everything that still matches this build, so the next default to move reaches these people. It cannot
 // give back a default that has already moved: a line the old build wrote is identical to one typed on
-// purpose. Only an existing file is touched — nobody who has never saved settings gets one made for them.
-if (existsSync(settingsFile)) writeSettings(settingsFile, settings, isMac);
+// purpose. What the file holds and what survives is tidySettingsFile's to say, not this line's.
+tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is

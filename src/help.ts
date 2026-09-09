@@ -54,7 +54,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
   app: 'Every key on this list can be changed, and so can the colours, the font and the shell. They '
     + 'are kept in ~/.config/dashboard/settings.json, which you can also edit by hand. It holds only '
     + 'what you changed; anything you left alone follows the app\'s default, including when that '
-    + 'default moves. Delete it and everything is back to how it shipped.',
+    + 'default moves. The app tidies the file each time it starts, so a line you write that already '
+    + 'matches the default is taken out again. '
+    + 'Delete it and everything is back to how it shipped.',
 };
 
 // What a screen does with the keys no binding names, which is why these are written out rather than
