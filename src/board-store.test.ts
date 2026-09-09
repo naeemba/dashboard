@@ -273,6 +273,13 @@ describe('seedBoardDirectory', () => {
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'README.md'), 'utf8')).toContain('.dashboard');
   });
 
+  it('writes a doc missing from a folder that is already there', () => {
+    const path = project();
+    mkdirSync(join(path, BOARD_DIRECTORY), { recursive: true });
+    seedBoardDirectory(path);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('board.json');
+  });
+
   it('never overwrites files that are already there', () => {
     const path = project();
     seedBoardDirectory(path);

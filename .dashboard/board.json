@@ -46,13 +46,6 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "88501b70-e5fe-4b73-831f-9b74828ed37d",
-          "title": "Cards across projects, and Enter jumps to the card",
-          "notes": "Each project's Doing cards, then urgent and high in Todo, under that project's row. readBoard already parses a board.json; this reads several. Enter opens that project's board with the card selected. Open question to settle first: open projects only (free), or every recent project (reads folders that have no page and may be gone).",
-          "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
           "title": "A fourth mode: notes, one page of them per project",
           "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
@@ -70,13 +63,6 @@
           "id": "fc2bf7b0-d488-4a95-9599-c76e9004f3a2",
           "title": "Panes name themselves",
           "notes": "`api . dev server` instead of `api . terminal 3`. One small change and everything else reads better: the waiting list, the notification banner, the status bar, and which pane is on which worktree.\n\nMostly automatic, from three sources, best first:\n\n1. The program names itself. A terminal title is an escape sequence any program can print -- `printf '\\033]0;dev server\\007'` -- and xterm.js already parses it and fires an event nobody listens to. Shells set it on every prompt. Claude Code can be told to set it to whatever it is working on, from a line in the project's CLAUDE.md, and then the pane says so while it works.\n2. The command it was started with. When the startup commands put `npm run dev` in pane 2, the name is already known.\n3. A name you typed, which beats both -- otherwise the next prompt wipes it.\n\nA title is a hint, not a label: shells rewrite it on every command, so taken blindly the name flickers with every `ls`. Take it only when nothing better is set.\n\n`paneLabel` is already the one place a pane's name is spelled and every other part of the app reads it from there, so this is that function preferring a stored name. An unnamed pane still says `terminal 3` -- lose the numbering and the focus keys stop making sense.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
-          "title": "Manager tab: board mode showing tasks from all open projects",
-          "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
           "priority": "medium",
           "parent": null
         },
@@ -112,6 +98,16 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
+          "title": "Manager tab: a board of every open project, editable in place",
+          "notes": "Shipped. Ctrl+B on the manager stacks one board per open project under project headings, and the cards are edited where they sit. Cmd+Up and Cmd+Down on macOS, Ctrl elsewhere, say which project the keys are aimed at — macOS takes Ctrl with an arrow for Mission Control before the app is told, Escape goes back to the pane list.\n\nNot a second board: createBoardView once per project, so every editing key already worked, each project keeps its own undo and writes its own file, and the renderer gained no branch — the view hands back a BoardView, so it sits in the same field and shows in the same mode. The manager page has two views now instead of one. Both screens re-read on arrival and loadBoard clears undo on every read, so neither can undo over the other.\n\nisProjectPage stopped reading the mode. It answered \"is this the manager?\" with mode !== \"manager\", and a manager that can sit in board mode counted as a project — saved to the session file, listed in its own waiting list, draggable along the tab strip. It reads the slot, which is the thing about the manager that never moves.\n\nTwo rules that were written twice are written once now. heldIndex in clamp-index.ts is how a selection survives the list under it being rebuilt, asked by the manager’s rows and by the boards on its board. SELECTED_CARD is exported from board-view.ts, so the name of the card the keys are on cannot be renamed there and left behind here — nothing would have failed, the selection would just have stopped being scrolled to.\n\nSeeding .dashboard walks its files unconditionally and checks each one on its own, so a folder cloned without its docs gets them back. It runs in front of every read, and this page reads every open project at once, on the process that also pumps the panes.\n\nKnown cost: on a project’s own board Ctrl+H lists the three new keys and pressing them there does nothing. Their descriptions say \"on the manager\". A mode of its own is the only way out, and costs more in MODES, MODE_NAMES, BLURBS, modeLabel and focusMode for the same screen.\n\nNo filtering and no file watching — every column and every card, and a card an agent writes while you are looking turns up when you come back. PR #23.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-09T12:23:44.943Z",
+          "branch": "manager-cards-board",
+          "pullRequest": 23
+        },
         {
           "id": "a434556d-1175-4f8b-b3f1-34872a1b404a",
           "title": "A saved settings.json freezes every shipped default",

@@ -30,6 +30,7 @@ export type Action =
   | { kind: 'board-priority' }
   | { kind: 'board-sort' }
   | { kind: 'board-undo' }
+  | { kind: 'cards-project'; direction: 'previous' | 'next' }
   | { kind: 'manager-select'; direction: 'up' | 'down' }
   | { kind: 'manager-open' };
 
@@ -69,6 +70,11 @@ function range(count: number): number[] {
 
 // A flat list of rows. It is data, so its length is not a design smell — the file-size rule already
 // says so — and every consumer reads it rather than writing its own copy.
+//
+// One thing to know before picking a mac default: Ctrl with an arrow belongs to macOS. Ctrl+Up is
+// Mission Control and Ctrl+Down is Application windows, both on out of the box, and the system takes
+// them before the app is told. A row that ships one on the mac side ships a key that does nothing
+// until the person finds the settings screen. Cmd with an arrow is free.
 export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'project-picker', description: 'Open the project list', group: 'projects', scope: 'global',
@@ -218,6 +224,28 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'board-undo', description: 'Undo the last board change',
     group: 'board', scope: 'board', action: { kind: 'board-undo' }, mac: 'U', other: 'U',
+  },
+  // The manager's board is every open project's board stacked, and these say which of them the rest of
+  // the keys reach. Board scope, because that screen is a board and hears what a board hears — so a
+  // project's own board hears them too and has nowhere to go, the way a mode key does nothing on a
+  // page with no such view.
+  {
+    name: 'cards-project-previous', description: "The previous project's board, on the manager",
+    group: 'board', scope: 'board', action: { kind: 'cards-project', direction: 'previous' },
+    mac: 'Cmd+Up', other: 'Ctrl+Up',
+  },
+  {
+    name: 'cards-project-next', description: "The next project's board, on the manager",
+    group: 'board', scope: 'board', action: { kind: 'cards-project', direction: 'next' },
+    mac: 'Cmd+Down', other: 'Ctrl+Down',
+  },
+  // The way back off the manager's board, which is the one board with a list behind it. Grouped with
+  // the board keys rather than the mode keys so it is only printed on a board — the modes group is
+  // printed on every screen, and Escape is not heard on any of the others.
+  {
+    name: 'mode-manager', description: "Back to the manager's list, from its board",
+    group: 'board', scope: 'board', action: { kind: 'mode-set', mode: 'manager' },
+    mac: 'Escape', other: 'Escape',
   },
   // Bare arrows and a bare Enter, which only this screen hears. The manager does take typing — a
   // character on a waiting row goes to that pane's shell — and these keys are safe from it because the

@@ -1,20 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
-  NOTHING_SELECTED, alertSummary, canOpen, isProjectPage, landingPosition, lineKey, managerLines,
-  managerRows, nextSelection, projectPosition, selectedLine, tailLines, takesAnswer,
+  MANAGER_SLOT, NOTHING_SELECTED, alertSummary, canOpen, isProjectPage, landingPosition, lineKey,
+  managerLines, managerRows, nextSelection, projectPosition, selectedLine, tailLines, takesAnswer,
   type PaneAlert,
 } from './manager';
 import type { Bell } from './waiting';
 
 describe('isProjectPage', () => {
   it('says the manager is not one, so it never moves and is never saved', () => {
-    expect(isProjectPage({ mode: 'manager' })).toBe(false);
+    expect(isProjectPage({ slot: MANAGER_SLOT })).toBe(false);
   });
 
-  it('says every view a project can show is one', () => {
-    expect(isProjectPage({ mode: 'terminals' })).toBe(true);
-    expect(isProjectPage({ mode: 'nvim' })).toBe(true);
-    expect(isProjectPage({ mode: 'board' })).toBe(true);
+  it('says every project is one, whatever slot it was handed', () => {
+    expect(isProjectPage({ slot: 0 })).toBe(true);
+    expect(isProjectPage({ slot: 4 })).toBe(true);
   });
 });
 

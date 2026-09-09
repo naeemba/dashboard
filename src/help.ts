@@ -32,10 +32,15 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'another card: it stays an ordinary card in whatever column you put it in, shows a badge naming '
     + 'its parent, and counts towards the bar on that parent. A card also carries the branch and pull '
     + 'request its work is on, which you type in, and the dates it was written and last changed, which '
-    + 'the app keeps for you and shows when you open the card.',
-  manager: 'The first tab, and the only page that is not a project: no folder, no shells, no board, '
-    + 'so the view keys do nothing here. It is where the window lands when nothing was open last time. '
-    + 'It lists every open project and what its panes want from you — one asking a question, one that '
+    + 'the app keeps for you and shows when you open the card. '
+    + 'The manager has one of these too, and it is every open project\'s board at once, one under the '
+    + 'other. The same keys and the same writes — each project keeps its own undo — with two more that '
+    + 'say which project the rest of them are aimed at, and Escape to go back to the manager\'s list.',
+  manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
+    + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open last '
+    + 'time, and it has two views. The board key shows the other one — every open project\'s board, '
+    + 'stacked, with the cards editable where they sit. '
+    + 'This one lists every open project and what its panes want from you — one asking a question, one that '
     + 'has died and needs starting again. Enter on a project shows those panes by name, each with the '
     + 'last few lines it printed, so the question can be read from here. Enter on a pane takes you '
     + 'straight there; a letter, digit or symbol is sent to it instead, which answers a menu without '
@@ -45,7 +50,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'wants Enter in the pane itself. A project with nothing to report says quiet and has nothing to '
     + 'open.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
-    + 'lands you back in the same view.',
+    + 'lands you back in the same view. The manager has two of its own: its list of what the panes '
+    + 'want, and every project\'s board.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
     + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
     + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '

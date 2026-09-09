@@ -157,6 +157,19 @@ Two halves, both yours to keep true:
 
 A change is not done until Ctrl+H would tell the truth about it.
 
+One place it deliberately over-lists, so nobody re-finds it: board scope is wider
+than the manager's board. The three keys that belong only there — the two that
+pick a project and the Escape that goes back to the manager's list — are board
+scope, because the manager's board *is* a board and hears what a board hears. So
+a project's own board hears them too, where the first two have nowhere to go and
+Escape is swallowed by a `setMode('manager')` that finds no manager view. Open
+Ctrl+H on a project's board and those three rows are listed and do nothing.
+
+The alternative is a scope of its own for one screen, or threading "which board
+am I" from the renderer into `openHelp` just so the dialog can drop three rows.
+Neither is worth it. What to watch for: the next thing that wants Escape on a
+project's board will not fire, and will not say why.
+
 ## Checks
 
     npm test        # vitest

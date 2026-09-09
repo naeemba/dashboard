@@ -390,6 +390,15 @@ body *:not(.pane, .pane *) {
   color: var(--brightWhite);
 }
 
+/* Every board has a selection and every board draws it, so on the manager, where several are stacked,
+   only the one the keys reach may show it — or five projects all look like the one you are on. It sits
+   here rather than with the other .cards rules because it is this rule it turns off: rename .selected
+   above and this has to move with it, and nothing else would say so. */
+.cards-project:not(.active) .board-card.selected {
+  outline: none;
+  color: inherit;
+}
+
 .board-edit {
   width: 100%;
   font: inherit;
@@ -411,6 +420,40 @@ textarea.board-edit {
 .board-empty {
   margin: 0;
   color: var(--brightBlack);
+}
+
+/* The manager's board: every open project's board, one under the other, in a single scroller. The rule
+   that dims an inactive project's selection lives with .board-card.selected, not here. */
+.cards {
+  overflow-y: auto;
+  padding: 2px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.cards .board-empty {
+  margin: 8px;
+}
+
+/* Each project's board is the real board view, so all that is said to it here is to stop being a screen
+   of its own: it grows to its cards, and only a board with more than a screenful in it is capped — at
+   which point its columns go back to scrolling inside themselves, as they do on a project's own tab.
+   Without the cap one project with two hundred Done cards is the whole page. */
+.cards .board {
+  height: auto;
+  max-height: 70vh;
+}
+
+/* Dim until the keys are aimed at it. The selected card's outline says where the keyboard is, but on a
+   long page that card can be off screen, and then nothing else would say which project you are on. */
+.cards-project h2 {
+  margin: 8px 4px 4px;
+  color: var(--brightBlack);
+  font-size: inherit;
+}
+
+.cards-project.active h2 {
+  color: var(--brightWhite);
 }
 
 .page.missing {

@@ -259,15 +259,19 @@ export function writeBoard(projectPath: string, board: Board): void {
   }
 }
 
-// Written once, when the folder first appears. Neither file is regenerated, so an edited CLAUDE.md
-// stays edited.
+// Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md
+// stays edited. The folder existing is not enough to skip the walk: writeBoard makes it too, and a
+// repo that keeps board.json in git often does not keep the docs beside it — clone one of those and
+// the folder arrives with no CLAUDE.md in it, leaving an agent working in there nothing that says
+// what a card looks like.
 export function seedBoardDirectory(projectPath: string): void {
-  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
+  const directory = join(projectPath, BOARD_DIRECTORY);
+  mkdirSync(directory, { recursive: true });
   for (const [name, contents] of [
     ['CLAUDE.md', EXPLANATION_FOR_AGENTS],
     ['README.md', EXPLANATION_FOR_PEOPLE],
   ] as const) {
-    const file = join(projectPath, BOARD_DIRECTORY, name);
+    const file = join(directory, name);
     if (!existsSync(file)) writeFileSync(file, contents);
   }
 }
