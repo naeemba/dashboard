@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseSettings, type Settings } from './settings';
+import { parseSettings, withoutShipped, type Settings } from './settings';
 
 // Beside the .env file main already reads, not in Electron's userData directory. userData is
 // ~/Library/Application Support/Dashboard on macOS, and the point of this file is that a person opens
@@ -23,12 +23,37 @@ export function readSettings(file: string, isMac: boolean): Settings {
   }
 }
 
-export function writeSettings(file: string, settings: Settings): void {
+// Indented and newline-terminated, because the point of this file is that a person opens it in an
+// editor.
+function serialize(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+// isMac is here rather than at the call site because withoutShipped is not optional: a caller that
+// forgot it would write this build's defaults into the file and freeze them, with nothing failing.
+export function writeSettings(file: string, settings: Settings, isMac: boolean): void {
   try {
+    // The directory may not exist yet the first time anything is written.
     mkdirSync(path.dirname(file), { recursive: true });
-    // Indented and newline-terminated: this is a file people edit by hand.
-    writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
+    writeFileSync(file, serialize(withoutShipped(settings, isMac)));
   } catch {
     // The change is live in this run; it just will not survive a restart.
+  }
+}
+
+// The launch tidy: the file's own lines, minus the ones this build already ships. A file an older build
+// wrote named every key and every colour, so nothing in it could ever follow a default that moved; this
+// takes those lines back out and the next move reaches it.
+// Only a file that is there and reads as JSON is touched. A damaged one is left exactly as it is —
+// rewriting it would throw away the text whoever is fixing it is looking at. A file with nothing to
+// take out is left alone too, down to its bytes: keep settings.json in a dotfiles repo and a launch
+// must not show up there as a change.
+export function tidySettingsFile(file: string, isMac: boolean): void {
+  try {
+    const stored = JSON.parse(readFileSync(file, 'utf8'));
+    const tidied = withoutShipped(stored, isMac);
+    if (JSON.stringify(tidied) !== JSON.stringify(stored)) writeFileSync(file, serialize(tidied));
+  } catch {
+    // No file, nothing readable in it, or nowhere to write it back. All three mean: leave it alone.
   }
 }

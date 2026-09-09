@@ -62,22 +62,25 @@ function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): Binding
   return { binding: formatBinding(parsed), written: true };
 }
 
+// A plain object, and nothing else. A list has string keys too, so Array.isArray has to be asked
+// separately or `[1, 2]` reads as `{ "0": 1, "1": 2 }`.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+// Anything that is not a plain object reads as one with nothing in it. Every check that follows a call
+// to this already rejects undefined, so a file holding a number, a list or null where an object belongs
+// falls through to the defaults instead of throwing.
+function asRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
 export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const defaults = defaultSettings(isMac);
-  // Destructuring anything that is not an object gives undefined fields, and every check below already
-  // rejects undefined, so the only shape worth guarding against is the one that would throw.
-  const raw = (typeof stored === 'object' && stored !== null && !Array.isArray(stored))
-    ? stored as Record<string, unknown>
-    : {};
-  const storedKeys = (typeof raw.keys === 'object' && raw.keys !== null)
-    ? raw.keys as Record<string, unknown>
-    : {};
-  const storedTheme = (typeof raw.theme === 'object' && raw.theme !== null)
-    ? raw.theme as Record<string, unknown>
-    : {};
-  const storedFont = (typeof raw.font === 'object' && raw.font !== null)
-    ? raw.font as Record<string, unknown>
-    : {};
+  const raw = asRecord(stored);
+  const storedKeys = asRecord(raw.keys);
+  const storedTheme = asRecord(raw.theme);
+  const storedFont = asRecord(raw.font);
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
@@ -158,4 +161,57 @@ export function bindKey(settings: Settings, name: string, binding: string | null
 
 export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
+}
+
+// The chosen lines of one object: what is left of it once every entry equal to what this build ships is
+// taken out.
+// Every line it holds, whatever it is called. Naming the settings here instead would mean the next one
+// added is copied in above and never compared, so this build's default for it is written into the file
+// and frozen — the failure this whole function exists to stop, with every test green.
+// A line is walked as a group only where the file itself holds an object there; anything else is a
+// value, kept unless it matches the default. `"theme": "dark"` is somebody reaching for a feature that
+// is not here — it is left as a value to be read, not replaced by an empty object. A group the file
+// never named is not added either, or every launch dirties a settings.json kept in a dotfiles repo.
+// Walking down is the same rule again rather than a second one, so a group that later grows a group of
+// its own is thinned by the rule that already exists instead of falling through it.
+function chosenFrom(
+  mine: Record<string, unknown>, shipped: Record<string, unknown>,
+): Record<string, unknown> {
+  const chosen = { ...mine };
+  for (const [name, value] of Object.entries(chosen)) {
+    const theirs = shipped[name];
+    if (isRecord(value) && isRecord(theirs)) chosen[name] = chosenFrom(value, theirs);
+    else if (value === theirs) delete chosen[name];
+  }
+  return chosen;
+}
+
+// What belongs in the file: the lines somebody chose. Anything equal to what this build ships is left
+// out, so the next build's default is read rather than this one's being frozen in.
+// Without it, saving one font size writes every action's key and every theme colour as if you had
+// picked them. A default we later have to move — the manager board's project keys went from Ctrl+Up to
+// Cmd+Up because macOS takes Ctrl with an arrow for Mission Control — then never reaches anyone who has
+// ever opened the settings screen, and their only way out is deleting the file, which takes their font
+// and their colours with it.
+// It is also what makes `written` mean anything: a file that named every action made every line written,
+// so the written-first sort in withoutDuplicates settled nothing and ACTIONS row order quietly decided
+// who lost a clashing key.
+// An explicit null key stays. It says "no key at all", which is not what the default says, and
+// parseSettings reads a missing line as the default rather than as unbound.
+//
+// Both writers come through here — the save, handed the settings it is storing, and the launch tidy,
+// handed the file's own JSON — so the rule is written once. The tidy is why this takes lines out of
+// what it was given rather than building a fresh object from what it recognises: parseSettings repairs
+// what it cannot accept, and writing those repairs back deletes what you typed. You write "size": 130
+// meaning 13.0, launch to find the panes unchanged, open the file to look for the typo, and the line
+// is gone. Comparing the raw value instead, 130 is not 13, so it stays where you put it.
+// Everything the file holds that this build has no opinion on is handed back untouched, a field it has
+// never heard of included — on the launch tidy, which is the only path that ever sees one. A save
+// writes what parseSettings read, and that never held the field.
+export function withoutShipped(stored: unknown, isMac: boolean): unknown {
+  // A file holding a list, a string or null parses fine and is none of our business. Rebuilding it as
+  // an object would be the whole file thrown away for a mistake we could have let them read instead.
+  if (!isRecord(stored)) return stored;
+  const shipped: Record<string, unknown> = defaultSettings(isMac);
+  return chosenFrom(stored, shipped);
 }

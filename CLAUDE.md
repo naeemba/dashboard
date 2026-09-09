@@ -127,10 +127,18 @@ held its own copy of the 6-to-72 range. A size the settings screen accepted
 could still get silently discarded the next time the file was read, with
 nothing on screen saying why.
 
-Six predicates exist for this reason: `hasSubtasks`, `attachmentRing` and
-`pullRequestFrom` in `board.ts`, and `holderOfBinding`, `isHexColor` and
-`isFontSize` in `settings.ts`. A refusal worth a message reuses one of these or
-adds a seventh — never a second copy of the condition.
+Seven predicates exist for this reason: `hasSubtasks`, `attachmentRing` and
+`pullRequestFrom` in `board.ts`, and `holderOfBinding`, `isHexColor`,
+`isFontSize` and `withoutShipped` in `settings.ts`. A refusal worth a message
+reuses one of these or adds an eighth — never a second copy of the condition.
+
+`withoutShipped` is the same idea one step over: it decides what a line has to
+be before it belongs in settings.json, and both writers ask it — the save and
+the launch tidy. Give one of them its own copy and the two drift. Add a
+`scrollback` setting that ships as 1000, teach only the save to leave it out,
+and an old file holding `"scrollback": 1000` is never tidied; when the shipped
+default moves to 5000 that person stays on 1000, which is the bug the rule
+exists to stop, with nothing failing.
 
 The prose counts too. A comment that restates a rule living in another file is a
 second copy that no test can catch — the code stays right while the sentence goes

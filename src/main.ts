@@ -16,7 +16,7 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
-import { readSettings, settingsFilePath, writeSettings } from './settings-store';
+import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import type { Settings } from './settings';
 import type { Board } from './board';
 
@@ -37,7 +37,14 @@ const sessionFile = path.join(app.getPath('userData'), 'session.json');
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
-let settings = readSettings(settingsFile, process.platform === 'darwin');
+const isMac = process.platform === 'darwin';
+let settings = readSettings(settingsFile, isMac);
+// A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
+// nothing strips those lines until the settings screen is next opened. Tidying it once here drops
+// everything that still matches this build, so the next default to move reaches these people. It cannot
+// give back a default that has already moved: a line the old build wrote is identical to one typed on
+// purpose. What the file holds and what survives is tidySettingsFile's to say, not this line's.
+tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
@@ -135,7 +142,7 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   // Panes already running keep the shell they started with. Nothing here kills one: there are
   // long-running jobs in them, and a settings change is not a reason to lose one.
   shellCommand = pickShell(settings, process.env, process.platform);
-  writeSettings(settingsFile, settings);
+  writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
 // Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
