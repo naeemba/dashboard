@@ -90,22 +90,10 @@
           "updatedAt": "2026-09-09T00:00:00.000Z"
         },
         {
-          "id": "a434556d-1175-4f8b-b3f1-34872a1b404a",
-          "title": "A saved settings.json freezes every shipped default",
-          "notes": "writeSettings dumps the whole Settings object, so keys holds a line for every action — not just the ones you bound. Change anything on the settings screen once and every default is written to ~/.config/dashboard/settings.json as if you picked it; on the next launch toBinding marks it written and the shipped default is never read again.\n\nCost: PR #23 moves the manager board's project keys to Cmd+Up / Cmd+Down on macOS because the system eats Ctrl+Arrow. Anyone who set a font size before that build keeps Ctrl+Up — Cmd+Down does nothing, Ctrl+Down still spreads every window, and the only escape is deleting the settings file, which takes the font and colours with it.\n\nFix: writeSettings leaves out a binding equal to the shipped default. settings.ts already tracks which lines were written. Also correct settings-store.ts's comment, which reads as if the file only holds what you chose.\n\nhttps://github.com/naeemba/dashboard/issues/24\nhttps://github.com/naeemba/dashboard/pull/23",
-          "priority": "medium"
-        },
-        {
           "id": "b7a28f07-06d5-4f5a-b513-0df0d818bd5d",
           "title": "macOS may take Ctrl+1..9 for Mission Control, the keys that jump between tabs",
           "notes": "src/actions.ts, the project-jump rows ship Ctrl+1..Ctrl+9 on the mac side. Mission Control's Switch to Desktop 1..9 are the same keys and come alive once you have a second Space. Where they are alive, Ctrl+2 slides you to another desktop instead of jumping to tab 2 - and project-jump is the most-pressed row in the table.\n\nSame shape as the bug PR #23 fixed for Ctrl+Up and Ctrl+Down, which macOS took for Mission Control and Application windows. That PR wrote the rule down above the table: Ctrl with an arrow belongs to macOS. Ctrl with a digit was not checked.\n\nNot confirmed. First step is ten seconds in System Settings > Keyboard > Keyboard Shortcuts > Mission Control on a machine with two Spaces. Ctrl+Shift+1..9 for project-move looks clear either way.\n\nIf it is real, the fix is not the swap made for the arrows: Cmd+1..Cmd+9 is already terminal-focus on the mac side, so this needs a different family. actions.test.ts already refuses two actions on one key per screen, so a bad swap fails there rather than shipping.\n\nhttps://github.com/naeemba/dashboard/issues/25\nhttps://github.com/naeemba/dashboard/pull/23",
           "priority": "low"
-        },
-        {
-          "id": "4dcc2623-28c3-41c5-9a91-3020a04f700b",
-          "title": "A saved settings.json freezes every shipped default",
-          "notes": "writeSettings writes the whole Settings object, and its keys has a line for every action in the table - including the ones nobody chose. So the first time you nudge a font size or a theme colour, every shipped binding is written into your file as if you had picked it. toBinding then treats any string it finds there as your own choice, and the shipped default is never read again.\n\nWhat that looks like: you set your font to 14pt last month. You take the build from PR #23. On the manager's board Cmd+Down does nothing, and Ctrl+Down still spreads every window on the machine - the exact bug that PR changed the row to fix, still there, for everyone who has ever touched the settings screen. Deleting ~/.config/dashboard/settings.json is the only way out, and it takes the font with it.\n\nThe shape: writeSettings leaves out a binding equal to the shipped default. settings.ts already tracks which lines were written, so nothing new has to be worked out.\n\nOut-of-scope for PR #23 - this is how settings persistence has always worked and that PR did not make it worse. Raised there, filed as issue 24, and carded here so it does not live only in a closed PR's thread.\n\nhttps://github.com/naeemba/dashboard/issues/24\nhttps://github.com/naeemba/dashboard/pull/23",
-          "priority": "medium"
         }
       ]
     },
@@ -124,6 +112,12 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "a434556d-1175-4f8b-b3f1-34872a1b404a",
+          "title": "A saved settings.json freezes every shipped default",
+          "notes": "Shipped in PR #26. writeSettings wrote the whole Settings object, so the first time you nudged a font size, every shipped key and every shipped colour went into ~/.config/dashboard/settings.json as if you had picked it — and parseSettings read them back as your choices forever after.\n\nWhat it cost: PR #23 moves the manager board's project keys to Cmd+Up / Cmd+Down on macOS, because the system takes Ctrl with an arrow for Mission Control. Anyone who had ever set a font size kept Ctrl+Up. The only way out was deleting the settings file, which took the font and the colours with it.\n\nchosenSettings now leaves out anything equal to what this build ships — keys, theme, font and shellCommand, not just the keys the bug was found through — which is what parseSettings has always assumed a missing line means. An explicit null key stays: it means no key at all.\n\nIt also gives `written` its meaning back. A file naming every action made every line written, so the written-first sort in withoutDuplicates settled nothing and ACTIONS row order decided who lost a clashing key.\n\nhttps://github.com/naeemba/dashboard/pull/26\nhttps://github.com/naeemba/dashboard/issues/24",
+          "priority": "medium"
+        },
         {
           "id": "99072c51-acb0-46c6-85c3-4d511e515803",
           "title": "Show a waiting pane's tail, and answer it with a keystroke",
