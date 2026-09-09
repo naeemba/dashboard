@@ -70,6 +70,11 @@ function range(count: number): number[] {
 
 // A flat list of rows. It is data, so its length is not a design smell — the file-size rule already
 // says so — and every consumer reads it rather than writing its own copy.
+//
+// One thing to know before picking a mac default: Ctrl with an arrow belongs to macOS. Ctrl+Up is
+// Mission Control and Ctrl+Down is Application windows, both on out of the box, and the system takes
+// them before the app is told. A row that ships one on the mac side ships a key that does nothing
+// until the person finds the settings screen. Cmd with an arrow is free.
 export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'project-picker', description: 'Open the project list', group: 'projects', scope: 'global',
@@ -227,12 +232,12 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'cards-project-previous', description: "The previous project's board, on the manager",
     group: 'board', scope: 'board', action: { kind: 'cards-project', direction: 'previous' },
-    mac: 'Ctrl+Up', other: 'Ctrl+Up',
+    mac: 'Cmd+Up', other: 'Ctrl+Up',
   },
   {
     name: 'cards-project-next', description: "The next project's board, on the manager",
     group: 'board', scope: 'board', action: { kind: 'cards-project', direction: 'next' },
-    mac: 'Ctrl+Down', other: 'Ctrl+Down',
+    mac: 'Cmd+Down', other: 'Ctrl+Down',
   },
   // The way back off the manager's board, which is the one board with a list behind it. Grouped with
   // the board keys rather than the mode keys so it is only printed on a board — the modes group is

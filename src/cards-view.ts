@@ -1,16 +1,13 @@
 import type { Action } from './actions';
 import { SELECTED_CARD, createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
+import { cardsEmptyReason, cardsProjects, type CardsPage } from './cards';
 import { clampIndex, heldIndex } from './clamp-index';
-import type { Project } from './projects';
-
-// A page as this view needs it, which is what the renderer already holds one as.
-export type CardsPage = { project: Project; slot: number };
 
 export type CardsOptions = {
   bridge: DashboardBridge;
-  // Read on every arrival rather than held, so a project opened since you were last here has a board
-  // and one that went missing has stopped having one.
+  // Every open project, asked for again on every arrival. Which of them get a board is cardsProjects'
+  // answer, not this one's.
   projects(): readonly CardsPage[];
   // The status bar names the project the keys are aimed at and what its selection is on, so it is
   // redrawn whenever either can change.
@@ -40,14 +37,13 @@ export function createCardsView(options: CardsOptions): BoardView {
   element.tabIndex = -1;
   const empty = document.createElement('p');
   empty.className = 'board-empty';
-  empty.textContent = 'No project is open, so there are no cards to show.';
 
   // One board per project, kept between visits so a project's undo step survives leaving the page,
   // the way a project's own board keeps its. Keyed by path, which is the thing that decides which
   // file a board reads.
   const boards = new Map<string, ProjectBoard>();
   let paths: string[] = [];
-  let active = 0;
+  let activeIndex = 0;
   // Which board the keys reach, held as its path rather than its position: a project opening in front
   // would otherwise slide them onto somebody else's board between you reading the screen and pressing
   // a key.
@@ -76,8 +72,8 @@ export function createCardsView(options: CardsOptions): BoardView {
     return board;
   }
 
-  // Every board draws a selected card, because every board has a selection. Only the one the keys
-  // reach may show it, or five projects all look like the one you are on.
+  // The CSS turns off an inactive project's selection outline; see the .cards-project rule in
+  // index.css for why only one of the stacked boards may draw one. This says which is which.
   function markActive(): void {
     for (const board of boards.values()) {
       board.section.classList.toggle('active', board.page.project.path === activePath);
@@ -85,7 +81,7 @@ export function createCardsView(options: CardsOptions): BoardView {
   }
 
   function setActive(index: number): void {
-    active = index;
+    activeIndex = index;
     activePath = paths[index] ?? '';
     markActive();
   }
@@ -105,22 +101,23 @@ export function createCardsView(options: CardsOptions): BoardView {
   return {
     element,
     async open(): Promise<void> {
-      const pages = options.projects()
-        // A project whose folder has gone has no board.json to read and no page behind it either, so a
-        // heading for it would be a section you cannot do anything with.
-        .filter((page) => !page.project.missing);
+      const openProjects = options.projects();
+      const pages = cardsProjects(openProjects);
       paths = pages.map((page) => page.project.path);
       // A project that has been closed takes its board with it, or the file would go on being read and
       // drawn under a heading for a project that is no longer open.
       for (const path of [...boards.keys()]) if (!paths.includes(path)) boards.delete(path);
       const projectBoards = pages.map(boardFor);
-      element.replaceChildren(...projectBoards.length === 0
-        ? [empty]
-        : projectBoards.map((board) => board.section));
+      if (projectBoards.length === 0) {
+        empty.textContent = `There are no cards to show: ${cardsEmptyReason(openProjects)}.`;
+        element.replaceChildren(empty);
+      } else {
+        element.replaceChildren(...projectBoards.map((board) => board.section));
+      }
       // Every board reads its own file, and a read that fails reports itself through its own onError
       // and still renders — so there is nothing to catch here.
       const reads = projectBoards.map((board) => board.view.open());
-      setActive(heldIndex(paths, activePath, active));
+      setActive(heldIndex(paths, activePath, activeIndex));
       focusActive();
       // Again once the reads have landed: each board scrolls its own selected card into view as it
       // renders, and they share this scroller, so without this you arrive looking at the last project.
@@ -129,14 +126,15 @@ export function createCardsView(options: CardsOptions): BoardView {
     },
     statusLabel(): string {
       const board = boards.get(activePath);
-      return board ? `${board.page.project.name} · ${board.view.statusLabel()}` : 'no project is open';
+      if (board) return `${board.page.project.name} · ${board.view.statusLabel()}`;
+      return cardsEmptyReason(options.projects());
     },
     runAction(action: Action): void {
       // Which board the rest of the keys go to. The list does not wrap: holding it down stops at the
       // last project rather than carrying you back to the first.
       if (action.kind === 'cards-project') {
         const step = action.direction === 'next' ? 1 : -1;
-        setActive(clampIndex(active + step, paths.length - 1));
+        setActive(clampIndex(activeIndex + step, paths.length - 1));
         focusActive();
         return options.onChanged();
       }

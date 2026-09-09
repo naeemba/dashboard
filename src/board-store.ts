@@ -259,13 +259,13 @@ export function writeBoard(projectPath: string, board: Board): void {
   }
 }
 
-// Written once, when the folder first appears. Neither file is regenerated, so an edited CLAUDE.md
-// stays edited — and a folder that is already there is left alone entirely rather than walked again.
-// That matters now the manager's board reads every open project at once: this runs in front of each
-// read, on the main process, and every syscall it makes is one the panes are not being pumped through.
+// Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md
+// stays edited. The folder existing is not enough to skip the walk: writeBoard makes it too, and a
+// repo that keeps board.json in git often does not keep the docs beside it — clone one of those and
+// the folder arrives with no CLAUDE.md in it, leaving an agent working in there nothing that says
+// what a card looks like.
 export function seedBoardDirectory(projectPath: string): void {
   const directory = join(projectPath, BOARD_DIRECTORY);
-  if (existsSync(directory)) return;
   mkdirSync(directory, { recursive: true });
   for (const [name, contents] of [
     ['CLAUDE.md', EXPLANATION_FOR_AGENTS],
