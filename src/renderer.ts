@@ -19,9 +19,12 @@ import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
-import { type Bell, isRinging, marksWaiting, raisesNotification, waitingNames } from './waiting';
+import {
+  type Bell, isRinging, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
+} from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
+  tailLines,
 } from './manager';
 import { createManagerView, type ManagerView } from './manager-view';
 import { actionByName } from './actions';
@@ -140,6 +143,19 @@ function allPanes(page: Page): Pane[] {
   return page.editor === null ? page.panes : [...page.panes, page.editor];
 }
 
+// What a pane has on its screen, which is what you would see if you went there: xterm has already laid
+// the bytes out, so the escape codes, the redraws and the spinner overwriting itself are all resolved
+// before this reads a line. The live screen rather than the scrollback, so scrolling a pane by hand
+// does not change what the manager says about it.
+function paneTail(terminal: Terminal): string[] {
+  const buffer = terminal.buffer.active;
+  const screen = Array.from(
+    { length: terminal.rows },
+    (_value, row) => buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '',
+  );
+  return tailLines(screen);
+}
+
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the
 // project name, so without the names here you would arrive at a yellow project and have to walk all
 // six panes watching for the yellow to go out.
@@ -158,7 +174,9 @@ function renderStatus(): void {
   // board should not rebuild a list nobody can see.
   if (page.mode === 'manager') {
     page.manager?.render(managerRows(projectPages().map((entry) => ({
-      project: entry.project, slot: entry.slot, panes: allPanes(entry),
+      project: entry.project,
+      slot: entry.slot,
+      panes: allPanes(entry).map((pane) => ({ ...pane, tail: () => paneTail(pane.terminal) })),
     }))));
   }
   titleElement.textContent = `📁 ${page.project.name}`;
@@ -367,12 +385,11 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   terminal.onBell(() => {
     const windowFocused = document.hasFocus();
     if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
-    // Only a bell that changes something redraws: renderStatus() rebuilds every tab and writes the
-    // session file, and a pane that rings once a second is already marked after the first one.
-    if (!isRinging(pane.bell)) {
-      pane.bell = 'waiting';
-      renderStatus();
-    }
+    // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
+    // front and draws what it says.
+    const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
+    if (!isRinging(pane.bell)) pane.bell = 'waiting';
+    if (redraws) renderStatus();
     if (raisesNotification(windowFocused, pane.bell)) {
       pane.bell = 'notified';
       bridge.notify(page.project.name, `${pane.name} is waiting`, id);
@@ -397,7 +414,9 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
 function buildManagerPage(): Page {
   const element = document.createElement('section');
   element.className = 'page';
-  const manager = createManagerView({ onJump: goToPane, onChanged: renderStatus });
+  const manager = createManagerView({
+    onJump: goToPane, onAnswer: answerPane, onChanged: renderStatus,
+  });
   element.append(manager.element);
   return {
     project: MANAGER_PROJECT, element, views: { manager: manager.element }, mode: 'manager', panes: [],
@@ -605,6 +624,18 @@ function goToPane(slot: number, index: number): void {
   // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
   if (mode === 'terminals') page.focused = index;
   showPage(position, true);
+}
+
+// Answering a pane from the manager, without going to it. terminal.input is the door a dropped file
+// already goes through, so the key reaches the pty by the same path typing into the pane does. The
+// bell comes off because the pane has had its answer: the row leaving the list is the only sign the
+// key landed, and the pane rings again if it asks again.
+function answerPane(slot: number, index: number, key: string): void {
+  const pane = panesById.get(terminalId(slot, index));
+  if (!pane) return;
+  pane.terminal.input(key);
+  pane.bell = 'quiet';
+  renderStatus();
 }
 
 bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));

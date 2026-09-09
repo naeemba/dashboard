@@ -230,6 +230,25 @@ body *:not(.pane, .pane *) {
   padding-left: 2ch;
 }
 
+/* The pane's last few lines, indented past its name and as quiet as the summary beside it: the name
+   and the state are what you are reading, the tail is what the pane is saying. It takes a whole line
+   of its own by wrapping onto one — the row is still the flex line every other row is, so the state
+   keeps its place at the far end instead of being pushed off by a block of output. Wrapped rather
+   than clipped, because the end of the line is where the question mark is. */
+.manager-pane {
+  flex-wrap: wrap;
+}
+
+.manager-tail {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  padding-left: 4ch;
+  font: inherit;
+  opacity: 0.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* Pushed to the far end of the row by its own margin, with padding of its own so a long project name
    growing towards it never touches it. */
 .manager-summary,

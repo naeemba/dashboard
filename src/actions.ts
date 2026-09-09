@@ -219,8 +219,10 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'board-undo', description: 'Undo the last board change',
     group: 'board', scope: 'board', action: { kind: 'board-undo' }, mac: 'U', other: 'U',
   },
-  // Bare arrows and a bare Enter, which only this screen hears: nothing on the manager takes typing,
-  // so there is no shell or text box for them to be stolen from.
+  // Bare arrows and a bare Enter, which only this screen hears. The manager does take typing — a
+  // character on a waiting row goes to that pane's shell — and these keys are safe from it because the
+  // window's one lookup matches them first and stops them here. A bare key added to this group is a
+  // key the manager can no longer send, so add one only if it should never reach a pane.
   ...(['up', 'down'] as const).map((direction): ActionEntry => ({
     name: `manager-select-${direction}`, description: `Move the selection ${direction}`,
     group: 'manager', scope: 'manager',

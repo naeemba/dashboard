@@ -36,9 +36,14 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
   manager: 'The first tab, and the only page that is not a project: no folder, no shells, no board, '
     + 'so the view keys do nothing here. It is where the window lands when nothing was open last time. '
     + 'It lists every open project and what its panes want from you — one asking a question, one that '
-    + 'has died and needs starting again. Enter on a project shows those panes by name, and Enter on '
-    + 'one of them takes you straight there. A project with nothing to report says quiet and has '
-    + 'nothing to open.',
+    + 'has died and needs starting again. Enter on a project shows those panes by name, each with the '
+    + 'last few lines it printed, so the question can be read from here. Enter on a pane takes you '
+    + 'straight there; a letter, digit or symbol is sent to it instead, which answers a menu without '
+    + 'leaving this page and takes the pane off the list. Answering leaves nothing selected, so the '
+    + 'next character is not typed into whichever pane moved up into the space — an arrow picks a row '
+    + 'again. A pane that has died takes no keys — it '
+    + 'wants Enter in the pane itself. A project with nothing to report says quiet and has nothing to '
+    + 'open.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
@@ -51,11 +56,15 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'everything is back to how it shipped.',
 };
 
-// nvim owns its own keys; the dashboard adds none. Saying so is the answer to "what can I press here",
-// even though the list is empty.
-const NVIM_SHORTCUTS: Shortcut[] = [
-  { keys: 'Everything else', action: 'Goes straight to nvim' },
-];
+// What a screen does with the keys no binding names, which is why these are written out rather than
+// printed from the action table. nvim owns everything the dashboard did not claim, and on the manager
+// a typed character is the answer the selected pane is waiting for, every named key there being bound
+// already. Both are the answer to "what can I press here", so both are printed under the keys that do
+// have names.
+const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
+  nvim: [{ keys: 'Everything else', action: 'Goes straight to nvim' }],
+  manager: [{ keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane' }],
+};
 
 function isUntouched(entries: ActionEntry[], keys: Settings['keys'], isMac: boolean): boolean {
   return entries.every((entry) => keys[entry.name] === defaultBinding(entry, isMac));
@@ -78,8 +87,11 @@ function familyRow(entries: ActionEntry[], keys: Settings['keys'], isMac: boolea
 
 // An action with no key gets no row: this dialog answers "what can I press here", and you cannot press
 // an unbound action. The settings screen is where every action is listed whether it has a key or not.
+// `group` takes a Mode as well, because screenShortcuts asks for the group named after the screen you
+// are on and nvim is a screen with no group: no action has it, so the list comes back empty and its
+// keys are printed from UNBOUND_SHORTCUTS instead.
 function groupShortcuts(
-  group: ActionGroup, mode: Mode, keys: Settings['keys'], isMac: boolean,
+  group: ActionGroup | Mode, mode: Mode, keys: Settings['keys'], isMac: boolean,
 ): Shortcut[] {
   const rows: Shortcut[] = [];
   const families = new Set<string>();
@@ -104,10 +116,10 @@ function groupShortcuts(
   return rows;
 }
 
-// nvim has no keys of its own and says so; every other screen prints the group named after it.
+// The group named after the screen, then whatever that screen takes without a binding. nvim has no
+// group at all, so its list is only the second half.
 function screenShortcuts(mode: Mode, keys: Settings['keys'], isMac: boolean): Shortcut[] {
-  if (mode === 'nvim') return NVIM_SHORTCUTS;
-  return groupShortcuts(mode, mode, keys, isMac);
+  return [...groupShortcuts(mode, mode, keys, isMac), ...UNBOUND_SHORTCUTS[mode] ?? []];
 }
 
 // The screen you are on comes first: it is what you pressed the help key to ask about. The keys that

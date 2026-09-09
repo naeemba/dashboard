@@ -31,6 +31,15 @@ export function isRinging(bell: Bell): boolean {
   return bell !== 'quiet';
 }
 
+// Whether a bell is worth a redraw. A pane already marked has nothing new to say about itself: the
+// tab is yellow already, and a redraw rebuilds every tab and writes the session file, for a pane that
+// can ring once a second. The manager is the exception, because its row prints the pane's last lines —
+// a second bell there means the question on screen has been replaced by another one, and a row still
+// showing the old one takes your answer to a question the agent has stopped asking.
+export function redrawsForBell(bell: Bell, onManager: boolean): boolean {
+  return !isRinging(bell) || onManager;
+}
+
 // The tab strip only has room for the project name, so the panes are named in the right-hand span
 // instead — otherwise arriving at a yellow project tells you nothing about which of its six panes rang.
 export function waitingNames(panes: readonly { bell: Bell; name: string }[]): string[] {

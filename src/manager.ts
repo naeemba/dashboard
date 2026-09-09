@@ -50,8 +50,30 @@ export type PaneState = typeof PANE_STATES[number];
 
 // `index` is the pane's place in its project's panes with the editor last, which is the number
 // focusTerminal and modeOfPane already take. Carrying it means a row can be jumped to without anyone
-// translating it back.
-export type PaneAlert = { index: number; name: string; state: PaneState };
+// translating it back. `tail` is the last few lines that pane printed, so the row says what is being
+// asked rather than only that something is.
+export type PaneAlert = { index: number; name: string; state: PaneState; tail: string[] };
+
+// How much of a pane's screen a row shows. One line is not enough: an agent asks with a numbered menu,
+// and the options move around with what it is asking about, so `1` read on its own means nothing. Five
+// holds a question and its choices, and stops the page turning into six little terminals.
+const TAIL_LINES = 5;
+
+// The lines worth printing, newest last, from whatever the pane has on screen. Blank lines are dropped
+// rather than counted — a menu that spaces its options out would otherwise push the question itself
+// off the top — and what is left is still a guess: a spinner redraws one line forever, so the text can
+// be older than it looks.
+export function tailLines(lines: readonly string[]): string[] {
+  return lines.filter((line) => line.trim() !== '').slice(-TAIL_LINES);
+}
+
+// Which rows a keystroke can be answered on. A dead pane is not asking anything — what it wants is
+// Enter in the pane itself to start it again — so the key does nothing there rather than going to a
+// pty nobody is reading. One place says so, so the row that takes the keystroke and the status bar
+// that offers it cannot disagree.
+export function takesAnswer(alert: PaneAlert): boolean {
+  return alert.state === 'waiting';
+}
 
 export type ManagerRow = { slot: number; name: string; alerts: PaneAlert[] };
 
@@ -60,7 +82,9 @@ export type ManagerRow = { slot: number; name: string; alerts: PaneAlert[] };
 type ManagerPage = {
   project: { name: string };
   slot: number;
-  panes: readonly { name: string; bell: Bell; exited: boolean }[];
+  // `tail` is a function because it is only worth reading for a pane that wants something: the answer
+  // comes off a live terminal, and the quiet panes are most of them.
+  panes: readonly { name: string; bell: Bell; exited: boolean; tail(): string[] }[];
 };
 
 // Dead beats asking. A shell that exits after a failed command often rings on the way out, and going
@@ -78,7 +102,7 @@ export function managerRows(pages: readonly ManagerPage[]): ManagerRow[] {
     name: page.project.name,
     alerts: page.panes.flatMap((pane, index) => {
       const state = paneState(pane);
-      return state === null ? [] : [{ index, name: pane.name, state }];
+      return state === null ? [] : [{ index, name: pane.name, state, tail: pane.tail() }];
     }),
   }));
 }
@@ -126,10 +150,34 @@ export function lineKey(line: ManagerLine): string {
   return line.kind === 'project' ? `${line.row.slot}` : terminalId(line.slot, line.alert.index);
 }
 
+// No row under the highlight, which is where answering a pane leaves it: that row is on its way out
+// of the list, and the row sliding up into its place belongs to another project. Held rather than
+// clamped back onto a row, so the next character typed is dropped instead of landing in a shell you
+// were not aiming at.
+export const NOTHING_SELECTED = -1;
+
 // Where the selection lands once the page has been redrawn: on the same line it was on, wherever a
 // pane that has just started asking has pushed it to. A line that is gone — the pane stopped asking,
 // the project was closed — leaves the selection at the position it held, not back at the top.
 export function selectedLine(lines: readonly ManagerLine[], key: string, previous: number): number {
+  if (previous === NOTHING_SELECTED) return NOTHING_SELECTED;
   const found = lines.findIndex((line) => lineKey(line) === key);
   return found === -1 ? clampIndex(previous, lines.length - 1) : found;
+}
+
+// Where an arrow lands. The list does not wrap: holding Down stops on the last line rather than
+// carrying you back to the first project, which would be a jump you did not ask for.
+// With nothing selected — which is where answering a pane leaves you — the move starts from the gap
+// that row left, so Down takes whatever slid up into its place and Up the row above it. Counting from
+// the empty selection instead would floor at the top, and answering the last pane on the page would
+// send you all the way back to the first project.
+export function nextSelection(
+  selected: number,
+  answeredAt: number,
+  direction: 'up' | 'down',
+  count: number,
+): number {
+  const down = direction === 'down';
+  const from = selected === NOTHING_SELECTED ? answeredAt - (down ? 1 : 0) : selected;
+  return clampIndex(from + (down ? 1 : -1), count - 1);
 }

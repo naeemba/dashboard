@@ -1,13 +1,15 @@
 import type { Action } from './actions';
-import { clampIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, lineKey, managerLines, selectedLine,
-  type ManagerLine, type ManagerRow,
+  NOTHING_SELECTED, alertSummary, canOpen, lineKey, managerLines, nextSelection, selectedLine,
+  takesAnswer, type ManagerLine, type ManagerRow,
 } from './manager';
+import { isBareCharacter } from './shortcuts';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
   onJump(slot: number, index: number): void;
+  // One keystroke, straight to that pane's shell, without going there.
+  onAnswer(slot: number, index: number, key: string): void;
   // Redraws the page. The rows are the renderer's, so the view asks for them back rather than keeping
   // its own copy; the status bar, which names what the selection is on, is redrawn by the same call.
   onChanged(): void;
@@ -51,6 +53,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // index alone would slide the highlight onto a different pane between you reading it and pressing
   // Enter — so the next redraw finds the same line again wherever it has moved to.
   let selectedKey = '';
+  // Where an arrow starts from once the selection has been given up. Answering a pane empties it, and
+  // an empty selection is not a position — so the row that was answered is kept, and the arrows carry
+  // on from the gap it left rather than both landing on the first line of the list.
+  let answeredAt = 0;
 
   function paneLine(line: Extract<ManagerLine, { kind: 'pane' }>): HTMLElement {
     const item = document.createElement('li');
@@ -61,7 +67,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const state = document.createElement('span');
     state.className = `manager-state manager-${line.alert.state}`;
     state.textContent = line.alert.state;
-    item.append(name, state);
+
+    // What the pane has on screen, so the question can be read from here. A pane that has printed
+    // nothing gets no empty block under it.
+    const tail = document.createElement('pre');
+    tail.className = 'manager-tail';
+    tail.textContent = line.alert.tail.join('\n');
+    tail.hidden = line.alert.tail.length === 0;
+    item.append(name, state, tail);
     return item;
   }
 
@@ -101,10 +114,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     selectedKey = lines[index] ? lineKey(lines[index]) : '';
   }
 
-  // The list does not wrap: holding Down stops on the last pane rather than carrying you back to the
-  // first project, which would be a jump you did not ask for.
   function move(direction: 'up' | 'down'): void {
-    setSelection(clampIndex(selected + (direction === 'down' ? 1 : -1), lines.length - 1));
+    setSelection(nextSelection(selected, answeredAt, direction, lines.length));
     options.onChanged();
   }
 
@@ -117,6 +128,22 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     toggle(line.row);
     options.onChanged();
   }
+
+  // Everything the window did not claim: a typed character on a waiting row goes straight to that
+  // pane's shell, so a menu is answered without leaving this page. The arrows and Enter never reach
+  // here — the window's one lookup matches them first and stops them — and shortcuts.ts says which
+  // keystrokes count as typed and why the rest are kept out.
+  element.addEventListener('keydown', (event) => {
+    if (!isBareCharacter(event)) return;
+    const line = lines[selected];
+    if (!line || line.kind !== 'pane' || !takesAnswer(line.alert)) return;
+    event.preventDefault();
+    // Nothing is selected once the key has gone: the row leaves the list as the bell comes off, and
+    // manager.ts says why the highlight does not follow it. An arrow picks a row again, from here.
+    answeredAt = selected;
+    setSelection(NOTHING_SELECTED);
+    options.onAnswer(line.slot, line.alert.index, event.key);
+  });
 
   return {
     element,
@@ -139,7 +166,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     statusLabel(): string {
       const line = lines[selected];
       if (!line) return '';
-      if (line.kind === 'pane') return `${line.alert.name} · ${line.alert.state}`;
+      if (line.kind === 'pane') {
+        const answer = takesAnswer(line.alert) ? ' · type a character to answer it' : '';
+        return `${line.alert.name} · ${line.alert.state}${answer}`;
+      }
       return `${line.row.name} · ${alertSummary(line.row.alerts)}`;
     },
     runAction(action: Action): void {
