@@ -163,11 +163,27 @@ export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
 }
 
-// One group's chosen lines: the entries whose value is not what this build ships.
+// The chosen lines of one object: what is left of it once every entry equal to what this build ships is
+// taken out.
+// Every line it holds, whatever it is called. Naming the settings here instead would mean the next one
+// added is copied in above and never compared, so this build's default for it is written into the file
+// and frozen — the failure this whole function exists to stop, with every test green.
+// A line is walked as a group only where the file itself holds an object there; anything else is a
+// value, kept unless it matches the default. `"theme": "dark"` is somebody reaching for a feature that
+// is not here — it is left as a value to be read, not replaced by an empty object. A group the file
+// never named is not added either, or every launch dirties a settings.json kept in a dotfiles repo.
+// Walking down is the same rule again rather than a second one, so a group that later grows a group of
+// its own is thinned by the rule that already exists instead of falling through it.
 function chosenFrom(
   mine: Record<string, unknown>, shipped: Record<string, unknown>,
 ): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(mine).filter(([name, value]) => value !== shipped[name]));
+  const chosen = { ...mine };
+  for (const [name, value] of Object.entries(chosen)) {
+    const theirs = shipped[name];
+    if (isRecord(value) && isRecord(theirs)) chosen[name] = chosenFrom(value, theirs);
+    else if (value === theirs) delete chosen[name];
+  }
+  return chosen;
 }
 
 // What belongs in the file: the lines somebody chose. Anything equal to what this build ships is left
@@ -196,15 +212,6 @@ export function withoutShipped(stored: unknown, isMac: boolean): unknown {
   // A file holding a list, a string or null parses fine and is none of our business. Rebuilding it as
   // an object would be the whole file thrown away for a mistake we could have let them read instead.
   if (!isRecord(stored)) return stored;
-  const shipped = defaultSettings(isMac);
-  const chosen: Record<string, unknown> = { ...stored };
-  if (chosen.shellCommand === shipped.shellCommand) delete chosen.shellCommand;
-  // Only where the file actually holds an object. `"theme": "dark"` is somebody reaching for a feature
-  // that is not here; it is left there to be read, not replaced by an empty object. A group the file
-  // never named is not added either, or every launch dirties a settings.json kept in a dotfiles repo.
-  for (const group of ['font', 'theme', 'keys'] as const) {
-    const mine = chosen[group];
-    if (isRecord(mine)) chosen[group] = chosenFrom(mine, shipped[group]);
-  }
-  return chosen;
+  const shipped: Record<string, unknown> = defaultSettings(isMac);
+  return chosenFrom(stored, shipped);
 }

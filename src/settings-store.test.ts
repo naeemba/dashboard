@@ -94,6 +94,20 @@ describe('tidySettingsFile', () => {
       .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {} });
   });
 
+  // The rule is "this is what we ship, so leave it out", not "this line is called shellCommand". Nothing
+  // here names a setting, so the setting somebody adds next is covered the day they add it — otherwise
+  // its shipped value is written into everyone's file and frozen there, which is the whole failure this
+  // function exists to stop, and every test would still be green.
+  it('takes out any top-level line that matches, whatever it is called', () => {
+    const path = file();
+    const shipped: Record<string, unknown> = { ...defaultSettings(true) };
+    const scalars = Object.entries(shipped).filter(([, value]) => typeof value !== 'object');
+    expect(scalars.length).toBeGreaterThan(0);
+    writeFileSync(path, JSON.stringify({ ...Object.fromEntries(scalars), mine: 'kept' }));
+    tidySettingsFile(path, true);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ mine: 'kept' });
+  });
+
   // You meant 13.0 and typed 130, and #fff instead of #ffffff. Both are refused when the file is read,
   // so the panes come up shipped-size and shipped-colour and you open the file to find the mistake. It
   // has to still be there.
