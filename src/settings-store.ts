@@ -4,7 +4,9 @@ import { parseSettings, type Settings } from './settings';
 
 // Beside the .env file main already reads, not in Electron's userData directory. userData is
 // ~/Library/Application Support/Dashboard on macOS, and the point of this file is that a person opens
-// it in an editor — delete it, or empty it to {}, and everything is back to how it shipped.
+// it in an editor — delete it, or empty it to {}, and everything is back to how it shipped. What
+// gets written is the whole Settings object, every action's key included, so a line in there is
+// not proof anyone chose it.
 export function settingsFilePath(home: string, xdgConfigHome: string | undefined): string {
   const configHome = xdgConfigHome || path.join(home, '.config');
   return path.join(configHome, 'dashboard', 'settings.json');
