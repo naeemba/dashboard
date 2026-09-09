@@ -86,20 +86,22 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
-          "title": "Manager tab: a board of every open project, editable in place",
-          "notes": "The manager gets a second view: one board per open project, stacked under project headings, and you edit the cards where they sit. Ctrl+B on the manager shows it, Escape goes back to the list, Ctrl+Up and Ctrl+Down walk between projects.\n\nNot a new board. It is one createBoardView per project, so every editing key already works and each project keeps its own undo and writes its own file. Both screens re-read on arrival, so the manager and a project tab cannot drift apart.\n\nOpen projects only, which is free -- every recent project would mean reading folders that have no page and may be gone. Every column and every card, Done included; a filter waits until the page is too long to read.\n\nCarries the old \"Cards across projects\" card, which asked for a list under each manager row. This replaces it: the same cards, laid out as the board they came from.\n\nisProjectPage has to stop reading the mode on the way. It answers \"is this the manager?\" with mode !== \"manager\", and a manager that can sit in board mode starts counting as a project -- written to the session file, listed in its own waiting list, draggable along the tab strip. The slot is the thing about the manager that never moves.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
-          "updatedAt": "2026-09-09T11:44:15.483Z"
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
+          "title": "Manager tab: a board of every open project, editable in place",
+          "notes": "Shipped. Ctrl+B on the manager stacks one board per open project under project headings, and the cards are edited where they sit. Ctrl+Up and Ctrl+Down say which project the keys are aimed at, Escape goes back to the pane list.\n\nNot a second board: createBoardView once per project, so every editing key already worked, each project keeps its own undo and writes its own file, and the renderer gained no branch — the view hands back a BoardView, so it sits in the same field and shows in the same mode. The manager page has two views now instead of one. Both screens re-read on arrival and loadBoard clears undo on every read, so neither can undo over the other.\n\nisProjectPage stopped reading the mode. It answered \"is this the manager?\" with mode !== \"manager\", and a manager that can sit in board mode counted as a project — saved to the session file, listed in its own waiting list, draggable along the tab strip. It reads the slot, which is the thing about the manager that never moves.\n\nTwo rules that were written twice are written once now. heldIndex in clamp-index.ts is how a selection survives the list under it being rebuilt, asked by the manager’s rows and by the boards on its board. SELECTED_CARD is exported from board-view.ts, so the name of the card the keys are on cannot be renamed there and left behind here — nothing would have failed, the selection would just have stopped being scrolled to.\n\nSeeding .dashboard returns early when the folder is already there. It runs in front of every read, and this page reads every open project at once, on the process that also pumps the panes.\n\nKnown cost: on a project’s own board Ctrl+H lists the three new keys and pressing them there does nothing. Their descriptions say \"on the manager\". A mode of its own is the only way out, and costs more in MODES, MODE_NAMES, BLURBS, modeLabel and focusMode for the same screen.\n\nNo filtering and no file watching — every column and every card, and a card an agent writes while you are looking turns up when you come back. PR #23.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-09T12:23:44.943Z",
+          "branch": "manager-cards-board",
+          "pullRequest": 23
+        },
         {
           "id": "99072c51-acb0-46c6-85c3-4d511e515803",
           "title": "Show a waiting pane's tail, and answer it with a keystroke",
