@@ -54,7 +54,9 @@ backspace.
 
 Ctrl+, opens a settings screen for every key, the theme, the font and the shell. It writes to
 `~/.config/dashboard/settings.json` (or `$XDG_CONFIG_HOME/dashboard/settings.json`), which you can also
-edit by hand. Every field is optional — leave one out and it falls back to what the app ships with.
+edit by hand. Every field is optional — leave one out and it falls back to what the app ships with. The
+file holds only what you changed; anything you left alone follows the app's default, including when that
+default moves.
 
 A key binding is written the way you would say it, `Ctrl+Shift+K`, matching the physical key rather than
 whatever character the keyboard reports for it, so Option+H is Option+H on any layout. `null` means no

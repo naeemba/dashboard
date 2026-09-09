@@ -39,6 +39,12 @@ const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFI
 // spawns the first pane. Both are needed before the renderer has run a line.
 const isMac = process.platform === 'darwin';
 let settings = readSettings(settingsFile, isMac);
+// A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
+// nothing strips those lines until the settings screen is next opened. Rewriting it once here drops
+// everything that still matches this build, so the next default to move reaches these people. It cannot
+// give back a default that has already moved: a line the old build wrote is identical to one typed on
+// purpose. Only an existing file is touched — nobody who has never saved settings gets one made for them.
+if (existsSync(settingsFile)) writeSettings(settingsFile, settings, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is

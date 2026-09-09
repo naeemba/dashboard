@@ -179,7 +179,9 @@ export type FileSettings = {
   keys: Settings['keys'];
 };
 
-function chosenFrom<Value>(mine: Record<string, Value>, shipped: Record<string, Value>) {
+function chosenFrom<Value>(
+  mine: Record<string, Value>, shipped: Record<string, Value>,
+): Record<string, Value> {
   return Object.fromEntries(Object.entries(mine).filter(([name, value]) => value !== shipped[name]));
 }
 
