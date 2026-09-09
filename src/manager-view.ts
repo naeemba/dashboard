@@ -1,7 +1,7 @@
 import type { Action } from './actions';
 import { clampIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, lineKey, managerLines, selectedLine, takesAnswer,
+  NOTHING_SELECTED, alertSummary, canOpen, lineKey, managerLines, selectedLine, takesAnswer,
   type ManagerLine, type ManagerRow,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
@@ -137,7 +137,11 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const line = lines[selected];
     if (!line || line.kind !== 'pane' || !takesAnswer(line.alert)) return;
     event.preventDefault();
-    options.onAnswer(line.slot, line.alert.index, event.key);
+    // Nothing is selected once the key has gone: the row leaves the list as the bell comes off, and
+    // manager.ts says why the highlight does not follow it. An arrow picks a row again.
+    const { slot, alert } = line;
+    setSelection(NOTHING_SELECTED);
+    options.onAnswer(slot, alert.index, event.key);
   });
 
   return {
@@ -162,7 +166,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       const line = lines[selected];
       if (!line) return '';
       if (line.kind === 'pane') {
-        const answer = takesAnswer(line.alert) ? ' · any key answers it' : '';
+        const answer = takesAnswer(line.alert) ? ' · type a character to answer it' : '';
         return `${line.alert.name} · ${line.alert.state}${answer}`;
       }
       return `${line.row.name} · ${alertSummary(line.row.alerts)}`;

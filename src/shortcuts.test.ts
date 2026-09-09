@@ -150,6 +150,12 @@ describe('isBareCharacter', () => {
 
   it('is not a keystroke on its way to whoever owns that modifier', () => {
     expect(isBareCharacter(key({ key: 'n', code: 'KeyN', ctrlKey: true }))).toBe(false);
-    expect(isBareCharacter(key({ key: 'Y', code: 'KeyY', shiftKey: true }))).toBe(false);
+    expect(isBareCharacter(key({ key: 'y', code: 'KeyY', metaKey: true }))).toBe(false);
+    expect(isBareCharacter(key({ key: 'y', code: 'KeyY', altKey: true }))).toBe(false);
+  });
+
+  // Shift is how a capital is typed, so `Continue? [Y/n]` can be answered the way it asks.
+  it('is the capital a prompt asks for', () => {
+    expect(isBareCharacter(key({ key: 'Y', code: 'KeyY', shiftKey: true }))).toBe(true);
   });
 });

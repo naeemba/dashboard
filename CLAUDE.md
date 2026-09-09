@@ -56,8 +56,11 @@ can receive the keystroke anyway.
 (isModified(event)) return;` first, or a modified key does something in it
 that it was never meant to.** That is the help dialog, the card detail
 dialog, the delete confirmation, the picker's search box, the settings
-screen, and the card title and description editor. Two of them got this
-wrong before the rule was written down here. Take Ctrl+N in the card detail
+screen, the card title and description editor, and the manager list — which
+asks `isBareCharacter` rather than `isModified` directly, so the guard is one
+call down rather than missing, and which takes Shift on purpose as the third
+exception below. Two of them got this wrong before the rule was written down
+here. Take Ctrl+N in the card detail
 dialog and pressing it mid-word opens a "Subtask title" box. Take Enter with
 Cmd in the delete confirmation and a stray Cmd+Enter deletes a card and its
 whole family.
@@ -71,7 +74,7 @@ rows in `src/actions.ts` now — not special cases written into a handler. A
 plain `Tab` binding simply cannot match `Ctrl+Tab`, so the window switcher
 still gets it, and nobody had to write code to let it past.
 
-Two real exceptions read a key before the guard, both on purpose:
+Three real exceptions read a key before the guard, all on purpose:
 
 - Tab, in the picker's search box. Nothing else in that dialog is focusable,
   so Tab and Shift+Tab would drop focus into the pane behind the overlay.
@@ -79,6 +82,10 @@ Two real exceptions read a key before the guard, both on purpose:
   binding has to read Ctrl, Cmd, Alt and Shift, or those four are the only keys
   you could never bind. It is one keystroke long and puts the guard back
   immediately after.
+- Shift, on the manager list. A capital is typed with Shift, so refusing it is
+  refusing the `Y` in `Continue? [Y/n]` — the key the prompt asks for. Ctrl, Cmd
+  and Alt are still refused, and anything bound to one of them is claimed by the
+  window's lookup first, so nothing is stolen by letting a capital through.
 
 If a handler reads a modified key anywhere else, it is stealing it.
 

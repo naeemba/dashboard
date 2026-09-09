@@ -19,7 +19,9 @@ import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
-import { type Bell, isRinging, marksWaiting, raisesNotification, waitingNames } from './waiting';
+import {
+  type Bell, isRinging, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
+} from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
   tailLines,
@@ -383,12 +385,11 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   terminal.onBell(() => {
     const windowFocused = document.hasFocus();
     if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
-    // Only a bell that changes something redraws: renderStatus() rebuilds every tab and writes the
-    // session file, and a pane that rings once a second is already marked after the first one.
-    if (!isRinging(pane.bell)) {
-      pane.bell = 'waiting';
-      renderStatus();
-    }
+    // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
+    // front and draws what it says.
+    const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
+    if (!isRinging(pane.bell)) pane.bell = 'waiting';
+    if (redraws) renderStatus();
     if (raisesNotification(windowFocused, pane.bell)) {
       pane.bell = 'notified';
       bridge.notify(page.project.name, `${pane.name} is waiting`, id);

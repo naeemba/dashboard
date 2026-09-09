@@ -38,8 +38,10 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'It lists every open project and what its panes want from you — one asking a question, one that '
     + 'has died and needs starting again. Enter on a project shows those panes by name, each with the '
     + 'last few lines it printed, so the question can be read from here. Enter on a pane takes you '
-    + 'straight there; any single character is sent to it instead, which answers a menu without '
-    + 'leaving this page and takes the pane off the list. A pane that has died takes no keys — it '
+    + 'straight there; a letter, digit or symbol is sent to it instead, which answers a menu without '
+    + 'leaving this page and takes the pane off the list. Answering leaves nothing selected, so the '
+    + 'next character is not typed into whichever pane moved up into the space — an arrow picks a row '
+    + 'again. A pane that has died takes no keys — it '
     + 'wants Enter in the pane itself. A project with nothing to report says quiet and has nothing to '
     + 'open.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
@@ -56,11 +58,12 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
 
 // What a screen does with the keys no binding names, which is why these are written out rather than
 // printed from the action table. nvim owns everything the dashboard did not claim, and on the manager
-// whatever you press is the answer the selected pane is waiting for. Both are the answer to "what can
-// I press here", so both are printed under the keys that do have names.
+// a typed character is the answer the selected pane is waiting for, every named key there being bound
+// already. Both are the answer to "what can I press here", so both are printed under the keys that do
+// have names.
 const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
   nvim: [{ keys: 'Everything else', action: 'Goes straight to nvim' }],
-  manager: [{ keys: 'Any single key', action: 'Straight to the selected waiting pane' }],
+  manager: [{ keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane' }],
 };
 
 function isUntouched(entries: ActionEntry[], keys: Settings['keys'], isMac: boolean): boolean {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { marksWaiting, raisesNotification, waitingNames } from './waiting';
+import { marksWaiting, raisesNotification, redrawsForBell, waitingNames } from './waiting';
 
 describe('marksWaiting', () => {
   it('ignores the pane you are looking at', () => {
@@ -32,6 +32,23 @@ describe('raisesNotification', () => {
 
   it('still banners a pane that was marked while you were in the app', () => {
     expect(raisesNotification(false, 'waiting')).toBe(true);
+  });
+});
+
+describe('redrawsForBell', () => {
+  it('draws the first bell wherever you are', () => {
+    expect(redrawsForBell('quiet', false)).toBe(true);
+  });
+
+  it('ignores a repeat bell on a page that only shows the mark', () => {
+    expect(redrawsForBell('waiting', false)).toBe(false);
+    expect(redrawsForBell('notified', false)).toBe(false);
+  });
+
+  // The row prints the pane's last lines, so a repeat bell has replaced what it is showing.
+  it('draws a repeat bell on the manager, where the question itself is on screen', () => {
+    expect(redrawsForBell('waiting', true)).toBe(true);
+    expect(redrawsForBell('notified', true)).toBe(true);
   });
 });
 

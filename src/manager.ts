@@ -153,7 +153,14 @@ export function lineKey(line: ManagerLine): string {
 // Where the selection lands once the page has been redrawn: on the same line it was on, wherever a
 // pane that has just started asking has pushed it to. A line that is gone — the pane stopped asking,
 // the project was closed — leaves the selection at the position it held, not back at the top.
+// No row under the highlight, which is where answering a pane leaves it: that row is on its way out
+// of the list, and the row sliding up into its place belongs to another project. Held rather than
+// clamped back onto a row, so the next character typed is dropped instead of landing in a shell you
+// were not aiming at.
+export const NOTHING_SELECTED = -1;
+
 export function selectedLine(lines: readonly ManagerLine[], key: string, previous: number): number {
+  if (previous === NOTHING_SELECTED) return NOTHING_SELECTED;
   const found = lines.findIndex((line) => lineKey(line) === key);
   return found === -1 ? clampIndex(previous, lines.length - 1) : found;
 }

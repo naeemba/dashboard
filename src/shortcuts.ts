@@ -7,8 +7,8 @@ export type { KeyInput, Action };
 
 // What every keydown handler asks before it acts on `event.key`. A key with a modifier held is on its
 // way to whoever owns that combination, so a handler that reads `event.key` without asking this first
-// steals it. Dialogs included. The single deliberate exception is the armed row in the settings
-// screen, which exists to read exactly these keys; CLAUDE.md names it.
+// steals it. Dialogs included. CLAUDE.md holds the list of handlers that ask, and the few deliberate
+// exceptions.
 export function isModified(input: KeyInput): boolean {
   return input.shiftKey || input.metaKey || input.ctrlKey || input.altKey;
 }
@@ -19,8 +19,12 @@ export function isModified(input: KeyInput): boolean {
 // Asked where a keystroke is passed on to something that will act on it: a name sent to a shell is a
 // command it runs, so `yes` typed at a pane that has stopped asking starts a process printing y until
 // you go and find it.
+// Shift is the one modifier that counts as typing — it is how you write a capital, and `key` is
+// already the capital — so an agent asking `Continue? [Y/n]` can be answered the way it asks. The
+// other three are not typing, and anything actually bound to one of them was claimed by the window's
+// lookup before this is asked.
 export function isBareCharacter(input: KeyInput): boolean {
-  return !isModified(input) && input.key.length === 1;
+  return !input.metaKey && !input.ctrlKey && !input.altKey && input.key.length === 1;
 }
 
 // `global` is heard on every screen, including while a shell has the keyboard. The other two are heard

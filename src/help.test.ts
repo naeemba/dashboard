@@ -121,10 +121,10 @@ describe('helpSections', () => {
   // it and nobody would find out that a waiting pane can be answered from here.
   it('names the manager key that no binding names', () => {
     expect(rows('manager')).toContainEqual({
-      keys: 'Any single key', action: 'Straight to the selected waiting pane',
+      keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane',
     });
     expect(rows('board')).not.toContainEqual(
-      expect.objectContaining({ keys: 'Any single key' }),
+      expect.objectContaining({ keys: 'A letter, digit or symbol' }),
     );
   });
 

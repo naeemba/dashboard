@@ -150,6 +150,12 @@ describe('selectedLine', () => {
   it('never points past the end after the lines it was on disappear', () => {
     expect(selectedLine([], '9:9', 4)).toBe(0);
   });
+
+  // Answering a pane leaves nothing selected, and the redraw that follows must not pick a row: the
+  // row under the old highlight now belongs to another project.
+  it('keeps nothing selected once a pane has been answered', () => {
+    expect(selectedLine(lines, '', -1)).toBe(-1);
+  });
 });
 
 describe('canOpen', () => {
