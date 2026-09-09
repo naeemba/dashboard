@@ -88,6 +88,12 @@
           "parent": null,
           "createdAt": "2026-09-09T00:00:00.000Z",
           "updatedAt": "2026-09-09T00:00:00.000Z"
+        },
+        {
+          "id": "a434556d-1175-4f8b-b3f1-34872a1b404a",
+          "title": "A saved settings.json freezes every shipped default",
+          "notes": "writeSettings dumps the whole Settings object, so keys holds a line for every action — not just the ones you bound. Change anything on the settings screen once and every default is written to ~/.config/dashboard/settings.json as if you picked it; on the next launch toBinding marks it written and the shipped default is never read again.\n\nCost: PR #23 moves the manager board's project keys to Cmd+Up / Cmd+Down on macOS because the system eats Ctrl+Arrow. Anyone who set a font size before that build keeps Ctrl+Up — Cmd+Down does nothing, Ctrl+Down still spreads every window, and the only escape is deleting the settings file, which takes the font and colours with it.\n\nFix: writeSettings leaves out a binding equal to the shipped default. settings.ts already tracks which lines were written. Also correct settings-store.ts's comment, which reads as if the file only holds what you chose.\n\nhttps://github.com/naeemba/dashboard/issues/24\nhttps://github.com/naeemba/dashboard/pull/23",
+          "priority": "medium"
         }
       ]
     },
