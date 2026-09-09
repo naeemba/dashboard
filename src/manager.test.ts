@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   alertSummary, canOpen, isProjectPage, landingPosition, lineKey, managerLines,
-  managerRows, projectPosition, selectedLine,
+  managerRows, projectPosition, selectedLine, tailLines, takesAnswer,
   type PaneAlert,
 } from './manager';
 import type { Bell } from './waiting';
@@ -44,10 +44,13 @@ describe('landingPosition', () => {
 });
 
 describe('managerRows', () => {
-  const page = (name: string, slot: number, panes: { name: string; bell: Bell; exited: boolean }[]) => (
-    { project: { name }, slot, panes }
+  const page = (
+    name: string, slot: number,
+    panes: { name: string; bell: Bell; exited: boolean; tail(): string[] }[],
+  ) => ({ project: { name }, slot, panes });
+  const pane = (name: string, bell: Bell = 'quiet', exited = false, tail: string[] = []) => (
+    { name, bell, exited, tail: () => tail }
   );
-  const pane = (name: string, bell: Bell = 'quiet', exited = false) => ({ name, bell, exited });
 
   it('gives a project one row, whatever its panes are doing', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
@@ -62,15 +65,15 @@ describe('managerRows', () => {
       pane('nvim', 'notified'),
     ])]);
     expect(rows[0].alerts).toEqual([
-      { index: 1, name: 'terminal 2', state: 'waiting' },
-      { index: 2, name: 'terminal 3', state: 'exited' },
-      { index: 3, name: 'nvim', state: 'waiting' },
+      { index: 1, name: 'terminal 2', state: 'waiting', tail: [] },
+      { index: 2, name: 'terminal 3', state: 'exited', tail: [] },
+      { index: 3, name: 'nvim', state: 'waiting', tail: [] },
     ]);
   });
 
   it('calls a pane that died while it was asking dead, since restarting it is what it needs', () => {
     const rows = managerRows([page('api', 0, [pane('terminal 1', 'waiting', true)])]);
-    expect(rows[0].alerts).toEqual([{ index: 0, name: 'terminal 1', state: 'exited' }]);
+    expect(rows[0].alerts).toEqual([{ index: 0, name: 'terminal 1', state: 'exited', tail: [] }]);
   });
 
   it('keeps a project with no panes at all, so a dead project still has a row', () => {
@@ -79,7 +82,7 @@ describe('managerRows', () => {
 });
 
 describe('alertSummary', () => {
-  const alert = (state: 'waiting' | 'exited') => ({ index: 0, name: 'terminal 1', state });
+  const alert = (state: 'waiting' | 'exited') => ({ index: 0, name: 'terminal 1', state, tail: [] });
 
   it('says so when nothing on the project wants anything', () => {
     expect(alertSummary([])).toBe('quiet');
@@ -97,7 +100,7 @@ describe('alertSummary', () => {
 
 describe('managerLines', () => {
   const row = (slot: number, name: string, alerts: PaneAlert[] = []) => ({ slot, name, alerts });
-  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const };
+  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const, tail: [] };
 
   it('lists the projects and nothing else while every row is shut', () => {
     const lines = managerLines([row(0, 'api', [alert]), row(1, 'web')], new Set());
@@ -127,13 +130,13 @@ describe('lineKey', () => {
 
   it('tells a project from the panes under it', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
-    expect(lineKey({ kind: 'pane', slot: 2, alert: { index: 0, name: 'terminal 1', state: 'waiting' } }))
-      .toBe('2:0');
+    const alert = { index: 0, name: 'terminal 1', state: 'waiting' as const, tail: [] };
+    expect(lineKey({ kind: 'pane', slot: 2, alert })).toBe('2:0');
   });
 });
 
 describe('selectedLine', () => {
-  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const };
+  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const, tail: [] };
   const lines = managerLines([{ slot: 0, name: 'api', alerts: [alert] }], new Set([0]));
 
   it('follows the line it was on when a row appears above it', () => {
@@ -152,7 +155,40 @@ describe('selectedLine', () => {
 describe('canOpen', () => {
   it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
     expect(canOpen({ slot: 0, name: 'api', alerts: [] })).toBe(false);
-    expect(canOpen({ slot: 0, name: 'api', alerts: [{ index: 0, name: 'terminal 1', state: 'exited' }] }))
-      .toBe(true);
+    const alert = { index: 0, name: 'terminal 1', state: 'exited' as const, tail: [] };
+    expect(canOpen({ slot: 0, name: 'api', alerts: [alert] })).toBe(true);
+  });
+});
+
+describe('tailLines', () => {
+  it('takes the last few lines and leaves the rest of the screen behind', () => {
+    const screen = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'];
+    expect(tailLines(screen)).toEqual(['three', 'four', 'five', 'six', 'seven']);
+  });
+
+  // The blank lines a menu is spaced out with are what would push the question off the top.
+  it('drops the blank ones rather than counting them, so the whole question survives', () => {
+    const screen = [
+      'noise', '', 'Allow this?', '', '1. Yes', '   ', '2. No', '', '3. No, and tell it why', '', '',
+    ];
+    expect(tailLines(screen))
+      .toEqual(['noise', 'Allow this?', '1. Yes', '2. No', '3. No, and tell it why']);
+  });
+
+  it('gives back what there is when the pane has printed less than that', () => {
+    expect(tailLines(['$ ', ''])).toEqual(['$ ']);
+    expect(tailLines([])).toEqual([]);
+  });
+});
+
+describe('takesAnswer', () => {
+  const alert = (state: 'waiting' | 'exited') => ({ index: 0, name: 'terminal 1', state, tail: [] });
+
+  it('sends a keystroke to a pane that is asking', () => {
+    expect(takesAnswer(alert('waiting'))).toBe(true);
+  });
+
+  it('refuses a pane that has died, which needs Enter in the pane rather than an answer', () => {
+    expect(takesAnswer(alert('exited'))).toBe(false);
   });
 });

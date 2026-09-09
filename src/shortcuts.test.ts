@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapShortcut } from './shortcuts';
+import { isBareCharacter, mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
@@ -131,5 +131,25 @@ describe('every shipped default reaches its own action', () => {
       });
       expect(mapShortcut(pressed, keys, entry.scope), entry.name).toEqual(entry.action);
     }
+  });
+});
+
+describe('isBareCharacter', () => {
+  it('is the letter, digit or symbol somebody typed', () => {
+    expect(isBareCharacter(key({ key: '1', code: 'Digit1' }))).toBe(true);
+    expect(isBareCharacter(key({ key: 'y', code: 'KeyY' }))).toBe(true);
+    expect(isBareCharacter(key({ key: ' ', code: 'Space' }))).toBe(true);
+  });
+
+  // The keys that mean something wherever they are pressed, and the ones a shell would run as a word.
+  it('is not a key with a name', () => {
+    expect(isBareCharacter(key({ key: 'Enter', code: 'Enter' }))).toBe(false);
+    expect(isBareCharacter(key({ key: 'Escape', code: 'Escape' }))).toBe(false);
+    expect(isBareCharacter(key({ key: 'ArrowDown', code: 'ArrowDown' }))).toBe(false);
+  });
+
+  it('is not a keystroke on its way to whoever owns that modifier', () => {
+    expect(isBareCharacter(key({ key: 'n', code: 'KeyN', ctrlKey: true }))).toBe(false);
+    expect(isBareCharacter(key({ key: 'Y', code: 'KeyY', shiftKey: true }))).toBe(false);
   });
 });

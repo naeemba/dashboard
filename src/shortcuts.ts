@@ -13,6 +13,16 @@ export function isModified(input: KeyInput): boolean {
   return input.shiftKey || input.metaKey || input.ctrlKey || input.altKey;
 }
 
+// Whether the keystroke is a character somebody typed rather than a key with a name. Every key that
+// does something has a name — Enter, Escape, Tab, the arrows — and `key` is longer than one character
+// for all of them, so what is left is the letter, digit or symbol itself.
+// Asked where a keystroke is passed on to something that will act on it: a name sent to a shell is a
+// command it runs, so `yes` typed at a pane that has stopped asking starts a process printing y until
+// you go and find it.
+export function isBareCharacter(input: KeyInput): boolean {
+  return !isModified(input) && input.key.length === 1;
+}
+
 // `global` is heard on every screen, including while a shell has the keyboard. The other two are heard
 // only on their own, which is what lets the board keep a bare D that a terminal never sees.
 export function hears(scope: ActionScope, mode: Mode): boolean {

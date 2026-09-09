@@ -117,6 +117,17 @@ describe('helpSections', () => {
     }
   });
 
+  // The only key on any screen with no row in the action table behind it, so nothing else would print
+  // it and nobody would find out that a waiting pane can be answered from here.
+  it('names the manager key that no binding names', () => {
+    expect(rows('manager')).toContainEqual({
+      keys: 'Any single key', action: 'Straight to the selected waiting pane',
+    });
+    expect(rows('board')).not.toContainEqual(
+      expect.objectContaining({ keys: 'Any single key' }),
+    );
+  });
+
   it('has a home for every action in the table', () => {
     const printed = new Set(
       SCREENS.flatMap((mode) => rows(mode).map((row) => row.action)),

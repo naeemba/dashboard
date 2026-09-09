@@ -1,13 +1,16 @@
 import type { Action } from './actions';
 import { clampIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, lineKey, managerLines, selectedLine,
+  alertSummary, canOpen, lineKey, managerLines, selectedLine, takesAnswer,
   type ManagerLine, type ManagerRow,
 } from './manager';
+import { isBareCharacter } from './shortcuts';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
   onJump(slot: number, index: number): void;
+  // One keystroke, straight to that pane's shell, without going there.
+  onAnswer(slot: number, index: number, key: string): void;
   // Redraws the page. The rows are the renderer's, so the view asks for them back rather than keeping
   // its own copy; the status bar, which names what the selection is on, is redrawn by the same call.
   onChanged(): void;
@@ -61,7 +64,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const state = document.createElement('span');
     state.className = `manager-state manager-${line.alert.state}`;
     state.textContent = line.alert.state;
-    item.append(name, state);
+
+    // What the pane has on screen, so the question can be read from here. A pane that has printed
+    // nothing gets no empty block under it.
+    const tail = document.createElement('pre');
+    tail.className = 'manager-tail';
+    tail.textContent = line.alert.tail.join('\n');
+    tail.hidden = line.alert.tail.length === 0;
+    item.append(name, state, tail);
     return item;
   }
 
@@ -118,6 +128,18 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     options.onChanged();
   }
 
+  // Everything the window did not claim: a typed character on a waiting row goes straight to that
+  // pane's shell, so a menu is answered without leaving this page. The arrows and Enter never reach
+  // here — the window's one lookup matches them first and stops them — and shortcuts.ts says which
+  // keystrokes count as typed and why the rest are kept out.
+  element.addEventListener('keydown', (event) => {
+    if (!isBareCharacter(event)) return;
+    const line = lines[selected];
+    if (!line || line.kind !== 'pane' || !takesAnswer(line.alert)) return;
+    event.preventDefault();
+    options.onAnswer(line.slot, line.alert.index, event.key);
+  });
+
   return {
     element,
     render(rows: readonly ManagerRow[]): void {
@@ -139,7 +161,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     statusLabel(): string {
       const line = lines[selected];
       if (!line) return '';
-      if (line.kind === 'pane') return `${line.alert.name} · ${line.alert.state}`;
+      if (line.kind === 'pane') {
+        const answer = takesAnswer(line.alert) ? ' · any key answers it' : '';
+        return `${line.alert.name} · ${line.alert.state}${answer}`;
+      }
       return `${line.row.name} · ${alertSummary(line.row.alerts)}`;
     },
     runAction(action: Action): void {
