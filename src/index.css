@@ -222,6 +222,7 @@ body *:not(.pane, .pane *) {
 .manager-marker {
   white-space: pre;
   color: var(--brightWhite);
+  font-weight: 700;
 }
 
 /* Indented under the project it belongs to, and the marker's width again so the names line up. */
