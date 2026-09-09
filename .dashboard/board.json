@@ -86,6 +86,15 @@
           "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "5864b231-b04b-436c-9680-c721a740b335",
+          "title": "Read a project's file in a view that does bidi",
+          "notes": "Persian prose cannot be read in a pane and never will be, so the way to read a Persian roadmap or README is a screen the app draws itself -- Chromium lays it out correctly there, and the one rule in index.css already covers every element outside a pane.\n\nThe open question the design turns on is how the file is chosen: a picker over the project's folder, or whatever file nvim currently has open.\n\nKeyboard-first, so it is a row in actions.ts and a section in help.ts.\n\nRelated: the notes mode card is this same screen for a file the app owns. This one is for a file the project owns.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-09T00:00:00.000Z",
+          "updatedAt": "2026-09-09T00:00:00.000Z"
         }
       ]
     },
@@ -104,6 +113,15 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "d8266a85-564f-446f-99e4-71bbf17c41f7",
+          "title": "Persian typing in a pane was checked and is fine",
+          "notes": "Nothing to fix, written down so nobody investigates it twice. macOS's Persian-ISIRI 2901 layout puts ZWNJ -- the \u0646\u06cc\u0645\u200c\u0641\u0627\u0635\u0644\u0647, the one character Persian typing cannot do without -- on Shift+Space, and also on Shift+B. Neither is bound to anything in this app, so both reach the pane.\n\nWhat does sit on Option is \u0649, \u0671, two diacritics, and the Persian digits \u06f0-\u06f9 on the numeric keypad. Those are the ones macOptionIsMeta turns into Esc+key, so they cannot be typed into a pane. None of them is standard Persian orthography and a laptop has no keypad, so macOptionIsMeta stays as it is -- turning it off would cost <A-l> in nvim, which is the reason it was set.\n\nAsked of macOS itself through UCKeyTranslate over every keycode and modifier combination, on 2026-09-09, rather than guessed at.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-09-09T00:00:00.000Z",
+          "updatedAt": "2026-09-09T00:00:00.000Z"
+        },
         {
           "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
           "title": "Right-to-left text: fixed everywhere the app draws it, never in a pane",
