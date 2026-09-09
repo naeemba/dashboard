@@ -27,6 +27,7 @@ import {
   tailLines,
 } from './manager';
 import { createManagerView, type ManagerView } from './manager-view';
+import { createCardsView } from './cards-view';
 import { actionByName } from './actions';
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
@@ -409,19 +410,37 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   return pane;
 }
 
-// The one page with no folder behind it, so none of what buildPage makes: no shells, no editor, no
-// board, and one view it never leaves.
+// The one page with no folder behind it, so none of what buildPage makes: no shells and no editor. It
+// has two views — the list of what every project's panes want, and every project's board — and the
+// mode keys for the two it does not have do nothing here.
+// Its board is a board like any other as far as this file is concerned: same field, same mode, same
+// four functions. What is behind it is one real board per open project rather than one for a folder.
 function buildManagerPage(): Page {
   const element = document.createElement('section');
   element.className = 'page';
   const manager = createManagerView({
     onJump: goToPane, onAnswer: answerPane, onChanged: renderStatus,
   });
-  element.append(manager.element);
-  return {
-    project: MANAGER_PROJECT, element, views: { manager: manager.element }, mode: 'manager', panes: [],
-    focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false, board: null, manager,
+  const cards = createCardsView({
+    bridge,
+    // Read on every arrival rather than handed over once, so a project opened since you were last here
+    // has a board.
+    projects: projectPages,
+    onChanged: renderStatus,
+    // A slot each, and a different owner from the same project's own board, so the two screens reading
+    // one file never clear each other's message.
+    onError: (slot, message) => showError(`cards:${slot}`, message),
+  });
+  element.append(manager.element, cards.element);
+  const page: Page = {
+    project: MANAGER_PROJECT, element, views: { manager: manager.element, board: cards.element },
+    mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
+    board: cards, manager,
   };
+  // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
+  // set together — including here, where the page has not been arrived at yet.
+  showMode(page, 'manager');
+  return page;
 }
 
 function buildPage(project: Project, slot: number): Page {

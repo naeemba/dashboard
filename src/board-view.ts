@@ -71,6 +71,11 @@ const COMMITS: Record<EditableField, (state: BoardState, value: string) => Board
   pullRequest: commitPullRequest,
 };
 
+// The card the keys are on. Exported because the manager's board, which stacks several of these in one
+// scroller, has to find it too — and a name that lives in one place cannot be renamed here and left
+// behind there, where nothing would fail and the selection would simply stop being scrolled to.
+export const SELECTED_CARD = '.board-card.selected';
+
 export function createBoardView(options: BoardOptions): BoardView {
   const element = document.createElement('div');
   element.className = 'board';
@@ -251,7 +256,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       section.append(heading, list);
       return section;
     }));
-    element.querySelector('.board-card.selected')?.scrollIntoView({ block: 'nearest' });
+    element.querySelector(SELECTED_CARD)?.scrollIntoView({ block: 'nearest' });
     options.onChanged();
   }
 
@@ -306,7 +311,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     // either way, on whatever board is already in memory, with the error in the status bar instead of
     // a fresh board. A control the keyboard can't reach is unfinished.
     async open(): Promise<void> {
-      element.focus();
+      // preventScroll, because on the manager's board several of these share one scroller and each of
+      // them taking the keyboard would drag it to a different project. A project's own board fills its
+      // page and has nothing to be scrolled into view, so it costs that screen nothing.
+      element.focus({ preventScroll: true });
       const token = ++latestRead;
       let message = '';
       let next = state;

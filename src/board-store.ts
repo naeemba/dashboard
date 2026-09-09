@@ -260,14 +260,18 @@ export function writeBoard(projectPath: string, board: Board): void {
 }
 
 // Written once, when the folder first appears. Neither file is regenerated, so an edited CLAUDE.md
-// stays edited.
+// stays edited — and a folder that is already there is left alone entirely rather than walked again.
+// That matters now the manager's board reads every open project at once: this runs in front of each
+// read, on the main process, and every syscall it makes is one the panes are not being pumped through.
 export function seedBoardDirectory(projectPath: string): void {
-  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
+  const directory = join(projectPath, BOARD_DIRECTORY);
+  if (existsSync(directory)) return;
+  mkdirSync(directory, { recursive: true });
   for (const [name, contents] of [
     ['CLAUDE.md', EXPLANATION_FOR_AGENTS],
     ['README.md', EXPLANATION_FOR_PEOPLE],
   ] as const) {
-    const file = join(projectPath, BOARD_DIRECTORY, name);
+    const file = join(directory, name);
     if (!existsSync(file)) writeFileSync(file, contents);
   }
 }

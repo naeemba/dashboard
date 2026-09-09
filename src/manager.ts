@@ -1,5 +1,4 @@
-import { clampIndex } from './clamp-index';
-import type { Mode } from './modes';
+import { clampIndex, heldIndex } from './clamp-index';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
 import { isRinging, type Bell } from './waiting';
@@ -18,12 +17,14 @@ export const MANAGER_PROJECT: Project = { name: 'manager', path: '', missing: fa
 const FIRST_PROJECT_POSITION = 1;
 
 // Which pages are projects, and so what the session file remembers, what the picker can open, what you
-// can drag along the tab strip, and which page is allowed to move at all. Asked of the mode rather than
-// of the project behind it: the manager is the only page with that mode — setMode only ever picks a view
-// a page has, and it is the only page with that view — and it is also the only page with no project
-// behind it.
-export function isProjectPage(page: { mode: Mode }): boolean {
-  return page.mode !== 'manager';
+// can drag along the tab strip, and which page is allowed to move at all. Asked of the slot, which is
+// the one thing about the manager that never changes: it is the only page holding MANAGER_SLOT, and it
+// holds it whatever view it is showing.
+// It used to ask the mode instead, which stopped being true the moment the manager grew a board of its
+// own: on that view the manager answered "project" and was written to the session file, listed in its
+// own waiting list, and could be dragged along the tab strip.
+export function isProjectPage(page: { slot: number }): boolean {
+  return page.slot !== MANAGER_SLOT;
 }
 
 // Where a project asked for position `index` actually lands. Nothing goes in front of the manager, so a
@@ -157,12 +158,11 @@ export function lineKey(line: ManagerLine): string {
 export const NOTHING_SELECTED = -1;
 
 // Where the selection lands once the page has been redrawn: on the same line it was on, wherever a
-// pane that has just started asking has pushed it to. A line that is gone — the pane stopped asking,
-// the project was closed — leaves the selection at the position it held, not back at the top.
+// pane that has just started asking has pushed it to. heldIndex is the rest of the rule, and the whole
+// of what this adds is the empty selection, which is not a position and so survives a redraw as it is.
 export function selectedLine(lines: readonly ManagerLine[], key: string, previous: number): number {
   if (previous === NOTHING_SELECTED) return NOTHING_SELECTED;
-  const found = lines.findIndex((line) => lineKey(line) === key);
-  return found === -1 ? clampIndex(previous, lines.length - 1) : found;
+  return heldIndex(lines.map(lineKey), key, previous);
 }
 
 // Where an arrow lands. The list does not wrap: holding Down stops on the last line rather than
