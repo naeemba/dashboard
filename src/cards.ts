@@ -16,5 +16,7 @@ export function cardsProjects(pages: readonly CardsPage[]): CardsPage[] {
 // Two ways to get here and they are not the same answer: a project whose folder has gone keeps its
 // tab, so "no project is open" would be denied by that project's own name in the strip above.
 export function cardsEmptyReason(pages: readonly CardsPage[]): string {
-  return pages.length === 0 ? 'no project is open' : 'every open project has lost its folder';
+  return pages.length > 0 && pages.every((page) => page.project.missing)
+    ? 'every open project has lost its folder'
+    : 'no project is open';
 }

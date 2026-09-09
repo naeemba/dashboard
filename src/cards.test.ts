@@ -25,4 +25,8 @@ describe('cardsEmptyReason', () => {
   it('blames the folders when projects are open but every one of them is missing', () => {
     expect(cardsEmptyReason([cardsPage('web', true)])).toBe('every open project has lost its folder');
   });
+
+  it('does not blame the folders when a project still has one', () => {
+    expect(cardsEmptyReason([cardsPage('web')])).toBe('no project is open');
+  });
 });
