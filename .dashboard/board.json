@@ -94,6 +94,12 @@
           "title": "A saved settings.json freezes every shipped default",
           "notes": "writeSettings dumps the whole Settings object, so keys holds a line for every action — not just the ones you bound. Change anything on the settings screen once and every default is written to ~/.config/dashboard/settings.json as if you picked it; on the next launch toBinding marks it written and the shipped default is never read again.\n\nCost: PR #23 moves the manager board's project keys to Cmd+Up / Cmd+Down on macOS because the system eats Ctrl+Arrow. Anyone who set a font size before that build keeps Ctrl+Up — Cmd+Down does nothing, Ctrl+Down still spreads every window, and the only escape is deleting the settings file, which takes the font and colours with it.\n\nFix: writeSettings leaves out a binding equal to the shipped default. settings.ts already tracks which lines were written. Also correct settings-store.ts's comment, which reads as if the file only holds what you chose.\n\nhttps://github.com/naeemba/dashboard/issues/24\nhttps://github.com/naeemba/dashboard/pull/23",
           "priority": "medium"
+        },
+        {
+          "id": "b7a28f07-06d5-4f5a-b513-0df0d818bd5d",
+          "title": "macOS may take Ctrl+1..9 for Mission Control, the keys that jump between tabs",
+          "notes": "src/actions.ts, the project-jump rows ship Ctrl+1..Ctrl+9 on the mac side. Mission Control's Switch to Desktop 1..9 are the same keys and come alive once you have a second Space. Where they are alive, Ctrl+2 slides you to another desktop instead of jumping to tab 2 - and project-jump is the most-pressed row in the table.\n\nSame shape as the bug PR #23 fixed for Ctrl+Up and Ctrl+Down, which macOS took for Mission Control and Application windows. That PR wrote the rule down above the table: Ctrl with an arrow belongs to macOS. Ctrl with a digit was not checked.\n\nNot confirmed. First step is ten seconds in System Settings > Keyboard > Keyboard Shortcuts > Mission Control on a machine with two Spaces. Ctrl+Shift+1..9 for project-move looks clear either way.\n\nIf it is real, the fix is not the swap made for the arrows: Cmd+1..Cmd+9 is already terminal-focus on the mac side, so this needs a different family. actions.test.ts already refuses two actions on one key per screen, so a bad swap fails there rather than shipping.\n\nhttps://github.com/naeemba/dashboard/issues/25\nhttps://github.com/naeemba/dashboard/pull/23",
+          "priority": "low"
         }
       ]
     },
