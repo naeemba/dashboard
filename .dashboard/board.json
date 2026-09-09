@@ -62,7 +62,7 @@
         {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
           "title": "A fourth mode: notes, one page of them per project",
-          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.",
+          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
           "priority": "medium",
           "parent": null
         },
@@ -98,20 +98,22 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
-          "title": "Check what happens to right-to-left text in a terminal pane",
-          "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-09-09T00:00:00.000Z"
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
+          "title": "Right-to-left text: fixed everywhere the app draws it, never in a pane",
+          "notes": "Reproduced, and it splits in two. The app's own text is fixed. A pane cannot be.\n\nWhat was wrong where we draw it: nothing in the app ever asked for bidi, so a Persian note ending in a full stop drew the stop at the far left of the line and the sentence read as though it began with a period. One rule now asks -- `body *:not(.pane, .pane *) { unicode-bidi: plaintext }` in index.css. Every element rather than a list of the ones holding typed text, because unicode-bidi does not inherit; the list version was written first and already missed the title bar, the column headings, the settings row, the card detail's column names, the branch line and the Directory-not-found path, and would have missed the notes page next. Order only, so the columns still line up; the four boxes you type into carry dir=\"auto\", which turns the box round as well. The manager's arrow became a span of its own -- sharing the name's span it crossed to the far side of a Persian name and stopped lining up with the row above.\n\nWhat cannot be fixed: anything inside a pane. xterm.js lays out a grid of cells and reorders nothing, and nvim does not do bidi either -- `:help rileft` says so outright. Writing the algorithm into the grid ourselves is the trap: once screen column 5 is no longer buffer cell 5, the cursor, the selection and the mouse all lie, and you click a word and land four characters away. Not worth reopening. `:set rightleft` only helps a file with no English in it, and the webgl renderer's character joiner would leave the cursor wrong regardless.\n\nSo Persian prose belongs on a screen the app draws, not in a pane. That is an argument for the notes mode card, and a card worth writing for reading a project's file in a bidi view. PR #21.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-09-09T00:00:00.000Z",
+          "branch": "rtl-text-lays-out",
+          "pullRequest": 21
+        },
         {
           "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
           "title": "The waiting list, and Enter jumps to the pane",
