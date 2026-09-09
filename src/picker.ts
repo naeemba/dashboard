@@ -38,6 +38,8 @@ export function openPicker(projects: Project[]): Promise<PickerChoice> {
     const { dialog, remove } = openOverlay('picker', () => finish(undefined));
     const search = document.createElement('input');
     search.className = 'picker-search';
+    // A folder with a Persian name is typed right to left, and the box turns round to match.
+    search.dir = 'auto';
     search.placeholder = 'Search projects';
     const list = document.createElement('ul');
     list.className = 'picker-list';

@@ -88,6 +88,21 @@ the pass-through check at the top of this section runs against the action
 rather than the key — so if Ctrl+T becomes something else, the something else
 is what gets passed through, not the key that used to be Ctrl+T.
 
+## Every box you type into carries `dir="auto"` — Hard Rule
+
+**A new `<input>` or `<textarea>` gets `input.dir = 'auto'` in the same change
+that adds it.** The rest of the app is covered by one CSS rule — everything
+outside a pane is `unicode-bidi: plaintext`, so a line takes its direction from
+its first letter. That fixes the reading order but not the box: without
+`dir="auto"` the cursor starts on the left, so you type a Persian card title and
+the text runs away from the caret, ending punctuation lands on the wrong side,
+and Home and End take you to the opposite ends of what you see.
+
+Four boxes have it today: the card title in `board-view.ts`, the description in
+`board-detail.ts`, the picker's search box, and the settings screen's text
+fields. Nothing checks this — no test, no lint rule — which is why it is written
+down here.
+
 ## A refusal is explained where it is decided — Hard Rule
 
 When one place decides to refuse something and another prints the message, the

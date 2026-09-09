@@ -68,16 +68,20 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   function projectLine(line: Extract<ManagerLine, { kind: 'project' }>): HTMLElement {
     const item = document.createElement('li');
     item.className = 'manager-project';
+    // Only a project with panes to show gets an arrow; on a quiet one there is nothing to open and a
+    // marker saying otherwise would be inviting a key that does nothing. A span of its own, so that
+    // the name beside it holds a folder's name and nothing else: an arrow sharing that span crosses
+    // to the far side of a Persian name and stops lining up with the row above.
+    const marker = document.createElement('span');
+    marker.className = 'manager-marker';
+    marker.textContent = `${canOpen(line.row) ? (line.open ? OPEN : SHUT) : ' '} `;
     const name = document.createElement('span');
     name.className = 'manager-name';
-    // Only a project with panes to show gets an arrow; on a quiet one there is nothing to open and a
-    // marker saying otherwise would be inviting a key that does nothing.
-    const marker = canOpen(line.row) ? (line.open ? OPEN : SHUT) : ' ';
-    name.textContent = `${marker} ${line.row.name}`;
+    name.textContent = line.row.name;
     const summary = document.createElement('span');
     summary.className = 'manager-summary';
     summary.textContent = alertSummary(line.row.alerts);
-    item.append(name, summary);
+    item.append(marker, name, summary);
     return item;
   }
 

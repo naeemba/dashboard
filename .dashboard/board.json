@@ -60,16 +60,9 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
-          "title": "Check what happens to right-to-left text in a terminal pane",
-          "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
           "title": "A fourth mode: notes, one page of them per project",
-          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.",
+          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
           "priority": "medium",
           "parent": null
         },
@@ -93,6 +86,15 @@
           "notes": "The manager tab needs a board mode of its own. Unlike a project board, it aggregates: it shows all the tasks from every open project in one view.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "5864b231-b04b-436c-9680-c721a740b335",
+          "title": "Read a project's file in a view that does bidi",
+          "notes": "Persian prose cannot be read in a pane and never will be, so the way to read a Persian roadmap or README is a screen the app draws itself -- Chromium lays it out correctly there, and the one rule in index.css already covers every element outside a pane.\n\nThe open question the design turns on is how the file is chosen: a picker over the project's folder, or whatever file nvim currently has open.\n\nKeyboard-first, so it is a row in actions.ts and a section in help.ts.\n\nRelated: the notes mode card is this same screen for a file the app owns. This one is for a file the project owns.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-09T00:00:00.000Z",
+          "updatedAt": "2026-09-09T00:00:00.000Z"
         }
       ]
     },
@@ -111,6 +113,25 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "d8266a85-564f-446f-99e4-71bbf17c41f7",
+          "title": "Persian typing in a pane was checked and is fine",
+          "notes": "Nothing to fix, written down so nobody investigates it twice. macOS's Persian-ISIRI 2901 layout puts ZWNJ -- the نیم‌فاصله, the one character Persian typing cannot do without -- on Shift+Space, and also on Shift+B. Neither is bound to anything in this app, so both reach the pane.\n\nWhat does sit on Option is ى, ٱ, two diacritics, and the Persian digits ۰-۹ on the numeric keypad. Those are the ones macOptionIsMeta turns into Esc+key, so they cannot be typed into a pane. None of them is standard Persian orthography and a laptop has no keypad, so macOptionIsMeta stays as it is -- turning it off would cost <A-l> in nvim, which is the reason it was set.\n\nAsked of macOS itself through UCKeyTranslate over every keycode and modifier combination, on 2026-09-09, rather than guessed at.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-09-09T00:00:00.000Z",
+          "updatedAt": "2026-09-09T00:00:00.000Z"
+        },
+        {
+          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
+          "title": "Right-to-left text: fixed everywhere the app draws it, never in a pane",
+          "notes": "Reproduced, and it splits in two. The app's own text is fixed. A pane cannot be.\n\nWhat was wrong where we draw it: nothing in the app ever asked for bidi, so a Persian note ending in a full stop drew the stop at the far left of the line and the sentence read as though it began with a period. One rule now asks -- `body *:not(.pane, .pane *) { unicode-bidi: plaintext }` in index.css. Every element rather than a list of the ones holding typed text, because unicode-bidi does not inherit; the list version was written first and already missed the title bar, the column headings, the settings row, the card detail's column names, the branch line and the Directory-not-found path, and would have missed the notes page next. Order only, so the columns still line up; the four boxes you type into carry dir=\"auto\", which turns the box round as well. The manager's arrow became a span of its own -- sharing the name's span it crossed to the far side of a Persian name and stopped lining up with the row above.\n\nWhat cannot be fixed: anything inside a pane. xterm.js lays out a grid of cells and reorders nothing, and nvim does not do bidi either -- `:help rileft` says so outright. Writing the algorithm into the grid ourselves is the trap: once screen column 5 is no longer buffer cell 5, the cursor, the selection and the mouse all lie, and you click a word and land four characters away. Not worth reopening. `:set rightleft` only helps a file with no English in it, and the webgl renderer's character joiner would leave the cursor wrong regardless.\n\nSo Persian prose belongs on a screen the app draws, not in a pane. That is an argument for the notes mode card, and a card worth writing for reading a project's file in a bidi view. PR #21.\n\nThree ways of fixing it inside a pane were tried and none of them works. Written down so the next person does not spend the afternoon again.\n\n1. A bidi filter in front of the pane -- fribidi, which is the Unicode algorithm as a command line tool and is one brew install away. It reorders the text before the terminal sees it. It fights whatever reordering is already going on, and the two together are a different kind of wrong rather than a fix. Also useless for nvim by construction: nvim addresses the cursor per cell, so a filter in the pipe has no line to reorder.\n2. xterm.js's character joiner on the webgl renderer, which is the one API that hands several cells to the text shaper as a single run. Loaded the addon, registered a joiner over every right-to-left run, and the output was identical to the default renderer's. It merges draw calls; it does not change the base direction, and the base direction is what puts the words in the wrong order.\n3. An option somewhere in xterm.js. There is none: grep the v6 typings for bidi, rtl and direction and there are no hits.\n\nSo the only version that could work is bidi in our own renderer -- reorder each row for display and keep a map between visual and logical columns so the cursor, the selection and the mouse stay honest. That map is the whole job. Without it you put the cursor at the start of a Persian word in nvim, press x, and the character that disappears is from the other end of the word. And nvim would still be half wrong, because nvim does its own layout in logical columns -- where the line wraps, where a table column starts -- so reordering the display leaves nvim's idea of the line and what you see disagreeing.\n\nIf it is ever wanted, the narrow version is the one to attempt: display-order reordering only, read-only, behind a setting that is off by default. Good enough for cat, bat, less and an agent's output; explicitly not for nvim. Days of work, and it may come out worse than the honest breakage we have. Not chosen.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-09-09T00:00:00.000Z",
+          "branch": "rtl-text-lays-out",
+          "pullRequest": 21
+        },
         {
           "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
           "title": "The waiting list, and Enter jumps to the pane",
