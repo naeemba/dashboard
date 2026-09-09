@@ -128,6 +128,8 @@ export function openSettings(
       const input = document.createElement('input');
       input.className = 'settings-edit';
       input.value = row.value;
+      // A shell or a font with a Persian name in it turns the box round as you type.
+      input.dir = 'auto';
       editor = input;
       // Replaces the value in the row that is already on screen, so nothing moves under your hand.
       const item = dialog.querySelectorAll('.settings-row, .settings-heading')[selected];

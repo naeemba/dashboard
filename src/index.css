@@ -14,6 +14,30 @@ body {
   flex-direction: column;
 }
 
+/* Text reads in the direction it is written in. A card titled in Persian runs right to left, an
+   English one beside it still runs left to right, and a line with both in it puts each run where it
+   belongs — Chromium does the whole of the Unicode algorithm here once the box asks for it. Without
+   this a Persian note's full stop draws at the far left of the line, so the sentence reads as though
+   it begins with a period.
+
+   Every element, rather than a list of the ones that hold text somebody typed, because unicode-bidi
+   does not inherit and so every box that holds text needs its own word for it. A list would be a
+   second thing to keep true whenever a screen is added, and it was already wrong the day it was
+   written: the tab strip was on it and the title bar an inch above was not, so one folder's name drew
+   both ways at once. It costs nothing on the app's own English: plaintext takes the direction from
+   the first letter that has one, and in "Enter changes the row" that letter is E.
+
+   A pane is the exception, and not only because its markup is xterm's to style rather than ours.
+   xterm.js lays out a grid of cells and reorders nothing, nvim does not do it either, so Persian
+   inside a pane reads back to front whatever this file says.
+
+   Order only: the alignment stays put, so four columns of cards still line up down their left edge.
+   The boxes you type into carry dir="auto" instead, which turns the box round as well, the way a text
+   field does in any browser. */
+body *:not(.pane, .pane *) {
+  unicode-bidi: plaintext;
+}
+
 /* The two rows of chrome above the terminals read as one dark bar, so they share its colour and its
    refusal to be selected. */
 #title, #status {
@@ -177,8 +201,6 @@ body {
 
 .manager-list li {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -191,8 +213,15 @@ body {
 .manager-project .manager-name {
   color: var(--brightWhite);
   font-weight: 700;
-  /* The marker is a character wide, so a project with nothing to open lines up with one that has. */
+}
+
+/* The marker is a character wide and carries its own trailing space, so a project with nothing to
+   open lines up with one that has, and both line up with the panes indented underneath. Nothing may
+   sit between it and the name — the row has no gap for that reason, and what holds the summary at the
+   far end is the summary's own margin. */
+.manager-marker {
   white-space: pre;
+  color: var(--brightWhite);
 }
 
 /* Indented under the project it belongs to, and the marker's width again so the names line up. */
@@ -200,9 +229,13 @@ body {
   padding-left: 2ch;
 }
 
+/* Pushed to the far end of the row by its own margin, with padding of its own so a long project name
+   growing towards it never touches it. */
 .manager-summary,
 .manager-state {
   flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 12px;
 }
 
 .manager-summary {

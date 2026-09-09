@@ -60,13 +60,6 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
-          "title": "Check what happens to right-to-left text in a terminal pane",
-          "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
           "title": "A fourth mode: notes, one page of them per project",
           "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.",
@@ -105,6 +98,14 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "dc8d262b-561f-4b9c-b864-f153f22433bd",
+          "title": "Check what happens to right-to-left text in a terminal pane",
+          "notes": "Unknown, not broken as far as anyone has checked. xterm.js does not reorder bidirectional text on its own, so Arabic or Hebrew output may draw in logical order rather than visual, and the cursor may sit on the wrong side. Worth reproducing first -- run something that prints RTL, see what it actually does, then decide whether it needs an addon, a font, or nothing.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-09-09T00:00:00.000Z"
         }
       ]
     },
@@ -114,7 +115,7 @@
         {
           "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
           "title": "The waiting list, and Enter jumps to the pane",
-          "notes": "Shipped. Every pane asking for you, named under its project on the manager page, with Enter landing you in it. goToPane is one function now, shared with the notification click, so the two ways into a pane from elsewhere cannot land differently. isRinging moved to waiting.ts and both the tab strip and this list ask it — before, the rule was written twice and dropping `notified` from one would have stopped the tab going yellow while the manager still listed the pane. PR #18.",
+          "notes": "Shipped. Every pane asking for you, named under its project on the manager page, with Enter landing you in it. goToPane is one function now, shared with the notification click, so the two ways into a pane from elsewhere cannot land differently. isRinging moved to waiting.ts and both the tab strip and this list ask it \u2014 before, the rule was written twice and dropping `notified` from one would have stopped the tab going yellow while the manager still listed the pane. PR #18.",
           "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "updatedAt": "2026-09-08T10:35:01.361Z",
@@ -124,7 +125,7 @@
         {
           "id": "9ec3aa79-428a-4c8f-9d92-25284434e79d",
           "title": "Say which panes have died",
-          "notes": "Shipped. A pane that exits now shows up on the manager page as `terminal 1 · exited`, red, and Enter on that row takes you to it to press Enter again. The exited flag has always existed and nothing ever read it; onExit redraws now, which is the whole of what was missing. Dead beats asking: a shell that rings on its way out is listed as exited, not waiting, because answering it finds nothing to answer. The tab does not go yellow for a dead pane — yellow means asking today, and giving it a second meaning is a change to the terminals screen, not this page. PR #18.",
+          "notes": "Shipped. A pane that exits now shows up on the manager page as `terminal 1 \u00b7 exited`, red, and Enter on that row takes you to it to press Enter again. The exited flag has always existed and nothing ever read it; onExit redraws now, which is the whole of what was missing. Dead beats asking: a shell that rings on its way out is listed as exited, not waiting, because answering it finds nothing to answer. The tab does not go yellow for a dead pane \u2014 yellow means asking today, and giving it a second meaning is a change to the terminals screen, not this page. PR #18.",
           "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "updatedAt": "2026-09-08T10:35:01.361Z",
@@ -134,7 +135,7 @@
         {
           "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
           "title": "One row per project, and the lists live inside it",
-          "notes": "Shipped. One row per open project carrying what its panes want — `dashboard · 2 waiting · 1 exited`, or `quiet`. Enter opens a project to name those panes, Enter on a pane lands you there: right tab, right view, keyboard in the pane, and the bell clears on arrival as it always did. Up and Down walk the flat list. The rules are in manager.ts beside a test — managerRows, alertSummary, managerLines, canOpen, selectedLine — and the DOM is in manager-view.ts, the split board.ts and board-view.ts already have. canOpen is the one place deciding a quiet project cannot expand, so the arrow, the drawn lines and the key cannot disagree. The selection is held as what it is on rather than where it is, so a pane that starts asking pushes the highlight along instead of sliding it onto a different pane. Three ordinary rows in the action table under a new manager scope, so they rebind and the help dialog and settings screen print them untold. No age on the row yet — that needs a per-second redraw and belongs with the last-line card. PR #18.",
+          "notes": "Shipped. One row per open project carrying what its panes want \u2014 `dashboard \u00b7 2 waiting \u00b7 1 exited`, or `quiet`. Enter opens a project to name those panes, Enter on a pane lands you there: right tab, right view, keyboard in the pane, and the bell clears on arrival as it always did. Up and Down walk the flat list. The rules are in manager.ts beside a test \u2014 managerRows, alertSummary, managerLines, canOpen, selectedLine \u2014 and the DOM is in manager-view.ts, the split board.ts and board-view.ts already have. canOpen is the one place deciding a quiet project cannot expand, so the arrow, the drawn lines and the key cannot disagree. The selection is held as what it is on rather than where it is, so a pane that starts asking pushes the highlight along instead of sliding it onto a different pane. Three ordinary rows in the action table under a new manager scope, so they rebind and the help dialog and settings screen print them untold. No age on the row yet \u2014 that needs a per-second redraw and belongs with the last-line card. PR #18.",
           "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "updatedAt": "2026-09-08T10:35:01.361Z",
@@ -144,7 +145,7 @@
         {
           "id": "251a424c-0e3c-429b-93ed-915201bc057c",
           "title": "A first tab that is not a project",
-          "notes": "Shipped. The manager sits at the front of the tab strip where a project sits, with no folder, no five shells, no editor and no board. Ctrl+1 lands on it, Ctrl+O comes back to it, a launch with nothing saved opens on it, and nothing can be dragged in front of it. `manager` is a fourth Mode no key selects, and that one fact carries the change: setMode refuses a view the page does not have, which replaces the dead-project check it used to make, and isProjectPage reads the mode so the session file, the picker, the tab drag and the launch landing all ask one question instead of four. Page.views is a Partial record — three views, one, or none. Not written to session.json, and the empty path is a second lock since parseSession already drops a page with no path. The empty window is gone: that state is the manager, and the sentence saying how to open a project moved to its status bar, reading the key and the wording off the action table. Ctrl+H has its own section for it. Nothing is on the page yet — the lists are their own cards. PR #17.",
+          "notes": "Shipped. The manager sits at the front of the tab strip where a project sits, with no folder, no five shells, no editor and no board. Ctrl+1 lands on it, Ctrl+O comes back to it, a launch with nothing saved opens on it, and nothing can be dragged in front of it. `manager` is a fourth Mode no key selects, and that one fact carries the change: setMode refuses a view the page does not have, which replaces the dead-project check it used to make, and isProjectPage reads the mode so the session file, the picker, the tab drag and the launch landing all ask one question instead of four. Page.views is a Partial record \u2014 three views, one, or none. Not written to session.json, and the empty path is a second lock since parseSession already drops a page with no path. The empty window is gone: that state is the manager, and the sentence saying how to open a project moved to its status bar, reading the key and the wording off the action table. Ctrl+H has its own section for it. Nothing is on the page yet \u2014 the lists are their own cards. PR #17.",
           "priority": "high",
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "updatedAt": "2026-09-08T09:34:46.793Z",
@@ -154,7 +155,7 @@
         {
           "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
           "title": "Cards remember when they were made and when they last changed",
-          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows — a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
+          "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows \u2014 a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
           "priority": "medium",
           "parent": null,
           "branch": "card-timestamps-and-branch",
@@ -256,7 +257,7 @@
         {
           "id": "3b766e7b-6178-487e-86f8-7fd98d65655e",
           "title": "One clamp, not three: board.ts, board-detail.ts and manager.ts each hold a copy",
-          "notes": "Shipped. src/clamp-index.ts holds one clampIndex(value, lastIndex) beside one test, and every list in the app reads it: board.ts, board-detail.ts (both the redraw and the arrow keys), manager.ts, manager-view.ts, picker.ts and board-state.ts. The three copies the issue named plus three more found on the way - picker.ts and board-state.ts were the same shape as the others and now read the same, and the card detail dialog wrote the two halves by hand a hundred lines below the copy it shared. The guards that only fed the old clamp are gone too: lastRow and deleteCard no longer floor a number their callers already floor. The “lists here do not wrap” sentence moved onto move() in manager-view.ts, which decides it. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/20",
+          "notes": "Shipped. src/clamp-index.ts holds one clampIndex(value, lastIndex) beside one test, and every list in the app reads it: board.ts, board-detail.ts (both the redraw and the arrow keys), manager.ts, manager-view.ts, picker.ts and board-state.ts. The three copies the issue named plus three more found on the way - picker.ts and board-state.ts were the same shape as the others and now read the same, and the card detail dialog wrote the two halves by hand a hundred lines below the copy it shared. The guards that only fed the old clamp are gone too: lastRow and deleteCard no longer floor a number their callers already floor. The \u201clists here do not wrap\u201d sentence moved onto move() in manager-view.ts, which decides it. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/20",
           "priority": "low",
           "updatedAt": "2026-09-08T11:16:25.893760Z"
         }

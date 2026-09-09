@@ -113,6 +113,8 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
         const input = document.createElement('input');
         input.className = 'card-detail-add';
         input.placeholder = 'Subtask title';
+        // A subtask titled in Persian turns the box round as you type.
+        input.dir = 'auto';
         // onkeydown rather than addEventListener, for the same reason board-view.ts uses it: the tag
         // declares it as taking a KeyboardEvent, which the listener overloads do not.
         input.onkeydown = (event) => {

@@ -153,6 +153,8 @@ export function createBoardView(options: BoardOptions): BoardView {
       field === 'notes' ? document.createElement('textarea') : document.createElement('input');
     input.className = 'board-edit';
     input.value = value;
+    // A title or a description typed in Persian turns the box round as you type.
+    input.dir = 'auto';
     // onkeydown rather than addEventListener: both tags declare it as taking a KeyboardEvent, which the
     // union of the two does not do for the listener overloads.
     input.onkeydown = (event) => {
