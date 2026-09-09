@@ -62,13 +62,17 @@ function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): Binding
   return { binding: formatBinding(parsed), written: true };
 }
 
+// A plain object, and nothing else. A list has string keys too, so Array.isArray has to be asked
+// separately or `[1, 2]` reads as `{ "0": 1, "1": 2 }`.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 // Anything that is not a plain object reads as one with nothing in it. Every check that follows a call
 // to this already rejects undefined, so a file holding a number, a list or null where an object belongs
 // falls through to the defaults instead of throwing.
 function asRecord(value: unknown): Record<string, unknown> {
-  return (typeof value === 'object' && value !== null && !Array.isArray(value))
-    ? value as Record<string, unknown>
-    : {};
+  return isRecord(value) ? value : {};
 }
 
 export function parseSettings(stored: unknown, isMac: boolean): Settings {
@@ -159,6 +163,13 @@ export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
 }
 
+// One group's chosen lines: the entries whose value is not what this build ships.
+function chosenFrom(
+  mine: Record<string, unknown>, shipped: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(mine).filter(([name, value]) => value !== shipped[name]));
+}
+
 // What belongs in the file: the lines somebody chose. Anything equal to what this build ships is left
 // out, so the next build's default is read rather than this one's being frozen in.
 // Without it, saving one font size writes every action's key and every theme colour as if you had
@@ -171,49 +182,29 @@ export function resetKeys(settings: Settings, isMac: boolean): Settings {
 // who lost a clashing key.
 // An explicit null key stays. It says "no key at all", which is not what the default says, and
 // parseSettings reads a missing line as the default rather than as unbound.
-export type FileSettings = {
-  shellCommand?: string;
-  font: { name?: string; size?: number };
-  theme: Record<string, string>;
-  keys: Settings['keys'];
-};
-
-function chosenFrom<Value>(
-  mine: Record<string, Value>, shipped: Record<string, Value>,
-): Record<string, Value> {
-  return Object.fromEntries(Object.entries(mine).filter(([name, value]) => value !== shipped[name]));
-}
-
-export function chosenSettings(settings: Settings, isMac: boolean): FileSettings {
+//
+// Both writers come through here — the save, handed the settings it is storing, and the launch tidy,
+// handed the file's own JSON — so the rule is written once. The tidy is why this takes lines out of
+// what it was given rather than building a fresh object from what it recognises: parseSettings repairs
+// what it cannot accept, and writing those repairs back deletes what you typed. You write "size": 130
+// meaning 13.0, launch to find the panes unchanged, open the file to look for the typo, and the line
+// is gone. Comparing the raw value instead, 130 is not 13, so it stays where you put it.
+// Everything the file holds that this build has no opinion on is handed back untouched, a field it has
+// never heard of included — on the launch tidy, which is the only path that ever sees one. A save
+// writes what parseSettings read, and that never held the field.
+export function withoutShipped(stored: unknown, isMac: boolean): unknown {
+  // A file holding a list, a string or null parses fine and is none of our business. Rebuilding it as
+  // an object would be the whole file thrown away for a mistake we could have let them read instead.
+  if (!isRecord(stored)) return stored;
   const shipped = defaultSettings(isMac);
-  return {
-    // Undefined rather than omitted: JSON.stringify drops it either way, and one shape is easier to read
-    // than four spreads that each have to say what they are not adding.
-    shellCommand: settings.shellCommand === shipped.shellCommand ? undefined : settings.shellCommand,
-    font: {
-      name: settings.font.name === shipped.font.name ? undefined : settings.font.name,
-      size: settings.font.size === shipped.font.size ? undefined : settings.font.size,
-    },
-    theme: chosenFrom(settings.theme, shipped.theme),
-    keys: chosenFrom(settings.keys, shipped.keys),
-  };
-}
-
-// The launch tidy. Same rule as chosenSettings — a line equal to what this build ships comes out — but
-// read off the file's own JSON rather than the parsed settings, and that difference is the whole point.
-// parseSettings repairs what it cannot accept, and writing those repairs back deletes what you typed:
-// you write "size": 130 meaning 13.0, launch to find the panes unchanged, open the file to look for the
-// typo, and the line is gone. Comparing the raw value instead, 130 is not 13, so it stays where you put
-// it. Everything else the file holds is passed through untouched, a field this build has never heard of
-// included: it is not ours to throw away.
-export function withoutShipped(stored: unknown, isMac: boolean): Record<string, unknown> {
-  const shipped = defaultSettings(isMac);
-  const raw = asRecord(stored);
-  return {
-    ...raw,
-    shellCommand: raw.shellCommand === shipped.shellCommand ? undefined : raw.shellCommand,
-    font: chosenFrom<unknown>(asRecord(raw.font), shipped.font),
-    theme: chosenFrom<unknown>(asRecord(raw.theme), shipped.theme),
-    keys: chosenFrom<unknown>(asRecord(raw.keys), shipped.keys),
-  };
+  const chosen: Record<string, unknown> = { ...stored };
+  if (chosen.shellCommand === shipped.shellCommand) delete chosen.shellCommand;
+  // Only where the file actually holds an object. `"theme": "dark"` is somebody reaching for a feature
+  // that is not here; it is left there to be read, not replaced by an empty object. A group the file
+  // never named is not added either, or every launch dirties a settings.json kept in a dotfiles repo.
+  for (const group of ['font', 'theme', 'keys'] as const) {
+    const mine = chosen[group];
+    if (isRecord(mine)) chosen[group] = chosenFrom(mine, shipped[group]);
+  }
+  return chosen;
 }

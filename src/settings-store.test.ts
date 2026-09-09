@@ -102,7 +102,27 @@ describe('tidySettingsFile', () => {
     writeFileSync(path, JSON.stringify({ font: { size: 130 }, theme: { background: '#fff' } }));
     tidySettingsFile(path, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { size: 130 }, theme: { background: '#fff' }, keys: {} });
+      .toEqual({ font: { size: 130 }, theme: { background: '#fff' } });
+  });
+
+  // "theme" is a group here and a word there. Somebody reaching for a theme by name has to be able to
+  // open the file and see what they typed, not an empty object where their word used to be.
+  it('leaves a group the file gave a value instead of an object', () => {
+    const path = file();
+    writeFileSync(path, JSON.stringify({ theme: 'dark' }));
+    tidySettingsFile(path, true);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ theme: 'dark' });
+  });
+
+  // Valid JSON, but not an object. There is nothing here to take a line out of, and turning the whole
+  // file into one leaves nothing to fix.
+  it('leaves a file that is json but not an object', () => {
+    for (const text of ['null', '[1, 2]', '"hello"']) {
+      const path = file();
+      writeFileSync(path, text);
+      tidySettingsFile(path, true);
+      expect(readFileSync(path, 'utf8')).toBe(text);
+    }
   });
 
   // Two actions on one key: reading the file takes the key off the loser, and writing that back would
@@ -115,11 +135,25 @@ describe('tidySettingsFile', () => {
       .toEqual({ help: 'Ctrl+J', 'board-open': 'Ctrl+J' });
   });
 
-  it('keeps a field this build knows nothing about', () => {
+  // The tidy keeps it; a save does not, because a save writes the settings parseSettings read and the
+  // field was never in them. Both halves are pinned here so the first is not read as a promise.
+  it('keeps a field this build knows nothing about, which a save then drops', () => {
     const path = file();
     writeFileSync(path, JSON.stringify({ somethingLater: 'mine' }));
     tidySettingsFile(path, true);
     expect(JSON.parse(readFileSync(path, 'utf8')).somethingLater).toBe('mine');
+    writeSettings(path, { ...defaultSettings(true), font: { name: 'Menlo', size: 14 } }, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')).somethingLater).toBe(undefined);
+  });
+
+  // A launch that takes nothing out must not touch the file, or a settings.json tracked in a dotfiles
+  // repo shows up as changed after every start.
+  it('does not rewrite a file it has nothing to take out of', () => {
+    const path = file();
+    writeSettings(path, { ...defaultSettings(true), font: { name: 'Menlo', size: 14 } }, true);
+    const before = readFileSync(path, 'utf8');
+    tidySettingsFile(path, true);
+    expect(readFileSync(path, 'utf8')).toBe(before);
   });
 
   it('leaves a damaged file and a missing one alone', () => {
