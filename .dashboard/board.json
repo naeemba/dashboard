@@ -39,13 +39,6 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "99072c51-acb0-46c6-85c3-4d511e515803",
-          "title": "Show a waiting pane's tail, and answer it with a keystroke",
-          "notes": "A waiting row carries the last few lines that pane printed, and a key you press goes straight to that pty. Three agents ask for permission in the same minute and you clear all three without switching tabs. The plumbing to send keystrokes to a pane is already there; the row needs the tail and a key.\n\nA few lines, not one -- Claude Code asks with a numbered menu rather than a question, and the order of the options changes with what it is asking about. Answer it blind and `1` means something different every time.\n\nSingle keystrokes, not typed text. If the agent has already finished, the pane is back at a shell prompt: type `yes` at it meaning yes and you have started a process that prints y forever until you go and find it.\n\nDeepens the last-line card for waiting panes: that one is one line for every pane, this is several lines for the panes that are asking.",
-          "priority": "high",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "6f6529fb-2567-420d-acd7-04fcfea4c2b9",
           "title": "What each pane last printed, and how long ago",
           "notes": "Main sees every byte of every pty. Keep the last non-blank line and the time it arrived, and thirty shells across five projects fit on one screen: `api . terminal 1, 2s ago, 214 tests passed`. The age is the half that earns it -- `quiet 41 minutes` is how you spot the pane you forgot.\n\nThe last line is a guess, and the page should not pretend otherwise. Spinners and progress bars redraw one line forever, so the text can be stale in a way the age will not show. Strip the escape codes, take the last line with printable characters in it, and accept it is approximate.",
@@ -113,6 +106,16 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "99072c51-acb0-46c6-85c3-4d511e515803",
+          "title": "Show a waiting pane's tail, and answer it with a keystroke",
+          "notes": "Shipped. A waiting row on the manager carries the last five lines that pane has on screen, and a character typed on that row goes straight to its pty — three agents asking at once are cleared without switching tabs. Five lines, not one: an agent asks with a numbered menu whose options move around. The bell comes off as the key goes out, so the row leaving the list is the sign it landed.\n\nEnter still takes you to the pane; keys with names never reach the pty, since the window's lookup claims them first and a word typed at a pane that has stopped asking is a command the shell runs. A dead pane takes no keys — it wants Enter in the pane. tailLines and takesAnswer are the rules, in manager.ts with tests; isBareCharacter went beside isModified in shortcuts.ts, because whether a keystroke is a typed character is a keyboard question; reading the xterm buffer stayed in renderer.ts as wiring, off the live screen rather than the scrollback. help.ts has the blurb and an `Any single key` row, and the keys no binding names are one table now, shared with nvim's.\n\nKnown edge: a capital needs Shift, and Shift is a modifier, so `Y` cannot be sent. Digits and lowercase can. PR #22.",
+          "priority": "high",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "updatedAt": "2026-09-09T10:37:09.267Z",
+          "branch": "waiting-pane-tail",
+          "pullRequest": 22
+        },
         {
           "id": "d8266a85-564f-446f-99e4-71bbf17c41f7",
           "title": "Persian typing in a pane was checked and is fine",
