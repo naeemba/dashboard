@@ -37,7 +37,8 @@ const sessionFile = path.join(app.getPath('userData'), 'session.json');
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
-let settings = readSettings(settingsFile, process.platform === 'darwin');
+const isMac = process.platform === 'darwin';
+let settings = readSettings(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
@@ -135,7 +136,7 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   // Panes already running keep the shell they started with. Nothing here kills one: there are
   // long-running jobs in them, and a settings change is not a reason to lose one.
   shellCommand = pickShell(settings, process.env, process.platform);
-  writeSettings(settingsFile, settings);
+  writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
 // Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane

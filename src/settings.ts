@@ -159,3 +159,41 @@ export function bindKey(settings: Settings, name: string, binding: string | null
 export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
 }
+
+// What belongs in the file: the lines somebody chose. Anything equal to what this build ships is left
+// out, so the next build's default is read rather than this one's being frozen in.
+// Without it, saving one font size writes every action's key and every theme colour as if you had
+// picked them. A default we later have to move — the manager board's project keys went from Ctrl+Up to
+// Cmd+Up because macOS takes Ctrl with an arrow for Mission Control — then never reaches anyone who has
+// ever opened the settings screen, and their only way out is deleting the file, which takes their font
+// and their colours with it.
+// It is also what makes `written` mean anything: a file that named every action made every line written,
+// so the written-first sort in withoutDuplicates settled nothing and ACTIONS row order quietly decided
+// who lost a clashing key.
+// An explicit null key stays. It says "no key at all", which is not what the default says, and
+// parseSettings reads a missing line as the default rather than as unbound.
+export type FileSettings = {
+  shellCommand?: string;
+  font: { name?: string; size?: number };
+  theme: Record<string, string>;
+  keys: Settings['keys'];
+};
+
+function chosenFrom<Value>(mine: Record<string, Value>, shipped: Record<string, Value>) {
+  return Object.fromEntries(Object.entries(mine).filter(([name, value]) => value !== shipped[name]));
+}
+
+export function chosenSettings(settings: Settings, isMac: boolean): FileSettings {
+  const shipped = defaultSettings(isMac);
+  return {
+    // Undefined rather than omitted: JSON.stringify drops it either way, and one shape is easier to read
+    // than four spreads that each have to say what they are not adding.
+    shellCommand: settings.shellCommand === shipped.shellCommand ? undefined : settings.shellCommand,
+    font: {
+      name: settings.font.name === shipped.font.name ? undefined : settings.font.name,
+      size: settings.font.size === shipped.font.size ? undefined : settings.font.size,
+    },
+    theme: chosenFrom(settings.theme, shipped.theme),
+    keys: chosenFrom(settings.keys, shipped.keys),
+  };
+}

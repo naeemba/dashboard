@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseSettings, type Settings } from './settings';
+import { chosenSettings, parseSettings, type Settings } from './settings';
 
 // Beside the .env file main already reads, not in Electron's userData directory. userData is
 // ~/Library/Application Support/Dashboard on macOS, and the point of this file is that a person opens
@@ -21,11 +21,13 @@ export function readSettings(file: string, isMac: boolean): Settings {
   }
 }
 
-export function writeSettings(file: string, settings: Settings): void {
+// isMac is here rather than at the call site because chosenSettings is not optional: a caller that
+// forgot it would write this build's defaults into the file and freeze them, with nothing failing.
+export function writeSettings(file: string, settings: Settings, isMac: boolean): void {
   try {
     mkdirSync(path.dirname(file), { recursive: true });
     // Indented and newline-terminated: this is a file people edit by hand.
-    writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
+    writeFileSync(file, `${JSON.stringify(chosenSettings(settings, isMac), null, 2)}\n`);
   } catch {
     // The change is live in this run; it just will not survive a restart.
   }
