@@ -57,11 +57,11 @@ can receive the keystroke anyway.
 that it was never meant to.** That is the help dialog, the card detail
 dialog, the delete confirmation, the picker's search box, the settings
 screen, the card title and description editor, and the manager list — which
-asks `isBareCharacter` rather than `isModified` directly, so the guard is one
-call down rather than missing, and which takes Shift on purpose as the third
-exception below. Two of them got this wrong before the rule was written down
-here. Take Ctrl+N in the card detail
-dialog and pressing it mid-word opens a "Subtask title" box. Take Enter with
+asks `isBareCharacter` instead, because it takes Shift on purpose as the third
+exception below. Both predicates read the same list of the three modifiers that
+are not typing, so a fourth added to `stopsTyping` reaches both. Two of them
+got this wrong before the rule was written down here. Take Ctrl+N in the card
+detail dialog and pressing it mid-word opens a "Subtask title" box. Take Enter with
 Cmd in the delete confirmation and a stray Cmd+Enter deletes a card and its
 whole family.
 

@@ -10,7 +10,14 @@ export type { KeyInput, Action };
 // steals it. Dialogs included. CLAUDE.md holds the list of handlers that ask, and the few deliberate
 // exceptions.
 export function isModified(input: KeyInput): boolean {
-  return input.shiftKey || input.metaKey || input.ctrlKey || input.altKey;
+  return input.shiftKey || stopsTyping(input);
+}
+
+// The three modifiers that turn a keystroke into somebody's shortcut instead of a character. Shift is
+// not one of them, which is the only difference between the two predicates either side of this — so
+// they are written as one list, and a fourth modifier added here reaches both.
+function stopsTyping(input: KeyInput): boolean {
+  return input.metaKey || input.ctrlKey || input.altKey;
 }
 
 // Whether the keystroke is a character somebody typed rather than a key with a name. Every key that
@@ -24,7 +31,7 @@ export function isModified(input: KeyInput): boolean {
 // other three are not typing, and anything actually bound to one of them was claimed by the window's
 // lookup before this is asked.
 export function isBareCharacter(input: KeyInput): boolean {
-  return !input.metaKey && !input.ctrlKey && !input.altKey && input.key.length === 1;
+  return !stopsTyping(input) && input.key.length === 1;
 }
 
 // `global` is heard on every screen, including while a shell has the keyboard. The other two are heard

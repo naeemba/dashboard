@@ -150,17 +150,34 @@ export function lineKey(line: ManagerLine): string {
   return line.kind === 'project' ? `${line.row.slot}` : terminalId(line.slot, line.alert.index);
 }
 
-// Where the selection lands once the page has been redrawn: on the same line it was on, wherever a
-// pane that has just started asking has pushed it to. A line that is gone — the pane stopped asking,
-// the project was closed — leaves the selection at the position it held, not back at the top.
 // No row under the highlight, which is where answering a pane leaves it: that row is on its way out
 // of the list, and the row sliding up into its place belongs to another project. Held rather than
 // clamped back onto a row, so the next character typed is dropped instead of landing in a shell you
 // were not aiming at.
 export const NOTHING_SELECTED = -1;
 
+// Where the selection lands once the page has been redrawn: on the same line it was on, wherever a
+// pane that has just started asking has pushed it to. A line that is gone — the pane stopped asking,
+// the project was closed — leaves the selection at the position it held, not back at the top.
 export function selectedLine(lines: readonly ManagerLine[], key: string, previous: number): number {
   if (previous === NOTHING_SELECTED) return NOTHING_SELECTED;
   const found = lines.findIndex((line) => lineKey(line) === key);
   return found === -1 ? clampIndex(previous, lines.length - 1) : found;
+}
+
+// Where an arrow lands. The list does not wrap: holding Down stops on the last line rather than
+// carrying you back to the first project, which would be a jump you did not ask for.
+// With nothing selected — which is where answering a pane leaves you — the move starts from the gap
+// that row left, so Down takes whatever slid up into its place and Up the row above it. Counting from
+// the empty selection instead would floor at the top, and answering the last pane on the page would
+// send you all the way back to the first project.
+export function nextSelection(
+  selected: number,
+  answeredAt: number,
+  direction: 'up' | 'down',
+  count: number,
+): number {
+  const down = direction === 'down';
+  const from = selected === NOTHING_SELECTED ? answeredAt - (down ? 1 : 0) : selected;
+  return clampIndex(from + (down ? 1 : -1), count - 1);
 }

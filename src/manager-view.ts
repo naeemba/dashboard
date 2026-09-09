@@ -1,8 +1,7 @@
 import type { Action } from './actions';
-import { clampIndex } from './clamp-index';
 import {
-  NOTHING_SELECTED, alertSummary, canOpen, lineKey, managerLines, selectedLine, takesAnswer,
-  type ManagerLine, type ManagerRow,
+  NOTHING_SELECTED, alertSummary, canOpen, lineKey, managerLines, nextSelection, selectedLine,
+  takesAnswer, type ManagerLine, type ManagerRow,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
 
@@ -54,6 +53,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // index alone would slide the highlight onto a different pane between you reading it and pressing
   // Enter — so the next redraw finds the same line again wherever it has moved to.
   let selectedKey = '';
+  // Where an arrow starts from once the selection has been given up. Answering a pane empties it, and
+  // an empty selection is not a position — so the row that was answered is kept, and the arrows carry
+  // on from the gap it left rather than both landing on the first line of the list.
+  let answeredAt = 0;
 
   function paneLine(line: Extract<ManagerLine, { kind: 'pane' }>): HTMLElement {
     const item = document.createElement('li');
@@ -111,10 +114,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     selectedKey = lines[index] ? lineKey(lines[index]) : '';
   }
 
-  // The list does not wrap: holding Down stops on the last pane rather than carrying you back to the
-  // first project, which would be a jump you did not ask for.
   function move(direction: 'up' | 'down'): void {
-    setSelection(clampIndex(selected + (direction === 'down' ? 1 : -1), lines.length - 1));
+    setSelection(nextSelection(selected, answeredAt, direction, lines.length));
     options.onChanged();
   }
 
@@ -138,10 +139,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     if (!line || line.kind !== 'pane' || !takesAnswer(line.alert)) return;
     event.preventDefault();
     // Nothing is selected once the key has gone: the row leaves the list as the bell comes off, and
-    // manager.ts says why the highlight does not follow it. An arrow picks a row again.
-    const { slot, alert } = line;
+    // manager.ts says why the highlight does not follow it. An arrow picks a row again, from here.
+    answeredAt = selected;
     setSelection(NOTHING_SELECTED);
-    options.onAnswer(slot, alert.index, event.key);
+    options.onAnswer(line.slot, line.alert.index, event.key);
   });
 
   return {

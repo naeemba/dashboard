@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  alertSummary, canOpen, isProjectPage, landingPosition, lineKey, managerLines,
-  managerRows, projectPosition, selectedLine, tailLines, takesAnswer,
+  NOTHING_SELECTED, alertSummary, canOpen, isProjectPage, landingPosition, lineKey, managerLines,
+  managerRows, nextSelection, projectPosition, selectedLine, tailLines, takesAnswer,
   type PaneAlert,
 } from './manager';
 import type { Bell } from './waiting';
@@ -155,6 +155,27 @@ describe('selectedLine', () => {
   // row under the old highlight now belongs to another project.
   it('keeps nothing selected once a pane has been answered', () => {
     expect(selectedLine(lines, '', -1)).toBe(-1);
+  });
+});
+
+describe('nextSelection', () => {
+  it('walks the list and stops at either end rather than wrapping', () => {
+    expect(nextSelection(1, 0, 'down', 4)).toBe(2);
+    expect(nextSelection(1, 0, 'up', 4)).toBe(0);
+    expect(nextSelection(3, 0, 'down', 4)).toBe(3);
+    expect(nextSelection(0, 0, 'up', 4)).toBe(0);
+  });
+
+  // Answering the pane on line 2 takes that row out, so line 2 is now the row that was under it.
+  it('carries on from the row that was answered, not from the top of the list', () => {
+    expect(nextSelection(NOTHING_SELECTED, 2, 'down', 4)).toBe(2);
+    expect(nextSelection(NOTHING_SELECTED, 2, 'up', 4)).toBe(1);
+  });
+
+  // The bug this replaced: from an empty selection both arrows floored at zero, so answering a pane
+  // near the bottom sent you back to the first project.
+  it('does not send you to the first project after answering the last pane', () => {
+    expect(nextSelection(NOTHING_SELECTED, 5, 'up', 5)).toBe(4);
   });
 });
 
