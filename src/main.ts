@@ -20,7 +20,15 @@ import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import { blockingChanges, branchNameFor, freePane, oneAtATime, worktreePathFor } from './ship';
+import {
+  blockingChanges,
+  branchNameFor,
+  freePane,
+  oneAtATime,
+  runsAnAgent,
+  worktreePathFor,
+  type PaneCommand,
+} from './ship';
 import {
   entryForCard,
   livingEntries,
@@ -61,8 +69,8 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 let worktrees: WorktreeEntry[] = livingEntries(readWorktrees(worktreesFile), existsSync)
   .map((entry) => ({ ...entry, pane: null }));
 writeWorktrees(worktreesFile, worktrees);
-// Which panes you have typed into. The only signal there is about a pane being free: main sees every
-// keystroke sent to a pty and nothing at all about what is running in one.
+// Which panes you have typed into. Half of what makes a pane somebody's; paneIsBusy has the other
+// half, which is read rather than kept here.
 const typedPanes = new Set<string>();
 // The cards whose ship is running right now. Two ships of one card both get past the already-shipped
 // check before either has recorded anything, and the second record replaces the first: two branches
@@ -90,7 +98,7 @@ const shells = new Map<string, pty.IPty>();
 // shell in force, and a project can sit open for a long time before its nvim key is ever pressed. Baking
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
-const terminalCommands = new Map<string, { args: string[] | 'editor'; directory: string }>();
+const terminalCommands = new Map<string, PaneCommand>();
 let mainWindow: BrowserWindow;
 // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q
 // stacks a question per keypress and you answer the same one five times.
@@ -100,24 +108,30 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
 }
 
+// Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: you
+// typed in it, or an agent is running in it — and the second is read off terminalCommands rather than
+// tracked beside it, so the two can never disagree.
+//
+// Tracked, they did. Answering an agent's prompt put the pane in typedPanes, and the agent exiting
+// took it straight back out: your own shell, with what you had typed in it, read as free, and the next
+// ship killed it out from under you.
+function paneIsBusy(id: string): boolean {
+  return typedPanes.has(id) || runsAnAgent(terminalCommands.get(id));
+}
+
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
-// Whether a pane was an agent's is the worktrees record's to say — the pane is pointed at one of its
-// folders — rather than a second list kept alongside it.
 function releaseAgentPane(id: string): void {
-  const entry = terminalCommands.get(id);
-  if (entry === undefined) return;
-  if (!worktrees.some((worktree) => worktree.worktreePath === entry.directory)) return;
-  typedPanes.delete(id);
-  terminalCommands.set(id, { args: [], directory: entry.directory });
+  const command = terminalCommands.get(id);
+  if (!runsAnAgent(command)) return;
+  terminalCommands.set(id, { args: [], directory: command.directory });
 }
 
 // The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
-// plain shell in the project, since the folder it was in is not there any more. Run before the record
-// is dropped, because releaseAgentPane above recognises an agent's pane by finding its folder in the
-// record — once the row is gone the pane can never be given back, and Enter in it would keep starting
-// a shell in a directory that does not exist.
+// plain shell in the project, since the folder it was in is not there any more. The typedPanes line
+// is what hands the pane back — you asked for the worktree to go, so what you typed answering its
+// agent is not a claim on the pane any more.
 function releaseWorktreePanes(entry: WorktreeEntry): void {
   for (const [id, command] of terminalCommands) {
     if (command.directory !== entry.worktreePath) continue;
@@ -195,9 +209,6 @@ function startAgent(id: string, worktreePath: string, cardId: string): void {
     args: agentArguments(shellCommand, `/work-card ${cardId}`),
     directory: worktreePath,
   });
-  // Counted as used from here on. A pane with an agent working in it is the last one a second ship
-  // should take, and nobody typing in it is exactly why it would otherwise still look free.
-  typedPanes.add(id);
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -326,9 +337,9 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
 // ship of a card whose worktree exists but never got one.
 function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
-  const typedIn = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
-    .filter((index) => typedPanes.has(terminalId(slot, index)));
-  const pane = freePane(typedIn, TERMINAL_COUNT);
+  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
+    .filter((index) => paneIsBusy(terminalId(slot, index)));
+  const pane = freePane(busy, TERMINAL_COUNT);
   if (pane === null) {
     return {
       ok: false,

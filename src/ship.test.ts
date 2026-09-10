@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { blockingChanges, branchNameFor, freePane, oneAtATime, worktreePathFor } from './ship';
+import {
+  blockingChanges,
+  branchNameFor,
+  freePane,
+  oneAtATime,
+  runsAnAgent,
+  worktreePathFor,
+} from './ship';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
 
@@ -56,6 +63,17 @@ describe('worktreePathFor', () => {
   it('is not confused by a trailing slash on the project path', () => {
     expect(worktreePathFor('/Users/sharp/work/api/', 'bump-deps'))
       .toBe('/Users/sharp/work/api.worktrees/bump-deps');
+  });
+});
+
+// What makes a pane the ship's to take. Two panes must never count as an agent's: an ordinary shell,
+// and the editor — whose args are a note saying "work nvim out at spawn time", not a command.
+describe('runsAnAgent', () => {
+  it('says yes only to a pane carrying a command of its own', () => {
+    expect(runsAnAgent({ args: ['-lc', 'agent'], directory: '/work/api.worktrees/one' })).toBe(true);
+    expect(runsAnAgent({ args: [], directory: '/work/api' })).toBe(false);
+    expect(runsAnAgent({ args: 'editor', directory: '/work/api' })).toBe(false);
+    expect(runsAnAgent(undefined)).toBe(false);
   });
 });
 

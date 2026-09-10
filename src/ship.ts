@@ -57,13 +57,24 @@ export function worktreePathFor(projectPath: string, branch: string): string {
   return join(dirname(projectPath), `${name}.worktrees`, branch);
 }
 
-// The lowest-numbered pane nobody has typed into, or null when every one has been used. Never typed
-// in is the only signal there is: main sees every keystroke sent to a pty and nothing at all about
-// what is running in one. A pane running a startup command you did not type reads as free, which is
-// a true statement about a pane nobody has touched and not one about what is in it.
-export function freePane(typedIn: readonly number[], count: number): number | null {
+// What a pane was asked to run and where. main holds one of these per pane; this is the shape of a row
+// in that map, here because what the shape means to a ship is decided here.
+export type PaneCommand = { args: string[] | 'editor'; directory: string };
+
+// An agent's pane, which is the only one carrying a command of its own. The five terminals run nothing
+// — an empty array — and the editor's args are the string 'editor', which is not a command but a note
+// saying to work nvim's out at spawn time, so that quitting nvim leaves a pane Enter starts it in
+// again. Counting either as an agent's would take a pane out of the ship's reach for good.
+export function runsAnAgent(command: PaneCommand | undefined): command is PaneCommand {
+  return command !== undefined && command.args !== 'editor' && command.args.length > 0;
+}
+
+// The lowest-numbered pane that is nobody's, or null when every one is taken. What makes a pane
+// somebody's is main's to say — it is the one that sees both the keystrokes and what each pane was
+// asked to run — so this is handed the answer rather than working it out.
+export function freePane(busy: readonly number[], count: number): number | null {
   for (let index = 0; index < count; index += 1) {
-    if (!typedIn.includes(index)) return index;
+    if (!busy.includes(index)) return index;
   }
   return null;
 }
