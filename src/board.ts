@@ -58,7 +58,12 @@ export function selectionOf(board: Board, id: string): Selection | null {
   return null;
 }
 
-const DEFAULT_COLUMNS = ['Todo', 'Doing', 'Done'];
+// The column you move a card into to start it: the app makes a worktree, takes a pane you have not
+// been typing in, and starts an agent there. Named rather than positioned, because an index moves the
+// moment somebody adds a column and the name is what board.json actually carries.
+export const SHIP_COLUMN = 'Ship';
+
+const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', 'Done'];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -75,6 +80,23 @@ function withColumns(board: Board, columns: Column[]): Board {
 
 function replaceColumn(board: Board, index: number, cards: Card[]): Board {
   return withColumns(board, board.columns.map((column, at) => (at === index ? { ...column, cards } : column)));
+}
+
+// Where Ship is, or -1. Case-insensitive, the same way create-task.js matches a --column, so a board
+// written by hand with "ship" is not a board the feature quietly refuses to work on.
+export function shipColumnIndex(board: Board): number {
+  return board.columns.findIndex((column) => column.name.toLowerCase() === SHIP_COLUMN.toLowerCase());
+}
+
+// Every board written before Ship existed has three columns, and getting the fourth should not mean
+// hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
+// card pays nothing for it. The same board back when it already has one, so reading a board is not a
+// change to it.
+export function withShipColumn(board: Board): Board {
+  if (shipColumnIndex(board) !== -1) return board;
+  const columns = [...board.columns];
+  columns.splice(1, 0, { name: SHIP_COLUMN, cards: [] });
+  return withColumns(board, columns);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {
@@ -276,6 +298,25 @@ export function deleteCardAndDescendants(board: Board, selection: Selection): Ch
   };
 }
 
+// Pulls a card out of its column, stamps it, and drops it into the target column at the given row —
+// the part moveCard's sideways step and moveCardToColumn both do, the only difference between them
+// being which row it lands on.
+//
+// A column is not a field of the card, but Todo to Doing is the change people most want a date for
+// — "when did this start" and "when did it ship" are both this move. So it ages the card. Moving a
+// card up and down within its column does not: that is reordering a list, not touching the work.
+function relocateCard(board: Board, selection: Selection, card: Card, target: number, row: number): Change {
+  const arriving = [...board.columns[target].cards];
+  arriving.splice(row, 0, { ...card, updatedAt: stamp() });
+  const leaving = board.columns[selection.column].cards.filter((_entry, at) => at !== selection.card);
+  const columns = board.columns.map((column, at) => {
+    if (at === selection.column) return { ...column, cards: leaving };
+    if (at === target) return { ...column, cards: arriving };
+    return column;
+  });
+  return { board: withColumns(board, columns), selection: { column: target, card: row } };
+}
+
 export function moveCard(board: Board, selection: Selection, direction: Direction): Change {
   const cards = board.columns[selection.column].cards;
   if (cards.length === 0) return { board, selection };
@@ -298,18 +339,21 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
   // The card keeps its row in the column it arrives at, or goes last if that column is shorter, so a
   // card sent sideways stays roughly where your eye left it.
   const row = Math.min(selection.card, board.columns[target].cards.length);
-  const arriving = [...board.columns[target].cards];
-  // A column is not a field of the card, but Todo to Doing is the change people most want a date for
-  // — "when did this start" and "when did it ship" are both this move. So it ages the card. Moving a
-  // card up and down within its column does not: that is reordering a list, not touching the work.
-  arriving.splice(row, 0, { ...card, updatedAt: stamp() });
-  const leaving = cards.filter((_entry, at) => at !== selection.card);
-  const columns = board.columns.map((column, at) => {
-    if (at === selection.column) return { ...column, cards: leaving };
-    if (at === target) return { ...column, cards: arriving };
-    return column;
-  });
-  return { board: withColumns(board, columns), selection: { column: target, card: row } };
+  return relocateCard(board, selection, card, target, row);
+}
+
+// Straight to a column, wherever the card is now. moveCard walks one column at a time, which is what
+// a keystroke means and not what a ship means: the worktree's board has the card wherever the last
+// merge left it, and the ship has to put it in Ship in one go from any of them.
+//
+// It lands last in the column it arrives at rather than keeping its row, because the caller is not a
+// cursor and has no row to keep.
+export function moveCardToColumn(board: Board, selection: Selection, target: number): Change {
+  const card = board.columns[selection.column]?.cards[selection.card];
+  if (!card || target < 0 || target >= board.columns.length || target === selection.column) {
+    return { board, selection };
+  }
+  return relocateCard(board, selection, card, target, board.columns[target].cards.length);
 }
 
 // Every card on the board, columns left to right and rows top to bottom. That order is what children

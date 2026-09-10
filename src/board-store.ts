@@ -5,6 +5,7 @@ import {
   PRIORITIES,
   emptyBoard,
   isPullRequestNumber,
+  withShipColumn,
   type Board,
   type Card,
   type Column,
@@ -15,6 +16,10 @@ import {
 // here, so there is one thing to commit or to ignore.
 export const BOARD_DIRECTORY = '.dashboard';
 const BOARD_FILE = 'board.json';
+// The board, relative to the project — the shape git reports and git compares, as opposed to the
+// absolute path boardPath joins. One spelling, so a second copy in another module cannot drift from
+// this one the day .dashboard is renamed.
+export const BOARD_FILE_PATH = `${BOARD_DIRECTORY}/${BOARD_FILE}`;
 // Where a board.json that could not be parsed is moved aside, so a crash mid-write or a bad hand-edit
 // loses nothing: the next read starts fresh, and the damaged file sits right next to it under this name.
 export const BROKEN_BOARD_FILE = 'board.json.broken';
@@ -53,6 +58,13 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
     }
 
 - \`columns\` is ordered. The first column is the leftmost on screen.
+- The \`Ship\` column is not an ordinary one. Moving a card into it asks the
+  Dashboard app to make a git worktree for that card, check out a branch named
+  after it, and start an agent in one of the project's panes. Put a card there
+  only when you mean to start it.
+- A card's column on the \`main\` branch says what has been merged. While work
+  is in flight the card's column lives on that work's own branch, and arrives
+  here when the pull request does.
 - \`cards\` is ordered. The first card is at the top of its column.
 - \`id\` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
   written without one, or with an id another card already used, is given a fresh one the next time
@@ -206,7 +218,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return { columns: repairCards(columns, makeId) };
+  return withShipColumn({ columns: repairCards(columns, makeId) });
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but
