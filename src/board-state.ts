@@ -48,6 +48,21 @@ export function applyChange(state: BoardState, next: Change): BoardState {
   };
 }
 
+// A change the app made rather than one you asked for. The board moves and is written like any other
+// change, but your undo step is left pointing where it already pointed, because there is no keystroke
+// of yours here for `u` to take back.
+//
+// The ship's move-back is the only one. Spending the step on it would put a shipped card into Ship on
+// main on the very next `u` — the one state the whole design forbids — and it is not the same shape as
+// `addingCard`, which is two changes of yours undoing as one.
+//
+// Built on applyChange rather than beside it, so the rule about a no-op handing back the same object
+// stays in one place: the identity check above is what stops apply() rewriting the file for nothing.
+export function applyAutomaticChange(state: BoardState, next: Change): BoardState {
+  const applied = applyChange(state, next);
+  return applied === state ? state : { ...applied, previous: state.previous };
+}
+
 export function undoChange(state: BoardState): BoardState {
   if (state.previous === null) return state;
   return { ...state.previous, previous: null, addingCard: false };

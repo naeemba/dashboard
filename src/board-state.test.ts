@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PRIORITY, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
 import {
   addBlankCard,
+  applyAutomaticChange,
   applyChange,
   commitBranch,
   commitNotes,
@@ -44,6 +45,34 @@ describe('applyChange', () => {
   it('hands back the same state when the operation did nothing', () => {
     const empty = state(board(['a'], []), { column: 1, card: 0 });
     expect(applyChange(empty, deleteCard(empty.board, empty.selection))).toBe(empty);
+  });
+});
+
+// The ship's move-back. Without this, `u` after a ship that worked puts the card back into Ship and
+// writes it there — a shipped card in Ship on main, which is the one state the design forbids, one
+// keystroke away.
+describe('applyAutomaticChange', () => {
+  const start = state(board(['a'], []), { column: 0, card: 0 });
+
+  it('moves the board without spending the undo step', () => {
+    const shipped = applyChange(start, moveCard(start.board, start.selection, 'right'));
+    expect(titles(shipped)).toEqual([[], ['a']]);
+    const back = applyAutomaticChange(shipped, moveCard(shipped.board, shipped.selection, 'left'));
+    expect(titles(back)).toEqual([['a'], []]);
+    // The step the user's own move left, not the board with the card in the second column.
+    expect(back.previous).toBe(shipped.previous);
+  });
+
+  // So `u` right after a ship that worked does nothing visible: the board is already where the step
+  // points, rather than being dragged back into the column the card was shipped from.
+  it('leaves undo pointing at the board the card is already on', () => {
+    const shipped = applyChange(start, moveCard(start.board, start.selection, 'right'));
+    const back = applyAutomaticChange(shipped, moveCard(shipped.board, shipped.selection, 'left'));
+    expect(titles(undoChange(back))).toEqual([['a'], []]);
+  });
+
+  it('hands back the same state when the operation did nothing', () => {
+    expect(applyAutomaticChange(start, moveCard(start.board, start.selection, 'left'))).toBe(start);
   });
 });
 

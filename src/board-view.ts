@@ -24,6 +24,7 @@ import type { Action } from './actions';
 import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
+  applyAutomaticChange,
   applyChange,
   commitBranch,
   commitNotes,
@@ -304,16 +305,16 @@ export function createBoardView(options: BoardOptions): BoardView {
   // A card that has landed in Ship, and `from` is the column it was in a keystroke ago.
   //
   // A ship that works puts the card back there, carrying its badge: this board is main's, and a
-  // column on main says what has been merged. The move back is an ordinary change — the same write,
-  // the same undo step — rather than undoChange, which is the `u` key and is one step deep: spending
-  // it here would leave your next undo doing nothing, with nothing on screen saying why.
+  // column on main says what has been merged. That move writes board.json like any other, and goes
+  // through applyAutomaticChange rather than change() because it is the app's move and not yours —
+  // board-state.ts holds the reason.
   //
   // A ship that fails changes nothing. The card stays in Ship where you put it and the message says
   // why; the app never silently undoes a move you made.
   //
-  // No staleness guard on the result below, unlike open(): a result landing after you have moved off
-  // this view only writes this closure's own `shipped` and redraws whatever view is currently
-  // attached — there is no board read in flight for it to overwrite, so there is nothing to protect.
+  // No staleness guard on the result, unlike open(): a board read in flight would replace the whole
+  // board, and this only moves one card that it finds again first. Landing after you have left this
+  // view is fine too — the write is to this board's own file either way.
   function ship(card: Card, from: number): void {
     options.onError(`shipping "${card.title}"…`);
     options.bridge.shipCard({
@@ -329,7 +330,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         // Found again rather than remembered: a ship takes as long as git does, and anything you did
         // to the board while it ran has moved the card off the row it was shipped from.
         const landed = selectionOf(state.board, card.id);
-        if (landed) change(moveCardToColumn(state.board, landed, from));
+        if (landed) apply(applyAutomaticChange(state, moveCardToColumn(state.board, landed, from)));
         else render();
         options.onShipped();
       },
