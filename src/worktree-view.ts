@@ -5,6 +5,7 @@ import type { DashboardBridge } from './bridge';
 import { confirmOverlay, openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
+import { dirtyLabel, orderedWorktrees } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 
 // Every worktree the app has made, and the one screen they are removed from. Nothing here removes
@@ -18,9 +19,8 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
   let entries: WorktreeEntry[] = [];
   let highlighted = 0;
   // Filled in after the rows are already on screen: git is asked once the list has painted, not
-  // before, so removing a worktree never waits on it. dirtyChecked stays false only for the first
-  // paint — every dirty cell reads "…" until the first answer lands, then holds its last answer
-  // while a later one is in flight.
+  // before, so removing a worktree never waits on it. What the cell says while these three are in
+  // each of their states is dirtyLabel's to decide.
   let dirty = new Set<string>();
   let unreadable = new Set<string>();
   let dirtyChecked = false;
@@ -42,25 +42,10 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
     dialog.append(heading, list, keys);
     dialog.focus();
 
-    // Newest first, ordered here rather than inherited from the store. `withEntry` moves a replaced
-    // entry to the end of its array, so leaving the order alone would mean the list re-sorts itself
-    // whenever a record is touched, for reasons nothing on screen explains.
-    function ordered(): WorktreeEntry[] {
-      return [...entries].sort((first, second) => second.startedAt.localeCompare(first.startedAt));
-    }
-
-    // "…" until the first answer comes back, then the dirty check's own words for it, never this
-    // dialog's guess: unreadable is not the same claim as clean, and only main can tell them apart.
-    function dirtyLabel(worktreePath: string): string {
-      if (!dirtyChecked) return '…';
-      if (unreadable.has(worktreePath)) return 'unknown';
-      return dirty.has(worktreePath) ? 'DIRTY' : 'clean';
-    }
-
     function render(): void {
       heading.textContent = `Worktrees (${entries.length})`;
       highlighted = clampIndex(highlighted, entries.length - 1);
-      list.replaceChildren(...ordered().map((entry, index) => {
+      list.replaceChildren(...orderedWorktrees(entries).map((entry, index) => {
         const item = document.createElement('li');
         if (index === highlighted) item.classList.add('highlighted');
 
@@ -79,7 +64,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
 
         const dirtyCell = document.createElement('span');
         dirtyCell.className = 'worktrees-dirty';
-        dirtyCell.textContent = dirtyLabel(entry.worktreePath);
+        dirtyCell.textContent = dirtyLabel(entry.worktreePath, dirtyChecked, dirty, unreadable);
         dirtyCell.classList.toggle('worktrees-is-dirty', dirty.has(entry.worktreePath));
         dirtyCell.classList.toggle('worktrees-unreadable', unreadable.has(entry.worktreePath));
 
@@ -146,7 +131,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
     // delete it`; without the offer here that worktree could never be removed from inside the app at
     // all, and neither could one whose removal failed for any other reason.
     async function removeHighlighted(): Promise<void> {
-      const entry = ordered()[highlighted];
+      const entry = orderedWorktrees(entries)[highlighted];
       if (!entry) return;
       const first = await confirmOverlay(`Remove the worktree for "${entry.title}"?`,
         'Enter removes it. Escape keeps it. The folder and everything in it goes; the branch stays.');
@@ -170,7 +155,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
       if (isModified(event)) return;
       switch (event.key) {
         case 'Escape': return finish(undefined);
-        case 'Enter': return finish(ordered()[highlighted]?.worktreePath);
+        case 'Enter': return finish(orderedWorktrees(entries)[highlighted]?.worktreePath);
         case 'ArrowDown':
           event.preventDefault();
           highlighted += 1;
