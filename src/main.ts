@@ -429,6 +429,17 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
     const dirty = blockingChanges(await git(['status', '--porcelain'], worktreePath));
     if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
     await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
+    // Before the record goes. releaseAgentPane asks the record whether a pane is an agent's, so a pane
+    // still pointed at this folder once the row is gone can never be given back: its shell would keep
+    // starting in a directory that is not there, and no later ship would count it free.
+    for (const [id, command] of terminalCommands) {
+      if (command.directory !== worktreePath) continue;
+      // The agent goes with the folder it was working in. Leaving it running would leave it writing
+      // into a directory git has just deleted.
+      shells.get(id)?.kill();
+      typedPanes.delete(id);
+      terminalCommands.set(id, { args: [], directory: entry.projectPath });
+    }
     worktrees = withoutWorktree(worktrees, worktreePath);
     writeWorktrees(worktreesFile, worktrees);
     return { ok: true, message: `removed ${entry.branch}`, dirty: [] };

@@ -79,9 +79,11 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Ctrl+W opens the worktree list: every card that has been shipped, its branch, how old the '
     + 'worktree is, whether it has uncommitted changes, and which pane its agent is in — no pane if '
     + 'every pane was already taken when it shipped, or if the app has restarted since, because no '
-    + 'shell outlives it. Nothing there is ever removed on its own; d does that, asking twice and '
-    + 'naming the files if the worktree is dirty. The branch is left behind on purpose — the pull '
-    + 'request it came from may still be open.',
+    + 'shell outlives it. Nothing there is ever removed on its own; d does that, asking twice — the '
+    + 'second question names the files if the worktree is dirty, and says why git refused if it '
+    + 'refused for some other reason. The folder and everything in it goes, gitignored files '
+    + 'included, and the pane its agent was in goes back to being a plain shell in the project. The '
+    + 'branch is left behind on purpose — the pull request it came from may still be open.',
 };
 
 // What a screen does with the keys no binding names, which is why these are written out rather than
