@@ -604,7 +604,12 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'worktrees') return void openWorktrees(bridge).then(refreshWorktrees);
+  if (action.kind === 'worktrees') return void openWorktrees(bridge, jumpToWorktree).then(() => {
+    // The same reclaim every other dialog does, and it is what keeps the keyboard on a pane Enter
+    // landed on: goToPane has already moved activeIndex, so this focuses where you were sent.
+    showPage(activeIndex);
+    refreshWorktrees();
+  });
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-last': {
@@ -663,8 +668,9 @@ bridge.onNotificationClick((paneId) => {
   goToPane(slot, index);
 });
 
-// The two ways to be sent to a pane you are not on: clicking its notification, and pressing Enter on
-// its row in the manager. One function, so the second never lands somewhere the first would not.
+// The three ways to be sent to a pane you are not on: clicking its notification, pressing Enter on its
+// row in the manager, and pressing Enter on its row in the worktree list. One function, so none of
+// them lands somewhere another would not — including on the right view, which modeOfPane decides.
 function goToPane(slot: number, index: number): void {
   const position = positionOfSlot(slot);
   if (position === -1) return;
@@ -674,6 +680,18 @@ function goToPane(slot: number, index: number): void {
   // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
   if (mode === 'terminals') page.focused = index;
   showPage(position, true);
+}
+
+// Enter on a row of the worktree list. Two rows have nowhere to send you, and both say so rather than
+// looking like a key that did nothing: a worktree with no pane is one whose ship found every pane in
+// use, or one the app has restarted since, and a project closed since its card shipped has no page to
+// land on. Neither opens anything on your behalf — Enter here is "take me there", not "start it".
+function jumpToWorktree(entry: WorktreeEntry): string {
+  if (entry.pane === null) return `${entry.branch} has no pane — nothing of it is running`;
+  const page = pages.find((candidate) => candidate.project.path === entry.projectPath);
+  if (!page) return `${entry.branch} is in a project that is not open`;
+  goToPane(page.slot, entry.pane);
+  return '';
 }
 
 // Answering a pane from the manager, without going to it. terminal.input is the door a dropped file

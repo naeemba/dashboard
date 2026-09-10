@@ -8,6 +8,10 @@ import { paneLabel } from './terminals';
 import { dirtyLabel, orderedWorktrees } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 
+// Lands on the worktree's pane, or hands back the sentence saying why it could not. The empty string
+// is the landing having happened — there is nothing to say about a key that did what it looked like.
+export type JumpToWorktree = (entry: WorktreeEntry) => string;
+
 // Every worktree the app has made, and the one screen they are removed from. Nothing here removes
 // anything on its own: a worktree whose branch has merged is still a folder you may have something
 // in, and a squash-merged branch does not read as merged anyway.
@@ -15,7 +19,12 @@ import type { WorktreeEntry } from './worktree-store';
 // An overlay rather than a row on the manager page, because on the manager a bare `d` is a letter
 // that can no longer reach a waiting pane's shell. A dialog owns the keyboard, so bare keys are free
 // here.
-export function openWorktrees(bridge: DashboardBridge): Promise<string | undefined> {
+//
+// `jump` lands on a row's pane. Whether it can — the pane may be null, and the project may have been
+// closed since — is the renderer's to answer, because only it knows which projects are open and where
+// their pages are; the sentence it hands back is shown on this dialog's own sheet rather than on a
+// status bar behind the overlay.
+export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Promise<void> {
   let entries: WorktreeEntry[] = [];
   let highlighted = 0;
   // Filled in after the rows are already on screen: git is asked once the list has painted, not
@@ -25,13 +34,13 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
   let unreadable = new Set<string>();
   let dirtyChecked = false;
 
-  return new Promise<string | undefined>((resolve) => {
-    function finish(choice: string | undefined): void {
+  return new Promise<void>((resolve) => {
+    function finish(): void {
       remove();
-      resolve(choice);
+      resolve();
     }
 
-    const { dialog, remove } = openOverlay('worktrees', () => finish(undefined));
+    const { dialog, remove } = openOverlay('worktrees', finish);
     const heading = document.createElement('h2');
     heading.className = 'worktrees-heading';
     const list = document.createElement('ul');
@@ -78,7 +87,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
         item.addEventListener('click', () => {
           highlighted = index;
           render();
-          finish(entry.worktreePath);
+          void goToHighlighted();
         });
         return item;
       }));
@@ -113,6 +122,17 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
     async function notify(message: string): Promise<void> {
       await confirmOverlay(message, 'Enter or Escape closes.');
       dialog.focus();
+    }
+
+    // Enter, and a click, on a row. The dialog closes only when the landing actually happened: a row
+    // whose worktree has no pane, and one whose project has been closed since it shipped, both have
+    // somewhere the reader has to be told about rather than a keystroke that appears to do nothing.
+    async function goToHighlighted(): Promise<void> {
+      const entry = orderedWorktrees(entries)[highlighted];
+      if (!entry) return;
+      const refusal = jump(entry);
+      if (refusal === '') return finish();
+      await notify(refusal);
     }
 
     // What the second question says: the files when main refused on uncommitted changes, main's own
@@ -154,8 +174,11 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
       // A modified key belongs to whatever the window bound it to, not to this list.
       if (isModified(event)) return;
       switch (event.key) {
-        case 'Escape': return finish(undefined);
-        case 'Enter': return finish(orderedWorktrees(entries)[highlighted]?.worktreePath);
+        case 'Escape': return finish();
+        case 'Enter':
+          event.preventDefault();
+          void goToHighlighted();
+          return;
         case 'ArrowDown':
           event.preventDefault();
           highlighted += 1;
