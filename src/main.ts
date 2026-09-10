@@ -113,6 +113,29 @@ function releaseAgentPane(id: string): void {
   terminalCommands.set(id, { args: [], directory: entry.directory });
 }
 
+// The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
+// plain shell in the project, since the folder it was in is not there any more. Run before the record
+// is dropped, because releaseAgentPane above recognises an agent's pane by finding its folder in the
+// record — once the row is gone the pane can never be given back, and Enter in it would keep starting
+// a shell in a directory that does not exist.
+function releaseWorktreePanes(entry: WorktreeEntry): void {
+  for (const [id, command] of terminalCommands) {
+    if (command.directory !== entry.worktreePath) continue;
+    typedPanes.delete(id);
+    terminalCommands.set(id, { args: [], directory: entry.projectPath });
+  }
+}
+
+// Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand
+// outside the app strands a pane exactly the way one removed inside it used to, so the two share this.
+// What it does not do is kill whatever is running: a folder that went by other means may still have an
+// agent doing something, and that is not this function's to decide.
+function dropDeadWorktrees(): void {
+  const living = livingEntries(worktrees, existsSync);
+  for (const entry of worktrees) if (!living.includes(entry)) releaseWorktreePanes(entry);
+  worktrees = living;
+}
+
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
   if (entry === undefined) return;
@@ -375,7 +398,7 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
 
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
   const { projectPath, cardId, title, slot } = request;
-  worktrees = livingEntries(worktrees, existsSync);
+  dropDeadWorktrees();
 
   // Already shipped. A record with a pane on it means an agent is working, and a second worktree for
   // the same card is the mistake the record exists to catch. One with no pane is a ship that ran out
@@ -404,7 +427,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
 });
 
 ipcMain.handle('worktree:list', () => {
-  worktrees = livingEntries(worktrees, existsSync);
+  dropDeadWorktrees();
   writeWorktrees(worktreesFile, worktrees);
   return worktrees;
 });
@@ -438,20 +461,22 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
   const entry = worktrees.find((candidate) => candidate.worktreePath === worktreePath);
   if (!entry) return { ok: false, message: 'no such worktree', dirty: [] };
   try {
-    const dirty = blockingChanges(await git(['status', '--porcelain'], worktreePath));
+    // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is
+    // not there, and node fails with `spawn git ENOENT` — its own failure to start a process, which
+    // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
+    // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
+    // folder has vanished, so the question is skipped rather than asked and lost.
+    const dirty = existsSync(worktreePath)
+      ? blockingChanges(await git(['status', '--porcelain'], worktreePath))
+      : [];
     if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
     await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
-    // Before the record goes. releaseAgentPane asks the record whether a pane is an agent's, so a pane
-    // still pointed at this folder once the row is gone can never be given back: its shell would keep
-    // starting in a directory that is not there, and no later ship would count it free.
+    // The agent goes with the folder it was working in: leaving it running leaves it writing into a
+    // directory git has just deleted. Only here, where the folder was deleted on purpose.
     for (const [id, command] of terminalCommands) {
-      if (command.directory !== worktreePath) continue;
-      // The agent goes with the folder it was working in. Leaving it running would leave it writing
-      // into a directory git has just deleted.
-      shells.get(id)?.kill();
-      typedPanes.delete(id);
-      terminalCommands.set(id, { args: [], directory: entry.projectPath });
+      if (command.directory === worktreePath) shells.get(id)?.kill();
     }
+    releaseWorktreePanes(entry);
     worktrees = withoutWorktree(worktrees, worktreePath);
     writeWorktrees(worktreesFile, worktrees);
     return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
