@@ -76,7 +76,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'default moves. The app tidies the file each time it starts, so a line you write that already '
     + 'matches the default is taken out again. '
     + 'Delete it and everything is back to how it shipped. '
-    + 'Ctrl+W opens the worktree list: every card that has been shipped, its branch, how old the '
+    + 'The worktree list — its key is on this page — holds every card that has been shipped, its branch, how old the '
     + 'worktree is, whether it has uncommitted changes, and which pane its agent is in — no pane if '
     + 'every pane was already taken when it shipped, or if the app has restarted since, because no '
     + 'shell outlives it. Nothing there is ever removed on its own; d does that, asking twice — the '

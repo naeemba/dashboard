@@ -359,7 +359,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     await git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
 
     // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
-    // worktree that exists is always one Ctrl+W can show you and remove. An orphan worktree nothing
+    // worktree that exists is always one the worktree list can show you and remove. An orphan worktree nothing
     // knows about is the thing that piles up unseen.
     const entry = recordWorktree({
       cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),

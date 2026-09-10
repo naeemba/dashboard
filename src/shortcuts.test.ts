@@ -47,6 +47,15 @@ describe('mapShortcut', () => {
     }
   });
 
+  // Ctrl+W is backward-kill-word in bash, zsh and vim's insert mode, and the worktree list is global
+  // scope, so binding the bare key would take it from every pane on every screen.
+  it('leaves the bare Ctrl+W to the shell and opens the worktree list on Shift', () => {
+    expect(mapShortcut(key({ code: 'KeyW', ctrlKey: true }), mac, 'terminals')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyW', ctrlKey: true }), other, 'terminals')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyW', ctrlKey: true, shiftKey: true }), mac, 'terminals'))
+      .toEqual({ kind: 'worktrees' });
+  });
+
   // Ctrl+N is nvim's autocomplete and Ctrl+T is the shell's transpose. You leave a mode by naming a
   // different one.
   it('passes the mode key you are already on through to the screen', () => {
