@@ -58,6 +58,11 @@ export type BoardView = {
   // What the status bar says about the board: the column the selection is in, and the priority of the
   // card it is on. The colour down a card's edge is the fast read; this is the one that names it.
   statusLabel(): string;
+  // The worktrees shipped from this board's own project, for the status bar to name the branch a
+  // focused pane is on. The board already reads and holds this list for its own "shipped" badges, so
+  // the status bar asks for it rather than the renderer keeping a second copy in step with the same
+  // file.
+  worktrees(): readonly WorktreeEntry[];
   // The board's own keys, once the renderer's own lookup finds them and hands them here instead of
   // this element's own keydown listener answering them.
   runAction(action: Action): void;
@@ -401,6 +406,9 @@ export function createBoardView(options: BoardOptions): BoardView {
       if (!column) return '';
       const card = cardAt(state.board, state.selection);
       return card ? `${column.name} · ${card.priority}` : column.name;
+    },
+    worktrees(): readonly WorktreeEntry[] {
+      return shipped;
     },
     // Every key on this screen is found by the window's one lookup and handed here. The board keeps no
     // key handling of its own, which is what stops a board key and its help row drifting apart.

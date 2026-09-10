@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import {
+  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneLabel, terminalId,
+} from './terminals';
 
 describe('neighbor', () => {
   it('moves along a row and stops at the edge', () => {
@@ -20,9 +22,34 @@ describe('neighbor', () => {
 });
 
 describe('paneLabel', () => {
-  it('names panes from one, the way the grid is read', () => {
+  it('names a pane by its number', () => {
     expect(paneLabel(0)).toBe('terminal 1');
-    expect(paneLabel(4)).toBe('terminal 5');
+    expect(paneLabel(2)).toBe('terminal 3');
+  });
+
+  // The numbering stays, because the focus keys are numbered. The branch is added to it, not swapped
+  // for it.
+  it('adds the branch when the pane is on a worktree', () => {
+    expect(paneLabel(2, 'panes-name-themselves')).toBe('terminal 3 · panes-name-themselves');
+  });
+});
+
+describe('branchOfPane', () => {
+  it('finds the branch of the entry holding that pane', () => {
+    const entries = [{ pane: 1, branch: 'panes-name-themselves' }];
+    expect(branchOfPane(entries, 1)).toBe('panes-name-themselves');
+  });
+
+  it('is undefined when no entry holds that pane', () => {
+    expect(branchOfPane([{ pane: 1, branch: 'panes-name-themselves' }], 0)).toBeUndefined();
+  });
+
+  // null means the worktree was made with every pane already in use — no pane at all, not pane 0.
+  // Matching it to pane 0 would label the wrong shell, which is the failure this function exists to
+  // prevent.
+  it('never matches a null pane to pane 0', () => {
+    const entries = [{ pane: null, branch: 'panes-name-themselves' }];
+    expect(branchOfPane(entries, 0)).toBeUndefined();
   });
 });
 

@@ -14,6 +14,7 @@ import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
 import { defaultSettings, type Settings } from './settings';
@@ -121,22 +122,20 @@ function projectPages(): Page[] {
   return pages.filter(isProjectPage);
 }
 
-// The manager is where a launch with nothing saved lands, and with no project open there is nothing on
-// screen saying how to open one. Both halves are read fresh on every redraw, so rebinding the key or
-// rewording the action rewrites the sentence rather than leaving it naming a key that now does
-// something else.
-function managerLabel(page: Page): string {
-  if (projectPages().length > 0) return page.manager?.statusLabel() ?? '';
-  const name = 'project-picker';
-  return `${settings.keys[name] ?? 'Nothing'} · ${actionByName(name)?.description ?? ''}`;
-}
-
-// The right-hand span says which view you are in, and for terminals which pane has the keyboard.
-function modeLabel(page: Page): string {
-  if (page.mode === 'manager') return managerLabel(page);
-  if (page.mode === 'nvim') return 'nvim';
-  if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
-  return page.panes.length > 0 ? paneLabel(page.focused) : '';
+// Everything status.ts needs to say what the right-hand span says about this page, read off the module
+// state it cannot reach on its own.
+function statusPage(page: Page): StatusPage {
+  return {
+    mode: page.mode,
+    focused: page.focused,
+    paneCount: page.panes.length,
+    boardLabel: page.board?.statusLabel() ?? '',
+    hasProjects: projectPages().length > 0,
+    managerStatusLabel: page.manager?.statusLabel() ?? '',
+    pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
+    pickerDescription: actionByName('project-picker')?.description ?? '',
+    worktrees: page.board?.worktrees() ?? [],
+  };
 }
 
 // The grid's five and the editor, which rings its bell like any other pane.
@@ -155,15 +154,6 @@ function paneTail(terminal: Terminal): string[] {
     (_value, row) => buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '',
   );
   return tailLines(screen);
-}
-
-// The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the
-// project name, so without the names here you would arrive at a yellow project and have to walk all
-// six panes watching for the yellow to go out.
-function terminalStatus(page: Page): string {
-  const names = waitingNames(allPanes(page));
-  if (names.length === 0) return modeLabel(page);
-  return `${modeLabel(page)} · ${names.join(', ')} waiting`;
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
@@ -191,7 +181,7 @@ function renderStatus(): void {
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = terminalStatus(page);
+  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames(allPanes(page)));
   saveSession();
 }
 

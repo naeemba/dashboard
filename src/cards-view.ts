@@ -3,6 +3,7 @@ import { SELECTED_CARD, createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import { cardsEmptyReason, cardsProjects, type CardsPage } from './cards';
 import { clampIndex, heldIndex } from './clamp-index';
+import type { WorktreeEntry } from './worktree-store';
 
 export type CardsOptions = {
   bridge: DashboardBridge;
@@ -129,6 +130,11 @@ export function createCardsView(options: CardsOptions): BoardView {
       const board = boards.get(activePath);
       if (board) return `${board.page.project.name} · ${board.view.statusLabel()}`;
       return cardsEmptyReason(options.projects());
+    },
+    // The manager page has no panes of its own to name a branch for — it stacks several projects'
+    // boards, not one project's terminals — so this is never actually read.
+    worktrees(): readonly WorktreeEntry[] {
+      return [];
     },
     runAction(action: Action): void {
       // Which board the rest of the keys go to. The list does not wrap: holding it down stops at the
