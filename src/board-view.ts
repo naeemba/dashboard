@@ -57,6 +57,10 @@ export type BoardOptions = {
   // A card has just been shipped, so the record of what is in flight has a row this board's caller has
   // not seen. Which panes are on a worktree is the status bar's question, not this board's.
   onShipped(): void;
+  // Everything in flight, asked for on every render rather than fetched and held here. One copy of
+  // worktrees.json in the renderer, so a worktree removed from the Ctrl+Shift+W list cannot leave a
+  // card on the board behind it still reading `shipped · <branch> · terminal 3`.
+  worktrees(): readonly WorktreeEntry[];
 };
 
 export type BoardView = {
@@ -68,6 +72,9 @@ export type BoardView = {
   // The board's own keys, once the renderer's own lookup finds them and hands them here instead of
   // this element's own keydown listener answering them.
   runAction(action: Action): void;
+  // Draw again from what has not changed here: the record of what is in flight lives in the renderer,
+  // and a card's badge comes from it.
+  redraw(): void;
 };
 
 // Read off the action rather than spelled out again: a field the table can ask for and this file has
@@ -108,10 +115,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   // not get it back either.
   let latestRead = 0;
   let landedRead = 0;
-  // What this project has in flight, refreshed whenever the board is read. The badge on a card comes
-  // from here rather than from the board, because a card's column on main says what has been merged
-  // and says nothing about work that is under way on a branch.
-  let shipped: WorktreeEntry[] = [];
+  // This project's rows of the record, by card, rebuilt once per render. The badge comes from here
+  // rather than from the board, because a card's column on main says what has been merged and says
+  // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
+  // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
+  let inFlight = new Map<string, WorktreeEntry>();
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
@@ -208,12 +216,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     // What this card has in flight on this machine. Not on the board and not in git: the card's
     // column on main is about what has merged, so without this a card an agent is working on sits in
     // Todo looking untouched — and gets shipped a second time.
-    const inFlight = shipped.find((entry) => entry.cardId === card.id);
-    if (inFlight) {
+    const flying = inFlight.get(card.id);
+    if (flying) {
       const badge = document.createElement('p');
       badge.className = 'board-shipped';
-      const pane = inFlight.pane === null ? 'no pane' : paneLabel(inFlight.pane);
-      badge.textContent = `shipped · ${inFlight.branch} · ${pane}`;
+      const pane = flying.pane === null ? 'no pane' : paneLabel(flying.pane);
+      badge.textContent = `shipped · ${flying.branch} · ${pane}`;
       item.append(badge);
     }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
@@ -265,6 +273,9 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   function render(): void {
+    inFlight = new Map(options.worktrees()
+      .filter((entry) => entry.projectPath === options.projectPath)
+      .map((entry) => [entry.cardId, entry]));
     element.replaceChildren(...state.board.columns.map((column, columnIndex) => {
       const section = document.createElement('section');
       section.className = 'board-column';
@@ -338,7 +349,6 @@ export function createBoardView(options: BoardOptions): BoardView {
     }).then(
       (result) => {
         if (!result.ok) return options.onError(result.message);
-        shipped = [...shipped.filter((entry) => entry.cardId !== card.id), result.entry];
         options.onError('');
         // Found again rather than remembered: a ship takes as long as git does, and anything you did
         // to the board while it ran has moved the card off the row it was shipped from.
@@ -373,6 +383,7 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   return {
     element,
+    redraw: render,
     // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
     // at the board is not picked up until you switch away and back. Watch the file if that bites.
     //
@@ -382,11 +393,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     // comfortably longer than the gap between two keys — so a key typed during the read is dropped
     // rather than applied to the board that is about to be replaced.
     //
-    // Two things are read, the board and the local ship record, and both are started here before
-    // either is awaited — so a second open() landing in between finds one gap to overtake, not two.
-    // Everything each read decides (`next`, `message`, `nextShipped`) stays local until both have
-    // settled, and the one guard below is what a stale call bounces off; a guard per await is the
-    // shape that let an old read win a race the first version of this file had already closed.
+    // What it decides (`next`, `message`) stays local until the read has settled, and the one guard
+    // below is what a stale call bounces off; a guard per await is the shape that let an old read win
+    // a race the first version of this file had already closed.
     //
     // A failed read still has to leave the board on screen usable from the keyboard — render() runs
     // either way, on whatever board is already in memory, with the error in the status bar instead of
@@ -400,14 +409,6 @@ export function createBoardView(options: BoardOptions): BoardView {
       let message = '';
       let next = state;
       const boardRead = options.bridge.readBoard(options.projectPath);
-      // Cheap and local — a JSON file in the app's own folder — so it is re-read with the board rather
-      // than kept in step by hand. The catch is attached here, on the promise itself, not around an
-      // await further down — a rejection has to be claimed the moment it is possible, not left to
-      // become unhandled while the other read is still in flight.
-      const shippedRead = options.bridge.listWorktrees()
-        .then((entries) => entries.filter((entry) => entry.projectPath === options.projectPath))
-        // A failure to read the local record must never cost you the board; null says "leave it".
-        .catch(() => null);
       try {
         const read = await boardRead;
         next = loadBoard(state, read.board);
@@ -416,11 +417,9 @@ export function createBoardView(options: BoardOptions): BoardView {
       } catch (error: unknown) {
         message = `Board not opened: ${String(error)}`;
       }
-      const nextShipped = await shippedRead;
       // A read another open() has overtaken says nothing: the newer one is the board you asked for.
       if (token !== latestRead) return;
       landedRead = token;
-      if (nextShipped !== null) shipped = nextShipped;
       state = next;
       editing = null;
       options.onError(message);

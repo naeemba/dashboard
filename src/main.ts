@@ -451,9 +451,9 @@ ipcMain.handle('worktree:list', () => {
   return worktrees;
 });
 
-// A channel of its own rather than riding along on worktree:list: board-view.ts calls that on every
-// board open, and a `git status` per worktree behind it would put that many process spawns behind
-// every Ctrl+B. Only the worktree dialog needs to know which ones are dirty, so only it asks this.
+// A channel of its own rather than riding along on worktree:list, which the renderer reads at launch,
+// after every ship and whenever the dialog closes. A `git status` per worktree behind all of those
+// would be that many process spawns for an answer only the worktree dialog shows.
 //
 // blockingChanges is the same predicate worktree:remove asks, so the two can never disagree about
 // what counts as dirty. Run concurrently — this is main, and every pane's bytes flow through it — and

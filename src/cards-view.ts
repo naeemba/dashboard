@@ -1,4 +1,5 @@
 import type { Action } from './actions';
+import type { WorktreeEntry } from './worktree-store';
 import { SELECTED_CARD, createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import { cardsEmptyReason, cardsProjects, type CardsPage } from './cards';
@@ -19,6 +20,9 @@ export type CardsOptions = {
   // Passed straight through: a card shipped from here belongs to one of the stacked projects, and what
   // is in flight is the same one record wherever it was shipped from.
   onShipped(): void;
+  // Handed straight to every stacked board, so all of them draw their badges from the renderer's one
+  // copy of the record.
+  worktrees(): readonly WorktreeEntry[];
 };
 
 type ProjectBoard = { page: CardsPage; view: BoardView; section: HTMLElement };
@@ -66,6 +70,7 @@ export function createCardsView(options: CardsOptions): BoardView {
       },
       onError: (message) => options.onError(page.slot, message),
       onShipped: options.onShipped,
+      worktrees: options.worktrees,
     });
     const section = document.createElement('section');
     section.className = 'cards-project';
@@ -133,6 +138,11 @@ export function createCardsView(options: CardsOptions): BoardView {
       const board = boards.get(activePath);
       if (board) return `${board.page.project.name} · ${board.view.statusLabel()}`;
       return cardsEmptyReason(options.projects());
+    },
+    // Every stacked board, not only the one the keys are aimed at: they are all on screen, and a
+    // worktree removed while this page is up changes badges on any of them.
+    redraw(): void {
+      for (const board of boards.values()) board.view.redraw();
     },
     runAction(action: Action): void {
       // Which board the rest of the keys go to. The list does not wrap: holding it down stops at the

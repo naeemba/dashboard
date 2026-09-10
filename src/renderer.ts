@@ -138,7 +138,14 @@ function projectPages(): Page[] {
 let worktrees: WorktreeEntry[] = [];
 function refreshWorktrees(): void {
   // A failure to read the local record costs a branch name, never the screen.
-  void bridge.listWorktrees().then((entries) => { worktrees = entries; renderStatus(); }, () => undefined);
+  void bridge.listWorktrees().then((entries) => {
+    worktrees = entries;
+    renderStatus();
+    // The badges too, not only the status bar: remove a worktree with the board in front of you and
+    // its card would otherwise still read `shipped · <branch> · terminal 3` until you left and
+    // came back.
+    pages[activeIndex].board?.redraw();
+  }, () => undefined);
 }
 
 // Everything status.ts needs to say what the right-hand span says about this page, read off the module
@@ -308,8 +315,12 @@ function focusMode(page: Page, entering: boolean): void {
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
     // report() wrapper is needed here.
-    if (entering) void page.board.open();
-    else page.board.element.focus();
+    if (entering) {
+      // With the board, because a worktree removed outside the app is only noticed when main is next
+      // asked for the list, and the badges on this board are drawn from what that answers.
+      refreshWorktrees();
+      void page.board.open();
+    } else page.board.element.focus();
   }
   renderStatus();
 }
@@ -458,6 +469,7 @@ function buildManagerPage(): Page {
     // one file never clear each other's message.
     onError: (slot, message) => showError(`cards:${slot}`, message),
     onShipped: refreshWorktrees,
+    worktrees: () => worktrees,
   });
   element.append(manager.element, cards.element);
   const page: Page = {
@@ -519,6 +531,7 @@ function buildPage(project: Project, slot: number): Page {
     // A slot each, so one project's board never clears another one's failure.
     onError: (message) => showError(`board:${slot}`, message),
     onShipped: refreshWorktrees,
+    worktrees: () => worktrees,
   });
   views.board.append(page.board.element);
   return page;
