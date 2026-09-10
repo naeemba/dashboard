@@ -29,7 +29,7 @@ import {
   type WorktreeEntry,
 } from './worktree-store';
 import type { Settings } from './settings';
-import { moveCardToColumn, selectionOf, shipColumnIndex, withShipColumn, type Board } from './board';
+import { moveCardToColumn, selectionOf, shipColumnIndex, type Board } from './board';
 import type { ShipRequest, ShipResult } from './bridge';
 
 if (started) app.quit();
@@ -53,6 +53,11 @@ let worktrees = livingEntries(readWorktrees(worktreesFile), existsSync);
 // Which panes you have typed into. The only signal there is about a pane being free: main sees every
 // keystroke sent to a pty and nothing at all about what is running in one.
 const typedPanes = new Set<string>();
+// The cards whose ship is running right now. Two ships of one card both get past the already-shipped
+// check before either has recorded anything, and the second record replaces the first: two branches
+// and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
+// the app.
+const shippingCards = new Set<string>();
 const runCommand = promisify(execFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
@@ -84,6 +89,19 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
 }
 
+// A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
+// worktree, because that is where the work is. Left alone, Enter would start the agent over instead
+// of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
+// Whether a pane was an agent's is the worktrees record's to say — the pane is pointed at one of its
+// folders — rather than a second list kept alongside it.
+function releaseAgentPane(id: string): void {
+  const entry = terminalCommands.get(id);
+  if (entry === undefined) return;
+  if (!worktrees.some((worktree) => worktree.worktreePath === entry.directory)) return;
+  typedPanes.delete(id);
+  terminalCommands.set(id, { args: [], directory: entry.directory });
+}
+
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
   if (entry === undefined) return;
@@ -112,6 +130,7 @@ function spawnTerminal(id: string): void {
     // renderer a pane that is busy working had died.
     if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
+    releaseAgentPane(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, terminalProcess);
@@ -303,6 +322,8 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     return attachPane(existing, slot);
   }
 
+  if (shippingCards.has(cardId)) return { ok: false, message: `"${title}" is already being shipped` };
+  shippingCards.add(cardId);
   try {
     const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
     if (dirty.length > 0) {
@@ -312,9 +333,12 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
 
     // Undo the Ship move on main, and any Ship column the app inserted when it read the board. The
     // card id is already in hand, so throwing the file away costs nothing. Only ever reached with the
-    // guard above satisfied, and board.json is the one file that guard lets past.
+    // guard above satisfied, and that folder is what the guard lets past — though only this one file
+    // in it is thrown away. From HEAD rather than the index: `checkout -- <path>` restores what is
+    // staged, so a board.json somebody had run `git add` on would keep the Ship move and the card
+    // would sit in Ship on main from then on.
     try {
-      await git(['checkout', '--', BOARD_FILE_PATH], projectPath);
+      await git(['checkout', 'HEAD', '--', BOARD_FILE_PATH], projectPath);
     } catch {
       // A project whose board.json is not committed yet has nothing to restore.
     }
@@ -344,19 +368,28 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     });
 
     // The card's Ship move, on the branch. The only board write that belongs to one; the agent makes
-    // every move after it.
-    const board = withShipColumn(readBoard(worktreePath).board);
+    // every move after it. The Ship column is there to move it into whatever the branch's file holds:
+    // readBoard gives every board one, and a board with no file at all is the shipped four columns.
+    const board = readBoard(worktreePath).board;
     const from = selectionOf(board, cardId);
     if (from) {
       const moved = moveCardToColumn(board, from, shipColumnIndex(board));
       writeBoard(worktreePath, moved.board);
       await git(['add', BOARD_FILE_PATH], worktreePath);
-      await git(['commit', '-m', `board: ship "${title}"`], worktreePath);
+      // Nothing staged means the card is already in Ship on the base branch — shipped once before,
+      // the worktree since removed. `git commit` with nothing to commit exits 1, which would fail the
+      // ship in git's own words with the branch and the folder already made.
+      const staged = await git(['diff', '--cached', '--name-only'], worktreePath);
+      if (staged !== '') await git(['commit', '-m', `board: ship "${title}"`], worktreePath);
     }
 
     return attachPane(entry, slot);
   } catch (error: unknown) {
     return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
+  } finally {
+    // In a finally, so a step that throws cannot leave the card locked for the rest of the run with
+    // nothing on screen able to clear it.
+    shippingCards.delete(cardId);
   }
 });
 

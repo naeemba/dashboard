@@ -1,5 +1,5 @@
 import { basename, dirname, join } from 'node:path';
-import { BOARD_FILE_PATH } from './board-store';
+import { BOARD_DIRECTORY } from './board-store';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
 // commands; what to call things, which pane to take and what counts as being in the way is here,
@@ -71,8 +71,15 @@ export function freePane(typedIn: readonly number[], count: number): number | nu
 // The changed files that stop a ship, read from `git status --porcelain`. The refusal and the message
 // that explains it both call this, so the count on screen is exactly the list that caused it.
 //
-// board.json is the one exemption. The app rewrites it on every keystroke and the ship's first step
-// puts it back to HEAD, so counting it would mean the ship always refuses itself.
+// .dashboard/ is the one exemption, and the whole folder rather than board.json alone. A project
+// that has never committed the folder is reported as the single line `?? .dashboard/` — git collapses
+// an untracked directory to its name and never lists what is inside — and that line is not the board
+// file's path, so exempting only the file refuses every ship on a new project, which is every project
+// until someone commits the folder the app itself wrote.
+//
+// The app rewrites board.json on every keystroke and the ship's first step puts it back to HEAD, so
+// counting it would mean the ship always refuses itself. The rest of the folder is the app's own
+// explanation files. Nothing here widens what the ship throws away: that is still board.json alone.
 export function blockingChanges(porcelain: string): string[] {
   return porcelain
     .split('\n')
@@ -83,7 +90,7 @@ export function blockingChanges(porcelain: string): string[] {
     .map((line) => (line.slice(0, 2).includes('R') ? line.slice(3).split(' -> ').pop() ?? '' : line.slice(3)))
     // git quotes a path with a space or a non-ASCII character in it.
     .map((path) => path.replace(/^"|"$/g, ''))
-    .filter((path) => path !== '' && path !== BOARD_FILE_PATH);
+    .filter((path) => path !== '' && !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
 
 export { BOARD_FILE_PATH } from './board-store';

@@ -79,6 +79,22 @@ describe('blockingChanges', () => {
     expect(blockingChanges('')).toEqual([]);
   });
 
+  // git never lists the contents of an untracked directory, only the directory. A project that has
+  // not committed the folder the app wrote for it reports exactly this one line, and reading it as a
+  // blocker refuses every ship that project will ever make.
+  it('ignores the whole folder when it is untracked and reported as one line', () => {
+    expect(blockingChanges('?? .dashboard/\n')).toEqual([]);
+  });
+
+  it('ignores anything else the app keeps in that folder', () => {
+    expect(blockingChanges('?? .dashboard/CLAUDE.md\n M .dashboard/notes/plan.md\n')).toEqual([]);
+  });
+
+  // The exemption is that folder, not every path that starts with those characters.
+  it('still blocks a folder whose name only begins the same way', () => {
+    expect(blockingChanges('?? .dashboard-old/board.json\n')).toEqual(['.dashboard-old/board.json']);
+  });
+
   it('names every other changed file', () => {
     const porcelain = ' M src/board.ts\n M .dashboard/board.json\n?? docs/notes.md\n';
     expect(blockingChanges(porcelain)).toEqual(['src/board.ts', 'docs/notes.md']);
