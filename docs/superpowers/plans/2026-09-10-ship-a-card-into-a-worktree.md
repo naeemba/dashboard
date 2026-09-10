@@ -1411,10 +1411,17 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
     dialog.append(heading, list, keys);
     dialog.focus();
 
+    // Newest first, ordered here rather than inherited from the store. `withEntry` moves a replaced
+    // entry to the end of its array, so leaving the order alone would mean the list re-sorts itself
+    // whenever a record is touched, for reasons nothing on screen explains.
+    function ordered(): WorktreeEntry[] {
+      return [...entries].sort((first, second) => second.startedAt.localeCompare(first.startedAt));
+    }
+
     function render(): void {
       heading.textContent = `Worktrees (${entries.length})`;
       highlighted = clampIndex(highlighted, entries.length - 1);
-      list.replaceChildren(...entries.map((entry, index) => {
+      list.replaceChildren(...ordered().map((entry, index) => {
         const item = document.createElement('li');
         if (index === highlighted) item.classList.add('highlighted');
         const branch = document.createElement('span');
@@ -1452,7 +1459,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
     // exist nowhere else. main decides what counts as dirty and hands the list back, so the question
     // on screen cannot name one thing while the removal refuses on another.
     async function removeHighlighted(): Promise<void> {
-      const entry = entries[highlighted];
+      const entry = ordered()[highlighted];
       if (!entry) return;
       const first = await confirmOverlay(`Remove the worktree for "${entry.title}"?`,
         'Enter removes it. Escape keeps it. The branch stays either way.');
@@ -1475,7 +1482,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
       if (isModified(event)) return;
       switch (event.key) {
         case 'Escape': return finish(undefined);
-        case 'Enter': return finish(entries[highlighted]?.worktreePath);
+        case 'Enter': return finish(ordered()[highlighted]?.worktreePath);
         case 'ArrowDown':
           event.preventDefault();
           highlighted += 1;
