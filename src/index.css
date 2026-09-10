@@ -336,7 +336,8 @@ body *:not(.pane, .pane *) {
    long branch name or a long parent title must not turn a card into three rows and push the column
    out of shape. */
 .board-parent,
-.board-flight {
+.board-flight,
+.board-shipped {
   font-size: 11px;
   opacity: 0.55;
   overflow: hidden;
@@ -346,6 +347,14 @@ body *:not(.pane, .pane *) {
 
 .board-parent { margin: 0 0 4px; }
 .board-flight { margin: 4px 0 0; }
+
+/* A card in flight is live state, not a typed-in field like the branch or PR line beneath it, so it
+   reads brighter than the 0.55 those use. */
+.board-shipped {
+  margin: 4px 0 0;
+  opacity: 0.85;
+  color: var(--cyan);
+}
 
 .board-progress {
   display: flex;

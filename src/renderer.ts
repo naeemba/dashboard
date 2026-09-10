@@ -485,6 +485,7 @@ function buildPage(project: Project, slot: number): Page {
   panesById.set(editorId, page.editor);
   page.board = createBoardView({
     projectPath: project.path,
+    slot,
     bridge,
     onChanged: renderStatus,
     // A slot each, so one project's board never clears another one's failure.

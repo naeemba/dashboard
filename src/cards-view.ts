@@ -54,6 +54,7 @@ export function createCardsView(options: CardsOptions): BoardView {
     if (existing) return existing;
     const view = createBoardView({
       projectPath: page.project.path,
+      slot: page.slot,
       bridge: options.bridge,
       // Only the board the keys reach can change what the status bar says. Without this every board
       // redrawing on arrival would rebuild the bar, and the tab strip with it, once per project.
