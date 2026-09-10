@@ -25,6 +25,7 @@ import {
   livingEntries,
   readWorktrees,
   withEntry,
+  withoutWorktree,
   writeWorktrees,
   type WorktreeEntry,
 } from './worktree-store';
@@ -406,6 +407,27 @@ ipcMain.handle('worktree:list', () => {
   worktrees = livingEntries(worktrees, existsSync);
   writeWorktrees(worktreesFile, worktrees);
   return worktrees;
+});
+
+// Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
+// question is worth asking, and refusing forever would mean the only way out is the command line.
+ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
+  const entry = worktrees.find((candidate) => candidate.worktreePath === worktreePath);
+  if (!entry) return { ok: false, message: 'no such worktree', dirty: [] };
+  try {
+    const dirty = blockingChanges(await git(['status', '--porcelain'], worktreePath));
+    if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
+    await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
+    worktrees = withoutWorktree(worktrees, worktreePath);
+    writeWorktrees(worktreesFile, worktrees);
+    return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      message: `not removed: ${error instanceof Error ? error.message : String(error)}`,
+      dirty: [],
+    };
+  }
 });
 
 function createWindow(): void {

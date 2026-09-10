@@ -43,6 +43,9 @@ export type DashboardBridge = {
   shipCard(request: ShipRequest): Promise<ShipResult>;
   // Every worktree the app has made, with the dead ones already dropped.
   listWorktrees(): Promise<WorktreeEntry[]>;
+  // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
+  // a second time naming them rather than deciding on its own what "dirty enough" means.
+  removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string; dirty: string[] }>;
 };
 
 declare global {

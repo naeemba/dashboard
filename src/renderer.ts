@@ -10,6 +10,7 @@ import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
+import { openWorktrees } from './worktree-view';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -590,6 +591,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
+  if (action.kind === 'worktrees') return void openWorktrees(bridge);
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-last': {

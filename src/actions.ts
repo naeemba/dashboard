@@ -13,6 +13,7 @@ export type Action =
   | { kind: 'project-last' }
   | { kind: 'help' }
   | { kind: 'settings' }
+  | { kind: 'worktrees' }
   | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
   | { kind: 'terminal-next' }
@@ -120,6 +121,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'settings', description: 'Open the settings screen', group: 'app', scope: 'global',
     action: { kind: 'settings' }, mac: 'Ctrl+,', other: 'Ctrl+,',
+  },
+  {
+    name: 'worktrees', description: 'List the worktrees cards were shipped into',
+    group: 'app', scope: 'global',
+    action: { kind: 'worktrees' }, mac: 'Ctrl+W', other: 'Ctrl+W',
   },
   {
     name: 'mode-terminals', description: 'Terminals mode', group: 'modes', scope: 'global',

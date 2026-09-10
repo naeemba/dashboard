@@ -693,6 +693,69 @@ textarea.board-edit {
   color: var(--blue);
 }
 
+/* Worktrees: the one screen they are removed from. Same shape as the picker — a heading instead of a
+   search box, since there is nothing here to type into. */
+.worktrees-dialog {
+  padding: 10px 0;
+  outline: none;
+}
+
+.worktrees-heading {
+  margin: 4px 0 8px;
+  padding: 0 12px;
+  color: var(--blue);
+  font-size: inherit;
+  font-weight: normal;
+}
+
+.worktrees-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.worktrees-list li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.worktrees-list li.highlighted {
+  background: var(--brightBlack);
+}
+
+.worktrees-branch {
+  color: var(--brightWhite);
+}
+
+.worktrees-detail {
+  overflow: hidden;
+  color: var(--brightBlack);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worktrees-list li.highlighted .worktrees-detail {
+  color: var(--white);
+}
+
+.worktrees-keys {
+  margin: 8px 0 0;
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--brightBlack);
+  color: var(--brightBlack);
+}
+
+.worktrees-empty {
+  margin: 0;
+  padding: 4px 12px;
+  color: var(--brightBlack);
+}
+
 /* Settings: one row per thing you can change, walked with the arrows. Taller than the help dialog
    because the list is every action there is, not only the ones with a key. */
 .settings-dialog {

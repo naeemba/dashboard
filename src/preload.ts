@@ -23,6 +23,7 @@ const bridge: DashboardBridge = {
   saveSettings: (settings) => ipcRenderer.invoke('settings:write', settings),
   shipCard: (request) => ipcRenderer.invoke('worktree:create', request),
   listWorktrees: () => ipcRenderer.invoke('worktree:list'),
+  removeWorktree: (worktreePath, force) => ipcRenderer.invoke('worktree:remove', worktreePath, force),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);
