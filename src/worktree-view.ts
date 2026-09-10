@@ -127,9 +127,21 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
       void refreshDirtiness();
     }
 
+    // A notice with nothing to answer, built on the same sheet as the two confirmations below it so
+    // a refusal never has to be read off the status bar behind the overlay — that is the answer to a
+    // question this dialog asked, not the page under it.
+    async function notify(message: string): Promise<void> {
+      await confirmOverlay(message, 'Enter or Escape closes.');
+      dialog.focus();
+    }
+
     // Asked twice for a dirty worktree, and the second question names the files: the changes in it
     // exist nowhere else. main decides what counts as dirty and hands the list back, so the question
     // on screen cannot name one thing while the removal refuses on another.
+    //
+    // Every other refusal — the worktree gone by other means, a lock, a git failure — carries a
+    // message main already wrote. Shown here rather than swallowed, or pressing d would refresh a
+    // list that still has the row on it and nothing would say why.
     async function removeHighlighted(): Promise<void> {
       const entry = ordered()[highlighted];
       if (!entry) return;
@@ -144,7 +156,12 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
         const forced = await confirmOverlay(`${entry.branch} has uncommitted changes: ${files}${more}.`,
           'Enter removes it and loses them. Escape keeps it.');
         dialog.focus();
-        if (forced) await bridge.removeWorktree(entry.worktreePath, true);
+        if (forced) {
+          const attemptForced = await bridge.removeWorktree(entry.worktreePath, true);
+          if (!attemptForced.ok) await notify(attemptForced.message);
+        }
+      } else if (!attempt.ok) {
+        await notify(attempt.message);
       }
       await refresh();
     }

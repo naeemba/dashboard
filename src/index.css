@@ -649,7 +649,11 @@ textarea.board-edit {
   margin: 8px 0;
 }
 
-.picker-list {
+/* Shared with .worktrees-list below: both are an overlay's one scrolling list of rows, walked with
+   the arrows, with the same padding and the same highlight. What differs between the two dialogs is
+   what goes inside a row, which stays in each dialog's own rules. */
+.picker-list,
+.worktrees-list {
   flex: 1;
   overflow-y: auto;
   margin: 0;
@@ -657,7 +661,8 @@ textarea.board-edit {
   list-style: none;
 }
 
-.picker-list li {
+.picker-list li,
+.worktrees-list li {
   display: flex;
   gap: 8px;
   align-items: baseline;
@@ -665,7 +670,8 @@ textarea.board-edit {
   cursor: pointer;
 }
 
-.picker-list li.highlighted {
+.picker-list li.highlighted,
+.worktrees-list li.highlighted {
   background: var(--brightBlack);
 }
 
@@ -708,26 +714,6 @@ textarea.board-edit {
   color: var(--blue);
   font-size: inherit;
   font-weight: normal;
-}
-
-.worktrees-list {
-  flex: 1;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.worktrees-list li {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.worktrees-list li.highlighted {
-  background: var(--brightBlack);
 }
 
 /* Five fixed-width columns, project through pane, so the eye can scan one down the dialog instead of
