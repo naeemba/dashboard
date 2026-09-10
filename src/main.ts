@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
+import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import {
@@ -11,14 +13,24 @@ import {
   type Project,
 } from './projects';
 import { isOpenableLink } from './links';
-import { editorArguments, pickShell } from './shell';
+import { agentArguments, editorArguments, pickShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
+import { BOARD_FILE_PATH, blockingChanges, branchNameFor, freePane, worktreePathFor } from './ship';
+import {
+  entryForCard,
+  livingEntries,
+  readWorktrees,
+  withEntry,
+  writeWorktrees,
+  type WorktreeEntry,
+} from './worktree-store';
 import type { Settings } from './settings';
-import type { Board } from './board';
+import { moveCardToColumn, selectionOf, shipColumnIndex, withShipColumn, type Board } from './board';
+import type { ShipRequest, ShipResult } from './bridge';
 
 if (started) app.quit();
 
@@ -34,6 +46,14 @@ const projects: Project[] = [];
 // last run was left in.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const sessionFile = path.join(app.getPath('userData'), 'session.json');
+const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
+// Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
+// flight forever with nothing able to clear it.
+let worktrees = livingEntries(readWorktrees(worktreesFile), existsSync);
+// Which panes you have typed into. The only signal there is about a pane being free: main sees every
+// keystroke sent to a pty and nothing at all about what is running in one.
+const typedPanes = new Set<string>();
+const runCommand = promisify(execFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
@@ -86,6 +106,11 @@ function spawnTerminal(id: string): void {
   }
   terminalProcess.onData((data) => sendToRenderer('pty:data', id, data));
   terminalProcess.onExit(({ exitCode }) => {
+    // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
+    // the agent in the same tick, and the killed shell's exit arrives after that: without the check it
+    // would drop the agent out of the map, leaving nothing for your keystrokes to reach, and tell the
+    // renderer a pane that is busy working had died.
+    if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
@@ -98,10 +123,59 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
+    // A brand new shell in this slot, so nobody has typed into it — even if someone typed into the
+    // project that used to be here. Left set, opening a fresh project into a slot you had worked in
+    // would tell the next ship every pane was in use.
+    typedPanes.delete(id);
     terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+}
+
+// Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
+// 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
+// exists to say. The old shell is killed first: retargeting a pane that is still running one would
+// leave two processes writing to the same id.
+function startAgent(id: string, worktreePath: string, cardId: string): void {
+  terminalCommands.set(id, {
+    args: agentArguments(shellCommand, `/work-card ${cardId}`),
+    directory: worktreePath,
+  });
+  // Counted as used from here on. A pane with an agent working in it is the last one a second ship
+  // should take, and nobody typing in it is exactly why it would otherwise still look free.
+  typedPanes.add(id);
+  shells.get(id)?.kill();
+  shells.delete(id);
+  spawnTerminal(id);
+}
+
+// execFile, never a shell, so a card titled with a quote in it cannot become a command. Awaited
+// rather than sync: main is the process every pane's bytes flow through, and a fetch on a slow
+// network would otherwise stop all five shells painting until it returned.
+async function git(args: string[], cwd: string): Promise<string> {
+  const { stdout } = await runCommand('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+  return stdout.trim();
+}
+
+// origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
+// same reason: origin/HEAD is not set in every clone.
+async function baseBranch(projectPath: string): Promise<string> {
+  try {
+    const head = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], projectPath);
+    return head.replace(/^origin\//, '');
+  } catch {
+    // Not set in this clone; try the usual names.
+  }
+  for (const candidate of ['main', 'master']) {
+    try {
+      await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${candidate}`], projectPath);
+      return candidate;
+    } catch {
+      // Try the next one.
+    }
+  }
+  throw new Error('cannot tell which branch on origin is the main one');
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -168,7 +242,10 @@ ipcMain.on('notification:show', (_event, title: string, body: string, paneId: st
 ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
 });
-ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
+ipcMain.on('pty:input', (_event, id: string, data: string) => {
+  typedPanes.add(id);
+  shells.get(id)?.write(data);
+});
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
@@ -186,6 +263,108 @@ ipcMain.handle('board:read', (_event, projectPath: string) => {
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
 ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => writeBoard(projectPath, board));
+
+function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
+  worktrees = withEntry(worktrees, entry);
+  writeWorktrees(worktreesFile, worktrees);
+  return entry;
+}
+
+// Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
+// ship of a card whose worktree exists but never got one.
+function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
+  const typedIn = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
+    .filter((index) => typedPanes.has(terminalId(slot, index)));
+  const pane = freePane(typedIn, TERMINAL_COUNT);
+  if (pane === null) {
+    return {
+      ok: false,
+      message: `every pane in ${path.basename(entry.projectPath)} is in use — free one and ship again`,
+    };
+  }
+  startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);
+  return { ok: true, entry: recordWorktree({ ...entry, pane }) };
+}
+
+// The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
+// back as a message the board's status bar prints; everything before it is left as it was.
+ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
+  const { projectPath, cardId, title, slot } = request;
+  worktrees = livingEntries(worktrees, existsSync);
+
+  // Already shipped. A record with a pane on it means an agent is working, and a second worktree for
+  // the same card is the mistake the record exists to catch. One with no pane is a ship that ran out
+  // of panes, and finishing it is the one re-ship that is allowed.
+  const existing = entryForCard(worktrees, cardId);
+  if (existing) {
+    if (existing.pane !== null) {
+      return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
+    }
+    return attachPane(existing, slot);
+  }
+
+  try {
+    const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
+    if (dirty.length > 0) {
+      const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
+      return { ok: false, message: `${count} uncommitted — commit or stash them first` };
+    }
+
+    // Undo the Ship move on main, and any Ship column the app inserted when it read the board. The
+    // card id is already in hand, so throwing the file away costs nothing. Only ever reached with the
+    // guard above satisfied, and board.json is the one file that guard lets past.
+    try {
+      await git(['checkout', '--', BOARD_FILE_PATH], projectPath);
+    } catch {
+      // A project whose board.json is not committed yet has nothing to restore.
+    }
+
+    const base = await baseBranch(projectPath);
+    await git(['fetch', 'origin', base], projectPath);
+    // The checkout itself is only fast-forwarded when it is sitting on the base branch and can be.
+    // A checkout on some other branch is left alone — the worktree comes off origin/<base> either
+    // way, so it does not need the local branch to have caught up.
+    try {
+      const head = await git(['rev-parse', '--abbrev-ref', 'HEAD'], projectPath);
+      if (head === base) await git(['merge', '--ff-only', `origin/${base}`], projectPath);
+    } catch {
+      // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
+    }
+
+    const heads = await git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
+    const branch = branchNameFor(title, cardId, heads.split('\n').filter((name) => name !== ''));
+    const worktreePath = worktreePathFor(projectPath, branch);
+    await git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
+
+    // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
+    // worktree that exists is always one Ctrl+W can show you and remove. An orphan worktree nothing
+    // knows about is the thing that piles up unseen.
+    const entry = recordWorktree({
+      cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
+    });
+
+    // The card's Ship move, on the branch. The only board write that belongs to one; the agent makes
+    // every move after it.
+    const board = withShipColumn(readBoard(worktreePath).board);
+    const from = selectionOf(board, cardId);
+    if (from) {
+      const moved = moveCardToColumn(board, from, shipColumnIndex(board));
+      writeBoard(worktreePath, moved.board);
+      await git(['add', BOARD_FILE_PATH], worktreePath);
+      await git(['commit', '-m', `board: ship "${title}"`], worktreePath);
+    }
+
+    return attachPane(entry, slot);
+  } catch (error: unknown) {
+    return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
+});
+
+ipcMain.handle('worktree:list', () => {
+  worktrees = livingEntries(worktrees, existsSync);
+  writeWorktrees(worktreesFile, worktrees);
+  return worktrees;
+});
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([

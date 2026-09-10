@@ -21,6 +21,8 @@ const bridge: DashboardBridge = {
   writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),
   getSettings: () => ipcRenderer.invoke('settings:read'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:write', settings),
+  shipCard: (request) => ipcRenderer.invoke('worktree:create', request),
+  listWorktrees: () => ipcRenderer.invoke('worktree:list'),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

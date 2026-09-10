@@ -3,6 +3,12 @@ import type { Board } from './board';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { Settings } from './settings';
+import type { WorktreeEntry } from './worktree-store';
+
+// What the board hands main when a card is moved into Ship. The slot is the project's page, which is
+// what says which five panes are candidates for the agent.
+export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
+export type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string };
 
 export type DashboardBridge = {
   platform: string;
@@ -32,6 +38,11 @@ export type DashboardBridge = {
   // Answers with the shell main resolved from the new settings, which is the one a dropped path is
   // quoted for.
   saveSettings(settings: Settings): Promise<string>;
+  // Moving a card into Ship: the worktree, the branch, the pane and the agent. Answers with the
+  // record it wrote, or with the message saying which step refused and why.
+  shipCard(request: ShipRequest): Promise<ShipResult>;
+  // Every worktree the app has made, with the dead ones already dropped.
+  listWorktrees(): Promise<WorktreeEntry[]>;
 };
 
 declare global {
