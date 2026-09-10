@@ -49,7 +49,16 @@ const sessionFile = path.join(app.getPath('userData'), 'session.json');
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
 // flight forever with nothing able to clear it.
-let worktrees = livingEntries(readWorktrees(worktreesFile), existsSync);
+//
+// Every pane comes back null with it. No shell outlives the app, so nothing this file says was in
+// pane 2 is in pane 2 a moment after launch: that pane is a plain shell in the project, and a record
+// still naming it would put a branch name under the status bar of a checkout the pane is not in —
+// which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
+// the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
+// it hands the folder that is already there to a pane. Written out, so the file says what this says.
+let worktrees: WorktreeEntry[] = livingEntries(readWorktrees(worktreesFile), existsSync)
+  .map((entry) => ({ ...entry, pane: null }));
+writeWorktrees(worktreesFile, worktrees);
 // Which panes you have typed into. The only signal there is about a pane being free: main sees every
 // keystroke sent to a pty and nothing at all about what is running in one.
 const typedPanes = new Set<string>();
