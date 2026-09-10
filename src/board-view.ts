@@ -299,6 +299,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // A card that has landed in Ship. The board is written first, so the card is where you put it even
   // if the ship then refuses — the app never silently undoes a move you made. Main puts board.json
   // back to HEAD as its own first step, which is what makes that safe.
+  //
+  // No staleness guard on the result below, unlike open(): a result landing after you have moved off
+  // this view only writes this closure's own `shipped` and redraws whatever view is currently
+  // attached — there is no board read in flight for it to overwrite, so there is nothing to protect.
   function ship(card: Card): void {
     options.onError(`shipping "${card.title}"…`);
     options.bridge.shipCard({
@@ -348,6 +352,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     // comfortably longer than the gap between two keys — so a key typed during the read is dropped
     // rather than applied to the board that is about to be replaced.
     //
+    // Two things are read, the board and the local ship record, and both are started here before
+    // either is awaited — so a second open() landing in between finds one gap to overtake, not two.
+    // Everything each read decides (`next`, `message`, `nextShipped`) stays local until both have
+    // settled, and the one guard below is what a stale call bounces off; a guard per await is the
+    // shape that let an old read win a race the first version of this file had already closed.
+    //
     // A failed read still has to leave the board on screen usable from the keyboard — render() runs
     // either way, on whatever board is already in memory, with the error in the status bar instead of
     // a fresh board. A control the keyboard can't reach is unfinished.
@@ -359,25 +369,28 @@ export function createBoardView(options: BoardOptions): BoardView {
       const token = ++latestRead;
       let message = '';
       let next = state;
+      const boardRead = options.bridge.readBoard(options.projectPath);
+      // Cheap and local — a JSON file in the app's own folder — so it is re-read with the board rather
+      // than kept in step by hand. The catch is attached here, on the promise itself, not around an
+      // await further down — a rejection has to be claimed the moment it is possible, not left to
+      // become unhandled while the other read is still in flight.
+      const shippedRead = options.bridge.listWorktrees()
+        .then((entries) => entries.filter((entry) => entry.projectPath === options.projectPath))
+        // A failure to read the local record must never cost you the board; null says "leave it".
+        .catch(() => null);
       try {
-        const read = await options.bridge.readBoard(options.projectPath);
+        const read = await boardRead;
         next = loadBoard(state, read.board);
         // The old file is still on disk under this name, so the cards are not gone — just not shown.
         if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
       } catch (error: unknown) {
         message = `Board not opened: ${String(error)}`;
       }
+      const nextShipped = await shippedRead;
       // A read another open() has overtaken says nothing: the newer one is the board you asked for.
       if (token !== latestRead) return;
       landedRead = token;
-      try {
-        // Cheap and local — a JSON file in the app's own folder — so it is re-read with the board
-        // rather than kept in step by hand.
-        shipped = (await options.bridge.listWorktrees())
-          .filter((entry) => entry.projectPath === options.projectPath);
-      } catch {
-        // A failure to read the local record must never cost you the board.
-      }
+      if (nextShipped !== null) shipped = nextShipped;
       state = next;
       editing = null;
       options.onError(message);
