@@ -1,16 +1,11 @@
 import { relativeAge } from './age';
+import { baseName } from './base-name';
 import { clampIndex } from './clamp-index';
 import type { DashboardBridge } from './bridge';
 import { confirmOverlay, openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
-
-// node:path's basename does not split on a backslash on darwin, the same reason shell.ts reads a
-// path this way instead — a project opened from a Windows share should still show its own name.
-function projectName(projectPath: string): string {
-  return projectPath.split(/[\\/]/).pop() || projectPath;
-}
 
 // Every worktree the app has made, and the one screen they are removed from. Nothing here removes
 // anything on its own: a worktree whose branch has merged is still a folder you may have something
@@ -71,7 +66,7 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
 
         const project = document.createElement('span');
         project.className = 'worktrees-project';
-        project.textContent = projectName(entry.projectPath);
+        project.textContent = baseName(entry.projectPath);
 
         const branch = document.createElement('span');
         branch.className = 'worktrees-branch';

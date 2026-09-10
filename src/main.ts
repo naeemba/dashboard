@@ -12,6 +12,7 @@ import {
   replacesProject,
   type Project,
 } from './projects';
+import { baseName } from './base-name';
 import { isOpenableLink } from './links';
 import { agentArguments, editorArguments, pickShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -308,7 +309,7 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
   if (pane === null) {
     return {
       ok: false,
-      message: `every pane in ${path.basename(entry.projectPath)} is in use — free one and ship again`,
+      message: `every pane in ${baseName(entry.projectPath)} is in use — free one and ship again`,
     };
   }
   startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);

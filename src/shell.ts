@@ -1,3 +1,4 @@
+import { baseName } from './base-name';
 import type { Settings } from './settings';
 
 const platformDefault: Record<string, string> = {
@@ -33,10 +34,8 @@ const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 // Windows run git-bash. cmd.exe has no single-quote quoting at all and is not supported.
 const POWERSHELL = /^(powershell|pwsh)(\.exe)?$/i;
 
-// basename from node:path would be the obvious reader here, but on darwin it does not split on a
-// backslash, so a Windows path comes back whole and the PowerShell branch is missed.
 export function isPowerShell(shellCommand: string): boolean {
-  return POWERSHELL.test(shellCommand.split(/[\\/]/).pop() ?? '');
+  return POWERSHELL.test(baseName(shellCommand));
 }
 
 export function quoteForShell(value: string, shellCommand: string): string {
