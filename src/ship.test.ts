@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blockingChanges, branchNameFor, freePane, worktreePathFor } from './ship';
+import { blockingChanges, branchNameFor, freePane, oneAtATime, worktreePathFor } from './ship';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
 
@@ -110,5 +110,46 @@ describe('blockingChanges', () => {
 
   it('does not mistake " -> " in a plain file name for a rename', () => {
     expect(blockingChanges('A  "a -> b.ts"\n')).toEqual(['a -> b.ts']);
+  });
+});
+
+describe('oneAtATime', () => {
+  function deferred(): { promise: Promise<string>; settle: (value: string) => void } {
+    let settle: (value: string) => void = () => undefined;
+    const promise = new Promise<string>((resolve) => { settle = resolve; });
+    return { promise, settle };
+  }
+
+  it('holds a second run on the same key until the first has finished', async () => {
+    const queue = oneAtATime();
+    const first = deferred();
+    const order: string[] = [];
+    const one = queue('api', async () => { order.push('one started'); return first.promise; });
+    const two = queue('api', async () => { order.push('two started'); return 'two'; });
+    await Promise.resolve();
+    expect(order).toEqual(['one started']);
+    first.settle('one');
+    await Promise.all([one, two]);
+    expect(order).toEqual(['one started', 'two started']);
+  });
+
+  it('lets two projects ship at once', async () => {
+    const queue = oneAtATime();
+    const held = deferred();
+    const order: string[] = [];
+    const one = queue('api', async () => { order.push('api'); return held.promise; });
+    const two = queue('web', async () => { order.push('web'); return 'web'; });
+    await two;
+    expect(order).toEqual(['api', 'web']);
+    held.settle('api');
+    await one;
+  });
+
+  // A ship that throws must not leave the project unable to ship for the rest of the run.
+  it('carries the failure to its own caller and runs the next one anyway', async () => {
+    const queue = oneAtATime();
+    const failed = queue('api', async () => { throw new Error('index.lock'); });
+    await expect(failed).rejects.toThrow('index.lock');
+    await expect(queue('api', async () => 'next')).resolves.toBe('next');
   });
 });

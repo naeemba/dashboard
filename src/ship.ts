@@ -93,3 +93,27 @@ export function blockingChanges(porcelain: string): string[] {
     .map((path) => path.replace(/^"|"$/g, ''))
     .filter((path) => path !== '' && !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
+
+// Runs what is handed to it one at a time per key, in the order the calls arrived.
+//
+// The key a ship uses is the project. git locks the repository's index for the whole of `worktree add`
+// and again for the commit, so two ships of different cards in one project end with the second dying
+// on .git/index.lock in git's own words — with its card already sitting in Ship on the board. Both are
+// wanted, so the second waits instead of being refused: refusing it is the same lost ship with a retry
+// bolted on. Two ships of the *same* card are a different thing and are still refused outright, by the
+// caller, before they reach here.
+//
+// Waiting also settles the branch names. Both ships read the repository's branches to pick a name that
+// is not taken, and run together they read the same list and can pick the same one.
+export function oneAtATime(): <T>(key: string, run: () => Promise<T>) => Promise<T> {
+  const tails = new Map<string, Promise<unknown>>();
+  return <T>(key: string, run: () => Promise<T>): Promise<T> => {
+    // Both arms are `run`: what the one before it answered is nothing to do with whether this one goes,
+    // and a failed ship must not wedge the project's queue for the rest of the run.
+    const next = (tails.get(key) ?? Promise.resolve()).then(run, run);
+    // The stored copy has its rejection already claimed, or a ship that throws would be an unhandled
+    // rejection the moment nobody is waiting behind it. The caller still gets `next` itself.
+    tails.set(key, next.then(() => undefined, () => undefined));
+    return next;
+  };
+}

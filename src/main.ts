@@ -20,7 +20,7 @@ import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import { blockingChanges, branchNameFor, freePane, worktreePathFor } from './ship';
+import { blockingChanges, branchNameFor, freePane, oneAtATime, worktreePathFor } from './ship';
 import {
   entryForCard,
   livingEntries,
@@ -316,8 +316,63 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
+// Ships in one project run one after another, never together; ship.ts says why.
+const shipInProject = oneAtATime();
+
 // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
-// back as a message the board's status bar prints; everything before it is left as it was.
+// back as a message the board's status bar prints; everything before it is left as it was. Every git
+// command below runs with the project's queue held, so nothing else here is touching this repository.
+async function runShip(request: ShipRequest): Promise<ShipResult> {
+  const { projectPath, cardId, title, slot } = request;
+  const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
+  if (dirty.length > 0) {
+    const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
+    return { ok: false, message: `${count} uncommitted — commit or stash them first` };
+  }
+
+  const base = await baseBranch(projectPath);
+  await git(['fetch', 'origin', base], projectPath);
+  // The checkout itself is only fast-forwarded when it is sitting on the base branch and can be.
+  // A checkout on some other branch is left alone — the worktree comes off origin/<base> either
+  // way, so it does not need the local branch to have caught up.
+  try {
+    const head = await git(['rev-parse', '--abbrev-ref', 'HEAD'], projectPath);
+    if (head === base) await git(['merge', '--ff-only', `origin/${base}`], projectPath);
+  } catch {
+    // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
+  }
+
+  const heads = await git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
+  const branch = branchNameFor(title, cardId, heads.split('\n').filter((name) => name !== ''));
+  const worktreePath = worktreePathFor(projectPath, branch);
+  await git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
+
+  // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
+  // worktree that exists is always one the worktree list can show you and remove. An orphan worktree
+  // nothing knows about is the thing that piles up unseen.
+  const entry = recordWorktree({
+    cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
+  });
+
+  // The card's Ship move, on the branch. The only board write that belongs to one; the agent makes
+  // every move after it. The Ship column is there to move it into whatever the branch's file holds:
+  // readBoard gives every board one, and a board with no file at all is the shipped four columns.
+  const board = readBoard(worktreePath).board;
+  const from = selectionOf(board, cardId);
+  if (from) {
+    const moved = moveCardToColumn(board, from, shipColumnIndex(board));
+    writeBoard(worktreePath, moved.board);
+    await git(['add', BOARD_FILE_PATH], worktreePath);
+    // Nothing staged means the card is already in Ship on the base branch — shipped once before,
+    // the worktree since removed. `git commit` with nothing to commit exits 1, which would fail the
+    // ship in git's own words with the branch and the folder already made.
+    const staged = await git(['diff', '--cached', '--name-only'], worktreePath);
+    if (staged !== '') await git(['commit', '-m', `board: ship "${title}"`], worktreePath);
+  }
+
+  return attachPane(entry, slot);
+}
+
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
   const { projectPath, cardId, title, slot } = request;
   worktrees = livingEntries(worktrees, existsSync);
@@ -333,56 +388,12 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     return attachPane(existing, slot);
   }
 
+  // Two ships of one card are a mistake and are refused. Two of different cards in one project are
+  // both wanted, so the second waits behind the first rather than racing it onto git's index lock.
   if (shippingCards.has(cardId)) return { ok: false, message: `"${title}" is already being shipped` };
   shippingCards.add(cardId);
   try {
-    const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
-    if (dirty.length > 0) {
-      const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
-      return { ok: false, message: `${count} uncommitted — commit or stash them first` };
-    }
-
-    const base = await baseBranch(projectPath);
-    await git(['fetch', 'origin', base], projectPath);
-    // The checkout itself is only fast-forwarded when it is sitting on the base branch and can be.
-    // A checkout on some other branch is left alone — the worktree comes off origin/<base> either
-    // way, so it does not need the local branch to have caught up.
-    try {
-      const head = await git(['rev-parse', '--abbrev-ref', 'HEAD'], projectPath);
-      if (head === base) await git(['merge', '--ff-only', `origin/${base}`], projectPath);
-    } catch {
-      // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
-    }
-
-    const heads = await git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
-    const branch = branchNameFor(title, cardId, heads.split('\n').filter((name) => name !== ''));
-    const worktreePath = worktreePathFor(projectPath, branch);
-    await git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
-
-    // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
-    // worktree that exists is always one the worktree list can show you and remove. An orphan worktree nothing
-    // knows about is the thing that piles up unseen.
-    const entry = recordWorktree({
-      cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
-    });
-
-    // The card's Ship move, on the branch. The only board write that belongs to one; the agent makes
-    // every move after it. The Ship column is there to move it into whatever the branch's file holds:
-    // readBoard gives every board one, and a board with no file at all is the shipped four columns.
-    const board = readBoard(worktreePath).board;
-    const from = selectionOf(board, cardId);
-    if (from) {
-      const moved = moveCardToColumn(board, from, shipColumnIndex(board));
-      writeBoard(worktreePath, moved.board);
-      await git(['add', BOARD_FILE_PATH], worktreePath);
-      // Nothing staged means the card is already in Ship on the base branch — shipped once before,
-      // the worktree since removed. `git commit` with nothing to commit exits 1, which would fail the
-      // ship in git's own words with the branch and the folder already made.
-      const staged = await git(['diff', '--cached', '--name-only'], worktreePath);
-      if (staged !== '') await git(['commit', '-m', `board: ship "${title}"`], worktreePath);
-    }
-
-    return attachPane(entry, slot);
+    return await shipInProject(projectPath, () => runShip(request));
   } catch (error: unknown) {
     return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
   } finally {
