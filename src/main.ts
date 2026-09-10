@@ -350,6 +350,24 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
+// The card's Ship move, on the branch. The only board write that belongs to a ship; the agent makes
+// every move after it. The Ship column is there to move it into whatever the branch's file holds:
+// readBoard gives every board one, and a board with no file at all is the shipped four columns.
+//
+// Run again by a ship that is being finished rather than started, so it has to be safe to repeat: a
+// card already in Ship stages nothing, and `git commit` with nothing to commit exits 1, which would
+// fail the ship in git's own words with the branch and the folder already made. Nothing staged also
+// covers the card never having been on the base branch's board at all.
+async function commitShipMove(entry: WorktreeEntry): Promise<void> {
+  const board = readBoard(entry.worktreePath).board;
+  const from = selectionOf(board, entry.cardId);
+  if (!from) return;
+  writeBoard(entry.worktreePath, moveCardToColumn(board, from, shipColumnIndex(board)).board);
+  await git(['add', BOARD_FILE_PATH], entry.worktreePath);
+  const staged = await git(['diff', '--cached', '--name-only'], entry.worktreePath);
+  if (staged !== '') await git(['commit', '-m', `board: ship "${entry.title}"`], entry.worktreePath);
+}
+
 // Ships in one project run one after another, never together; ship.ts says why.
 const shipInProject = oneAtATime();
 
@@ -388,22 +406,7 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
     cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
   });
 
-  // The card's Ship move, on the branch. The only board write that belongs to one; the agent makes
-  // every move after it. The Ship column is there to move it into whatever the branch's file holds:
-  // readBoard gives every board one, and a board with no file at all is the shipped four columns.
-  const board = readBoard(worktreePath).board;
-  const from = selectionOf(board, cardId);
-  if (from) {
-    const moved = moveCardToColumn(board, from, shipColumnIndex(board));
-    writeBoard(worktreePath, moved.board);
-    await git(['add', BOARD_FILE_PATH], worktreePath);
-    // Nothing staged means the card is already in Ship on the base branch — shipped once before,
-    // the worktree since removed. `git commit` with nothing to commit exits 1, which would fail the
-    // ship in git's own words with the branch and the folder already made.
-    const staged = await git(['diff', '--cached', '--name-only'], worktreePath);
-    if (staged !== '') await git(['commit', '-m', `board: ship "${title}"`], worktreePath);
-  }
-
+  await commitShipMove(entry);
   return attachPane(entry, slot);
 }
 
@@ -412,14 +415,10 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
   dropDeadWorktrees();
 
   // Already shipped. A record with a pane on it means an agent is working, and a second worktree for
-  // the same card is the mistake the record exists to catch. One with no pane is a ship that ran out
-  // of panes, and finishing it is the one re-ship that is allowed.
+  // the same card is the mistake the record exists to catch.
   const existing = entryForCard(worktrees, cardId);
-  if (existing) {
-    if (existing.pane !== null) {
-      return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
-    }
-    return attachPane(existing, slot);
+  if (existing && existing.pane !== null) {
+    return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
   }
 
   // Two ships of one card are a mistake and are refused. Two of different cards in one project are
@@ -427,7 +426,16 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
   if (shippingCards.has(cardId)) return { ok: false, message: `"${title}" is already being shipped` };
   shippingCards.add(cardId);
   try {
-    return await shipInProject(projectPath, () => runShip(request));
+    return await shipInProject(projectPath, async () => {
+      if (!existing) return runShip(request);
+      // A record with no pane is a ship that stopped part way: it ran out of panes, or it failed after
+      // the worktree was made. Which of those it was is not written down, so this finishes the work
+      // rather than assuming only the pane is missing — an agent started in a worktree whose Ship move
+      // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
+      // it runs git in the same repository.
+      await commitShipMove(existing);
+      return attachPane(existing, slot);
+    });
   } catch (error: unknown) {
     return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
   } finally {
