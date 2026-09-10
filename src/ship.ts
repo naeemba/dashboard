@@ -10,13 +10,17 @@ import { BOARD_FILE_PATH } from './board-store';
 const BRANCH_LIMIT = 48;
 // How many characters of the card id disambiguate two cards with the same title.
 const ID_LENGTH = 4;
+// slug() cannot wait to find out whether a collision is coming before it cuts the title down — by
+// then the id suffix is already decided. So it reserves the hyphen and the id up front and cuts to
+// that shorter length always, not only on the collision path.
+const BASE_LIMIT = BRANCH_LIMIT - (ID_LENGTH + 1);
 
 function slug(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, BRANCH_LIMIT)
+    .slice(0, BASE_LIMIT)
     // Again after the cut: slicing mid-word can land the last character on a hyphen, and git accepts
     // a branch ending in one while nothing else about it reads as a name.
     .replace(/-+$/, '');
@@ -34,6 +38,9 @@ export function branchNameFor(title: string, cardId: string, taken: readonly str
   if (!taken.includes(base)) return base;
   const withId = `${base}-${short}`;
   if (!taken.includes(withId)) return withId;
+  // Getting here means the title's slug and that slug plus four id characters are both already
+  // taken — two different cards colliding on both. Rare enough that the number on the end is let
+  // run past BRANCH_LIMIT rather than reserving room a title will almost never need.
   for (let attempt = 2; attempt < 100; attempt += 1) {
     const candidate = `${withId}-${attempt}`;
     if (!taken.includes(candidate)) return candidate;
@@ -69,9 +76,11 @@ export function freePane(typedIn: readonly number[], count: number): number | nu
 export function blockingChanges(porcelain: string): string[] {
   return porcelain
     .split('\n')
-    // `XY path`, so the path starts at column 3. A rename is `XY old -> new`.
+    // `XY path`, so the path starts at column 3. A rename is `XY old -> new`, but only a rename —
+    // splitting on ' -> ' unconditionally would misread a plain add of a file literally named
+    // "a -> b.ts" as one.
     .filter((line) => line.length > 3)
-    .map((line) => line.slice(3).split(' -> ').pop() ?? '')
+    .map((line) => (line.slice(0, 2).includes('R') ? line.slice(3).split(' -> ').pop() ?? '' : line.slice(3)))
     // git quotes a path with a space or a non-ASCII character in it.
     .map((path) => path.replace(/^"|"$/g, ''))
     .filter((path) => path !== '' && path !== BOARD_FILE_PATH);

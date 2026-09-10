@@ -35,6 +35,14 @@ describe('branchNameFor', () => {
     const taken = ['panes-name-themselves', 'panes-name-themselves-fc2b'];
     expect(branchNameFor('Panes name themselves', cardId, taken)).toBe('panes-name-themselves-fc2b-2');
   });
+
+  it('reserves room for the id suffix, so a collision does not push the branch past the limit', () => {
+    const long = 'a'.repeat(46) + ' and then some more words after it';
+    const base = branchNameFor(long, cardId, []);
+    const suffixed = branchNameFor(long, cardId, [base]);
+    expect(suffixed.endsWith('-')).toBe(false);
+    expect(suffixed.length).toBeLessThanOrEqual(48);
+  });
 });
 
 describe('worktreePathFor', () => {
@@ -82,5 +90,9 @@ describe('blockingChanges', () => {
 
   it('strips the quotes git puts round a path with a space in it', () => {
     expect(blockingChanges(' M "src/two words.ts"\n')).toEqual(['src/two words.ts']);
+  });
+
+  it('does not mistake " -> " in a plain file name for a rename', () => {
+    expect(blockingChanges('A  "a -> b.ts"\n')).toEqual(['a -> b.ts']);
   });
 });
