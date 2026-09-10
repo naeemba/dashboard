@@ -88,6 +88,20 @@ export function shipColumnIndex(board: Board): number {
   return board.columns.findIndex((column) => column.name.toLowerCase() === SHIP_COLUMN.toLowerCase());
 }
 
+// Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
+// produced, the selection it left behind, and `from`, the column the card was in a keystroke earlier.
+//
+// Rightward only. Ship sits second from the left, so without the direction a card dragged leftward out
+// of Doing would silently make a worktree, take a pane and start an agent — from a keystroke that
+// looks like putting something back.
+//
+// And it has to have come from somewhere else. A card already in Ship that is merely reordered has not
+// landed in it again, and neither has one pushed against the right-hand edge of a board somebody wrote
+// with Ship as its last column, where rightward moves nothing at all.
+export function landsInShip(board: Board, from: number, moved: Selection, direction: Direction): boolean {
+  return direction === 'right' && from !== moved.column && moved.column === shipColumnIndex(board);
+}
+
 // Every board written before Ship existed has three columns, and getting the fourth should not mean
 // hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
 // card pays nothing for it. The same board back when it already has one, so reading a board is not a

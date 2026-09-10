@@ -9,13 +9,13 @@ import {
   descendantsOf,
   detachCard,
   hasSubtasks,
+  landsInShip,
   moveCard,
   moveCardToColumn,
   flightParts,
   moveSelection,
   pullRequestFrom,
   selectionOf,
-  shipColumnIndex,
   sortColumn,
   type Card,
   type Change,
@@ -430,12 +430,11 @@ export function createBoardView(options: BoardOptions): BoardView {
           return render();
         case 'board-move': {
           const moving = cardAt(state.board, state.selection);
+          // The column the card is leaving, which both halves of a ship need: whether this move is the
+          // gesture at all, and where the card goes back to once the ship works.
           const from = state.selection.column;
           change(moveCard(state.board, state.selection, action.direction));
-          // Asked after the move, of the board the move produced: landing in Ship is the gesture, and
-          // a card already in Ship that is merely reordered has not landed in it again.
-          const landed = state.selection.column === shipColumnIndex(state.board);
-          if (moving && landed && action.direction === 'right') ship(moving, from);
+          if (moving && landsInShip(state.board, from, state.selection, action.direction)) ship(moving, from);
           return;
         }
         case 'board-attach': {

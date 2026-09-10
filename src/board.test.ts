@@ -17,6 +17,7 @@ import {
   emptyBoard,
   hasSubtasks,
   isDescendantOf,
+  landsInShip,
   moveCard,
   moveCardToColumn,
   moveSelection,
@@ -114,6 +115,52 @@ describe('moveCardToColumn', () => {
     expect(moveCardToColumn(board, { column: 0, card: 0 }, 0).board).toBe(board);
     expect(moveCardToColumn(board, { column: 0, card: 0 }, 9).board).toBe(board);
     expect(moveCardToColumn(board, { column: 1, card: 0 }, 2).board).toBe(board);
+  });
+});
+
+// The condition that decides whether a keystroke starts an agent. It was composed inline in the view,
+// where nothing pinned it: drop the direction and a card dragged leftward out of Doing makes a
+// worktree and takes a pane on its way past.
+describe('landsInShip', () => {
+  const board = {
+    columns: [
+      { name: 'Todo', cards: [] },
+      { name: SHIP_COLUMN, cards: [] },
+      { name: 'Doing', cards: [] },
+    ],
+  };
+
+  it('says yes to a card moved rightward into Ship', () => {
+    expect(landsInShip(board, 0, { column: 1, card: 0 }, 'right')).toBe(true);
+  });
+
+  it('says no to a card moved rightward out of Ship into Doing', () => {
+    expect(landsInShip(board, 1, { column: 2, card: 0 }, 'right')).toBe(false);
+  });
+
+  // The one that costs something: leftward into Ship would start an agent from a keystroke that reads
+  // as putting a card back.
+  it('says no to a card moved leftward into Ship from Doing', () => {
+    expect(landsInShip(board, 2, { column: 1, card: 0 }, 'left')).toBe(false);
+  });
+
+  it('says no to a card reordered inside Ship', () => {
+    expect(landsInShip(board, 1, { column: 1, card: 1 }, 'down')).toBe(false);
+    expect(landsInShip(board, 1, { column: 1, card: 0 }, 'up')).toBe(false);
+  });
+
+  // moveCard hands back the selection it was given when there is nowhere to go, so `from` and the
+  // column landed in are the same. A board written by hand with Ship last would otherwise re-ship a
+  // card every time you pushed it against the right-hand edge.
+  it('says no to a move that changed nothing', () => {
+    const shipLast = { columns: [{ name: 'Todo', cards: [] }, { name: SHIP_COLUMN, cards: [] }] };
+    expect(landsInShip(shipLast, 1, { column: 1, card: 0 }, 'right')).toBe(false);
+  });
+
+  it('says no on an empty column, and on a board with no Ship column at all', () => {
+    expect(landsInShip(board, 0, { column: 0, card: 0 }, 'right')).toBe(false);
+    const noShip = { columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }] };
+    expect(landsInShip(noShip, 0, { column: 1, card: 0 }, 'right')).toBe(false);
   });
 });
 
