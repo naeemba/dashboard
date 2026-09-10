@@ -1,5 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { marksWaiting, raisesNotification, redrawsForBell, waitingNames } from './waiting';
+import { looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames } from './waiting';
+
+describe('looksBusy', () => {
+  it('reads an agent still working from the seconds after its spinner', () => {
+    expect(looksBusy(['✳ Coalescing… (5s · thinking with high effort)'])).toBe(true);
+  });
+
+  it('reads it from the key that stops it', () => {
+    expect(looksBusy(['✻ Reticulating… (esc to interrupt)'])).toBe(true);
+  });
+
+  // The spinner sits above the input box, which is three lines on its own.
+  it('finds the spinner above what the agent draws under it', () => {
+    expect(looksBusy([
+      '✳ Coalescing… (5s)', '', '╭────────╮', '│ >      │', '╰────────╯', '  auto mode on',
+    ])).toBe(true);
+  });
+
+  // Every pane's bell comes through here, and a shell that prints its own seconds is not a spinner.
+  it('leaves a build that printed how long it took', () => {
+    expect(looksBusy(['built in (12s)', 'error: 1 test failed'])).toBe(false);
+  });
+
+  it('leaves a pane that is really asking', () => {
+    expect(looksBusy(['Do you want to make this edit?', '❯ 1. Yes', '  2. No'])).toBe(false);
+  });
+
+  it('leaves an empty screen', () => {
+    expect(looksBusy([])).toBe(false);
+  });
+});
 
 describe('marksWaiting', () => {
   it('ignores the pane you are looking at', () => {

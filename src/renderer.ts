@@ -21,7 +21,7 @@ import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
 import {
-  type Bell, isRinging, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
+  type Bell, isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
 } from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
@@ -34,13 +34,20 @@ import { actionByName } from './actions';
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
 // is asking for you and whether its banner has already gone out, so a pane that rings ten times does
 // not raise ten of them.
+// `bellTimer` is the one verdict a pane has pending on its own bell, held so a second ring inside the
+// wait joins it rather than starting another.
 type Pane = {
   terminal: Terminal;
   fit: FitAddon;
   exited: boolean;
   name: string;
   bell: Bell;
+  bellTimer?: number;
 };
+
+// How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
+// its spinner again, short enough that a real question is on the tab strip before you look up.
+const BELL_SETTLE_MS = 1000;
 type Page = {
   project: Project;
   element: HTMLElement;
@@ -147,13 +154,18 @@ function allPanes(page: Page): Pane[] {
 // the bytes out, so the escape codes, the redraws and the spinner overwriting itself are all resolved
 // before this reads a line. The live screen rather than the scrollback, so scrolling a pane by hand
 // does not change what the manager says about it.
-function paneTail(terminal: Terminal): string[] {
+function paneScreen(terminal: Terminal): string[] {
   const buffer = terminal.buffer.active;
-  const screen = Array.from(
+  return Array.from(
     { length: terminal.rows },
     (_value, row) => buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '',
   );
-  return tailLines(screen);
+}
+
+// What the manager prints on a row, which is the last few lines of the same screen. The bell reads
+// the screen whole instead, so how much of it a row has space for cannot decide what a bell means.
+function paneTail(terminal: Terminal): string[] {
+  return tailLines(paneScreen(terminal));
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
@@ -373,18 +385,31 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   // the document who has focus answers both "is this page in front" and "is this the focused pane" at
   // once, and answers it right on the board, where no pane has the keyboard at all. What the states of
   // the bell mean is waiting.ts's job; this only reads them and draws the answer.
+  // Where you were when it rang is what says whether the bell is news, so that is read now: leave the
+  // pane in the second that follows and the mark would otherwise go up on the pane you just read.
+  // What the bell meant is the part that has to wait — a moment later the screen says whether the
+  // agent asked you something or went back to work.
   terminal.onBell(() => {
-    const windowFocused = document.hasFocus();
-    if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
-    // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
-    // front and draws what it says.
-    const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
-    if (!isRinging(pane.bell)) pane.bell = 'waiting';
-    if (redraws) renderStatus();
-    if (raisesNotification(windowFocused, pane.bell)) {
-      pane.bell = 'notified';
-      bridge.notify(page.project.name, `${pane.name} is waiting`, id);
-    }
+    if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
+    // One verdict per wait, not one per ring. An agent can ring every second, and without this each
+    // ring leaves its own timer behind to read the whole screen again for the same answer.
+    if (pane.bellTimer !== undefined) return;
+    pane.bellTimer = window.setTimeout(() => {
+      pane.bellTimer = undefined;
+      // What counts as still working is waiting.ts's to answer; this hands it the screen.
+      if (looksBusy(paneScreen(terminal))) return;
+      // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
+      // front and draws what it says.
+      const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
+      if (!isRinging(pane.bell)) pane.bell = 'waiting';
+      if (redraws) renderStatus();
+      // Read again rather than reused from above: the banner is only worth raising if the window is
+      // still behind something else now, which is when it would actually appear.
+      if (raisesNotification(document.hasFocus(), pane.bell)) {
+        pane.bell = 'notified';
+        bridge.notify(page.project.name, `${pane.name} is waiting`, id);
+      }
+    }, BELL_SETTLE_MS);
   });
   // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
   // than in the focus handlers: this fires for every way in, including landing back on the pane the
