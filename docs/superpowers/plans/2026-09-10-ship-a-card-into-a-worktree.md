@@ -247,7 +247,7 @@ Every branch in this feature that is not git's or Electron's, in one module with
   - `worktreePathFor(projectPath: string, branch: string): string`
   - `freePane(typedIn: readonly number[], count: number): number | null`
   - `blockingChanges(porcelain: string): string[]`
-  - `BOARD_FILE_PATH: string` (the literal `'.dashboard/board.json'`)
+- Imports: `BOARD_FILE_PATH` from `./board-store` (added in Task 1). **Do not declare a second copy of the path here** — board-store.ts owns `.dashboard` and `board.json` already, and two spellings drift the day the folder is renamed.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -353,14 +353,11 @@ Create `src/ship.ts`:
 
 ```typescript
 import { basename, dirname, join } from 'node:path';
+import { BOARD_FILE_PATH } from './board-store';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
 // commands; what to call things, which pane to take and what counts as being in the way is here,
 // where a test can pin it.
-
-// The project's board, relative to the project. Spelled here as well as in board-store.ts because
-// this is the path git reports and git compares, not a path anything joins.
-export const BOARD_FILE_PATH = '.dashboard/board.json';
 
 // How long a branch name may get. Past this the card id on the end pushes it out of what a shell
 // prompt shows, and a branch you cannot read is a branch you check out by mistake.
@@ -433,6 +430,12 @@ export function blockingChanges(porcelain: string): string[] {
     .map((path) => path.replace(/^"|"$/g, ''))
     .filter((path) => path !== '' && path !== BOARD_FILE_PATH);
 }
+```
+
+`BOARD_FILE_PATH` is re-exported from here so `main.ts` has one import for the ship's vocabulary:
+
+```typescript
+export { BOARD_FILE_PATH } from './board-store';
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -1183,14 +1186,22 @@ git commit -m "board: a card landing in Ship starts it, and says so afterwards"
 
 Five panes all reading `terminal 3` with two of them in worktrees is how a command lands in the wrong checkout. This takes the narrow slice the ship needs and leaves the rest to the "Panes name themselves" card.
 
+This task also pays renderer.ts's line budget. Tasks 6 and 8 each add a wiring line to a file that is already 144 lines over the 600-line limit, and the Global Constraints forbid making it longer. So the right-hand status span moves out into its own module — it is a decision with branches in it, which `CLAUDE.md` says belongs beside a test anyway — and renderer.ts ends the branch no longer than it started.
+
 **Files:**
-- Modify: `src/terminals.ts` (`paneLabel` takes an optional branch)
-- Modify: `src/renderer.ts:139` (one changed line)
-- Test: `src/terminals.test.ts`
+- Modify: `src/terminals.ts` (`paneLabel` takes an optional branch; add `branchOfPane`)
+- Create: `src/status.ts`, `src/status.test.ts`
+- Modify: `src/renderer.ts` (delete `modeLabel`, call the new module instead — a net reduction)
+- Test: `src/terminals.test.ts`, `src/status.test.ts`
 
 **Interfaces:**
-- Consumes: nothing.
-- Produces: `paneLabel(index: number, branch?: string): string`
+- Consumes: `type WorktreeEntry` (Task 3)
+- Produces:
+  - `paneLabel(index: number, branch?: string): string`
+  - `branchOfPane(entries: readonly { pane: number | null; branch: string }[], pane: number): string | undefined`
+  - `modeLabel(page: StatusPage): string` in `status.ts`
+
+`branchOfPane` goes in `terminals.ts` and **not** in `ship.ts`: `ship.ts` reaches `node:fs` through `board-store.ts`, and this function is called from renderer-side code that must never pull `node:fs` into its bundle.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1232,18 +1243,12 @@ export function paneLabel(index: number, branch?: string): string {
 }
 ```
 
-- [ ] **Step 4: Say it in the status bar**
-
-In `src/renderer.ts`, line 139 currently reads:
+- [ ] **Step 4: Add `branchOfPane` to terminals.ts, with a test**
 
 ```typescript
-  return page.panes.length > 0 ? paneLabel(page.focused) : '';
-```
-
-Change it to pass the branch, reading it from the page's shipped records. The page needs one field to read from — add `worktrees: WorktreeEntry[]` to the page type beside `board`, fill it in the same place `board` is filled, and refresh it whenever the board is read. If that would add lines to `renderer.ts`, put the lookup in `ship.ts` instead as:
-
-```typescript
-// The branch a pane is on, or undefined when it is on the project itself.
+// The branch a pane is on, or undefined when it is on the project's own checkout. Kept beside
+// paneLabel because it is the other half of the same sentence: the caller asks which branch, then
+// asks for the label that says so.
 export function branchOfPane(
   entries: readonly { pane: number | null; branch: string }[],
   pane: number,
@@ -1252,17 +1257,53 @@ export function branchOfPane(
 }
 ```
 
-with its own test, so `renderer.ts` gains a call and not a loop.
+Test it: a pane with an entry, a pane with none, and an entry whose `pane` is `null` never matching pane 0 — `null` means no pane, and matching it to pane 0 would label the wrong shell.
 
-- [ ] **Step 5: Verify**
+- [ ] **Step 5: Move the status span out of renderer.ts**
+
+`renderer.ts` currently holds `modeLabel` at lines 134-139. Move it to a new `src/status.ts`, widened to say which branch a pane is on:
+
+```typescript
+import { branchOfPane, paneLabel } from './terminals';
+import type { Mode } from './modes';
+
+// What the right-hand end of the status bar says: which view you are on, and for terminals which pane
+// has the keyboard and which checkout that pane is looking at.
+//
+// Out of renderer.ts because it is a decision with branches in it rather than wiring, and because a
+// pane on a worktree is exactly the case where the wrong answer costs something: five panes all
+// reading "terminal 3" with two of them in worktrees is how a command lands in the wrong checkout.
+export type StatusPage = {
+  mode: Mode;
+  focused: number;
+  paneCount: number;
+  boardLabel: string | null;
+  managerLabel: string | null;
+  worktrees: readonly { pane: number | null; branch: string }[];
+};
+
+export function modeLabel(page: StatusPage): string {
+  if (page.mode === 'manager') return page.managerLabel ?? '';
+  if (page.mode === 'nvim') return 'nvim';
+  if (page.mode === 'board') return `board · ${page.boardLabel ?? ''}`;
+  if (page.paneCount === 0) return '';
+  return paneLabel(page.focused, branchOfPane(page.worktrees, page.focused));
+}
+```
+
+Test every branch of it, including a focused pane that is on a worktree and one that is not.
+
+In `renderer.ts`, delete the old `modeLabel` and call this one, building the `StatusPage` inline from the page. The page needs a `worktrees` field beside `board`; fill it from the board view's records where the board is read. Confirm with `wc -l src/renderer.ts` that the file is no longer than it was before Task 6.
+
+- [ ] **Step 6: Verify**
 
 Run: `npm test && npx tsc --noEmit && npx eslint . && wc -l src/renderer.ts`
-Expected: PASS, and `renderer.ts` no longer than it was.
+Expected: PASS, and `renderer.ts` at or below the length it had at the start of Task 6.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/terminals.ts src/terminals.test.ts src/renderer.ts src/ship.ts src/ship.test.ts
+git add src/terminals.ts src/terminals.test.ts src/status.ts src/status.test.ts src/renderer.ts
 git commit -m "terminals: a pane on a worktree says which branch"
 ```
 
