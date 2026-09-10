@@ -3,7 +3,6 @@ import { SELECTED_CARD, createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import { cardsEmptyReason, cardsProjects, type CardsPage } from './cards';
 import { clampIndex, heldIndex } from './clamp-index';
-import type { WorktreeEntry } from './worktree-store';
 
 export type CardsOptions = {
   bridge: DashboardBridge;
@@ -17,6 +16,9 @@ export type CardsOptions = {
   // screens read the same file — this page and that project's own tab — and neither may clear a
   // message the other put on the bar.
   onError(slot: number, message: string): void;
+  // Passed straight through: a card shipped from here belongs to one of the stacked projects, and what
+  // is in flight is the same one record wherever it was shipped from.
+  onShipped(): void;
 };
 
 type ProjectBoard = { page: CardsPage; view: BoardView; section: HTMLElement };
@@ -63,6 +65,7 @@ export function createCardsView(options: CardsOptions): BoardView {
         if (page.project.path === activePath) options.onChanged();
       },
       onError: (message) => options.onError(page.slot, message),
+      onShipped: options.onShipped,
     });
     const section = document.createElement('section');
     section.className = 'cards-project';
@@ -130,11 +133,6 @@ export function createCardsView(options: CardsOptions): BoardView {
       const board = boards.get(activePath);
       if (board) return `${board.page.project.name} · ${board.view.statusLabel()}`;
       return cardsEmptyReason(options.projects());
-    },
-    // The manager page has no panes of its own to name a branch for — it stacks several projects'
-    // boards, not one project's terminals — so this is never actually read.
-    worktrees(): readonly WorktreeEntry[] {
-      return [];
     },
     runAction(action: Action): void {
       // Which board the rest of the keys go to. The list does not wrap: holding it down stops at the

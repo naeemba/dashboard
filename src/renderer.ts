@@ -18,6 +18,7 @@ import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLab
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
+import type { WorktreeEntry } from './worktree-store';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
@@ -130,6 +131,15 @@ function projectPages(): Page[] {
   return pages.filter(isProjectPage);
 }
 
+// Every worktree in flight, held here rather than on a board view: a card shipped from the manager's
+// stack of boards lands in a project whose own board may never have been opened, and its pane would
+// then sit in a worktree with the status bar calling it "terminal 2".
+let worktrees: WorktreeEntry[] = [];
+function refreshWorktrees(): void {
+  // A failure to read the local record costs a branch name, never the screen.
+  void bridge.listWorktrees().then((entries) => { worktrees = entries; renderStatus(); }, () => undefined);
+}
+
 // Everything status.ts needs to say what the right-hand span says about this page, read off the module
 // state it cannot reach on its own.
 function statusPage(page: Page): StatusPage {
@@ -142,7 +152,7 @@ function statusPage(page: Page): StatusPage {
     managerStatusLabel: page.manager?.statusLabel() ?? '',
     pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
     pickerDescription: actionByName('project-picker')?.description ?? '',
-    worktrees: page.board?.worktrees() ?? [],
+    worktrees: worktrees.filter((entry) => entry.projectPath === page.project.path),
   };
 }
 
@@ -446,6 +456,7 @@ function buildManagerPage(): Page {
     // A slot each, and a different owner from the same project's own board, so the two screens reading
     // one file never clear each other's message.
     onError: (slot, message) => showError(`cards:${slot}`, message),
+    onShipped: refreshWorktrees,
   });
   element.append(manager.element, cards.element);
   const page: Page = {
@@ -506,6 +517,7 @@ function buildPage(project: Project, slot: number): Page {
     onChanged: renderStatus,
     // A slot each, so one project's board never clears another one's failure.
     onError: (message) => showError(`board:${slot}`, message),
+    onShipped: refreshWorktrees,
   });
   views.board.append(page.board.element);
   return page;
@@ -591,7 +603,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'worktrees') return void openWorktrees(bridge);
+  if (action.kind === 'worktrees') return void openWorktrees(bridge).then(refreshWorktrees);
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-last': {
@@ -736,6 +748,7 @@ async function start(): Promise<void> {
   pagesElement.append(manager.element);
   pages.push(manager);
   renderStatus();
+  refreshWorktrees();
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
   shellCommand = loaded.shellCommand;
