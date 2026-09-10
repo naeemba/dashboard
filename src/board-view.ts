@@ -19,6 +19,7 @@ import {
   sortColumn,
   type Card,
   type Change,
+  type Selection,
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail } from './board-detail';
@@ -315,6 +316,18 @@ export function createBoardView(options: BoardOptions): BoardView {
   // No staleness guard on the result, unlike open(): a board read in flight would replace the whole
   // board, and this only moves one card that it finds again first. Landing after you have left this
   // view is fine too — the write is to this board's own file either way.
+  // The move-back itself. A change carries the selection with it, and normally that is right — the
+  // highlight follows the card home. Not while a box is open: the selection is then the card you are
+  // typing into, and taking the moved card's would commit what you typed onto the card that just
+  // shipped and leave the one you were naming blank. Found by id rather than kept as a number, because
+  // the move it is riding on has just shifted the rows below it.
+  function movedBack(landed: Selection, from: number): Change {
+    const moved = moveCardToColumn(state.board, landed, from);
+    const editingId = editing === null ? undefined : cardAt(state.board, state.selection)?.id;
+    if (editingId === undefined) return moved;
+    return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
+  }
+
   function ship(card: Card, from: number): void {
     options.onError(`shipping "${card.title}"…`);
     options.bridge.shipCard({
@@ -330,7 +343,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         // Found again rather than remembered: a ship takes as long as git does, and anything you did
         // to the board while it ran has moved the card off the row it was shipped from.
         const landed = selectionOf(state.board, card.id);
-        if (landed) apply(applyAutomaticChange(state, moveCardToColumn(state.board, landed, from)));
+        if (landed) apply(applyAutomaticChange(state, movedBack(landed, from)));
         else render();
         options.onShipped();
       },

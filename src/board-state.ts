@@ -24,14 +24,14 @@ export type BoardState = {
   board: Board;
   selection: Selection;
   previous: Step | null;
-  // `n` is two changes — add the blank card, then commit the typed title — that must undo as one.
-  // Set while that pair is in flight so the second change keeps the first one's `previous` instead
-  // of overwriting it with the just-added blank card.
-  addingCard: boolean;
+  // Whether the change coming next is the app finishing something you already started, rather than a
+  // keystroke with an undo step of its own. `n` sets it: adding the blank card and committing the
+  // typed title are two changes that have to undo as one, so only the first spends the step.
+  nextChangeIsAutomatic: boolean;
 };
 
 export function initialBoardState(): BoardState {
-  return { board: emptyBoard(), selection: { column: 0, card: 0 }, previous: null, addingCard: false };
+  return { board: emptyBoard(), selection: { column: 0, card: 0 }, previous: null, nextChangeIsAutomatic: false };
 }
 
 // Every operation in board.ts returns the same board object, unchanged, when it has nothing to do —
@@ -43,33 +43,35 @@ export function applyChange(state: BoardState, next: Change): BoardState {
   return {
     board: next.board,
     selection: next.selection,
-    previous: state.addingCard ? state.previous : { board: state.board, selection: state.selection },
-    addingCard: false,
+    previous: state.nextChangeIsAutomatic ? state.previous : { board: state.board, selection: state.selection },
+    nextChangeIsAutomatic: false,
   };
 }
 
-// A change the app made rather than one you asked for. The board moves and is written like any other
-// change, but your undo step is left pointing where it already pointed, because there is no keystroke
-// of yours here for `u` to take back.
+// The other way in to the same rule, for a change nothing marked in advance: the ship's move-back
+// lands whenever git finishes, so there was no keystroke of yours before it to set the flag. The board
+// moves and is written like any other change, and your undo step is left pointing where it pointed.
 //
-// The ship's move-back is the only one. Spending the step on it would put a shipped card into Ship on
-// main on the very next `u` — the one state the whole design forbids — and it is not the same shape as
-// `addingCard`, which is two changes of yours undoing as one.
+// It also leaves the flag alone, which is the whole reason the flag is a field and not an argument.
+// Press `n`, start typing, and let a ship you began a minute ago land: it goes through here, and if it
+// cleared the flag your Enter would spend a step of its own. `u` would then leave the untitled card
+// sitting in the column instead of putting back the board from before `n`.
 //
-// Built on applyChange rather than beside it, so the rule about a no-op handing back the same object
-// stays in one place: the identity check above is what stops apply() rewriting the file for nothing.
+// Built on applyChange rather than beside it, so the no-op ruling stays in one place: the identity
+// check is what stops apply() rewriting the file for a change that moved nothing.
 export function applyAutomaticChange(state: BoardState, next: Change): BoardState {
   const applied = applyChange(state, next);
-  return applied === state ? state : { ...applied, previous: state.previous };
+  if (applied === state) return state;
+  return { ...applied, previous: state.previous, nextChangeIsAutomatic: state.nextChangeIsAutomatic };
 }
 
 export function undoChange(state: BoardState): BoardState {
   if (state.previous === null) return state;
-  return { ...state.previous, previous: null, addingCard: false };
+  return { ...state.previous, previous: null, nextChangeIsAutomatic: false };
 }
 
 export function addBlankCard(state: BoardState, id: string): BoardState {
-  return { ...applyChange(state, addCard(state.board, state.selection, id, '')), addingCard: true };
+  return { ...applyChange(state, addCard(state.board, state.selection, id, '')), nextChangeIsAutomatic: true };
 }
 
 // Enter and Escape both commit: what you typed is what you meant. A card left with an empty title is
@@ -110,7 +112,7 @@ export function loadBoard(state: BoardState, board: Board): BoardState {
     board,
     selection: { column: clampIndex(state.selection.column, board.columns.length - 1), card: 0 },
     previous: null,
-    addingCard: false,
+    nextChangeIsAutomatic: false,
   };
 }
 

@@ -104,6 +104,24 @@ describe('addBlankCard', () => {
     expect(titles(undoChange(named))).toEqual([['a'], []]);
   });
 
+  // The ship's move-back landing between `n` and Enter. Before this, the automatic change cleared the
+  // flag, so Enter spent a step of its own and `u` left the just-named card sitting in the column
+  // instead of putting back the board from before `n`.
+  it('stays one step when an automatic change lands while the title box is open', () => {
+    const start = state(board(['a'], []), { column: 1, card: 0 });
+    const added = addBlankCard(start, 'new-id');
+    // The selection stays on the card whose box is open; board-view.ts is what holds it there.
+    const shipped = applyAutomaticChange(added, {
+      board: renameCard(added.board, { column: 0, card: 0 }, 'a moved').board,
+      selection: added.selection,
+    });
+    const named = commitTitle(shipped, 'Fix the resize race');
+    expect(titles(named)).toEqual([['a moved'], ['Fix the resize race']]);
+    const undone = undoChange(named);
+    expect(undone.board.columns.flatMap((column) => column.cards.map((card) => card.title)))
+      .not.toContain('Fix the resize race');
+  });
+
   // Escape with nothing typed: the card that `n` added goes away rather than sitting there blank.
   it('drops the card again when the title is left empty', () => {
     const start = state(board([]), { column: 0, card: 0 });
