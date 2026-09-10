@@ -10,9 +10,11 @@ import {
   detachCard,
   hasSubtasks,
   moveCard,
+  moveCardToColumn,
   flightParts,
   moveSelection,
   pullRequestFrom,
+  selectionOf,
   shipColumnIndex,
   sortColumn,
   type Card,
@@ -301,14 +303,20 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
-  // A card that has landed in Ship. The board is written first, so the card is where you put it even
-  // if the ship then refuses — the app never silently undoes a move you made. Main puts board.json
-  // back to HEAD as its own first step, which is what makes that safe.
+  // A card that has landed in Ship, and `from` is the column it was in a keystroke ago.
+  //
+  // A ship that works puts the card back there, carrying its badge: this board is main's, and a
+  // column on main says what has been merged. The move back is an ordinary change — the same write,
+  // the same undo step — rather than undoChange, which is the `u` key and is one step deep: spending
+  // it here would leave your next undo doing nothing, with nothing on screen saying why.
+  //
+  // A ship that fails changes nothing. The card stays in Ship where you put it and the message says
+  // why; the app never silently undoes a move you made.
   //
   // No staleness guard on the result below, unlike open(): a result landing after you have moved off
   // this view only writes this closure's own `shipped` and redraws whatever view is currently
   // attached — there is no board read in flight for it to overwrite, so there is nothing to protect.
-  function ship(card: Card): void {
+  function ship(card: Card, from: number): void {
     options.onError(`shipping "${card.title}"…`);
     options.bridge.shipCard({
       projectPath: options.projectPath,
@@ -320,7 +328,11 @@ export function createBoardView(options: BoardOptions): BoardView {
         if (!result.ok) return options.onError(result.message);
         shipped = [...shipped.filter((entry) => entry.cardId !== card.id), result.entry];
         options.onError('');
-        render();
+        // Found again rather than remembered: a ship takes as long as git does, and anything you did
+        // to the board while it ran has moved the card off the row it was shipped from.
+        const landed = selectionOf(state.board, card.id);
+        if (landed) change(moveCardToColumn(state.board, landed, from));
+        else render();
       },
       (error: unknown) => options.onError(`ship failed: ${String(error)}`),
     );
@@ -422,11 +434,12 @@ export function createBoardView(options: BoardOptions): BoardView {
           return render();
         case 'board-move': {
           const moving = cardAt(state.board, state.selection);
+          const from = state.selection.column;
           change(moveCard(state.board, state.selection, action.direction));
           // Asked after the move, of the board the move produced: landing in Ship is the gesture, and
           // a card already in Ship that is merely reordered has not landed in it again.
           const landed = state.selection.column === shipColumnIndex(state.board);
-          if (moving && landed && action.direction === 'right') ship(moving);
+          if (moving && landed && action.direction === 'right') ship(moving, from);
           return;
         }
         case 'board-attach': {

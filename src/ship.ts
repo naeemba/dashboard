@@ -77,9 +77,10 @@ export function freePane(typedIn: readonly number[], count: number): number | nu
 // file's path, so exempting only the file refuses every ship on a new project, which is every project
 // until someone commits the folder the app itself wrote.
 //
-// The app rewrites board.json on every keystroke and the ship's first step puts it back to HEAD, so
-// counting it would mean the ship always refuses itself. The rest of the folder is the app's own
-// explanation files. Nothing here widens what the ship throws away: that is still board.json alone.
+// The app rewrites board.json on every keystroke — the Ship move that started this very ship is in it
+// — so counting it would mean the ship always refuses itself. The rest of the folder is the app's own
+// explanation files. Nothing in the flow touches the project's checkout: the worktree is cut from
+// origin and the board it reads and commits is the worktree's own.
 export function blockingChanges(porcelain: string): string[] {
   return porcelain
     .split('\n')
@@ -92,5 +93,3 @@ export function blockingChanges(porcelain: string): string[] {
     .map((path) => path.replace(/^"|"$/g, ''))
     .filter((path) => path !== '' && !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
-
-export { BOARD_FILE_PATH } from './board-store';

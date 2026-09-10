@@ -16,10 +16,10 @@ import { isOpenableLink } from './links';
 import { agentArguments, editorArguments, pickShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
-import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import { BOARD_FILE_PATH, blockingChanges, branchNameFor, freePane, worktreePathFor } from './ship';
+import { blockingChanges, branchNameFor, freePane, worktreePathFor } from './ship';
 import {
   entryForCard,
   livingEntries,
@@ -339,18 +339,6 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     if (dirty.length > 0) {
       const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
       return { ok: false, message: `${count} uncommitted — commit or stash them first` };
-    }
-
-    // Undo the Ship move on main, and any Ship column the app inserted when it read the board. The
-    // card id is already in hand, so throwing the file away costs nothing. Only ever reached with the
-    // guard above satisfied, and that folder is what the guard lets past — though only this one file
-    // in it is thrown away. From HEAD rather than the index: `checkout -- <path>` restores what is
-    // staged, so a board.json somebody had run `git add` on would keep the Ship move and the card
-    // would sit in Ship on main from then on.
-    try {
-      await git(['checkout', 'HEAD', '--', BOARD_FILE_PATH], projectPath);
-    } catch {
-      // A project whose board.json is not committed yet has nothing to restore.
     }
 
     const base = await baseBranch(projectPath);
