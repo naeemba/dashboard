@@ -1,9 +1,16 @@
+import { relativeAge } from './age';
 import { clampIndex } from './clamp-index';
 import type { DashboardBridge } from './bridge';
 import { confirmOverlay, openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
+
+// node:path's basename does not split on a backslash on darwin, the same reason shell.ts reads a
+// path this way instead — a project opened from a Windows share should still show its own name.
+function projectName(projectPath: string): string {
+  return projectPath.split(/[\\/]/).pop() || projectPath;
+}
 
 // Every worktree the app has made, and the one screen they are removed from. Nothing here removes
 // anything on its own: a worktree whose branch has merged is still a folder you may have something
@@ -15,6 +22,13 @@ import type { WorktreeEntry } from './worktree-store';
 export function openWorktrees(bridge: DashboardBridge): Promise<string | undefined> {
   let entries: WorktreeEntry[] = [];
   let highlighted = 0;
+  // Filled in after the rows are already on screen: git is asked once the list has painted, not
+  // before, so removing a worktree never waits on it. dirtyChecked stays false only for the first
+  // paint — every dirty cell reads "…" until the first answer lands, then holds its last answer
+  // while a later one is in flight.
+  let dirty = new Set<string>();
+  let unreadable = new Set<string>();
+  let dirtyChecked = false;
 
   return new Promise<string | undefined>((resolve) => {
     function finish(choice: string | undefined): void {
@@ -40,20 +54,45 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
       return [...entries].sort((first, second) => second.startedAt.localeCompare(first.startedAt));
     }
 
+    // "…" until the first answer comes back, then the dirty check's own words for it, never this
+    // dialog's guess: unreadable is not the same claim as clean, and only main can tell them apart.
+    function dirtyLabel(worktreePath: string): string {
+      if (!dirtyChecked) return '…';
+      if (unreadable.has(worktreePath)) return 'unknown';
+      return dirty.has(worktreePath) ? 'DIRTY' : 'clean';
+    }
+
     function render(): void {
       heading.textContent = `Worktrees (${entries.length})`;
       highlighted = clampIndex(highlighted, entries.length - 1);
       list.replaceChildren(...ordered().map((entry, index) => {
         const item = document.createElement('li');
         if (index === highlighted) item.classList.add('highlighted');
+
+        const project = document.createElement('span');
+        project.className = 'worktrees-project';
+        project.textContent = projectName(entry.projectPath);
+
         const branch = document.createElement('span');
         branch.className = 'worktrees-branch';
         branch.textContent = entry.branch;
-        const detail = document.createElement('span');
-        detail.className = 'worktrees-detail';
-        const pane = entry.pane === null ? 'no pane' : paneLabel(entry.pane);
-        detail.textContent = `${entry.title} · ${pane}`;
-        item.append(branch, detail);
+
+        const age = document.createElement('span');
+        age.className = 'worktrees-age';
+        // A timestamp the clock cannot read says nothing rather than "Invalid Date" — see age.ts.
+        age.textContent = relativeAge(entry.startedAt) ?? '';
+
+        const dirtyCell = document.createElement('span');
+        dirtyCell.className = 'worktrees-dirty';
+        dirtyCell.textContent = dirtyLabel(entry.worktreePath);
+        dirtyCell.classList.toggle('worktrees-is-dirty', dirty.has(entry.worktreePath));
+        dirtyCell.classList.toggle('worktrees-unreadable', unreadable.has(entry.worktreePath));
+
+        const pane = document.createElement('span');
+        pane.className = 'worktrees-pane';
+        pane.textContent = entry.pane === null ? 'no pane' : paneLabel(entry.pane);
+
+        item.append(project, branch, age, dirtyCell, pane);
         // A click moves the selection to the row and then does what Enter does there, so the pointer
         // and the keyboard never name two different rows.
         item.addEventListener('click', () => {
@@ -72,9 +111,20 @@ export function openWorktrees(bridge: DashboardBridge): Promise<string | undefin
       list.children[highlighted]?.scrollIntoView({ block: 'nearest' });
     }
 
+    // Kicked off after the rows are on screen rather than awaited by refresh(), so a slow git never
+    // holds up the list itself — see the comment above dirtyChecked.
+    async function refreshDirtiness(): Promise<void> {
+      const result = await bridge.dirtyWorktrees();
+      dirty = new Set(result.dirty);
+      unreadable = new Set(result.unreadable);
+      dirtyChecked = true;
+      render();
+    }
+
     async function refresh(): Promise<void> {
       entries = await bridge.listWorktrees();
       render();
+      void refreshDirtiness();
     }
 
     // Asked twice for a dirty worktree, and the second question names the files: the changes in it

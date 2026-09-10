@@ -409,6 +409,29 @@ ipcMain.handle('worktree:list', () => {
   return worktrees;
 });
 
+// A channel of its own rather than riding along on worktree:list: board-view.ts calls that on every
+// board open, and a `git status` per worktree behind it would put that many process spawns behind
+// every Ctrl+B. Only the worktree dialog needs to know which ones are dirty, so only it asks this.
+//
+// blockingChanges is the same predicate worktree:remove asks, so the two can never disagree about
+// what counts as dirty. Run concurrently — this is main, and every pane's bytes flow through it — and
+// a worktree git cannot read (moved, deleted by hand) comes back unreadable rather than clean, since
+// silence is not the same thing as no changes.
+ipcMain.handle('worktree:dirty', async () => {
+  const results = await Promise.all(worktrees.map(async (entry) => {
+    try {
+      const changed = blockingChanges(await git(['status', '--porcelain'], entry.worktreePath));
+      return { worktreePath: entry.worktreePath, dirty: changed.length > 0, unreadable: false };
+    } catch {
+      return { worktreePath: entry.worktreePath, dirty: false, unreadable: true };
+    }
+  }));
+  return {
+    dirty: results.filter((result) => result.dirty).map((result) => result.worktreePath),
+    unreadable: results.filter((result) => result.unreadable).map((result) => result.worktreePath),
+  };
+});
+
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
 // question is worth asking, and refusing forever would mean the only way out is the command line.
 ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {

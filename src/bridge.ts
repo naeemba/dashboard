@@ -43,6 +43,11 @@ export type DashboardBridge = {
   shipCard(request: ShipRequest): Promise<ShipResult>;
   // Every worktree the app has made, with the dead ones already dropped.
   listWorktrees(): Promise<WorktreeEntry[]>;
+  // Which of the current worktrees have uncommitted changes, decided by the same predicate
+  // worktree:remove asks. Separate from listWorktrees so a `git status` per worktree never rides
+  // along behind board-view.ts's call to that on every board open. A worktree git cannot read comes
+  // back unreadable rather than clean.
+  dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
   // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
   // a second time naming them rather than deciding on its own what "dirty enough" means.
   removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string; dirty: string[] }>;
