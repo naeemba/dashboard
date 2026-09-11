@@ -82,7 +82,8 @@ export function hasTail(result: TaskResult): boolean {
 // answers every project at once, and a tally kept by hand would have to be right about how many of
 // those it had already seen.
 export function anyRunning(results: Iterable<TaskResult>): boolean {
-  return [...results].some((result) => result.state === 'running');
+  for (const result of results) if (result.state === 'running') return true;
+  return false;
 }
 
 // One command in one project, while it is still running. Generic over the child so this stays a pure
@@ -99,10 +100,8 @@ export type RunningTask<Child> = { child: Child; projectPath: string };
 // A child no longer in the list has been answered for already. A spawn that fails fires `error` and
 // then `close`, and the second would overwrite the first — which is the one carrying the message.
 export function finishedTasks<Child>(
-  tasks: readonly RunningTask<Child>[], child: Child, run: number, currentRun: number,
+  tasks: RunningTask<Child>[], child: Child, run: number, currentRun: number,
 ): { tasks: RunningTask<Child>[]; send: boolean } {
-  if (run !== currentRun || !tasks.some((task) => task.child === child)) {
-    return { tasks: [...tasks], send: false };
-  }
+  if (run !== currentRun || !tasks.some((task) => task.child === child)) return { tasks, send: false };
   return { tasks: tasks.filter((task) => task.child !== child), send: true };
 }
