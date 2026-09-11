@@ -466,8 +466,9 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
 ipcMain.handle('worktree:list', () => {
   dropDeadWorktrees();
   writeWorktrees(worktreesFile, worktrees);
-  // Where every pane is, read straight off terminalCommands rather than tracked beside it, so the
-  // branch the status bar prints can never disagree with the folder the shell is actually in.
+  // Where each pane's shell was started, read straight off terminalCommands rather than tracked
+  // beside it, so there is one copy of it. It is the spawn cwd, not the shell's: `cd` in a pane never
+  // reaches here, so the branch the status bar prints is the one the pane was opened in.
   const paneDirectories = Object.fromEntries(
     Array.from(terminalCommands, ([id, command]) => [id, command.directory]),
   );

@@ -136,9 +136,9 @@ function projectPages(): Page[] {
 // stack of boards lands in a project whose own board may never have been opened, and its pane would
 // then sit in a worktree with the status bar calling it "terminal 2".
 let worktrees: WorktreeEntry[] = [];
-// The folder each pane's shell is in, keyed by terminal id, which is what says whether a pane is in a
-// worktree. Main's copy, never a second one kept here: it changes on a ship, on a worktree being
-// removed and on a project opening, which are the three moments this is read again.
+// The folder each pane's shell was started in, keyed by terminal id, which is what says whether a
+// pane is in a worktree. Main's copy, never a second one kept here, and read again at launch and at
+// the three moments it can have changed: a ship, the worktree dialog closing, and arriving at a board.
 let paneDirectories: Record<string, string> = {};
 function refreshWorktrees(): void {
   // A failure to read the local record costs a branch name, never the screen.
