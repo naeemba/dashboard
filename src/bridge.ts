@@ -3,6 +3,7 @@ import type { Board } from './board';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { Settings } from './settings';
+import type { TaskResult } from './tasks';
 import type { WorktreeEntry } from './worktree-store';
 
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
@@ -55,6 +56,15 @@ export type DashboardBridge = {
   // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
   // a second time naming them rather than deciding on its own what "dirty enough" means.
   removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string; dirty: string[] }>;
+  // One command, run in each of these projects at once, each in its own process. Not a pty and not a
+  // pane: a command that borrows a shell throws away whatever was in it.
+  runTask(command: string, projectPaths: string[]): void;
+  // Stop whatever is still going. Every project that was stopped is named back through onTaskUpdate.
+  cancelTasks(): void;
+  // One per project, twice: when it starts and when it finishes. Per project rather than one answer at
+  // the end, because a row still saying `running` beside four that have answered is the point of the
+  // screen.
+  onTaskUpdate(listener: (result: TaskResult) => void): void;
 };
 
 declare global {

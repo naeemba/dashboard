@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -14,7 +14,9 @@ import {
 } from './projects';
 import { baseName } from './base-name';
 import { isOpenableLink } from './links';
-import { agentArguments, editorArguments, pickShell } from './shell';
+import { tailLines } from './manager';
+import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
+import { lastPrintableLine, printableLines, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
@@ -529,6 +531,99 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
       message: `not removed: ${error instanceof Error ? error.message : String(error)}`,
       dirty: [],
     };
+  }
+});
+
+// Every process the current run started, each beside the project it is running in. The path is kept
+// here because cancelling has to name every project it stopped — a row told nothing sits on `running`
+// forever, and the process it was waiting for is already dead.
+let runningTasks: { child: ReturnType<typeof spawn>; projectPath: string }[] = [];
+// Which run a process belongs to. Without it, killing run 3 and starting run 4 in the same breath lets
+// run 3's dying processes report "cancelled" for projects run 4 has already marked "running" — the
+// row goes backwards in front of you and stays wrong until the next run.
+let currentRun = 0;
+
+function killTask(child: ReturnType<typeof spawn>): void {
+  try {
+    // The negative pid is the process group, which is what `detached` bought: `npm audit` spawns
+    // children, and killing only the shell leaves them running with nothing on screen naming them.
+    // Windows has no process groups to kill this way, so the child goes on its own there.
+    if (process.platform === 'win32' || child.pid === undefined) child.kill();
+    else process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    // Already gone.
+  }
+}
+
+function stopTasks(): void {
+  for (const task of runningTasks) killTask(task.child);
+  runningTasks = [];
+}
+
+function sendTask(result: TaskResult): void {
+  sendToRenderer('task:update', result);
+}
+
+// The stale-run guard and the drop from `runningTasks` are shared by every way a process can end
+// (failed to start, or exited) — done here once rather than repeated in each listener.
+function finishTask(child: ReturnType<typeof spawn>, run: number, result: TaskResult): void {
+  if (run !== currentRun) return;
+  runningTasks = runningTasks.filter((task) => task.child !== child);
+  sendTask(result);
+}
+
+ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => {
+  stopTasks();
+  currentRun += 1;
+  const run = currentRun;
+  for (const projectPath of projectPaths) {
+    sendTask({ projectPath, state: 'running', exitCode: null, lastLine: '', tail: [] });
+    // Not a pty and not one of the five panes: a command that borrows a shell throws away whatever was
+    // in it, which is the whole reason this screen exists rather than sending keystrokes to panes.
+    const child = spawn(shellCommand, taskArguments(shellCommand, command), {
+      cwd: projectPath, detached: process.platform !== 'win32',
+      env: process.env as Record<string, string>,
+    });
+    // Both streams into one buffer. A tool that reports on stderr — most of them, for a summary — would
+    // otherwise leave the row showing the last thing it happened to say on stdout.
+    let output = '';
+    child.stdout?.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+    child.stderr?.on('data', (chunk: Buffer) => { output += chunk.toString(); });
+    // The shell itself could not be started. There is no exit code for that, so the row says the one
+    // a shell says for a command it cannot find, and the message is what the last line shows.
+    child.on('error', (error: Error) => {
+      finishTask(child, run, {
+        projectPath, state: 'done', exitCode: 127, lastLine: error.message, tail: [error.message],
+      });
+    });
+    child.on('close', (code: number | null, signal: string | null) => {
+      finishTask(child, run, {
+        projectPath,
+        // A signal rather than a code is this app killing it, which is the only thing that sends one
+        // here. A command that dies of its own signal is rare enough to read as cancelled.
+        state: signal === null ? 'done' : 'cancelled',
+        exitCode: code,
+        lastLine: lastPrintableLine(output),
+        // The same five lines, chosen by the same rule, as the manager's pane rows.
+        tail: tailLines(printableLines(output)),
+      });
+    });
+    runningTasks.push({ child, projectPath });
+  }
+});
+
+ipcMain.on('task:cancel', () => {
+  // Every stopped project is named back. A row told nothing sits on `running` for as long as the app
+  // is open, waiting for a process that is already dead.
+  //
+  // The paths are read before the processes are killed, and the run number moves with them, so each
+  // project is told "cancelled" exactly once — from here, rather than a second time as its own close
+  // event arrives with a signal on it.
+  const paths = runningTasks.map((task) => task.projectPath);
+  stopTasks();
+  currentRun += 1;
+  for (const projectPath of paths) {
+    sendTask({ projectPath, state: 'cancelled', exitCode: null, lastLine: '', tail: [] });
   }
 });
 

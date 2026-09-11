@@ -25,6 +25,10 @@ const bridge: DashboardBridge = {
   listWorktrees: () => ipcRenderer.invoke('worktree:list'),
   dirtyWorktrees: () => ipcRenderer.invoke('worktree:check'),
   removeWorktree: (worktreePath, force) => ipcRenderer.invoke('worktree:remove', worktreePath, force),
+  runTask: (command, projectPaths) => ipcRenderer.send('task:run', command, projectPaths),
+  cancelTasks: () => ipcRenderer.send('task:cancel'),
+  onTaskUpdate: (listener) =>
+    ipcRenderer.on('task:update', (_event, result) => listener(result)),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);
