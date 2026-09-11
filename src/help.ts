@@ -79,8 +79,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'from any of the three. The arrows are deliberately not these keys: on the board they move '
     + 'between cards.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
-    + 'lands you back in the same view. The manager has two of its own: its list of what the panes '
-    + 'want, and every project\'s board.',
+    + 'lands you back in the same view. The manager has three of its own, named along the top: its '
+    + 'list of what the panes want, every project\'s board, and one command run across projects.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
     + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
     + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '

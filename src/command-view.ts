@@ -1,7 +1,9 @@
 import type { Action } from './actions';
 import { clampIndex, heldIndex } from './clamp-index';
 import { isBareCharacter } from './shortcuts';
-import { taskSummary, type TaskResult } from './tasks';
+import {
+  anyRunning, commandKeys, COMMAND_KEY, hasTail, idleTask, taskSummary, type TaskResult,
+} from './tasks';
 
 export type CommandProject = { name: string; path: string };
 
@@ -11,6 +13,10 @@ export type CommandOptions = {
   projects(): readonly CommandProject[];
   runTask(command: string, projectPaths: string[]): void;
   cancelTasks(): void;
+  // What an action is bound to right now, read fresh on every redraw rather than handed over once, so
+  // rebinding a key in the settings screen rewrites the hint under the list and the status bar with it
+  // — status.ts's managerLabel takes the picker's binding the same way and for the same reason.
+  binding(actionName: string): string;
   // Redraws the status bar, which names what the selection is on.
   onChanged(): void;
 };
@@ -28,11 +34,6 @@ export type CommandView = {
 
 // The command box is the first thing the selection walks over, and the project rows follow it.
 const COMMAND_ROW = 0;
-// The selection's key when it is on the command box. Every project path is an absolute filesystem
-// path — `/…` on macOS and Linux, `C:\…` on Windows — and none of those spellings is ever the bare
-// word below, so it can never collide with one, the way an empty string could if a project's path
-// were ever empty.
-const COMMAND_KEY = 'command';
 
 export function createCommandView(options: CommandOptions): CommandView {
   const element = document.createElement('div');
@@ -60,7 +61,6 @@ export function createCommandView(options: CommandOptions): CommandView {
   empty.textContent = 'No project is open, so there is nothing to run a command in.';
   const keys = document.createElement('p');
   keys.className = 'command-keys';
-  keys.textContent = 'Enter runs it · Space marks a project · Escape cancels';
   element.append(label, list, empty, keys);
 
   // Which projects a run covers. Everything starts marked, so a command typed and Enter pressed runs
@@ -81,12 +81,17 @@ export function createCommandView(options: CommandOptions): CommandView {
   let selectedKey = COMMAND_KEY;
   let running = false;
 
-  function projects(): readonly CommandProject[] {
-    return options.projects();
+  function keyAt(index: number): string {
+    return commandKeys(currentProjects)[index] ?? COMMAND_KEY;
   }
 
-  function keyAt(index: number): string {
-    return index === COMMAND_ROW ? COMMAND_KEY : currentProjects[index - 1]?.path ?? COMMAND_KEY;
+  // What the one key that is not Space does here, named by whatever it is bound to. Nothing hears the
+  // cancel key while nothing is running, so the idle line does not offer it: a line saying "Escape
+  // cancels" on a screen where Escape does nothing is a way out that is not there.
+  function keyHint(): string {
+    return running
+      ? `${options.binding('command-cancel')} stops it`
+      : `${options.binding('command-open')} runs it`;
   }
 
   // Where the selection is and what it is on, always written together: set one without the other and
@@ -102,8 +107,7 @@ export function createCommandView(options: CommandOptions): CommandView {
   }
 
   function resultFor(path: string): TaskResult {
-    return results.get(path)
-      ?? { projectPath: path, state: 'idle', exitCode: null, lastLine: '', tail: [] };
+    return results.get(path) ?? idleTask(path);
   }
 
   // Moves the keyboard to wherever the selection is, unconditionally. Safe from a key or a click,
@@ -130,7 +134,7 @@ export function createCommandView(options: CommandOptions): CommandView {
   function run(): void {
     const command = input.value.trim();
     if (command === '') return;
-    const paths = projects().map((project) => project.path).filter((path) => !unmarked.has(path));
+    const paths = currentProjects.map((project) => project.path).filter((path) => !unmarked.has(path));
     if (paths.length === 0) return;
     running = true;
     // Last run's answers go as this one starts. A row showing yesterday's exit code beside four that
@@ -147,9 +151,8 @@ export function createCommandView(options: CommandOptions): CommandView {
     const project = selectedProject();
     if (project === null) return run();
     // A row with nothing under it has nothing to toggle open, so Enter falls through to the same run
-    // the command box does. That is what makes "Enter runs it" true from a project row too, instead of
-    // a key that types as working on some rows and silently does nothing on others.
-    if (resultFor(project.path).tail.length === 0) return run();
+    // the command box does — hasTail in tasks.ts says why.
+    if (!hasTail(resultFor(project.path))) return run();
     if (opened.has(project.path)) opened.delete(project.path);
     else opened.add(project.path);
     render();
@@ -197,15 +200,11 @@ export function createCommandView(options: CommandOptions): CommandView {
   }
 
   function render(): void {
-    currentProjects = projects();
-    // Built from keyAt rather than restating its mapping, so COMMAND_ROW's key has one definition.
-    const keysAtRow = Array.from({ length: currentProjects.length + 1 }, (_unused, index) => keyAt(index));
-    setSelection(heldIndex(keysAtRow, selectedKey, selected));
+    currentProjects = options.projects();
+    setSelection(heldIndex(commandKeys(currentProjects), selectedKey, selected));
     empty.hidden = currentProjects.length > 0;
     label.classList.toggle('highlighted', selected === COMMAND_ROW);
-    keys.textContent = running
-      ? 'Escape stops it'
-      : 'Enter runs it · Space marks a project · Escape cancels';
+    keys.textContent = running ? keyHint() : `${keyHint()} · Space marks a project`;
     list.replaceChildren(...currentProjects.map((project, index) => projectRow(project, index)));
     // Only when this screen already holds the keyboard. render() also runs off a task result arriving
     // from main, which arrives no matter which section is showing — a command finishing while you read
@@ -242,9 +241,7 @@ export function createCommandView(options: CommandOptions): CommandView {
     render,
     statusLabel(): string {
       const project = selectedProject();
-      if (project === null) {
-        return running ? 'command · running · Escape stops it' : 'command · Enter runs it';
-      }
+      if (project === null) return `command · ${running ? 'running · ' : ''}${keyHint()}`;
       const marked = unmarked.has(project.path) ? 'not marked' : 'marked';
       return `${project.name} · ${marked} · ${taskSummary(resultFor(project.path))}`;
     },
@@ -255,13 +252,10 @@ export function createCommandView(options: CommandOptions): CommandView {
     },
     update(result: TaskResult): void {
       results.set(result.projectPath, result);
-      // Whether anything is still going, asked of the results rather than counted as they arrive: a
-      // cancel answers every project at once, and a tally kept by hand would have to be right about
-      // how many of those it had already seen.
-      running = [...results.values()].some((entry) => entry.state === 'running');
+      running = anyRunning(results.values());
       // A row whose output has just gone shuts itself, rather than staying open over nothing and
       // leaving a gap under the name.
-      if (result.tail.length === 0) opened.delete(result.projectPath);
+      if (!hasTail(result)) opened.delete(result.projectPath);
       render();
       options.onChanged();
     },

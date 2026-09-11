@@ -30,7 +30,10 @@ export function printableLines(output: string): string[] {
   return output
     .replaceAll(ESCAPE_SEQUENCE, '')
     .split('\n')
-    .map((line) => (line.split('\r').at(-1) ?? '').trim());
+    // trimEnd, not trim: `npm audit` and a failing test runner say what they mean with indentation, and
+    // the tail is shown as a block. A whitespace-only line still collapses to '', which is what
+    // lastPrintableLine and tailLines both key off.
+    .map((line) => (line.split('\r').at(-1) ?? '').trimEnd());
 }
 
 // What the command last said. A tool whose final act is a blank separator has its real message one
@@ -47,4 +50,59 @@ export function taskSummary(result: TaskResult): string {
   if (result.state === 'cancelled') return 'cancelled';
   const exit = `exit ${result.exitCode ?? 0}`;
   return result.lastLine === '' ? exit : `${exit} · ${result.lastLine}`;
+}
+
+// The selection's key when it is on the command box. Every project path is an absolute filesystem
+// path — `/…` on macOS and Linux, `C:\…` on Windows — and none of those spellings is ever the bare
+// word here, so it can never collide with one, the way an empty string could if a project's path were
+// ever empty.
+export const COMMAND_KEY = 'command';
+
+// What the command screen's rows are keyed by, in the order they are drawn: the command box, then one
+// project each. The selection is held by key rather than by index, so a project opened or closed
+// underneath it keeps the highlight on the row you were looking at.
+export function commandKeys(projects: readonly { path: string }[]): string[] {
+  return [COMMAND_KEY, ...projects.map((project) => project.path)];
+}
+
+// A project nothing has been run in yet. A row draws from a result either way, so there is one shape
+// rather than a row that has to know what a missing entry means.
+export function idleTask(projectPath: string): TaskResult {
+  return { projectPath, state: 'idle', exitCode: null, lastLine: '', tail: [] };
+}
+
+// Whether a row has anything to open under it. Enter on a row with nothing falls through to running the
+// command, which is what makes "Enter runs it" true from a project row too, rather than a key that
+// types as working on some rows and silently does nothing on others.
+export function hasTail(result: TaskResult): boolean {
+  return result.tail.length > 0;
+}
+
+// Whether a run is still going, asked of the results rather than counted as they arrive: a cancel
+// answers every project at once, and a tally kept by hand would have to be right about how many of
+// those it had already seen.
+export function anyRunning(results: Iterable<TaskResult>): boolean {
+  return [...results].some((result) => result.state === 'running');
+}
+
+// One command in one project, while it is still running. Generic over the child so this stays a pure
+// module: main.ts hands it node's ChildProcess, and a test hands it anything at all.
+export type RunningTask<Child> = { child: Child; projectPath: string };
+
+// A process has ended: what is left running, and whether this ending is the one to report. Two guards,
+// and each stops a row that would otherwise be wrong.
+//
+// A run that is not the current one is a process a newer run already killed. Let it report and three
+// rows the new run has just marked `running` flip back to `cancelled` in front of you — press Escape
+// and immediately Enter to see it — and stay wrong until the next run.
+//
+// A child no longer in the list has been answered for already. A spawn that fails fires `error` and
+// then `close`, and the second would overwrite the first — which is the one carrying the message.
+export function finishedTasks<Child>(
+  tasks: readonly RunningTask<Child>[], child: Child, run: number, currentRun: number,
+): { tasks: RunningTask<Child>[]; send: boolean } {
+  if (run !== currentRun || !tasks.some((task) => task.child === child)) {
+    return { tasks: [...tasks], send: false };
+  }
+  return { tasks: tasks.filter((task) => task.child !== child), send: true };
 }

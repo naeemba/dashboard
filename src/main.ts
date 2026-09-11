@@ -16,7 +16,7 @@ import { baseName } from './base-name';
 import { isOpenableLink } from './links';
 import { tailLines } from './manager';
 import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
-import { lastPrintableLine, printableLines, type TaskResult } from './tasks';
+import { finishedTasks, lastPrintableLine, printableLines, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
@@ -579,15 +579,13 @@ function stopAndTell(): void {
   }
 }
 
-// The stale-run guard and the drop from `runningTasks` are shared by every way a process can end
-// (failed to start, or exited) — done here once rather than repeated in each listener. Membership in
-// `runningTasks` is what "already answered for" means: a failed spawn fires `error` and then `close`,
-// and without this check the second would overwrite the first — which is the one carrying the message.
+// Shared by every way a process can end (failed to start, or exited), rather than repeated in each
+// listener. Both guards live in `finishedTasks` beside their test; this is the wiring that applies
+// what it answers.
 function finishTask(child: ReturnType<typeof spawn>, run: number, result: TaskResult): void {
-  if (run !== currentRun) return;
-  if (!runningTasks.some((task) => task.child === child)) return;
-  runningTasks = runningTasks.filter((task) => task.child !== child);
-  sendTask(result);
+  const finished = finishedTasks(runningTasks, child, run, currentRun);
+  runningTasks = finished.tasks;
+  if (finished.send) sendTask(result);
 }
 
 ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => {
@@ -597,9 +595,11 @@ ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => {
     sendTask({ projectPath, state: 'running', exitCode: null, lastLine: '', tail: [] });
     // Not a pty and not one of the five panes: a command that borrows a shell throws away whatever was
     // in it, which is the whole reason this screen exists rather than sending keystrokes to panes.
+    // stdin is closed rather than left as a pipe nobody ever writes to. A command that asks a question
+    // would block on an answer that cannot arrive, leaving the row on `running` with nothing on screen
+    // saying a question was asked; closed, the same command fails at once and the row shows what it said.
     const child = spawn(shellCommand, taskArguments(shellCommand, command), {
-      cwd: projectPath, detached: process.platform !== 'win32',
-      env: process.env as Record<string, string>,
+      cwd: projectPath, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],
     });
     // Both streams into one buffer. A tool that reports on stderr — most of them, for a summary — would
     // otherwise leave the row showing the last thing it happened to say on stdout.
@@ -688,5 +688,8 @@ function createWindow(): void {
 app.on('ready', createWindow);
 app.on('will-quit', () => {
   for (const shellProcess of shells.values()) shellProcess.kill();
+  // A task child is spawned detached, in a process group of its own, so it outlives the app unless it
+  // is killed here as well — five `npm test` runs still burning CPU with no window naming them.
+  stopTasks();
 });
 app.on('window-all-closed', () => app.quit());

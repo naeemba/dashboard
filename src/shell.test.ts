@@ -94,15 +94,12 @@ describe('agentArguments', () => {
 });
 
 describe('taskArguments', () => {
+  // No `exec`: the shell stays as the process, so the exit code the row prints is the shell's own.
   it('runs the command through a login, interactive POSIX shell', () => {
     expect(taskArguments('/bin/zsh', 'npm audit')).toEqual(['-lic', 'npm audit']);
   });
 
   it('uses PowerShell’s own flag where that is the shell', () => {
     expect(taskArguments('pwsh', 'npm audit')).toEqual(['-Command', 'npm audit']);
-  });
-
-  it('does not exec: the shell is the process whose exit code the row prints', () => {
-    expect(taskArguments('/bin/zsh', 'npm audit')[1]).not.toContain('exec');
   });
 });

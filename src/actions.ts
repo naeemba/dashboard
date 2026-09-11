@@ -1,5 +1,5 @@
 import { projectPosition } from './manager';
-import { isSection } from './manager-sections';
+import { SECTIONS } from './manager-sections';
 import type { Mode } from './modes';
 import { TERMINAL_COUNT, type Direction } from './terminals';
 
@@ -61,8 +61,11 @@ export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'comman
 // three modes the manager shows.
 export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
   if (one === 'global' || other === 'global' || one === other) return true;
-  if (one === 'manager-page') return isSection(other as Mode);
-  if (other === 'manager-page') return isSection(one as Mode);
+  // Asked of SECTIONS rather than through isSection, which takes a Mode: a scope is not a mode, and a
+  // cast between the two sets would answer `false` by luck for the next scope that is neither.
+  const covers = (scope: ActionScope): boolean => SECTIONS.some((section) => section.mode === scope);
+  if (one === 'manager-page') return covers(other);
+  if (other === 'manager-page') return covers(one);
   return false;
 }
 

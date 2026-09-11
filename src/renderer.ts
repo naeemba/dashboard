@@ -503,6 +503,7 @@ function buildManagerPage(): Page {
     })),
     runTask: (text, paths) => bridge.runTask(text, paths),
     cancelTasks: () => bridge.cancelTasks(),
+    binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
     onChanged: renderStatus,
   });
   // Above the three views rather than inside one, so it is on screen whichever section is showing.
