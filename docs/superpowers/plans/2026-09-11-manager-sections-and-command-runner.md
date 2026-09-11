@@ -615,7 +615,7 @@ In `src/actions.ts`, add to the `Action` union:
   | { kind: 'command-cancel' }
 ```
 
-and add `'command'` to `ActionGroup`.
+and add `'command'` and `'sections'` to `ActionGroup`.
 
 - [ ] **Step 2: Add the six rows**
 
@@ -630,14 +630,18 @@ Append to `ACTIONS`, after the manager rows:
   // and right. That is not a clash: those are terminals scope and the manager has no terminals.
   // The arrows are deliberately not bound here. On the board they move between cards, and a pair of
   // keys that works on two sections out of three is worse to learn than one pair that always works.
+  // Their own group, not the manager's: the help dialog prints a screen's keys from the group named
+  // after that screen, so in the manager group these two would be listed on the general list and
+  // nowhere else — invisible on the board and the command screen, which are the two places you most
+  // need to know how to get out. helpSections prints this group on all three sections instead.
   {
     name: 'section-previous', description: 'The section to the left, along the top',
-    group: 'manager', scope: 'manager-page',
+    group: 'sections', scope: 'manager-page',
     action: { kind: 'section-move', direction: 'previous' }, mac: 'Alt+H', other: 'Alt+H',
   },
   {
     name: 'section-next', description: 'The section to the right, along the top',
-    group: 'manager', scope: 'manager-page',
+    group: 'sections', scope: 'manager-page',
     action: { kind: 'section-move', direction: 'next' }, mac: 'Alt+L', other: 'Alt+L',
   },
   // The command screen. Bare arrows, a bare Enter and Escape, heard on this screen only. Nothing here
@@ -648,7 +652,7 @@ Append to `ACTIONS`, after the manager rows:
     name: `command-select-${direction}`, description: `Move the selection ${direction}`,
     group: 'command', scope: 'command',
     action: { kind: 'command-select', direction },
-    mac: ARROW_KEYS[direction === 'up' ? 'up' : 'down'], other: ARROW_KEYS[direction === 'up' ? 'up' : 'down'],
+    mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],
   })),
   {
     name: 'command-open', description: 'Run it, or show what a project printed',
@@ -660,10 +664,6 @@ Append to `ACTIONS`, after the manager rows:
     mac: 'Escape', other: 'Escape',
   },
 ```
-
-Simplify the `ARROW_KEYS` lookup to `ARROW_KEYS[direction]` if `Direction`
-already covers `'up' | 'down'` — it does, `DIRECTIONS` is
-`['left','down','up','right']` — so write `mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],`.
 
 - [ ] **Step 3: Tell the help dialog about Space**
 
@@ -1419,7 +1419,47 @@ Use the variable names this file actually defines. If `--selection`,
 `--muted` or `--accent` are not among them, use whichever the manager rows
 already use for the same job.
 
-- [ ] **Step 2: Rewrite the manager blurb**
+- [ ] **Step 2: Print the strip keys on all three sections**
+
+The help dialog builds a screen's key list from the group named after that
+screen, so the two `sections` rows would otherwise be listed on the general
+list and nowhere else — invisible on the board and the command screen, which
+are the two places you most need to know how to get out.
+
+In `src/help.ts`, `screenShortcuts` gains the sections group whenever the
+screen is one of the manager's:
+
+```ts
+// The group named after the screen, then whatever that screen takes without a binding. nvim has no
+// group at all, so its list is only the second half.
+// The manager's three screens get one more: the strip keys are not any one screen's, they are how you
+// leave all three, so they are printed on each rather than on the one whose name matches their group.
+function screenShortcuts(mode: Mode, keys: Settings['keys'], isMac: boolean): Shortcut[] {
+  return [
+    ...groupShortcuts(mode, mode, keys, isMac),
+    ...(sectionIndex(mode) === -1 ? [] : groupShortcuts('sections', mode, keys, isMac)),
+    ...UNBOUND_SHORTCUTS[mode] ?? [],
+  ];
+}
+```
+
+Add `import { sectionIndex } from './manager-sections';` to `help.ts`.
+
+`BLURBS` is `Record<Mode | ActionGroup, string>`, so adding `'sections'` to
+`ActionGroup` in Task 4 means `tsc` now demands a `sections` blurb. Add one:
+
+```ts
+  sections: 'The manager is three screens with one strip of names above them. These two keys walk it, '
+    + 'from any of the three. The arrows are deliberately not these keys: on the board they move '
+    + 'between cards.',
+```
+
+`groupShortcuts` is called with a `title` in `helpSections` only for the three
+groups in `rest` — `sections` is not one of them, so it needs no title there.
+Do not add it to `rest`: that would print it a second time, on every screen in
+the app.
+
+- [ ] **Step 3: Rewrite the manager blurb**
 
 The `manager` blurb in `src/help.ts` says the page "has two views" and that
 "the board key shows the other one". Both are now wrong. Replace that opening
@@ -1440,7 +1480,7 @@ Keep the rest of the existing sentence from `'last few lines it printed'`
 onward exactly as it is — read the file and splice, do not retype it from
 here.
 
-- [ ] **Step 3: Update the `dir="auto"` count in CLAUDE.md**
+- [ ] **Step 4: Update the `dir="auto"` count in CLAUDE.md**
 
 That section says "Four boxes have it today" and lists them. There are five
 now. Change the count and add the command box:
@@ -1451,20 +1491,22 @@ Five boxes have it today: the card title in `board-view.ts`, the description in
 and the command box in `command-view.ts`.
 ```
 
-- [ ] **Step 4: Run everything**
+- [ ] **Step 5: Run everything**
 
 Run: `npm test && npx tsc --noEmit && npx eslint .`
 Expected: all three PASS.
 
-- [ ] **Step 5: Read Ctrl+H's own words back**
+- [ ] **Step 6: Read Ctrl+H's own words back**
 
 Not a command — a read. Open `src/help.ts` and check three things are true:
 the `Manager` blurb describes a strip and names Alt+H and Alt+L; the `Command`
-blurb describes what that screen is; `UNBOUND_SHORTCUTS.command` lists Space.
+blurb describes what that screen is; `UNBOUND_SHORTCUTS.command` lists Space;
+and `screenShortcuts` prints the two `sections` rows on general, board and
+command alike.
 A help dialog describing the version before yours is worse than none, because
 it is believed.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/index.css src/help.ts CLAUDE.md
