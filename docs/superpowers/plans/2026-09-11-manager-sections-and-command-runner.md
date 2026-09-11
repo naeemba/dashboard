@@ -1422,45 +1422,19 @@ Use the variable names this file actually defines. If `--selection`,
 `--muted` or `--accent` are not among them, use whichever the manager rows
 already use for the same job.
 
-- [ ] **Step 2: Print the strip keys on all three sections**
+- [ ] **Step 2: Already done in Task 4 — verify only**
 
-The help dialog builds a screen's key list from the group named after that
-screen, so the two `sections` rows would otherwise be listed on the general
-list and nowhere else — invisible on the board and the command screen, which
-are the two places you most need to know how to get out.
+`screenShortcuts` and the `sections` blurb moved into Task 4, because the rows
+that make `ActionGroup` gain `'sections'` break `tsc` without the blurb, and a
+task must not leave a check red for later tasks to fix. Do not add either
+again. Check that `src/help.ts` has:
 
-In `src/help.ts`, `screenShortcuts` gains the sections group whenever the
-screen is one of the manager's:
+- a `sections` entry in `BLURBS`,
+- `screenShortcuts` printing the `sections` group on `onManagerPage && isSection(mode)`,
+- `onManagerPage` threaded through `openHelp` and `helpSections`.
 
-```ts
-// The group named after the screen, then whatever that screen takes without a binding. nvim has no
-// group at all, so its list is only the second half.
-// The manager's three screens get one more: the strip keys are not any one screen's, they are how you
-// leave all three, so they are printed on each rather than on the one whose name matches their group.
-function screenShortcuts(mode: Mode, keys: Settings['keys'], isMac: boolean): Shortcut[] {
-  return [
-    ...groupShortcuts(mode, mode, keys, isMac),
-    ...(sectionIndex(mode) === -1 ? [] : groupShortcuts('sections', mode, keys, isMac)),
-    ...UNBOUND_SHORTCUTS[mode] ?? [],
-  ];
-}
-```
-
-Add `import { sectionIndex } from './manager-sections';` to `help.ts`.
-
-`BLURBS` is `Record<Mode | ActionGroup, string>`, so adding `'sections'` to
-`ActionGroup` in Task 4 means `tsc` now demands a `sections` blurb. Add one:
-
-```ts
-  sections: 'The manager is three screens with one strip of names above them. These two keys walk it, '
-    + 'from any of the three. The arrows are deliberately not these keys: on the board they move '
-    + 'between cards.',
-```
-
-`groupShortcuts` is called with a `title` in `helpSections` only for the three
-groups in `rest` — `sections` is not one of them, so it needs no title there.
-Do not add it to `rest`: that would print it a second time, on every screen in
-the app.
+If any is missing, stop and say so rather than writing it fresh — it would mean
+Task 4's commit was not what its review approved.
 
 - [ ] **Step 3: Rewrite the manager blurb**
 
