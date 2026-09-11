@@ -1,5 +1,6 @@
 import { ACTIONS, type Action, type ActionScope } from './actions';
 import { matchesBinding, type KeyInput } from './binding';
+import { sectionIndex } from './manager-sections';
 import type { Mode } from './modes';
 import type { Settings } from './settings';
 
@@ -34,19 +35,25 @@ export function isBareCharacter(input: KeyInput): boolean {
   return !stopsTyping(input) && input.key.length === 1;
 }
 
-// `global` is heard on every screen, including while a shell has the keyboard. The other two are heard
-// only on their own, which is what lets the board keep a bare D that a terminal never sees.
-export function hears(scope: ActionScope, mode: Mode): boolean {
-  return scope === 'global' || scope === mode;
+// `global` is heard on every screen, including while a shell has the keyboard. A scope named after a
+// mode is heard only on that screen, which is what lets the board keep a bare D that a terminal never
+// sees. `manager-page` is the exception that needs more than the mode: the manager shows three views
+// and one of them is board mode, which every project also has, so the page has to say whether it is
+// the manager. The renderer knows — the manager is the page holding MANAGER_SLOT.
+export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): boolean {
+  if (scope === 'global') return true;
+  if (scope === 'manager-page') return onManagerPage && sectionIndex(mode) !== -1;
+  return scope === mode;
 }
 
 export function mapShortcut(
   input: KeyInput,
   keys: Settings['keys'],
   mode: Mode = 'terminals',
+  onManagerPage = false,
 ): Action | null {
   for (const entry of ACTIONS) {
-    if (!hears(entry.scope, mode)) continue;
+    if (!hears(entry.scope, mode, onManagerPage)) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
     // The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a
     // word in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different

@@ -1,4 +1,5 @@
 import { projectPosition } from './manager';
+import { sectionIndex } from './manager-sections';
 import type { Mode } from './modes';
 import { TERMINAL_COUNT, type Direction } from './terminals';
 
@@ -35,9 +36,31 @@ export type Action =
   | { kind: 'manager-select'; direction: 'up' | 'down' }
   | { kind: 'manager-open' };
 
-// Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard;
-// the other two only on their own screen, so the board's bare `D` never reaches a terminal.
-export type ActionScope = 'global' | 'terminals' | 'board' | 'manager';
+// Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
+// `terminals`, `board`, `manager` and `command` are each heard only on their own screen, so the
+// board's bare `D` never reaches a terminal.
+//
+// `manager-page` is the one that is not a mode: it means any section of the manager, whichever of its
+// three views is showing. The strip keys need it, because they have to work on all three and an action
+// may name only one scope — two rows sharing a binding is what this app already treats as a
+// hand-edited settings file. It cannot be answered from the mode alone, because `board` is a mode the
+// manager shares with every project, so `hears` is told which page you are on.
+export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'command' | 'manager-page';
+
+// Whether two actions can be heard at the same moment, which is the whole of what "these two want the
+// same key" means. Exported because two places ask it and they must not each hold their own idea of
+// it: `hears` decides whether a key fires, and the settings screen decides whether to warn you that
+// something else already has it. Let those drift and the screen offers you a key that silently loses
+// to another one — or warns about a clash that cannot happen.
+//
+// Scopes are not a flat list of equals: `global` is heard everywhere, and `manager-page` covers the
+// three modes the manager shows.
+export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
+  if (one === 'global' || other === 'global' || one === other) return true;
+  const pair = [one, other];
+  return pair.includes('manager-page')
+    && pair.some((scope) => scope !== 'manager-page' && sectionIndex(scope as Mode) !== -1);
+}
 
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.

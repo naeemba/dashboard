@@ -664,7 +664,8 @@ window.addEventListener('keydown', (event) => {
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
-  const action = mapShortcut(event, settings.keys, pages[activeIndex].mode);
+  const page = pages[activeIndex];
+  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page));
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
