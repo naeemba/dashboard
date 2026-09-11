@@ -11,7 +11,7 @@ export type Shortcut = { keys: string; action: string };
 export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 export const MODE_NAMES: Record<Mode, string> = {
-  terminals: 'Terminals', nvim: 'nvim', board: 'Board', manager: 'Manager',
+  terminals: 'Terminals', nvim: 'nvim', board: 'Board', manager: 'Manager', command: 'Command',
 };
 
 // What each screen and each group is, for the person who has not been told. The things worth knowing
@@ -64,6 +64,16 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'again. A pane that has died takes no keys — it '
     + 'wants Enter in the pane itself. A project with nothing to report says quiet and has nothing to '
     + 'open.',
+  command: 'One command, run in the projects you mark, with the answers side by side. Type it once — '
+    + '`npm audit`, `npm outdated`, the test suite — press Enter, and every marked project gets its own '
+    + 'process. Not a pane: a command run here never touches the five shells, so whatever was in them '
+    + 'is still there. Each row shows how its project exited and the last line it printed, and Enter on '
+    + 'a finished row shows the last few lines under it. Escape stops a run. '
+    + 'The last line is a guess and this screen does not pretend otherwise: a command whose final act '
+    + 'is to redraw a progress bar shows that bar. Reading `npm audit` properly — three high, none '
+    + 'moderate — would need a parser per tool, and every tool words it differently. '
+    + 'The command you typed lasts while the app is running and is gone on restart, and so are the '
+    + 'results: a run answers a question you are asking now, and is not a record of anything.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The manager has two of its own: its list of what the panes '
     + 'want, and every project\'s board.',
@@ -98,6 +108,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
 const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
   nvim: [{ keys: 'Everything else', action: 'Goes straight to nvim' }],
   manager: [{ keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane' }],
+  command: [{ keys: 'Space', action: 'Mark or unmark the project under the selection' }],
 };
 
 function isUntouched(entries: ActionEntry[], keys: Settings['keys'], isMac: boolean): boolean {
