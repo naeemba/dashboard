@@ -126,6 +126,10 @@ function releaseAgentPane(id: string): void {
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
+  // The record stops naming the pane too, for every reason the launch block above gives for clearing
+  // them all — an agent exiting is that same fact, one pane at a time.
+  const entry = worktrees.find((candidate) => candidate.worktreePath === command.directory);
+  if (entry) recordWorktree({ ...entry, pane: null });
 }
 
 // The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
@@ -363,9 +367,14 @@ async function commitShipMove(entry: WorktreeEntry): Promise<void> {
   const from = selectionOf(board, entry.cardId);
   if (!from) return;
   writeBoard(entry.worktreePath, moveCardToColumn(board, from, shipColumnIndex(board)).board);
+  // Both halves name the board file. A resumed ship runs in a worktree that has been lived in, so
+  // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
+  // half-finished work under a board message.
   await git(['add', BOARD_FILE_PATH], entry.worktreePath);
-  const staged = await git(['diff', '--cached', '--name-only'], entry.worktreePath);
-  if (staged !== '') await git(['commit', '-m', `board: ship "${entry.title}"`], entry.worktreePath);
+  const staged = await git(['diff', '--cached', '--name-only', '--', BOARD_FILE_PATH], entry.worktreePath);
+  if (staged !== '') {
+    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', BOARD_FILE_PATH], entry.worktreePath);
+  }
 }
 
 // Ships in one project run one after another, never together; ship.ts says why.
@@ -459,7 +468,7 @@ ipcMain.handle('worktree:list', () => {
 // what counts as dirty. Run concurrently — this is main, and every pane's bytes flow through it — and
 // a worktree git cannot read (moved, deleted by hand) comes back unreadable rather than clean, since
 // silence is not the same thing as no changes.
-ipcMain.handle('worktree:dirty', async () => {
+ipcMain.handle('worktree:check', async () => {
   const results = await Promise.all(worktrees.map(async (entry) => {
     try {
       const changed = blockingChanges(await git(['status', '--porcelain'], entry.worktreePath));

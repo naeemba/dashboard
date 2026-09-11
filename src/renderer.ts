@@ -408,8 +408,8 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   // the document who has focus answers both "is this page in front" and "is this the focused pane" at
   // once, and answers it right on the board, where no pane has the keyboard at all. What the states of
   // the bell mean is waiting.ts's job; this only reads them and draws the answer.
-  // Where you were when it rang is what says whether the bell is news, so that is read now: leave the
-  // pane in the second that follows and the mark would otherwise go up on the pane you just read.
+  // Where you are is asked at both ends of the wait, because you can move either way inside it: leave
+  // the pane in the second that follows, or arrive at it.
   // What the bell meant is the part that has to wait — a moment later the screen says whether the
   // agent asked you something or went back to work.
   terminal.onBell(() => {
@@ -421,6 +421,10 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
       pane.bellTimer = undefined;
       // What counts as still working is waiting.ts's to answer; this hands it the screen.
       if (looksBusy(paneScreen(terminal))) return;
+      // Asked again rather than reused from when the bell rang, the way the banner below is: you may
+      // have arrived at the pane inside the wait, and where you are now is what waiting.ts is being
+      // asked about.
+      if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
       // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
       // front and draws what it says.
       const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
