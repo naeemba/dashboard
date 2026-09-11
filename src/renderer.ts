@@ -136,10 +136,15 @@ function projectPages(): Page[] {
 // stack of boards lands in a project whose own board may never have been opened, and its pane would
 // then sit in a worktree with the status bar calling it "terminal 2".
 let worktrees: WorktreeEntry[] = [];
+// The folder each pane's shell is in, keyed by terminal id, which is what says whether a pane is in a
+// worktree. Main's copy, never a second one kept here: it changes on a ship, on a worktree being
+// removed and on a project opening, which are the three moments this is read again.
+let paneDirectories: Record<string, string> = {};
 function refreshWorktrees(): void {
   // A failure to read the local record costs a branch name, never the screen.
-  void bridge.listWorktrees().then((entries) => {
-    worktrees = entries;
+  void bridge.listWorktrees().then((list) => {
+    worktrees = list.entries;
+    paneDirectories = list.paneDirectories;
     renderStatus();
     // The badges too, not only the status bar: remove a worktree with the board in front of you and
     // its card would otherwise still read `shipped · <branch> · terminal 3` until you left and
@@ -160,7 +165,8 @@ function statusPage(page: Page): StatusPage {
     managerStatusLabel: page.manager?.statusLabel() ?? '',
     pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
     pickerDescription: actionByName('project-picker')?.description ?? '',
-    worktrees: worktrees.filter((entry) => entry.projectPath === page.project.path),
+    worktrees,
+    focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
   };
 }
 

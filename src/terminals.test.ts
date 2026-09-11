@@ -35,21 +35,23 @@ describe('paneLabel', () => {
 });
 
 describe('branchOfPane', () => {
-  it('finds the branch of the entry holding that pane', () => {
-    const entries = [{ pane: 1, branch: 'panes-name-themselves' }];
-    expect(branchOfPane(entries, 1)).toBe('panes-name-themselves');
+  const entries = [{
+    worktreePath: '/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves',
+    branch: 'panes-name-themselves',
+  }];
+
+  it('finds the branch of the worktree the pane is sitting in', () => {
+    expect(branchOfPane(entries, entries[0].worktreePath)).toBe('panes-name-themselves');
   });
 
-  it('is undefined when no entry holds that pane', () => {
-    expect(branchOfPane([{ pane: 1, branch: 'panes-name-themselves' }], 0)).toBeUndefined();
+  it('is undefined for a pane on the project checkout', () => {
+    expect(branchOfPane(entries, '/Users/sharp/workspace/personal/dashboard')).toBeUndefined();
   });
 
-  // null means the worktree was made with every pane already in use — no pane at all, not pane 0.
-  // Matching it to pane 0 would label the wrong shell, which is the failure this function exists to
-  // prevent.
-  it('never matches a null pane to pane 0', () => {
-    const entries = [{ pane: null, branch: 'panes-name-themselves' }];
-    expect(branchOfPane(entries, 0)).toBeUndefined();
+  // A pane whose shell has no folder recorded yet. Matching it to the first worktree would label a
+  // shell that is not in one.
+  it('is undefined when the pane has no directory', () => {
+    expect(branchOfPane(entries, '')).toBeUndefined();
   });
 });
 

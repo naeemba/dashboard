@@ -30,6 +30,7 @@ import {
   type PaneCommand,
 } from './ship';
 import {
+  claimsPane,
   entryForCard,
   entryForPath,
   livingEntries,
@@ -127,8 +128,8 @@ function releaseAgentPane(id: string): void {
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
-  // The record goes on naming the pane, because the pane is still in that worktree and the status bar
-  // reads the branch off the record. The claim ends where the pane is taken, in attachPane.
+  // The record goes on naming the pane: the worktree list's Enter takes you to the pane its card was
+  // shipped into, and the pane is still there. The claim ends where the pane is taken, in attachPane.
 }
 
 // The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
@@ -351,8 +352,8 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
   }
   // The pane may still be named by another card's record, whose agent has exited and left it in that
   // worktree. Taking the pane is what ends that claim, so the old record gives it up here — one record
-  // per pane, and branchOfPane keeps answering for exactly one branch.
-  const claimed = worktrees.find((candidate) => candidate.pane === pane && candidate.cardId !== entry.cardId);
+  // per pane in this project — claimsPane holds why the project half of that matters.
+  const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
   if (claimed) recordWorktree({ ...claimed, pane: null });
   startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
@@ -429,7 +430,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
 
   // Already shipped, and still being worked on — a second worktree for the same card is the mistake
   // the record exists to catch. The pane on the record is not the question: a record keeps naming its
-  // pane after the agent exits, so the status bar can go on naming the branch that pane is sitting in.
+  // pane after the agent exits, so Enter on the worktree list still lands on the shell it left behind.
   // What refuses the ship is an agent actually running in there.
   const existing = entryForCard(worktrees, cardId);
   if (existing && existing.pane !== null
@@ -465,7 +466,12 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
 ipcMain.handle('worktree:list', () => {
   dropDeadWorktrees();
   writeWorktrees(worktreesFile, worktrees);
-  return worktrees;
+  // Where every pane is, read straight off terminalCommands rather than tracked beside it, so the
+  // branch the status bar prints can never disagree with the folder the shell is actually in.
+  const paneDirectories = Object.fromEntries(
+    Array.from(terminalCommands, ([id, command]) => [id, command.directory]),
+  );
+  return { entries: worktrees, paneDirectories };
 });
 
 // A channel of its own rather than riding along on worktree:list, which the renderer reads at launch,

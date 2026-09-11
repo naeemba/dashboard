@@ -101,3 +101,22 @@ export function livingEntries(
 ): WorktreeEntry[] {
   return entries.filter((entry) => exists(entry.worktreePath));
 }
+
+// The record giving a pane up, when a ship comes to take it. The project is half the address: pane
+// numbers are per project — terminalId scopes them and freePane counts within one slot — so a match
+// on the number alone hands one project's ship the record of a card working in another.
+//
+// What that costs, with `api` at slot 0 and `web` at slot 1: you ship in `web`, it takes pane 0, and
+// the card running in `api`'s pane 0 loses its record. Its agent is still going, `api`'s terminal 1
+// goes back to reading `terminal 1` while the agent works in a worktree, Enter on the card's row in
+// the worktree list says nothing of it is running, and the already-shipped refusal stops refusing —
+// so moving the card back into Ship starts a second agent beside the first.
+export function claimsPane(
+  entries: readonly WorktreeEntry[],
+  projectPath: string,
+  pane: number,
+  cardId: string,
+): WorktreeEntry | undefined {
+  return entries.find((entry) => entry.projectPath === projectPath
+    && entry.pane === pane && entry.cardId !== cardId);
+}

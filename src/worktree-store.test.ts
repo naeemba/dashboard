@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  claimsPane,
   entryForCard,
   entryForPath,
   livingEntries,
@@ -87,5 +88,30 @@ describe('livingEntries', () => {
   it('drops entries whose folder has gone', () => {
     const gone = { ...entry, cardId: 'other', worktreePath: '/gone' };
     expect(livingEntries([entry, gone], (path) => path !== '/gone')).toEqual([entry]);
+  });
+});
+
+describe('claimsPane', () => {
+  const other: WorktreeEntry = {
+    ...entry,
+    cardId: 'aaaaaaaa-1234-4321-8888-bbbbbbbbbbbb',
+    title: 'A card in another project',
+    projectPath: '/Users/sharp/workspace/personal/api',
+    branch: 'a-card-in-another-project',
+    worktreePath: '/Users/sharp/workspace/personal/api.worktrees/a-card-in-another-project',
+  };
+
+  it('finds the other card holding that pane in that project', () => {
+    expect(claimsPane([entry], entry.projectPath, 2, 'some-other-card')?.cardId).toBe(entry.cardId);
+  });
+
+  // Pane numbers are per project, so the same number in another project is another pane. Matching it
+  // takes the branch off a pane whose agent is still running, two projects over.
+  it('leaves the same pane number in another project alone', () => {
+    expect(claimsPane([other], entry.projectPath, 2, 'some-other-card')).toBeUndefined();
+  });
+
+  it('is undefined for the card taking the pane itself', () => {
+    expect(claimsPane([entry], entry.projectPath, 2, entry.cardId)).toBeUndefined();
   });
 });

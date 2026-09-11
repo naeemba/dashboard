@@ -111,7 +111,7 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
     }
 
     async function refresh(): Promise<void> {
-      entries = await bridge.listWorktrees();
+      entries = (await bridge.listWorktrees()).entries;
       render();
       void refreshDirtiness();
     }

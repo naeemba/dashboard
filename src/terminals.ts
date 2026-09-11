@@ -41,11 +41,17 @@ export function paneLabel(index: number, branch?: string): string {
 // The branch a pane is on, or undefined when it is on the project's own checkout. Kept beside
 // paneLabel because it is the other half of the same sentence: the caller asks which branch, then
 // asks for the label that says so.
+//
+// Asked by the folder the pane's shell is in, not by the pane number on a record. A record names one
+// pane, and two panes can end up in one worktree: an agent exits leaving its pane in the checkout, you
+// type in it, and the card is shipped again onto a different pane. By the record, the pane you are
+// typing in goes back to reading "terminal 3" while sitting in the branch's folder — which is the
+// wrong-checkout mistake the branch is printed to prevent. By the folder, both panes say the branch.
 export function branchOfPane(
-  entries: readonly { pane: number | null; branch: string }[],
-  pane: number,
+  entries: readonly { worktreePath: string; branch: string }[],
+  directory: string,
 ): string | undefined {
-  return entries.find((entry) => entry.pane === pane)?.branch;
+  return entries.find((entry) => entry.worktreePath === directory)?.branch;
 }
 
 // The inverse of terminalId. A notification is raised for one pane and carries that pane's id back

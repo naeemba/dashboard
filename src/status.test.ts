@@ -12,6 +12,7 @@ function page(overrides: Partial<StatusPage>): StatusPage {
     pickerBinding: '',
     pickerDescription: '',
     worktrees: [],
+    focusedDirectory: '',
     ...overrides,
   };
 }
@@ -46,21 +47,32 @@ describe('modeLabel', () => {
     expect(modeLabel(page({ mode: 'terminals', paneCount: 0 }))).toBe('');
   });
 
+  const worktrees = [{
+    worktreePath: '/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves',
+    branch: 'panes-name-themselves',
+  }];
+
   it('names the focused pane plainly when it is on the project checkout', () => {
-    const worktrees = [{ pane: 1, branch: 'panes-name-themselves' }];
-    expect(modeLabel(page({ mode: 'terminals', focused: 0, worktrees }))).toBe('terminal 1');
+    expect(modeLabel(page({
+      mode: 'terminals',
+      focused: 0,
+      worktrees,
+      focusedDirectory: '/Users/sharp/workspace/personal/dashboard',
+    }))).toBe('terminal 1');
   });
 
-  it('names the branch when the focused pane is on a worktree', () => {
-    const worktrees = [{ pane: 2, branch: 'panes-name-themselves' }];
-    expect(modeLabel(page({ mode: 'terminals', focused: 2, worktrees }))).toBe(
-      'terminal 3 · panes-name-themselves',
-    );
+  it('names the branch when the focused pane is in a worktree', () => {
+    expect(modeLabel(page({
+      mode: 'terminals', focused: 2, worktrees, focusedDirectory: worktrees[0].worktreePath,
+    }))).toBe('terminal 3 · panes-name-themselves');
   });
 
-  it('never labels pane 0 with a worktree that has no pane', () => {
-    const worktrees = [{ pane: null, branch: 'panes-name-themselves' }];
-    expect(modeLabel(page({ mode: 'terminals', focused: 0, worktrees }))).toBe('terminal 1');
+  // The shell an agent left behind is still in the branch's folder, and a second pane can be shipped
+  // into the same worktree. Both say the branch, because both are in it.
+  it('names the branch for every pane in the folder, not just the one a record holds', () => {
+    expect(modeLabel(page({
+      mode: 'terminals', focused: 4, worktrees, focusedDirectory: worktrees[0].worktreePath,
+    }))).toBe('terminal 5 · panes-name-themselves');
   });
 });
 

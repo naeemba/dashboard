@@ -20,7 +20,10 @@ export type StatusPage = {
   managerStatusLabel: string;
   pickerBinding: string;
   pickerDescription: string;
-  worktrees: readonly { pane: number | null; branch: string }[];
+  worktrees: readonly { worktreePath: string; branch: string }[];
+  // Where the focused pane's shell is, which is what says whether it is in a worktree. The pane
+  // number is not enough: two panes can be in one checkout and a record names only one of them.
+  focusedDirectory: string;
 };
 
 // The manager is where a launch with nothing saved lands, and with no project open there is nothing on
@@ -44,7 +47,7 @@ export function modeLabel(page: StatusPage): string {
   if (page.mode === 'nvim') return 'nvim';
   if (page.mode === 'board') return `board · ${page.boardLabel}`;
   if (page.paneCount === 0) return '';
-  return paneLabel(page.focused, branchOfPane(page.worktrees, page.focused));
+  return paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory));
 }
 
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the

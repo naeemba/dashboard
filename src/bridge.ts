@@ -41,8 +41,12 @@ export type DashboardBridge = {
   // Moving a card into Ship: the worktree, the branch, the pane and the agent. Answers with the
   // record it wrote, or with the message saying which step refused and why.
   shipCard(request: ShipRequest): Promise<ShipResult>;
-  // Every worktree the app has made, with the dead ones already dropped.
-  listWorktrees(): Promise<WorktreeEntry[]>;
+  // Every worktree the app has made, with the dead ones already dropped, and the folder each pane's
+  // shell is in, keyed by terminal id. The folders ride along with the records because the status
+  // bar's question is the two of them together: is the pane I am in one of these checkouts. Only
+  // main knows where a pane is, and both answers change at the same moments — a ship, a worktree
+  // removed, a project opened — so one round trip fetches both.
+  listWorktrees(): Promise<{ entries: WorktreeEntry[]; paneDirectories: Record<string, string> }>;
   // Which of the current worktrees have uncommitted changes, decided by the same predicate
   // worktree:remove asks. Separate from listWorktrees, which is read on every launch and after every
   // ship, so a `git status` per worktree only runs for the one screen that shows the answer. A
