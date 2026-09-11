@@ -479,7 +479,9 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
 // four functions. What is behind it is one real board per open project rather than one for a folder.
 function buildManagerPage(): Page {
   const element = document.createElement('section');
-  element.className = 'page';
+  // The modifier is what index.css uses to push this page's views down below the section strip —
+  // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
+  element.className = 'page page-manager';
   const manager = createManagerView({
     onJump: goToPane, onAnswer: answerPane, onChanged: renderStatus,
   });

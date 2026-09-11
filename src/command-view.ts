@@ -29,8 +29,9 @@ export type CommandView = {
 // The command box is the first thing the selection walks over, and the project rows follow it.
 const COMMAND_ROW = 0;
 // The selection's key when it is on the command box. Every project path is an absolute filesystem
-// path, so it always starts with a slash — this never does, and so can never collide with one, the
-// way an empty string could if a project's path were ever empty.
+// path — `/…` on macOS and Linux, `C:\…` on Windows — and none of those spellings is ever the bare
+// word below, so it can never collide with one, the way an empty string could if a project's path
+// were ever empty.
 const COMMAND_KEY = 'command';
 
 export function createCommandView(options: CommandOptions): CommandView {
@@ -145,9 +146,10 @@ export function createCommandView(options: CommandOptions): CommandView {
   function open(): void {
     const project = selectedProject();
     if (project === null) return run();
-    // A row with nothing under it does not open. The selection has already moved here by now, so the
-    // click that landed on it still did its half of the job.
-    if (resultFor(project.path).tail.length === 0) return;
+    // A row with nothing under it has nothing to toggle open, so Enter falls through to the same run
+    // the command box does. That is what makes "Enter runs it" true from a project row too, instead of
+    // a key that types as working on some rows and silently does nothing on others.
+    if (resultFor(project.path).tail.length === 0) return run();
     if (opened.has(project.path)) opened.delete(project.path);
     else opened.add(project.path);
     render();

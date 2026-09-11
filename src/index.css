@@ -7,6 +7,9 @@ html, body {
   font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
   /* Where the keyboard is, on a pane or on a card: one outline, defined once. */
   --focus-outline: 1px solid var(--blue);
+  /* The section strip's own height, named once so the strip and the views it sits above agree on it
+     rather than each repeating the same number. */
+  --section-strip-height: 40px;
 }
 
 body {
@@ -178,7 +181,8 @@ body *:not(.pane, .pane *) {
   background: var(--background);
 }
 
-.view-manager:focus {
+.view-manager:focus,
+.view-command:focus {
   outline: none;
 }
 
@@ -286,11 +290,27 @@ body *:not(.pane, .pane *) {
 }
 
 /* The names above the manager's three screens. Sits above them rather than inside one — see
-   section-strip.ts for why — so its own rule stands apart from any one view's too. */
+   section-strip.ts for why — so its own rule stands apart from any one view's too.
+
+   .page is itself `position: absolute`, which makes it the containing block its children position
+   against. Without a position of its own the strip is a static box that an absolutely-positioned,
+   opaque .view then paints straight over — the page still switches sections on Alt+H/Alt+L, but
+   nothing on screen ever showed there were sections to switch. Pinning the strip to the page's own
+   top and pushing .page-manager's views down by the same height (below) keeps both visible instead. */
 .section-strip {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--section-strip-height);
   display: flex;
   gap: 24px;
   padding: 12px 16px 0;
+  box-sizing: border-box;
+}
+
+/* Only the manager page has a strip, so only there do the views start below it. A project's page
+   keeps the plain `.page, .view { inset: 0 }` above — one view filling the whole page. */
+.page-manager .view {
+  top: var(--section-strip-height);
 }
 
 .section-name {
