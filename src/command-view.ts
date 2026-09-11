@@ -196,7 +196,8 @@ export function createCommandView(options: CommandOptions): CommandView {
 
   function render(): void {
     currentProjects = projects();
-    const keysAtRow = [COMMAND_KEY, ...currentProjects.map((project) => project.path)];
+    // Built from keyAt rather than restating its mapping, so COMMAND_ROW's key has one definition.
+    const keysAtRow = Array.from({ length: currentProjects.length + 1 }, (_unused, index) => keyAt(index));
     setSelection(heldIndex(keysAtRow, selectedKey, selected));
     empty.hidden = currentProjects.length > 0;
     label.classList.toggle('highlighted', selected === COMMAND_ROW);
