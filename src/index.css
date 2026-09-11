@@ -319,9 +319,11 @@ body *:not(.pane, .pane *) {
   outline-offset: 2px;
 }
 
+/* Same text-box look as .picker-search and .card-detail-add, below — one definition rather than a
+   third copy of the same declarations. Its own rule only for what those two do not need: growing to
+   fill the label. */
 .command-input {
   flex: 1;
-  font: inherit;
 }
 
 /* Room under the command box before the project rows start; the rows themselves are styled with
@@ -693,7 +695,8 @@ textarea.board-edit {
 }
 
 .picker-search,
-.card-detail-add {
+.card-detail-add,
+.command-input {
   font: inherit;
   color: inherit;
   background: none;
