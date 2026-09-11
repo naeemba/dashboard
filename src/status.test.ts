@@ -9,6 +9,7 @@ function page(overrides: Partial<StatusPage>): StatusPage {
     boardLabel: '',
     hasProjects: true,
     managerStatusLabel: '',
+    commandStatusLabel: '',
     pickerBinding: '',
     pickerDescription: '',
     worktrees: [],
@@ -41,6 +42,11 @@ describe('modeLabel', () => {
 
   it('names the board and its label on board mode', () => {
     expect(modeLabel(page({ mode: 'board', boardLabel: 'Doing · high' }))).toBe('board · Doing · high');
+  });
+
+  it('lets the command screen name what the selection is on', () => {
+    expect(modeLabel(page({ mode: 'command', commandStatusLabel: 'api · marked · exit 0' })))
+      .toBe('api · marked · exit 0');
   });
 
   it('is empty when a project has no panes', () => {

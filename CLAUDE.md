@@ -106,9 +106,10 @@ its first letter. That fixes the reading order but not the box: without
 the text runs away from the caret, ending punctuation lands on the wrong side,
 and Home and End take you to the opposite ends of what you see.
 
-Four boxes have it today: the card title in `board-view.ts`, the description in
-`board-detail.ts`, the picker's search box, and the settings screen's text
-fields. Nothing checks this — no test, no lint rule — which is why it is written
+Five boxes have it today: the card title in `board-view.ts`, the description in
+`board-detail.ts`, the picker's search box, the settings screen's text fields,
+and the command box in `command-view.ts`. Nothing checks this — no test, no lint
+rule — which is why it is written
 down here.
 
 ## A refusal is explained where it is decided — Hard Rule
@@ -177,9 +178,20 @@ a project's own board hears them too, where the first two have nowhere to go and
 Escape is swallowed by a `setMode('manager')` that finds no manager view. Open
 Ctrl+H on a project's board and those three rows are listed and do nothing.
 
-The alternative is a scope of its own for one screen, or threading "which board
-am I" from the renderer into `openHelp` just so the dialog can drop three rows.
-Neither is worth it. What to watch for: the next thing that wants Escape on a
+Both of the things that were once too expensive for this now exist for another
+reason: `manager-page` is a scope of its own, added for the section strip, and
+`openHelp` is told which page you are on so the strip's keys are listed only on
+the manager. So the question is no longer what they cost — it is what each of the
+three keys would do if it moved.
+
+The two that pick a project do not move. `manager-page` is all three sections, and
+Cmd+Up on the general list or the command screen would swap which project's board
+is waiting behind them, with nothing on screen saying it happened. Escape does not
+move either: `mode-manager` on `manager-page` would put it on the command screen,
+where `command-cancel` already holds it, and `actions.test.ts` fails on the clash.
+
+So all three stay board scope and all three are still listed on a project's own
+board, doing nothing. What to watch for: the next thing that wants Escape on a
 project's board will not fire, and will not say why.
 
 ## Checks

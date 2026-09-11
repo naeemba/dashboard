@@ -33,7 +33,7 @@ describe('the action table', () => {
       for (const mode of MODES) {
         const taken = new Map<string, string>();
         for (const entry of ACTIONS) {
-          if (!hears(entry.scope, mode)) continue;
+          if (!hears(entry.scope, mode, true)) continue;
           const binding = defaultBinding(entry, isMac);
           if (binding === null) continue;
           expect(taken.get(binding), `${entry.name} and ${taken.get(binding)} both ship on ${binding} in ${mode}`)

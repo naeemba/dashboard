@@ -18,6 +18,7 @@ export type StatusPage = {
   boardLabel: string;
   hasProjects: boolean;
   managerStatusLabel: string;
+  commandStatusLabel: string;
   pickerBinding: string;
   pickerDescription: string;
   worktrees: readonly { worktreePath: string; branch: string }[];
@@ -46,6 +47,7 @@ export function modeLabel(page: StatusPage): string {
   }
   if (page.mode === 'nvim') return 'nvim';
   if (page.mode === 'board') return `board · ${page.boardLabel}`;
+  if (page.mode === 'command') return page.commandStatusLabel;
   if (page.paneCount === 0) return '';
   return paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory));
 }

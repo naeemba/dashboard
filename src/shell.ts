@@ -73,3 +73,19 @@ export function agentArguments(shellCommand: string, prompt: string): string[] {
     ? ['-Command', `claude ${quoted}`]
     : ['-lic', `exec claude ${quoted}`];
 }
+
+// A command run across projects goes through the user's shell, login and interactive, for the same
+// reason spelled out above editorArguments: an app launched from the Dock inherits almost no PATH, so
+// `npm` is not found unless the shell's own startup files have run. `-l` is where Homebrew is and `-i`
+// is where fnm, nvm, rbenv, pyenv and mise are, and a command needs both.
+//
+// No `exec`, unlike the panes. Nothing is taking this process over — the shell is the thing whose exit
+// code a row prints, and it has to survive to report it.
+//
+// `-i` with no terminal attached is the one thing here that is new: a shell started interactive
+// without a tty can complain about job control on stderr, and that complaint is then part of the
+// output a row takes its last line from. If it turns out to be, the fix is to prefer the last line of
+// stdout and fall back to stderr only when stdout is empty.
+export function taskArguments(shellCommand: string, command: string): string[] {
+  return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', command];
+}

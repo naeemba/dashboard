@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, parseSettings, resetKeys,
 } from './settings';
-import { ACTIONS } from './actions';
+import { ACTIONS, scopesOverlap } from './actions';
 import { THEME } from './theme';
 
 describe('parseSettings', () => {
@@ -114,7 +114,14 @@ describe('holderOfBinding', () => {
 
   // A board key and a terminal key never meet: neither fires on the other's screen.
   it('lets two screens hold the same key', () => {
-    expect(holderOfBinding(settings, 'board-undo', 'Alt+H')).toBeNull();
+    // Alt+J is terminal-move-down, and a terminal and a board are never on screen at once.
+    expect(holderOfBinding(settings, 'board-undo', 'Alt+J')).toBeNull();
+  });
+
+  // The manager's board is a board and a manager section at once, so a board key and a strip key
+  // really are both live there — the settings screen has to say so before you bind over one.
+  it('catches a clash between a board key and the manager strip', () => {
+    expect(holderOfBinding(settings, 'board-undo', 'Alt+H')).toBe('section-previous');
   });
 
   // A global key is heard everywhere, so it clashes with both screens and they with it.
@@ -170,5 +177,24 @@ describe('the two refusals the settings screen prints', () => {
     expect(isFontSize('73')).toBe(false);
     expect(isFontSize('big')).toBe(false);
     expect(isFontSize('')).toBe(false);
+  });
+});
+
+describe('holderOfBinding, across overlapping scopes', () => {
+  it('sees a manager-page key and a board key as holding the same key', () => {
+    // They really do collide: the manager's board is board mode on the manager page, so both are
+    // heard there at once.
+    expect(scopesOverlap('manager-page', 'board')).toBe(true);
+    expect(scopesOverlap('board', 'manager-page')).toBe(true);
+  });
+
+  it('sees two screens that are never on at once as free of each other', () => {
+    expect(scopesOverlap('terminals', 'board')).toBe(false);
+    expect(scopesOverlap('terminals', 'manager-page')).toBe(false);
+  });
+
+  it('has global colliding with everything', () => {
+    expect(scopesOverlap('global', 'terminals')).toBe(true);
+    expect(scopesOverlap('manager-page', 'global')).toBe(true);
   });
 });

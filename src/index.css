@@ -7,6 +7,9 @@ html, body {
   font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
   /* Where the keyboard is, on a pane or on a card: one outline, defined once. */
   --focus-outline: 1px solid var(--blue);
+  /* The section strip's own height, named once so the strip and the views it sits above agree on it
+     rather than each repeating the same number. */
+  --section-strip-height: 40px;
 }
 
 body {
@@ -171,13 +174,15 @@ body *:not(.pane, .pane *) {
 
 /* The manager: prose and lists, no panes. It takes the keyboard when you arrive, and a focus ring
    around the whole page says nothing useful, so the tab strip is what marks it instead. */
-.view-manager {
+.view-manager,
+.view-command {
   padding: 16px;
   overflow-y: auto;
   background: var(--background);
 }
 
-.view-manager:focus {
+.view-manager:focus,
+.view-command:focus {
   outline: none;
 }
 
@@ -192,25 +197,32 @@ body *:not(.pane, .pane *) {
   max-width: 70ch;
 }
 
-.manager-list {
+/* The command list is one more of these rows — marker, name, summary pushed to the far end, an
+   optional tail wrapped onto its own line — so it shares every rule below rather than re-deriving
+   the same shape under a different name. */
+.manager-list,
+.command-list {
   margin: 0;
   padding: 0;
   list-style: none;
   max-width: 70ch;
 }
 
-.manager-list li {
+.manager-list li,
+.command-list li {
   display: flex;
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
 }
 
-.manager-list li.highlighted {
+.manager-list li.highlighted,
+.command-list li.highlighted {
   background: rgb(255 255 255 / 10%);
 }
 
-.manager-project .manager-name {
+.manager-project .manager-name,
+.command-name {
   color: var(--brightWhite);
   font-weight: 700;
 }
@@ -219,7 +231,8 @@ body *:not(.pane, .pane *) {
    open lines up with one that has, and both line up with the panes indented underneath. Nothing may
    sit between it and the name — the row has no gap for that reason, and what holds the summary at the
    far end is the summary's own margin. */
-.manager-marker {
+.manager-marker,
+.command-mark {
   white-space: pre;
   color: var(--brightWhite);
   font-weight: 700;
@@ -234,12 +247,15 @@ body *:not(.pane, .pane *) {
    and the state are what you are reading, the tail is what the pane is saying. It takes a whole line
    of its own by wrapping onto one — the row is still the flex line every other row is, so the state
    keeps its place at the far end instead of being pushed off by a block of output. Wrapped rather
-   than clipped, because the end of the line is where the question mark is. */
-.manager-pane {
+   than clipped, because the end of the line is where the question mark is. The command list's own
+   rows carry the same tail under the same reasoning. */
+.manager-pane,
+.command-project {
   flex-wrap: wrap;
 }
 
-.manager-tail {
+.manager-tail,
+.command-tail {
   flex-basis: 100%;
   margin: 2px 0 0;
   padding-left: 4ch;
@@ -252,13 +268,16 @@ body *:not(.pane, .pane *) {
 /* Pushed to the far end of the row by its own margin, with padding of its own so a long project name
    growing towards it never touches it. */
 .manager-summary,
-.manager-state {
+.manager-state,
+.command-summary {
   flex: 0 0 auto;
   margin-left: auto;
   padding-left: 12px;
 }
 
-.manager-summary {
+.manager-summary,
+.command-summary,
+.command-keys {
   opacity: 0.6;
 }
 
@@ -268,6 +287,69 @@ body *:not(.pane, .pane *) {
 
 .manager-exited {
   color: var(--red);
+}
+
+/* The names above the manager's three screens. Sits above them rather than inside one — see
+   section-strip.ts for why — so its own rule stands apart from any one view's too.
+
+   .page is itself `position: absolute`, which makes it the containing block its children position
+   against. Without a position of its own the strip is a static box that an absolutely-positioned,
+   opaque .view then paints straight over — the page still switches sections on Alt+H/Alt+L, but
+   nothing on screen ever showed there were sections to switch. Pinning the strip to the page's own
+   top and pushing .page-manager's views down by the same height (below) keeps both visible instead. */
+.section-strip {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--section-strip-height);
+  display: flex;
+  gap: 24px;
+  padding: 12px 16px 0;
+  box-sizing: border-box;
+}
+
+/* Only the manager page has a strip, so only there do the views start below it. A project's page
+   keeps the plain `.page, .view { inset: 0 }` above — one view filling the whole page. */
+.page-manager .view {
+  top: var(--section-strip-height);
+}
+
+.section-name {
+  background: none;
+  border: 0;
+  padding: 0 0 6px;
+  cursor: pointer;
+  color: var(--brightBlack);
+  font: inherit;
+  border-bottom: 2px solid transparent;
+}
+
+.section-name.current {
+  color: var(--brightWhite);
+  border-bottom-color: var(--blue);
+}
+
+.command-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.command-label.highlighted {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+/* Same text-box look as .picker-search and .card-detail-add, below — one definition rather than a
+   third copy of the same declarations. Its own rule only for what those two do not need: growing to
+   fill the label. */
+.command-input {
+  flex: 1;
+}
+
+/* Room under the command box before the project rows start; the rows themselves are styled with
+   .manager-list's above. */
+.command-list {
+  margin: 16px 0;
 }
 
 .board {
@@ -633,7 +715,8 @@ textarea.board-edit {
 }
 
 .picker-search,
-.card-detail-add {
+.card-detail-add,
+.command-input {
   font: inherit;
   color: inherit;
   background: none;

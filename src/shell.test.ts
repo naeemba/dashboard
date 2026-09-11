@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentArguments, editorArguments, pickShell, quoteForShell } from './shell';
+import { agentArguments, editorArguments, pickShell, quoteForShell, taskArguments } from './shell';
 import { defaultSettings } from './settings';
 
 describe('pickShell', () => {
@@ -90,5 +90,16 @@ describe('agentArguments', () => {
   it('uses PowerShell quoting when PowerShell will receive it', () => {
     expect(agentArguments('powershell.exe', "/work-card it's here"))
       .toEqual(['-Command', "claude '/work-card it''s here'"]);
+  });
+});
+
+describe('taskArguments', () => {
+  // No `exec`: the shell stays as the process, so the exit code the row prints is the shell's own.
+  it('runs the command through a login, interactive POSIX shell', () => {
+    expect(taskArguments('/bin/zsh', 'npm audit')).toEqual(['-lic', 'npm audit']);
+  });
+
+  it('uses PowerShell’s own flag where that is the shell', () => {
+    expect(taskArguments('pwsh', 'npm audit')).toEqual(['-Command', 'npm audit']);
   });
 });

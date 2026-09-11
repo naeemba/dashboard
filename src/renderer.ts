@@ -32,6 +32,9 @@ import {
 } from './manager';
 import { createManagerView, type ManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
+import { createCommandView, type CommandView } from './command-view';
+import { createSectionStrip, type SectionStrip } from './section-strip';
+import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
@@ -66,6 +69,10 @@ type Page = {
   board: BoardView | null;
   // Only the manager page has one, the way only a project page has a board.
   manager: ManagerView | null;
+  // Only the manager page has these two either — the strip above the sections and the screen one of
+  // them shows.
+  command: CommandView | null;
+  strip: SectionStrip | null;
 };
 
 const bridge = window.dashboard;
@@ -163,6 +170,7 @@ function statusPage(page: Page): StatusPage {
     boardLabel: page.board?.statusLabel() ?? '',
     hasProjects: projectPages().length > 0,
     managerStatusLabel: page.manager?.statusLabel() ?? '',
+    commandStatusLabel: page.command?.statusLabel() ?? '',
     pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
     pickerDescription: actionByName('project-picker')?.description ?? '',
     worktrees,
@@ -289,6 +297,7 @@ function focusTerminal(index: number): void {
 function showMode(page: Page, mode: Mode): void {
   page.mode = mode;
   for (const [name, view] of Object.entries(page.views)) if (view) view.hidden = name !== mode;
+  page.strip?.render(mode);
 }
 
 function setMode(mode: Mode): void {
@@ -307,6 +316,11 @@ function setMode(mode: Mode): void {
 // on every refocus would throw away its undo step each time, since board.open() resets it.
 function focusMode(page: Page, entering: boolean): void {
   if (page.mode === 'manager') page.views.manager?.focus();
+  if (page.mode === 'command' && page.command) {
+    // Re-read on arrival, the way the board is: a project opened since you were last here needs a row.
+    if (entering) page.command.render();
+    page.command.focus();
+  }
   if (page.mode === 'terminals') return focusTerminal(page.focused);
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
@@ -465,7 +479,9 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
 // four functions. What is behind it is one real board per open project rather than one for a folder.
 function buildManagerPage(): Page {
   const element = document.createElement('section');
-  element.className = 'page';
+  // The modifier is what index.css uses to push this page's views down below the section strip —
+  // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
+  element.className = 'page page-manager';
   const manager = createManagerView({
     onJump: goToPane, onAnswer: answerPane, onChanged: renderStatus,
   });
@@ -481,11 +497,23 @@ function buildManagerPage(): Page {
     onShipped: refreshWorktrees,
     worktrees: () => worktrees,
   });
-  element.append(manager.element, cards.element);
+  const command = createCommandView({
+    projects: () => projectPages().map((entry) => ({
+      name: entry.project.name, path: entry.project.path,
+    })),
+    runTask: (text, paths) => bridge.runTask(text, paths),
+    cancelTasks: () => bridge.cancelTasks(),
+    binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
+    onChanged: renderStatus,
+  });
+  // Above the three views rather than inside one, so it is on screen whichever section is showing.
+  const strip = createSectionStrip((mode) => setMode(mode));
+  element.append(strip.element, manager.element, cards.element, command.element);
   const page: Page = {
-    project: MANAGER_PROJECT, element, views: { manager: manager.element, board: cards.element },
+    project: MANAGER_PROJECT, element,
+    views: { manager: manager.element, board: cards.element, command: command.element },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, manager,
+    board: cards, manager, command, strip,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.
@@ -507,7 +535,7 @@ function buildPage(project: Project, slot: number): Page {
   }
   const page: Page = {
     project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-    editorStarted: false, board: null, manager: null,
+    editorStarted: false, board: null, manager: null, command: null, strip: null,
   };
   // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
   // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -611,7 +639,8 @@ function report(task: Promise<void>): void {
 // The keys for the screen in front of you. With no project open that screen is the manager, which is
 // a page like any other and has its own section in the dialog.
 function showHelp(): void {
-  openHelp(pages[activeIndex].mode, settings.keys, isMac)
+  const page = pages[activeIndex];
+  openHelp(page.mode, !isProjectPage(page), settings.keys, isMac)
     .then(() => showPage(activeIndex));
 }
 
@@ -620,7 +649,13 @@ function showSettings(): void {
     settings = next;
     void bridge.saveSettings(next).then((shell) => { shellCommand = shell; });
     applyAppearance();
-  }).then(() => showPage(activeIndex));
+  }).then(() => {
+    showPage(activeIndex);
+    // A rebinding changes what two lines of text say: the command screen's hint and the status bar's
+    // picker key. Neither is redrawn by landing back on the page you never left, so ask for both here.
+    pages[activeIndex].command?.render();
+    renderStatus();
+  });
 }
 
 function apply(action: Action): void {
@@ -652,6 +687,10 @@ function apply(action: Action): void {
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
+    case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
+    case 'command-select':
+    case 'command-open':
+    case 'command-cancel': return page.command?.runAction(action);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.
@@ -664,7 +703,8 @@ window.addEventListener('keydown', (event) => {
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
-  const action = mapShortcut(event, settings.keys, pages[activeIndex].mode);
+  const page = pages[activeIndex];
+  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page));
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
@@ -738,6 +778,14 @@ bridge.onExit((id, exitCode) => {
   // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
   // find out about a pane on a project you are not on.
   renderStatus();
+});
+
+// Results arrive one project at a time, from whichever run is going. The manager page is built before
+// the first one can land, so there is always a view to hand it to. Found the same way every other
+// listener here finds the manager page — the one page isProjectPage says no to — rather than a second
+// way of asking the same question.
+bridge.onTaskUpdate((result) => {
+  pages.find((page) => !isProjectPage(page))?.command?.update(result);
 });
 
 // Puts back what the last run was left on: the same projects in the same order, each on the view it was

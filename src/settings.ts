@@ -1,4 +1,4 @@
-import { ACTIONS, actionByName, defaultBinding, type ActionEntry } from './actions';
+import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from './actions';
 import { formatBinding, parseBinding } from './binding';
 import { THEME } from './theme';
 
@@ -130,13 +130,6 @@ function withoutDuplicates(settings: Settings, written: Set<string>): Settings {
   return soFar;
 }
 
-// Two actions clash when they hear the same key on the same screen. A global action is heard on every
-// screen, so it clashes with everything; two screen-scoped actions on different screens never meet,
-// which is what lets the board keep a bare D while a terminal keeps its own.
-function scopesOverlap(one: ActionEntry, other: ActionEntry): boolean {
-  return one.scope === other.scope || one.scope === 'global' || other.scope === 'global';
-}
-
 // Exported because the settings screen prints the message and this decides the refusal. Keeping the two
 // apart is how you end up with a dialog naming an action that is not the one in the way.
 export function holderOfBinding(settings: Settings, name: string, binding: string): string | null {
@@ -145,7 +138,8 @@ export function holderOfBinding(settings: Settings, name: string, binding: strin
   for (const entry of ACTIONS) {
     if (entry.name === name) continue;
     if (settings.keys[entry.name] !== binding) continue;
-    if (scopesOverlap(asking, entry)) return entry.name;
+    if (!scopesOverlap(asking.scope, entry.scope)) continue;
+    return entry.name;
   }
   return null;
 }

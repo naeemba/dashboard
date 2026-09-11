@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isBareCharacter, mapShortcut } from './shortcuts';
+import { hears, isBareCharacter, mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
@@ -122,6 +122,25 @@ describe('mapShortcut', () => {
   });
 });
 
+describe('hears, on the manager page', () => {
+  it('hears a manager-page key on every section the manager has', () => {
+    expect(hears('manager-page', 'manager', true)).toBe(true);
+    expect(hears('manager-page', 'board', true)).toBe(true);
+    expect(hears('manager-page', 'command', true)).toBe(true);
+  });
+
+  it('does not hear it on a project, including on a project board', () => {
+    expect(hears('manager-page', 'board', false)).toBe(false);
+    expect(hears('manager-page', 'terminals', false)).toBe(false);
+  });
+
+  it('leaves every other scope deciding by mode alone', () => {
+    expect(hears('board', 'board', false)).toBe(true);
+    expect(hears('board', 'manager', true)).toBe(false);
+    expect(hears('global', 'terminals', false)).toBe(true);
+  });
+});
+
 describe('every shipped default reaches its own action', () => {
   // Every screen-scoped key, driven from its own scope: the board, whose keys used to live in a
   // switch, and every screen added since. A default typed as a key name the parser does not know is
@@ -138,7 +157,11 @@ describe('every shipped default reaches its own action', () => {
         altKey: stroke.alt,
         shiftKey: stroke.shift,
       });
-      expect(mapShortcut(pressed, keys, entry.scope), entry.name).toEqual(entry.action);
+      // manager-page is not a mode: it is every section of the manager. Driven from its first section,
+      // with the flag the renderer passes when the page you are on is the manager.
+      const mode = entry.scope === 'manager-page' ? 'manager' : entry.scope;
+      const onManagerPage = entry.scope === 'manager-page';
+      expect(mapShortcut(pressed, keys, mode, onManagerPage), entry.name).toEqual(entry.action);
     }
   });
 });
