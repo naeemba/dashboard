@@ -665,9 +665,12 @@ Append to `ACTIONS`, after the manager rows:
   },
 ```
 
-- [ ] **Step 3: Tell the help dialog about Space**
+- [ ] **Step 3: The Space row is already there**
 
-In `src/help.ts`, `UNBOUND_SHORTCUTS` gains:
+`UNBOUND_SHORTCUTS.command` was added in Task 2, not here. Adding `command` to
+`MODE_NAMES` puts it in `SCREENS`, and `help.test.ts` asserts every screen has
+at least one key — so the row had to land in the same task as the mode or the
+suite goes red for two tasks. Do not add it again; check it reads:
 
 ```ts
   command: [{ keys: 'Space', action: 'Mark or unmark the project under the selection' }],
