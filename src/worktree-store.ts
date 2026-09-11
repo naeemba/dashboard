@@ -72,6 +72,13 @@ export function entryForCard(
   return entries.find((entry) => entry.cardId === cardId);
 }
 
+export function entryForPath(
+  entries: readonly WorktreeEntry[],
+  worktreePath: string,
+): WorktreeEntry | undefined {
+  return entries.find((entry) => entry.worktreePath === worktreePath);
+}
+
 // One entry per card. The ship writes twice — once when the worktree exists, again when a pane has
 // taken it — and the second write must replace the first rather than making a second row.
 export function withEntry(entries: readonly WorktreeEntry[], entry: WorktreeEntry): WorktreeEntry[] {

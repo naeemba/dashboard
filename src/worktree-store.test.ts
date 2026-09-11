@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   entryForCard,
+  entryForPath,
   livingEntries,
   parseWorktrees,
   withEntry,
@@ -51,6 +52,13 @@ describe('entryForCard', () => {
   it('finds the entry a card is shipped under', () => {
     expect(entryForCard([entry], entry.cardId)).toBe(entry);
     expect(entryForCard([entry], 'nobody')).toBe(undefined);
+  });
+});
+
+describe('entryForPath', () => {
+  it('finds the entry a folder belongs to', () => {
+    expect(entryForPath([entry], entry.worktreePath)).toBe(entry);
+    expect(entryForPath([entry], '/nowhere')).toBe(undefined);
   });
 });
 

@@ -31,6 +31,7 @@ import {
 } from './ship';
 import {
   entryForCard,
+  entryForPath,
   livingEntries,
   readWorktrees,
   withEntry,
@@ -126,10 +127,8 @@ function releaseAgentPane(id: string): void {
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
-  // The record stops naming the pane too, for every reason the launch block above gives for clearing
-  // them all — an agent exiting is that same fact, one pane at a time.
-  const entry = worktrees.find((candidate) => candidate.worktreePath === command.directory);
-  if (entry) recordWorktree({ ...entry, pane: null });
+  // The record goes on naming the pane, because the pane is still in that worktree and the status bar
+  // reads the branch off the record. The claim ends where the pane is taken, in attachPane.
 }
 
 // The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
@@ -350,6 +349,11 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
       message: `every pane in ${baseName(entry.projectPath)} is in use — free one and ship again`,
     };
   }
+  // The pane may still be named by another card's record, whose agent has exited and left it in that
+  // worktree. Taking the pane is what ends that claim, so the old record gives it up here — one record
+  // per pane, and branchOfPane keeps answering for exactly one branch.
+  const claimed = worktrees.find((candidate) => candidate.pane === pane && candidate.cardId !== entry.cardId);
+  if (claimed) recordWorktree({ ...claimed, pane: null });
   startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
@@ -423,10 +427,13 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
   const { projectPath, cardId, title, slot } = request;
   dropDeadWorktrees();
 
-  // Already shipped. A record with a pane on it means an agent is working, and a second worktree for
-  // the same card is the mistake the record exists to catch.
+  // Already shipped, and still being worked on — a second worktree for the same card is the mistake
+  // the record exists to catch. The pane on the record is not the question: a record keeps naming its
+  // pane after the agent exits, so the status bar can go on naming the branch that pane is sitting in.
+  // What refuses the ship is an agent actually running in there.
   const existing = entryForCard(worktrees, cardId);
-  if (existing && existing.pane !== null) {
+  if (existing && existing.pane !== null
+    && runsAnAgent(terminalCommands.get(terminalId(slot, existing.pane)))) {
     return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
   }
 
@@ -437,8 +444,9 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
   try {
     return await shipInProject(projectPath, async () => {
       if (!existing) return runShip(request);
-      // A record with no pane is a ship that stopped part way: it ran out of panes, or it failed after
-      // the worktree was made. Which of those it was is not written down, so this finishes the work
+      // An existing record that got past the refusal is a card nothing is running for: a ship that
+      // stopped part way — out of panes, or failed after the worktree was made — or one whose agent has
+      // since exited. Which of those it was is not written down, so this finishes the work
       // rather than assuming only the pane is missing — an agent started in a worktree whose Ship move
       // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
       // it runs git in the same repository.
@@ -486,7 +494,7 @@ ipcMain.handle('worktree:check', async () => {
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
 // question is worth asking, and refusing forever would mean the only way out is the command line.
 ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
-  const entry = worktrees.find((candidate) => candidate.worktreePath === worktreePath);
+  const entry = entryForPath(worktrees, worktreePath);
   if (!entry) return { ok: false, message: 'no such worktree', dirty: [] };
   try {
     // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is
