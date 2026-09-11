@@ -77,13 +77,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
-          "title": "Run a task across projects and collect the results",
-          "notes": "A named task -- `npm audit`, `npm outdated`, the test suite -- run over the projects you pick, with the answers gathered back onto the manager page. One row per project: how it exited and what it last said. Ask once whether anything has a vulnerability and read five answers in one place.\n\nNot the same as sending a command to panes, and it must not use them: a task that borrows your shells throws away whatever was in them. Main spawns a process per project and keeps its output, which is new -- today it only spawns ptys that belong to a pane.\n\nStart with a task being a name and a command, and show the exit code and the last line. Reading the output properly -- 3 high, 0 moderate -- means a parser per task, and every tool words it differently.",
-          "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "title": "Add a manager page as the first tab, giving an overview across projects",
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
@@ -95,6 +88,14 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
+          "title": "Run a task across projects and collect the results",
+          "notes": "Shipped. The manager page has a strip of three named sections along the top — general, board, command — walked by Alt+H and Alt+L from any of them. Behind the third: type one shell command, mark which open projects it runs in with Space, press Enter, and read one row per project saying how it exited and what it last printed. Enter on a finished row opens its last five lines; Escape stops a run.\n\nMain spawns one process per project through the user's shell with -lic, the same PATH reasoning the editor and agent panes already use. It is not a pty and borrows no pane, so a command asked of five projects never touches what is in your shells.\n\nAn action's scope gained one non-mode value, manager-page, meaning any section of the manager. The strip keys have to be heard on all three sections and `board` is a mode every project also has, so `hears` now takes whether the page is the manager. `scopesOverlap` is exported for the settings screen's clash warning, so the key matcher and the warning cannot drift. The help dialog takes the same flag, or it would list the strip keys on a project's own board where they are never heard.\n\nKnown cost: renderer.ts is at 570 code lines against the 600 ceiling. The next feature touching it needs the file split first — its own card.\n\nNot doing, deliberately: named tasks saved in settings.json (you type the command, it lasts the session), results surviving a restart, and any history of runs.\n\nPR #PENDING",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "branch": "run-a-task-across-projects"
+        },
         {
           "id": "275095b6-3632-4cfb-a7c7-31330d1ee0fc",
           "title": "Start a card in its own worktree, in one of the project's panes",
