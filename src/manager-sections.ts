@@ -22,9 +22,9 @@ export function sectionIndex(mode: Mode): number {
 }
 
 // Whether a mode is one of the manager's sections at all, asked wherever the question is only "is it
-// one" rather than "which one" — actions.ts and shortcuts.ts both need this fact for `manager-page`,
-// and each holding its own `sectionIndex(mode) !== -1` is the second copy CLAUDE.md warns about: change
-// what counts as a section here and one of the two keeps the old answer.
+// one" rather than "which one" — shortcuts.ts needs it for `manager-page` and help.ts for which rows to
+// print, and each holding its own `sectionIndex(mode) !== -1` is the second copy CLAUDE.md warns about:
+// change what counts as a section here and one of the two keeps the old answer.
 export function isSection(mode: Mode): boolean {
   return sectionIndex(mode) !== -1;
 }

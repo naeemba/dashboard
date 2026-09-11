@@ -16,7 +16,7 @@ import { baseName } from './base-name';
 import { isOpenableLink } from './links';
 import { tailLines } from './manager';
 import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
-import { finishedTasks, lastPrintableLine, printableLines, type TaskResult } from './tasks';
+import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
 import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
@@ -537,7 +537,7 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
 // Every process the current run started, each beside the project it is running in. The path is kept
 // here because cancelling has to name every project it stopped — a row told nothing sits on `running`
 // forever, and the process it was waiting for is already dead.
-let runningTasks: { child: ReturnType<typeof spawn>; projectPath: string }[] = [];
+let runningTasks: RunningTask<ReturnType<typeof spawn>>[] = [];
 // Which run a process belongs to. Without it, killing run 3 and starting run 4 in the same breath lets
 // run 3's dying processes report "cancelled" for projects run 4 has already marked "running" — the
 // row goes backwards in front of you and stays wrong until the next run.

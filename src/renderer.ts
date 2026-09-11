@@ -649,7 +649,13 @@ function showSettings(): void {
     settings = next;
     void bridge.saveSettings(next).then((shell) => { shellCommand = shell; });
     applyAppearance();
-  }).then(() => showPage(activeIndex));
+  }).then(() => {
+    showPage(activeIndex);
+    // A rebinding changes what two lines of text say: the command screen's hint and the status bar's
+    // picker key. Neither is redrawn by landing back on the page you never left, so ask for both here.
+    pages[activeIndex].command?.render();
+    renderStatus();
+  });
 }
 
 function apply(action: Action): void {
