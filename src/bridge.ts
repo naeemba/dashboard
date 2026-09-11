@@ -3,6 +3,12 @@ import type { Board } from './board';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { Settings } from './settings';
+import type { WorktreeEntry } from './worktree-store';
+
+// What the board hands main when a card is moved into Ship. The slot is the project's page, which is
+// what says which five panes are candidates for the agent.
+export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
+export type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string };
 
 export type DashboardBridge = {
   platform: string;
@@ -32,6 +38,23 @@ export type DashboardBridge = {
   // Answers with the shell main resolved from the new settings, which is the one a dropped path is
   // quoted for.
   saveSettings(settings: Settings): Promise<string>;
+  // Moving a card into Ship: the worktree, the branch, the pane and the agent. Answers with the
+  // record it wrote, or with the message saying which step refused and why.
+  shipCard(request: ShipRequest): Promise<ShipResult>;
+  // Every worktree the app has made, with the dead ones already dropped, and the folder each pane's
+  // shell is in, keyed by terminal id. The folders ride along with the records because the status
+  // bar's question is the two of them together: is the pane I am in one of these checkouts. Only
+  // main knows where a pane is, and both answers change at the same moments — a ship, a worktree
+  // removed, a project opened — so one round trip fetches both.
+  listWorktrees(): Promise<{ entries: WorktreeEntry[]; paneDirectories: Record<string, string> }>;
+  // Which of the current worktrees have uncommitted changes, decided by the same predicate
+  // worktree:remove asks. Separate from listWorktrees, which is read on every launch and after every
+  // ship, so a `git status` per worktree only runs for the one screen that shows the answer. A
+  // worktree git cannot read comes back unreadable rather than clean.
+  dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
+  // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
+  // a second time naming them rather than deciding on its own what "dirty enough" means.
+  removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string; dirty: string[] }>;
 };
 
 declare global {

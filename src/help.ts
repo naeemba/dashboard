@@ -19,11 +19,17 @@ export const MODE_NAMES: Record<Mode, string> = {
 // yet, that the board has no save key, that settings are a file you can also edit by hand.
 const BLURBS: Record<Mode | ActionGroup, string> = {
   terminals: 'Five shells in a fixed grid. They keep running while you are on another project or '
-    + 'another view, so a long job is still going when you come back. A pane that rings the terminal '
-    + 'bell to ask for you puts a pulsing red dot on its project along the top, turns that name '
+    + 'another view, so a long job is still going when you come back. One of them can be running an '
+    + 'agent in a worktree instead of the project\'s own checkout — a card shipped into that pane — and '
+    + 'the status bar names the branch of whichever pane you are in whenever it is sitting in a '
+    + 'worktree, the agent\'s and the shell it leaves behind, so a command typed there does not land '
+    + 'in the wrong place. '
+    + 'A pane that rings the terminal bell to ask for you puts a pulsing red dot on its project along '
+    + 'the top, turns that name '
     + 'yellow and says which pane on the right, and raises a system notification once if the window '
     + 'is behind something else. Clicking that notification brings the app forward on that pane. '
-    + 'Going to the pane clears it.',
+    + 'Going to the pane clears it. A bell is checked a second later against what the pane has on '
+    + 'screen, so an agent that rings on its way past something and keeps working is left alone.',
   nvim: 'One nvim filling the window. It starts the first time you press the nvim key for this '
     + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
@@ -33,6 +39,15 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'its parent, and counts towards the bar on that parent. A card also carries the branch and pull '
     + 'request its work is on, which you type in, and the dates it was written and last changed, which '
     + 'the app keeps for you and shows when you open the card. '
+    + 'There is a Ship column, second from the left. Moving a card into it — rightward only — hands '
+    + 'it to an agent: the app refuses if the project has anything uncommitted outside .dashboard/, '
+    + 'fetches and branches off the project\'s base branch, makes a worktree in a folder beside the '
+    + 'project, and starts an agent in a pane you have never typed into. Nothing you have written on '
+    + 'this board is touched — the branch gets its own copy of the file. '
+    + 'The card goes back to where it was once the ship works, carrying a line naming its branch and its '
+    + 'pane — a column here says what has been merged, not what is in flight, and the work stays on '
+    + 'its own branch until the pull request lands. A card already in flight cannot be shipped again; '
+    + 'its badge says where the first one went. '
     + 'The manager has one of these too, and it is every open project\'s board at once, one under the '
     + 'other. The same keys and the same writes — each project keeps its own undo — with two more that '
     + 'say which project the rest of them are aimed at, and Escape to go back to the manager\'s list.',
@@ -62,7 +77,17 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'what you changed; anything you left alone follows the app\'s default, including when that '
     + 'default moves. The app tidies the file each time it starts, so a line you write that already '
     + 'matches the default is taken out again. '
-    + 'Delete it and everything is back to how it shipped.',
+    + 'Delete it and everything is back to how it shipped. '
+    + 'The worktree list — its key is on this page — holds every card that has been shipped, its '
+    + 'branch, how old the worktree is, whether it has uncommitted changes, and which pane its agent '
+    + 'is in — no pane if every pane was already taken when it shipped, or if the app has restarted '
+    + 'since, because no shell outlives it. Enter on a row goes to that pane; a row with no pane, and '
+    + 'one whose project has been closed since it shipped, say so rather than doing nothing. '
+    + 'Nothing there is ever removed on its own; d does that, asking twice — the '
+    + 'second question names the files if the worktree is dirty, and says why git refused if it '
+    + 'refused for some other reason. The folder and everything in it goes, gitignored files '
+    + 'included, and the pane its agent was in goes back to being a plain shell in the project. The '
+    + 'branch is left behind on purpose — the pull request it came from may still be open.',
 };
 
 // What a screen does with the keys no binding names, which is why these are written out rather than

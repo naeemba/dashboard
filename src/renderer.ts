@@ -2,6 +2,7 @@ import '@xterm/xterm/css/xterm.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
+import './worktrees.css';
 import { Terminal } from '@xterm/xterm';
 import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -10,17 +11,20 @@ import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
+import { openWorktrees } from './worktree-view';
 import { createBoardView, type BoardView } from './board-view';
 import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
+import type { WorktreeEntry } from './worktree-store';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
 import {
-  type Bell, isRinging, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
+  type Bell, isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
 } from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
@@ -33,13 +37,20 @@ import { actionByName } from './actions';
 // `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
 // is asking for you and whether its banner has already gone out, so a pane that rings ten times does
 // not raise ten of them.
+// `bellTimer` is the one verdict a pane has pending on its own bell, held so a second ring inside the
+// wait joins it rather than starting another.
 type Pane = {
   terminal: Terminal;
   fit: FitAddon;
   exited: boolean;
   name: string;
   bell: Bell;
+  bellTimer?: number;
 };
+
+// How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
+// its spinner again, short enough that a real question is on the tab strip before you look up.
+const BELL_SETTLE_MS = 1000;
 type Page = {
   project: Project;
   element: HTMLElement;
@@ -121,22 +132,42 @@ function projectPages(): Page[] {
   return pages.filter(isProjectPage);
 }
 
-// The manager is where a launch with nothing saved lands, and with no project open there is nothing on
-// screen saying how to open one. Both halves are read fresh on every redraw, so rebinding the key or
-// rewording the action rewrites the sentence rather than leaving it naming a key that now does
-// something else.
-function managerLabel(page: Page): string {
-  if (projectPages().length > 0) return page.manager?.statusLabel() ?? '';
-  const name = 'project-picker';
-  return `${settings.keys[name] ?? 'Nothing'} · ${actionByName(name)?.description ?? ''}`;
+// Every worktree in flight, held here rather than on a board view: a card shipped from the manager's
+// stack of boards lands in a project whose own board may never have been opened, and its pane would
+// then sit in a worktree with the status bar calling it "terminal 2".
+let worktrees: WorktreeEntry[] = [];
+// The folder each pane's shell was started in, keyed by terminal id, which is what says whether a
+// pane is in a worktree. Main's copy, never a second one kept here, and read again at launch and at
+// the three moments it can have changed: a ship, the worktree dialog closing, and arriving at a board.
+let paneDirectories: Record<string, string> = {};
+function refreshWorktrees(): void {
+  // A failure to read the local record costs a branch name, never the screen.
+  void bridge.listWorktrees().then((list) => {
+    worktrees = list.entries;
+    paneDirectories = list.paneDirectories;
+    renderStatus();
+    // The badges too, not only the status bar: remove a worktree with the board in front of you and
+    // its card would otherwise still read `shipped · <branch> · terminal 3` until you left and
+    // came back.
+    pages[activeIndex].board?.redraw();
+  }, () => undefined);
 }
 
-// The right-hand span says which view you are in, and for terminals which pane has the keyboard.
-function modeLabel(page: Page): string {
-  if (page.mode === 'manager') return managerLabel(page);
-  if (page.mode === 'nvim') return 'nvim';
-  if (page.mode === 'board') return `board · ${page.board?.statusLabel() ?? ''}`;
-  return page.panes.length > 0 ? paneLabel(page.focused) : '';
+// Everything status.ts needs to say what the right-hand span says about this page, read off the module
+// state it cannot reach on its own.
+function statusPage(page: Page): StatusPage {
+  return {
+    mode: page.mode,
+    focused: page.focused,
+    paneCount: page.panes.length,
+    boardLabel: page.board?.statusLabel() ?? '',
+    hasProjects: projectPages().length > 0,
+    managerStatusLabel: page.manager?.statusLabel() ?? '',
+    pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
+    pickerDescription: actionByName('project-picker')?.description ?? '',
+    worktrees,
+    focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
+  };
 }
 
 // The grid's five and the editor, which rings its bell like any other pane.
@@ -148,22 +179,18 @@ function allPanes(page: Page): Pane[] {
 // the bytes out, so the escape codes, the redraws and the spinner overwriting itself are all resolved
 // before this reads a line. The live screen rather than the scrollback, so scrolling a pane by hand
 // does not change what the manager says about it.
-function paneTail(terminal: Terminal): string[] {
+function paneScreen(terminal: Terminal): string[] {
   const buffer = terminal.buffer.active;
-  const screen = Array.from(
+  return Array.from(
     { length: terminal.rows },
     (_value, row) => buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '',
   );
-  return tailLines(screen);
 }
 
-// The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the
-// project name, so without the names here you would arrive at a yellow project and have to walk all
-// six panes watching for the yellow to go out.
-function terminalStatus(page: Page): string {
-  const names = waitingNames(allPanes(page));
-  if (names.length === 0) return modeLabel(page);
-  return `${modeLabel(page)} · ${names.join(', ')} waiting`;
+// What the manager prints on a row, which is the last few lines of the same screen. The bell reads
+// the screen whole instead, so how much of it a row has space for cannot decide what a bell means.
+function paneTail(terminal: Terminal): string[] {
+  return tailLines(paneScreen(terminal));
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
@@ -191,7 +218,7 @@ function renderStatus(): void {
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = terminalStatus(page);
+  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames(allPanes(page)));
   saveSession();
 }
 
@@ -294,8 +321,12 @@ function focusMode(page: Page, entering: boolean): void {
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
     // report() wrapper is needed here.
-    if (entering) void page.board.open();
-    else page.board.element.focus();
+    if (entering) {
+      // With the board, because a worktree removed outside the app is only noticed when main is next
+      // asked for the list, and the badges on this board are drawn from what that answers.
+      refreshWorktrees();
+      void page.board.open();
+    } else page.board.element.focus();
   }
   renderStatus();
 }
@@ -383,18 +414,35 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   // the document who has focus answers both "is this page in front" and "is this the focused pane" at
   // once, and answers it right on the board, where no pane has the keyboard at all. What the states of
   // the bell mean is waiting.ts's job; this only reads them and draws the answer.
+  // Where you are is asked at both ends of the wait, because you can move either way inside it: leave
+  // the pane in the second that follows, or arrive at it.
+  // What the bell meant is the part that has to wait — a moment later the screen says whether the
+  // agent asked you something or went back to work.
   terminal.onBell(() => {
-    const windowFocused = document.hasFocus();
-    if (!marksWaiting(windowFocused, terminal.textarea === document.activeElement)) return;
-    // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
-    // front and draws what it says.
-    const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
-    if (!isRinging(pane.bell)) pane.bell = 'waiting';
-    if (redraws) renderStatus();
-    if (raisesNotification(windowFocused, pane.bell)) {
-      pane.bell = 'notified';
-      bridge.notify(page.project.name, `${pane.name} is waiting`, id);
-    }
+    if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
+    // One verdict per wait, not one per ring. An agent can ring every second, and without this each
+    // ring leaves its own timer behind to read the whole screen again for the same answer.
+    if (pane.bellTimer !== undefined) return;
+    pane.bellTimer = window.setTimeout(() => {
+      pane.bellTimer = undefined;
+      // What counts as still working is waiting.ts's to answer; this hands it the screen.
+      if (looksBusy(paneScreen(terminal))) return;
+      // Asked again rather than reused from when the bell rang, the way the banner below is: you may
+      // have arrived at the pane inside the wait, and where you are now is what waiting.ts is being
+      // asked about.
+      if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
+      // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
+      // front and draws what it says.
+      const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
+      if (!isRinging(pane.bell)) pane.bell = 'waiting';
+      if (redraws) renderStatus();
+      // Read again rather than reused from above: the banner is only worth raising if the window is
+      // still behind something else now, which is when it would actually appear.
+      if (raisesNotification(document.hasFocus(), pane.bell)) {
+        pane.bell = 'notified';
+        bridge.notify(page.project.name, `${pane.name} is waiting`, id);
+      }
+    }, BELL_SETTLE_MS);
   });
   // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
   // than in the focus handlers: this fires for every way in, including landing back on the pane the
@@ -430,6 +478,8 @@ function buildManagerPage(): Page {
     // A slot each, and a different owner from the same project's own board, so the two screens reading
     // one file never clear each other's message.
     onError: (slot, message) => showError(`cards:${slot}`, message),
+    onShipped: refreshWorktrees,
+    worktrees: () => worktrees,
   });
   element.append(manager.element, cards.element);
   const page: Page = {
@@ -485,10 +535,13 @@ function buildPage(project: Project, slot: number): Page {
   panesById.set(editorId, page.editor);
   page.board = createBoardView({
     projectPath: project.path,
+    slot,
     bridge,
     onChanged: renderStatus,
     // A slot each, so one project's board never clears another one's failure.
     onError: (message) => showError(`board:${slot}`, message),
+    onShipped: refreshWorktrees,
+    worktrees: () => worktrees,
   });
   views.board.append(page.board.element);
   return page;
@@ -574,6 +627,12 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
+  if (action.kind === 'worktrees') return void openWorktrees(bridge, jumpToWorktree).then(() => {
+    // The same reclaim every other dialog does, and it is what keeps the keyboard on a pane Enter
+    // landed on: goToPane has already moved activeIndex, so this focuses where you were sent.
+    showPage(activeIndex);
+    refreshWorktrees();
+  });
   const page = pages[activeIndex];
   switch (action.kind) {
     case 'project-last': {
@@ -632,8 +691,9 @@ bridge.onNotificationClick((paneId) => {
   goToPane(slot, index);
 });
 
-// The two ways to be sent to a pane you are not on: clicking its notification, and pressing Enter on
-// its row in the manager. One function, so the second never lands somewhere the first would not.
+// The three ways to be sent to a pane you are not on: clicking its notification, pressing Enter on its
+// row in the manager, and pressing Enter on its row in the worktree list. One function, so none of
+// them lands somewhere another would not — including on the right view, which modeOfPane decides.
 function goToPane(slot: number, index: number): void {
   const position = positionOfSlot(slot);
   if (position === -1) return;
@@ -643,6 +703,18 @@ function goToPane(slot: number, index: number): void {
   // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
   if (mode === 'terminals') page.focused = index;
   showPage(position, true);
+}
+
+// Enter on a row of the worktree list. Two rows have nowhere to send you, and both say so rather than
+// looking like a key that did nothing: a worktree with no pane is one whose ship found every pane in
+// use, or one the app has restarted since, and a project closed since its card shipped has no page to
+// land on. Neither opens anything on your behalf — Enter here is "take me there", not "start it".
+function jumpToWorktree(entry: WorktreeEntry): string {
+  if (entry.pane === null) return `${entry.branch} has no pane — nothing of it is running`;
+  const page = pages.find((candidate) => candidate.project.path === entry.projectPath);
+  if (!page) return `${entry.branch} is in a project that is not open`;
+  goToPane(page.slot, entry.pane);
+  return '';
 }
 
 // Answering a pane from the manager, without going to it. terminal.input is the door a dropped file
@@ -718,6 +790,7 @@ async function start(): Promise<void> {
   pagesElement.append(manager.element);
   pages.push(manager);
   renderStatus();
+  refreshWorktrees();
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
   shellCommand = loaded.shellCommand;

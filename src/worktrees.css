@@ -1,0 +1,74 @@
+/* The worktree dialog's own rules. Out of index.css because that file is over the size limit and this
+   is the one block in it that belongs to a single screen. The two rules it shares with the picker —
+   the scrolling list and its highlighted row — stay there, next to the picker they also style. */
+
+/* Worktrees: the one screen they are removed from. Same shape as the picker — a heading instead of a
+   search box, since there is nothing here to type into. Wider than the picker's default: five columns
+   of text need more room than a name and a path do. */
+.worktrees-dialog {
+  width: min(680px, 92vw);
+  padding: 10px 0;
+  outline: none;
+}
+
+.worktrees-heading {
+  margin: 4px 0 8px;
+  padding: 0 12px;
+  color: var(--blue);
+  font-size: inherit;
+  font-weight: normal;
+}
+
+/* Five fixed-width columns, project through pane, so the eye can scan one down the dialog instead of
+   reading each row as a sentence. Branch takes whatever is left over: it is the one field with no
+   natural cap. */
+.worktrees-project,
+.worktrees-age,
+.worktrees-dirty,
+.worktrees-pane {
+  flex: none;
+  overflow: hidden;
+  color: var(--brightBlack);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worktrees-project { width: 12ch; }
+.worktrees-age { width: 11ch; }
+.worktrees-dirty { width: 6ch; }
+.worktrees-pane { width: 13ch; }
+
+.worktrees-branch {
+  flex: 1;
+  overflow: hidden;
+  color: var(--brightWhite);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worktrees-dirty.worktrees-is-dirty {
+  color: var(--red);
+}
+
+.worktrees-dirty.worktrees-unreadable {
+  color: var(--yellow);
+}
+
+.worktrees-list li.highlighted .worktrees-project,
+.worktrees-list li.highlighted .worktrees-age,
+.worktrees-list li.highlighted .worktrees-pane {
+  color: var(--white);
+}
+
+.worktrees-keys {
+  margin: 8px 0 0;
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--brightBlack);
+  color: var(--brightBlack);
+}
+
+.worktrees-empty {
+  margin: 0;
+  padding: 4px 12px;
+  color: var(--brightBlack);
+}

@@ -26,6 +26,13 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
     }
 
 - `columns` is ordered. The first column is the leftmost on screen.
+- The `Ship` column is not an ordinary one. Moving a card into it asks the
+  Dashboard app to make a git worktree for that card, check out a branch named
+  after it, and start an agent in one of the project's panes. Put a card there
+  only when you mean to start it.
+- A card's column on the `main` branch says what has been merged. While work
+  is in flight the card's column lives on that work's own branch, and arrives
+  here when the pull request does.
 - `cards` is ordered. The first card is at the top of its column.
 - `id` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
   written without one, or with an id another card already used, is given a fresh one the next time

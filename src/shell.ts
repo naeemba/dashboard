@@ -1,3 +1,4 @@
+import { baseName } from './base-name';
 import type { Settings } from './settings';
 
 const platformDefault: Record<string, string> = {
@@ -33,10 +34,8 @@ const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 // Windows run git-bash. cmd.exe has no single-quote quoting at all and is not supported.
 const POWERSHELL = /^(powershell|pwsh)(\.exe)?$/i;
 
-// basename from node:path would be the obvious reader here, but on darwin it does not split on a
-// backslash, so a Windows path comes back whole and the PowerShell branch is missed.
-function isPowerShell(shellCommand: string): boolean {
-  return POWERSHELL.test(shellCommand.split(/[\\/]/).pop() ?? '');
+export function isPowerShell(shellCommand: string): boolean {
+  return POWERSHELL.test(baseName(shellCommand));
 }
 
 export function quoteForShell(value: string, shellCommand: string): string {
@@ -60,4 +59,17 @@ export function quoteForShell(value: string, shellCommand: string): string {
 // long as the pane is open.
 export function editorArguments(shellCommand: string): string[] {
   return isPowerShell(shellCommand) ? ['-Command', 'nvim'] : ['-lic', 'exec nvim'];
+}
+
+// The agent pane runs `claude` through the same shell the editor pane runs nvim through, and for the
+// same reason spelled out above editorArguments: an app launched from the Dock inherits almost no
+// PATH, and claude is installed wherever the user's shell manager put it. `exec` leaves claude as the
+// pane's only process rather than parking a shell above it for as long as the work takes.
+//
+// PowerShell gets no `exec` — it has none — so the shell stays as claude's parent there.
+export function agentArguments(shellCommand: string, prompt: string): string[] {
+  const quoted = quoteForShell(prompt, shellCommand);
+  return isPowerShell(shellCommand)
+    ? ['-Command', `claude ${quoted}`]
+    : ['-lic', `exec claude ${quoted}`];
 }

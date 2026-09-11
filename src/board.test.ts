@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_PRIORITY,
+  SHIP_COLUMN,
   addCard,
   addChildCard,
   attachToCardAbove,
@@ -16,13 +17,17 @@ import {
   emptyBoard,
   hasSubtasks,
   isDescendantOf,
+  landsInShip,
   moveCard,
+  moveCardToColumn,
   moveSelection,
   pullRequestFrom,
   renameCard,
   selectionOf,
   setNotes,
+  shipColumnIndex,
   sortColumn,
+  withShipColumn,
   type Board,
   type Priority,
 } from './board';
@@ -55,9 +60,107 @@ function parents(result: Board): Record<string, string | null> {
 }
 
 describe('emptyBoard', () => {
-  it('opens with three empty columns', () => {
-    expect(emptyBoard().columns.map((column) => column.name)).toEqual(['Todo', 'Doing', 'Done']);
+  it('opens with four empty columns', () => {
+    expect(emptyBoard().columns.map((column) => column.name)).toEqual(['Todo', SHIP_COLUMN, 'Doing', 'Done']);
     expect(emptyBoard().columns.every((column) => column.cards.length === 0)).toBe(true);
+  });
+});
+
+describe('the Ship column', () => {
+  it('is second from the left on a new board', () => {
+    expect(emptyBoard().columns.map((column) => column.name)).toEqual(['Todo', SHIP_COLUMN, 'Doing', 'Done']);
+  });
+
+  it('finds Ship whatever case it is written in', () => {
+    expect(shipColumnIndex(emptyBoard())).toBe(1);
+    expect(shipColumnIndex({ columns: [{ name: 'ship', cards: [] }] })).toBe(0);
+    expect(shipColumnIndex({ columns: [{ name: 'Todo', cards: [] }] })).toBe(-1);
+  });
+
+  it('inserts an empty Ship second into a board that has none', () => {
+    const old = { columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }] };
+    expect(withShipColumn(old).columns.map((column) => column.name)).toEqual(['Todo', SHIP_COLUMN, 'Doing']);
+    expect(withShipColumn(old).columns[1].cards).toEqual([]);
+  });
+
+  // The same object back, so a board that already has one neither burns an undo step nor is rewritten.
+  it('hands back the same board when Ship is already there', () => {
+    const board = emptyBoard();
+    expect(withShipColumn(board)).toBe(board);
+  });
+});
+
+describe('moveCardToColumn', () => {
+  const board = {
+    columns: [
+      { name: 'Todo', cards: [{ id: 'a', title: 'a', notes: '', priority: 'medium' as const, parent: null }] },
+      { name: SHIP_COLUMN, cards: [] },
+      { name: 'Doing', cards: [] },
+    ],
+  };
+
+  it('moves a card straight to a column two along, and lands it last', () => {
+    const moved = moveCardToColumn(board, { column: 0, card: 0 }, 2);
+    expect(moved.board.columns[0].cards).toEqual([]);
+    expect(moved.board.columns[2].cards.map((card) => card.id)).toEqual(['a']);
+    expect(moved.selection).toEqual({ column: 2, card: 0 });
+  });
+
+  it('ages the card, because a column change is a change to the work', () => {
+    const moved = moveCardToColumn(board, { column: 0, card: 0 }, 1);
+    expect(moved.board.columns[1].cards[0].updatedAt).toEqual(expect.any(String));
+  });
+
+  it('hands back the same board when there is nothing to do', () => {
+    expect(moveCardToColumn(board, { column: 0, card: 0 }, 0).board).toBe(board);
+    expect(moveCardToColumn(board, { column: 0, card: 0 }, 9).board).toBe(board);
+    expect(moveCardToColumn(board, { column: 1, card: 0 }, 2).board).toBe(board);
+  });
+});
+
+// The condition that decides whether a keystroke starts an agent. It was composed inline in the view,
+// where nothing pinned it: drop the direction and a card dragged leftward out of Doing makes a
+// worktree and takes a pane on its way past.
+describe('landsInShip', () => {
+  const board = {
+    columns: [
+      { name: 'Todo', cards: [] },
+      { name: SHIP_COLUMN, cards: [] },
+      { name: 'Doing', cards: [] },
+    ],
+  };
+
+  it('says yes to a card moved rightward into Ship', () => {
+    expect(landsInShip(board, 0, { column: 1, card: 0 }, 'right')).toBe(true);
+  });
+
+  it('says no to a card moved rightward out of Ship into Doing', () => {
+    expect(landsInShip(board, 1, { column: 2, card: 0 }, 'right')).toBe(false);
+  });
+
+  // The one that costs something: leftward into Ship would start an agent from a keystroke that reads
+  // as putting a card back.
+  it('says no to a card moved leftward into Ship from Doing', () => {
+    expect(landsInShip(board, 2, { column: 1, card: 0 }, 'left')).toBe(false);
+  });
+
+  it('says no to a card reordered inside Ship', () => {
+    expect(landsInShip(board, 1, { column: 1, card: 1 }, 'down')).toBe(false);
+    expect(landsInShip(board, 1, { column: 1, card: 0 }, 'up')).toBe(false);
+  });
+
+  // moveCard hands back the selection it was given when there is nowhere to go, so `from` and the
+  // column landed in are the same. A board written by hand with Ship last would otherwise re-ship a
+  // card every time you pushed it against the right-hand edge.
+  it('says no to a move that changed nothing', () => {
+    const shipLast = { columns: [{ name: 'Todo', cards: [] }, { name: SHIP_COLUMN, cards: [] }] };
+    expect(landsInShip(shipLast, 1, { column: 1, card: 0 }, 'right')).toBe(false);
+  });
+
+  it('says no on an empty column, and on a board with no Ship column at all', () => {
+    expect(landsInShip(board, 0, { column: 0, card: 0 }, 'right')).toBe(false);
+    const noShip = { columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }] };
+    expect(landsInShip(noShip, 0, { column: 1, card: 0 }, 'right')).toBe(false);
   });
 });
 

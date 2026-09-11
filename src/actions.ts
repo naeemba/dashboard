@@ -13,6 +13,7 @@ export type Action =
   | { kind: 'project-last' }
   | { kind: 'help' }
   | { kind: 'settings' }
+  | { kind: 'worktrees' }
   | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
   | { kind: 'terminal-next' }
@@ -120,6 +121,14 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'settings', description: 'Open the settings screen', group: 'app', scope: 'global',
     action: { kind: 'settings' }, mac: 'Ctrl+,', other: 'Ctrl+,',
+  },
+  // Shift on purpose. Bare Ctrl+W is backward-kill-word in bash, zsh and vim's insert mode, and this
+  // is global scope, so binding it would take a key every pane uses all day. matchesBinding compares
+  // every modifier, so the bare one matches nothing here and falls through to the shell.
+  {
+    name: 'worktrees', description: 'List the worktrees cards were shipped into',
+    group: 'app', scope: 'global',
+    action: { kind: 'worktrees' }, mac: 'Ctrl+Shift+W', other: 'Ctrl+Shift+W',
   },
   {
     name: 'mode-terminals', description: 'Terminals mode', group: 'modes', scope: 'global',

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import {
+  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneLabel, terminalId,
+} from './terminals';
 
 describe('neighbor', () => {
   it('moves along a row and stops at the edge', () => {
@@ -20,9 +22,36 @@ describe('neighbor', () => {
 });
 
 describe('paneLabel', () => {
-  it('names panes from one, the way the grid is read', () => {
+  it('names a pane by its number', () => {
     expect(paneLabel(0)).toBe('terminal 1');
-    expect(paneLabel(4)).toBe('terminal 5');
+    expect(paneLabel(2)).toBe('terminal 3');
+  });
+
+  // The numbering stays, because the focus keys are numbered. The branch is added to it, not swapped
+  // for it.
+  it('adds the branch when the pane is on a worktree', () => {
+    expect(paneLabel(2, 'panes-name-themselves')).toBe('terminal 3 · panes-name-themselves');
+  });
+});
+
+describe('branchOfPane', () => {
+  const entries = [{
+    worktreePath: '/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves',
+    branch: 'panes-name-themselves',
+  }];
+
+  it('finds the branch of the worktree the pane is sitting in', () => {
+    expect(branchOfPane(entries, entries[0].worktreePath)).toBe('panes-name-themselves');
+  });
+
+  it('is undefined for a pane on the project checkout', () => {
+    expect(branchOfPane(entries, '/Users/sharp/workspace/personal/dashboard')).toBeUndefined();
+  });
+
+  // A pane whose shell has no folder recorded yet. Matching it to the first worktree would label a
+  // shell that is not in one.
+  it('is undefined when the pane has no directory', () => {
+    expect(branchOfPane(entries, '')).toBeUndefined();
   });
 });
 

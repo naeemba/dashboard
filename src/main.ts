@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
+import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import {
@@ -10,15 +12,37 @@ import {
   replacesProject,
   type Project,
 } from './projects';
+import { baseName } from './base-name';
 import { isOpenableLink } from './links';
-import { editorArguments, pickShell } from './shell';
+import { agentArguments, editorArguments, pickShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
-import { readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
+import {
+  blockingChanges,
+  branchNameFor,
+  freePane,
+  oneAtATime,
+  runsAnAgent,
+  worktreePathFor,
+  type PaneCommand,
+} from './ship';
+import {
+  claimsPane,
+  entryForCard,
+  entryForPath,
+  livingEntries,
+  readWorktrees,
+  withEntry,
+  withoutWorktree,
+  writeWorktrees,
+  type WorktreeEntry,
+} from './worktree-store';
 import type { Settings } from './settings';
-import type { Board } from './board';
+import { moveCardToColumn, selectionOf, shipColumnIndex, type Board } from './board';
+import type { ShipRequest, ShipResult } from './bridge';
 
 if (started) app.quit();
 
@@ -34,6 +58,28 @@ const projects: Project[] = [];
 // last run was left in.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const sessionFile = path.join(app.getPath('userData'), 'session.json');
+const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
+// Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
+// flight forever with nothing able to clear it.
+//
+// Every pane comes back null with it. No shell outlives the app, so nothing this file says was in
+// pane 2 is in pane 2 a moment after launch: that pane is a plain shell in the project, and a record
+// still naming it would put a branch name under the status bar of a checkout the pane is not in —
+// which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
+// the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
+// it hands the folder that is already there to a pane. Written out, so the file says what this says.
+let worktrees: WorktreeEntry[] = livingEntries(readWorktrees(worktreesFile), existsSync)
+  .map((entry) => ({ ...entry, pane: null }));
+writeWorktrees(worktreesFile, worktrees);
+// Which panes you have typed into. Half of what makes a pane somebody's; paneIsBusy has the other
+// half, which is read rather than kept here.
+const typedPanes = new Set<string>();
+// The cards whose ship is running right now. Two ships of one card both get past the already-shipped
+// check before either has recorded anything, and the second record replaces the first: two branches
+// and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
+// the app.
+const shippingCards = new Set<string>();
+const runCommand = promisify(execFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
@@ -54,7 +100,7 @@ const shells = new Map<string, pty.IPty>();
 // shell in force, and a project can sit open for a long time before its nvim key is ever pressed. Baking
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
-const terminalCommands = new Map<string, { args: string[] | 'editor'; directory: string }>();
+const terminalCommands = new Map<string, PaneCommand>();
 let mainWindow: BrowserWindow;
 // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q
 // stacks a question per keypress and you answer the same one five times.
@@ -62,6 +108,50 @@ let askingToQuit = false;
 
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
+}
+
+// Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: you
+// typed in it, or an agent is running in it — and the second is read off terminalCommands rather than
+// tracked beside it, so the two can never disagree.
+//
+// Tracked, they did. Answering an agent's prompt put the pane in typedPanes, and the agent exiting
+// took it straight back out: your own shell, with what you had typed in it, read as free, and the next
+// ship killed it out from under you.
+function paneIsBusy(id: string): boolean {
+  return typedPanes.has(id) || runsAnAgent(terminalCommands.get(id));
+}
+
+// A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
+// worktree, because that is where the work is. Left alone, Enter would start the agent over instead
+// of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
+function releaseAgentPane(id: string): void {
+  const command = terminalCommands.get(id);
+  if (!runsAnAgent(command)) return;
+  terminalCommands.set(id, { args: [], directory: command.directory });
+  // The record goes on naming the pane: the worktree list's Enter takes you to the pane its card was
+  // shipped into, and the pane is still there. The claim ends where the pane is taken, in attachPane.
+}
+
+// The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
+// plain shell in the project, since the folder it was in is not there any more. The typedPanes line
+// is what hands the pane back — you asked for the worktree to go, so what you typed answering its
+// agent is not a claim on the pane any more.
+function releaseWorktreePanes(entry: WorktreeEntry): void {
+  for (const [id, command] of terminalCommands) {
+    if (command.directory !== entry.worktreePath) continue;
+    typedPanes.delete(id);
+    terminalCommands.set(id, { args: [], directory: entry.projectPath });
+  }
+}
+
+// Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand
+// outside the app strands a pane exactly the way one removed inside it used to, so the two share this.
+// What it does not do is kill whatever is running: a folder that went by other means may still have an
+// agent doing something, and that is not this function's to decide.
+function dropDeadWorktrees(): void {
+  const living = livingEntries(worktrees, existsSync);
+  for (const entry of worktrees) if (!living.includes(entry)) releaseWorktreePanes(entry);
+  worktrees = living;
 }
 
 function spawnTerminal(id: string): void {
@@ -86,7 +176,13 @@ function spawnTerminal(id: string): void {
   }
   terminalProcess.onData((data) => sendToRenderer('pty:data', id, data));
   terminalProcess.onExit(({ exitCode }) => {
+    // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
+    // the agent in the same tick, and the killed shell's exit arrives after that: without the check it
+    // would drop the agent out of the map, leaving nothing for your keystrokes to reach, and tell the
+    // renderer a pane that is busy working had died.
+    if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
+    releaseAgentPane(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, terminalProcess);
@@ -98,10 +194,56 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
+    // A brand new shell in this slot, so nobody has typed into it — even if someone typed into the
+    // project that used to be here. Left set, opening a fresh project into a slot you had worked in
+    // would tell the next ship every pane was in use.
+    typedPanes.delete(id);
     terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+}
+
+// Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
+// 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
+// exists to say. The old shell is killed first: retargeting a pane that is still running one would
+// leave two processes writing to the same id.
+function startAgent(id: string, worktreePath: string, cardId: string): void {
+  terminalCommands.set(id, {
+    args: agentArguments(shellCommand, `/work-card ${cardId}`),
+    directory: worktreePath,
+  });
+  shells.get(id)?.kill();
+  shells.delete(id);
+  spawnTerminal(id);
+}
+
+// execFile, never a shell, so a card titled with a quote in it cannot become a command. Awaited
+// rather than sync: main is the process every pane's bytes flow through, and a fetch on a slow
+// network would otherwise stop all five shells painting until it returned.
+async function git(args: string[], cwd: string): Promise<string> {
+  const { stdout } = await runCommand('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+  return stdout.trim();
+}
+
+// origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
+// same reason: origin/HEAD is not set in every clone.
+async function baseBranch(projectPath: string): Promise<string> {
+  try {
+    const head = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], projectPath);
+    return head.replace(/^origin\//, '');
+  } catch {
+    // Not set in this clone; try the usual names.
+  }
+  for (const candidate of ['main', 'master']) {
+    try {
+      await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${candidate}`], projectPath);
+      return candidate;
+    } catch {
+      // Try the next one.
+    }
+  }
+  throw new Error('cannot tell which branch on origin is the main one');
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -168,7 +310,10 @@ ipcMain.on('notification:show', (_event, title: string, body: string, paneId: st
 ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
 });
-ipcMain.on('pty:input', (_event, id: string, data: string) => shells.get(id)?.write(data));
+ipcMain.on('pty:input', (_event, id: string, data: string) => {
+  typedPanes.add(id);
+  shells.get(id)?.write(data);
+});
 ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
@@ -186,6 +331,206 @@ ipcMain.handle('board:read', (_event, projectPath: string) => {
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
 ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => writeBoard(projectPath, board));
+
+function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
+  worktrees = withEntry(worktrees, entry);
+  writeWorktrees(worktreesFile, worktrees);
+  return entry;
+}
+
+// Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
+// ship of a card whose worktree exists but never got one.
+function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
+  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
+    .filter((index) => paneIsBusy(terminalId(slot, index)));
+  const pane = freePane(busy, TERMINAL_COUNT);
+  if (pane === null) {
+    return {
+      ok: false,
+      message: `every pane in ${baseName(entry.projectPath)} is in use — free one and ship again`,
+    };
+  }
+  // The pane may still be named by another card's record, whose agent has exited and left it in that
+  // worktree. Taking the pane is what ends that claim, so the old record gives it up here — one record
+  // per pane in this project — claimsPane holds why the project half of that matters.
+  const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
+  if (claimed) recordWorktree({ ...claimed, pane: null });
+  startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);
+  return { ok: true, entry: recordWorktree({ ...entry, pane }) };
+}
+
+// The card's Ship move, on the branch. The only board write that belongs to a ship; the agent makes
+// every move after it. The Ship column is there to move it into whatever the branch's file holds:
+// readBoard gives every board one, and a board with no file at all is the shipped four columns.
+//
+// Run again by a ship that is being finished rather than started, so it has to be safe to repeat: a
+// card already in Ship stages nothing, and `git commit` with nothing to commit exits 1, which would
+// fail the ship in git's own words with the branch and the folder already made. Nothing staged also
+// covers the card never having been on the base branch's board at all.
+async function commitShipMove(entry: WorktreeEntry): Promise<void> {
+  const board = readBoard(entry.worktreePath).board;
+  const from = selectionOf(board, entry.cardId);
+  if (!from) return;
+  writeBoard(entry.worktreePath, moveCardToColumn(board, from, shipColumnIndex(board)).board);
+  // Both halves name the board file. A resumed ship runs in a worktree that has been lived in, so
+  // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
+  // half-finished work under a board message.
+  await git(['add', BOARD_FILE_PATH], entry.worktreePath);
+  const staged = await git(['diff', '--cached', '--name-only', '--', BOARD_FILE_PATH], entry.worktreePath);
+  if (staged !== '') {
+    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', BOARD_FILE_PATH], entry.worktreePath);
+  }
+}
+
+// Ships in one project run one after another, never together; ship.ts says why.
+const shipInProject = oneAtATime();
+
+// The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
+// back as a message the board's status bar prints; everything before it is left as it was. Every git
+// command below runs with the project's queue held, so nothing else here is touching this repository.
+async function runShip(request: ShipRequest): Promise<ShipResult> {
+  const { projectPath, cardId, title, slot } = request;
+  const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
+  if (dirty.length > 0) {
+    const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
+    return { ok: false, message: `${count} uncommitted — commit or stash them first` };
+  }
+
+  const base = await baseBranch(projectPath);
+  await git(['fetch', 'origin', base], projectPath);
+  // The checkout itself is only fast-forwarded when it is sitting on the base branch and can be.
+  // A checkout on some other branch is left alone — the worktree comes off origin/<base> either
+  // way, so it does not need the local branch to have caught up.
+  try {
+    const head = await git(['rev-parse', '--abbrev-ref', 'HEAD'], projectPath);
+    if (head === base) await git(['merge', '--ff-only', `origin/${base}`], projectPath);
+  } catch {
+    // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
+  }
+
+  const heads = await git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
+  const branch = branchNameFor(title, cardId, heads.split('\n').filter((name) => name !== ''));
+  const worktreePath = worktreePathFor(projectPath, branch);
+  await git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
+
+  // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
+  // worktree that exists is always one the worktree list can show you and remove. An orphan worktree
+  // nothing knows about is the thing that piles up unseen.
+  const entry = recordWorktree({
+    cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
+  });
+
+  await commitShipMove(entry);
+  return attachPane(entry, slot);
+}
+
+ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
+  const { projectPath, cardId, title, slot } = request;
+  dropDeadWorktrees();
+
+  // Already shipped, and still being worked on — a second worktree for the same card is the mistake
+  // the record exists to catch. The pane on the record is not the question: a record keeps naming its
+  // pane after the agent exits, so Enter on the worktree list still lands on the shell it left behind.
+  // What refuses the ship is an agent actually running in there.
+  const existing = entryForCard(worktrees, cardId);
+  if (existing && existing.pane !== null
+    && runsAnAgent(terminalCommands.get(terminalId(slot, existing.pane)))) {
+    return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
+  }
+
+  // Two ships of one card are a mistake and are refused. Two of different cards in one project are
+  // both wanted, so the second waits behind the first rather than racing it onto git's index lock.
+  if (shippingCards.has(cardId)) return { ok: false, message: `"${title}" is already being shipped` };
+  shippingCards.add(cardId);
+  try {
+    return await shipInProject(projectPath, async () => {
+      if (!existing) return runShip(request);
+      // An existing record that got past the refusal is a card nothing is running for: a ship that
+      // stopped part way — out of panes, or failed after the worktree was made — or one whose agent has
+      // since exited. Which of those it was is not written down, so this finishes the work
+      // rather than assuming only the pane is missing — an agent started in a worktree whose Ship move
+      // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
+      // it runs git in the same repository.
+      await commitShipMove(existing);
+      return attachPane(existing, slot);
+    });
+  } catch (error: unknown) {
+    return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
+  } finally {
+    // In a finally, so a step that throws cannot leave the card locked for the rest of the run with
+    // nothing on screen able to clear it.
+    shippingCards.delete(cardId);
+  }
+});
+
+ipcMain.handle('worktree:list', () => {
+  dropDeadWorktrees();
+  writeWorktrees(worktreesFile, worktrees);
+  // Where each pane's shell was started, read straight off terminalCommands rather than tracked
+  // beside it, so there is one copy of it. It is the spawn cwd, not the shell's: `cd` in a pane never
+  // reaches here, so the branch the status bar prints is the one the pane was opened in.
+  const paneDirectories = Object.fromEntries(
+    Array.from(terminalCommands, ([id, command]) => [id, command.directory]),
+  );
+  return { entries: worktrees, paneDirectories };
+});
+
+// A channel of its own rather than riding along on worktree:list, which the renderer reads at launch,
+// after every ship and whenever the dialog closes. A `git status` per worktree behind all of those
+// would be that many process spawns for an answer only the worktree dialog shows.
+//
+// blockingChanges is the same predicate worktree:remove asks, so the two can never disagree about
+// what counts as dirty. Run concurrently — this is main, and every pane's bytes flow through it — and
+// a worktree git cannot read (moved, deleted by hand) comes back unreadable rather than clean, since
+// silence is not the same thing as no changes.
+ipcMain.handle('worktree:check', async () => {
+  const results = await Promise.all(worktrees.map(async (entry) => {
+    try {
+      const changed = blockingChanges(await git(['status', '--porcelain'], entry.worktreePath));
+      return { worktreePath: entry.worktreePath, dirty: changed.length > 0, unreadable: false };
+    } catch {
+      return { worktreePath: entry.worktreePath, dirty: false, unreadable: true };
+    }
+  }));
+  return {
+    dirty: results.filter((result) => result.dirty).map((result) => result.worktreePath),
+    unreadable: results.filter((result) => result.unreadable).map((result) => result.worktreePath),
+  };
+});
+
+// Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
+// question is worth asking, and refusing forever would mean the only way out is the command line.
+ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
+  const entry = entryForPath(worktrees, worktreePath);
+  if (!entry) return { ok: false, message: 'no such worktree', dirty: [] };
+  try {
+    // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is
+    // not there, and node fails with `spawn git ENOENT` — its own failure to start a process, which
+    // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
+    // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
+    // folder has vanished, so the question is skipped rather than asked and lost.
+    const dirty = existsSync(worktreePath)
+      ? blockingChanges(await git(['status', '--porcelain'], worktreePath))
+      : [];
+    if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
+    await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
+    // The agent goes with the folder it was working in: leaving it running leaves it writing into a
+    // directory git has just deleted. Only here, where the folder was deleted on purpose.
+    for (const [id, command] of terminalCommands) {
+      if (command.directory === worktreePath) shells.get(id)?.kill();
+    }
+    releaseWorktreePanes(entry);
+    worktrees = withoutWorktree(worktrees, worktreePath);
+    writeWorktrees(worktreesFile, worktrees);
+    return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      message: `not removed: ${error instanceof Error ? error.message : String(error)}`,
+      dirty: [],
+    };
+  }
+});
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([

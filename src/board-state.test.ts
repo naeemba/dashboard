@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_PRIORITY, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
 import {
   addBlankCard,
+  applyAutomaticChange,
   applyChange,
   commitBranch,
   commitNotes,
@@ -47,6 +48,34 @@ describe('applyChange', () => {
   });
 });
 
+// The ship's move-back. Without this, `u` after a ship that worked puts the card back into Ship and
+// writes it there — a shipped card in Ship on main, which is the one state the design forbids, one
+// keystroke away.
+describe('applyAutomaticChange', () => {
+  const start = state(board(['a'], []), { column: 0, card: 0 });
+
+  it('moves the board without spending the undo step', () => {
+    const shipped = applyChange(start, moveCard(start.board, start.selection, 'right'));
+    expect(titles(shipped)).toEqual([[], ['a']]);
+    const back = applyAutomaticChange(shipped, moveCard(shipped.board, shipped.selection, 'left'));
+    expect(titles(back)).toEqual([['a'], []]);
+    // The step the user's own move left, not the board with the card in the second column.
+    expect(back.previous).toBe(shipped.previous);
+  });
+
+  // So `u` right after a ship that worked does nothing visible: the board is already where the step
+  // points, rather than being dragged back into the column the card was shipped from.
+  it('leaves undo pointing at the board the card is already on', () => {
+    const shipped = applyChange(start, moveCard(start.board, start.selection, 'right'));
+    const back = applyAutomaticChange(shipped, moveCard(shipped.board, shipped.selection, 'left'));
+    expect(titles(undoChange(back))).toEqual([['a'], []]);
+  });
+
+  it('hands back the same state when the operation did nothing', () => {
+    expect(applyAutomaticChange(start, moveCard(start.board, start.selection, 'left'))).toBe(start);
+  });
+});
+
 describe('undoChange', () => {
   it('puts the board and the cursor back where the mis-hit happened', () => {
     const start = state(board(['a', 'b', 'c', 'd']), { column: 0, card: 3 });
@@ -73,6 +102,24 @@ describe('addBlankCard', () => {
     const named = commitTitle(added, 'Fix the resize race');
     expect(titles(named)).toEqual([['a'], ['Fix the resize race']]);
     expect(titles(undoChange(named))).toEqual([['a'], []]);
+  });
+
+  // The ship's move-back landing between `n` and Enter. Before this, the automatic change cleared the
+  // flag, so Enter spent a step of its own and `u` left the just-named card sitting in the column
+  // instead of putting back the board from before `n`.
+  it('stays one step when an automatic change lands while the title box is open', () => {
+    const start = state(board(['a'], []), { column: 1, card: 0 });
+    const added = addBlankCard(start, 'new-id');
+    // The selection stays on the card whose box is open; board-view.ts is what holds it there.
+    const shipped = applyAutomaticChange(added, {
+      board: renameCard(added.board, { column: 0, card: 0 }, 'a moved').board,
+      selection: added.selection,
+    });
+    const named = commitTitle(shipped, 'Fix the resize race');
+    expect(titles(named)).toEqual([['a moved'], ['Fix the resize race']]);
+    const undone = undoChange(named);
+    expect(undone.board.columns.flatMap((column) => column.cards.map((card) => card.title)))
+      .not.toContain('Fix the resize race');
   });
 
   // Escape with nothing typed: the card that `n` added goes away rather than sitting there blank.

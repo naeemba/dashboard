@@ -9,18 +9,23 @@ import {
   descendantsOf,
   detachCard,
   hasSubtasks,
+  landsInShip,
   moveCard,
+  moveCardToColumn,
   flightParts,
   moveSelection,
   pullRequestFrom,
+  selectionOf,
   sortColumn,
   type Card,
   type Change,
+  type Selection,
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail } from './board-detail';
 import {
   addBlankCard,
+  applyAutomaticChange,
   applyChange,
   commitBranch,
   commitNotes,
@@ -34,9 +39,13 @@ import {
 import type { DashboardBridge } from './bridge';
 import { confirmOverlay } from './overlay';
 import { isModified } from './shortcuts';
+import { paneLabel } from './terminals';
+import type { WorktreeEntry } from './worktree-store';
 
 export type BoardOptions = {
   projectPath: string;
+  // Which page this board belongs to, because shipping a card takes one of that page's five panes.
+  slot: number;
   bridge: DashboardBridge;
   // The status bar names the column the selection is in and the priority of the card it is on, so it
   // is redrawn whenever either can change.
@@ -45,6 +54,13 @@ export type BoardOptions = {
   // lands, must not leave its own previous failure sitting on screen. Another producer's message is
   // not this board's to clear, which the renderer enforces.
   onError(message: string): void;
+  // A card has just been shipped, so the record of what is in flight has a row this board's caller has
+  // not seen. Which panes are on a worktree is the status bar's question, not this board's.
+  onShipped(): void;
+  // Everything in flight, asked for on every render rather than fetched and held here. One copy of
+  // worktrees.json in the renderer, so a worktree removed from the Ctrl+Shift+W list cannot leave a
+  // card on the board behind it still reading `shipped · <branch> · terminal 3`.
+  worktrees(): readonly WorktreeEntry[];
 };
 
 export type BoardView = {
@@ -56,6 +72,9 @@ export type BoardView = {
   // The board's own keys, once the renderer's own lookup finds them and hands them here instead of
   // this element's own keydown listener answering them.
   runAction(action: Action): void;
+  // Draw again from what has not changed here: the record of what is in flight lives in the renderer,
+  // and a card's badge comes from it.
+  redraw(): void;
 };
 
 // Read off the action rather than spelled out again: a field the table can ask for and this file has
@@ -96,6 +115,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   // not get it back either.
   let latestRead = 0;
   let landedRead = 0;
+  // This project's rows of the record, by card, rebuilt once per render. The badge comes from here
+  // rather than from the board, because a card's column on main says what has been merged and says
+  // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
+  // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
+  let inFlight = new Map<string, WorktreeEntry>();
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
@@ -189,6 +213,17 @@ export function createBoardView(options: BoardOptions): BoardView {
       badge.textContent = parent.title;
       item.append(badge);
     }
+    // What this card has in flight on this machine. Not on the board and not in git: the card's
+    // column on main is about what has merged, so without this a card an agent is working on sits in
+    // Todo looking untouched — and gets shipped a second time.
+    const flying = inFlight.get(card.id);
+    if (flying) {
+      const badge = document.createElement('p');
+      badge.className = 'board-shipped';
+      const pane = flying.pane === null ? 'no pane' : paneLabel(flying.pane);
+      badge.textContent = `shipped · ${flying.branch} · ${pane}`;
+      item.append(badge);
+    }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
     // A description shows on the card rather than behind a keystroke: the point of writing one down is
     // reading it without asking. A card with none takes no room for it.
@@ -238,6 +273,9 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   function render(): void {
+    inFlight = new Map(options.worktrees()
+      .filter((entry) => entry.projectPath === options.projectPath)
+      .map((entry) => [entry.cardId, entry]));
     element.replaceChildren(...state.board.columns.map((column, columnIndex) => {
       const section = document.createElement('section');
       section.className = 'board-column';
@@ -276,6 +314,53 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
+  // A card that has landed in Ship, and `from` is the column it was in a keystroke ago.
+  //
+  // A ship that works puts the card back there, carrying its badge: this board is main's, and a
+  // column on main says what has been merged. That move writes board.json like any other, and goes
+  // through applyAutomaticChange rather than change() because it is the app's move and not yours —
+  // board-state.ts holds the reason.
+  //
+  // A ship that fails changes nothing. The card stays in Ship where you put it and the message says
+  // why; the app never silently undoes a move you made.
+  //
+  // No staleness guard on the result, unlike open(): a board read in flight would replace the whole
+  // board, and this only moves one card that it finds again first. Landing after you have left this
+  // view is fine too — the write is to this board's own file either way.
+  // The move-back itself. A change carries the selection with it, and normally that is right — the
+  // highlight follows the card home. Not while a box is open: the selection is then the card you are
+  // typing into, and taking the moved card's would commit what you typed onto the card that just
+  // shipped and leave the one you were naming blank. Found by id rather than kept as a number, because
+  // the move it is riding on has just shifted the rows below it.
+  function movedBack(landed: Selection, from: number): Change {
+    const moved = moveCardToColumn(state.board, landed, from);
+    const editingId = editing === null ? undefined : cardAt(state.board, state.selection)?.id;
+    if (editingId === undefined) return moved;
+    return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
+  }
+
+  function ship(card: Card, from: number): void {
+    options.onError(`shipping "${card.title}"…`);
+    options.bridge.shipCard({
+      projectPath: options.projectPath,
+      cardId: card.id,
+      title: card.title,
+      slot: options.slot,
+    }).then(
+      (result) => {
+        if (!result.ok) return options.onError(result.message);
+        options.onError('');
+        // Found again rather than remembered: a ship takes as long as git does, and anything you did
+        // to the board while it ran has moved the card off the row it was shipped from.
+        const landed = selectionOf(state.board, card.id);
+        if (landed) apply(applyAutomaticChange(state, movedBack(landed, from)));
+        else render();
+        options.onShipped();
+      },
+      (error: unknown) => options.onError(`ship failed: ${String(error)}`),
+    );
+  }
+
   // The dialog changes the board as you add subtasks, so each change goes through apply() as it
   // happens — same undo step, same write to disk as a change made on the board itself. It closes on
   // the card you asked for, or on the subtask you pressed Enter on.
@@ -298,6 +383,7 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   return {
     element,
+    redraw: render,
     // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
     // at the board is not picked up until you switch away and back. Watch the file if that bites.
     //
@@ -306,6 +392,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     // land nowhere. Main's read is synchronous fs, which on a cold or network-mounted folder is
     // comfortably longer than the gap between two keys — so a key typed during the read is dropped
     // rather than applied to the board that is about to be replaced.
+    //
+    // What it decides (`next`, `message`) stays local until the read has settled, and the one guard
+    // below is what a stale call bounces off; a guard per await is the shape that let an old read win
+    // a race the first version of this file had already closed.
     //
     // A failed read still has to leave the board on screen usable from the keyboard — render() runs
     // either way, on whatever board is already in memory, with the error in the status bar instead of
@@ -318,8 +408,9 @@ export function createBoardView(options: BoardOptions): BoardView {
       const token = ++latestRead;
       let message = '';
       let next = state;
+      const boardRead = options.bridge.readBoard(options.projectPath);
       try {
-        const read = await options.bridge.readBoard(options.projectPath);
+        const read = await boardRead;
         next = loadBoard(state, read.board);
         // The old file is still on disk under this name, so the cards are not gone — just not shown.
         if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
@@ -350,7 +441,15 @@ export function createBoardView(options: BoardOptions): BoardView {
         case 'board-select':
           state = { ...state, selection: moveSelection(state.board, state.selection, action.direction) };
           return render();
-        case 'board-move': return change(moveCard(state.board, state.selection, action.direction));
+        case 'board-move': {
+          const moving = cardAt(state.board, state.selection);
+          // The column the card is leaving, which both halves of a ship need: whether this move is the
+          // gesture at all, and where the card goes back to once the ship works.
+          const from = state.selection.column;
+          change(moveCard(state.board, state.selection, action.direction));
+          if (moving && landsInShip(state.board, from, state.selection, action.direction)) ship(moving, from);
+          return;
+        }
         case 'board-attach': {
           // The one refusal worth explaining. The others — no card above, nothing selected — are
           // obvious from the screen. attachmentRing decides it on the same call, so the message cannot

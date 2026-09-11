@@ -56,7 +56,8 @@ can receive the keystroke anyway.
 (isModified(event)) return;` first, or a modified key does something in it
 that it was never meant to.** That is the help dialog, the card detail
 dialog, the delete confirmation, the picker's search box, the settings
-screen, the card title and description editor, and the manager list — which
+screen, the card title and description editor, the worktree list, and the
+manager list — which
 asks `isBareCharacter` instead, because it takes Shift on purpose as the third
 exception below. Both predicates read the same list of the three modifiers that
 are not typing, so a fourth added to `stopsTyping` reaches both. Two of them
@@ -127,10 +128,13 @@ held its own copy of the 6-to-72 range. A size the settings screen accepted
 could still get silently discarded the next time the file was read, with
 nothing on screen saying why.
 
-Seven predicates exist for this reason: `hasSubtasks`, `attachmentRing` and
-`pullRequestFrom` in `board.ts`, and `holderOfBinding`, `isHexColor`,
-`isFontSize` and `withoutShipped` in `settings.ts`. A refusal worth a message
-reuses one of these or adds an eighth — never a second copy of the condition.
+Eight predicates exist for this reason: `hasSubtasks`, `attachmentRing` and
+`pullRequestFrom` in `board.ts`, `holderOfBinding`, `isHexColor`,
+`isFontSize` and `withoutShipped` in `settings.ts`, and `blockingChanges` in
+`ship.ts` — which both the ship's refusal and the message listing the files in
+the way call, so the count on screen is exactly the list that caused it. A
+refusal worth a message reuses one of these or adds a ninth — never a second
+copy of the condition.
 
 `withoutShipped` is the same idea one step over: it decides what a line has to
 be before it belongs in settings.json, and both writers ask it — the save and

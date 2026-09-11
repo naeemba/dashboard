@@ -30,8 +30,28 @@ export function neighbor(index: number, direction: Direction): number {
 
 // The one spelling of a pane's name. The status bar and the bell's notification both say it, and a
 // second literal in either place is a name that goes stale the day the panes are renamed.
-export function paneLabel(index: number): string {
-  return `terminal ${index + 1}`;
+//
+// A pane running an agent in a worktree says which branch it is on. The number stays in front of it —
+// lose the numbering and the focus keys stop making sense — so the branch is added, never swapped in.
+export function paneLabel(index: number, branch?: string): string {
+  const name = `terminal ${index + 1}`;
+  return branch === undefined ? name : `${name} · ${branch}`;
+}
+
+// The branch a pane is on, or undefined when it is on the project's own checkout. Kept beside
+// paneLabel because it is the other half of the same sentence: the caller asks which branch, then
+// asks for the label that says so.
+//
+// Asked by the folder the pane's shell is in, not by the pane number on a record. A record names one
+// pane, and two panes can end up in one worktree: an agent exits leaving its pane in the checkout, you
+// type in it, and the card is shipped again onto a different pane. By the record, the pane you are
+// typing in goes back to reading "terminal 3" while sitting in the branch's folder — which is the
+// wrong-checkout mistake the branch is printed to prevent. By the folder, both panes say the branch.
+export function branchOfPane(
+  entries: readonly { worktreePath: string; branch: string }[],
+  directory: string,
+): string | undefined {
+  return entries.find((entry) => entry.worktreePath === directory)?.branch;
 }
 
 // The inverse of terminalId. A notification is raised for one pane and carries that pane's id back

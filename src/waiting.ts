@@ -10,6 +10,24 @@ export function marksWaiting(windowFocused: boolean, isFocusedPane: boolean): bo
   return !windowFocused || !isFocusedPane;
 }
 
+// A bell is not proof the pane wants you. An agent rings on its way past something — a teammate
+// finishes, a message lands, an update installs — and goes straight back to work, so the mark would
+// go up on a pane that is mid-run and the banner would name a question nobody is asking.
+// The screen says which it is. Two things only an agent still working prints: the key that stops it,
+// and its spinner, which is a word left hanging on an ellipsis with the seconds so far after it.
+// Both are gone the moment it is really asking you something.
+// The seconds are only read as a spinner when that ellipsis is in front of them. Every pane's bell
+// comes through here, including the shells, and a bare `(12s)` is what an ordinary build prints on
+// its way to failing — take that for a spinner and the pane never goes yellow, so you never find out
+// the build broke and nothing on screen says why.
+const BUSY = /esc to interrupt|(?:…|\.\.\.)\s*\(\d+s\b/i;
+
+// The whole screen rather than the last few lines: the spinner is not the bottom line. An agent draws
+// its input box under it, and the box alone is three lines before anything else the screen holds.
+export function looksBusy(screen: readonly string[]): boolean {
+  return screen.some((line) => BUSY.test(line));
+}
+
 // A pane is in one of three states, not two independent flags: it is quiet, or it is asking, or it is
 // asking and has already had its banner. One field, because 'notified but not asking' is not a state a
 // pane can be in — and arriving at the pane puts it back to 'quiet' in a single write, so there is no
