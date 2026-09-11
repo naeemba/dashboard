@@ -106,9 +106,10 @@ its first letter. That fixes the reading order but not the box: without
 the text runs away from the caret, ending punctuation lands on the wrong side,
 and Home and End take you to the opposite ends of what you see.
 
-Four boxes have it today: the card title in `board-view.ts`, the description in
-`board-detail.ts`, the picker's search box, and the settings screen's text
-fields. Nothing checks this — no test, no lint rule — which is why it is written
+Five boxes have it today: the card title in `board-view.ts`, the description in
+`board-detail.ts`, the picker's search box, the settings screen's text fields,
+and the command box in `command-view.ts`. Nothing checks this — no test, no lint
+rule — which is why it is written
 down here.
 
 ## A refusal is explained where it is decided — Hard Rule

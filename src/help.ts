@@ -54,8 +54,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'say which project the rest of them are aimed at, and Escape to go back to the manager\'s list.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
     + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open last '
-    + 'time, and it has two views. The board key shows the other one — every open project\'s board, '
-    + 'stacked, with the cards editable where they sit. '
+    + 'time. Three sections are named along the top — general, board, command — and Alt+H and Alt+L '
+    + 'walk between them, from any of the three. The arrows are not those keys: on the board they move '
+    + 'between cards. The board key still comes straight here to the board. '
     + 'This one lists every open project and what its panes want from you — one asking a question, one that '
     + 'has died and needs starting again. Enter on a project shows those panes by name, each with the '
     + 'last few lines it printed, so the question can be read from here. Enter on a pane takes you '
