@@ -77,16 +77,12 @@
       ]
     },
     {
+      "name": "Ship",
+      "cards": []
+    },
+    {
       "name": "Doing",
       "cards": [
-        {
-          "id": "275095b6-3632-4cfb-a7c7-31330d1ee0fc",
-          "title": "Start a card in its own worktree, in one of the project's panes",
-          "notes": "A key on a card in Doing makes a git worktree and a branch for it, and puts one of the project's five panes into that worktree. You work the card there while the other panes stay on the main checkout. No stashing, and two cards can be in flight at once without standing on each other.\n\nNot a project tab of its own: that would mean a second entry in the session, a second row in the tab strip and a second install of everything, for a checkout that lives a few days.\n\nThe pane has to say which branch it is on. Five panes that all read `terminal 3` with two of them in worktrees is how a command lands in the wrong checkout. That is the naming card, and this needs it.\n\nDecide how a pane is pointed at the worktree. Sending it `cd` keeps whatever was in the pane and leaves its shell where the project started; restarting it there is cleaner and throws away the scrollback. Also decide which pane -- picked by you, or a free one, and nothing yet knows which panes are free.\n\nThe lifecycle is the work, not the git command. When is the worktree removed, what happens with uncommitted changes in it, what happens when the branch merges, and what stops fifteen stale checkouts collecting on disk. The nvim pane stays on the main checkout unless something says otherwise.\n\nDesign agreed 2026-09-10. Ship is a new column between Todo and Doing; moving a card there creates the worktree off a freshly fetched base branch, takes a pane you have never typed in, and starts `claude \"/work-card <id>\"` in it. In-flight state lives on the branch, never on main; a local worktrees.json in userData carries the badge, the pane label and the cleanup list. Spec: docs/superpowers/specs/2026-09-10-ship-a-card-into-a-worktree-design.md",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-10T10:59:57.495994Z"
-        },
         {
           "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "title": "Add a manager page as the first tab, giving an overview across projects",
@@ -99,6 +95,16 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "275095b6-3632-4cfb-a7c7-31330d1ee0fc",
+          "title": "Start a card in its own worktree, in one of the project's panes",
+          "notes": "A key on a card in Doing makes a git worktree and a branch for it, and puts one of the project's five panes into that worktree. You work the card there while the other panes stay on the main checkout. No stashing, and two cards can be in flight at once without standing on each other.\n\nNot a project tab of its own: that would mean a second entry in the session, a second row in the tab strip and a second install of everything, for a checkout that lives a few days.\n\nThe pane has to say which branch it is on. Five panes that all read `terminal 3` with two of them in worktrees is how a command lands in the wrong checkout. That is the naming card, and this needs it.\n\nDecide how a pane is pointed at the worktree. Sending it `cd` keeps whatever was in the pane and leaves its shell where the project started; restarting it there is cleaner and throws away the scrollback. Also decide which pane -- picked by you, or a free one, and nothing yet knows which panes are free.\n\nThe lifecycle is the work, not the git command. When is the worktree removed, what happens with uncommitted changes in it, what happens when the branch merges, and what stops fifteen stale checkouts collecting on disk. The nvim pane stays on the main checkout unless something says otherwise.\n\nDesign agreed 2026-09-10. Ship is a new column between Todo and Doing; moving a card there creates the worktree off a freshly fetched base branch, takes a pane you have never typed in, and starts `claude \"/work-card <id>\"` in it. In-flight state lives on the branch, never on main; a local worktrees.json in userData carries the badge, the pane label and the cleanup list. Spec: docs/superpowers/specs/2026-09-10-ship-a-card-into-a-worktree-design.md\n\nShipped in #27. Ship is a new column second from the left: moving a card there makes a worktree beside the project off a freshly fetched base branch, commits the card's move on that branch, and starts an agent in a pane you have never typed into. A local worktrees.json carries the card's badge, the pane's branch label and the Ctrl+Shift+W list, which is the only place a worktree is ever removed. The agent's own instructions live in dotfiles as /work-card and land separately.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-11T08:01:03.184609Z",
+          "branch": "ship-a-card-into-a-worktree",
+          "pullRequest": 27
+        },
         {
           "id": "f18b41cb-2212-460a-bb4f-b3a240eb784b",
           "title": "Manager tab: a board of every open project, editable in place",
