@@ -564,17 +564,34 @@ function sendTask(result: TaskResult): void {
   sendToRenderer('task:update', result);
 }
 
+// Stop whatever is running and tell every project that it was stopped. Both the cancel key and a
+// fresh run come through here: a new run kills the previous one, and a project the new run does not
+// name would otherwise sit on `running` forever, waiting for a process that is already dead.
+//
+// The paths are read before the processes are killed, and the run number moves with them, so each
+// project is told exactly once — from here, rather than a second time as its own close event arrives.
+function stopAndTell(): void {
+  const paths = runningTasks.map((task) => task.projectPath);
+  stopTasks();
+  currentRun += 1;
+  for (const projectPath of paths) {
+    sendTask({ projectPath, state: 'cancelled', exitCode: null, lastLine: '', tail: [] });
+  }
+}
+
 // The stale-run guard and the drop from `runningTasks` are shared by every way a process can end
-// (failed to start, or exited) — done here once rather than repeated in each listener.
+// (failed to start, or exited) — done here once rather than repeated in each listener. Membership in
+// `runningTasks` is what "already answered for" means: a failed spawn fires `error` and then `close`,
+// and without this check the second would overwrite the first — which is the one carrying the message.
 function finishTask(child: ReturnType<typeof spawn>, run: number, result: TaskResult): void {
   if (run !== currentRun) return;
+  if (!runningTasks.some((task) => task.child === child)) return;
   runningTasks = runningTasks.filter((task) => task.child !== child);
   sendTask(result);
 }
 
 ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => {
-  stopTasks();
-  currentRun += 1;
+  stopAndTell();
   const run = currentRun;
   for (const projectPath of projectPaths) {
     sendTask({ projectPath, state: 'running', exitCode: null, lastLine: '', tail: [] });
@@ -612,20 +629,7 @@ ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => {
   }
 });
 
-ipcMain.on('task:cancel', () => {
-  // Every stopped project is named back. A row told nothing sits on `running` for as long as the app
-  // is open, waiting for a process that is already dead.
-  //
-  // The paths are read before the processes are killed, and the run number moves with them, so each
-  // project is told "cancelled" exactly once — from here, rather than a second time as its own close
-  // event arrives with a signal on it.
-  const paths = runningTasks.map((task) => task.projectPath);
-  stopTasks();
-  currentRun += 1;
-  for (const projectPath of paths) {
-    sendTask({ projectPath, state: 'cancelled', exitCode: null, lastLine: '', tail: [] });
-  }
-});
+ipcMain.on('task:cancel', stopAndTell);
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
