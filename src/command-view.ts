@@ -149,11 +149,12 @@ export function createCommandView(options: CommandOptions): CommandView {
     const name = document.createElement('span');
     name.className = 'command-name';
     name.textContent = project.name;
+    const result = resultFor(project.path);
     const summary = document.createElement('span');
     summary.className = 'command-summary';
-    summary.textContent = taskSummary(resultFor(project.path));
+    summary.textContent = taskSummary(result);
 
-    const lines = resultFor(project.path).tail;
+    const lines = result.tail;
     const tail = document.createElement('pre');
     tail.className = 'command-tail';
     tail.textContent = lines.join('\n');
@@ -174,7 +175,7 @@ export function createCommandView(options: CommandOptions): CommandView {
 
   function render(): void {
     const rows = projects();
-    selected = clampIndex(selected, rowCount() - 1);
+    selected = clampIndex(selected, rows.length);
     empty.hidden = rows.length > 0;
     label.classList.toggle('highlighted', selected === COMMAND_ROW);
     keys.textContent = running
