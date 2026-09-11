@@ -1,5 +1,5 @@
 import { projectPosition } from './manager';
-import { sectionIndex } from './manager-sections';
+import { isSection } from './manager-sections';
 import type { Mode } from './modes';
 import { TERMINAL_COUNT, type Direction } from './terminals';
 
@@ -57,9 +57,9 @@ export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'comman
 // three modes the manager shows.
 export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
   if (one === 'global' || other === 'global' || one === other) return true;
-  const pair = [one, other];
-  return pair.includes('manager-page')
-    && pair.some((scope) => scope !== 'manager-page' && sectionIndex(scope as Mode) !== -1);
+  if (one === 'manager-page') return isSection(other as Mode);
+  if (other === 'manager-page') return isSection(one as Mode);
+  return false;
 }
 
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:

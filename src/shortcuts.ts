@@ -1,6 +1,6 @@
 import { ACTIONS, type Action, type ActionScope } from './actions';
 import { matchesBinding, type KeyInput } from './binding';
-import { sectionIndex } from './manager-sections';
+import { isSection } from './manager-sections';
 import type { Mode } from './modes';
 import type { Settings } from './settings';
 
@@ -42,7 +42,7 @@ export function isBareCharacter(input: KeyInput): boolean {
 // the manager. The renderer knows — the manager is the page holding MANAGER_SLOT.
 export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): boolean {
   if (scope === 'global') return true;
-  if (scope === 'manager-page') return onManagerPage && sectionIndex(mode) !== -1;
+  if (scope === 'manager-page') return onManagerPage && isSection(mode);
   return scope === mode;
 }
 

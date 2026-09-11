@@ -21,6 +21,14 @@ export function sectionIndex(mode: Mode): number {
   return SECTIONS.findIndex((section) => section.mode === mode);
 }
 
+// Whether a mode is one of the manager's sections at all, asked wherever the question is only "is it
+// one" rather than "which one" — actions.ts and shortcuts.ts both need this fact for `manager-page`,
+// and each holding its own `sectionIndex(mode) !== -1` is the second copy CLAUDE.md warns about: change
+// what counts as a section here and one of the two keeps the old answer.
+export function isSection(mode: Mode): boolean {
+  return sectionIndex(mode) !== -1;
+}
+
 // Where Alt+H and Alt+L land. The strip does not wrap: Alt+H on the first section stays on it, the way
 // the manager's own list stops at its last row rather than carrying you back to the top. Holding a key
 // to get to the end should stop at the end.
