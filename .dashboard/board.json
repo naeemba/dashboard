@@ -25,13 +25,6 @@
           "parent": null
         },
         {
-          "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
-          "title": "Run a task across projects and collect the results",
-          "notes": "A named task -- `npm audit`, `npm outdated`, the test suite -- run over the projects you pick, with the answers gathered back onto the manager page. One row per project: how it exited and what it last said. Ask once whether anything has a vulnerability and read five answers in one place.\n\nNot the same as sending a command to panes, and it must not use them: a task that borrows your shells throws away whatever was in them. Main spawns a process per project and keeps its output, which is new -- today it only spawns ptys that belong to a pane.\n\nStart with a task being a name and a command, and show the exit code and the last line. Reading the output properly -- 3 high, 0 moderate -- means a parser per task, and every tool words it differently.",
-          "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "f1b344b2-59bf-4349-b410-63177f61c3a2",
           "title": "Send one command to many panes",
           "notes": "Pick panes across projects, type a command once, and it runs in all of them. `git pull` in five repos for one keystroke. Same plumbing as answering a waiting pane, plus a way to select rows.\n\nThe danger is the feature: whatever sends `git pull` to thirty shells sends `rm -rf` to thirty shells. So the selection has to be visible, the confirmation has to name the count, and it should refuse a pane that is not sitting at a prompt -- a pane mid-agent-session takes the command into Claude Code's input box rather than a shell. Knowing which panes are idle needs shell integration we do not have, so decide what to do about that before building the rest.",
@@ -83,6 +76,13 @@
     {
       "name": "Doing",
       "cards": [
+        {
+          "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
+          "title": "Run a task across projects and collect the results",
+          "notes": "A named task -- `npm audit`, `npm outdated`, the test suite -- run over the projects you pick, with the answers gathered back onto the manager page. One row per project: how it exited and what it last said. Ask once whether anything has a vulnerability and read five answers in one place.\n\nNot the same as sending a command to panes, and it must not use them: a task that borrows your shells throws away whatever was in them. Main spawns a process per project and keeps its output, which is new -- today it only spawns ptys that belong to a pane.\n\nStart with a task being a name and a command, and show the exit code and the last line. Reading the output properly -- 3 high, 0 moderate -- means a parser per task, and every tool words it differently.",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
+        },
         {
           "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "title": "Add a manager page as the first tab, giving an overview across projects",
