@@ -611,7 +611,8 @@ function report(task: Promise<void>): void {
 // The keys for the screen in front of you. With no project open that screen is the manager, which is
 // a page like any other and has its own section in the dialog.
 function showHelp(): void {
-  openHelp(pages[activeIndex].mode, settings.keys, isMac)
+  const page = pages[activeIndex];
+  openHelp(page.mode, !isProjectPage(page), settings.keys, isMac)
     .then(() => showPage(activeIndex));
 }
 

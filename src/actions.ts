@@ -34,7 +34,11 @@ export type Action =
   | { kind: 'board-undo' }
   | { kind: 'cards-project'; direction: 'previous' | 'next' }
   | { kind: 'manager-select'; direction: 'up' | 'down' }
-  | { kind: 'manager-open' };
+  | { kind: 'manager-open' }
+  | { kind: 'section-move'; direction: 'previous' | 'next' }
+  | { kind: 'command-select'; direction: 'up' | 'down' }
+  | { kind: 'command-open' }
+  | { kind: 'command-cancel' };
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager` and `command` are each heard only on their own screen, so the
@@ -64,7 +68,7 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.
-export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager';
+export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'sections';
 
 export type ActionEntry = {
   // Stable: it is the key in settings.json, so renaming one loses whatever the user had bound to it.
@@ -292,6 +296,47 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'manager-open', description: "Show a project's panes, or go to the pane",
     group: 'manager', scope: 'manager', action: { kind: 'manager-open' }, mac: 'Enter', other: 'Enter',
+  },
+  // The strip along the top of the manager page. manager-page scope, because they have to work on all
+  // three sections and one of those is board mode, which every project also has — a project's board
+  // must not hear these.
+  //
+  // Alt+H and Alt+L are the vim directions, the same two letters terminal-move already uses for left
+  // and right. That is not a clash: those are terminals scope and the manager has no terminals.
+  // The arrows are deliberately not bound here. On the board they move between cards, and a pair of
+  // keys that works on two sections out of three is worse to learn than one pair that always works.
+  // Their own group, not the manager's: the help dialog prints a screen's keys from the group named
+  // after that screen, so in the manager group these two would be listed on the general list and
+  // nowhere else — invisible on the board and the command screen, which are the two places you most
+  // need to know how to get out. helpSections prints this group on all three sections instead.
+  {
+    name: 'section-previous', description: 'The section to the left, along the top',
+    group: 'sections', scope: 'manager-page',
+    action: { kind: 'section-move', direction: 'previous' }, mac: 'Alt+H', other: 'Alt+H',
+  },
+  {
+    name: 'section-next', description: 'The section to the right, along the top',
+    group: 'sections', scope: 'manager-page',
+    action: { kind: 'section-move', direction: 'next' }, mac: 'Alt+L', other: 'Alt+L',
+  },
+  // The command screen. Bare arrows, a bare Enter and Escape, heard on this screen only. Nothing here
+  // is forwarded to a pane — this is not the manager's list — so a bare key costs nothing.
+  // Space is deliberately absent: it has to reach the command box as a space, and the view sends it to
+  // a mark only when the selection has left that box. help.ts lists it under UNBOUND_SHORTCUTS.
+  ...(['up', 'down'] as const).map((direction): ActionEntry => ({
+    name: `command-select-${direction}`, description: `Move the selection ${direction}`,
+    group: 'command', scope: 'command',
+    action: { kind: 'command-select', direction },
+    mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],
+  })),
+  {
+    name: 'command-open', description: 'Run it, or show what a project printed',
+    group: 'command', scope: 'command', action: { kind: 'command-open' }, mac: 'Enter', other: 'Enter',
+  },
+  {
+    name: 'command-cancel', description: 'Stop a run',
+    group: 'command', scope: 'command', action: { kind: 'command-cancel' },
+    mac: 'Escape', other: 'Escape',
   },
 ];
 

@@ -114,7 +114,14 @@ describe('holderOfBinding', () => {
 
   // A board key and a terminal key never meet: neither fires on the other's screen.
   it('lets two screens hold the same key', () => {
-    expect(holderOfBinding(settings, 'board-undo', 'Alt+H')).toBeNull();
+    // Alt+J is terminal-move-down, and a terminal and a board are never on screen at once.
+    expect(holderOfBinding(settings, 'board-undo', 'Alt+J')).toBeNull();
+  });
+
+  // The manager's board is a board and a manager section at once, so a board key and a strip key
+  // really are both live there — the settings screen has to say so before you bind over one.
+  it('catches a clash between a board key and the manager strip', () => {
+    expect(holderOfBinding(settings, 'board-undo', 'Alt+H')).toBe('section-previous');
   });
 
   // A global key is heard everywhere, so it clashes with both screens and they with it.

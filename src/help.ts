@@ -1,4 +1,5 @@
 import { ACTIONS, defaultBinding, type ActionEntry, type ActionGroup } from './actions';
+import { isSection } from './manager-sections';
 import { type Mode } from './modes';
 import { openOverlay } from './overlay';
 import type { Settings } from './settings';
@@ -74,6 +75,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'moderate — would need a parser per tool, and every tool words it differently. '
     + 'The command you typed lasts while the app is running and is gone on restart, and so are the '
     + 'results: a run answers a question you are asking now, and is not a record of anything.',
+  sections: 'The manager is three screens with one strip of names above them. These two keys walk it, '
+    + 'from any of the three. The arrows are deliberately not these keys: on the board they move '
+    + 'between cards.',
   modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The manager has two of its own: its list of what the panes '
     + 'want, and every project\'s board.',
@@ -105,7 +109,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
 // a typed character is the answer the selected pane is waiting for, every named key there being bound
 // already. Both are the answer to "what can I press here", so both are printed under the keys that do
 // have names.
-const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
+export const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
   nvim: [{ keys: 'Everything else', action: 'Goes straight to nvim' }],
   manager: [{ keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane' }],
   command: [{ keys: 'Space', action: 'Mark or unmark the project under the selection' }],
@@ -163,17 +167,28 @@ function groupShortcuts(
 
 // The group named after the screen, then whatever that screen takes without a binding. nvim has no
 // group at all, so its list is only the second half.
-function screenShortcuts(mode: Mode, keys: Settings['keys'], isMac: boolean): Shortcut[] {
-  return [...groupShortcuts(mode, mode, keys, isMac), ...UNBOUND_SHORTCUTS[mode] ?? []];
+// The manager's three screens get one more, and only there: `onManagerPage` is the same question
+// `hears` asks before firing a manager-page action, asked here so the dialog never lists a key that
+// question would refuse. A project's own board is `isSection(mode)` too, and must not get these rows.
+function screenShortcuts(
+  mode: Mode, onManagerPage: boolean, keys: Settings['keys'], isMac: boolean,
+): Shortcut[] {
+  return [
+    ...groupShortcuts(mode, mode, keys, isMac),
+    ...(onManagerPage && isSection(mode) ? groupShortcuts('sections', mode, keys, isMac) : []),
+    ...UNBOUND_SHORTCUTS[mode] ?? [],
+  ];
 }
 
 // The screen you are on comes first: it is what you pressed the help key to ask about. The keys that
 // answer from everywhere follow, since they are the ones you already half know.
-export function helpSections(mode: Mode, keys: Settings['keys'], isMac: boolean): Section[] {
+export function helpSections(
+  mode: Mode, onManagerPage: boolean, keys: Settings['keys'], isMac: boolean,
+): Section[] {
   const screen: Section = {
     title: MODE_NAMES[mode],
     blurb: BLURBS[mode],
-    shortcuts: screenShortcuts(mode, keys, isMac),
+    shortcuts: screenShortcuts(mode, onManagerPage, keys, isMac),
   };
   const rest: readonly ('modes' | 'projects' | 'app')[] = ['modes', 'projects', 'app'];
   return [screen, ...rest.map((group) => ({
@@ -185,7 +200,9 @@ export function helpSections(mode: Mode, keys: Settings['keys'], isMac: boolean)
 
 // Read-only, so there is nothing to walk over: Escape or Enter closes it and the arrows scroll a list
 // too long for the dialog.
-export function openHelp(mode: Mode, keys: Settings['keys'], isMac: boolean): Promise<void> {
+export function openHelp(
+  mode: Mode, onManagerPage: boolean, keys: Settings['keys'], isMac: boolean,
+): Promise<void> {
   return new Promise<void>((resolve) => {
     function close(): void {
       remove();
@@ -194,7 +211,7 @@ export function openHelp(mode: Mode, keys: Settings['keys'], isMac: boolean): Pr
 
     const { dialog, remove } = openOverlay('help', close);
 
-    for (const section of helpSections(mode, keys, isMac)) {
+    for (const section of helpSections(mode, onManagerPage, keys, isMac)) {
       const heading = document.createElement('h2');
       heading.textContent = section.title;
       const blurb = document.createElement('p');
