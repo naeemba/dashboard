@@ -78,6 +78,12 @@
           "title": "Pull request status on the Ship card, found from the branch through gh",
           "notes": "For each card with a branch and no pull request number, gh pr list --head <branch> finds the number and stores it on the card. For each card with a number, poll gh pr view (state, mergeable, checks, review decision) about once a minute and show one glyph on the card: checks running, checks failed, approved, mergeable, merged. A merged pull request is recorded on the card and never polled again. Open: whether a merged pull request moves the card to Done by itself or only marks it.",
           "priority": "medium"
+        },
+        {
+          "id": "d738c37e-e3dc-4b61-998b-bbdb1180cf61",
+          "title": "Move a card on the board with the mouse",
+          "notes": "Drag a card between columns and within a column with the mouse, doing what Shift+Arrow does from the keyboard. The drag moves the selection to that card first, so the highlight and the pointer name the same row.",
+          "priority": "medium"
         }
       ]
     },
