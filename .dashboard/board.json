@@ -126,6 +126,12 @@
           "title": "Token usage per project: this five-hour window, this week, and all time",
           "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
           "priority": "medium"
+        },
+        {
+          "id": "0ee4d087-9e82-411f-844b-3cc26a876533",
+          "title": "Open the focused pane's scrollback in nvim",
+          "notes": "One key writes the focused pane's whole buffer to a temp file and opens it in the nvim slot, so an agent transcript can be searched, read and yanked with real editor tools. The key is a row in the actions table and the help dialog gets the row.",
+          "priority": "high"
         }
       ]
     },
