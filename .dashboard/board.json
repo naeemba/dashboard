@@ -84,6 +84,12 @@
           "title": "Move a card on the board with the mouse",
           "notes": "Drag a card between columns and within a column with the mouse, doing what Shift+Arrow does from the keyboard. The drag moves the selection to that card first, so the highlight and the pointer name the same row.",
           "priority": "medium"
+        },
+        {
+          "id": "5344c823-38a4-4fdd-aee9-71c91ea94eed",
+          "title": "Discard a card's worktree in one key",
+          "notes": "On a card in Ship or Doing, one key removes its worktree, deletes the branch, and moves the card back to Todo, after a confirmation like delete. Refuses when the worktree has uncommitted changes, saying so; force needs a second confirmation. Open: whether a pane still running in that worktree blocks the discard or is killed first.",
+          "priority": "medium"
         }
       ]
     },
