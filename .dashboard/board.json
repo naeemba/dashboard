@@ -96,6 +96,12 @@
           "title": "Search a pane's scrollback",
           "notes": "Cmd+F on macOS opens a small search box at the top of the focused pane; Enter and Shift+Enter jump between matches, Escape closes. Uses the xterm.js search addon. The box gets dir=auto, the key is a row in the actions table, and the help dialog gets the row. Cmd rather than Ctrl because Ctrl+F is the shell's forward-char.",
           "priority": "medium"
+        },
+        {
+          "id": "f0c1d251-d7a3-4c71-a04a-b16d6ce7e5db",
+          "title": "Zoom the focused pane to fill the page, and back, like tmux",
+          "notes": "Option+F makes the focused pane take the whole terminals grid; pressing it again puts it back in place. Same as tmux prefix+z. The key is a row in the actions table and the help dialog gets the row.",
+          "priority": "medium"
         }
       ]
     },
