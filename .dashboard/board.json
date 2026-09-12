@@ -102,6 +102,12 @@
           "title": "Zoom the focused pane to fill the page, and back, like tmux",
           "notes": "Option+F makes the focused pane take the whole terminals grid; pressing it again puts it back in place. Same as tmux prefix+z. The key is a row in the actions table and the help dialog gets the row.",
           "priority": "medium"
+        },
+        {
+          "id": "b58f0d69-1df8-408a-ab6d-7894fc1670d3",
+          "title": "Review a card's worktree diff in tig",
+          "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
+          "priority": "medium"
         }
       ]
     },
