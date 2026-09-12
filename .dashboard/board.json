@@ -66,6 +66,12 @@
           "title": "macOS may take Ctrl+1..9 for Mission Control, the keys that jump between tabs",
           "notes": "src/actions.ts, the project-jump rows ship Ctrl+1..Ctrl+9 on the mac side. Mission Control's Switch to Desktop 1..9 are the same keys and come alive once you have a second Space. Where they are alive, Ctrl+2 slides you to another desktop instead of jumping to tab 2 - and project-jump is the most-pressed row in the table.\n\nSame shape as the bug PR #23 fixed for Ctrl+Up and Ctrl+Down, which macOS took for Mission Control and Application windows. That PR wrote the rule down above the table: Ctrl with an arrow belongs to macOS. Ctrl with a digit was not checked.\n\nNot confirmed. First step is ten seconds in System Settings > Keyboard > Keyboard Shortcuts > Mission Control on a machine with two Spaces. Ctrl+Shift+1..9 for project-move looks clear either way.\n\nIf it is real, the fix is not the swap made for the arrows: Cmd+1..Cmd+9 is already terminal-focus on the mac side, so this needs a different family. actions.test.ts already refuses two actions on one key per screen, so a bad swap fails there rather than shipping.\n\nhttps://github.com/naeemba/dashboard/issues/25\nhttps://github.com/naeemba/dashboard/pull/23",
           "priority": "low"
+        },
+        {
+          "id": "b7a4124e-af42-4f9f-9646-46a73124036a",
+          "title": "Agent state per pane from Claude Code hooks, answered from the manager list",
+          "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
+          "priority": "medium"
         }
       ]
     },
