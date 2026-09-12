@@ -120,6 +120,12 @@
           "title": "A command line for the board, so agents can work it",
           "notes": "A CLI shipped with the app that edits a project's .dashboard/board.json the same way the app does: create a card, move a card between columns, set the pull request number and branch, set priority, list cards. The ship agent's prompt tells it to move its own card to Done with the pull request number once the pull request is open, so nobody moves cards by hand. Two writers on one file means the app needs a watcher on board.json so a card moved by an agent shows up without re-entering the board.",
           "priority": "high"
+        },
+        {
+          "id": "7b0a129d-0180-47ec-9b74-46e7a3af5dda",
+          "title": "Token usage per project: this five-hour window, this week, and all time",
+          "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
+          "priority": "medium"
         }
       ]
     },
