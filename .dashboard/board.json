@@ -114,6 +114,12 @@
           "title": "Main broadcasts worktree changes so the renderer stops polling worktrees.json",
           "notes": "Every write to the worktree record in main sends worktree:changed with the new record; the board view and the manager's stacked boards redraw from it instead of reading worktrees.json for themselves. Fixes the card that keeps showing a branch whose worktree was removed. Discarding a worktree and opening tig in one both change worktrees and need this to be seen at once.",
           "priority": "medium"
+        },
+        {
+          "id": "2033fcf6-714b-4642-bda0-f0f9f409a36f",
+          "title": "A command line for the board, so agents can work it",
+          "notes": "A CLI shipped with the app that edits a project's .dashboard/board.json the same way the app does: create a card, move a card between columns, set the pull request number and branch, set priority, list cards. The ship agent's prompt tells it to move its own card to Done with the pull request number once the pull request is open, so nobody moves cards by hand. Two writers on one file means the app needs a watcher on board.json so a card moved by an agent shows up without re-entering the board.",
+          "priority": "high"
         }
       ]
     },
