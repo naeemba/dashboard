@@ -90,6 +90,12 @@
           "title": "Discard a card's worktree in one key",
           "notes": "On a card in Ship or Doing, one key removes its worktree, deletes the branch, and moves the card back to Todo, after a confirmation like delete. Refuses when the worktree has uncommitted changes, saying so; force needs a second confirmation. Open: whether a pane still running in that worktree blocks the discard or is killed first.",
           "priority": "medium"
+        },
+        {
+          "id": "f086140c-c028-4a85-932e-8bdfc5acf339",
+          "title": "Search a pane's scrollback",
+          "notes": "Cmd+F on macOS opens a small search box at the top of the focused pane; Enter and Shift+Enter jump between matches, Escape closes. Uses the xterm.js search addon. The box gets dir=auto, the key is a row in the actions table, and the help dialog gets the row. Cmd rather than Ctrl because Ctrl+F is the shell's forward-char.",
+          "priority": "medium"
         }
       ]
     },
