@@ -108,6 +108,12 @@
           "title": "Review a card's worktree diff in tig",
           "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
           "priority": "medium"
+        },
+        {
+          "id": "cb2603ea-ca53-4d69-ba28-0cded705cf46",
+          "title": "Main broadcasts worktree changes so the renderer stops polling worktrees.json",
+          "notes": "Every write to the worktree record in main sends worktree:changed with the new record; the board view and the manager's stacked boards redraw from it instead of reading worktrees.json for themselves. Fixes the card that keeps showing a branch whose worktree was removed. Discarding a worktree and opening tig in one both change worktrees and need this to be seen at once.",
+          "priority": "medium"
         }
       ]
     },
