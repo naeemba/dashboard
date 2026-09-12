@@ -132,6 +132,12 @@
           "title": "Open the focused pane's scrollback in nvim",
           "notes": "One key writes the focused pane's whole buffer to a temp file and opens it in the nvim slot, so an agent transcript can be searched, read and yanked with real editor tools. The key is a row in the actions table and the help dialog gets the row.",
           "priority": "high"
+        },
+        {
+          "id": "2a7184b1-5400-42ce-9a48-8e7850f1e467",
+          "title": "Remove a project from the open projects",
+          "notes": "A key on the manager list closes the selected project: its page and five shells go away and it leaves the session. Refuse, and say so, while a pane in it is still running something.",
+          "priority": "medium"
         }
       ]
     },
