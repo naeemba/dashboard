@@ -72,6 +72,12 @@
           "title": "Agent state per pane from Claude Code hooks, answered from the manager list",
           "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
           "priority": "medium"
+        },
+        {
+          "id": "b0234b28-528e-49a0-9143-b42252a64e50",
+          "title": "Pull request status on the Ship card, found from the branch through gh",
+          "notes": "For each card with a branch and no pull request number, gh pr list --head <branch> finds the number and stores it on the card. For each card with a number, poll gh pr view (state, mergeable, checks, review decision) about once a minute and show one glyph on the card: checks running, checks failed, approved, mergeable, merged. A merged pull request is recorded on the card and never polled again. Open: whether a merged pull request moves the card to Done by itself or only marks it.",
+          "priority": "medium"
         }
       ]
     },
