@@ -4,7 +4,7 @@ import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import './worktrees.css';
 import { Terminal } from '@xterm/xterm';
-import type { IBuffer, ITheme } from '@xterm/xterm';
+import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { openHelp } from './help';
@@ -24,37 +24,19 @@ import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR } from './overlay';
 import {
-  type Bell, isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
+  isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
 } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, isPrinted, isProjectPage, landingPosition, managerRows,
-  projectPosition, tailLines,
+  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
 } from './manager';
 import { createManagerView, type ManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
 import { createCommandView, type CommandView } from './command-view';
+import { planSend, type SendPlan } from './free-pane';
+import { paneLastLine, paneScreen, paneTail, paneUse, type Pane } from './pane';
 import { createSectionStrip, type SectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
-
-// `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
-// is asking for you and whether its banner has already gone out, so a pane that rings ten times does
-// not raise ten of them.
-// `bellTimer` is the one verdict a pane has pending on its own bell, held so a second ring inside the
-// wait joins it rather than starting another.
-// `lastPrintedAt` is when the pty last sent anything, which is what the manager prints an age from. It
-// is the arrival of the bytes, not a change in what they say: a spinner redrawing the same line keeps
-// the pane young, and that is the answer wanted — a pane drawing a spinner is not a pane nobody has
-// touched since this morning. Zero until the first byte, which is a pane that has printed nothing.
-type Pane = {
-  terminal: Terminal;
-  fit: FitAddon;
-  exited: boolean;
-  name: string;
-  bell: Bell;
-  bellTimer?: number;
-  lastPrintedAt: number;
-};
 
 // How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
 // its spinner again, short enough that a real question is on the tab strip before you look up.
@@ -186,40 +168,6 @@ function statusPage(page: Page): StatusPage {
 // The grid's five and the editor, which rings its bell like any other pane.
 function allPanes(page: Page): Pane[] {
   return page.editor === null ? page.panes : [...page.panes, page.editor];
-}
-
-// What a pane has on its screen, which is what you would see if you went there: xterm has already laid
-// the bytes out, so the escape codes, the redraws and the spinner overwriting itself are all resolved
-// before this reads a line. The live screen rather than the scrollback, so scrolling a pane by hand
-// does not change what the manager says about it.
-function paneScreen(terminal: Terminal): string[] {
-  const buffer = terminal.buffer.active;
-  return Array.from({ length: terminal.rows }, (_value, row) => paneRow(buffer, row));
-}
-
-// One row of what is on screen, counted from the top of it. Both readers go through here, so neither
-// can drift into reading the scrollback or leaving the trailing spaces on.
-function paneRow(buffer: IBuffer, row: number): string {
-  return buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '';
-}
-
-// What the manager prints on a row, which is the last few lines of the same screen. The bell reads
-// the screen whole instead, so how much of it a row has space for cannot decide what a bell means.
-function paneTail(terminal: Terminal): string[] {
-  return tailLines(paneScreen(terminal));
-}
-
-// The one line a quiet row prints, walked up from the bottom of the screen and stopped at the first
-// row with anything on it. The same line `paneTail` would end on, read without laying the other
-// twenty-odd out: every pane of every opened project asks for this on every arrow key, and thirty
-// panes laying out a screen each to use one line of it is the work nobody sees.
-function paneLastLine(terminal: Terminal): string {
-  const buffer = terminal.buffer.active;
-  for (let row = terminal.rows - 1; row >= 0; row -= 1) {
-    const line = paneRow(buffer, row);
-    if (isPrinted(line)) return line;
-  }
-  return '';
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
@@ -533,6 +481,7 @@ function buildManagerPage(): Page {
       name: entry.project.name, path: entry.project.path,
     })),
     runTask: (text, paths) => bridge.runTask(text, paths),
+    runInPanes: (text, paths) => sendToPanes(text, paths),
     cancelTasks: () => bridge.cancelTasks(),
     binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
     onChanged: renderStatus,
@@ -786,6 +735,36 @@ function jumpToWorktree(entry: WorktreeEntry): string {
   if (!page) return `${entry.branch} is in a project that is not open`;
   goToPane(page.slot, entry.pane);
   return '';
+}
+
+// Typing the command screen's command into the shells themselves. That screen marks projects, so which
+// pane in each of them takes the line, and which projects can take it at all, is free-pane.ts's to
+// answer. terminal.input is the same door answerPane and a dropped file already go through, and the
+// carriage return is what an Enter in the pane sends.
+function sendToPanes(command: string, paths: readonly string[]): SendPlan {
+  // One array, both jobs: what planSend is asked about, and where the line is then delivered. Two
+  // collections built from the same filter is how a project comes to be planned for and not written
+  // to, or written to after the plan has left it out.
+  const chosen = projectPages().filter((page) => paths.includes(page.project.path));
+  const plan = planSend(chosen.map((page) => ({
+    name: page.project.name,
+    path: page.project.path,
+    // A project whose folder has gone keeps its page, and that page has no panes — so free-pane.ts is
+    // told why, rather than being left to report an empty project as one whose panes were all taken.
+    missing: page.project.missing,
+    // The five shells, never the editor. It rings a bell like a pane and is listed like one, but a
+    // line of shell typed into nvim is not a command, it is an edit to whatever file is open.
+    panes: page.panes.map(paneUse),
+  })));
+  // The plan's own answer, keyed by the path it names, so nothing here decides a second time which
+  // projects the command reaches. A path with no entry is one the plan deliberately left out — every
+  // pane busy, or the folder gone — which is why this loop skips it rather than looking for a pane.
+  const planned = new Map(plan.sends.map((send) => [send.path, send.paneIndex]));
+  for (const page of chosen) {
+    const paneIndex = planned.get(page.project.path);
+    if (paneIndex !== undefined) page.panes[paneIndex].terminal.input(`${command}\r`);
+  }
+  return plan;
 }
 
 // Answering a pane from the manager, without going to it. terminal.input is the door a dropped file

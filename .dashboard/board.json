@@ -25,13 +25,6 @@
           "parent": null
         },
         {
-          "id": "f1b344b2-59bf-4349-b410-63177f61c3a2",
-          "title": "Send one command to many panes",
-          "notes": "Pick panes across projects, type a command once, and it runs in all of them. `git pull` in five repos for one keystroke. Same plumbing as answering a waiting pane, plus a way to select rows.\n\nThe danger is the feature: whatever sends `git pull` to thirty shells sends `rm -rf` to thirty shells. So the selection has to be visible, the confirmation has to name the count, and it should refuse a pane that is not sitting at a prompt -- a pane mid-agent-session takes the command into Claude Code's input box rather than a shell. Knowing which panes are idle needs shell integration we do not have, so decide what to do about that before building the rest.",
-          "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
           "title": "A fourth mode: notes, one page of them per project",
           "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
@@ -374,6 +367,15 @@
           "notes": "Shipped. src/clamp-index.ts holds one clampIndex(value, lastIndex) beside one test, and every list in the app reads it: board.ts, board-detail.ts (both the redraw and the arrow keys), manager.ts, manager-view.ts, picker.ts and board-state.ts. The three copies the issue named plus three more found on the way - picker.ts and board-state.ts were the same shape as the others and now read the same, and the card detail dialog wrote the two halves by hand a hundred lines below the copy it shared. The guards that only fed the old clamp are gone too: lastRow and deleteCard no longer floor a number their callers already floor. The “lists here do not wrap” sentence moved onto move() in manager-view.ts, which decides it. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/20",
           "priority": "low",
           "updatedAt": "2026-09-08T11:16:25.893760Z"
+        },
+        {
+          "id": "f1b344b2-59bf-4349-b410-63177f61c3a2",
+          "title": "Send one command to many panes",
+          "notes": "Shipped in PR #30. Mark projects on the command screen, type a command once, and Cmd+Enter types it into one free pane of each of them — `git pull` in five repos for one keystroke. Enter is unchanged: a process per project, with the exit codes collected in the rows.\n\nProjects, not panes. The screen already marks projects, so both ways ask the same question and neither can run somewhere the other would have left out.\n\nA free pane is one that has not exited and shows no sign of an agent on it. paneUse reads the two signs it can: looksBusy for an agent still working, and the bell for one that has stopped to ask you something — that second one prints no spinner and no `esc to interrupt`, and is usually pane 1, so without it the command would be submitted as the answer to the agent's question.\n\nWhat it deliberately does not answer: whether a pane is at a shell prompt. Two kinds of pane count as free and take the line. One running a dev server, a tail, psql or vim. And one whose agent asked you something you have already looked at — going to a pane clears its bell, so the mark is off and the question prints neither busy pattern. Both need the same thing to close: shell integration this app does not have. A longer-lived flag only moves the question to when it clears, and there is no answer to that either. Which is what this card said to decide before building — decided: ship without it, and say so in the help blurb rather than let the words promise more than the code does.\n\nA project that got nothing is named rather than counted, and the two reasons are kept apart: `no free pane in api, web` sends you to look at panes, `api is gone` sends you to reopen a folder.\n\nrenderer.ts was at the 600-line ceiling, so this split first: src/pane.ts now holds what a pane is and what can be read off it — the Pane type, the screen readers, and paneUse — with a test. renderer.ts is 587 code lines.",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "branch": "send-one-command-to-many-panes",
+          "pullRequest": 30
         }
       ]
     }

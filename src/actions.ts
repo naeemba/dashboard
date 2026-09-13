@@ -38,6 +38,7 @@ export type Action =
   | { kind: 'section-move'; direction: 'previous' | 'next' }
   | { kind: 'command-select'; direction: 'up' | 'down' }
   | { kind: 'command-open' }
+  | { kind: 'command-run-in-panes' }
   | { kind: 'command-cancel' };
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
@@ -335,6 +336,14 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'command-open', description: 'Run it, or show what a project printed',
     group: 'command', scope: 'command', action: { kind: 'command-open' }, mac: 'Enter', other: 'Enter',
+  },
+  // The second way to run it. A modifier rather than a bare key, because every bare key that is not an
+  // arrow or Enter has to reach the command box as a character — this one is pressed with the box
+  // holding the keyboard, which is where you have just finished typing the command.
+  {
+    name: 'command-run-in-panes', description: 'Run it in a free pane of each marked project',
+    group: 'command', scope: 'command', action: { kind: 'command-run-in-panes' },
+    mac: 'Cmd+Enter', other: 'Ctrl+Enter',
   },
   {
     name: 'command-cancel', description: 'Stop a run',
