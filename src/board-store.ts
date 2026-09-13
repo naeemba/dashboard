@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
@@ -94,8 +94,8 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 ## The \`board\` command
 
 Every pane the Dashboard app opens carries \`DASHBOARD_BOARD\`, the path to a command that edits the
-board of the project in the current directory. It goes through the same code the app does, so a card
-it writes is a card the app wrote.
+board of the project you are in — any depth inside it, not only its root. It goes through the same
+code the app does, so a card it writes is a card the app wrote.
 
 ${USAGE.split('\n').map((line) => (line === '' ? '' : `    ${line}`)).join('\n')}
 
@@ -119,6 +119,22 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 
 \`CLAUDE.md\` beside this file describes the format.
 `;
+
+// Which project a directory belongs to. The command line is pointed at a project by the directory you
+// run it from, and an agent that has `cd src` first is still working the same project: without this,
+// `board add` there seeds a second `.dashboard` under src/ and writes the card into it — a real id
+// printed back, a card on no board anyone looks at, and an untracked folder in `git status`.
+//
+// The nearest board above you wins, and a project that has no board yet falls back to the repository,
+// which is the same root the app itself opens a project at. Neither found, the directory you are in is
+// the answer, so a folder that is not a repository still gets a board where you asked for one.
+export function projectRoot(directory: string): string {
+  const start = resolve(directory);
+  for (let at = start; at !== dirname(at); at = dirname(at)) {
+    if (existsSync(join(at, BOARD_DIRECTORY)) || existsSync(join(at, '.git'))) return at;
+  }
+  return start;
+}
 
 function boardPath(projectPath: string): string {
   return join(projectPath, BOARD_DIRECTORY, BOARD_FILE);

@@ -57,10 +57,10 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 ## The `board` command
 
 Every pane the Dashboard app opens carries `DASHBOARD_BOARD`, the path to a command that edits the
-board of the project in the current directory. It goes through the same code the app does, so a card
-it writes is a card the app wrote.
+board of the project you are in — any depth inside it, not only its root. It goes through the same
+code the app does, so a card it writes is a card the app wrote.
 
-    board — the Dashboard board of the project in the current directory
+    board — the Dashboard board of the project you are in
 
       board list
       board add <title> [--column <name>] [--priority <level>] [--notes <text>]

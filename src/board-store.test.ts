@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -9,13 +9,16 @@ import {
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
   parseBoard,
+  projectRoot,
   readBoard,
   seedBoardDirectory,
   writeBoard,
 } from './board-store';
 
+// realpath, because on macOS the temporary folder is reached through a symlink and projectRoot
+// resolves it — a raw mkdtemp path would not compare equal to the answer.
 function project(): string {
-  return mkdtempSync(join(tmpdir(), 'dashboard-board-'));
+  return realpathSync(mkdtempSync(join(tmpdir(), 'dashboard-board-')));
 }
 
 function writeRaw(projectPath: string, text: string): void {
@@ -28,6 +31,29 @@ const columnNames = (board: { columns: { name: string }[] }) => board.columns.ma
 describe('BOARD_FILE_PATH', () => {
   it('is the board, relative to the project', () => {
     expect(BOARD_FILE_PATH).toBe('.dashboard/board.json');
+  });
+});
+
+describe('projectRoot', () => {
+  it('walks up to the folder that holds the board', () => {
+    const root = project();
+    mkdirSync(join(root, BOARD_DIRECTORY));
+    const deep = join(root, 'src', 'views');
+    mkdirSync(deep, { recursive: true });
+    expect(projectRoot(deep)).toBe(root);
+  });
+
+  it('falls back to the repository when the project has no board yet', () => {
+    const root = project();
+    mkdirSync(join(root, '.git'));
+    const deep = join(root, 'src');
+    mkdirSync(deep);
+    expect(projectRoot(deep)).toBe(root);
+  });
+
+  it('answers the directory itself when there is neither above it', () => {
+    const root = project();
+    expect(projectRoot(root)).toBe(root);
   });
 });
 
