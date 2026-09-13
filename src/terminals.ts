@@ -24,6 +24,14 @@ export function terminalId(slot: number, index: number): string {
   return `${slot}:${index}`;
 }
 
+// Every pane of one project, in the order they were made: the grid's five and the editor one past
+// them. Both processes ask — main to spawn and to kill them, the renderer to let them go — and both
+// would otherwise walk the layout themselves, which is what EDITOR_INDEX above exists to stop. Move
+// the editor and the six ids follow it here, once.
+export function paneIds(slot: number): string[] {
+  return Array.from({ length: EDITOR_INDEX + 1 }, (_value, index) => terminalId(slot, index));
+}
+
 export function neighbor(index: number, direction: Direction): number {
   return NEIGHBORS[direction][index];
 }

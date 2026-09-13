@@ -23,7 +23,15 @@ export type ProjectPanes = { name: string; path: string; missing: boolean; panes
 // is a message to the agent. How much of "an agent has this pane" that flag can actually catch is
 // paneUse's to say, in pane.ts, and is narrower than the word busy sounds.
 export function freePaneIndex(panes: readonly PaneUse[]): number {
-  return panes.findIndex((pane) => !pane.exited && !pane.busy);
+  return panes.findIndex(paneIsFree);
+}
+
+// Whether a pane can take a line of shell. One place says so, because two screens ask opposite halves
+// of it: this one picks the free pane, and closing a project refuses over the panes that are neither
+// free nor dead. Spelled twice with the sign flipped, a third flag added to PaneUse would reach one of
+// them — and a pane the command screen will not type into would be one a close kills without a word.
+export function paneIsFree(pane: PaneUse): boolean {
+  return !pane.exited && !pane.busy;
 }
 
 export type SendPlan = {

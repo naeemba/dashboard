@@ -1,4 +1,4 @@
-import type { PaneUse } from './free-pane';
+import { paneIsFree, type PaneUse } from './free-pane';
 
 // Whether a project can be closed, and the sentence saying why not. Closing takes five shells and an
 // editor away at once and there is no undo for it, so the one thing worth stopping it for is a pane
@@ -11,18 +11,18 @@ import type { PaneUse } from './free-pane';
 // shell sitting at its prompt, and a project whose panes are all doing that closes without a word.
 export type ClosingPane = PaneUse & { name: string };
 
-// The panes standing in the way, named rather than counted: three panes and a number tells you to go
-// and look at five. A pane that has exited is not running anything — its shell is gone and Enter is
-// what would start it again — so it never holds a project open.
-export function runningPanes(panes: readonly ClosingPane[]): string[] {
-  return panes.filter((pane) => !pane.exited && pane.busy).map((pane) => pane.name);
-}
-
-// The refusal, or an empty string when there is nothing in the way. The panes are named so you know
-// where to go, and the project is named because the key is pressed on a list of projects, where the
-// row you meant and the row the highlight is on are not always the same one.
+// The refusal, or an empty string when nothing is in the way.
+//
+// A pane stops the close when it is neither free nor dead. Free is free-pane.ts's word, the one the
+// command screen picks a pane by, so a pane it would not type a command into is a pane this will not
+// kill without asking. Dead is the other end: a pane that has exited has no shell left to lose, so it
+// never holds a project open.
+//
+// The panes in the way are named rather than counted — three names beat a number that only tells you
+// to go and look at five — and the project is named with them, because the key is pressed on a list of
+// projects, where the row you meant and the row the highlight is on are not always the same one.
 export function closeRefusal(projectName: string, panes: readonly ClosingPane[]): string {
-  const running = runningPanes(panes);
+  const running = panes.filter((pane) => !pane.exited && !paneIsFree(pane)).map((pane) => pane.name);
   if (running.length === 0) return '';
   return `${projectName} is still running in ${running.join(', ')} — stop it and close again`;
 }

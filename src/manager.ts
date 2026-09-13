@@ -195,9 +195,16 @@ export function managerLines(rows: readonly ManagerRow[], open: ReadonlySet<numb
   });
 }
 
+// Which project a line belongs to: the row's own slot, or the slot of the project a pane row sits
+// under. One place, because the key that closes a project and the key that names one both ask, and a
+// third line kind added later must not have one of them still answering for two.
+export function slotOfLine(line: ManagerLine): number {
+  return line.kind === 'project' ? line.row.slot : line.slot;
+}
+
 // What the selection is on, as one string. A project is its slot; a pane is the same slot-and-index
 // pair every pane in the app is already named by, so there is no second spelling of a pane's id.
 export function lineKey(line: ManagerLine): string {
-  return line.kind === 'project' ? `${line.row.slot}` : terminalId(line.slot, line.pane.index);
+  return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }
 

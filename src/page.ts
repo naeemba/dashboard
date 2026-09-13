@@ -12,7 +12,7 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { EDITOR_INDEX, TERMINAL_COUNT, paneLabel, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, paneLabel, terminalId } from './terminals';
 import { isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -54,9 +54,7 @@ export const panesById = new Map<string, Pane>();
 // as much as the terminal: a bell rung a moment before the close still has a second to wait, and it
 // would wake to read a screen nobody can see and raise a banner naming a project that is gone.
 export function discardPanes(slot: number): void {
-  // The grid's five and the editor one past them, which is the same six spawnProject makes.
-  for (let index = 0; index <= EDITOR_INDEX; index++) {
-    const id = terminalId(slot, index);
+  for (const id of paneIds(slot)) {
     const pane = panesById.get(id);
     // A project whose folder had gone was drawn as a page with no panes at all, so there is nothing
     // under any of its ids.
@@ -110,22 +108,16 @@ export function restylePanes(settings: Settings): void {
   }
 }
 
-export type PageBuilder = {
-  // The page for one project: its three views, its five shells and its editor. A project whose folder
-  // has gone gets a page saying so and nothing else.
-  buildPage(project: Project, slot: number): Page;
-  // Measures the grid's five panes again. xterm only tells a pty a new size when it is measured, so a
-  // pane that changed shape keeps drawing at the old one until this runs.
-  fitPanes(page: Page): void;
-};
+// Measures the grid's five panes again. xterm only tells a pty a new size when it is measured, so a
+// pane that changed shape keeps drawing at the old size until this runs.
+export function fitPanes(page: Page): void {
+  for (const pane of page.panes) pane.fit.fit();
+}
 
-// What a project's page is built by, and how its grid is measured. A factory rather than plain
-// exports, so the handful of things a pane needs from the renderer are handed over once.
-export function createPageBuilder(options: PageOptions): PageBuilder {
-  function fitPanes(page: Page): void {
-    for (const pane of page.panes) pane.fit.fit();
-  }
-
+// Builds the page for one project: its three views, its five shells and its editor — or, for a project
+// whose folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane
+// needs from the renderer are handed over once rather than on every call.
+export function createPageBuilder(options: PageOptions): (project: Project, slot: number) => Page {
   function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFocus?: () => void): Pane {
     const container = document.createElement('div');
     container.className = 'pane';
@@ -286,5 +278,5 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     return page;
   }
 
-  return { buildPage, fitPanes };
+  return buildPage;
 }

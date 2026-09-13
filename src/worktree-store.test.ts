@@ -6,6 +6,7 @@ import {
   livingEntries,
   parseWorktrees,
   withEntry,
+  withoutPanes,
   withoutWorktree,
   type WorktreeEntry,
 } from './worktree-store';
@@ -88,6 +89,21 @@ describe('livingEntries', () => {
   it('drops entries whose folder has gone', () => {
     const gone = { ...entry, cardId: 'other', worktreePath: '/gone' };
     expect(livingEntries([entry, gone], (path) => path !== '/gone')).toEqual([entry]);
+  });
+});
+
+describe('withoutPanes', () => {
+  // The launch: no shell outlives the app, so nothing this file says was in pane 2 is in pane 2 a
+  // moment later.
+  it('takes the pane off every entry when no project is named', () => {
+    const other = { ...entry, cardId: 'other', projectPath: '/work/api', pane: 4 };
+    expect(withoutPanes([entry, other])).toEqual([{ ...entry, pane: null }, { ...other, pane: null }]);
+  });
+
+  // Closing one project is the same event for that project's panes and nobody else's.
+  it("leaves another project's entries alone when one is named", () => {
+    const other = { ...entry, cardId: 'other', projectPath: '/work/api', pane: 4 };
+    expect(withoutPanes([entry, other], entry.projectPath)).toEqual([{ ...entry, pane: null }, other]);
   });
 });
 

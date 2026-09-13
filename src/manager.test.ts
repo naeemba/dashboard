@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MANAGER_SLOT, alertSummary, canOpen, isAlerting, isProjectPage, landingPosition, lineKey,
-  managerLines, managerRows, paneAge, projectPosition, tailLines, takesAnswer, type PaneSummary,
+  managerLines, managerRows, paneAge, projectPosition, slotOfLine, tailLines, takesAnswer,
+  type PaneSummary,
 } from './manager';
 import type { Bell } from './waiting';
 
@@ -202,6 +203,15 @@ describe('lineKey', () => {
   it('tells a project from the panes under it', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
     expect(lineKey({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe('2:0');
+  });
+});
+
+describe('slotOfLine', () => {
+  const row = { slot: 2, name: 'api', panes: [] };
+
+  it('gives a pane row the project it sits under, which is what the close key is aimed at', () => {
+    expect(slotOfLine({ kind: 'project', row, open: false })).toBe(2);
+    expect(slotOfLine({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe(2);
   });
 });
 

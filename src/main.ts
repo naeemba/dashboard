@@ -18,7 +18,7 @@ import { tailLines } from './manager';
 import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { EDITOR_INDEX, TERMINAL_COUNT, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, terminalId } from './terminals';
 import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
@@ -38,6 +38,7 @@ import {
   livingEntries,
   readWorktrees,
   withEntry,
+  withoutPanes,
   withoutWorktree,
   writeWorktrees,
   type WorktreeEntry,
@@ -75,8 +76,7 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
 // the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
-let worktrees: WorktreeEntry[] = livingEntries(readWorktrees(worktreesFile), existsSync)
-  .map((entry) => ({ ...entry, pane: null }));
+let worktrees: WorktreeEntry[] = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
 writeWorktrees(worktreesFile, worktrees);
 // Which panes you have typed into. Half of what makes a pane somebody's; paneIsBusy has the other
 // half, which is read rather than kept here.
@@ -274,8 +274,8 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
-  // `picked` only stands in for a slot that was not replaced, which is a project already open and
-  // still there — the same folder under the same name.
+  // The slot holds a project either way by now: it was just filled, or the path matched one that is
+  // open. `picked` is only what stops the type being optional, never an answer anyone receives.
   return { index, project: projects[index] ?? picked, replaced };
 });
 // Closing a project. Its six panes are killed and forgotten, and its slot is emptied. Nothing is
@@ -287,10 +287,11 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
 // card in flight, unable to be shipped again, with nothing left running to finish it.
 ipcMain.on('projects:close', (_event, slot: number) => {
   const closing = projects[slot];
+  // A slot that holds nothing has already been closed, and there is nothing of it left to kill.
+  // Answered first so a slot past the end of the list is not written into it as a hole.
+  if (closing === undefined) return;
   projects[slot] = undefined;
-  // The grid's five and the editor one past them, which is what spawnProject made.
-  for (let index = 0; index <= EDITOR_INDEX; index++) {
-    const id = terminalId(slot, index);
+  for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
     // spawnTerminal, so no pty:exit goes out for a pane the renderer has already taken off the screen.
     const terminalProcess = shells.get(id);
@@ -299,8 +300,10 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     terminalCommands.delete(id);
     typedPanes.delete(id);
   }
-  if (closing === undefined) return;
-  worktrees = worktrees.map((entry) => (entry.projectPath === closing.path ? { ...entry, pane: null } : entry));
+  // Nothing to rewrite for a project that never shipped a card. Worth the question: this is the
+  // process every other project's pane bytes flow through, and a write stops all of them.
+  if (!worktrees.some((entry) => entry.projectPath === closing.path && entry.pane !== null)) return;
+  worktrees = withoutPanes(worktrees, closing.path);
   writeWorktrees(worktreesFile, worktrees);
 });
 // Read once at startup and written back whenever the layout changes, so a crash loses at most the

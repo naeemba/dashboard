@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
-  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneLabel, terminalId,
+  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds, paneLabel,
+  terminalId,
 } from './terminals';
+
+describe('paneIds', () => {
+  // The six a project is made of: the grid's five and the editor one past them. Main spawns and kills
+  // them by this list and the renderer lets them go by it, so a seventh pane added to the layout
+  // reaches both without either being edited.
+  it('names every pane of one project, the editor last', () => {
+    expect(paneIds(3)).toEqual(['3:0', '3:1', '3:2', '3:3', '3:4', '3:5']);
+    expect(paneIds(0)).toHaveLength(TERMINAL_COUNT + 1);
+    expect(paneIds(0)[EDITOR_INDEX]).toBe(terminalId(0, EDITOR_INDEX));
+  });
+});
 
 describe('neighbor', () => {
   it('moves along a row and stops at the edge', () => {

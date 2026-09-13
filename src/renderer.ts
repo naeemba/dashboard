@@ -27,7 +27,7 @@ import { createCommandView } from './command-view';
 import { closeRefusal } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneTail, paneUse, type Pane } from './pane';
-import { createPageBuilder, discardPanes, panesById, restylePanes, type Page } from './page';
+import { createPageBuilder, discardPanes, fitPanes, panesById, restylePanes, type Page } from './page';
 import { createSectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
@@ -317,7 +317,6 @@ function fitAllPages(): void {
   }
 }
 
-
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
 // one. Two callers pass it. The restore needs it: it lands on a page nobody has visited yet this run,
 // so nvim has to start and the board has to be read, exactly as if you had just switched to it. A
@@ -335,7 +334,6 @@ function showPage(index: number, arriving = false): void {
   });
   focusMode(pages[activeIndex], true);
 }
-
 
 // The one page with no folder behind it, so none of what buildPage makes: no shells and no editor. It
 // has two views — the list of what every project's panes want, and every project's board — and the
@@ -387,11 +385,10 @@ function buildManagerPage(): Page {
   return page;
 }
 
-
 // The one page builder, handed the few things a pane needs from this file. Every one of them is a
 // function rather than a value: the settings and the shell change while the app runs, and a pane built
 // an hour ago has to draw what is in force now.
-const { buildPage, fitPanes } = createPageBuilder({
+const buildPage = createPageBuilder({
   settings: () => settings,
   shellCommand: () => shellCommand,
   onChanged: () => renderStatus(),
@@ -434,10 +431,10 @@ function closeProject(slot: number): void {
   bridge.closeProject(slot);
   discardPanes(slot);
   page.element.remove();
+  // activeIndex needs no adjusting: the manager holds the first tab and never moves off it, a project
+  // is always behind it, and this key is only heard on the manager — so what leaves the list is always
+  // behind the page you are looking at.
   pages.splice(position, 1);
-  // You close from the manager, which is the first tab, so the page that goes is never the one you are
-  // looking at — but every page behind it moves one to the left, and activeIndex counts positions.
-  if (position < activeIndex) activeIndex -= 1;
   // Clears its own message and nobody else's: a refusal you have since acted on must not sit in the
   // status bar over the close that followed it.
   showError('close', '');
