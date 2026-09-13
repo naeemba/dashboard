@@ -13,6 +13,7 @@ import {
 import { relativeAge } from './age';
 import { clampIndex } from './clamp-index';
 import { openOverlay } from './overlay';
+import { putEditBack, takeEdit } from './carried-edit';
 import { isModified } from './shortcuts';
 
 export type CardDetailOptions = {
@@ -51,10 +52,20 @@ export function cardMeta(board: Board, card: Card, now?: number): string {
   ].filter((part): part is string => part !== null).join(' · ');
 }
 
+// `closed` resolves with the card to select when the dialog goes; `redraw` is how the owner tells it
+// the board underneath has changed, since the dialog reads the live board but has no way to hear a write.
+export type CardDetail = {
+  closed: Promise<Selection>;
+  redraw(): void;
+};
+
 // Resolves with the card to select when the dialog closes: the one you opened, or the child you
 // pressed Enter on.
-export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
-  return new Promise<Selection>((resolve) => {
+export function openCardDetail(options: CardDetailOptions): CardDetail {
+  // Assigned by the executor, which runs before the Promise constructor returns — so it is the real
+  // render by the time anyone outside can call it.
+  let redraw = (): void => {};
+  const closed = new Promise<Selection>((resolve) => {
     // The card this dialog is about, followed by id rather than by row: a write landing while it is up
     // can move it to another row or another column. Empty for a dialog opened on no card, which is an
     // id no lookup below matches.
@@ -108,6 +119,8 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       }));
 
       const parts: HTMLElement[] = [heading, meta];
+      // The box being typed into, if this render is putting one back on screen.
+      let box: HTMLInputElement | null = null;
       if (card.notes !== '') {
         const notes = document.createElement('p');
         notes.className = 'card-detail-notes';
@@ -139,15 +152,23 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           adding = false;
           // An empty title adds nothing, the same way a blank card is dropped on the board.
           if (event.key === 'Enter' && title !== '') {
-            const id = options.makeId();
             // Built on the board as it is at this keystroke, not on one taken when the dialog opened.
             const before = options.board();
-            options.onChange(addChildCard(before, openedAt(before), id, title));
-            // childrenOf orders by column, not by when a card was added, and addChildCard puts the new
-            // card in the parent's column rather than at the end of this list — so the new card's row
-            // has to be found by id, the same as any other lookup here, clamped rather than trusted.
-            const newRow = childrenOf(options.board(), openedId).findIndex((child) => child.id === id);
-            highlighted = Math.max(0, newRow);
+            // The card this box belongs to, not the row it was opened on. openedAt falls back to that
+            // row for a card that has gone, and the card sitting there now is somebody else's — the
+            // subtask would hang off it, badge and progress bar and all, for work it never got. Write
+            // nothing instead; render() below finds the card gone and closes.
+            const at = selectionOf(before, openedId);
+            if (at) {
+              const id = options.makeId();
+              options.onChange(addChildCard(before, at, id, title));
+              // childrenOf orders by column, not by when a card was added, and addChildCard puts the
+              // new card in the parent's column rather than at the end of this list — so the new card's
+              // row has to be found by id, the same as any other lookup here, clamped rather than
+              // trusted.
+              const newRow = childrenOf(options.board(), openedId).findIndex((child) => child.id === id);
+              highlighted = Math.max(0, newRow);
+            }
           }
           render();
           dialog.focus();
@@ -159,6 +180,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           adding = false;
           render();
         };
+        box = input;
         parts.push(input);
       }
 
@@ -167,10 +189,17 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       footer.textContent = 'Arrows walk the subtasks. Enter goes to one. n adds one. Escape closes.';
       parts.push(footer);
 
+      // A write landing while you are naming a subtask redraws this dialog under you, and
+      // replaceChildren throws the box away — so what is half-typed in it is taken out first and put
+      // back into the one this render drew.
+      const carried = takeEdit(dialog.querySelector<HTMLInputElement>('.card-detail-add'));
+
       dialog.replaceChildren(...parts);
       list.children[highlighted]?.scrollIntoView({ block: 'nearest' });
-      if (adding) dialog.querySelector<HTMLInputElement>('.card-detail-add')?.focus();
-      else dialog.focus();
+      if (!box) return dialog.focus();
+      // Nothing to carry means this is the box `n` just asked for, which comes up empty.
+      if (carried) putEditBack(box, carried);
+      else box.focus();
     }
 
     dialog.addEventListener('keydown', (event) => {
@@ -207,6 +236,8 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       }
     });
 
+    redraw = render;
     render();
   });
+  return { closed, redraw };
 }

@@ -22,7 +22,8 @@ import {
   type Selection,
 } from './board';
 import type { Action } from './actions';
-import { openCardDetail } from './board-detail';
+import { openCardDetail, type CardDetail } from './board-detail';
+import { putEditBack, takeEdit } from './carried-edit';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -87,7 +88,6 @@ export type BoardView = {
 type EditableField = Extract<Action, { kind: 'board-edit' }>['field'];
 
 // An open box's text and where the caret sits in it, held for as long as a redraw takes.
-type CarriedEdit = { value: string; start: number; end: number };
 
 // Which commit rule each field ends on. Every one of them hands back the same state when nothing
 // changed, which is what keeps opening a field and closing it from spending the undo step.
@@ -128,6 +128,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
+  // The open card dialog, or null. Held so a write that lands can redraw it: it reads the live board on
+  // every key, but nothing tells it the file changed, so the subtasks on screen and the ones Enter acts
+  // on would be two different lists.
+  let detail: CardDetail | null = null;
 
   // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
   // step is gone, which is what entering a board means. Without it the file simply changed under you
@@ -166,7 +170,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // builds a new one, so the text and the caret cross over by hand.
     if (fresh) editing = null;
     const wasEditing = editingCardId();
-    const carried = editing === null ? null : takeEditor();
+    const carried = editing === null ? null : takeEdit(editorInput());
     state = next;
     // The box only goes back on the card it was opened on. A write that drops that card leaves the
     // selection on the row it held, which is now the next card down — and a box drawn there would be
@@ -176,10 +180,13 @@ export function createBoardView(options: BoardOptions): BoardView {
     render();
     // The card you were typing into is not on the new board, so there is no box to put the text back
     // in. Leaving `editing` set here would take every key on this screen for good.
-    if (carried && !putEditorBack(carried)) {
+    if (carried && !putEditBack(editorInput(), carried)) {
       editing = null;
       element.focus();
     }
+    // The open card dialog reads this board on every key, so it has to be drawn from it too. It closes
+    // itself if the write took its card away, and carries a half-typed subtask across if it did not.
+    detail?.redraw();
   }
 
   function save(): void {
@@ -216,27 +223,6 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the selection is now pointing at.
   function editingCardId(): string | undefined {
     return editing === null ? undefined : cardAt(state.board, state.selection)?.id;
-  }
-
-  // What is in the open box right now, so a redraw underneath it can put it back. The blur handler
-  // comes off first: the redraw removes this input, and a browser that fires blur for a removal would
-  // commit what you typed onto the board that is on its way out.
-  function takeEditor(): CarriedEdit | null {
-    const input = editorInput();
-    if (!input) return null;
-    input.onblur = null;
-    return { value: input.value, start: input.selectionStart ?? 0, end: input.selectionEnd ?? 0 };
-  }
-
-  // False when the redraw left no box to put it back in, which is the caller's cue that the edit is
-  // over. The caret goes back too, or a reload would jump you to the end of what you were typing.
-  function putEditorBack(carried: CarriedEdit): boolean {
-    const input = editorInput();
-    if (!input) return false;
-    input.value = carried.value;
-    input.focus();
-    input.setSelectionRange(carried.start, carried.end);
-    return true;
   }
 
   function startEditing(field: EditableField): void {
@@ -467,14 +453,16 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the card you asked for, or on the subtask you pressed Enter on.
   function openDetail(): void {
     if (!cardAt(state.board, state.selection)) return;
-    openCardDetail({
+    detail = openCardDetail({
       // The live board, not the one on screen when it opened: a write can land while the dialog is up,
       // and a subtask added to the board from before it would put that board back over the write.
       board: () => state.board,
       selection: state.selection,
       makeId: () => crypto.randomUUID(),
       onChange: change,
-    }).then((selection) => {
+    });
+    detail.closed.then((selection) => {
+      detail = null;
       state = { ...state, selection };
       element.focus();
       render();
