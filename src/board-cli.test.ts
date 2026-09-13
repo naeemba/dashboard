@@ -170,6 +170,12 @@ describe('set', () => {
     expect(result.message).toContain('--branch');
   });
 
+  it("trims the notes it is given, the way the board's own box does", () => {
+    const { board, id } = withCard();
+    const next = boardAfter(board, 'set', id, '--notes', 'why it matters\n');
+    expect(cardById(next, id)?.notes).toBe('why it matters');
+  });
+
   it('refuses a set with nothing to set', () => {
     const { board, id } = withCard();
     expect(run(board, 'set', id)).toEqual({ ok: false, message: 'set needs something to set' });

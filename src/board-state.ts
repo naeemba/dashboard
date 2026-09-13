@@ -102,9 +102,10 @@ export function commitTitle(state: BoardState, title: string): BoardState {
 // clears the card's notes — unlike a title, a card with no description is an ordinary card. Closing a
 // description unchanged is not a change, for the same reason reading a title is not.
 export function commitNotes(state: BoardState, notes: string): BoardState {
-  const trimmed = notes.trim();
-  if (trimmed === cardAt(state.board, state.selection)?.notes.trim()) return state;
-  return applyChange(state, setNotes(state.board, state.selection, trimmed));
+  // Trimmed for the comparison only. setNotes is what decides what a card's notes look like once
+  // written, so the command line and this box cannot store the same text two ways.
+  if (notes.trim() === cardAt(state.board, state.selection)?.notes.trim()) return state;
+  return applyChange(state, setNotes(state.board, state.selection, notes));
 }
 
 // A board read from disk starts fresh: nothing on it can be undone back to what was in memory. The

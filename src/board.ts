@@ -178,8 +178,12 @@ export function renameCard(board: Board, selection: Selection, title: string): C
   return editCard(board, selection, { title });
 }
 
+// Trimmed here rather than by each caller, the way branchFrom holds the one rule about a branch. The
+// board's own box trims what you type before it commits; `board set <id> --notes "$(cat notes.txt)"`
+// hands over the file's trailing newline, and without this the detail dialog opens on a blank last
+// line for a card written from the command line and not for the same card written on the board.
 export function setNotes(board: Board, selection: Selection, notes: string): Change {
-  return editCard(board, selection, { notes });
+  return editCard(board, selection, { notes: notes.trim() });
 }
 
 export function setBranch(board: Board, selection: Selection, branch: string | undefined): Change {
