@@ -4,7 +4,7 @@ import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import './worktrees.css';
 import { Terminal } from '@xterm/xterm';
-import type { ITheme } from '@xterm/xterm';
+import type { IBuffer, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { openHelp } from './help';
@@ -27,8 +27,8 @@ import {
   type Bell, isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
 } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
-  tailLines,
+  MANAGER_PROJECT, MANAGER_SLOT, isPrinted, isProjectPage, landingPosition, managerRows,
+  projectPosition, tailLines,
 } from './manager';
 import { createManagerView, type ManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
@@ -42,6 +42,10 @@ import { actionByName } from './actions';
 // not raise ten of them.
 // `bellTimer` is the one verdict a pane has pending on its own bell, held so a second ring inside the
 // wait joins it rather than starting another.
+// `lastPrintedAt` is when the pty last sent anything, which is what the manager prints an age from. It
+// is the arrival of the bytes, not a change in what they say: a spinner redrawing the same line keeps
+// the pane young, and that is the answer wanted — a pane drawing a spinner is not a pane nobody has
+// touched since this morning. Zero until the first byte, which is a pane that has printed nothing.
 type Pane = {
   terminal: Terminal;
   fit: FitAddon;
@@ -49,6 +53,7 @@ type Pane = {
   name: string;
   bell: Bell;
   bellTimer?: number;
+  lastPrintedAt: number;
 };
 
 // How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
@@ -189,10 +194,13 @@ function allPanes(page: Page): Pane[] {
 // does not change what the manager says about it.
 function paneScreen(terminal: Terminal): string[] {
   const buffer = terminal.buffer.active;
-  return Array.from(
-    { length: terminal.rows },
-    (_value, row) => buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '',
-  );
+  return Array.from({ length: terminal.rows }, (_value, row) => paneRow(buffer, row));
+}
+
+// One row of what is on screen, counted from the top of it. Both readers go through here, so neither
+// can drift into reading the scrollback or leaving the trailing spaces on.
+function paneRow(buffer: IBuffer, row: number): string {
+  return buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '';
 }
 
 // What the manager prints on a row, which is the last few lines of the same screen. The bell reads
@@ -201,19 +209,42 @@ function paneTail(terminal: Terminal): string[] {
   return tailLines(paneScreen(terminal));
 }
 
+// The one line a quiet row prints, walked up from the bottom of the screen and stopped at the first
+// row with anything on it. The same line `paneTail` would end on, read without laying the other
+// twenty-odd out: every pane of every opened project asks for this on every arrow key, and thirty
+// panes laying out a screen each to use one line of it is the work nobody sees.
+function paneLastLine(terminal: Terminal): string {
+  const buffer = terminal.buffer.active;
+  for (let row = terminal.rows - 1; row >= 0; row -= 1) {
+    const line = paneRow(buffer, row);
+    if (isPrinted(line)) return line;
+  }
+  return '';
+}
+
 // The manager page is pushed before the first call, so there is always a page to draw.
-function renderStatus(): void {
+// `panesOnly` is the timer's redraw below, which has nothing to change on a row but the line its pane
+// last printed and how long ago that was. Everything else here runs either way, so the status bar
+// still reads the age off the selection and the tab strip is still the one this function has always
+// drawn.
+function renderStatus(panesOnly = false): void {
   const page = pages[activeIndex];
   // Before the status bar reads its label off the selection. The rows are the pages themselves, so a
   // bell, an exit or a project opening all reach the manager through the redraw they already cause —
   // and only while you are looking at it, since arriving redraws too and typing a card title on a
   // board should not rebuild a list nobody can see.
   if (page.mode === 'manager') {
-    page.manager?.render(managerRows(projectPages().map((entry) => ({
+    const rows = managerRows(projectPages().map((entry) => ({
       project: entry.project,
       slot: entry.slot,
-      panes: allPanes(entry).map((pane) => ({ ...pane, tail: () => paneTail(pane.terminal) })),
-    }))));
+      panes: allPanes(entry).map((pane) => ({
+        ...pane,
+        tail: () => paneTail(pane.terminal),
+        lastPrinted: () => paneLastLine(pane.terminal),
+      })),
+    })));
+    if (panesOnly) page.manager?.refreshPanes(rows);
+    else page.manager?.render(rows);
   }
   titleElement.textContent = `📁 ${page.project.name}`;
   // A span each: the open project is marked by a highlight, the way a tab strip marks one, and a
@@ -398,7 +429,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
   terminal.open(container);
 
-  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet' };
+  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet', lastPrintedAt: 0 };
   terminal.onData((data) => {
     if (!pane.exited) {
       bridge.sendInput(id, data);
@@ -759,8 +790,11 @@ function jumpToWorktree(entry: WorktreeEntry): string {
 
 // Answering a pane from the manager, without going to it. terminal.input is the door a dropped file
 // already goes through, so the key reaches the pty by the same path typing into the pane does. The
-// bell comes off because the pane has had its answer: the row leaving the list is the only sign the
-// key landed, and the pane rings again if it asks again.
+// bell comes off because the pane has had its answer, and the pane rings again if it asks again. What
+// tells you the key landed is the row going from yellow `waiting` to dim `quiet` under a highlight
+// that has not moved — the row does not leave the list. That is what the highlight staying put is
+// for: the next character is dropped while the pane is quiet, and goes to that same pane the moment
+// it asks again, without anyone picking the row a second time.
 function answerPane(slot: number, index: number, key: string): void {
   const pane = panesById.get(terminalId(slot, index));
   if (!pane) return;
@@ -769,7 +803,22 @@ function answerPane(slot: number, index: number, key: string): void {
   renderStatus();
 }
 
-bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
+bridge.onData((id, data) => {
+  const pane = panesById.get(id);
+  if (!pane) return;
+  pane.lastPrintedAt = Date.now();
+  pane.terminal.write(data);
+});
+
+// The manager's pane rows are the only thing on any screen that goes stale where it stands: every
+// other line is redrawn by whatever changed it, and a pane printing on quietly changes nothing that
+// calls a redraw. Without this you open the manager, read `Running 3 of 47 tests` · `just now`
+// against a pane, and it still says both an hour later while the pane is long finished.
+// Straight into renderStatus, which already draws the manager only when the manager is in front — a
+// second copy of that question here is one that could come to disagree with it. It is told the pane
+// rows are all it has to change, so the list is not rebuilt under someone who is reading it.
+const PANE_REFRESH_MS = 30_000;
+window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
 bridge.onExit((id, exitCode) => {
   const pane = panesById.get(id);
   if (!pane) return;

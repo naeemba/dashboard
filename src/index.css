@@ -205,7 +205,23 @@ body *:not(.pane, .pane *) {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* A command row is a sentence — a project's name and what is waiting in it — so it is capped where
+   prose is. */
+.command-list {
   max-width: 70ch;
+}
+
+/* Wider than the prose above it and than the command list, because a pane row is a table and not a
+   sentence: a name, the line the pane last printed, a state and an age. At 70ch the fixed parts eat
+   about half the row and the line you came to read is cut at `Running 12 of 47 tests in src/bo…`.
+   The whole list rather than the pane rows alone — every row's far end is one column, and a project
+   row stopping short of it would highlight to a different width than the panes under it. Still
+   capped rather than let loose: on a wide screen an uncapped row puts the state an arm's length from
+   the name it belongs to. */
+.manager-list {
+  max-width: 120ch;
 }
 
 .manager-list li,
@@ -243,12 +259,13 @@ body *:not(.pane, .pane *) {
   padding-left: 2ch;
 }
 
-/* The pane's last few lines, indented past its name and as quiet as the summary beside it: the name
-   and the state are what you are reading, the tail is what the pane is saying. It takes a whole line
-   of its own by wrapping onto one — the row is still the flex line every other row is, so the state
-   keeps its place at the far end instead of being pushed off by a block of output. Wrapped rather
-   than clipped, because the end of the line is where the question mark is. The command list's own
-   rows carry the same tail under the same reasoning. */
+/* The pane's last few lines, kept for the panes that want something: a pane getting on with its work
+   says what it last printed on the row itself. Indented past its name and as quiet as the summary
+   beside it: the name and the state are what you are reading, the tail is what the pane is saying.
+   It takes a whole line of its own by wrapping onto one — the row is still the flex line every other
+   row is, so the state keeps its place at the far end instead of being pushed off by a block of
+   output. Wrapped rather than clipped, because the end of the line is where the question mark is.
+   The command list's own rows carry the same tail under the same reasoning. */
 .manager-pane,
 .command-project {
   flex-wrap: wrap;
@@ -265,6 +282,19 @@ body *:not(.pane, .pane *) {
   overflow-wrap: anywhere;
 }
 
+/* The last line a quiet pane printed, on the row beside its name. It takes the space between the name
+   and the state and gives it all back: clipped to one line with an ellipsis rather than wrapped, so
+   thirty panes are thirty rows however much a build printed. min-width: 0 is what lets a flex item
+   shrink below its text at all — without it a long line pushes the state and the age off the row. */
+.manager-last-printed {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 2ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Pushed to the far end of the row by its own margin, with padding of its own so a long project name
    growing towards it never touches it. */
 .manager-summary,
@@ -275,7 +305,21 @@ body *:not(.pane, .pane *) {
   padding-left: 12px;
 }
 
+/* How long since the pane printed, after the state and quieter than it: the state is one word you
+   recognise by its colour, the age is the part you read. Its own margin is not auto — the state ahead
+   of it has already pushed the pair to the end, and a second auto would split them apart. */
+.manager-age {
+  flex: 0 0 auto;
+  padding-left: 8px;
+}
+
+/* Everything on a row that is not the name or the state you are looking for. `quiet` is in here
+   because it is the state of most panes most of the time: the two colours below are the rows worth
+   spotting, and a column of plain white `quiet` would shout them down. */
 .manager-summary,
+.manager-last-printed,
+.manager-age,
+.manager-quiet,
 .command-summary,
 .command-keys {
   opacity: 0.6;

@@ -35,6 +35,11 @@ describe('relativeAge', () => {
     expect(relativeAge(new Date(now + 2 * DAY).toISOString(), now)).toBe('in 2 days');
   });
 
+  // What a pane last printed is timed by this process's own clock, so it arrives as a number.
+  it('takes a timestamp as it is, without parsing it', () => {
+    expect(relativeAge(now - 5 * MINUTE, now)).toBe('5 minutes ago');
+  });
+
   // .dashboard/CLAUDE.md invites hand-editing, so this is a thing people will write.
   it('says nothing about text that is not a date', () => {
     expect(relativeAge('last tuesday', now)).toBe(null);

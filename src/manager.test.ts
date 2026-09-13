@@ -1,10 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MANAGER_SLOT, NOTHING_SELECTED, alertSummary, canOpen, isProjectPage, landingPosition, lineKey,
-  managerLines, managerRows, nextSelection, projectPosition, selectedLine, tailLines, takesAnswer,
-  type PaneAlert,
+  MANAGER_SLOT, alertSummary, canOpen, isAlerting, isProjectPage, landingPosition, lineKey,
+  managerLines, managerRows, paneAge, projectPosition, tailLines, takesAnswer, type PaneSummary,
 } from './manager';
 import type { Bell } from './waiting';
+
+// The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
+// with one written out.
+const drawn = (panes: readonly PaneSummary[]) => panes.map((pane) => (
+  { ...pane, tail: pane.tail(), lastPrinted: pane.lastPrinted() }
+));
+
+const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary => ({
+  index: 0,
+  name: 'terminal 1',
+  state,
+  lastPrintedAt: 0,
+  tail: () => tail,
+  lastPrinted: () => tail.at(-1) ?? '',
+});
 
 describe('isProjectPage', () => {
   it('says the manager is not one, so it never moves and is never saved', () => {
@@ -45,15 +59,22 @@ describe('landingPosition', () => {
 describe('managerRows', () => {
   const page = (
     name: string, slot: number,
-    panes: { name: string; bell: Bell; exited: boolean; tail(): string[] }[],
+    panes: {
+      name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+      tail(): string[]; lastPrinted(): string;
+    }[],
   ) => ({ project: { name }, slot, panes });
-  const pane = (name: string, bell: Bell = 'quiet', exited = false, tail: string[] = []) => (
-    { name, bell, exited, tail: () => tail }
-  );
+  const pane = (
+    name: string, bell: Bell = 'quiet', exited = false, tail: string[] = [], lastPrintedAt = 0,
+  ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });
 
-  it('gives a project one row, whatever its panes are doing', () => {
+  it('gives a project one row with every pane on it, whatever they are doing', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
-    expect(rows).toEqual([{ slot: 3, name: 'api', alerts: [] }]);
+    expect(rows.map((row) => ({ slot: row.slot, name: row.name }))).toEqual([{ slot: 3, name: 'api' }]);
+    expect(drawn(rows[0].panes)).toEqual([
+      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0 },
+      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0 },
+    ]);
   });
 
   it('names the panes that are asking and the panes that have died', () => {
@@ -63,126 +84,139 @@ describe('managerRows', () => {
       pane('terminal 3', 'quiet', true),
       pane('nvim', 'notified'),
     ])]);
-    expect(rows[0].alerts).toEqual([
-      { index: 1, name: 'terminal 2', state: 'waiting', tail: [] },
-      { index: 2, name: 'terminal 3', state: 'exited', tail: [] },
-      { index: 3, name: 'nvim', state: 'waiting', tail: [] },
+    expect(rows[0].panes.map((entry) => entry.state)).toEqual([
+      'quiet', 'waiting', 'exited', 'waiting',
     ]);
+  });
+
+  it('carries what each pane printed and when, so the row can say how long ago', () => {
+    const rows = managerRows([page('api', 0, [pane('terminal 1', 'quiet', false, ['ok'], 1_000)])]);
+    expect(drawn(rows[0].panes)).toEqual([
+      {
+        index: 0, name: 'terminal 1', state: 'quiet', tail: ['ok'], lastPrinted: 'ok',
+        lastPrintedAt: 1_000,
+      },
+    ]);
+  });
+
+  // A project nobody has opened draws none of its panes, and reading a live terminal for a row that is
+  // not on screen is thirty screens laid out on every keystroke to print none of them.
+  it('does not read a pane’s screen until the row is drawn', () => {
+    let reads = 0;
+    const counted = {
+      name: 'terminal 1',
+      bell: 'quiet' as Bell,
+      exited: false,
+      lastPrintedAt: 0,
+      tail: () => {
+        reads += 1;
+        return [];
+      },
+      lastPrinted: () => {
+        reads += 1;
+        return '';
+      },
+    };
+    const rows = managerRows([page('api', 0, [counted])]);
+    expect(reads).toBe(0);
+    rows[0].panes[0].tail();
+    rows[0].panes[0].lastPrinted();
+    expect(reads).toBe(2);
   });
 
   it('calls a pane that died while it was asking dead, since restarting it is what it needs', () => {
     const rows = managerRows([page('api', 0, [pane('terminal 1', 'waiting', true)])]);
-    expect(rows[0].alerts).toEqual([{ index: 0, name: 'terminal 1', state: 'exited', tail: [] }]);
+    expect(rows[0].panes[0].state).toBe('exited');
   });
 
   it('keeps a project with no panes at all, so a dead project still has a row', () => {
-    expect(managerRows([page('gone', 2, [])])).toEqual([{ slot: 2, name: 'gone', alerts: [] }]);
+    expect(managerRows([page('gone', 2, [])])).toEqual([{ slot: 2, name: 'gone', panes: [] }]);
+  });
+});
+
+describe('paneAge', () => {
+  const now = Date.parse('2026-09-08T12:00:00.000Z');
+
+  it('says how long ago the pane last printed', () => {
+    expect(paneAge(now - 41 * 60 * 1000, now)).toBe('41 minutes ago');
+  });
+
+  // A shell that has not drawn its prompt yet. The epoch would read as quiet since 1970.
+  it('says nothing about a pane that has printed nothing', () => {
+    expect(paneAge(0, now)).toBe('');
   });
 });
 
 describe('alertSummary', () => {
-  const alert = (state: 'waiting' | 'exited') => ({ index: 0, name: 'terminal 1', state, tail: [] });
+  const pane = summary;
 
   it('says so when nothing on the project wants anything', () => {
     expect(alertSummary([])).toBe('quiet');
   });
 
+  // The five shells are five whatever they are doing, so counting them says nothing.
+  it('says quiet for a project whose panes are all getting on with it', () => {
+    expect(alertSummary([pane('quiet'), pane('quiet')])).toBe('quiet');
+  });
+
   it('counts each kind, asking first', () => {
-    expect(alertSummary([alert('exited'), alert('waiting'), alert('waiting')]))
+    expect(alertSummary([pane('exited'), pane('quiet'), pane('waiting'), pane('waiting')]))
       .toBe('2 waiting · 1 exited');
   });
 
   it('leaves out the kind that has none', () => {
-    expect(alertSummary([alert('exited')])).toBe('1 exited');
+    expect(alertSummary([pane('exited')])).toBe('1 exited');
   });
 });
 
 describe('managerLines', () => {
-  const row = (slot: number, name: string, alerts: PaneAlert[] = []) => ({ slot, name, alerts });
-  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const, tail: [] };
+  const row = (slot: number, name: string, panes: PaneSummary[] = []) => ({ slot, name, panes });
+  const pane = { ...summary('waiting'), index: 1, name: 'terminal 2' };
 
   it('lists the projects and nothing else while every row is shut', () => {
-    const lines = managerLines([row(0, 'api', [alert]), row(1, 'web')], new Set());
+    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set());
     expect(lines).toEqual([
-      { kind: 'project', row: row(0, 'api', [alert]), open: false },
+      { kind: 'project', row: row(0, 'api', [pane]), open: false },
       { kind: 'project', row: row(1, 'web'), open: false },
     ]);
   });
 
   it('puts an open project’s panes under it', () => {
-    const lines = managerLines([row(0, 'api', [alert]), row(1, 'web')], new Set([0]));
+    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set([0]));
     expect(lines).toEqual([
-      { kind: 'project', row: row(0, 'api', [alert]), open: true },
-      { kind: 'pane', slot: 0, alert },
+      { kind: 'project', row: row(0, 'api', [pane]), open: true },
+      { kind: 'pane', slot: 0, pane },
       { kind: 'project', row: row(1, 'web'), open: false },
     ]);
   });
 
-  it('shows a quiet project as shut however it was left, since it has nothing to show', () => {
+  it('shows a project with no panes as shut however it was left, since it has nothing to show', () => {
     const lines = managerLines([row(1, 'web')], new Set([1]));
     expect(lines).toEqual([{ kind: 'project', row: row(1, 'web'), open: false }]);
   });
 });
 
 describe('lineKey', () => {
-  const row = { slot: 2, name: 'api', alerts: [] };
+  const row = { slot: 2, name: 'api', panes: [] };
 
   it('tells a project from the panes under it', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
-    const alert = { index: 0, name: 'terminal 1', state: 'waiting' as const, tail: [] };
-    expect(lineKey({ kind: 'pane', slot: 2, alert })).toBe('2:0');
-  });
-});
-
-describe('selectedLine', () => {
-  const alert = { index: 1, name: 'terminal 2', state: 'waiting' as const, tail: [] };
-  const lines = managerLines([{ slot: 0, name: 'api', alerts: [alert] }], new Set([0]));
-
-  it('follows the line it was on when a row appears above it', () => {
-    expect(selectedLine(lines, '0:1', 0)).toBe(1);
-  });
-
-  it('stays where it was when the line it was on has gone', () => {
-    expect(selectedLine(lines, '9:9', 1)).toBe(1);
-  });
-
-  it('never points past the end after the lines it was on disappear', () => {
-    expect(selectedLine([], '9:9', 4)).toBe(0);
-  });
-
-  // Answering a pane leaves nothing selected, and the redraw that follows must not pick a row: the
-  // row under the old highlight now belongs to another project.
-  it('keeps nothing selected once a pane has been answered', () => {
-    expect(selectedLine(lines, '', -1)).toBe(-1);
-  });
-});
-
-describe('nextSelection', () => {
-  it('walks the list and stops at either end rather than wrapping', () => {
-    expect(nextSelection(1, 0, 'down', 4)).toBe(2);
-    expect(nextSelection(1, 0, 'up', 4)).toBe(0);
-    expect(nextSelection(3, 0, 'down', 4)).toBe(3);
-    expect(nextSelection(0, 0, 'up', 4)).toBe(0);
-  });
-
-  // Answering the pane on line 2 takes that row out, so line 2 is now the row that was under it.
-  it('carries on from the row that was answered, not from the top of the list', () => {
-    expect(nextSelection(NOTHING_SELECTED, 2, 'down', 4)).toBe(2);
-    expect(nextSelection(NOTHING_SELECTED, 2, 'up', 4)).toBe(1);
-  });
-
-  // The bug this replaced: from an empty selection both arrows floored at zero, so answering a pane
-  // near the bottom sent you back to the first project.
-  it('does not send you to the first project after answering the last pane', () => {
-    expect(nextSelection(NOTHING_SELECTED, 5, 'up', 5)).toBe(4);
+    expect(lineKey({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe('2:0');
   });
 });
 
 describe('canOpen', () => {
   it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
-    expect(canOpen({ slot: 0, name: 'api', alerts: [] })).toBe(false);
-    const alert = { index: 0, name: 'terminal 1', state: 'exited' as const, tail: [] };
-    expect(canOpen({ slot: 0, name: 'api', alerts: [alert] })).toBe(true);
+    expect(canOpen({ slot: 0, name: 'api', panes: [] })).toBe(false);
+    expect(canOpen({ slot: 0, name: 'api', panes: [summary('quiet')] })).toBe(true);
+  });
+});
+
+describe('isAlerting', () => {
+  it('says a pane asking or dead wants something, and a pane at work does not', () => {
+    expect(isAlerting(summary('waiting'))).toBe(true);
+    expect(isAlerting(summary('exited'))).toBe(true);
+    expect(isAlerting(summary('quiet'))).toBe(false);
   });
 });
 
@@ -208,13 +242,19 @@ describe('tailLines', () => {
 });
 
 describe('takesAnswer', () => {
-  const alert = (state: 'waiting' | 'exited') => ({ index: 0, name: 'terminal 1', state, tail: [] });
+  const pane = summary;
 
   it('sends a keystroke to a pane that is asking', () => {
-    expect(takesAnswer(alert('waiting'))).toBe(true);
+    expect(takesAnswer(pane('waiting'))).toBe(true);
   });
 
   it('refuses a pane that has died, which needs Enter in the pane rather than an answer', () => {
-    expect(takesAnswer(alert('exited'))).toBe(false);
+    expect(takesAnswer(pane('exited'))).toBe(false);
+  });
+
+  // A pane getting on with its work is on the list now. A character typed at it would land in the
+  // middle of whatever it is running, from a page that was not showing you what it is running.
+  it('refuses a pane that is not asking anything', () => {
+    expect(takesAnswer(pane('quiet'))).toBe(false);
   });
 });
