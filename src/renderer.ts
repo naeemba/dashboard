@@ -795,8 +795,13 @@ function jumpToWorktree(entry: WorktreeEntry): string {
 // answer. terminal.input is the same door answerPane and a dropped file already go through, and the
 // carriage return is what an Enter in the pane sends.
 function sendToPanes(command: string, paths: readonly string[]): SendPlan {
-  const chosen = projectPages().filter((page) => paths.includes(page.project.path));
-  const plan = planSend(chosen.map((page) => ({
+  // One map, both jobs: what planSend is asked about, and where the line is then delivered. Two
+  // collections built from the same filter is how a project comes to be planned for and not written
+  // to, or written to after the plan has left it out.
+  const chosen = new Map(projectPages()
+    .filter((page) => paths.includes(page.project.path))
+    .map((page) => [page.project.path, page]));
+  const plan = planSend([...chosen.values()].map((page) => ({
     name: page.project.name,
     path: page.project.path,
     // The five shells, never the editor. It rings a bell like a pane and is listed like one, but a
@@ -805,8 +810,9 @@ function sendToPanes(command: string, paths: readonly string[]): SendPlan {
       exited: pane.exited, busy: looksBusy(paneScreen(pane.terminal)),
     })),
   })));
-  const panesByPath = new Map(chosen.map((page) => [page.project.path, page.panes]));
-  for (const send of plan.sends) panesByPath.get(send.path)?.[send.pane]?.terminal.input(`${command}\r`);
+  for (const send of plan.sends) {
+    chosen.get(send.path)?.panes[send.pane]?.terminal.input(`${command}\r`);
+  }
   return plan;
 }
 
