@@ -75,9 +75,18 @@ The board lives in `.dashboard/board.json` inside the project, alongside a `READ
 
 Inside the board: arrows move the selection, Shift with an arrow moves the card itself, and the keys in the table above do the rest. A card carries a title, a description, and one of four priorities — `urgent`, `high`, `medium`, `low` — shown as a coloured stripe down its left edge and named in the status bar. `p` walks through the four, `s` sorts the column you are on with the urgent cards at the top. Every change is written straight to disk; there is no save key.
 
+Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that edits the board of the project you are in. It goes through the same code the app does.
+
+    node "$DASHBOARD_BOARD" list
+    node "$DASHBOARD_BOARD" add "Fix the resize race" --priority high --notes "what goes wrong"
+    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Done
+    node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
+
+`list` prints the column, priority and id of every card; the other three take that id. Run it with no arguments for the whole of it. It is how an agent working a card moves its own card to Done when the pull request is open, instead of editing JSON by hand.
+
 While a card is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global shortcut are dead until the edit ends. A title ends on Enter or Escape. A description ends on Escape only — Enter there is a newline, since a description is written as lines.
 
-The board is re-read whenever you enter it, so edits made to `board.json` from outside show up when you switch away and back — not while you are looking at it. If the board file is broken — truncated by a crash, broken by a hand-edit, or carrying a merge conflict marker — it is renamed to `board.json.broken` before showing an empty board, and the status bar says so. Your old cards are in the renamed file.
+The board is re-read whenever you enter it, and again while you are looking at it when something else writes the file: the app watches `board.json` and redraws without moving your selection. If the board file is broken — truncated by a crash, broken by a hand-edit, or carrying a merge conflict marker — it is renamed to `board.json.broken` before showing an empty board, and the status bar says so. Your old cards are in the renamed file.
 
 ## Known limitations
 

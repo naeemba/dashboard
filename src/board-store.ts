@@ -1,21 +1,26 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+// The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
+// flag is renamed, and this file is the only place an agent finds out the command exists at all.
+import { USAGE } from './board-usage';
 import {
   DEFAULT_PRIORITY,
-  PRIORITIES,
   emptyBoard,
+  isPriority,
   isPullRequestNumber,
+  isTitle,
   withShipColumn,
   type Board,
   type Card,
   type Column,
-  type Priority,
 } from './board';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.
 export const BOARD_DIRECTORY = '.dashboard';
-const BOARD_FILE = 'board.json';
+// Exported because main watches the folder rather than the file — a board is replaced by a rename,
+// which a watch on the file itself loses — and has to know which name in it is the board.
+export const BOARD_FILE = 'board.json';
 // The board, relative to the project — the shape git reports and git compares, as opposed to the
 // absolute path boardPath joins. One spelling, so a second copy in another module cannot drift from
 // this one the day .dashboard is renamed.
@@ -86,9 +91,24 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   a whole number above zero written without the \`#\`, or absent. Both are typed in — \`b\` edits the
   branch and \`r\` the pull request — and nothing fetches or refreshes them.
 
-Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
-away from the board and back to see your changes. The app rewrites the whole file on every edit and
-drops any field not listed above.
+## The \`board\` command
+
+Every pane the Dashboard app opens carries \`DASHBOARD_BOARD\`, the path to a command that edits the
+board of the project you are in — any depth inside it, not only its root. It goes through the same
+code the app does, so a card it writes is a card the app wrote.
+
+${USAGE.split('\n').map((line) => (line === '' ? '' : `    ${line}`)).join('\n')}
+
+Run it as \`node "$DASHBOARD_BOARD" <command>\`. \`list\` prints the column, the priority and the id of
+every card, which is where the id the other three want comes from.
+
+Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
+where a hand edit that gets a field wrong is repaired silently on the next read.
+
+Edit this file directly if you like — the app notices. It watches board.json while a board is on
+screen, so a card moved from the command line or by hand shows up where you are looking, with the
+selection left on the card it was on. The app rewrites the whole file on every edit and drops any
+field not listed above.
 `;
 
 export const EXPLANATION_FOR_PEOPLE = `# .dashboard
@@ -99,6 +119,22 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 
 \`CLAUDE.md\` beside this file describes the format.
 `;
+
+// Which project a directory belongs to. The command line is pointed at a project by the directory you
+// run it from, and an agent that has `cd src` first is still working the same project: without this,
+// `board add` there seeds a second `.dashboard` under src/ and writes the card into it — a real id
+// printed back, a card on no board anyone looks at, and an untracked folder in `git status`.
+//
+// The nearest board above you wins, and a project that has no board yet falls back to the repository,
+// which is the same root the app itself opens a project at. Neither found, the directory you are in is
+// the answer, so a folder that is not a repository still gets a board where you asked for one.
+export function projectRoot(directory: string): string {
+  const start = resolve(directory);
+  for (let at = start; at !== dirname(at); at = dirname(at)) {
+    if (existsSync(join(at, BOARD_DIRECTORY)) || existsSync(join(at, '.git'))) return at;
+  }
+  return start;
+}
 
 function boardPath(projectPath: string): string {
   return join(projectPath, BOARD_DIRECTORY, BOARD_FILE);
@@ -112,12 +148,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
-// can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
-function isPriority(value: unknown): value is Priority {
-  return PRIORITIES.some((priority) => priority === value);
-}
-
 // undefined rather than a default, for the four fields that mean "nobody knows". A blank string is
 // the same as absent: a hand-written `"branch": ""` should not draw an empty badge on the card.
 function optionalText(value: unknown): string | undefined {
@@ -126,8 +156,10 @@ function optionalText(value: unknown): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
+// A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
+// can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
 function parseCard(value: unknown, makeId: () => string): Card | null {
-  if (!isRecord(value) || typeof value.title !== 'string' || value.title.trim() === '') return null;
+  if (!isRecord(value) || !isTitle(value.title)) return null;
   return {
     id: typeof value.id === 'string' ? value.id : makeId(),
     title: value.title,
@@ -247,6 +279,11 @@ export function readBoard(projectPath: string): BoardRead {
   }
 }
 
+// Answers with the bytes it wrote. Main keeps the last of them per project and compares them against
+// what the folder watcher finds, which is how the app's own saves are told apart from the command
+// line's — without it every keystroke on the board would come back as somebody else's change and
+// redraw the board out from under the selection.
+//
 // Unlike reading, a failed write is reported. Swallowing it would show cards on screen that are not
 // on disk, and the next launch would silently lose them.
 //
@@ -254,11 +291,12 @@ export function readBoard(projectPath: string): BoardRead {
 // atomic on every platform this app runs on, so a crash or a full disk mid-write leaves either the
 // old file or the new one, never a truncated one. Without this, the app itself would be the main
 // producer of the corruption the salvage path in readBoard exists to clean up after.
-export function writeBoard(projectPath: string, board: Board): void {
+export function writeBoard(projectPath: string, board: Board): string {
   const directory = join(projectPath, BOARD_DIRECTORY);
   mkdirSync(directory, { recursive: true });
   const temporaryPath = join(directory, `${BOARD_FILE}.tmp`);
-  writeFileSync(temporaryPath, `${JSON.stringify(board, null, 2)}\n`);
+  const text = `${JSON.stringify(board, null, 2)}\n`;
+  writeFileSync(temporaryPath, text);
   try {
     renameSync(temporaryPath, boardPath(projectPath));
   } catch (error: unknown) {
@@ -269,6 +307,20 @@ export function writeBoard(projectPath: string, board: Board): void {
     }
     throw error;
   }
+  return text;
+}
+
+// Seed, then read. Both callers that open a board — the app's board:read and the command line — want
+// exactly this, and seeding is a convenience: writing the two explanation files must never cost
+// someone a board.json that is sitting right there and perfectly readable, so a read-only folder
+// loses the docs and keeps the cards.
+export function openBoard(projectPath: string): BoardRead {
+  try {
+    seedBoardDirectory(projectPath);
+  } catch {
+    // No explanation files this time.
+  }
+  return readBoard(projectPath);
 }
 
 // Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md

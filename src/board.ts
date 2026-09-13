@@ -82,10 +82,15 @@ function replaceColumn(board: Board, index: number, cards: Card[]): Board {
   return withColumns(board, board.columns.map((column, at) => (at === index ? { ...column, cards } : column)));
 }
 
-// Where Ship is, or -1. Case-insensitive, the same way create-task.js matches a --column, so a board
-// written by hand with "ship" is not a board the feature quietly refuses to work on.
+// A column by name, or -1. Case-insensitive, the same way create-task.js matches a --column: a board
+// written by hand with "ship" is not a board the feature quietly refuses to work on, and `board move
+// <id> done` is what anyone types.
+export function columnNamed(board: Board, name: string): number {
+  return board.columns.findIndex((column) => column.name.toLowerCase() === name.toLowerCase().trim());
+}
+
 export function shipColumnIndex(board: Board): number {
-  return board.columns.findIndex((column) => column.name.toLowerCase() === SHIP_COLUMN.toLowerCase());
+  return columnNamed(board, SHIP_COLUMN);
 }
 
 // Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
@@ -123,10 +128,14 @@ export function moveSelection(board: Board, selection: Selection, direction: Dir
   return { column, card: clampIndex(selection.card, lastRow(board.columns[column])) };
 }
 
+// Trimmed here rather than by each caller, the same way setNotes holds the one rule about notes. The
+// board's own box trims what you type before it commits and so does `board add`; a third writer that
+// forgets would leave one card sitting a space in from every other card on the board, with nothing
+// failing.
 export function addCard(board: Board, selection: Selection, id: string, title: string): Change {
   const now = stamp();
   const cards = [...board.columns[selection.column].cards,
-    { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: null, createdAt: now, updatedAt: now }];
+    { id, title: title.trim(), notes: '', priority: DEFAULT_PRIORITY, parent: null, createdAt: now, updatedAt: now }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
@@ -140,7 +149,7 @@ export function addChildCard(board: Board, selection: Selection, id: string, tit
   if (!parent) return { board, selection };
   const now = stamp();
   const cards = [...board.columns[selection.column].cards,
-    { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: parent.id, createdAt: now, updatedAt: now }];
+    { id, title: title.trim(), notes: '', priority: DEFAULT_PRIORITY, parent: parent.id, createdAt: now, updatedAt: now }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
@@ -169,12 +178,18 @@ function editCard(board: Board, selection: Selection, fields: Partial<Card>): Ch
   };
 }
 
+// Trimmed for the same reason addCard trims: the title a card carries is decided here, not by
+// whoever happened to write it.
 export function renameCard(board: Board, selection: Selection, title: string): Change {
-  return editCard(board, selection, { title });
+  return editCard(board, selection, { title: title.trim() });
 }
 
+// Trimmed here rather than by each caller, the way branchFrom holds the one rule about a branch. The
+// board's own box trims what you type before it commits; `board set <id> --notes "$(cat notes.txt)"`
+// hands over the file's trailing newline, and without this the detail dialog opens on a blank last
+// line for a card written from the command line and not for the same card written on the board.
 export function setNotes(board: Board, selection: Selection, notes: string): Change {
-  return editCard(board, selection, { notes });
+  return editCard(board, selection, { notes: notes.trim() });
 }
 
 export function setBranch(board: Board, selection: Selection, branch: string | undefined): Change {
@@ -183,6 +198,30 @@ export function setBranch(board: Board, selection: Selection, branch: string | u
 
 export function setPullRequest(board: Board, selection: Selection, pullRequest: number | undefined): Change {
   return editCard(board, selection, { pullRequest });
+}
+
+// What a card has to have to be a card. parseCard drops one written without it, blanking a title
+// deletes the card, and the command line refuses to add one — three places that must agree, or the
+// app draws a card the command line says cannot exist.
+export function isTitle(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+// An empty box means the card has no branch, which is an ordinary state for a card — so both the
+// board's own field and the command line clear it rather than refusing.
+export function branchFrom(text: string): string | undefined {
+  const trimmed = text.trim();
+  return trimmed === '' ? undefined : trimmed;
+}
+
+export function setPriority(board: Board, selection: Selection, priority: Priority): Change {
+  return editCard(board, selection, { priority });
+}
+
+// What counts as a priority. parseCard asks it of whatever was in the file and the command line asks
+// it of what was typed, so a level one of them accepts cannot be the one the other quietly drops.
+export function isPriority(value: unknown): value is Priority {
+  return PRIORITIES.some((priority) => priority === value);
 }
 
 // What counts as a pull request number. parseCard asks it of whatever was in the file, and the board
@@ -218,7 +257,7 @@ export function cyclePriority(board: Board, selection: Selection): Change {
   const card = cardAt(board, selection);
   if (!card) return { board, selection };
   const next = PRIORITIES[(PRIORITIES.indexOf(card.priority) + 1) % PRIORITIES.length];
-  return editCard(board, selection, { priority: next });
+  return setPriority(board, selection, next);
 }
 
 // Tab. The card above in the same column becomes this card's parent — there is no separate "pick a

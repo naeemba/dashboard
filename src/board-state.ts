@@ -1,6 +1,9 @@
 import {
   addCard,
+  branchFrom,
   cardAt,
+  isTitle,
+  selectionOf,
   deleteCard,
   emptyBoard,
   hasSubtasks,
@@ -84,7 +87,7 @@ export function addBlankCard(state: BoardState, id: string): BoardState {
 // board. So this hands the state back unchanged instead, and the title stays whatever it was.
 export function commitTitle(state: BoardState, title: string): BoardState {
   const trimmed = title.trim();
-  if (trimmed === '') {
+  if (!isTitle(trimmed)) {
     if (hasSubtasks(state.board, state.selection)) return state;
     return applyChange(state, deleteCard(state.board, state.selection));
   }
@@ -99,9 +102,10 @@ export function commitTitle(state: BoardState, title: string): BoardState {
 // clears the card's notes — unlike a title, a card with no description is an ordinary card. Closing a
 // description unchanged is not a change, for the same reason reading a title is not.
 export function commitNotes(state: BoardState, notes: string): BoardState {
-  const trimmed = notes.trim();
-  if (trimmed === cardAt(state.board, state.selection)?.notes.trim()) return state;
-  return applyChange(state, setNotes(state.board, state.selection, trimmed));
+  // Trimmed for the comparison only. setNotes is what decides what a card's notes look like once
+  // written, so the command line and this box cannot store the same text two ways.
+  if (notes.trim() === cardAt(state.board, state.selection)?.notes.trim()) return state;
+  return applyChange(state, setNotes(state.board, state.selection, notes));
 }
 
 // A board read from disk starts fresh: nothing on it can be undone back to what was in memory. The
@@ -116,12 +120,32 @@ export function loadBoard(state: BoardState, board: Board): BoardState {
   };
 }
 
+// The same board arriving from disk while you are looking at it, because something else wrote the
+// file — the command line, or a hand edit. Unlike loadBoard this keeps the selection on the card it
+// was on, wherever that card has moved to: an agent setting a pull request number on its own card
+// must not slide your cursor to the top of a column while you are reading.
+//
+// A card that is no longer on the board leaves the selection where it was sitting, clamped, which is
+// the same place the next card up has moved into.
+export function reloadBoard(state: BoardState, board: Board): BoardState {
+  // Everything but the selection is an arrival's ruling, including losing the undo step: the board in
+  // front of you is not the one that step was taken from any more.
+  const arrived = loadBoard(state, board);
+  const selected = cardAt(state.board, state.selection);
+  const moved = selected === undefined ? null : selectionOf(board, selected.id);
+  const column = arrived.selection.column;
+  return {
+    ...arrived,
+    selection: moved ?? { column, card: clampIndex(state.selection.card, board.columns[column].cards.length - 1) },
+  };
+}
+
 // Enter and Escape both commit, as with a title. An empty box means the card has no branch, which is
 // an ordinary state for a card — so it clears the field rather than refusing.
 export function commitBranch(state: BoardState, branch: string): BoardState {
-  const trimmed = branch.trim();
-  if (trimmed === (cardAt(state.board, state.selection)?.branch ?? '')) return state;
-  return applyChange(state, setBranch(state.board, state.selection, trimmed === '' ? undefined : trimmed));
+  const next = branchFrom(branch);
+  if ((next ?? '') === (cardAt(state.board, state.selection)?.branch ?? '')) return state;
+  return applyChange(state, setBranch(state.board, state.selection, next));
 }
 
 // An empty box clears the number, the same as a branch. Anything else that is not a pull request

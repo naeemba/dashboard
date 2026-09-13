@@ -37,7 +37,13 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
     + 'straight to disk, so there is no save key and undo is the only way back. The file is re-read '
-    + 'each time you enter the board, not while you are looking at it. A card can be a subtask of '
+    + 'each time you enter the board, and again while you are looking at it if something else writes '
+    + 'it — an agent running the board command, or a hand edit — with your selection left on the card '
+    + 'it was on and a box you have open left open on that card, still holding what you have typed. If '
+    + 'the write took the card away, the box closes rather than moving your text onto its neighbour. A '
+    + 'card you have open follows the write too: its subtasks redraw as they land, a subtask you are '
+    + 'half-way through naming keeps what you have typed, and the card closes if the write took it '
+    + 'away. A card can be a subtask of '
     + 'another card: it stays an ordinary card in whatever column you put it in, shows a badge naming '
     + 'its parent, and counts towards the bar on that parent. A card also carries the branch and pull '
     + 'request its work is on, which you type in, and the dates it was written and last changed, which '
@@ -53,7 +59,10 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'its badge says where the first one went. '
     + 'The manager has one of these too, and it is every open project\'s board at once, one under the '
     + 'other. The same keys and the same writes — each project keeps its own undo — with two more that '
-    + 'say which project the rest of them are aimed at, and Escape to go back to the manager\'s list.',
+    + 'say which project the rest of them are aimed at, and Escape to go back to the manager\'s list. '
+    + 'Every pane also carries DASHBOARD_BOARD, the path to a command that lists cards and moves them '
+    + 'from a shell: run `node "$DASHBOARD_BOARD"` in a project to see what it takes. It is how an '
+    + 'agent working a card moves its own, and .dashboard/CLAUDE.md in each project spells it out.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
     + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open last '
     + 'time. Three sections are named along the top — general, board, command — and the board key still '

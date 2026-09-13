@@ -54,6 +54,28 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   a whole number above zero written without the `#`, or absent. Both are typed in — `b` edits the
   branch and `r` the pull request — and nothing fetches or refreshes them.
 
-Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
-away from the board and back to see your changes. The app rewrites the whole file on every edit and
-drops any field not listed above.
+## The `board` command
+
+Every pane the Dashboard app opens carries `DASHBOARD_BOARD`, the path to a command that edits the
+board of the project you are in — any depth inside it, not only its root. It goes through the same
+code the app does, so a card it writes is a card the app wrote.
+
+    board — the Dashboard board of the project you are in
+
+      board list
+      board add <title> [--column <name>] [--priority <level>] [--notes <text>]
+      board move <id> <column>
+      board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
+
+    Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field.
+
+Run it as `node "$DASHBOARD_BOARD" <command>`. `list` prints the column, the priority and the id of
+every card, which is where the id the other three want comes from.
+
+Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
+where a hand edit that gets a field wrong is repaired silently on the next read.
+
+Edit this file directly if you like — the app notices. It watches board.json while a board is on
+screen, so a card moved from the command line or by hand shows up where you are looking, with the
+selection left on the card it was on. The app rewrites the whole file on every edit and drops any
+field not listed above.

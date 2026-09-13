@@ -1,0 +1,189 @@
+import {
+  PRIORITIES,
+  addCard,
+  branchFrom,
+  columnNamed,
+  flightParts,
+  isPriority,
+  isTitle,
+  moveCardToColumn,
+  pullRequestFrom,
+  selectionOf,
+  setBranch,
+  setNotes,
+  setPriority,
+  setPullRequest,
+  type Board,
+  type Selection,
+} from './board';
+import { USAGE } from './board-usage';
+
+// Every decision the command line makes. The board it is handed and the board it answers with are
+// the app's own, through the app's own operations in board.ts — a card added here carries the same
+// fields, ages the same way and lands in the same place as one added with `n` on the board.
+//
+// Nothing here reads a file or prints. That is board-cli-entry.ts, which is the whole of the
+// program outside this file and has no decision in it.
+
+// null rather than the board when nothing changed: the entry writes only when there is something to
+// write, so `move` to the column a card is already in leaves the file's bytes and its mtime alone —
+// and the watcher in main stays quiet instead of redrawing every board for a command that did nothing.
+export type CommandResult =
+  | { ok: true; output: string; board: Board | null }
+  | { ok: false; message: string };
+
+// `--name value` and `--name=value` both, because an agent writing the command will use either and
+// refusing one of them is a refusal nobody can see coming. A flag repeated takes its last value.
+function readFlags(args: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
+  const flags = new Map<string, string>();
+  for (let at = 0; at < args.length; at += 1) {
+    const argument = args[at];
+    if (!argument.startsWith('--')) return { message: `not a flag: ${argument}` };
+    const equals = argument.indexOf('=');
+    const name = equals === -1 ? argument.slice(2) : argument.slice(2, equals);
+    if (!allowed.includes(name)) return { message: `no --${name} here; this command takes ${allowed.map((flag) => `--${flag}`).join(', ')}` };
+    if (equals !== -1) {
+      flags.set(name, argument.slice(equals + 1));
+      continue;
+    }
+    // A missing value is refused rather than read as an empty string: `--branch --notes x` would
+    // otherwise clear the branch and say nothing, and the notes would go missing with it.
+    at += 1;
+    if (at >= args.length) return { message: `--${name} needs a value` };
+    flags.set(name, args[at]);
+  }
+  return { flags };
+}
+
+function noSuchColumn(board: Board, name: string): string {
+  return `no column called ${name}; this board has ${board.columns.map((column) => column.name).join(', ')}`;
+}
+
+function noSuchPriority(level: string): string {
+  return `not a priority: ${level}; one of ${PRIORITIES.join(', ')}`;
+}
+
+// The fields `add` and `set` share. Each is applied through the same function the board's own keys
+// call, so `updatedAt` moves here exactly as it moves there.
+function withFields(board: Board, selection: Selection, flags: Map<string, string>): { board: Board } | { message: string } {
+  let next = board;
+  const priority = flags.get('priority');
+  if (priority !== undefined) {
+    if (!isPriority(priority)) return { message: noSuchPriority(priority) };
+    next = setPriority(next, selection, priority).board;
+  }
+  const branch = flags.get('branch');
+  if (branch !== undefined) next = setBranch(next, selection, branchFrom(branch)).board;
+  const pullRequest = flags.get('pull-request');
+  if (pullRequest !== undefined) {
+    const number = pullRequest.trim() === '' ? undefined : pullRequestFrom(pullRequest);
+    // null is what pullRequestFrom says about text that is not a number; undefined is the empty
+    // string, which means the card has none. They are not the same answer and must not share a branch.
+    if (number === null) return { message: `not a pull request number: ${pullRequest}` };
+    next = setPullRequest(next, selection, number).board;
+  }
+  const notes = flags.get('notes');
+  if (notes !== undefined) next = setNotes(next, selection, notes).board;
+  return { board: next };
+}
+
+// One line per card, every column, left to right and top to bottom — the order the board draws them
+// in, so reading this and reading the screen give the same answer about what is where.
+export function formatList(board: Board): string {
+  const cards = board.columns.flatMap((column) => column.cards.map((card) => ({ column: column.name, card })));
+  if (cards.length === 0) return 'No cards.';
+  const columnWidth = Math.max(...cards.map((row) => row.column.length));
+  const priorityWidth = Math.max(...PRIORITIES.map((priority) => priority.length));
+  return cards
+    .map(({ column, card }) => {
+      const flight = flightParts(card);
+      return [
+        column.padEnd(columnWidth),
+        card.priority.padEnd(priorityWidth),
+        card.id,
+        card.title + (flight.length === 0 ? '' : `  (${flight.join(' · ')})`),
+      ].join('  ');
+    })
+    .join('\n');
+}
+
+export function runBoardCommand(
+  board: Board,
+  args: readonly string[],
+  makeId: () => string = () => crypto.randomUUID(),
+): CommandResult {
+  const [command, ...rest] = args;
+  if (command === undefined || command === '--help' || command === '-h') {
+    return { ok: true, output: USAGE, board: null };
+  }
+
+  if (command === 'list') {
+    if (rest.length > 0) return { ok: false, message: 'list takes nothing after it' };
+    return { ok: true, output: formatList(board), board: null };
+  }
+
+  if (command === 'add') {
+    const [title, ...flagArgs] = rest;
+    // A flag where the title should be is a typo, not a title. Without this `board add --help` writes a
+    // card called `--help` into a file the team commits, and answers as if you had meant it. One dash
+    // counts: `-h` is the other spelling this program takes for help, and the only title this refuses
+    // that `--` would not is one starting with a dash, which nobody writes.
+    if (title !== undefined && title.startsWith('-')) return { ok: false, message: 'add needs a title before its flags' };
+    // The same rule parseCard holds a hand-written card to: a card with no title is not a card, and
+    // one written here would be dropped the next time the app read the file.
+    if (!isTitle(title)) return { ok: false, message: 'add needs a title' };
+    const read = readFlags(flagArgs, ['column', 'priority', 'notes']);
+    if ('message' in read) return { ok: false, message: read.message };
+    const columnName = read.flags.get('column');
+    // The leftmost column, which is where a card nobody has placed belongs — Todo on every board the
+    // app writes.
+    const column = columnName === undefined ? 0 : columnNamed(board, columnName);
+    if (columnName !== undefined && column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
+    const id = makeId();
+    const added = addCard(board, { column, card: 0 }, id, title);
+    const fields = withFields(added.board, added.selection, read.flags);
+    if ('message' in fields) return { ok: false, message: fields.message };
+    // Read back rather than echoed: addCard decides what title the card ends up with, so the line
+    // printed here cannot say one thing while the file holds another.
+    const card = fields.board.columns[added.selection.column].cards[added.selection.card];
+    return { ok: true, output: `${id}  ${board.columns[column].name}  ${card.title}`, board: fields.board };
+  }
+
+  if (command === 'move') {
+    const [id, columnName, ...extra] = rest;
+    if (id === undefined || columnName === undefined) return { ok: false, message: 'move needs a card id and a column' };
+    if (extra.length > 0) return { ok: false, message: 'move takes nothing after the column' };
+    const selection = selectionOf(board, id);
+    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const column = columnNamed(board, columnName);
+    if (column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
+    // selectionOf just found it, so it is there.
+    const title = board.columns[selection.column].cards[selection.card].title;
+    const moved = moveCardToColumn(board, selection, column);
+    // moveCardToColumn hands back the board it was given when the card is already there. Saying so
+    // and writing nothing beats a silent success that touches the file.
+    if (moved.board === board) return { ok: true, output: `${title} is already in ${board.columns[column].name}`, board: null };
+    return { ok: true, output: `${title}  →  ${board.columns[column].name}`, board: moved.board };
+  }
+
+  if (command === 'set') {
+    const [id, ...flagArgs] = rest;
+    if (id === undefined) return { ok: false, message: 'set needs a card id' };
+    const selection = selectionOf(board, id);
+    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const read = readFlags(flagArgs, ['branch', 'pull-request', 'priority', 'notes']);
+    if ('message' in read) return { ok: false, message: read.message };
+    if (read.flags.size === 0) return { ok: false, message: 'set needs something to set' };
+    const fields = withFields(board, selection, read.flags);
+    if ('message' in fields) return { ok: false, message: fields.message };
+    // Still where selectionOf found it: every field change edits the card in place.
+    const card = fields.board.columns[selection.column].cards[selection.card];
+    return {
+      ok: true,
+      output: [card.title, card.priority, ...flightParts(card)].join('  ·  '),
+      board: fields.board,
+    };
+  }
+
+  return { ok: false, message: `no such command: ${command}\n\n${USAGE}` };
+}

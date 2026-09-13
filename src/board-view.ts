@@ -22,7 +22,8 @@ import {
   type Selection,
 } from './board';
 import type { Action } from './actions';
-import { openCardDetail } from './board-detail';
+import { openCardDetail, type CardDetail } from './board-detail';
+import { putEditBack, takeEdit } from './carried-edit';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -33,6 +34,7 @@ import {
   commitTitle,
   initialBoardState,
   loadBoard,
+  reloadBoard,
   undoChange,
   type BoardState,
 } from './board-state';
@@ -66,6 +68,10 @@ export type BoardOptions = {
 export type BoardView = {
   element: HTMLElement;
   open(): Promise<void>;
+  // The file changed under you: read it again and redraw, without moving the keyboard or the
+  // selection. The path is passed because the manager shows every open project's board at once and
+  // only one of them wrote; a board whose project this is not does nothing.
+  reload(projectPath: string): void;
   // What the status bar says about the board: the column the selection is in, and the priority of the
   // card it is on. The colour down a card's edge is the fast read; this is the one that names it.
   statusLabel(): string;
@@ -120,6 +126,66 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
+  // The open card dialog, or null. Held so a write that lands can redraw it: it reads the live board on
+  // every key, but nothing tells it the file changed, so the subtasks on screen and the ones Enter acts
+  // on would be two different lists.
+  let detail: CardDetail | null = null;
+
+  // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
+  // step is gone, which is what entering a board means. Without it the file simply changed under you
+  // and the selection stays on the card it was on.
+  //
+  // Main's read is synchronous fs, which on a cold or network-mounted folder is comfortably longer
+  // than the gap between two keys — so a key typed during the read is dropped rather than applied to
+  // the board that is about to be replaced.
+  //
+  // What it decides (`next`, `message`) stays local until the read has settled, and the one guard
+  // below is what a stale call bounces off; a guard per await is the shape that let an old read win a
+  // race the first version of this file had already closed.
+  //
+  // A failed read still has to leave the board on screen usable from the keyboard: render() runs
+  // either way, on whatever board is already in memory, with the error in the status bar instead of a
+  // fresh board. A control the keyboard can't reach is unfinished.
+  async function readAgain(fresh: boolean): Promise<void> {
+    const token = ++latestRead;
+    let message = '';
+    let next = state;
+    const boardRead = options.bridge.readBoard(options.projectPath);
+    try {
+      const read = await boardRead;
+      next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
+      // The old file is still on disk under this name, so the cards are not gone — just not shown.
+      if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
+    } catch (error: unknown) {
+      message = `Board not opened: ${String(error)}`;
+    }
+    // A read another one has overtaken says nothing: the newer one is the board you asked for.
+    if (token !== latestRead) return;
+    landedRead = token;
+    // An arrival closes any open box: you asked to come here, and this is a different board. A file
+    // that changed under you does not close it — what you have half typed is yours, and reloadBoard
+    // has already followed your card to wherever the write put it. The redraw throws the box away and
+    // builds a new one, so the text and the caret cross over by hand.
+    if (fresh) editing = null;
+    const wasEditing = editingCardId();
+    const carried = editing === null ? null : takeEdit(editorInput());
+    state = next;
+    // The box only goes back on the card it was opened on. A write that drops that card leaves the
+    // selection on the row it held, which is now the next card down — and a box drawn there would be
+    // that card's box with your text in it, so pressing Enter renames a card you never opened.
+    if (wasEditing !== undefined && cardAt(state.board, state.selection)?.id !== wasEditing) editing = null;
+    options.onError(message);
+    render();
+    // The card you were typing into is not on the new board, so there is no box to put the text back
+    // in. Leaving `editing` set here would take every key on this screen for good.
+    if (carried && !putEditBack(editorInput(), carried)) {
+      editing = null;
+      element.focus();
+    }
+    // The open card dialog reads this board on every key, so it has to be drawn from it too. It closes
+    // itself if the write took its card away, and carries a half-typed subtask across if it did not.
+    detail?.redraw();
+  }
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
@@ -143,12 +209,26 @@ export function createBoardView(options: BoardOptions): BoardView {
     apply(applyChange(state, next));
   }
 
+  // The open box, whichever tag it was drawn as. One lookup, because three things now want it: opening
+  // one, and the two halves of carrying one across a redraw.
+  function editorInput(): HTMLInputElement | HTMLTextAreaElement | null {
+    const input = element.querySelector('.board-edit');
+    return input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement ? input : null;
+  }
+
+  // The card the open box belongs to, or undefined when no box is open. Both callers need it because
+  // a board that changes under a box has to put that box back on the same card, not on whatever row
+  // the selection is now pointing at.
+  function editingCardId(): string | undefined {
+    return editing === null ? undefined : cardAt(state.board, state.selection)?.id;
+  }
+
   function startEditing(field: EditableField): void {
     if (!cardAt(state.board, state.selection)) return;
     editing = field;
     render();
-    const input = element.querySelector('.board-edit');
-    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return;
+    const input = editorInput();
+    if (!input) return;
     input.focus();
     // A title, a branch and a pull request number are opened to replace, so they come up selected and
     // one keystroke retypes them. A description is opened to add a line to, and selecting it would let
@@ -310,7 +390,12 @@ export function createBoardView(options: BoardOptions): BoardView {
       : `Delete "${card.title}" and its ${family} subtask${family === 1 ? '' : 's'}?`;
     confirmOverlay(question, 'Enter deletes. Escape keeps it.').then((confirmed) => {
       element.focus();
-      if (confirmed) change(deleteCardAndDescendants(state.board, state.selection));
+      if (!confirmed) return;
+      // Found again rather than remembered, the same as ship(): a write that lands while the question
+      // is up moves the card off the row it was on, and deleting the row would delete whatever slid
+      // into it — "Delete A?" taking B and B's whole family with it.
+      const at = selectionOf(state.board, card.id);
+      if (at) change(deleteCardAndDescendants(state.board, at));
     });
   }
 
@@ -334,7 +419,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the move it is riding on has just shifted the rows below it.
   function movedBack(landed: Selection, from: number): Change {
     const moved = moveCardToColumn(state.board, landed, from);
-    const editingId = editing === null ? undefined : cardAt(state.board, state.selection)?.id;
+    const editingId = editingCardId();
     if (editingId === undefined) return moved;
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
@@ -366,15 +451,16 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the card you asked for, or on the subtask you pressed Enter on.
   function openDetail(): void {
     if (!cardAt(state.board, state.selection)) return;
-    openCardDetail({
-      board: state.board,
+    detail = openCardDetail({
+      // The live board, not the one on screen when it opened: a write can land while the dialog is up,
+      // and a subtask added to the board from before it would put that board back over the write.
+      board: () => state.board,
       selection: state.selection,
       makeId: () => crypto.randomUUID(),
-      onChange: (next) => {
-        change(next);
-        return state.board;
-      },
-    }).then((selection) => {
+      onChange: change,
+    });
+    detail.closed.then((selection) => {
+      detail = null;
       state = { ...state, selection };
       element.focus();
       render();
@@ -384,46 +470,25 @@ export function createBoardView(options: BoardOptions): BoardView {
   return {
     element,
     redraw: render,
-    // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
-    // at the board is not picked up until you switch away and back. Watch the file if that bites.
-    //
     // Focus is taken before the read, not after: the terminals view is already hidden by the time
     // open() runs, so focus is sitting on the body and a keystroke typed straight after Ctrl+B would
-    // land nowhere. Main's read is synchronous fs, which on a cold or network-mounted folder is
-    // comfortably longer than the gap between two keys — so a key typed during the read is dropped
-    // rather than applied to the board that is about to be replaced.
-    //
-    // What it decides (`next`, `message`) stays local until the read has settled, and the one guard
-    // below is what a stale call bounces off; a guard per await is the shape that let an old read win
-    // a race the first version of this file had already closed.
-    //
-    // A failed read still has to leave the board on screen usable from the keyboard — render() runs
-    // either way, on whatever board is already in memory, with the error in the status bar instead of
-    // a fresh board. A control the keyboard can't reach is unfinished.
+    // land nowhere.
     async open(): Promise<void> {
       // preventScroll, because on the manager's board several of these share one scroller and each of
       // them taking the keyboard would drag it to a different project. A project's own board fills its
       // page and has nothing to be scrolled into view, so it costs that screen nothing.
       element.focus({ preventScroll: true });
-      const token = ++latestRead;
-      let message = '';
-      let next = state;
-      const boardRead = options.bridge.readBoard(options.projectPath);
-      try {
-        const read = await boardRead;
-        next = loadBoard(state, read.board);
-        // The old file is still on disk under this name, so the cards are not gone — just not shown.
-        if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
-      } catch (error: unknown) {
-        message = `Board not opened: ${String(error)}`;
-      }
-      // A read another open() has overtaken says nothing: the newer one is the board you asked for.
-      if (token !== latestRead) return;
-      landedRead = token;
-      state = next;
-      editing = null;
-      options.onError(message);
-      render();
+      await readAgain(true);
+    },
+    // Somebody else wrote the file — the command line, or a hand edit — and main said so. The
+    // keyboard is not touched: you did not ask to come here, you are already here.
+    reload(projectPath: string): void {
+      if (projectPath !== options.projectPath) return;
+      // Read even with a box open. Refusing here dropped the write for good and then let the next
+      // keystroke save the board from before it: an agent moves a card to Done while you are naming
+      // another one, you press Enter, and the card is back in Doing with nothing on screen saying so.
+      // readAgain carries the box across instead.
+      void readAgain(false);
     },
     statusLabel(): string {
       const column = state.board.columns[state.selection.column];
