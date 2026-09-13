@@ -69,11 +69,17 @@ export function paneLastLine(terminal: PaneTerminal): string {
   return '';
 }
 
-// What free-pane.ts picks from, read off one live pane. `busy` is both halves of "an agent has this
-// pane": still working, which looksBusy reads off the screen — the same question the bell asks before
-// it believes a ring — and stopped to ask you something, which prints neither of those patterns and is
-// the pane a command would be submitted into as the answer. A pane running an ordinary long command
-// is neither, and is a candidate.
-export function paneUse(pane: Pane): PaneUse {
+// What free-pane.ts picks from, read off one live pane. `busy` is the two things this app can actually
+// tell: an agent still working, which looksBusy reads off the screen — the same question the bell asks
+// before it believes a ring — and a pane still flagged as asking, which prints neither busy pattern and
+// is the pane a command would be submitted into as the answer.
+// The flag is the weaker half and stays weak on purpose: focusing a pane clears its bell, because
+// arriving at the pane is the answer to whatever it asked. So a pane whose agent asked something you
+// have already glanced at reads as free again, the same way a dev server does — once the mark is off,
+// nothing on screen separates a question from a prompt. A longer-lived flag would need its own answer
+// for when it clears, and there is not one without shell integration either.
+// Structural rather than `Pane` so the branch can be tested without building an xterm terminal; a real
+// `Pane` satisfies it.
+export function paneUse(pane: { exited: boolean; bell: Bell; terminal: PaneTerminal }): PaneUse {
   return { exited: pane.exited, busy: isRinging(pane.bell) || looksBusy(paneScreen(pane.terminal)) };
 }
