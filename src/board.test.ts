@@ -201,6 +201,13 @@ describe('addCard', () => {
     addCard(original, { column: 0, card: 0 }, 'new', 'b');
     expect(titles(original)).toEqual([['a']]);
   });
+
+  // Trimmed here, not by whoever called. A caller that forgets would leave one card sitting a space
+  // in from every other card on the board, and nothing would fail.
+  it('trims the title', () => {
+    const result = addCard(board([]), { column: 0, card: 0 }, 'new', '  Ship it  ');
+    expect(titles(result.board)).toEqual([['Ship it']]);
+  });
 });
 
 describe('addChildCard', () => {
@@ -225,6 +232,11 @@ describe('addChildCard', () => {
     addChildCard(original, { column: 0, card: 0 }, 'new', 'a subtask');
     expect(titles(original)).toEqual([['a']]);
   });
+
+  it('trims the title, the same as addCard', () => {
+    const result = addChildCard(board(['a']), { column: 0, card: 0 }, 'new', '  a subtask  ');
+    expect(titles(result.board)).toEqual([['a', 'a subtask']]);
+  });
 });
 
 describe('renameCard', () => {
@@ -235,6 +247,11 @@ describe('renameCard', () => {
     const result = renameCard(start, { column: 0, card: 0 }, 'new');
     expect(result.board.columns[0].cards[0])
       .toEqual({ id: 'x', title: 'new', notes: 'why', priority: 'high', parent: null, updatedAt: expect.any(String) });
+  });
+
+  it('trims the title, the same as addCard', () => {
+    const result = renameCard(board(['old']), { column: 0, card: 0 }, '  Ship it  ');
+    expect(titles(result.board)).toEqual([['Ship it']]);
   });
 
   it('does nothing on an empty column, and hands back the same board', () => {

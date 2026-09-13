@@ -128,10 +128,14 @@ export function moveSelection(board: Board, selection: Selection, direction: Dir
   return { column, card: clampIndex(selection.card, lastRow(board.columns[column])) };
 }
 
+// Trimmed here rather than by each caller, the same way setNotes holds the one rule about notes. The
+// board's own box trims what you type before it commits and so does `board add`; a third writer that
+// forgets would leave one card sitting a space in from every other card on the board, with nothing
+// failing.
 export function addCard(board: Board, selection: Selection, id: string, title: string): Change {
   const now = stamp();
   const cards = [...board.columns[selection.column].cards,
-    { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: null, createdAt: now, updatedAt: now }];
+    { id, title: title.trim(), notes: '', priority: DEFAULT_PRIORITY, parent: null, createdAt: now, updatedAt: now }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
@@ -145,7 +149,7 @@ export function addChildCard(board: Board, selection: Selection, id: string, tit
   if (!parent) return { board, selection };
   const now = stamp();
   const cards = [...board.columns[selection.column].cards,
-    { id, title, notes: '', priority: DEFAULT_PRIORITY, parent: parent.id, createdAt: now, updatedAt: now }];
+    { id, title: title.trim(), notes: '', priority: DEFAULT_PRIORITY, parent: parent.id, createdAt: now, updatedAt: now }];
   return {
     board: replaceColumn(board, selection.column, cards),
     selection: { column: selection.column, card: cards.length - 1 },
@@ -174,8 +178,10 @@ function editCard(board: Board, selection: Selection, fields: Partial<Card>): Ch
   };
 }
 
+// Trimmed for the same reason addCard trims: the title a card carries is decided here, not by
+// whoever happened to write it.
 export function renameCard(board: Board, selection: Selection, title: string): Change {
-  return editCard(board, selection, { title });
+  return editCard(board, selection, { title: title.trim() });
 }
 
 // Trimmed here rather than by each caller, the way branchFrom holds the one rule about a branch. The
