@@ -234,7 +234,7 @@ the command's decisions and every one of them is a call into `board.ts`;
 `board-cli-entry.ts` is the file and the terminal, and has no decision in it.
 
 The other half is that the app has to notice. Main watches each open project's
-`.dashboard` folder and sends `board:changed`, and the board on screen re-reads
+`.dashboard` folder and sends `board:change`, and the board on screen re-reads
 itself without moving your selection. It watches the *folder*, not the file:
 `writeBoard` replaces `board.json` by renaming a temporary file over it, and a
 watch on the file follows the old one into the bin. And it compares the bytes
