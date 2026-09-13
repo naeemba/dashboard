@@ -87,8 +87,6 @@ export type BoardView = {
 // never heard of would otherwise be a key that does nothing.
 type EditableField = Extract<Action, { kind: 'board-edit' }>['field'];
 
-// An open box's text and where the caret sits in it, held for as long as a redraw takes.
-
 // Which commit rule each field ends on. Every one of them hands back the same state when nothing
 // changed, which is what keeps opening a field and closing it from spending the undo step.
 const COMMITS: Record<EditableField, (state: BoardState, value: string) => BoardState> = {
