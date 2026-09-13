@@ -86,6 +86,9 @@ export type BoardView = {
 // never heard of would otherwise be a key that does nothing.
 type EditableField = Extract<Action, { kind: 'board-edit' }>['field'];
 
+// An open box's text and where the caret sits in it, held for as long as a redraw takes.
+type CarriedEdit = { value: string; start: number; end: number };
+
 // Which commit rule each field ends on. Every one of them hands back the same state when nothing
 // changed, which is what keeps opening a field and closing it from spending the undo step.
 const COMMITS: Record<EditableField, (state: BoardState, value: string) => BoardState> = {
@@ -157,10 +160,21 @@ export function createBoardView(options: BoardOptions): BoardView {
     // A read another one has overtaken says nothing: the newer one is the board you asked for.
     if (token !== latestRead) return;
     landedRead = token;
+    // An arrival closes any open box: you asked to come here, and this is a different board. A file
+    // that changed under you does not close it — what you have half typed is yours, and reloadBoard
+    // has already followed your card to wherever the write put it. The redraw throws the box away and
+    // builds a new one, so the text and the caret cross over by hand.
+    if (fresh) editing = null;
+    const carried = editing === null ? null : takeEditor();
     state = next;
-    editing = null;
     options.onError(message);
     render();
+    // The card you were typing into is not on the new board, so there is no box to put the text back
+    // in. Leaving `editing` set here would take every key on this screen for good.
+    if (carried && !putEditorBack(carried)) {
+      editing = null;
+      element.focus();
+    }
   }
 
   function save(): void {
@@ -185,12 +199,40 @@ export function createBoardView(options: BoardOptions): BoardView {
     apply(applyChange(state, next));
   }
 
+  // The open box, whichever tag it was drawn as. One lookup, because three things now want it: opening
+  // one, and the two halves of carrying one across a redraw.
+  function editorInput(): HTMLInputElement | HTMLTextAreaElement | null {
+    const input = element.querySelector('.board-edit');
+    return input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement ? input : null;
+  }
+
+  // What is in the open box right now, so a redraw underneath it can put it back. The blur handler
+  // comes off first: the redraw removes this input, and a browser that fires blur for a removal would
+  // commit what you typed onto the board that is on its way out.
+  function takeEditor(): CarriedEdit | null {
+    const input = editorInput();
+    if (!input) return null;
+    input.onblur = null;
+    return { value: input.value, start: input.selectionStart ?? 0, end: input.selectionEnd ?? 0 };
+  }
+
+  // False when the redraw left no box to put it back in, which is the caller's cue that the edit is
+  // over. The caret goes back too, or a reload would jump you to the end of what you were typing.
+  function putEditorBack(carried: CarriedEdit): boolean {
+    const input = editorInput();
+    if (!input) return false;
+    input.value = carried.value;
+    input.focus();
+    input.setSelectionRange(carried.start, carried.end);
+    return true;
+  }
+
   function startEditing(field: EditableField): void {
     if (!cardAt(state.board, state.selection)) return;
     editing = field;
     render();
-    const input = element.querySelector('.board-edit');
-    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return;
+    const input = editorInput();
+    if (!input) return;
     input.focus();
     // A title, a branch and a pull request number are opened to replace, so they come up selected and
     // one keystroke retypes them. A description is opened to add a line to, and selecting it would let
@@ -440,9 +482,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     // keyboard is not touched: you did not ask to come here, you are already here.
     reload(projectPath: string): void {
       if (projectPath !== options.projectPath) return;
-      // A half-typed title is yours and is not thrown away for somebody else's write. This one write
-      // is missed and the board stays as it is until you leave and come back, which re-reads it.
-      if (editing) return;
+      // Read even with a box open. Refusing here dropped the write for good and then let the next
+      // keystroke save the board from before it: an agent moves a card to Done while you are naming
+      // another one, you press Enter, and the card is back in Doing with nothing on screen saying so.
+      // readAgain carries the box across instead.
       void readAgain(false);
     },
     statusLabel(): string {
