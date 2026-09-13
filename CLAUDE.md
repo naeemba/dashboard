@@ -219,6 +219,30 @@ around it, and every piece of that is Electron's, not ours: `preventDefault` on
 close. A test for it is a test of mocks, which passes whatever we do to the real
 handler. So these stay inline, and a change to one is read rather than run.
 
+## The board has two writers — Hard Rule
+
+The app is not the only thing that writes `.dashboard/board.json` any more. The
+`board` command does too, and an agent working a card uses it to move its own
+card. **Anything that writes a board goes through `board.ts` and
+`board-store.ts` — never its own JSON.**
+
+What a second copy costs: someone teaches the command line to write a card
+without `createdAt`. The app reads it back, `relativeAge` has nothing to show,
+and the card's detail dialog says the card was never made. Nothing fails; the
+board just quietly stops agreeing with itself. `board-cli.ts` is the whole of
+the command's decisions and every one of them is a call into `board.ts`;
+`board-cli-entry.ts` is the file and the terminal, and has no decision in it.
+
+The other half is that the app has to notice. Main watches each open project's
+`.dashboard` folder and sends `board:changed`, and the board on screen re-reads
+itself without moving your selection. It watches the *folder*, not the file:
+`writeBoard` replaces `board.json` by renaming a temporary file over it, and a
+watch on the file follows the old one into the bin. And it compares the bytes
+against what the app itself last wrote, or the app is its own loudest writer —
+every keystroke on a board saves, and the board would be re-read and redrawn
+underneath your cursor thirty times a minute. `isBoardChange` in
+`board-watch.ts` is that rule, with the test.
+
 ## IPC channels are `<noun>:<verb>`
 
 The thing first, then what you do to it: `link:open`, `session:write`,
