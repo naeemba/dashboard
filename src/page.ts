@@ -48,6 +48,25 @@ export type PageOptions = {
 // them finds the terminal it belongs to.
 export const panesById = new Map<string, Pane>();
 
+// Every pane of one slot, let go for good: the verdict its bell has pending, the terminal itself, and
+// its place in the map above. What a closed project's panes need, and the map is why it lives here —
+// a second place deleting from it is a second place that could leave a pane in it. The timer matters
+// as much as the terminal: a bell rung a moment before the close still has a second to wait, and it
+// would wake to read a screen nobody can see and raise a banner naming a project that is gone.
+export function discardPanes(slot: number): void {
+  // The grid's five and the editor one past them, which is the same six spawnProject makes.
+  for (let index = 0; index <= EDITOR_INDEX; index++) {
+    const id = terminalId(slot, index);
+    const pane = panesById.get(id);
+    // A project whose folder had gone was drawn as a page with no panes at all, so there is nothing
+    // under any of its ids.
+    if (pane === undefined) continue;
+    window.clearTimeout(pane.bellTimer);
+    pane.terminal.dispose();
+    panesById.delete(id);
+  }
+}
+
 // How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
 // its spinner again, short enough that a real question is on the tab strip before you look up.
 const BELL_SETTLE_MS = 1000;

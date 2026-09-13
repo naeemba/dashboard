@@ -5,6 +5,7 @@ const bridge: DashboardBridge = {
   platform: process.platform,
   getRecentProjects: () => ipcRenderer.invoke('projects:recent'),
   openProject: (projectPath) => ipcRenderer.invoke('projects:open', projectPath),
+  closeProject: (slot) => ipcRenderer.send('projects:close', slot),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openExternal: (url) => ipcRenderer.send('link:open', url),
   notify: (title, body, paneId) => ipcRenderer.send('notification:show', title, body, paneId),

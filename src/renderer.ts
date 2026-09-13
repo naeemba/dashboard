@@ -24,9 +24,10 @@ import {
 import { createManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
+import { closeRefusal } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneTail, paneUse, type Pane } from './pane';
-import { createPageBuilder, panesById, restylePanes, type Page } from './page';
+import { createPageBuilder, discardPanes, panesById, restylePanes, type Page } from './page';
 import { createSectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
@@ -347,7 +348,7 @@ function buildManagerPage(): Page {
   // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
   element.className = 'page page-manager';
   const manager = createManagerView({
-    onJump: goToPane, onAnswer: answerPane, onChanged: renderStatus,
+    onJump: goToPane, onAnswer: answerPane, onClose: closeProject, onChanged: renderStatus,
   });
   const cards = createCardsView({
     bridge,
@@ -412,6 +413,36 @@ function setPage(project: Project, slot: number): void {
   }
   pages[existing].element.replaceWith(page.element);
   pages[existing] = page;
+}
+
+// Closing a project from the manager's list. Everything it takes is gone for good — five shells, the
+// editor, and whatever was running in them — so what can stop it, and the sentence saying so, are
+// close-project.ts's. A pane that has exited or is sitting at a prompt stops nothing.
+// The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
+// pane id that named this project names nothing from here on.
+function closeProject(slot: number): void {
+  const position = positionOfSlot(slot);
+  const page = pages[position];
+  // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
+  // has already gone.
+  if (!page || !isProjectPage(page)) return;
+  const refusal = closeRefusal(
+    page.project.name,
+    allPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
+  );
+  if (refusal !== '') return showError('close', refusal);
+  bridge.closeProject(slot);
+  discardPanes(slot);
+  page.element.remove();
+  pages.splice(position, 1);
+  // You close from the manager, which is the first tab, so the page that goes is never the one you are
+  // looking at — but every page behind it moves one to the left, and activeIndex counts positions.
+  if (position < activeIndex) activeIndex -= 1;
+  // Clears its own message and nobody else's: a refusal you have since acted on must not sit in the
+  // status bar over the close that followed it.
+  showError('close', '');
+  // The row leaves the list, the tab leaves the strip, and the session file is written without it.
+  renderStatus();
 }
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are

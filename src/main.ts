@@ -55,7 +55,12 @@ const environmentFile = app.isPackaged
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
 // Empty at launch: every project comes from the picker, and the recents list remembers them across runs.
-const projects: Project[] = [];
+// One per slot, and a slot is what every pane of that project is named by — so a project that is
+// closed empties its place rather than leaving the list: splice it out and every project behind it
+// would be renamed onto ids whose shells are somebody else's. A hole is never filled again either, for
+// the same reason read the other way round: a new project in an old slot inherits the ids that a
+// notification, a worktree record or a board's ship may still be naming.
+const projects: (Project | undefined)[] = [];
 // The recently opened projects live next to the app's other per-user state, and so does the layout the
 // last run was left in.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
@@ -259,7 +264,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
     projectPath = filePaths[0];
   }
   const picked = projectFromPath(projectPath);
-  const matchIndex = projects.findIndex((project) => project.path === picked.path);
+  const matchIndex = projects.findIndex((project) => project?.path === picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
   if (replaced) {
@@ -269,7 +274,34 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
-  return { index, project: projects[index], replaced };
+  // `picked` only stands in for a slot that was not replaced, which is a project already open and
+  // still there — the same folder under the same name.
+  return { index, project: projects[index] ?? picked, replaced };
+});
+// Closing a project. Its six panes are killed and forgotten, and its slot is emptied. Nothing is
+// answered: whether anything was running in it was read off the panes themselves, which only the
+// renderer can see, and it has already refused or gone ahead by the time this arrives.
+// The worktree records naming a pane in it give that pane up, for the reason the launch above clears
+// every pane on read: no shell of this project survives the close, so a record still naming pane 2
+// would put a branch under a pane that is a plain shell of some other project — and would hold its
+// card in flight, unable to be shipped again, with nothing left running to finish it.
+ipcMain.on('projects:close', (_event, slot: number) => {
+  const closing = projects[slot];
+  projects[slot] = undefined;
+  // The grid's five and the editor one past them, which is what spawnProject made.
+  for (let index = 0; index <= EDITOR_INDEX; index++) {
+    const id = terminalId(slot, index);
+    // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
+    // spawnTerminal, so no pty:exit goes out for a pane the renderer has already taken off the screen.
+    const terminalProcess = shells.get(id);
+    shells.delete(id);
+    terminalProcess?.kill();
+    terminalCommands.delete(id);
+    typedPanes.delete(id);
+  }
+  if (closing === undefined) return;
+  worktrees = worktrees.map((entry) => (entry.projectPath === closing.path ? { ...entry, pane: null } : entry));
+  writeWorktrees(worktreesFile, worktrees);
 });
 // Read once at startup and written back whenever the layout changes, so a crash loses at most the
 // change you were making rather than every project you had open.
@@ -343,6 +375,16 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
 // ship of a card whose worktree exists but never got one.
 function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
+  // The project can be closed while the git half of a ship is still running, and its slot is empty from
+  // then on. Without this the agent would start in a pane of a page nobody has — running, unreadable
+  // and unreachable until the app quits. The worktree is already made and recorded, so shipping the
+  // card again is what gives it a pane, in whatever project is open then.
+  if (projects[slot] === undefined) {
+    return {
+      ok: false,
+      message: `${baseName(entry.projectPath)} was closed mid-ship — the worktree is made, ship it again for a pane`,
+    };
+  }
   const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
     .filter((index) => paneIsBusy(terminalId(slot, index)));
   const pane = freePane(busy, TERMINAL_COUNT);

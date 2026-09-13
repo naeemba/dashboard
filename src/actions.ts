@@ -36,6 +36,7 @@ export type Action =
   | { kind: 'cards-project'; direction: 'previous' | 'next' }
   | { kind: 'manager-select'; direction: 'up' | 'down' }
   | { kind: 'manager-open' }
+  | { kind: 'manager-close' }
   | { kind: 'section-move'; direction: 'previous' | 'next' }
   | { kind: 'command-select'; direction: 'up' | 'down' }
   | { kind: 'command-open' }
@@ -309,6 +310,15 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'manager-open', description: "Show a project's panes, or go to the pane",
     group: 'manager', scope: 'manager', action: { kind: 'manager-open' }, mac: 'Enter', other: 'Enter',
+  },
+  // The close key every application uses, and here it closes a project rather than the window. It can
+  // be taken safely even though the manager sends keys to panes: a modified key is never one of those —
+  // isBareCharacter refuses Ctrl, Cmd and Alt — so nothing that could reach a shell is lost. Off macOS
+  // Ctrl+W is backward-kill-word in a shell, which is why worktrees takes Shift with it; this one is
+  // manager scope, and the manager has no shell to type into.
+  {
+    name: 'manager-close', description: 'Close the selected project: its page and its shells',
+    group: 'manager', scope: 'manager', action: { kind: 'manager-close' }, mac: 'Cmd+W', other: 'Ctrl+W',
   },
   // The strip along the top of the manager page. manager-page scope, because they have to work on all
   // three sections and one of those is board mode, which every project also has — a project's board

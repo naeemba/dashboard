@@ -69,7 +69,13 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'question from the same pane is answered without picking it again. '
     + 'Only a pane that is asking takes a key that way: a pane that has died wants Enter in the '
     + 'pane itself, and one getting on with its work is left alone. A project with nothing to report '
-    + 'says quiet beside its name, and still opens to show what its panes are up to.',
+    + 'says quiet beside its name, and still opens to show what its panes are up to. '
+    + 'A project is also closed from this list, which is the only way out of one short of quitting: its '
+    + 'page, its five shells and its editor go, whatever was in them, and the next launch opens without '
+    + 'it. The close refuses while a pane in it has an agent working or a question waiting, and names '
+    + 'the panes in the way. What it cannot see is a pane running an ordinary long command — a dev '
+    + 'server, a tail, vim — which reads as idle here exactly as it does on the command screen, so a '
+    + 'close it allows is not a promise that nothing was running.',
   command: 'One command, run in the projects you mark. Type it once — `npm audit`, `npm outdated`, '
     + 'the test suite — and choose how it runs. Enter gives every marked project a process of its own '
     + 'and puts the answers side by side: each row shows how its project exited and the last line it '

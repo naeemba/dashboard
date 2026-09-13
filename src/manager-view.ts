@@ -11,6 +11,9 @@ export type ManagerOptions = {
   onJump(slot: number, index: number): void;
   // One keystroke, straight to that pane's shell, without going there.
   onAnswer(slot: number, index: number, key: string): void;
+  // Closes the project holding that slot, or says why it cannot. The view picks the project; what
+  // closing costs, and what stops it, is the renderer's and close-project.ts's to answer.
+  onClose(slot: number): void;
   // Redraws the page. The rows are the renderer's, so the view asks for them back rather than keeping
   // its own copy; the status bar, which names what the selection is on, is redrawn by the same call.
   onChanged(): void;
@@ -162,6 +165,16 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     options.onChanged();
   }
 
+  // Which project the selection is on, which is the row itself or the project a pane row sits under.
+  // A pane row answers with its project rather than nothing: the close key is aimed at a project and
+  // the panes on screen are that project's, so the key means the same thing wherever the highlight is
+  // inside the block.
+  function selectedSlot(): number | null {
+    const line = lines[selected];
+    if (!line) return null;
+    return line.kind === 'project' ? line.row.slot : line.slot;
+  }
+
   // Enter and a click both land here, and the redraw is here rather than inside toggle so that a row
   // which opens nothing still redraws.
   function open(): void {
@@ -251,6 +264,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);
       if (action.kind === 'manager-open') return open();
+      if (action.kind === 'manager-close') {
+        const slot = selectedSlot();
+        if (slot !== null) options.onClose(slot);
+      }
     },
   };
 }
