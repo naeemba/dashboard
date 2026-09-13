@@ -19,8 +19,10 @@ export const MODE_NAMES: Record<Mode, string> = {
 // are the ones that are not visible: that a shell survives leaving the page, that nvim is not running
 // yet, that the board has no save key, that settings are a file you can also edit by hand.
 const BLURBS: Record<Mode | ActionGroup, string> = {
-  terminals: 'Five shells in a fixed grid. They keep running while you are on another project or '
-    + 'another view, so a long job is still going when you come back. One of them can be running an '
+  terminals: 'Five shells in a grid. They keep running while you are on another project or '
+    + 'another view, so a long job is still going when you come back. One of them at a time can be '
+    + 'zoomed to fill the page and put back; while one is zoomed the pane holding the keyboard is '
+    + 'the one you see, so moving between panes moves the zoom with you. One of them can be running an '
     + 'agent in a worktree instead of the project\'s own checkout — a card shipped into that pane — and '
     + 'the status bar names the branch of whichever pane you are in whenever it is sitting in a '
     + 'worktree, the agent\'s and the shell it leaves behind, so a command typed there does not land '

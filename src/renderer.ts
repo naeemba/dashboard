@@ -38,6 +38,12 @@ import { createSectionStrip, type SectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 
+// This file sits a few lines under the 600-line ceiling and is meant to stay there. The next feature
+// that needs room here splits the file first, and the seam is pane and terminal building: buildPane,
+// buildPage and the fit helpers move to their own module, leaving the page and session plumbing behind.
+// Add the lines instead and the ceiling is breached, and whoever did it finds out from a review comment
+// rather than from the file.
+
 // How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
 // its spinner again, short enough that a real question is on the tab strip before you look up.
 const BELL_SETTLE_MS = 1000;
@@ -269,6 +275,22 @@ function focusTerminal(index: number): void {
   renderStatus();
 }
 
+// Zooming is one class on the view; which pane it lands on is the CSS's to answer from what has the
+// keyboard. Nothing is remembered across a restart — the panes come back as the grid they are.
+// The fit is unconditional here, unlike the one in `buildPane`'s focus handler: on the way out of
+// zoom the class is already gone, and the pane that shrank still has to be told.
+function toggleZoom(page: Page): void {
+  // The CSS grows whichever pane holds the keyboard, so the key has to make sure one does. A click on
+  // the status bar or on a pane's border leaves the keyboard on the body, and the class would then have
+  // nothing to grow and the key would look broken. The class moves first so that the fit the focus
+  // handler runs is already measuring the size the pane is going to keep. The other half is left alone
+  // on purpose: such a click still drops the zoom off the screen until you press something, because the
+  // zoomed pane is read from focus rather than remembered.
+  page.views.terminals?.classList.toggle('zoom');
+  page.panes[page.focused]?.terminal.focus();
+  fitPanes(page);
+}
+
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
 // views to switch between and ignores the keys.
 // The mode and which view is on screen are one fact, so they only ever move together. Restoring a page
@@ -331,9 +353,13 @@ function positionOfSlot(slot: number | null): number {
 // Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
   for (const page of pages) {
-    for (const pane of page.panes) pane.fit.fit();
+    fitPanes(page);
     page.editor?.fit.fit();
   }
+}
+
+function fitPanes(page: Page): void {
+  for (const pane of page.panes) pane.fit.fit();
 }
 
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
@@ -447,6 +473,15 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     pane.bell = 'quiet';
     onFocus?.();
     if (wasRinging) renderStatus();
+    // While the panes are zoomed the keyboard moving is the zoom moving: the pane arrived at has grown to
+    // the whole grid and the one left behind is back in its cell. xterm only tells the pty a new size
+    // when it is measured, so both have to be fit or the shell you just zoomed keeps drawing at the size
+    // of a sixth of the window. Here rather than in focusTerminal because this fires for every way in —
+    // a click on a pane never goes through focusTerminal at all, and neither does coming back from the
+    // board, which lands on the pane the page already called focused. The pane's own view is what is
+    // asked, so focusing the editor — built by this same function with the same page — does not refit
+    // the grid behind it: the nvim view never carries the class.
+    if (view.classList.contains('zoom')) fitPanes(page);
   });
   return pane;
 }
@@ -665,6 +700,7 @@ function apply(action: Action): void {
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
+    case 'terminal-zoom': return toggleZoom(page);
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));

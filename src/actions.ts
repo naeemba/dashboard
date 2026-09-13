@@ -21,6 +21,7 @@ export type Action =
   | { kind: 'terminal-previous' }
   | { kind: 'terminal-move'; direction: Direction }
   | { kind: 'terminal-input'; data: string }
+  | { kind: 'terminal-zoom' }
   | { kind: 'board-select'; direction: Direction }
   | { kind: 'board-move'; direction: Direction }
   | { kind: 'board-attach' }
@@ -203,6 +204,14 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'terminal-clear-line', description: "Clear the shell's current line",
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-input', data: '\x15' }, mac: 'Cmd+Backspace', other: null,
+  },
+  // Alt+F, in the same family as the Alt keys that move between panes: Ctrl+F is the shell's
+  // forward-char, so it cannot be taken. The cost is the shell's forward-word, which is the same cost
+  // Alt+H/J/K/L already pay.
+  {
+    name: 'terminal-zoom', description: 'Zoom the pane to fill the page, and back',
+    group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-zoom' }, mac: 'Alt+F', other: 'Alt+F',
   },
   ...DIRECTIONS.map((direction): ActionEntry => ({
     name: `board-select-${direction}`, description: `Move the selection ${direction}`,
