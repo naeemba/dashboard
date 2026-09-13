@@ -32,13 +32,6 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         },
         {
-          "id": "6f6529fb-2567-420d-acd7-04fcfea4c2b9",
-          "title": "What each pane last printed, and how long ago",
-          "notes": "Main sees every byte of every pty. Keep the last non-blank line and the time it arrived, and thirty shells across five projects fit on one screen: `api . terminal 1, 2s ago, 214 tests passed`. The age is the half that earns it -- `quiet 41 minutes` is how you spot the pane you forgot.\n\nThe last line is a guess, and the page should not pretend otherwise. Spinners and progress bars redraw one line forever, so the text can be stale in a way the age will not show. Strip the escape codes, take the last line with printable characters in it, and accept it is approximate.",
-          "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
-        },
-        {
           "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
           "title": "A fourth mode: notes, one page of them per project",
           "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
@@ -154,6 +147,15 @@
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "6f6529fb-2567-420d-acd7-04fcfea4c2b9",
+          "title": "What each pane last printed, and how long ago",
+          "notes": "Main sees every byte of every pty. Keep the last non-blank line and the time it arrived, and thirty shells across five projects fit on one screen: `api . terminal 1, 2s ago, 214 tests passed`. The age is the half that earns it -- `quiet 41 minutes` is how you spot the pane you forgot.\n\nThe last line is a guess, and the page should not pretend otherwise. Spinners and progress bars redraw one line forever, so the text can be stale in a way the age will not show. Strip the escape codes, take the last line with printable characters in it, and accept it is approximate.\n\nShipped in pull request 29, branch pane-last-printed. Every pane is a row on the manager, not only the ones asking: a quiet pane gets the one line it last printed and how long ago, a pane that wants something keeps its block of five. The age is stamped where the pty bytes arrive, so a spinner keeps its pane young. Panes are read only for the rows drawn, and a 30s tick keeps the ages from freezing. Answering a pane no longer takes its row off the list, so the empty selection built for that is gone. Open: projects still start collapsed rather than showing every pane at once.",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "branch": "pane-last-printed",
+          "pullRequest": 29
+        },
         {
           "id": "0e2bc483-3151-40b0-95ec-fd45709c8d84",
           "title": "Run a task across projects and collect the results",
