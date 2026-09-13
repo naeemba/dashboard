@@ -1,6 +1,7 @@
 import {
   addCard,
   cardAt,
+  selectionOf,
   deleteCard,
   emptyBoard,
   hasSubtasks,
@@ -111,6 +112,27 @@ export function loadBoard(state: BoardState, board: Board): BoardState {
   return {
     board,
     selection: { column: clampIndex(state.selection.column, board.columns.length - 1), card: 0 },
+    previous: null,
+    nextChangeIsAutomatic: false,
+  };
+}
+
+// The same board arriving from disk while you are looking at it, because something else wrote the
+// file — the command line, or a hand edit. Unlike loadBoard this keeps the selection on the card it
+// was on, wherever that card has moved to: an agent setting a pull request number on its own card
+// must not slide your cursor to the top of a column while you are reading.
+//
+// A card that is no longer on the board leaves the selection where it was sitting, clamped, which is
+// the same place the next card up has moved into.
+export function reloadBoard(state: BoardState, board: Board): BoardState {
+  const selected = cardAt(state.board, state.selection);
+  const moved = selected === undefined ? null : selectionOf(board, selected.id);
+  const column = clampIndex(state.selection.column, board.columns.length - 1);
+  return {
+    board,
+    selection: moved ?? { column, card: clampIndex(state.selection.card, board.columns[column].cards.length - 1) },
+    // The board in front of you is not the one the undo step was taken from any more, so there is
+    // nothing left to undo back to — the same ruling loadBoard makes for the same reason.
     previous: null,
     nextChangeIsAutomatic: false,
   };

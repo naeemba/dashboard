@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PRIORITY, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
+import { DEFAULT_PRIORITY, cardAt, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -10,6 +10,7 @@ import {
   commitTitle,
   initialBoardState,
   loadBoard,
+  reloadBoard,
   undoChange,
   type BoardState,
 } from './board-state';
@@ -258,5 +259,27 @@ describe('commitPullRequest', () => {
   it('is not a change when the number is what it already was', () => {
     const start = commitPullRequest(state(board(['a']), first), '14');
     expect(commitPullRequest(start, '#14')).toBe(start);
+  });
+});
+
+describe('reloadBoard', () => {
+  // The file changed underneath you because something else wrote it — the command line moving a
+  // card, or a hand edit. Your cursor stays on the card it was on, wherever that card has gone.
+  it('follows the selected card to its new column', () => {
+    const start = state(board(['a', 'b'], []), { column: 0, card: 1 });
+    const next = reloadBoard(start, board(['a'], ['b']));
+    expect(cardAt(next.board, next.selection)?.id).toBe('b');
+  });
+
+  it('keeps the selection where it is when the card is gone', () => {
+    const start = state(board(['a', 'b'], []), { column: 0, card: 1 });
+    expect(reloadBoard(start, board(['a'], [])).selection).toEqual({ column: 0, card: 0 });
+  });
+
+  it('throws away the undo step, which belongs to a board that is gone', () => {
+    const start = state(board(['a'], []), { column: 0, card: 0 });
+    const edited = applyChange(start, renameCard(start.board, start.selection, 'changed'));
+    expect(edited.previous).not.toBe(null);
+    expect(reloadBoard(edited, board(['a'], [])).previous).toBe(null);
   });
 });

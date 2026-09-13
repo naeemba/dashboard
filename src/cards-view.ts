@@ -134,6 +134,11 @@ export function createCardsView(options: CardsOptions): BoardView {
       await Promise.all(reads);
       focusActive();
     },
+    // Straight through to the one board whose file changed. It refuses a path that is not its own, so
+    // handing it to every stacked board would do the same thing and read the file once per project.
+    reload(projectPath: string): void {
+      boards.get(projectPath)?.view.reload(projectPath);
+    },
     statusLabel(): string {
       const board = boards.get(activePath);
       if (board) return `${board.page.project.name} · ${board.view.statusLabel()}`;

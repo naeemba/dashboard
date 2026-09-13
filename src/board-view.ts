@@ -33,6 +33,7 @@ import {
   commitTitle,
   initialBoardState,
   loadBoard,
+  reloadBoard,
   undoChange,
   type BoardState,
 } from './board-state';
@@ -66,6 +67,10 @@ export type BoardOptions = {
 export type BoardView = {
   element: HTMLElement;
   open(): Promise<void>;
+  // The file changed under you: read it again and redraw, without moving the keyboard or the
+  // selection. The path is passed because the manager shows every open project's board at once and
+  // only one of them wrote; a board whose project this is not does nothing.
+  reload(projectPath: string): void;
   // What the status bar says about the board: the column the selection is in, and the priority of the
   // card it is on. The colour down a card's edge is the fast read; this is the one that names it.
   statusLabel(): string;
@@ -120,6 +125,43 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
+
+  // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
+  // step is gone, which is what entering a board means. Without it the file simply changed under you
+  // and the selection stays on the card it was on.
+  //
+  // Main's read is synchronous fs, which on a cold or network-mounted folder is comfortably longer
+  // than the gap between two keys — so a key typed during the read is dropped rather than applied to
+  // the board that is about to be replaced.
+  //
+  // What it decides (`next`, `message`) stays local until the read has settled, and the one guard
+  // below is what a stale call bounces off; a guard per await is the shape that let an old read win a
+  // race the first version of this file had already closed.
+  //
+  // A failed read still has to leave the board on screen usable from the keyboard: render() runs
+  // either way, on whatever board is already in memory, with the error in the status bar instead of a
+  // fresh board. A control the keyboard can't reach is unfinished.
+  async function readAgain(fresh: boolean): Promise<void> {
+    const token = ++latestRead;
+    let message = '';
+    let next = state;
+    const boardRead = options.bridge.readBoard(options.projectPath);
+    try {
+      const read = await boardRead;
+      next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
+      // The old file is still on disk under this name, so the cards are not gone — just not shown.
+      if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
+    } catch (error: unknown) {
+      message = `Board not opened: ${String(error)}`;
+    }
+    // A read another one has overtaken says nothing: the newer one is the board you asked for.
+    if (token !== latestRead) return;
+    landedRead = token;
+    state = next;
+    editing = null;
+    options.onError(message);
+    render();
+  }
 
   function save(): void {
     options.bridge.writeBoard(options.projectPath, state.board).then(
@@ -384,46 +426,24 @@ export function createBoardView(options: BoardOptions): BoardView {
   return {
     element,
     redraw: render,
-    // ponytail: re-read on entry, no file watcher. An agent editing board.json while you are looking
-    // at the board is not picked up until you switch away and back. Watch the file if that bites.
-    //
     // Focus is taken before the read, not after: the terminals view is already hidden by the time
     // open() runs, so focus is sitting on the body and a keystroke typed straight after Ctrl+B would
-    // land nowhere. Main's read is synchronous fs, which on a cold or network-mounted folder is
-    // comfortably longer than the gap between two keys — so a key typed during the read is dropped
-    // rather than applied to the board that is about to be replaced.
-    //
-    // What it decides (`next`, `message`) stays local until the read has settled, and the one guard
-    // below is what a stale call bounces off; a guard per await is the shape that let an old read win
-    // a race the first version of this file had already closed.
-    //
-    // A failed read still has to leave the board on screen usable from the keyboard — render() runs
-    // either way, on whatever board is already in memory, with the error in the status bar instead of
-    // a fresh board. A control the keyboard can't reach is unfinished.
+    // land nowhere.
     async open(): Promise<void> {
       // preventScroll, because on the manager's board several of these share one scroller and each of
       // them taking the keyboard would drag it to a different project. A project's own board fills its
       // page and has nothing to be scrolled into view, so it costs that screen nothing.
       element.focus({ preventScroll: true });
-      const token = ++latestRead;
-      let message = '';
-      let next = state;
-      const boardRead = options.bridge.readBoard(options.projectPath);
-      try {
-        const read = await boardRead;
-        next = loadBoard(state, read.board);
-        // The old file is still on disk under this name, so the cards are not gone — just not shown.
-        if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
-      } catch (error: unknown) {
-        message = `Board not opened: ${String(error)}`;
-      }
-      // A read another open() has overtaken says nothing: the newer one is the board you asked for.
-      if (token !== latestRead) return;
-      landedRead = token;
-      state = next;
-      editing = null;
-      options.onError(message);
-      render();
+      await readAgain(true);
+    },
+    // Somebody else wrote the file — the command line, or a hand edit — and main said so. The
+    // keyboard is not touched: you did not ask to come here, you are already here.
+    reload(projectPath: string): void {
+      if (projectPath !== options.projectPath) return;
+      // A half-typed title is yours and is not thrown away for somebody else's write. This one write
+      // is missed and the board stays as it is until you leave and come back, which re-reads it.
+      if (editing) return;
+      void readAgain(false);
     },
     statusLabel(): string {
       const column = state.board.columns[state.selection.column];

@@ -616,6 +616,16 @@ bridge.onNotificationClick((paneId) => {
   goToPane(slot, index);
 });
 
+// Something other than the app wrote a board.json — the `board` command an agent runs, or a hand
+// edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and
+// a board that is not on screen has nothing to redraw. The manager's stack of boards is one of these
+// too, and finds the project the path belongs to itself.
+bridge.onBoardChanged((projectPath) => {
+  const page = pages[activeIndex];
+  if (page.mode !== 'board') return;
+  page.board?.reload(projectPath);
+});
+
 // The three ways to be sent to a pane you are not on: clicking its notification, pressing Enter on its
 // row in the manager, and pressing Enter on its row in the worktree list. One function, so none of
 // them lands somewhere another would not — including on the right view, which modeOfPane decides.

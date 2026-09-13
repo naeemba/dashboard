@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { execFile, spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
@@ -19,7 +19,8 @@ import { agentArguments, editorArguments, pickShell, taskArguments } from './she
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, terminalId } from './terminals';
-import { BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { isBoardChange } from './board-watch';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -100,6 +101,20 @@ let settings = readSettings(settingsFile, isMac);
 tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
+// The `board` command, handed to every pane as DASHBOARD_BOARD so an agent in any project can move
+// its own card without hand-editing JSON. .dashboard/CLAUDE.md is where it is documented, and that
+// file is seeded into every project the app touches.
+//
+// Unpacked, because node is what runs it and node cannot read a file inside an asar. In a packaged
+// app getAppPath() ends in app.asar and forge puts this one file in app.asar.unpacked beside it; in
+// development there is no asar in the path and the replace does nothing.
+const boardCommand = path
+  .join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.js')
+  .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+// One watcher per open project, on its .dashboard folder, and the bytes the app itself last wrote
+// there. Both keyed by project path: a slot can change hands, a path is the file.
+const boardWatchers = new Map<string, FSWatcher>();
+const boardTexts = new Map<string, string>();
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
@@ -172,7 +187,7 @@ function spawnTerminal(id: string): void {
       cols: 80,
       rows: 24,
       cwd: entry.directory,
-      env: process.env as Record<string, string>,
+      env: { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>,
     });
   } catch {
     // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
@@ -195,10 +210,49 @@ function spawnTerminal(id: string): void {
   shells.set(id, terminalProcess);
 }
 
+// Watch a project's .dashboard folder and tell the renderer when the board in it becomes something
+// the app did not write — the command line moving a card, or a hand edit. Idempotent, and tried at
+// both moments the folder can start existing: opening the project, and the first board read, which
+// is what seeds the folder on a project that has never had one.
+//
+// Never a failure anyone sees. A folder that is not there yet, a platform that refuses the watch, a
+// file that cannot be read: each costs the live redraw and nothing else, and the board is still
+// re-read every time you enter it.
+function watchBoard(projectPath: string): void {
+  if (boardWatchers.has(projectPath)) return;
+  const directory = path.join(projectPath, BOARD_DIRECTORY);
+  let watcher: FSWatcher;
+  try {
+    watcher = watch(directory, (_event, fileName) => {
+      let onDisk: string | null;
+      try {
+        onDisk = readFileSync(path.join(directory, BOARD_FILE), 'utf8');
+      } catch {
+        onDisk = null;
+      }
+      if (!isBoardChange(fileName, boardTexts.get(projectPath), onDisk)) return;
+      // Remembered as if the app had written it, so the several events one save fires — the
+      // temporary file, then the rename over it — announce the change once.
+      boardTexts.set(projectPath, onDisk ?? '');
+      sendToRenderer('board:changed', projectPath);
+    });
+  } catch {
+    return;
+  }
+  boardWatchers.set(projectPath, watcher);
+}
+
+function unwatchBoard(projectPath: string): void {
+  boardWatchers.get(projectPath)?.close();
+  boardWatchers.delete(projectPath);
+  boardTexts.delete(projectPath);
+}
+
 // The five shells start with the project. The editor is registered but not started: opening nine
 // projects should not launch nine editors, each with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
+  watchBoard(project.path);
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
     // A brand new shell in this slot, so nobody has typed into it — even if someone typed into the
@@ -291,6 +345,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
+  unwatchBoard(closing.path);
   for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
     // spawnTerminal, so no pty:exit goes out for a pane the renderer has already taken off the screen.
@@ -364,10 +419,17 @@ ipcMain.handle('board:read', (_event, projectPath: string) => {
   } catch {
     // No explanation files this time.
   }
+  // Here as well as at the open, because this is the call that creates .dashboard on a project that
+  // has never had a board — and there was nothing to watch when the project opened.
+  watchBoard(projectPath);
   return readBoard(projectPath);
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
-ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => writeBoard(projectPath, board));
+// The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
+// the renderer: it already has the board it just sent.
+ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
+  boardTexts.set(projectPath, writeBoard(projectPath, board));
+});
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   worktrees = withEntry(worktrees, entry);
