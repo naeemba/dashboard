@@ -235,8 +235,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
-        const tail = row?.querySelector('.manager-tail');
-        if (tail instanceof HTMLElement) {
+        const tail = row?.querySelector<HTMLElement>('.manager-tail');
+        if (tail) {
           const block = tailBlock(line.pane);
           tail.textContent = block.join('\n');
           tail.hidden = block.length === 0;
