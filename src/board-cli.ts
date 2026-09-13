@@ -125,8 +125,10 @@ export function runBoardCommand(
   if (command === 'add') {
     const [title, ...flagArgs] = rest;
     // A flag where the title should be is a typo, not a title. Without this `board add --help` writes a
-    // card called `--help` into a file the team commits, and answers as if you had meant it.
-    if (title !== undefined && title.startsWith('--')) return { ok: false, message: 'add needs a title before its flags' };
+    // card called `--help` into a file the team commits, and answers as if you had meant it. One dash
+    // counts: `-h` is the other spelling this program takes for help, and the only title this refuses
+    // that `--` would not is one starting with a dash, which nobody writes.
+    if (title !== undefined && title.startsWith('-')) return { ok: false, message: 'add needs a title before its flags' };
     // The same rule parseCard holds a hand-written card to: a card with no title is not a card, and
     // one written here would be dropped the next time the app read the file.
     if (!isTitle(title)) return { ok: false, message: 'add needs a title' };
@@ -138,10 +140,13 @@ export function runBoardCommand(
     const column = columnName === undefined ? 0 : columnNamed(board, columnName);
     if (columnName !== undefined && column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
     const id = makeId();
-    const added = addCard(board, { column, card: 0 }, id, title.trim());
+    const added = addCard(board, { column, card: 0 }, id, title);
     const fields = withFields(added.board, added.selection, read.flags);
     if ('message' in fields) return { ok: false, message: fields.message };
-    return { ok: true, output: `${id}  ${board.columns[column].name}  ${title.trim()}`, board: fields.board };
+    // Read back rather than echoed: addCard decides what title the card ends up with, so the line
+    // printed here cannot say one thing while the file holds another.
+    const card = fields.board.columns[added.selection.column].cards[added.selection.card];
+    return { ok: true, output: `${id}  ${board.columns[column].name}  ${card.title}`, board: fields.board };
   }
 
   if (command === 'move') {

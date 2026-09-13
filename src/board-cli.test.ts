@@ -80,6 +80,10 @@ describe('add', () => {
       .toEqual({ ok: false, message: 'add needs a title before its flags' });
     expect(run(emptyBoard(), 'add', '--notes', 'why'))
       .toEqual({ ok: false, message: 'add needs a title before its flags' });
+    // `-h` is the other spelling this program takes for help at the top level, so it is the one
+    // someone tries on a subcommand next.
+    expect(run(emptyBoard(), 'add', '-h'))
+      .toEqual({ ok: false, message: 'add needs a title before its flags' });
   });
 
   it('refuses a title that is only spaces, the way a hand-written card is dropped', () => {
