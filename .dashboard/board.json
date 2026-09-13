@@ -122,18 +122,20 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "2033fcf6-714b-4642-bda0-f0f9f409a36f",
-          "title": "A command line for the board, so agents can work it",
-          "notes": "A CLI shipped with the app that edits a project's .dashboard/board.json the same way the app does: create a card, move a card between columns, set the pull request number and branch, set priority, list cards. The ship agent's prompt tells it to move its own card to Done with the pull request number once the pull request is open, so nobody moves cards by hand. Two writers on one file means the app needs a watcher on board.json so a card moved by an agent shows up without re-entering the board.",
-          "priority": "high"
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "2033fcf6-714b-4642-bda0-f0f9f409a36f",
+          "title": "A command line for the board, so agents can work it",
+          "notes": "Shipped in PR #33. `DASHBOARD_BOARD` is on every pane the app opens: the path to a command that lists cards and moves them from a shell \u2014 list, add, move, set \u2014 over the board of the project you are in. Every decision it makes is a call into board.ts, so a card it writes is a card the app wrote.\n\nThe second half is that the app notices. Main watches each open project's .dashboard folder and sends board:change, and the board on screen re-reads without moving your selection. The folder, not the file, because a save renames a temporary file over board.json; and against the bytes the app itself last wrote, or every keystroke on a board would redraw it under your cursor.\n\nFour rules stopped being written twice on the way: columnNamed, isTitle, branchFrom and openBoard. The seeded .dashboard/CLAUDE.md prints the command's own usage rather than retyping it.\n\nNot verified: npm run package. The asar-unpack path is reasoned from the config, not seen \u2014 worth one packaged run before merging.",
+          "priority": "high",
+          "branch": "board-command-line",
+          "pullRequest": 33
+        },
         {
           "id": "f0c1d251-d7a3-4c71-a04a-b16d6ce7e5db",
           "title": "Zoom the focused pane to fill the page, and back, like tmux",
