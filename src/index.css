@@ -205,6 +205,11 @@ body *:not(.pane, .pane *) {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* A command row is a sentence — a project's name and what is waiting in it — so it is capped where
+   prose is. */
+.command-list {
   max-width: 70ch;
 }
 

@@ -27,8 +27,8 @@ import {
   type Bell, isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
 } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
-  tailLines,
+  MANAGER_PROJECT, MANAGER_SLOT, isPrinted, isProjectPage, landingPosition, managerRows,
+  projectPosition, tailLines,
 } from './manager';
 import { createManagerView, type ManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
@@ -217,16 +217,17 @@ function paneLastLine(terminal: Terminal): string {
   const buffer = terminal.buffer.active;
   for (let row = terminal.rows - 1; row >= 0; row -= 1) {
     const line = paneRow(buffer, row);
-    if (line.trim() !== '') return line;
+    if (isPrinted(line)) return line;
   }
   return '';
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
-// `agesOnly` is the timer's redraw below, which has nothing to change on a row but how long ago its
-// pane printed. Everything else here runs either way, so the status bar still reads the age off the
-// selection and the tab strip is still the one this function has always drawn.
-function renderStatus(agesOnly = false): void {
+// `panesOnly` is the timer's redraw below, which has nothing to change on a row but the line its pane
+// last printed and how long ago that was. Everything else here runs either way, so the status bar
+// still reads the age off the selection and the tab strip is still the one this function has always
+// drawn.
+function renderStatus(panesOnly = false): void {
   const page = pages[activeIndex];
   // Before the status bar reads its label off the selection. The rows are the pages themselves, so a
   // bell, an exit or a project opening all reach the manager through the redraw they already cause —
@@ -242,7 +243,7 @@ function renderStatus(agesOnly = false): void {
         lastPrinted: () => paneLastLine(pane.terminal),
       })),
     })));
-    if (agesOnly) page.manager?.refreshAges(rows);
+    if (panesOnly) page.manager?.refreshPanes(rows);
     else page.manager?.render(rows);
   }
   titleElement.textContent = `📁 ${page.project.name}`;
@@ -809,14 +810,15 @@ bridge.onData((id, data) => {
   pane.terminal.write(data);
 });
 
-// The manager's ages are the only thing on any screen that goes stale where it stands: every other
-// line is redrawn by whatever changed it, and a pane going quiet is nothing happening. Without this
-// you open the manager, read `just now` against a pane, and it still says `just now` an hour later.
+// The manager's pane rows are the only thing on any screen that goes stale where it stands: every
+// other line is redrawn by whatever changed it, and a pane printing on quietly changes nothing that
+// calls a redraw. Without this you open the manager, read `Running 3 of 47 tests` · `just now`
+// against a pane, and it still says both an hour later while the pane is long finished.
 // Straight into renderStatus, which already draws the manager only when the manager is in front — a
-// second copy of that question here is one that could come to disagree with it. It is told the ages
-// are all it has to change, so the list is not rebuilt under someone who is reading it.
-const AGE_REFRESH_MS = 30_000;
-window.setInterval(() => renderStatus(true), AGE_REFRESH_MS);
+// second copy of that question here is one that could come to disagree with it. It is told the pane
+// rows are all it has to change, so the list is not rebuilt under someone who is reading it.
+const PANE_REFRESH_MS = 30_000;
+window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
 bridge.onExit((id, exitCode) => {
   const pane = panesById.get(id);
   if (!pane) return;

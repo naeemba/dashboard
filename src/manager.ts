@@ -86,7 +86,15 @@ const TAIL_LINES = 5;
 // off the top — and what is left is still a guess: a spinner redraws one line forever, so the text can
 // be older than it looks.
 export function tailLines(lines: readonly string[]): string[] {
-  return lines.filter((line) => line.trim() !== '').slice(-TAIL_LINES);
+  return lines.filter(isPrinted).slice(-TAIL_LINES);
+}
+
+// Whether a row of a pane's screen has anything on it. The block of five and the single line a quiet
+// row prints both stop on the same rows because both ask this: the one line is meant to be the line
+// the block would end on, and two spellings of "has something on it" is how the two come to name
+// different lines with nothing failing.
+export function isPrinted(line: string): boolean {
+  return line.trim() !== '';
 }
 
 // Whether a pane wants something from you, which is every state but quiet. Read off ALERT_STATES so a

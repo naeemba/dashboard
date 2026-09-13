@@ -2,7 +2,7 @@ import type { Action } from './actions';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
   alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, takesAnswer,
-  type ManagerLine, type ManagerRow,
+  type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
 
@@ -21,8 +21,9 @@ export type ManagerView = {
   // The rows are read from the renderer's pages, which are the live ones — the page holds none of its
   // own, so a bell that arrives while you are looking at it shows up on the next redraw.
   render(rows: readonly ManagerRow[]): void;
-  // The timer's redraw, which has nothing new to say about a row but how long ago its pane printed.
-  refreshAges(rows: readonly ManagerRow[]): void;
+  // The timer's redraw: the two things on a pane row that change while nothing else does — the line
+  // it last printed and how long ago that was.
+  refreshPanes(rows: readonly ManagerRow[]): void;
   statusLabel(): string;
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
   // board has, and for the same reason: one place decides what every key on every screen does.
@@ -32,6 +33,13 @@ export type ManagerView = {
 // What the row says instead of a pane list when the project has nothing to show.
 const SHUT = '▸';
 const OPEN = '▾';
+
+// The line a pane row prints beside its name, which a pane that wants something does not get: its
+// block of five is on screen underneath and ends on this very line, so printing both says it twice.
+// One place, because the first draw and the timer's redraw both ask.
+function printedLine(pane: PaneSummary): string {
+  return isAlerting(pane) ? '' : pane.lastPrinted();
+}
 
 export function createManagerView(options: ManagerOptions): ManagerView {
   const element = document.createElement('div');
@@ -70,11 +78,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // want something keep the block underneath — it is the only place the question can be read — and
     // its last line is the same line this would print, so printing both would say it twice.
     // One or the other, never both: the quiet row asks for its one line without the screen behind it.
-    const alerting = isAlerting(line.pane);
-    const tailLines = alerting ? line.pane.tail() : [];
+    const tailLines = isAlerting(line.pane) ? line.pane.tail() : [];
     const lastPrinted = document.createElement('span');
     lastPrinted.className = 'manager-last-printed';
-    lastPrinted.textContent = alerting ? '' : line.pane.lastPrinted();
+    lastPrinted.textContent = printedLine(line.pane);
 
     const state = document.createElement('span');
     state.className = `manager-state manager-${line.pane.state}`;
@@ -192,15 +199,29 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       }));
       list.children[selected]?.scrollIntoView({ block: 'nearest' });
     },
-    // Every thirty seconds, so the ages do not freeze where they stand. Only the age spans are
-    // rewritten: nothing else on a row can have changed without a redraw of its own, and rebuilding
-    // the list to change one word would scroll it back to the highlight and throw away the line you
-    // had selected to copy out — under someone who is sitting there reading it.
-    refreshAges(rows: readonly ManagerRow[]): void {
-      relayout(rows);
+    // Every thirty seconds, so neither the ages nor the lines beside them freeze where they stand. A
+    // pane printing calls nothing — the bytes go into the terminal and that is all — so without this
+    // a quiet row's line only moves when a keystroke, a bell or an exit forces a whole redraw, and
+    // the age sits beside it saying `just now` about text from ten minutes ago.
+    // The two spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
+    // to the highlight and throw away the line you had selected to copy out, under someone who is
+    // sitting there reading it. The state span is not touched — every state change ends in a full
+    // redraw of its own.
+    refreshPanes(rows: readonly ManagerRow[]): void {
+      // Written into the rows that are on screen, so this writes only while the fresh rows are those
+      // rows. A project opened or a pane appeared means a full render is what caused it and a full
+      // render is what draws it; writing into `list.children` on a shape that moved would put one
+      // pane's line on its neighbour. The lines themselves are taken, stale panes and all, because
+      // the timestamps they hold are copies made when the row was last drawn.
+      const fresh = managerLines(rows, opened);
+      if (fresh.map(lineKey).join('\n') !== lines.map(lineKey).join('\n')) return;
+      lines = fresh;
       lines.forEach((line, index) => {
         if (line.kind !== 'pane') return;
-        const age = list.children[index]?.querySelector('.manager-age');
+        const row = list.children[index];
+        const lastPrinted = row?.querySelector('.manager-last-printed');
+        if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
+        const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
       });
     },
