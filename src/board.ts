@@ -185,6 +185,16 @@ export function setPullRequest(board: Board, selection: Selection, pullRequest: 
   return editCard(board, selection, { pullRequest });
 }
 
+export function setPriority(board: Board, selection: Selection, priority: Priority): Change {
+  return editCard(board, selection, { priority });
+}
+
+// What counts as a priority. parseCard asks it of whatever was in the file and the command line asks
+// it of what was typed, so a level one of them accepts cannot be the one the other quietly drops.
+export function isPriority(value: unknown): value is Priority {
+  return PRIORITIES.some((priority) => priority === value);
+}
+
 // What counts as a pull request number. parseCard asks it of whatever was in the file, and the board
 // view asks it of what you typed before refusing and saying why — one condition, so a number the
 // settings box accepts cannot be the one the file quietly drops.
@@ -218,7 +228,7 @@ export function cyclePriority(board: Board, selection: Selection): Change {
   const card = cardAt(board, selection);
   if (!card) return { board, selection };
   const next = PRIORITIES[(PRIORITIES.indexOf(card.priority) + 1) % PRIORITIES.length];
-  return editCard(board, selection, { priority: next });
+  return setPriority(board, selection, next);
 }
 
 // Tab. The card above in the same column becomes this card's parent — there is no separate "pick a

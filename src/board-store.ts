@@ -2,20 +2,21 @@ import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileS
 import { join } from 'node:path';
 import {
   DEFAULT_PRIORITY,
-  PRIORITIES,
   emptyBoard,
+  isPriority,
   isPullRequestNumber,
   withShipColumn,
   type Board,
   type Card,
   type Column,
-  type Priority,
 } from './board';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.
 export const BOARD_DIRECTORY = '.dashboard';
-const BOARD_FILE = 'board.json';
+// Exported because main watches the folder rather than the file — a board is replaced by a rename,
+// which a watch on the file itself loses — and has to know which name in it is the board.
+export const BOARD_FILE = 'board.json';
 // The board, relative to the project — the shape git reports and git compares, as opposed to the
 // absolute path boardPath joins. One spelling, so a second copy in another module cannot drift from
 // this one the day .dashboard is renamed.
@@ -86,9 +87,29 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   a whole number above zero written without the \`#\`, or absent. Both are typed in — \`b\` edits the
   branch and \`r\` the pull request — and nothing fetches or refreshes them.
 
-Edit this file directly if you like. The app re-reads it whenever the board is opened, so switch
-away from the board and back to see your changes. The app rewrites the whole file on every edit and
-drops any field not listed above.
+## The \`board\` command
+
+Every pane the Dashboard app opens carries \`DASHBOARD_BOARD\`, the path to a command that edits the
+board of the project in the current directory. It goes through the same code the app does, so a card
+it writes is a card the app wrote.
+
+    node "$DASHBOARD_BOARD" list
+    node "$DASHBOARD_BOARD" add "Fix the resize race" --priority high --notes "what goes wrong"
+    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Done
+    node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
+
+\`list\` prints the column, the priority and the id of every card, which is where the id for the other
+three comes from. \`add\` takes \`--column\`, \`--priority\` and \`--notes\`; \`set\` takes \`--branch\`,
+\`--pull-request\`, \`--priority\` and \`--notes\`, and an empty value clears a field. Run it with no
+arguments for the whole of it.
+
+Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
+where a hand edit that gets a field wrong is repaired silently on the next read.
+
+Edit this file directly if you like — the app notices. It watches board.json while a board is on
+screen, so a card moved from the command line or by hand shows up where you are looking, with the
+selection left on the card it was on. The app rewrites the whole file on every edit and drops any
+field not listed above.
 `;
 
 export const EXPLANATION_FOR_PEOPLE = `# .dashboard
@@ -112,12 +133,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-// A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
-// can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
-function isPriority(value: unknown): value is Priority {
-  return PRIORITIES.some((priority) => priority === value);
-}
-
 // undefined rather than a default, for the four fields that mean "nobody knows". A blank string is
 // the same as absent: a hand-written `"branch": ""` should not draw an empty badge on the card.
 function optionalText(value: unknown): string | undefined {
@@ -126,6 +141,8 @@ function optionalText(value: unknown): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
+// A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
+// can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
 function parseCard(value: unknown, makeId: () => string): Card | null {
   if (!isRecord(value) || typeof value.title !== 'string' || value.title.trim() === '') return null;
   return {
@@ -247,6 +264,11 @@ export function readBoard(projectPath: string): BoardRead {
   }
 }
 
+// Answers with the bytes it wrote. Main keeps the last of them per project and compares them against
+// what the folder watcher finds, which is how the app's own saves are told apart from the command
+// line's — without it every keystroke on the board would come back as somebody else's change and
+// redraw the board out from under the selection.
+//
 // Unlike reading, a failed write is reported. Swallowing it would show cards on screen that are not
 // on disk, and the next launch would silently lose them.
 //
@@ -254,11 +276,12 @@ export function readBoard(projectPath: string): BoardRead {
 // atomic on every platform this app runs on, so a crash or a full disk mid-write leaves either the
 // old file or the new one, never a truncated one. Without this, the app itself would be the main
 // producer of the corruption the salvage path in readBoard exists to clean up after.
-export function writeBoard(projectPath: string, board: Board): void {
+export function writeBoard(projectPath: string, board: Board): string {
   const directory = join(projectPath, BOARD_DIRECTORY);
   mkdirSync(directory, { recursive: true });
   const temporaryPath = join(directory, `${BOARD_FILE}.tmp`);
-  writeFileSync(temporaryPath, `${JSON.stringify(board, null, 2)}\n`);
+  const text = `${JSON.stringify(board, null, 2)}\n`;
+  writeFileSync(temporaryPath, text);
   try {
     renameSync(temporaryPath, boardPath(projectPath));
   } catch (error: unknown) {
@@ -269,6 +292,7 @@ export function writeBoard(projectPath: string, board: Board): void {
     }
     throw error;
   }
+  return text;
 }
 
 // Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md
