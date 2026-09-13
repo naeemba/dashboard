@@ -6,7 +6,7 @@ const busy = { exited: false, busy: true };
 const dead = { exited: true, busy: false };
 
 describe('freePaneIndex', () => {
-  it('takes the first pane that is neither dead nor held by an agent', () => {
+  it('takes the first pane that is neither dead nor busy', () => {
     expect(freePaneIndex([dead, busy, free, free])).toBe(2);
   });
 

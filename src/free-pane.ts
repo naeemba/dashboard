@@ -20,7 +20,8 @@ export type ProjectPanes = { name: string; path: string; missing: boolean; panes
 // free one and you know where to look for it without hunting.
 // A dead pane is skipped for the same reason the manager will not answer one — there is no shell
 // behind it to read the line — and a busy pane because a line typed at an agent is not a command, it
-// is a message to the agent, whether the agent is working or waiting for the answer.
+// is a message to the agent. How much of "an agent has this pane" that flag can actually catch is
+// paneUse's to say, in pane.ts, and is narrower than the word busy sounds.
 export function freePaneIndex(panes: readonly PaneUse[]): number {
   return panes.findIndex((pane) => !pane.exited && !pane.busy);
 }
