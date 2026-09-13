@@ -612,9 +612,14 @@ textarea.board-edit {
   outline-offset: -1px;
 }
 
-/* Two on top, three on bottom. Six columns divide evenly into both. Assumes TERMINAL_COUNT = 5. */
-.pane:nth-child(-n + 2) { grid-column: span 3; }
-.pane:nth-child(n + 3) { grid-column: span 2; }
+/* Two on top, three on bottom. Six columns divide evenly into both. Assumes TERMINAL_COUNT = 5.
+   Placed cell by cell rather than by span, because an auto-placed pane has to find a free cell and the
+   zoomed pane below takes all of them — the other four would be pushed into new rows under it. */
+.pane:nth-child(1) { grid-area: 1 / 1 / 2 / 4; }
+.pane:nth-child(2) { grid-area: 1 / 4 / 2 / 7; }
+.pane:nth-child(3) { grid-area: 2 / 1 / 3 / 3; }
+.pane:nth-child(4) { grid-area: 2 / 3 / 3 / 5; }
+.pane:nth-child(5) { grid-area: 2 / 5 / 3 / 7; }
 
 /* Zoom: the view is marked, and the pane holding the keyboard takes every cell and covers the rest.
    Written against :focus-within rather than a class on one pane, so the zoom follows the keyboard and

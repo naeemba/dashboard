@@ -277,8 +277,8 @@ function focusTerminal(index: number): void {
 
 // Zooming is one class on the view; which pane it lands on is the CSS's to answer from what has the
 // keyboard. Nothing is remembered across a restart — the panes come back as the grid they are.
-// The fit is unconditional here, unlike the one above: on the way out of zoom the class is already
-// gone, and the pane that shrank still has to be told.
+// The fit is unconditional here, unlike the one in `buildPane`'s focus handler: on the way out of
+// zoom the class is already gone, and the pane that shrank still has to be told.
 function toggleZoom(page: Page): void {
   // The CSS grows whichever pane holds the keyboard, so the key has to make sure one does. A click on
   // the status bar or on a pane's border leaves the keyboard on the body, and the class would then have
