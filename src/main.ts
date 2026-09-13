@@ -19,8 +19,8 @@ import { agentArguments, editorArguments, pickShell, taskArguments } from './she
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, terminalId } from './terminals';
-import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
-import { isBoardChange } from './board-watch';
+import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
+import { isBoardChange, isBoardFile } from './board-watch';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -111,6 +111,9 @@ const shells = new Map<string, pty.IPty>();
 const boardCommand = path
   .join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.js')
   .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+// Built once. Every pane gets the same one, and cloning the whole environment per pane is six clones
+// per project opened for a value that never changes.
+const paneEnvironment = { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>;
 // One watcher per open project, on its .dashboard folder, and the bytes the app itself last wrote
 // there. Both keyed by project path: a slot can change hands, a path is the file.
 const boardWatchers = new Map<string, FSWatcher>();
@@ -187,7 +190,7 @@ function spawnTerminal(id: string): void {
       cols: 80,
       rows: 24,
       cwd: entry.directory,
-      env: { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>,
+      env: paneEnvironment,
     });
   } catch {
     // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
@@ -211,30 +214,33 @@ function spawnTerminal(id: string): void {
 }
 
 // Watch a project's .dashboard folder and tell the renderer when the board in it becomes something
-// the app did not write — the command line moving a card, or a hand edit. Idempotent, and tried at
-// both moments the folder can start existing: opening the project, and the first board read, which
-// is what seeds the folder on a project that has never had one.
+// the app did not write — the command line moving a card, or a hand edit. Idempotent, and called
+// from the board read, which is the only way a board reaches the screen and the thing that creates
+// the folder on a project that has never had one.
 //
-// Never a failure anyone sees. A folder that is not there yet, a platform that refuses the watch, a
-// file that cannot be read: each costs the live redraw and nothing else, and the board is still
-// re-read every time you enter it.
+// Never a failure anyone sees. A platform that refuses the watch, a file that cannot be read: each
+// costs the live redraw and nothing else, and the board is still re-read every time you enter it.
 function watchBoard(projectPath: string): void {
   if (boardWatchers.has(projectPath)) return;
   const directory = path.join(projectPath, BOARD_DIRECTORY);
   let watcher: FSWatcher;
   try {
     watcher = watch(directory, (_event, fileName) => {
+      // Before the read, not after: one save fires an event for board.json.tmp and another for the
+      // rename, and reading the whole board for the first of them is work on the thread every pane's
+      // bytes flow through.
+      if (!isBoardFile(fileName)) return;
       let onDisk: string | null;
       try {
         onDisk = readFileSync(path.join(directory, BOARD_FILE), 'utf8');
       } catch {
         onDisk = null;
       }
-      if (!isBoardChange(fileName, boardTexts.get(projectPath), onDisk)) return;
-      // Remembered as if the app had written it, so the several events one save fires — the
-      // temporary file, then the rename over it — announce the change once.
-      boardTexts.set(projectPath, onDisk ?? '');
-      sendToRenderer('board:changed', projectPath);
+      if (!isBoardChange(boardTexts.get(projectPath), onDisk)) return;
+      // Remembered as if the app had written it, so the several events one save fires announce the
+      // change once.
+      boardTexts.set(projectPath, onDisk);
+      sendToRenderer('board:change', projectPath);
     });
   } catch {
     return;
@@ -252,7 +258,6 @@ function unwatchBoard(projectPath: string): void {
 // projects should not launch nine editors, each with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
-  watchBoard(project.path);
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
     // A brand new shell in this slot, so nobody has typed into it — even if someone typed into the
@@ -414,15 +419,10 @@ ipcMain.on('pty:restart', (_event, id: string) => {
 // is a convenience — writing the two explanation files — so a read-only project folder must not cost
 // the user a board.json that is sitting right there and perfectly readable.
 ipcMain.handle('board:read', (_event, projectPath: string) => {
-  try {
-    seedBoardDirectory(projectPath);
-  } catch {
-    // No explanation files this time.
-  }
-  // Here as well as at the open, because this is the call that creates .dashboard on a project that
-  // has never had a board — and there was nothing to watch when the project opened.
+  const read = openBoard(projectPath);
+  // After the read, which is what creates .dashboard on a project that has never had a board.
   watchBoard(projectPath);
-  return readBoard(projectPath);
+  return read;
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
 // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to

@@ -60,15 +60,17 @@ Every pane the Dashboard app opens carries `DASHBOARD_BOARD`, the path to a comm
 board of the project in the current directory. It goes through the same code the app does, so a card
 it writes is a card the app wrote.
 
-    node "$DASHBOARD_BOARD" list
-    node "$DASHBOARD_BOARD" add "Fix the resize race" --priority high --notes "what goes wrong"
-    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Done
-    node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
+    board — the Dashboard board of the project in the current directory
 
-`list` prints the column, the priority and the id of every card, which is where the id for the other
-three comes from. `add` takes `--column`, `--priority` and `--notes`; `set` takes `--branch`,
-`--pull-request`, `--priority` and `--notes`, and an empty value clears a field. Run it with no
-arguments for the whole of it.
+      board list
+      board add <title> [--column <name>] [--priority <level>] [--notes <text>]
+      board move <id> <column>
+      board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
+
+    Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field.
+
+Run it as `node "$DASHBOARD_BOARD" <command>`. `list` prints the column, the priority and the id of
+every card, which is where the id the other three want comes from.
 
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.

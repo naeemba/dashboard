@@ -1,10 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+// The usage text is written once, in the command itself. Copied into here it would go stale the day a
+// flag is renamed, and this file is the only place an agent finds out the command exists at all.
+import { USAGE } from './board-cli';
 import {
   DEFAULT_PRIORITY,
   emptyBoard,
   isPriority,
   isPullRequestNumber,
+  isTitle,
   withShipColumn,
   type Board,
   type Card,
@@ -93,15 +97,10 @@ Every pane the Dashboard app opens carries \`DASHBOARD_BOARD\`, the path to a co
 board of the project in the current directory. It goes through the same code the app does, so a card
 it writes is a card the app wrote.
 
-    node "$DASHBOARD_BOARD" list
-    node "$DASHBOARD_BOARD" add "Fix the resize race" --priority high --notes "what goes wrong"
-    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Done
-    node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
+${USAGE.split('\n').map((line) => (line === '' ? '' : `    ${line}`)).join('\n')}
 
-\`list\` prints the column, the priority and the id of every card, which is where the id for the other
-three comes from. \`add\` takes \`--column\`, \`--priority\` and \`--notes\`; \`set\` takes \`--branch\`,
-\`--pull-request\`, \`--priority\` and \`--notes\`, and an empty value clears a field. Run it with no
-arguments for the whole of it.
+Run it as \`node "$DASHBOARD_BOARD" <command>\`. \`list\` prints the column, the priority and the id of
+every card, which is where the id the other three want comes from.
 
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.
@@ -144,7 +143,7 @@ function optionalText(value: unknown): string | undefined {
 // A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
 // can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
 function parseCard(value: unknown, makeId: () => string): Card | null {
-  if (!isRecord(value) || typeof value.title !== 'string' || value.title.trim() === '') return null;
+  if (!isRecord(value) || !isTitle(value.title)) return null;
   return {
     id: typeof value.id === 'string' ? value.id : makeId(),
     title: value.title,
@@ -293,6 +292,19 @@ export function writeBoard(projectPath: string, board: Board): string {
     throw error;
   }
   return text;
+}
+
+// Seed, then read. Both callers that open a board — the app's board:read and the command line — want
+// exactly this, and seeding is a convenience: writing the two explanation files must never cost
+// someone a board.json that is sitting right there and perfectly readable, so a read-only folder
+// loses the docs and keeps the cards.
+export function openBoard(projectPath: string): BoardRead {
+  try {
+    seedBoardDirectory(projectPath);
+  } catch {
+    // No explanation files this time.
+  }
+  return readBoard(projectPath);
 }
 
 // Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md

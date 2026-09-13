@@ -620,7 +620,7 @@ bridge.onNotificationClick((paneId) => {
 // edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and
 // a board that is not on screen has nothing to redraw. The manager's stack of boards is one of these
 // too, and finds the project the path belongs to itself.
-bridge.onBoardChanged((projectPath) => {
+bridge.onBoardChange((projectPath) => {
   const page = pages[activeIndex];
   if (page.mode !== 'board') return;
   page.board?.reload(projectPath);

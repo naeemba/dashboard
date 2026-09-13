@@ -1,9 +1,11 @@
 import {
   PRIORITIES,
   addCard,
-  cardById,
+  branchFrom,
+  columnNamed,
   flightParts,
   isPriority,
+  isTitle,
   moveCardToColumn,
   pullRequestFrom,
   selectionOf,
@@ -61,12 +63,6 @@ function readFlags(args: readonly string[], allowed: readonly string[]): { flags
   return { flags };
 }
 
-// Case-insensitive, because the columns are named in prose — `board move <id> done` is what anyone
-// types, and a board whose column is spelled `Done` should not refuse it.
-function columnIndex(board: Board, name: string): number {
-  return board.columns.findIndex((column) => column.name.toLowerCase() === name.toLowerCase().trim());
-}
-
 function noSuchColumn(board: Board, name: string): string {
   return `no column called ${name}; this board has ${board.columns.map((column) => column.name).join(', ')}`;
 }
@@ -85,7 +81,7 @@ function withFields(board: Board, selection: Selection, flags: Map<string, strin
     next = setPriority(next, selection, priority).board;
   }
   const branch = flags.get('branch');
-  if (branch !== undefined) next = setBranch(next, selection, branch.trim() === '' ? undefined : branch.trim()).board;
+  if (branch !== undefined) next = setBranch(next, selection, branchFrom(branch)).board;
   const pullRequest = flags.get('pull-request');
   if (pullRequest !== undefined) {
     const number = pullRequest.trim() === '' ? undefined : pullRequestFrom(pullRequest);
@@ -138,14 +134,14 @@ export function runBoardCommand(
     const [title, ...flagArgs] = rest;
     // The same rule parseCard holds a hand-written card to: a card with no title is not a card, and
     // one written here would be dropped the next time the app read the file.
-    if (title === undefined || title.trim() === '') return { ok: false, message: 'add needs a title' };
+    if (!isTitle(title)) return { ok: false, message: 'add needs a title' };
     const read = readFlags(flagArgs, ['column', 'priority', 'notes']);
     if ('message' in read) return { ok: false, message: read.message };
     const columnName = read.flags.get('column');
     // The leftmost column, which is where a card nobody has placed belongs — Todo on every board the
     // app writes.
-    const column = columnName === undefined ? 0 : columnIndex(board, columnName);
-    if (column === -1) return { ok: false, message: noSuchColumn(board, columnName ?? '') };
+    const column = columnName === undefined ? 0 : columnNamed(board, columnName);
+    if (columnName !== undefined && column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
     const id = makeId();
     const added = addCard(board, { column, card: 0 }, id, title.trim());
     const fields = withFields(added.board, added.selection, read.flags);
@@ -159,9 +155,10 @@ export function runBoardCommand(
     if (extra.length > 0) return { ok: false, message: 'move takes nothing after the column' };
     const selection = selectionOf(board, id);
     if (selection === null) return { ok: false, message: `no card with id ${id}` };
-    const column = columnIndex(board, columnName);
+    const column = columnNamed(board, columnName);
     if (column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
-    const title = cardById(board, id)?.title ?? '';
+    // selectionOf just found it, so it is there.
+    const title = board.columns[selection.column].cards[selection.card].title;
     const moved = moveCardToColumn(board, selection, column);
     // moveCardToColumn hands back the board it was given when the card is already there. Saying so
     // and writing nothing beats a silent success that touches the file.
@@ -179,11 +176,11 @@ export function runBoardCommand(
     if (read.flags.size === 0) return { ok: false, message: 'set needs something to set' };
     const fields = withFields(board, selection, read.flags);
     if ('message' in fields) return { ok: false, message: fields.message };
-    const card = cardById(fields.board, id);
-    const flight = card === undefined ? [] : flightParts(card);
+    // Still where selectionOf found it: every field change edits the card in place.
+    const card = fields.board.columns[selection.column].cards[selection.card];
     return {
       ok: true,
-      output: [card?.title ?? '', card?.priority ?? '', ...flight].filter((part) => part !== '').join('  ·  '),
+      output: [card.title, card.priority, ...flightParts(card)].join('  ·  '),
       board: fields.board,
     };
   }

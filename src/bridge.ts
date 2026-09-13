@@ -40,7 +40,7 @@ export type DashboardBridge = {
   // The project whose board.json has become something the app did not write — the `board` command
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.
-  onBoardChanged(listener: (projectPath: string) => void): void;
+  onBoardChange(listener: (projectPath: string) => void): void;
   // The settings, and the shell that was resolved from them. One call, because the renderer needs
   // both before it builds a pane and they are decided together.
   getSettings(): Promise<{ settings: Settings; shellCommand: string }>;

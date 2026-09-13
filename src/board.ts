@@ -82,10 +82,15 @@ function replaceColumn(board: Board, index: number, cards: Card[]): Board {
   return withColumns(board, board.columns.map((column, at) => (at === index ? { ...column, cards } : column)));
 }
 
-// Where Ship is, or -1. Case-insensitive, the same way create-task.js matches a --column, so a board
-// written by hand with "ship" is not a board the feature quietly refuses to work on.
+// A column by name, or -1. Case-insensitive, the same way create-task.js matches a --column: a board
+// written by hand with "ship" is not a board the feature quietly refuses to work on, and `board move
+// <id> done` is what anyone types.
+export function columnNamed(board: Board, name: string): number {
+  return board.columns.findIndex((column) => column.name.toLowerCase() === name.toLowerCase().trim());
+}
+
 export function shipColumnIndex(board: Board): number {
-  return board.columns.findIndex((column) => column.name.toLowerCase() === SHIP_COLUMN.toLowerCase());
+  return columnNamed(board, SHIP_COLUMN);
 }
 
 // Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
@@ -183,6 +188,20 @@ export function setBranch(board: Board, selection: Selection, branch: string | u
 
 export function setPullRequest(board: Board, selection: Selection, pullRequest: number | undefined): Change {
   return editCard(board, selection, { pullRequest });
+}
+
+// What a card has to have to be a card. parseCard drops one written without it, blanking a title
+// deletes the card, and the command line refuses to add one — three places that must agree, or the
+// app draws a card the command line says cannot exist.
+export function isTitle(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+// An empty box means the card has no branch, which is an ordinary state for a card — so both the
+// board's own field and the command line clear it rather than refusing.
+export function branchFrom(text: string): string | undefined {
+  const trimmed = text.trim();
+  return trimmed === '' ? undefined : trimmed;
 }
 
 export function setPriority(board: Board, selection: Selection, priority: Priority): Change {
