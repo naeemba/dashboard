@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Bell } from './waiting';
 import { paneLastLine, paneScreen, paneUse, type PaneTerminal } from './pane';
 
 // A screen of `rows` lines starting at `baseY`, with the scrollback above it filled with lines that
@@ -37,18 +38,17 @@ describe('paneLastLine', () => {
 });
 
 describe('paneUse', () => {
+  const live = (bell: Bell, screen: string) => ({ exited: false, bell, terminal: terminal([screen]) });
+
   it('holds a pane whose agent has stopped to ask, which prints neither busy pattern', () => {
-    const asking = { exited: false, bell: 'waiting' as const, terminal: terminal(['Continue? [Y/n]']) };
-    expect(paneUse(asking).busy).toBe(true);
+    expect(paneUse(live('waiting', 'Continue? [Y/n]')).busy).toBe(true);
   });
 
   it('holds a pane whose agent is still working, whatever its bell says', () => {
-    const working = { exited: false, bell: 'quiet' as const, terminal: terminal(['esc to interrupt']) };
-    expect(paneUse(working).busy).toBe(true);
+    expect(paneUse(live('quiet', 'esc to interrupt')).busy).toBe(true);
   });
 
   it('frees a pane running an ordinary long command, which is all this can tell', () => {
-    const dev = { exited: false, bell: 'quiet' as const, terminal: terminal(['VITE ready in 300 ms']) };
-    expect(paneUse(dev)).toEqual({ exited: false, busy: false });
+    expect(paneUse(live('quiet', 'VITE ready in 300 ms'))).toEqual({ exited: false, busy: false });
   });
 });

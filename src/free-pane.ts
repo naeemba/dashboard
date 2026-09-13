@@ -5,12 +5,9 @@
 // two ways.
 
 // What the picking reads off one pane. Two flags rather than a terminal, so this file is testable
-// without building one. `busy` is narrower than "an agent has this pane": it is an agent still working,
-// or a pane still flagged as asking. Two kinds of pane are free by this reading that you might not mean
-// to be. One running `npm run dev`, `tail -f`, psql or vim — the line goes to that program's stdin, and
-// only shell integration we do not have could tell that apart from a prompt. And one whose agent asked
-// you something you have since looked at: visiting a pane clears its bell, so the flag is gone and
-// nothing on screen separates the question from a prompt either.
+// without building one. `busy` is "a line typed here would be read by an agent rather than a shell",
+// as far as anything can tell that without shell integration — which is narrower than it sounds, and
+// `paneUse` in pane.ts, where the flag is worked out, is where that is spelled out.
 export type PaneUse = { exited: boolean; busy: boolean };
 
 // `missing` is a project whose folder has gone. Its page is still open and still has a row on the
@@ -23,8 +20,7 @@ export type ProjectPanes = { name: string; path: string; missing: boolean; panes
 // free one and you know where to look for it without hunting.
 // A dead pane is skipped for the same reason the manager will not answer one — there is no shell
 // behind it to read the line — and a busy pane because a line typed at an agent is not a command, it
-// is a message to the agent, whether the agent is working or waiting for the answer. What counts as
-// busy is decided in PaneUse above, and it is narrower than that sentence sounds.
+// is a message to the agent, whether the agent is working or waiting for the answer.
 export function freePaneIndex(panes: readonly PaneUse[]): number {
   return panes.findIndex((pane) => !pane.exited && !pane.busy);
 }
