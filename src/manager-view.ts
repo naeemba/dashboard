@@ -21,8 +21,9 @@ export type ManagerView = {
   // The rows are read from the renderer's pages, which are the live ones — the page holds none of its
   // own, so a bell that arrives while you are looking at it shows up on the next redraw.
   render(rows: readonly ManagerRow[]): void;
-  // The timer's redraw: the two things on a pane row that change while nothing else does — the line
-  // it last printed and how long ago that was.
+  // The timer's redraw: the three things on a pane row that change while nothing else does — the line
+  // it last printed, how long ago that was, and the block of screen under a row that is asking you
+  // something.
   refreshPanes(rows: readonly ManagerRow[]): void;
   statusLabel(): string;
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
@@ -39,6 +40,14 @@ const OPEN = '▾';
 // One place, because the first draw and the timer's redraw both ask.
 function printedLine(pane: PaneSummary): string {
   return isAlerting(pane) ? '' : pane.lastPrinted();
+}
+
+// The other half of the same either/or: the block of five a pane that wants something keeps under its
+// name, and nothing at all for a pane getting on with its work. One place, because the first draw and
+// the timer's redraw both ask — a pane's screen moves without its state moving, so a block left out of
+// the redraw is the question from four minutes ago sitting under an age that says `just now`.
+function tailBlock(pane: PaneSummary): string[] {
+  return isAlerting(pane) ? pane.tail() : [];
 }
 
 export function createManagerView(options: ManagerOptions): ManagerView {
@@ -78,7 +87,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // want something keep the block underneath — it is the only place the question can be read — and
     // its last line is the same line this would print, so printing both would say it twice.
     // One or the other, never both: the quiet row asks for its one line without the screen behind it.
-    const tailLines = isAlerting(line.pane) ? line.pane.tail() : [];
+    const tailLines = tailBlock(line.pane);
     const lastPrinted = document.createElement('span');
     lastPrinted.className = 'manager-last-printed';
     lastPrinted.textContent = printedLine(line.pane);
@@ -203,7 +212,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // pane printing calls nothing — the bytes go into the terminal and that is all — so without this
     // a quiet row's line only moves when a keystroke, a bell or an exit forces a whole redraw, and
     // the age sits beside it saying `just now` about text from ten minutes ago.
-    // The two spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
+    // The three spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
     // to the highlight and throw away the line you had selected to copy out, under someone who is
     // sitting there reading it. The state span is not touched — every state change ends in a full
     // redraw of its own.
@@ -226,6 +235,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
+        const tail = row?.querySelector('.manager-tail');
+        if (tail instanceof HTMLElement) {
+          const block = tailBlock(line.pane);
+          tail.textContent = block.join('\n');
+          tail.hidden = block.length === 0;
+        }
       });
     },
     statusLabel(): string {
