@@ -3,6 +3,7 @@ import type { ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { createBoardView, type BoardView } from './board-view';
+import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
 import type { ManagerView } from './manager-view';
 import type { Mode } from './modes';
@@ -21,13 +22,15 @@ import type { WorktreeEntry } from './worktree-store';
 // What is left there is the plumbing — which page is in front, what the status bar says, what the
 // session file holds — and none of it builds a terminal.
 //
-// Everything this needs from the renderer arrives as `PageOptions`, and every one of them is a function
-// rather than a value: the settings and the shell change while the app runs, and a page built an hour
-// ago must draw the current ones rather than a copy taken when it was built.
-
-const bridge = window.dashboard;
+// Everything this needs from the renderer arrives as `PageOptions`, the bridge included — nothing here
+// reaches for the window. Every one that can change while the app runs is a function rather than a
+// value: the settings and the shell do, and a page built an hour ago must draw the current ones rather
+// than a copy taken when it was built.
 
 export type PageOptions = {
+  // Handed over like everything else here rather than read off the window, so a pane's bell can be
+  // tested against a fake one.
+  bridge: DashboardBridge;
   settings(): Settings;
   // What a dropped path is quoted for; main decides which family of shell is in force.
   shellCommand(): string;
@@ -138,20 +141,20 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     terminal.loadAddon(fit);
     // A URL in the output underlines under the pointer and opens in the real browser when clicked; main
     // decides what is safe to hand the operating system.
-    terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
+    terminal.loadAddon(new WebLinksAddon((_event, uri) => options.bridge.openExternal(uri)));
     terminal.open(container);
 
     const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet', lastPrintedAt: 0 };
     terminal.onData((data) => {
       if (!pane.exited) {
-        bridge.sendInput(id, data);
+        options.bridge.sendInput(id, data);
         return;
       }
       if (data === '\r') {
         pane.exited = false;
         terminal.reset();
-        bridge.restart(id);
-        bridge.resize(id, terminal.cols, terminal.rows);
+        options.bridge.restart(id);
+        options.bridge.resize(id, terminal.cols, terminal.rows);
       }
     });
     // Dropping files types their absolute paths at the prompt, quoted, the way a terminal is expected to
@@ -159,12 +162,12 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     // The trailing space is what every terminal appends, so a second drop starts a new word instead of
     // gluing itself onto the first path.
     container.addEventListener('drop', (event) => {
-      const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
+      const paths = [...event.dataTransfer?.files ?? []].map((file) => options.bridge.getPathForFile(file));
       if (paths.length === 0) return;
       terminal.focus();
       terminal.input(`${paths.map((entry) => quoteForShell(entry, options.shellCommand())).join(' ')} `);
     });
-    terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
+    terminal.onResize(({ cols, rows }) => options.bridge.resize(id, cols, rows));
     // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
     // to listen for: no reading the output, no guessing from how long it has been quiet.
     // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
@@ -197,7 +200,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
         // still behind something else now, which is when it would actually appear.
         if (raisesNotification(document.hasFocus(), pane.bell)) {
           pane.bell = 'notified';
-          bridge.notify(page.project.name, `${pane.name} is waiting`, id);
+          options.bridge.notify(page.project.name, `${pane.name} is waiting`, id);
         }
       }, BELL_SETTLE_MS);
     });
@@ -267,7 +270,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     page.board = createBoardView({
       projectPath: project.path,
       slot,
-      bridge,
+      bridge: options.bridge,
       onChanged: options.onChanged,
       // A slot each, so one project's board never clears another one's failure.
       onError: (message) => options.onError(`board:${slot}`, message),

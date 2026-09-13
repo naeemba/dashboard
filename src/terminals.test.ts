@@ -5,8 +5,8 @@ import {
 } from './terminals';
 
 describe('paneIds', () => {
-  // The six a project is made of: the grid's five and the editor one past them. Main spawns and kills
-  // them by this list and the renderer lets them go by it, so a seventh pane added to the layout
+  // The six a project is made of: the grid's five and the editor one past them. Main kills a project's
+  // panes by this list and the renderer lets them go by it, so a sixth grid pane added to the layout
   // reaches both without either being edited.
   it('names every pane of one project, the editor last', () => {
     expect(paneIds(3)).toEqual(['3:0', '3:1', '3:2', '3:3', '3:4', '3:5']);

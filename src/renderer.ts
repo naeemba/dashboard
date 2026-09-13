@@ -16,7 +16,7 @@ import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
-import { OVERLAY_SELECTOR } from './overlay';
+import { OVERLAY_SELECTOR, confirmOverlay } from './overlay';
 import { waitingNames } from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
@@ -385,10 +385,12 @@ function buildManagerPage(): Page {
   return page;
 }
 
-// The one page builder, handed the few things a pane needs from this file. Every one of them is a
-// function rather than a value: the settings and the shell change while the app runs, and a pane built
-// an hour ago has to draw what is in force now.
+// The one page builder, handed the few things a pane needs from this file. Every one that can change
+// while the app runs is a function rather than a value — the settings and the shell do — so a pane built
+// an hour ago draws what is in force now. The bridge is the exception: it is the same object for the
+// life of the window.
 const buildPage = createPageBuilder({
+  bridge,
   settings: () => settings,
   shellCommand: () => shellCommand,
   onChanged: () => renderStatus(),
@@ -414,7 +416,8 @@ function setPage(project: Project, slot: number): void {
 
 // Closing a project from the manager's list. Everything it takes is gone for good — five shells, the
 // editor, and whatever was running in them — so what can stop it, and the sentence saying so, are
-// close-project.ts's. A pane that has exited or is sitting at a prompt stops nothing.
+// close-project.ts's. A pane that has exited or is sitting at a prompt stops nothing, so the question
+// below is asked whether or not anything was in the way.
 // The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
 // pane id that named this project names nothing from here on.
 function closeProject(slot: number): void {
@@ -428,18 +431,33 @@ function closeProject(slot: number): void {
     allPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
   );
   if (refusal !== '') return showError('close', refusal);
-  bridge.closeProject(slot);
-  discardPanes(slot);
-  page.element.remove();
-  // activeIndex needs no adjusting: the manager holds the first tab and never moves off it, a project
-  // is always behind it, and this key is only heard on the manager — so what leaves the list is always
-  // behind the page you are looking at.
-  pages.splice(position, 1);
-  // Clears its own message and nobody else's: a refusal you have since acted on must not sit in the
-  // status bar over the close that followed it.
-  showError('close', '');
-  // The row leaves the list, the tab leaves the strip, and the session file is written without it.
-  renderStatus();
+  // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
+  // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
+  // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
+  // twice; this takes five shells and an editor with no undo.
+  void confirmOverlay(
+    `Close ${page.project.name}?`,
+    'Enter closes it, its five shells and its editor. Escape keeps it.',
+  ).then((confirmed) => {
+    if (!confirmed) return;
+    // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
+    // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
+    // found afresh here.
+    const closing = positionOfSlot(slot);
+    if (closing === -1) return;
+    bridge.closeProject(slot);
+    discardPanes(slot);
+    pages[closing].element.remove();
+    // activeIndex needs no adjusting: the manager holds the first tab and never moves off it, a project
+    // is always behind it, and this key is only heard on the manager — so what leaves the list is always
+    // behind the page you are looking at.
+    pages.splice(closing, 1);
+    // Clears its own message and nobody else's: a refusal you have since acted on must not sit in the
+    // status bar over the close that followed it.
+    showError('close', '');
+    // The row leaves the list, the tab leaves the strip, and the session file is written without it.
+    renderStatus();
+  });
 }
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are

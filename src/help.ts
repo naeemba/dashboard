@@ -75,7 +75,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'it. The close refuses while a pane in it has an agent working or a question waiting, and names '
     + 'the panes in the way. What it cannot see is a pane running an ordinary long command — a dev '
     + 'server, a tail, vim — which reads as idle here exactly as it does on the command screen, so a '
-    + 'close it allows is not a promise that nothing was running.',
+    + 'close it allows is not a promise that nothing was running — which is why it asks first, and '
+    + 'Enter is what takes the project away.',
   command: 'One command, run in the projects you mark. Type it once — `npm audit`, `npm outdated`, '
     + 'the test suite — and choose how it runs. Enter gives every marked project a process of its own '
     + 'and puts the answers side by side: each row shows how its project exited and the last line it '
