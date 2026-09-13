@@ -173,7 +173,12 @@ export function createCommandView(options: CommandOptions): CommandView {
     const job = pending();
     if (job === null) return;
     lastSend = sendSummary(options.runInPanes(job.command, job.paths));
+    // Back to the box, because the box is the only row whose label carries that sentence. The key
+    // fires from any row — press it with the selection on a project and the one line saying the run
+    // missed two projects would be written down and never shown.
+    setSelection(COMMAND_ROW);
     render();
+    focusSelection();
     options.onChanged();
   }
 
@@ -252,6 +257,14 @@ export function createCommandView(options: CommandOptions): CommandView {
     if (selected === COMMAND_ROW) return;
     setSelection(COMMAND_ROW);
     render();
+    options.onChanged();
+  });
+
+  // Editing the box is the same situation run() clears the line for: it described a different command,
+  // and leaving it up beside a command that has not been sent anywhere reads as that command's answer.
+  input.addEventListener('input', () => {
+    if (lastSend === '') return;
+    lastSend = '';
     options.onChanged();
   });
 
