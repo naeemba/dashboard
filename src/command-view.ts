@@ -1,6 +1,7 @@
 import type { Action } from './actions';
 import { clampIndex, heldIndex } from './clamp-index';
 import { isBareCharacter } from './shortcuts';
+import { sendSummary, type SendPlan } from './free-pane';
 import {
   anyRunning, commandKeys, COMMAND_KEY, hasTail, idleTask, taskSummary, type TaskResult,
 } from './tasks';
@@ -12,6 +13,10 @@ export type CommandOptions = {
   // opened since you were last here has a row.
   projects(): readonly CommandProject[];
   runTask(command: string, projectPaths: string[]): void;
+  // The other way to run it: typed into a live shell rather than a process of its own. Which pane in
+  // each project takes it is free-pane.ts's answer, and the plan it hands back is what this screen
+  // reports — a project that had no free pane is named, never silently left out.
+  runInPanes(command: string, projectPaths: string[]): SendPlan;
   cancelTasks(): void;
   // What an action is bound to right now, read fresh on every redraw rather than handed over once, so
   // rebinding a key in the settings screen rewrites the hint under the list and the status bar with it
@@ -80,6 +85,10 @@ export function createCommandView(options: CommandOptions): CommandView {
   // the same fix for the same reason.
   let selectedKey = COMMAND_KEY;
   let running = false;
+  // What the last run into the panes did. Held rather than printed and forgotten, because that run
+  // leaves nothing on this screen: the output is in a shell on another page, so without this line a
+  // command sent to five panes and a command sent to none look identical here.
+  let lastSend = '';
 
   function keyAt(index: number): string {
     return commandKeys(currentProjects)[index] ?? COMMAND_KEY;
@@ -89,9 +98,9 @@ export function createCommandView(options: CommandOptions): CommandView {
   // cancel key while nothing is running, so the idle line does not offer it: a line saying "Escape
   // cancels" on a screen where Escape does nothing is a way out that is not there.
   function keyHint(): string {
-    return running
-      ? `${options.binding('command-cancel')} stops it`
-      : `${options.binding('command-open')} runs it`;
+    if (running) return `${options.binding('command-cancel')} stops it`;
+    return `${options.binding('command-open')} runs it · `
+      + `${options.binding('command-run-in-panes')} runs it in a pane`;
   }
 
   // Where the selection is and what it is on, always written together: set one without the other and
@@ -131,16 +140,39 @@ export function createCommandView(options: CommandOptions): CommandView {
     else unmarked.add(project.path);
   }
 
-  function run(): void {
+  // The command and the projects it covers, or null when there is nothing to run — an empty box, or
+  // every project unmarked. Both ways of running ask the same question, so neither can end up running
+  // in a project the other would have left out.
+  function pending(): { command: string; paths: string[] } | null {
     const command = input.value.trim();
-    if (command === '') return;
+    if (command === '') return null;
     const paths = currentProjects.map((project) => project.path).filter((path) => !unmarked.has(path));
-    if (paths.length === 0) return;
+    return paths.length === 0 ? null : { command, paths };
+  }
+
+  function run(): void {
+    const job = pending();
+    if (job === null) return;
+    const { command, paths } = job;
     running = true;
+    // The pane run's line goes: it described a different run, and leaving it up beside rows that are
+    // filling in now reads as this run's answer.
+    lastSend = '';
     // Last run's answers go as this one starts. A row showing yesterday's exit code beside four that
     // say `running` is a row you will read as this run's.
     for (const path of paths) results.delete(path);
     options.runTask(command, paths);
+    render();
+    options.onChanged();
+  }
+
+  // Into the shells instead. Nothing is marked as running here: once the line is typed the pane owns
+  // it, and this screen has no way to know when it finishes — that is the trade for being able to take
+  // over mid-run, which is the whole reason for this key.
+  function runInPanes(): void {
+    const job = pending();
+    if (job === null) return;
+    lastSend = sendSummary(options.runInPanes(job.command, job.paths));
     render();
     options.onChanged();
   }
@@ -241,13 +273,17 @@ export function createCommandView(options: CommandOptions): CommandView {
     render,
     statusLabel(): string {
       const project = selectedProject();
-      if (project === null) return `command · ${running ? 'running · ' : ''}${keyHint()}`;
+      if (project === null) {
+        const sent = lastSend === '' ? '' : ` · ${lastSend}`;
+        return `command · ${running ? 'running · ' : ''}${keyHint()}${sent}`;
+      }
       const marked = unmarked.has(project.path) ? 'not marked' : 'marked';
       return `${project.name} · ${marked} · ${taskSummary(resultFor(project.path))}`;
     },
     runAction(action: Action): void {
       if (action.kind === 'command-select') return move(action.direction);
       if (action.kind === 'command-open') return open();
+      if (action.kind === 'command-run-in-panes') return runInPanes();
       if (action.kind === 'command-cancel') return cancel();
     },
     update(result: TaskResult): void {

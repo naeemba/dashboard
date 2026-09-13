@@ -33,6 +33,7 @@ import {
 import { createManagerView, type ManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
 import { createCommandView, type CommandView } from './command-view';
+import { planSend, type SendPlan } from './free-pane';
 import { createSectionStrip, type SectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
@@ -533,6 +534,7 @@ function buildManagerPage(): Page {
       name: entry.project.name, path: entry.project.path,
     })),
     runTask: (text, paths) => bridge.runTask(text, paths),
+    runInPanes: (text, paths) => sendToPanes(text, paths),
     cancelTasks: () => bridge.cancelTasks(),
     binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
     onChanged: renderStatus,
@@ -786,6 +788,26 @@ function jumpToWorktree(entry: WorktreeEntry): string {
   if (!page) return `${entry.branch} is in a project that is not open`;
   goToPane(page.slot, entry.pane);
   return '';
+}
+
+// Typing the command screen's command into the shells themselves. That screen marks projects, so which
+// pane in each of them takes the line, and which projects can take it at all, is free-pane.ts's to
+// answer. terminal.input is the same door answerPane and a dropped file already go through, and the
+// carriage return is what an Enter in the pane sends.
+function sendToPanes(command: string, paths: readonly string[]): SendPlan {
+  const chosen = projectPages().filter((page) => paths.includes(page.project.path));
+  const plan = planSend(chosen.map((page) => ({
+    name: page.project.name,
+    path: page.project.path,
+    // The five shells, never the editor. It rings a bell like a pane and is listed like one, but a
+    // line of shell typed into nvim is not a command, it is an edit to whatever file is open.
+    panes: page.panes.map((pane) => ({
+      exited: pane.exited, busy: looksBusy(paneScreen(pane.terminal)),
+    })),
+  })));
+  const panesByPath = new Map(chosen.map((page) => [page.project.path, page.panes]));
+  for (const send of plan.sends) panesByPath.get(send.path)?.[send.pane]?.terminal.input(`${command}\r`);
+  return plan;
 }
 
 // Answering a pane from the manager, without going to it. terminal.input is the door a dropped file
