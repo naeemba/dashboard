@@ -98,11 +98,8 @@ export function isPrinted(line: string): boolean {
 }
 
 // Whether a pane wants something from you, which is every state but quiet. Read off ALERT_STATES so a
-// state added there is an alert everywhere at once. The rows are drawn two ways from this: a quiet
-// pane gets the one line it last printed, and a pane that wants something gets the block of five
-// instead, because the question is in them. Spell it again in the view and a third state added later
-// is quiet there and an alert here — it would lose its last line and grow a block nobody meant it to
-// have, with nothing failing.
+// state added there is an alert everywhere at once. Spell it again in the view and a third state added
+// later is quiet there and an alert here, with nothing failing.
 export function isAlerting(pane: PaneSummary): boolean {
   return ALERT_STATES.some((state) => state === pane.state);
 }

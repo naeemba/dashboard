@@ -82,11 +82,6 @@ export function createManagerView(options: ManagerOptions): ManagerView {
 
     // Read once, here, and only for a row that is being drawn: it comes off the live terminal, and the
     // panes of a project nobody has opened are not on screen to want it.
-    // A pane getting on with its work gets one line, not five: the last thing it printed, on the row
-    // beside its name, so thirty shells across five projects are still one screen. The panes that
-    // want something keep the block underneath — it is the only place the question can be read — and
-    // its last line is the same line this would print, so printing both would say it twice.
-    // One or the other, never both: the quiet row asks for its one line without the screen behind it.
     const tailLines = tailBlock(line.pane);
     const lastPrinted = document.createElement('span');
     lastPrinted.className = 'manager-last-printed';
