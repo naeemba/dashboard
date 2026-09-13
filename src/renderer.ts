@@ -3,70 +3,40 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import './worktrees.css';
-import { Terminal } from '@xterm/xterm';
-import type { ITheme } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees } from './worktree-view';
-import { createBoardView, type BoardView } from './board-view';
-import { quoteForShell } from './shell';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, terminalId } from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
-import { OVERLAY_SELECTOR } from './overlay';
-import {
-  isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames,
-} from './waiting';
+import { OVERLAY_SELECTOR, confirmOverlay } from './overlay';
+import { waitingNames } from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
 } from './manager';
-import { createManagerView, type ManagerView } from './manager-view';
+import { createManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
-import { createCommandView, type CommandView } from './command-view';
+import { createCommandView } from './command-view';
+import { closeRefusal } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
-import { paneLastLine, paneScreen, paneTail, paneUse, type Pane } from './pane';
-import { createSectionStrip, type SectionStrip } from './section-strip';
+import { paneLastLine, paneTail, paneUse, type Pane } from './pane';
+import { createPageBuilder, discardPanes, fitPanes, panesById, restylePanes, type Page } from './page';
+import { createSectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 
-// This file sits a few lines under the 600-line ceiling and is meant to stay there. The next feature
-// that needs room here splits the file first, and the seam is pane and terminal building: buildPane,
-// buildPage and the fit helpers move to their own module, leaving the page and session plumbing behind.
-// Add the lines instead and the ceiling is breached, and whoever did it finds out from a review comment
-// rather than from the file.
-
-// How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
-// its spinner again, short enough that a real question is on the tab strip before you look up.
-const BELL_SETTLE_MS = 1000;
-type Page = {
-  project: Project;
-  element: HTMLElement;
-  // Only the views this page actually has. A project has three; the manager has one; a dead project
-  // has none, and that is what stops the mode keys switching it to a view that was never built.
-  views: Partial<Record<Mode, HTMLElement>>;
-  mode: Mode;
-  panes: Pane[];
-  focused: number;
-  slot: number;
-  editor: Pane | null;
-  editorStarted: boolean;
-  board: BoardView | null;
-  // Only the manager page has one, the way only a project page has a board.
-  manager: ManagerView | null;
-  // Only the manager page has these two either — the strip above the sections and the screen one of
-  // them shows.
-  command: CommandView | null;
-  strip: SectionStrip | null;
-};
+// Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
+// is the seam it had named for itself. What is left is plumbing: which page is in front, what the
+// status bar says, what the session file holds, and where a key goes. The next feature that needs room
+// splits again, and the seam then is the group at the bottom that answers for panes somewhere else —
+// goToPane, jumpToWorktree, sendToPanes and answerPane.
 
 const bridge = window.dashboard;
 const isMac = bridge.platform === 'darwin';
@@ -90,10 +60,6 @@ function publishTheme(theme: Settings['theme']): void {
   }
 }
 publishTheme(settings.theme);
-
-function fontFamily(): string {
-  return `"${settings.font.name}", Menlo, Monaco, monospace`;
-}
 
 // Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
 document.documentElement.classList.toggle('mac', isMac);
@@ -122,7 +88,6 @@ function showError(owner: string, message: string): void {
 const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
-const panesById = new Map<string, Pane>();
 let activeIndex = 0;
 // Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
@@ -254,13 +219,7 @@ function saveSession(): void {
 // old colour until the next launch — visible only in the margin around the panes.
 function applyAppearance(): void {
   publishTheme(settings.theme);
-  for (const pane of panesById.values()) {
-    // A plain record of hex strings on the way in; xterm names the colours it knows. parseSettings
-    // has already dropped anything that is not one of them, so the shapes agree.
-    pane.terminal.options.theme = settings.theme as ITheme;
-    pane.terminal.options.fontFamily = fontFamily();
-    pane.terminal.options.fontSize = settings.font.size;
-  }
+  restylePanes(settings);
   // The cell size changes with the font, so every pane has to be measured again or the grid keeps the
   // old one and the last row is cut off.
   fitAllPages();
@@ -358,10 +317,6 @@ function fitAllPages(): void {
   }
 }
 
-function fitPanes(page: Page): void {
-  for (const pane of page.panes) pane.fit.fit();
-}
-
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
 // one. Two callers pass it. The restore needs it: it lands on a page nobody has visited yet this run,
 // so nvim has to start and the board has to be read, exactly as if you had just switched to it. A
@@ -380,112 +335,6 @@ function showPage(index: number, arriving = false): void {
   focusMode(pages[activeIndex], true);
 }
 
-function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFocus?: () => void): Pane {
-  const container = document.createElement('div');
-  container.className = 'pane';
-  view.append(container);
-
-  const terminal = new Terminal({
-    cursorBlink: true,
-    fontSize: settings.font.size,
-    fontFamily: fontFamily(),
-    theme: settings.theme as ITheme,
-    drawBoldTextInBrightColors: false,
-    // Option+key sends Esc+key, the way every terminal on macOS does. Without it xterm hands the pane
-    // the composed character instead — Option+L arrives as "Â¬", and nvim's <A-l> never fires. The
-    // cost is that Option no longer types accented characters into a pane.
-    macOptionIsMeta: true,
-  });
-  const fit = new FitAddon();
-  terminal.loadAddon(fit);
-  // A URL in the output underlines under the pointer and opens in the real browser when clicked; main
-  // decides what is safe to hand the operating system.
-  terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
-  terminal.open(container);
-
-  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet', lastPrintedAt: 0 };
-  terminal.onData((data) => {
-    if (!pane.exited) {
-      bridge.sendInput(id, data);
-      return;
-    }
-    if (data === '\r') {
-      pane.exited = false;
-      terminal.reset();
-      bridge.restart(id);
-      bridge.resize(id, terminal.cols, terminal.rows);
-    }
-  });
-  // Dropping files types their absolute paths at the prompt, quoted, the way a terminal is expected to
-  // take them. It goes through terminal.input so a dead pane ignores the drop like any other keystroke.
-  // The trailing space is what every terminal appends, so a second drop starts a new word instead of
-  // gluing itself onto the first path.
-  container.addEventListener('drop', (event) => {
-    const paths = [...event.dataTransfer?.files ?? []].map((file) => bridge.getPathForFile(file));
-    if (paths.length === 0) return;
-    terminal.focus();
-    terminal.input(`${paths.map((entry) => quoteForShell(entry, shellCommand)).join(' ')} `);
-  });
-  terminal.onResize(({ cols, rows }) => bridge.resize(id, cols, rows));
-  // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
-  // to listen for: no reading the output, no guessing from how long it has been quiet.
-  // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
-  // the document who has focus answers both "is this page in front" and "is this the focused pane" at
-  // once, and answers it right on the board, where no pane has the keyboard at all. What the states of
-  // the bell mean is waiting.ts's job; this only reads them and draws the answer.
-  // Where you are is asked at both ends of the wait, because you can move either way inside it: leave
-  // the pane in the second that follows, or arrive at it.
-  // What the bell meant is the part that has to wait — a moment later the screen says whether the
-  // agent asked you something or went back to work.
-  terminal.onBell(() => {
-    if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
-    // One verdict per wait, not one per ring. An agent can ring every second, and without this each
-    // ring leaves its own timer behind to read the whole screen again for the same answer.
-    if (pane.bellTimer !== undefined) return;
-    pane.bellTimer = window.setTimeout(() => {
-      pane.bellTimer = undefined;
-      // What counts as still working is waiting.ts's to answer; this hands it the screen.
-      if (looksBusy(paneScreen(terminal))) return;
-      // Asked again rather than reused from when the bell rang, the way the banner below is: you may
-      // have arrived at the pane inside the wait, and where you are now is what waiting.ts is being
-      // asked about.
-      if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
-      // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
-      // front and draws what it says.
-      const redraws = redrawsForBell(pane.bell, pages[activeIndex].mode === 'manager');
-      if (!isRinging(pane.bell)) pane.bell = 'waiting';
-      if (redraws) renderStatus();
-      // Read again rather than reused from above: the banner is only worth raising if the window is
-      // still behind something else now, which is when it would actually appear.
-      if (raisesNotification(document.hasFocus(), pane.bell)) {
-        pane.bell = 'notified';
-        bridge.notify(page.project.name, `${pane.name} is waiting`, id);
-      }
-    }, BELL_SETTLE_MS);
-  });
-  // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
-  // than in the focus handlers: this fires for every way in, including landing back on the pane the
-  // page already called focused, which the caller's onFocus deliberately ignores.
-  // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
-  // before it would save a session naming the pane you just left.
-  terminal.textarea?.addEventListener('focus', () => {
-    const wasRinging = isRinging(pane.bell);
-    pane.bell = 'quiet';
-    onFocus?.();
-    if (wasRinging) renderStatus();
-    // While the panes are zoomed the keyboard moving is the zoom moving: the pane arrived at has grown to
-    // the whole grid and the one left behind is back in its cell. xterm only tells the pty a new size
-    // when it is measured, so both have to be fit or the shell you just zoomed keeps drawing at the size
-    // of a sixth of the window. Here rather than in focusTerminal because this fires for every way in —
-    // a click on a pane never goes through focusTerminal at all, and neither does coming back from the
-    // board, which lands on the pane the page already called focused. The pane's own view is what is
-    // asked, so focusing the editor — built by this same function with the same page — does not refit
-    // the grid behind it: the nvim view never carries the class.
-    if (view.classList.contains('zoom')) fitPanes(page);
-  });
-  return pane;
-}
-
 // The one page with no folder behind it, so none of what buildPage makes: no shells and no editor. It
 // has two views — the list of what every project's panes want, and every project's board — and the
 // mode keys for the two it does not have do nothing here.
@@ -497,7 +346,7 @@ function buildManagerPage(): Page {
   // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
   element.className = 'page page-manager';
   const manager = createManagerView({
-    onJump: goToPane, onAnswer: answerPane, onChanged: renderStatus,
+    onJump: goToPane, onAnswer: answerPane, onClose: closeProject, onChanged: renderStatus,
   });
   const cards = createCardsView({
     bridge,
@@ -536,59 +385,20 @@ function buildManagerPage(): Page {
   return page;
 }
 
-function buildPage(project: Project, slot: number): Page {
-  const element = document.createElement('section');
-  element.className = 'page';
-  const views: Record<'terminals' | 'nvim' | 'board', HTMLElement> = {
-    terminals: document.createElement('div'),
-    nvim: document.createElement('div'),
-    board: document.createElement('div'),
-  };
-  for (const [mode, view] of Object.entries(views)) {
-    view.className = `view view-${mode}`;
-    view.hidden = mode !== 'terminals';
-  }
-  const page: Page = {
-    project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-    editorStarted: false, board: null, manager: null, command: null, strip: null,
-  };
-  // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
-  // is deleting the folder between the dialog closing and the existence check. Then you get this page
-  // instead of a blank one with no shells.
-  if (project.missing) {
-    element.classList.add('missing');
-    element.textContent = `Directory not found: ${project.path}`;
-    // A dead project has no views: there is nothing to run nvim in and nowhere to keep a board.
-    page.views = {};
-    return page;
-  }
-  element.append(...Object.values(views));
-  for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
-    const id = terminalId(slot, terminalIndex);
-    const pane = buildPane(views.terminals, id, page, paneLabel(terminalIndex), () => {
-      if (page.focused === terminalIndex) return;
-      page.focused = terminalIndex;
-      renderStatus();
-    });
-    page.panes.push(pane);
-    panesById.set(id, pane);
-  }
-  const editorId = terminalId(slot, EDITOR_INDEX);
-  page.editor = buildPane(views.nvim, editorId, page, 'nvim');
-  panesById.set(editorId, page.editor);
-  page.board = createBoardView({
-    projectPath: project.path,
-    slot,
-    bridge,
-    onChanged: renderStatus,
-    // A slot each, so one project's board never clears another one's failure.
-    onError: (message) => showError(`board:${slot}`, message),
-    onShipped: refreshWorktrees,
-    worktrees: () => worktrees,
-  });
-  views.board.append(page.board.element);
-  return page;
-}
+// The one page builder, handed the few things a pane needs from this file. Every one that can change
+// while the app runs is a function rather than a value — the settings and the shell do — so a pane built
+// an hour ago draws what is in force now. The bridge is the exception: it is the same object for the
+// life of the window.
+const buildPage = createPageBuilder({
+  bridge,
+  settings: () => settings,
+  shellCommand: () => shellCommand,
+  onChanged: () => renderStatus(),
+  onError: showError,
+  managerInFront: () => pages[activeIndex].mode === 'manager',
+  onShipped: () => refreshWorktrees(),
+  worktrees: () => worktrees,
+});
 
 // Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
 // live one once the folder exists. A replacement keeps the old page's position in the list.
@@ -602,6 +412,65 @@ function setPage(project: Project, slot: number): void {
   }
   pages[existing].element.replaceWith(page.element);
   pages[existing] = page;
+}
+
+// Asked twice — once before the question and once with the answer — so it is one function. What the
+// flags catch and what the sentence says are close-project.ts's; this only reads them off live panes.
+function closeRefusalFor(page: Page): string {
+  return closeRefusal(
+    page.project.name,
+    allPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
+  );
+}
+
+// Closing a project from the manager's list. Everything it takes is gone for good — five shells, the
+// editor, and whatever was running in them — so what can stop it, and the sentence saying so, are
+// close-project.ts's. A pane that has exited or is sitting at a prompt stops nothing, so the question
+// below is asked whether or not anything was in the way.
+// The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
+// pane id that named this project names nothing from here on.
+function closeProject(slot: number): void {
+  const position = positionOfSlot(slot);
+  const page = pages[position];
+  // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
+  // has already gone.
+  if (!page || !isProjectPage(page)) return;
+  const refusal = closeRefusalFor(page);
+  if (refusal !== '') return showError('close', refusal);
+  // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
+  // is: cancelling the dialog leaves no path back here to clear it.
+  showError('close', '');
+  // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
+  // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
+  // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
+  // twice; this takes five shells and an editor with no undo.
+  void confirmOverlay(
+    `Close ${page.project.name}?`,
+    'Enter closes it, its five shells and its editor. Escape keeps it.',
+  ).then((confirmed) => {
+    if (!confirmed) return;
+    // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
+    // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
+    // found afresh here.
+    const closingPosition = positionOfSlot(slot);
+    if (closingPosition === -1) return;
+    // Whatever page holds this slot is a project page, because the slot is the same one the check at
+    // the top answered for and isProjectPage reads nothing else.
+    const closingPage = pages[closingPosition];
+    // Read again with the page and for the same reason: the answer was given over a quiet project, and
+    // a pane that took an agent or a question while the dialog was up is one the close refuses over.
+    const late = closeRefusalFor(closingPage);
+    if (late !== '') return showError('close', late);
+    bridge.closeProject(slot);
+    discardPanes(slot);
+    closingPage.element.remove();
+    // activeIndex needs no adjusting: the manager holds the first tab and never moves off it, a project
+    // is always behind it, and this key is only heard on the manager — so what leaves the list is always
+    // behind the page you are looking at.
+    pages.splice(closingPosition, 1);
+    // The row leaves the list, the tab leaves the strip, and the session file is written without it.
+    renderStatus();
+  });
 }
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are

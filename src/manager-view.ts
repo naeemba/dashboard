@@ -1,7 +1,7 @@
 import type { Action } from './actions';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, takesAnswer,
+  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, slotOfLine, takesAnswer,
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
@@ -11,6 +11,9 @@ export type ManagerOptions = {
   onJump(slot: number, index: number): void;
   // One keystroke, straight to that pane's shell, without going there.
   onAnswer(slot: number, index: number, key: string): void;
+  // Closes the project holding that slot, or says why it cannot. The view picks the project; what
+  // closing costs, and what stops it, is the renderer's and close-project.ts's to answer.
+  onClose(slot: number): void;
   // Redraws the page. The rows are the renderer's, so the view asks for them back rather than keeping
   // its own copy; the status bar, which names what the selection is on, is redrawn by the same call.
   onChanged(): void;
@@ -251,6 +254,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);
       if (action.kind === 'manager-open') return open();
+      // A pane row closes its project, rather than doing nothing: the close key is aimed at a project
+      // and the panes on screen are that project's, so the key means the same thing wherever the
+      // highlight is inside the block. Which project a line belongs to is manager.ts's to answer.
+      if (action.kind === 'manager-close') {
+        const line = lines[selected];
+        if (line) options.onClose(slotOfLine(line));
+      }
     },
   };
 }

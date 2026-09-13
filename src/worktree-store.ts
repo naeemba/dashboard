@@ -102,6 +102,20 @@ export function livingEntries(
   return entries.filter((entry) => exists(entry.worktreePath));
 }
 
+// Records giving their pane up, because the shell it named is not there any more: every record at
+// launch, since no shell outlives the app, and one project's records when that project is closed. Both
+// are the same sentence about the same fact, so both ask this rather than each rewriting it.
+// A record with no pane is also the one ship that is allowed to run again, which is what hands the
+// worktree back: shipping the card once more gives the folder that is already there a fresh pane.
+export function withoutPanes(
+  entries: readonly WorktreeEntry[],
+  projectPath?: string,
+): WorktreeEntry[] {
+  return entries.map((entry) => (
+    projectPath === undefined || entry.projectPath === projectPath ? { ...entry, pane: null } : entry
+  ));
+}
+
 // The record giving a pane up, when a ship comes to take it. The project is half the address: pane
 // numbers are per project — terminalId scopes them and freePane counts within one slot — so a match
 // on the number alone hands one project's ship the record of a card working in another.
