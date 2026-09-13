@@ -414,6 +414,15 @@ function setPage(project: Project, slot: number): void {
   pages[existing] = page;
 }
 
+// Asked twice — once before the question and once with the answer — so it is one function. What the
+// flags catch and what the sentence says are close-project.ts's; this only reads them off live panes.
+function closeRefusalFor(page: Page): string {
+  return closeRefusal(
+    page.project.name,
+    allPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
+  );
+}
+
 // Closing a project from the manager's list. Everything it takes is gone for good — five shells, the
 // editor, and whatever was running in them — so what can stop it, and the sentence saying so, are
 // close-project.ts's. A pane that has exited or is sitting at a prompt stops nothing, so the question
@@ -426,11 +435,11 @@ function closeProject(slot: number): void {
   // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
   // has already gone.
   if (!page || !isProjectPage(page)) return;
-  const refusal = closeRefusal(
-    page.project.name,
-    allPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
-  );
+  const refusal = closeRefusalFor(page);
   if (refusal !== '') return showError('close', refusal);
+  // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
+  // is: cancelling the dialog leaves no path back here to clear it.
+  showError('close', '');
   // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
   // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
   // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
@@ -443,18 +452,22 @@ function closeProject(slot: number): void {
     // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
     // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
     // found afresh here.
-    const closing = positionOfSlot(slot);
-    if (closing === -1) return;
+    const closingPosition = positionOfSlot(slot);
+    if (closingPosition === -1) return;
+    // Whatever page holds this slot is a project page, because the slot is the same one the check at
+    // the top answered for and isProjectPage reads nothing else.
+    const closingPage = pages[closingPosition];
+    // Read again with the page and for the same reason: the answer was given over a quiet project, and
+    // a pane that took an agent or a question while the dialog was up is one the close refuses over.
+    const late = closeRefusalFor(closingPage);
+    if (late !== '') return showError('close', late);
     bridge.closeProject(slot);
     discardPanes(slot);
-    pages[closing].element.remove();
+    closingPage.element.remove();
     // activeIndex needs no adjusting: the manager holds the first tab and never moves off it, a project
     // is always behind it, and this key is only heard on the manager — so what leaves the list is always
     // behind the page you are looking at.
-    pages.splice(closing, 1);
-    // Clears its own message and nobody else's: a refusal you have since acted on must not sit in the
-    // status bar over the close that followed it.
-    showError('close', '');
+    pages.splice(closingPosition, 1);
     // The row leaves the list, the tab leaves the strip, and the session file is written without it.
     renderStatus();
   });
