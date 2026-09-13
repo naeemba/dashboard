@@ -1,7 +1,8 @@
 import type { Action } from './actions';
+import { clampIndex, heldIndex } from './clamp-index';
 import {
-  NOTHING_SELECTED, alertSummary, canOpen, lineKey, managerLines, nextSelection, selectedLine,
-  takesAnswer, type ManagerLine, type ManagerRow,
+  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, takesAnswer,
+  type ManagerLine, type ManagerRow,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
 
@@ -53,28 +54,42 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // index alone would slide the highlight onto a different pane between you reading it and pressing
   // Enter — so the next redraw finds the same line again wherever it has moved to.
   let selectedKey = '';
-  // Where an arrow starts from once the selection has been given up. Answering a pane empties it, and
-  // an empty selection is not a position — so the row that was answered is kept, and the arrows carry
-  // on from the gap it left rather than both landing on the first line of the list.
-  let answeredAt = 0;
-
   function paneLine(line: Extract<ManagerLine, { kind: 'pane' }>): HTMLElement {
     const item = document.createElement('li');
     item.className = 'manager-pane';
     const name = document.createElement('span');
     name.className = 'manager-name';
-    name.textContent = line.alert.name;
+    name.textContent = line.pane.name;
+
+    // Read once, here, and only for a row that is being drawn: it comes off the live terminal, and the
+    // panes of a project nobody has opened are not on screen to want it.
+    // A pane getting on with its work gets one line, not five: the last thing it printed, on the row
+    // beside its name, so thirty shells across five projects are still one screen. The panes that
+    // want something keep the block underneath — it is the only place the question can be read — and
+    // its last line is the same line this would print, so printing both would say it twice.
+    const alerting = isAlerting(line.pane);
+    const tailLines = line.pane.tail();
+    const lastPrinted = document.createElement('span');
+    lastPrinted.className = 'manager-last-printed';
+    lastPrinted.textContent = alerting ? '' : tailLines.at(-1) ?? '';
+
     const state = document.createElement('span');
-    state.className = `manager-state manager-${line.alert.state}`;
-    state.textContent = line.alert.state;
+    state.className = `manager-state manager-${line.pane.state}`;
+    state.textContent = line.pane.state;
+    // How long it has been since the pane printed anything, which is the half of the row worth
+    // reading: the text beside it can be a spinner redrawing the same line, but forty minutes is
+    // forty minutes. A pane that has printed nothing yet has no age and is given none.
+    const age = document.createElement('span');
+    age.className = 'manager-age';
+    age.textContent = paneAge(line.pane.lastPrintedAt);
 
     // What the pane has on screen, so the question can be read from here. A pane that has printed
     // nothing gets no empty block under it.
     const tail = document.createElement('pre');
     tail.className = 'manager-tail';
-    tail.textContent = line.alert.tail.join('\n');
-    tail.hidden = line.alert.tail.length === 0;
-    item.append(name, state, tail);
+    tail.textContent = tailLines.join('\n');
+    tail.hidden = !alerting || tailLines.length === 0;
+    item.append(name, lastPrinted, state, age, tail);
     return item;
   }
 
@@ -93,7 +108,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     name.textContent = line.row.name;
     const summary = document.createElement('span');
     summary.className = 'manager-summary';
-    summary.textContent = alertSummary(line.row.alerts);
+    summary.textContent = alertSummary(line.row.panes);
     item.append(marker, name, summary);
     return item;
   }
@@ -114,8 +129,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     selectedKey = lines[index] ? lineKey(lines[index]) : '';
   }
 
+  // The list does not wrap: holding Down stops on the last line rather than carrying you back to the
+  // first project, which would be a jump you did not ask for. Nothing is redrawn for the arrow that
+  // stops there — every row reads its pane's live screen as it is built, and rebuilding thirty of them
+  // to move the highlight nowhere is what a held key would do thirty times a second.
   function move(direction: 'up' | 'down'): void {
-    setSelection(nextSelection(selected, answeredAt, direction, lines.length));
+    const next = clampIndex(selected + (direction === 'down' ? 1 : -1), lines.length - 1);
+    if (next === selected) return;
+    setSelection(next);
     options.onChanged();
   }
 
@@ -124,7 +145,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   function open(): void {
     const line = lines[selected];
     if (!line) return;
-    if (line.kind === 'pane') return options.onJump(line.slot, line.alert.index);
+    if (line.kind === 'pane') return options.onJump(line.slot, line.pane.index);
     toggle(line.row);
     options.onChanged();
   }
@@ -136,20 +157,19 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   element.addEventListener('keydown', (event) => {
     if (!isBareCharacter(event)) return;
     const line = lines[selected];
-    if (!line || line.kind !== 'pane' || !takesAnswer(line.alert)) return;
+    if (!line || line.kind !== 'pane' || !takesAnswer(line.pane)) return;
     event.preventDefault();
-    // Nothing is selected once the key has gone: the row leaves the list as the bell comes off, and
-    // manager.ts says why the highlight does not follow it. An arrow picks a row again, from here.
-    answeredAt = selected;
-    setSelection(NOTHING_SELECTED);
-    options.onAnswer(line.slot, line.alert.index, event.key);
+    // The highlight stays on the pane that was answered: the bell comes off it, but the row does not
+    // go anywhere, so a second question from the same pane is answered without picking it again.
+    options.onAnswer(line.slot, line.pane.index, event.key);
   });
 
   return {
     element,
     render(rows: readonly ManagerRow[]): void {
       lines = managerLines(rows, opened);
-      setSelection(selectedLine(lines, selectedKey, selected));
+      // Back onto the line it was on, wherever a project opening its panes has pushed it to.
+      setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
       empty.hidden = rows.length > 0;
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
@@ -167,10 +187,11 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       const line = lines[selected];
       if (!line) return '';
       if (line.kind === 'pane') {
-        const answer = takesAnswer(line.alert) ? ' · type a character to answer it' : '';
-        return `${line.alert.name} · ${line.alert.state}${answer}`;
+        const answer = takesAnswer(line.pane) ? ' · type a character to answer it' : '';
+        const age = paneAge(line.pane.lastPrintedAt);
+        return `${line.pane.name} · ${line.pane.state}${age === '' ? '' : ` · ${age}`}${answer}`;
       }
-      return `${line.row.name} · ${alertSummary(line.row.alerts)}`;
+      return `${line.row.name} · ${alertSummary(line.row.panes)}`;
     },
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);

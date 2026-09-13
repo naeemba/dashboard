@@ -15,12 +15,14 @@ const UNITS: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
 // null when the text is not a date. A card's timestamps are whatever was in the file, and
 // .dashboard/CLAUDE.md invites hand-editing, so `"createdAt": "last tuesday"` has to say nothing
 // rather than draw "Invalid Date" on the card.
+// A number is taken as it is: what a pane last printed is timed by the clock in this process, never
+// written down and never read back, so there is nothing to parse and nothing that can fail to.
 // Built once. Constructing one of these negotiates the locale, which is far dearer than formatting
 // with it, and the board redraws every card on every keystroke.
 const FORMAT = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
-export function relativeAge(iso: string, now: number = Date.now()): string | null {
-  const then = Date.parse(iso);
+export function relativeAge(when: string | number, now: number = Date.now()): string | null {
+  const then = typeof when === 'number' ? when : Date.parse(when);
   if (Number.isNaN(then)) return null;
   const elapsed = now - then;
   for (const [unit, size] of UNITS) {

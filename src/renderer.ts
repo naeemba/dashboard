@@ -42,6 +42,10 @@ import { actionByName } from './actions';
 // not raise ten of them.
 // `bellTimer` is the one verdict a pane has pending on its own bell, held so a second ring inside the
 // wait joins it rather than starting another.
+// `lastPrintedAt` is when the pty last sent anything, which is what the manager prints an age from. It
+// is the arrival of the bytes, not a change in what they say: a spinner redrawing the same line keeps
+// the pane young, and that is the answer wanted — a pane drawing a spinner is not a pane nobody has
+// touched since this morning. Zero until the first byte, which is a pane that has printed nothing.
 type Pane = {
   terminal: Terminal;
   fit: FitAddon;
@@ -49,6 +53,7 @@ type Pane = {
   name: string;
   bell: Bell;
   bellTimer?: number;
+  lastPrintedAt: number;
 };
 
 // How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
@@ -398,7 +403,7 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
   terminal.loadAddon(new WebLinksAddon((_event, uri) => bridge.openExternal(uri)));
   terminal.open(container);
 
-  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet' };
+  const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet', lastPrintedAt: 0 };
   terminal.onData((data) => {
     if (!pane.exited) {
       bridge.sendInput(id, data);
@@ -769,7 +774,20 @@ function answerPane(slot: number, index: number, key: string): void {
   renderStatus();
 }
 
-bridge.onData((id, data) => panesById.get(id)?.terminal.write(data));
+bridge.onData((id, data) => {
+  const pane = panesById.get(id);
+  if (!pane) return;
+  pane.lastPrintedAt = Date.now();
+  pane.terminal.write(data);
+});
+
+// The manager's ages are the only thing on any screen that goes stale where it stands: every other
+// line is redrawn by whatever changed it, and a pane going quiet is nothing happening. Without this
+// you open the manager, read `just now` against a pane, and it still says `just now` an hour later.
+// Straight into renderStatus, which already draws the manager only when the manager is in front — a
+// second copy of that question here is one that could come to disagree with it.
+const AGE_REFRESH_MS = 30_000;
+window.setInterval(renderStatus, AGE_REFRESH_MS);
 bridge.onExit((id, exitCode) => {
   const pane = panesById.get(id);
   if (!pane) return;
