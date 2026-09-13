@@ -214,7 +214,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // pane's line on its neighbour. The lines themselves are taken, stale panes and all, because
       // the timestamps they hold are copies made when the row was last drawn.
       const fresh = managerLines(rows, opened);
-      if (fresh.map(lineKey).join('\n') !== lines.map(lineKey).join('\n')) return;
+      const sameRows = fresh.length === lines.length
+        && fresh.every((line, index) => lineKey(line) === lineKey(lines[index]));
+      if (!sameRows) return;
+      // Kept, so the status bar reads the selected pane's age off the same numbers the row shows.
       lines = fresh;
       lines.forEach((line, index) => {
         if (line.kind !== 'pane') return;
