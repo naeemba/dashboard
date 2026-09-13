@@ -269,6 +269,15 @@ function focusTerminal(index: number): void {
   renderStatus();
 }
 
+// Zooming is one class on the view; which pane it lands on is the CSS's to answer from what has the
+// keyboard. Nothing is remembered across a restart — the panes come back as the grid they are.
+// The fit is unconditional here, unlike the one above: on the way out of zoom the class is already
+// gone, and the pane that shrank still has to be told.
+function toggleZoom(page: Page): void {
+  page.views.terminals?.classList.toggle('zoom');
+  fitPanes(page);
+}
+
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
 // views to switch between and ignores the keys.
 // The mode and which view is on screen are one fact, so they only ever move together. Restoring a page
@@ -331,9 +340,13 @@ function positionOfSlot(slot: number | null): number {
 // Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
   for (const page of pages) {
-    for (const pane of page.panes) pane.fit.fit();
+    fitPanes(page);
     page.editor?.fit.fit();
   }
+}
+
+function fitPanes(page: Page): void {
+  for (const pane of page.panes) pane.fit.fit();
 }
 
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
@@ -447,6 +460,13 @@ function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFo
     pane.bell = 'quiet';
     onFocus?.();
     if (wasRinging) renderStatus();
+    // While the page is zoomed the keyboard moving is the zoom moving: the pane arrived at has grown to
+    // the whole grid and the one left behind is back in its cell. xterm only tells the pty a new size
+    // when it is measured, so both have to be fit or the shell you just zoomed keeps drawing at the size
+    // of a sixth of the window. Here rather than in focusTerminal because this fires for every way in —
+    // a click on a pane never goes through focusTerminal at all, and neither does coming back from the
+    // board, which lands on the pane the page already called focused.
+    if (page.views.terminals?.classList.contains('zoom')) fitPanes(page);
   });
   return pane;
 }
@@ -665,6 +685,7 @@ function apply(action: Action): void {
     case 'terminal-next': return focusTerminal(page.focused + 1);
     case 'terminal-previous': return focusTerminal(page.focused - 1);
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
+    case 'terminal-zoom': return toggleZoom(page);
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));

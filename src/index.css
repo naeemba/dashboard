@@ -616,6 +616,15 @@ textarea.board-edit {
 .pane:nth-child(-n + 2) { grid-column: span 3; }
 .pane:nth-child(n + 3) { grid-column: span 2; }
 
+/* Zoom: the view is marked, and the pane holding the keyboard takes every cell and covers the rest.
+   Written against :focus-within rather than a class on one pane, so the zoom follows the keyboard and
+   you can never be typing into a pane hidden under another one. The four underneath keep their cells
+   and so keep their size, which is why zooming resizes one shell and not five. */
+.view-terminals.zoom .pane:focus-within {
+  grid-area: 1 / 1 / -1 / -1;
+  z-index: 1;
+}
+
 .pane .xterm {
   height: 100%;
 }
