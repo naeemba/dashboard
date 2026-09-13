@@ -124,6 +124,9 @@ export function runBoardCommand(
 
   if (command === 'add') {
     const [title, ...flagArgs] = rest;
+    // A flag where the title should be is a typo, not a title. Without this `board add --help` writes a
+    // card called `--help` into a file the team commits, and answers as if you had meant it.
+    if (title !== undefined && title.startsWith('--')) return { ok: false, message: 'add needs a title before its flags' };
     // The same rule parseCard holds a hand-written card to: a card with no title is not a card, and
     // one written here would be dropped the next time the app read the file.
     if (!isTitle(title)) return { ok: false, message: 'add needs a title' };

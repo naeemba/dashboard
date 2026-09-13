@@ -73,6 +73,15 @@ describe('add', () => {
     expect(result.ok).toBe(true);
   });
 
+  // `board add --help` is an ordinary thing to try, and it was the one spelling of it that wrote: a
+  // card called `--help`, in Todo, in a file the team commits.
+  it('refuses a flag where the title should be', () => {
+    expect(run(emptyBoard(), 'add', '--help'))
+      .toEqual({ ok: false, message: 'add needs a title before its flags' });
+    expect(run(emptyBoard(), 'add', '--notes', 'why'))
+      .toEqual({ ok: false, message: 'add needs a title before its flags' });
+  });
+
   it('refuses a title that is only spaces, the way a hand-written card is dropped', () => {
     const result = run(emptyBoard(), 'add', '   ');
     expect(result).toEqual({ ok: false, message: 'add needs a title' });
