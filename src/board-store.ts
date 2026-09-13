@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-// The usage text is written once, in the command itself. Copied into here it would go stale the day a
+// The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
-import { USAGE } from './board-cli';
+import { USAGE } from './board-usage';
 import {
   DEFAULT_PRIORITY,
   emptyBoard,

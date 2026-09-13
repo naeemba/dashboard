@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { runBoardCommand, formatList, USAGE } from './board-cli';
+import { runBoardCommand, formatList } from './board-cli';
+import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from './board';
 
 // Ids are handed in rather than generated, so a test can name the card it just made.

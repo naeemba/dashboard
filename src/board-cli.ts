@@ -16,6 +16,7 @@ import {
   type Board,
   type Selection,
 } from './board';
+import { USAGE } from './board-usage';
 
 // Every decision the command line makes. The board it is handed and the board it answers with are
 // the app's own, through the app's own operations in board.ts — a card added here carries the same
@@ -30,15 +31,6 @@ import {
 export type CommandResult =
   | { ok: true; output: string; board: Board | null }
   | { ok: false; message: string };
-
-export const USAGE = `board — the Dashboard board of the project in the current directory
-
-  board list
-  board add <title> [--column <name>] [--priority <level>] [--notes <text>]
-  board move <id> <column>
-  board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
-
-Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field.`;
 
 // `--name value` and `--name=value` both, because an agent writing the command will use either and
 // refusing one of them is a refusal nobody can see coming. A flag repeated takes its last value.
