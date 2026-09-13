@@ -276,6 +276,16 @@ describe('reloadBoard', () => {
     expect(reloadBoard(start, board(['a'], [])).selection).toEqual({ column: 0, card: 0 });
   });
 
+  // Which is the case an open box has to survive: the row is kept, so the card under the selection
+  // is now the next one down. board-view.ts asks exactly this — is the card the selection landed on
+  // still the one the box was opened on — and throws the box away when it is not, rather than
+  // drawing it on the neighbour with your text still in it.
+  it('lands the selection on a different card when the one it was on is dropped', () => {
+    const start = state(board(['a', 'b', 'c'], []), { column: 0, card: 0 });
+    const next = reloadBoard(start, board(['b', 'c'], []));
+    expect(cardAt(next.board, next.selection)?.id).toBe('b');
+  });
+
   it('throws away the undo step, which belongs to a board that is gone', () => {
     const start = state(board(['a'], []), { column: 0, card: 0 });
     const edited = applyChange(start, renameCard(start.board, start.selection, 'changed'));

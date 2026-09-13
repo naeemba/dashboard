@@ -165,8 +165,13 @@ export function createBoardView(options: BoardOptions): BoardView {
     // has already followed your card to wherever the write put it. The redraw throws the box away and
     // builds a new one, so the text and the caret cross over by hand.
     if (fresh) editing = null;
+    const wasEditing = editingCardId();
     const carried = editing === null ? null : takeEditor();
     state = next;
+    // The box only goes back on the card it was opened on. A write that drops that card leaves the
+    // selection on the row it held, which is now the next card down — and a box drawn there would be
+    // that card's box with your text in it, so pressing Enter renames a card you never opened.
+    if (wasEditing !== undefined && cardAt(state.board, state.selection)?.id !== wasEditing) editing = null;
     options.onError(message);
     render();
     // The card you were typing into is not on the new board, so there is no box to put the text back
@@ -204,6 +209,13 @@ export function createBoardView(options: BoardOptions): BoardView {
   function editorInput(): HTMLInputElement | HTMLTextAreaElement | null {
     const input = element.querySelector('.board-edit');
     return input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement ? input : null;
+  }
+
+  // The card the open box belongs to, or undefined when no box is open. Both callers need it because
+  // a board that changes under a box has to put that box back on the same card, not on whatever row
+  // the selection is now pointing at.
+  function editingCardId(): string | undefined {
+    return editing === null ? undefined : cardAt(state.board, state.selection)?.id;
   }
 
   // What is in the open box right now, so a redraw underneath it can put it back. The blur handler
@@ -394,7 +406,12 @@ export function createBoardView(options: BoardOptions): BoardView {
       : `Delete "${card.title}" and its ${family} subtask${family === 1 ? '' : 's'}?`;
     confirmOverlay(question, 'Enter deletes. Escape keeps it.').then((confirmed) => {
       element.focus();
-      if (confirmed) change(deleteCardAndDescendants(state.board, state.selection));
+      if (!confirmed) return;
+      // Found again rather than remembered, the same as ship(): a write that lands while the question
+      // is up moves the card off the row it was on, and deleting the row would delete whatever slid
+      // into it — "Delete A?" taking B and B's whole family with it.
+      const at = selectionOf(state.board, card.id);
+      if (at) change(deleteCardAndDescendants(state.board, at));
     });
   }
 
@@ -418,7 +435,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the move it is riding on has just shifted the rows below it.
   function movedBack(landed: Selection, from: number): Change {
     const moved = moveCardToColumn(state.board, landed, from);
-    const editingId = editing === null ? undefined : cardAt(state.board, state.selection)?.id;
+    const editingId = editingCardId();
     if (editingId === undefined) return moved;
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
@@ -451,13 +468,12 @@ export function createBoardView(options: BoardOptions): BoardView {
   function openDetail(): void {
     if (!cardAt(state.board, state.selection)) return;
     openCardDetail({
-      board: state.board,
+      // The live board, not the one on screen when it opened: a write can land while the dialog is up,
+      // and a subtask added to the board from before it would put that board back over the write.
+      board: () => state.board,
       selection: state.selection,
       makeId: () => crypto.randomUUID(),
-      onChange: (next) => {
-        change(next);
-        return state.board;
-      },
+      onChange: change,
     }).then((selection) => {
       state = { ...state, selection };
       element.focus();

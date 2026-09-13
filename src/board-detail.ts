@@ -16,16 +16,19 @@ import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 export type CardDetailOptions = {
-  board: Board;
-  // The card to open.
+  // The board as it is now, asked for again on every read. The dialog keeps no copy: something else
+  // can write the file while it is up — the command line, or a hand edit — and a change built on the
+  // board from before that write puts that whole board back when it is applied. An agent's card
+  // would be printed with a real id and then quietly dropped when you added a subtask.
+  board(): Board;
+  // The row the card was on when the dialog opened. The card itself is followed by id from here on,
+  // since a write that lands can shift it to another row or another column.
   selection: Selection;
   makeId(): string;
   // Adding a child changes the board, and the board is written to disk on every change everywhere
   // else — so the dialog hands each change straight out rather than batching them until it closes.
-  // The board that comes back is the one the dialog keeps drawing from, so this must apply the change
-  // and return the result synchronously. Return the board from before the change and the next subtask
-  // is built on a board missing this one.
-  onChange(change: Change): Board;
+  // This must apply the change before it returns, or the next read sees the board from before it.
+  onChange(change: Change): void;
 };
 
 // The line under the card's title: what it is, what it belongs to, what it is in flight as, and how
@@ -52,7 +55,7 @@ export function cardMeta(board: Board, card: Card, now?: number): string {
 // pressed Enter on.
 export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
   return new Promise<Selection>((resolve) => {
-    let board = options.board;
+    const openedId = cardAt(options.board(), options.selection)?.id;
     // A row in the children list, not a Selection — these are positions in this list, not on the
     // board. Clamped into range on every render, so it reads as 0 on a card with no children.
     let highlighted = 0;
@@ -63,11 +66,18 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       resolve(selection);
     }
 
-    const { dialog, remove } = openOverlay('card-detail', () => close(options.selection));
+    // Where the highlight goes when this closes: the card it was opened on, wherever a write has
+    // moved it to since. The row it was opened on is the fallback, for a card no longer there.
+    function openedAt(board: Board): Selection {
+      return (openedId === undefined ? null : selectionOf(board, openedId)) ?? options.selection;
+    }
+
+    const { dialog, remove } = openOverlay('card-detail', () => close(openedAt(options.board())));
 
     function render(): void {
-      const card = cardAt(board, options.selection);
-      if (!card) return close(options.selection);
+      const board = options.board();
+      const card = openedId === undefined ? undefined : cardById(board, openedId);
+      if (!card) return close(openedAt(board));
       const children = childrenOf(board, card.id);
       highlighted = clampIndex(highlighted, children.length - 1);
 
@@ -127,12 +137,13 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           // An empty title adds nothing, the same way a blank card is dropped on the board.
           if (event.key === 'Enter' && title !== '') {
             const id = options.makeId();
-            board = options.onChange(addChildCard(board, options.selection, id, title));
+            // Built on the board as it is at this keystroke, not on one taken when the dialog opened.
+            const before = options.board();
+            options.onChange(addChildCard(before, openedAt(before), id, title));
             // childrenOf orders by column, not by when a card was added, and addChildCard puts the new
             // card in the parent's column rather than at the end of this list — so the new card's row
             // has to be found by id, the same as any other lookup here, clamped rather than trusted.
-            const newRow = childrenOf(board, cardAt(board, options.selection)?.id ?? '')
-              .findIndex((child) => child.id === id);
+            const newRow = childrenOf(options.board(), openedId ?? '').findIndex((child) => child.id === id);
             highlighted = Math.max(0, newRow);
           }
           render();
@@ -165,12 +176,13 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
       // Nothing else claims a modified key here: renderer.ts hands every key typed inside
       // .card-detail to this dialog, so without this Ctrl+N opens the subtask box instead of nvim.
       if (isModified(event)) return;
-      const card = cardAt(board, options.selection);
+      const board = options.board();
+      const card = openedId === undefined ? undefined : cardById(board, openedId);
       const children = card ? childrenOf(board, card.id) : [];
       switch (event.key) {
         case 'Escape':
           event.preventDefault();
-          return close(options.selection);
+          return close(openedAt(board));
         case 'ArrowDown':
           event.preventDefault();
           highlighted = clampIndex(highlighted + 1, children.length - 1);
@@ -183,7 +195,7 @@ export function openCardDetail(options: CardDetailOptions): Promise<Selection> {
           event.preventDefault();
           const child = children[highlighted];
           if (!child) return;
-          return close(selectionOf(board, child.id) ?? options.selection);
+          return close(selectionOf(board, child.id) ?? openedAt(board));
         }
         case 'n':
           event.preventDefault();
