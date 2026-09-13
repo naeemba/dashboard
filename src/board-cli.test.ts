@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runBoardCommand, formatList } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from './board';
@@ -181,13 +181,22 @@ describe('set', () => {
     expect(run(board, 'set', id)).toEqual({ ok: false, message: 'set needs something to set' });
   });
 
+  // The clock is held still and then moved on, or both stamps land in the same millisecond and the
+  // last assertion passes for a card `set` never aged.
   it('moves updatedAt and leaves createdAt alone', () => {
-    const { board, id } = withCard();
-    const before = cardById(board, id);
-    const next = boardAfter(board, 'set', id, '--priority', 'low');
-    const after = cardById(next, id);
-    expect(after?.createdAt).toBe(before?.createdAt);
-    expect(after?.updatedAt).not.toBe(undefined);
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-01-04T10:00:00.000Z'));
+      const { board, id } = withCard();
+      const before = cardById(board, id);
+      vi.setSystemTime(new Date('2026-03-04T10:00:00.000Z'));
+      const next = boardAfter(board, 'set', id, '--priority', 'low');
+      const after = cardById(next, id);
+      expect(after?.createdAt).toBe(before?.createdAt);
+      expect(after?.updatedAt).not.toBe(before?.updatedAt);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
