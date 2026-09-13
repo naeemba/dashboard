@@ -128,12 +128,6 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "2a7184b1-5400-42ce-9a48-8e7850f1e467",
-          "title": "Remove a project from the open projects",
-          "notes": "A key on the manager list closes the selected project: its page and five shells go away and it leaves the session. Refuse, and say so, while a pane in it is still running something.",
-          "priority": "medium"
         }
       ]
     },
@@ -378,6 +372,14 @@
           "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
           "branch": "send-one-command-to-many-panes",
           "pullRequest": 30
+        },
+        {
+          "id": "2a7184b1-5400-42ce-9a48-8e7850f1e467",
+          "title": "Remove a project from the open projects",
+          "notes": "Shipped in PR #32. Cmd+W on the manager's list, Ctrl+W elsewhere, closes the project the highlight is on — from a pane row too, since those panes are that project's. The page leaves the tab strip, the five shells and the editor are killed, and the session file is written without it.\n\nIt refuses while a pane has an agent working or a question waiting, and names the panes in the way. close-project.ts decides that and words it, and asks paneIsFree — the same predicate the command screen picks a pane by, so a pane that screen will not type into is one this will not kill without asking. What it cannot see is a dev server, a tail or vim, which read as idle here exactly as they do on the command screen; the help blurb says so rather than letting the key promise more.\n\nA closed slot is emptied rather than spliced out and is never given to another project: every pane is named by its slot. The worktree records naming a pane in it give that pane up, the way the launch clears every pane on read, or the card stays in flight with nothing running to finish it. A ship whose git half is still going when the project closes refuses rather than starting an agent in a pane no page has.\n\nrenderer.ts was at 597 code lines against the 600 ceiling, so this split first along the seam that file had named: src/page.ts holds the Page type, pane and page building, the map of panes by terminal id and the restyle. renderer.ts is 480 code lines, page.ts is 178.\n\nNot done, deliberately: main cannot refuse the close while a card's ship is mid-git — it is a send with no answer — so that case comes back as a message afterwards instead.\n\nhttps://github.com/naeemba/dashboard/pull/32",
+          "priority": "medium",
+          "branch": "remove-a-project",
+          "pullRequest": 32
         }
       ]
     }
