@@ -55,15 +55,18 @@ export type PaneState = typeof ALERT_STATES[number] | 'quiet';
 // `index` is the pane's place in its project's panes with the editor last, which is the number
 // focusTerminal and modeOfPane already take. Carrying it means a row can be jumped to without anyone
 // translating it back. `lastPrintedAt` is when the pane last printed anything.
-// `tail` is the last few lines it printed, and stays a function the whole way to the row that draws
-// it: every pane is on the list now, but only the panes of an opened project are on screen, so reading
-// them here would lay out thirty screens on every keystroke to print none of them.
+// `tail` is the last few lines it printed and `lastPrinted` is only the last of them, both functions
+// the whole way to the row that draws them: every pane is on the list now, but only the panes of an
+// opened project are on screen, so reading them here would lay out thirty screens on every keystroke
+// to print none of them. Two accessors rather than one because a row asks for one or the other, never
+// both — and a whole screen laid out to keep one line of it is what the quiet rows would each pay.
 export type PaneSummary = {
   index: number;
   name: string;
   state: PaneState;
   lastPrintedAt: number;
   tail(): string[];
+  lastPrinted(): string;
 };
 
 // How long ago the pane last printed, in words. Empty for a pane that has printed nothing at all: a
@@ -111,10 +114,11 @@ export type ManagerRow = { slot: number; name: string; panes: PaneSummary[] };
 type ManagerPage = {
   project: { name: string };
   slot: number;
-  // `tail` is a function because the answer comes off a live terminal: the row asks for it at the
-  // moment it draws, so no copy of a pane's screen is kept anywhere to go stale.
+  // `tail` and `lastPrinted` are functions because the answer comes off a live terminal: the row asks
+  // for it at the moment it draws, so no copy of a pane's screen is kept anywhere to go stale.
   panes: readonly {
-    name: string; bell: Bell; exited: boolean; lastPrintedAt: number; tail(): string[];
+    name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+    tail(): string[]; lastPrinted(): string;
   }[];
 };
 
@@ -139,6 +143,7 @@ export function managerRows(pages: readonly ManagerPage[]): ManagerRow[] {
       state: paneState(pane),
       lastPrintedAt: pane.lastPrintedAt,
       tail: () => pane.tail(),
+      lastPrinted: () => pane.lastPrinted(),
     })),
   }));
 }
@@ -171,8 +176,9 @@ export function canOpen(row: ManagerRow): boolean {
 
 // The rows flattened to what is actually on screen, which is what the selection counts and what Enter
 // acts on. A project with no panes at all is drawn shut whatever `open` says, because there is nothing
-// to put under it — but it is still in the set, so a project you opened and never shut comes back open
-// by itself if it is ever opened again. That is the point: a row you asked to see stays asked for.
+// to put under it — but it is still in the set, so a project whose shells come back draws itself open
+// again: a project reopened over a folder that had gone away is rebuilt into the slot it had, and the
+// set is keyed by slot. That is the point: a row you asked to see stays asked for.
 export function managerLines(rows: readonly ManagerRow[], open: ReadonlySet<number>): ManagerLine[] {
   return rows.flatMap((row): ManagerLine[] => {
     const isOpen = open.has(row.slot) && canOpen(row);

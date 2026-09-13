@@ -21,6 +21,8 @@ export type ManagerView = {
   // The rows are read from the renderer's pages, which are the live ones — the page holds none of its
   // own, so a bell that arrives while you are looking at it shows up on the next redraw.
   render(rows: readonly ManagerRow[]): void;
+  // The timer's redraw, which has nothing new to say about a row but how long ago its pane printed.
+  refreshAges(rows: readonly ManagerRow[]): void;
   statusLabel(): string;
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
   // board has, and for the same reason: one place decides what every key on every screen does.
@@ -67,11 +69,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // beside its name, so thirty shells across five projects are still one screen. The panes that
     // want something keep the block underneath — it is the only place the question can be read — and
     // its last line is the same line this would print, so printing both would say it twice.
+    // One or the other, never both: the quiet row asks for its one line without the screen behind it.
     const alerting = isAlerting(line.pane);
-    const tailLines = line.pane.tail();
+    const tailLines = alerting ? line.pane.tail() : [];
     const lastPrinted = document.createElement('span');
     lastPrinted.className = 'manager-last-printed';
-    lastPrinted.textContent = alerting ? '' : tailLines.at(-1) ?? '';
+    lastPrinted.textContent = alerting ? '' : line.pane.lastPrinted();
 
     const state = document.createElement('span');
     state.className = `manager-state manager-${line.pane.state}`;
@@ -88,7 +91,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const tail = document.createElement('pre');
     tail.className = 'manager-tail';
     tail.textContent = tailLines.join('\n');
-    tail.hidden = !alerting || tailLines.length === 0;
+    tail.hidden = tailLines.length === 0;
     item.append(name, lastPrinted, state, age, tail);
     return item;
   }
@@ -129,6 +132,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     selectedKey = lines[index] ? lineKey(lines[index]) : '';
   }
 
+  // The rows flattened to the lines on screen, with the highlight put back onto the line it was on
+  // wherever a project opening its panes has pushed it to. Both redraws start here, so neither can
+  // leave the selection naming one row while it sits on another.
+  function relayout(rows: readonly ManagerRow[]): void {
+    lines = managerLines(rows, opened);
+    setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
+  }
+
   // The list does not wrap: holding Down stops on the last line rather than carrying you back to the
   // first project, which would be a jump you did not ask for. Nothing is redrawn for the arrow that
   // stops there — every row reads its pane's live screen as it is built, and rebuilding thirty of them
@@ -167,9 +178,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   return {
     element,
     render(rows: readonly ManagerRow[]): void {
-      lines = managerLines(rows, opened);
-      // Back onto the line it was on, wherever a project opening its panes has pushed it to.
-      setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
+      relayout(rows);
       empty.hidden = rows.length > 0;
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
@@ -182,6 +191,18 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         return item;
       }));
       list.children[selected]?.scrollIntoView({ block: 'nearest' });
+    },
+    // Every thirty seconds, so the ages do not freeze where they stand. Only the age spans are
+    // rewritten: nothing else on a row can have changed without a redraw of its own, and rebuilding
+    // the list to change one word would scroll it back to the highlight and throw away the line you
+    // had selected to copy out — under someone who is sitting there reading it.
+    refreshAges(rows: readonly ManagerRow[]): void {
+      relayout(rows);
+      lines.forEach((line, index) => {
+        if (line.kind !== 'pane') return;
+        const age = list.children[index]?.querySelector('.manager-age');
+        if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
+      });
     },
     statusLabel(): string {
       const line = lines[selected];

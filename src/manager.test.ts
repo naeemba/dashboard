@@ -5,12 +5,20 @@ import {
 } from './manager';
 import type { Bell } from './waiting';
 
-// The rows carry `tail` as a function, so it is called before a row is compared with one written out.
-const drawn = (panes: readonly PaneSummary[]) => panes.map((pane) => ({ ...pane, tail: pane.tail() }));
+// The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
+// with one written out.
+const drawn = (panes: readonly PaneSummary[]) => panes.map((pane) => (
+  { ...pane, tail: pane.tail(), lastPrinted: pane.lastPrinted() }
+));
 
-const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary => (
-  { index: 0, name: 'terminal 1', state, lastPrintedAt: 0, tail: () => tail }
-);
+const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary => ({
+  index: 0,
+  name: 'terminal 1',
+  state,
+  lastPrintedAt: 0,
+  tail: () => tail,
+  lastPrinted: () => tail.at(-1) ?? '',
+});
 
 describe('isProjectPage', () => {
   it('says the manager is not one, so it never moves and is never saved', () => {
@@ -51,18 +59,21 @@ describe('landingPosition', () => {
 describe('managerRows', () => {
   const page = (
     name: string, slot: number,
-    panes: { name: string; bell: Bell; exited: boolean; lastPrintedAt: number; tail(): string[] }[],
+    panes: {
+      name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+      tail(): string[]; lastPrinted(): string;
+    }[],
   ) => ({ project: { name }, slot, panes });
   const pane = (
     name: string, bell: Bell = 'quiet', exited = false, tail: string[] = [], lastPrintedAt = 0,
-  ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail });
+  ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });
 
   it('gives a project one row with every pane on it, whatever they are doing', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
     expect(rows.map((row) => ({ slot: row.slot, name: row.name }))).toEqual([{ slot: 3, name: 'api' }]);
     expect(drawn(rows[0].panes)).toEqual([
-      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrintedAt: 0 },
-      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrintedAt: 0 },
+      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0 },
+      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0 },
     ]);
   });
 
@@ -81,7 +92,10 @@ describe('managerRows', () => {
   it('carries what each pane printed and when, so the row can say how long ago', () => {
     const rows = managerRows([page('api', 0, [pane('terminal 1', 'quiet', false, ['ok'], 1_000)])]);
     expect(drawn(rows[0].panes)).toEqual([
-      { index: 0, name: 'terminal 1', state: 'quiet', tail: ['ok'], lastPrintedAt: 1_000 },
+      {
+        index: 0, name: 'terminal 1', state: 'quiet', tail: ['ok'], lastPrinted: 'ok',
+        lastPrintedAt: 1_000,
+      },
     ]);
   });
 
@@ -98,11 +112,16 @@ describe('managerRows', () => {
         reads += 1;
         return [];
       },
+      lastPrinted: () => {
+        reads += 1;
+        return '';
+      },
     };
     const rows = managerRows([page('api', 0, [counted])]);
     expect(reads).toBe(0);
     rows[0].panes[0].tail();
-    expect(reads).toBe(1);
+    rows[0].panes[0].lastPrinted();
+    expect(reads).toBe(2);
   });
 
   it('calls a pane that died while it was asking dead, since restarting it is what it needs', () => {

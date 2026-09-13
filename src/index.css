@@ -208,6 +208,17 @@ body *:not(.pane, .pane *) {
   max-width: 70ch;
 }
 
+/* Wider than the prose above it and than the command list, because a pane row is a table and not a
+   sentence: a name, the line the pane last printed, a state and an age. At 70ch the fixed parts eat
+   about half the row and the line you came to read is cut at `Running 12 of 47 tests in src/bo…`.
+   The whole list rather than the pane rows alone — every row's far end is one column, and a project
+   row stopping short of it would highlight to a different width than the panes under it. Still
+   capped rather than let loose: on a wide screen an uncapped row puts the state an arm's length from
+   the name it belongs to. */
+.manager-list {
+  max-width: 120ch;
+}
+
 .manager-list li,
 .command-list li {
   display: flex;
@@ -245,11 +256,11 @@ body *:not(.pane, .pane *) {
 
 /* The pane's last few lines, kept for the panes that want something: a pane getting on with its work
    says what it last printed on the row itself. Indented past its name and as quiet as the summary
-   beside it: the name and the state are what you are reading, the tail is what the pane is saying. It takes a whole line
-   of its own by wrapping onto one — the row is still the flex line every other row is, so the state
-   keeps its place at the far end instead of being pushed off by a block of output. Wrapped rather
-   than clipped, because the end of the line is where the question mark is. The command list's own
-   rows carry the same tail under the same reasoning. */
+   beside it: the name and the state are what you are reading, the tail is what the pane is saying.
+   It takes a whole line of its own by wrapping onto one — the row is still the flex line every other
+   row is, so the state keeps its place at the far end instead of being pushed off by a block of
+   output. Wrapped rather than clipped, because the end of the line is where the question mark is.
+   The command list's own rows carry the same tail under the same reasoning. */
 .manager-pane,
 .command-project {
   flex-wrap: wrap;
