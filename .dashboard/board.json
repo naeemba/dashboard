@@ -140,13 +140,6 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "f1b344b2-59bf-4349-b410-63177f61c3a2",
-          "title": "Send one command to many panes",
-          "notes": "Mark projects on the command screen, type a command once, and it runs in a free pane of each of them. `git pull` in five repos for one keystroke.\n\nProjects, not panes. The screen already marks projects and already runs a command in each of them as a background process, collecting the exit code. This is the same screen and the same marks, run a second way: into a real shell, where the command has history and you can take over mid-run.\n\nBoth ways stay, on two keys. Some commands you want the answer to -- npm audit across five repos reads better as five rows than five shells. Some you want to be in.\n\nA free pane is one that has not exited and is not mid-run, which looksBusy already answers off the screen. A project whose panes are all busy is skipped and named in the status bar, so the run never types into an agent's input box and never silently does nothing.",
-          "priority": "medium",
-          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10"
         }
       ]
     },
@@ -374,6 +367,15 @@
           "notes": "Shipped. src/clamp-index.ts holds one clampIndex(value, lastIndex) beside one test, and every list in the app reads it: board.ts, board-detail.ts (both the redraw and the arrow keys), manager.ts, manager-view.ts, picker.ts and board-state.ts. The three copies the issue named plus three more found on the way - picker.ts and board-state.ts were the same shape as the others and now read the same, and the card detail dialog wrote the two halves by hand a hundred lines below the copy it shared. The guards that only fed the old clamp are gone too: lastRow and deleteCard no longer floor a number their callers already floor. The \u201clists here do not wrap\u201d sentence moved onto move() in manager-view.ts, which decides it. Issue: https://github.com/naeemba/dashboard/issues/19 PR: https://github.com/naeemba/dashboard/pull/20",
           "priority": "low",
           "updatedAt": "2026-09-08T11:16:25.893760Z"
+        },
+        {
+          "id": "f1b344b2-59bf-4349-b410-63177f61c3a2",
+          "title": "Send one command to many panes",
+          "notes": "Mark projects on the command screen, type a command once, and it runs in a free pane of each of them. `git pull` in five repos for one keystroke.\n\nProjects, not panes. The screen already marks projects and already runs a command in each of them as a background process, collecting the exit code. This is the same screen and the same marks, run a second way: into a real shell, where the command has history and you can take over mid-run.\n\nBoth ways stay, on two keys. Some commands you want the answer to -- npm audit across five repos reads better as five rows than five shells. Some you want to be in.\n\nA free pane is one that has not exited and is not mid-run, which looksBusy already answers off the screen. A project whose panes are all busy is skipped and named in the status bar, so the run never types into an agent's input box and never silently does nothing.\n\nShipped in PR #30. Cmd+Enter on the command screen types the command into one free pane of each marked project; Enter still runs it as a process per project and collects the exit codes. free-pane.ts picks the pane and words the summary, looksBusy keeps the line out of an agent mid-answer, and a project with no free pane is named in the status bar.",
+          "priority": "medium",
+          "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "branch": "send-one-command-to-many-panes",
+          "pullRequest": 30
         }
       ]
     }
