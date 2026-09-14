@@ -34,7 +34,11 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Going to the pane clears it. A bell is checked a second later against what the pane has on '
     + 'screen, so an agent that rings on its way past something and keeps working is left alone.',
   nvim: 'One nvim filling the window. It starts the first time you press the nvim key for this '
-    + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again.',
+    + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again. '
+    + 'The scrollback key on the terminals screen sends the pane you are looking at here as a file in '
+    + 'a new tab, so an agent transcript can be searched and yanked with real editor tools. It arrives '
+    + 'whatever you were editing, unsaved changes and all, and it is a copy: editing it changes '
+    + 'nothing in the pane it came from.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
     + 'straight to disk, so there is no save key and undo is the only way back. The file is re-read '
     + 'each time you enter the board, and again while you are looking at it if something else writes '

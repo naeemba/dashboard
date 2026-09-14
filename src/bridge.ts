@@ -28,6 +28,11 @@ export type DashboardBridge = {
   notify(title: string, body: string, paneId: string): void;
   // A click on that banner, coming back with the id it was raised for.
   onNotificationClick(listener: (paneId: string) => void): void;
+  // Ctrl+`: the focused pane's scrollback, on its way to the project's nvim. The text travels rather
+  // than the pane's id, because only the renderer has the buffer — main has the pty, which is the
+  // bytes going past, not the screen they built. Answers with what to put in the status
+  // bar when nvim could not be reached, empty when it was.
+  openScrollback(slot: number, text: string): Promise<string>;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;

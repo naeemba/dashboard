@@ -57,8 +57,13 @@ export function quoteForShell(value: string, shellCommand: string): string {
 // costs about three quarters of a second, paid once when you first press Ctrl+N for a project, not per
 // keystroke. `exec` leaves nvim as the pane's only process rather than parking a shell above it for as
 // long as the pane is open.
-export function editorArguments(shellCommand: string): string[] {
-  return isPowerShell(shellCommand) ? ['-Command', 'nvim'] : ['-lic', 'exec nvim'];
+//
+// `--listen` is how anything else reaches this nvim once it is up: Ctrl+` sends the focused pane's
+// scrollback to it over that socket. nvim creates the socket as it starts, well before its plugins
+// finish, so the wait is the shell's startup and nothing more.
+export function editorArguments(shellCommand: string, socket: string): string[] {
+  const command = `nvim --listen ${quoteForShell(socket, shellCommand)}`;
+  return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', `exec ${command}`];
 }
 
 // The agent pane runs `claude` through the same shell the editor pane runs nvim through, and for the

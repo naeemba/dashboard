@@ -62,13 +62,21 @@ describe('editorArguments', () => {
   // version managers the terminal panes already have. Spawn nvim directly and the pane dies with an exit
   // code instead of opening an editor; drop -i and its language servers cannot find node.
   it('runs nvim through a login interactive POSIX shell', () => {
-    expect(editorArguments('/bin/zsh')).toEqual(['-lic', 'exec nvim']);
-    expect(editorArguments('/opt/homebrew/bin/fish')).toEqual(['-lic', 'exec nvim']);
+    expect(editorArguments('/bin/zsh', '/tmp/one.sock')).toEqual(['-lic', 'exec nvim --listen /tmp/one.sock']);
+    expect(editorArguments('/opt/homebrew/bin/fish', '/tmp/one.sock')).toEqual(['-lic', 'exec nvim --listen /tmp/one.sock']);
   });
 
   it('uses the PowerShell spelling for PowerShell', () => {
-    expect(editorArguments('powershell.exe')).toEqual(['-Command', 'nvim']);
-    expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe')).toEqual(['-Command', 'nvim']);
+    expect(editorArguments('powershell.exe', '/tmp/one.sock')).toEqual(['-Command', 'nvim --listen /tmp/one.sock']);
+    expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe', '/tmp/one.sock')).toEqual(['-Command', 'nvim --listen /tmp/one.sock']);
+  });
+
+  // The socket sits under the app's own temp folder, and on Windows that path holds the user's name —
+  // which can have a space in it. Unquoted, nvim is told to listen on the half before the space and the
+  // pane dies on the rest.
+  it('quotes a socket path with a space in it', () => {
+    expect(editorArguments('/bin/zsh', '/tmp/my sockets/one.sock'))
+      .toEqual(['-lic', "exec nvim --listen '/tmp/my sockets/one.sock'"]);
   });
 });
 

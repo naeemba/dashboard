@@ -22,6 +22,7 @@ export type Action =
   | { kind: 'terminal-move'; direction: Direction }
   | { kind: 'terminal-input'; data: string }
   | { kind: 'terminal-zoom' }
+  | { kind: 'terminal-scrollback' }
   | { kind: 'board-select'; direction: Direction }
   | { kind: 'board-move'; direction: Direction }
   | { kind: 'board-attach' }
@@ -233,6 +234,16 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'terminal-zoom', description: 'Zoom the pane to fill the page, and back',
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-zoom' }, mac: 'Alt+F', other: 'Alt+F',
+  },
+  // Ctrl+` costs the pane nothing, which is why it is a Ctrl key in a group of Alt ones. xterm makes a
+  // control character for A-Z, space, 3-8 and the three bracket keys and for nothing else, so Ctrl with
+  // a backquote already reaches the shell as no bytes at all — unlike Alt with a letter, which arrives
+  // as an escape sequence something in the pane may want. macOS does not want it either: the only
+  // system hotkey on that key is Cmd+`, which moves between an app's windows.
+  {
+    name: 'terminal-scrollback', description: "Open this pane's scrollback in nvim",
+    group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-scrollback' }, mac: 'Ctrl+`', other: 'Ctrl+`',
   },
   ...DIRECTIONS.map((direction): ActionEntry => ({
     name: `board-select-${direction}`, description: `Move the selection ${direction}`,

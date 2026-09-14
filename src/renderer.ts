@@ -27,7 +27,7 @@ import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
 import { closeRefusal } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
-import { paneLastLine, paneTail, paneUse, type Pane } from './pane';
+import { paneLastLine, paneScrollback, paneTail, paneUse, type Pane } from './pane';
 import { createPageBuilder, discardPanes, fitPanes, panesById, restylePanes, type Page } from './page';
 import { createSectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
@@ -271,6 +271,20 @@ function setMode(mode: Mode): void {
   focusMode(page, true);
 }
 
+// nvim, running by the time this returns — started if it has never run, started again if it was quit.
+// The question and the answer together on purpose: with the condition left to the callers, the second
+// one wrote its own and got a different one, and the third would have copied whichever it read first.
+// What that looks like: quit nvim, press the scrollback key, and it waits fifteen seconds for a socket
+// nothing is going to create before telling you nvim did not start.
+function startEditor(page: Page): void {
+  if (!page.editor) return;
+  if (page.editorStarted && !page.editor.exited) return;
+  page.editorStarted = true;
+  page.editor.exited = false;
+  bridge.restart(terminalId(page.slot, EDITOR_INDEX));
+  bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
+}
+
 // `entering` is true for a genuine arrival at the page's current mode — switching modes, or switching to
 // a different page — and false for merely reclaiming the keyboard, such as the picker closing on the
 // page you never left. Only a genuine arrival may start nvim or re-read the board: re-opening the board
@@ -286,11 +300,7 @@ function focusMode(page: Page, entering: boolean): void {
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
     // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.
-    if (entering && !page.editorStarted) {
-      page.editorStarted = true;
-      bridge.restart(terminalId(page.slot, EDITOR_INDEX));
-      bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
-    }
+    if (entering) startEditor(page);
     page.editor.terminal.focus();
   }
   if (page.mode === 'board' && page.board) {
@@ -523,6 +533,23 @@ async function showPicker(): Promise<void> {
   await openProject(choice);
 }
 
+// Ctrl+`: the pane you are looking at, as a file in the project's nvim.
+//
+// Main is asked before the mode is switched, and the order matters on a cold editor: the switch is what
+// starts nvim, and main is already waiting on the socket by the time it does, so the file is handed over
+// the moment nvim is listening rather than a round trip later. On a warm editor it is the same tick
+// either way.
+function openScrollback(page: Page): void {
+  const pane = page.panes[page.focused];
+  if (!pane) return;
+  const sending = bridge.openScrollback(page.slot, paneScrollback(pane.terminal));
+  setMode('nvim');
+  sending.then(
+    (message) => showError('scrollback', message),
+    (error: unknown) => showError('scrollback', `Could not open the scrollback: ${String(error)}`),
+  );
+}
+
 function report(task: Promise<void>): void {
   task.then(
     // Clears its own message and no one else's: a project that opens says nothing about a board that
@@ -588,6 +615,7 @@ function apply(action: Action): void {
     case 'terminal-previous': return focusTerminal(page.focused - 1);
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
     case 'terminal-zoom': return toggleZoom(page);
+    case 'terminal-scrollback': return openScrollback(page);
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
