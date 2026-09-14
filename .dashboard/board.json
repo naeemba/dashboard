@@ -125,14 +125,6 @@
           "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "0ee4d087-9e82-411f-844b-3cc26a876533",
-          "title": "Open the focused pane's scrollback in nvim",
-          "notes": "One key writes the focused pane's whole buffer to a temp file and opens it in the nvim slot, so an agent transcript can be searched, read and yanked with real editor tools. The key is a row in the actions table and the help dialog gets the row.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-09-14T09:42:52.024Z"
         }
       ]
     },
@@ -397,6 +389,16 @@
           "parent": null,
           "branch": "remove-a-project",
           "pullRequest": 32
+        },
+        {
+          "id": "0ee4d087-9e82-411f-844b-3cc26a876533",
+          "title": "Open the focused pane's scrollback in nvim",
+          "notes": "Ctrl+` writes the focused pane's buffer to a file and opens it in the project's nvim with --remote-tab, over a socket the editor pane now listens on. No keystrokes are sent to the editor: a config that swaps ; and : would have the app press ; and open nothing. nvim's path is resolved once, so the tab opens in about 45ms. Also fixed on the way: a quit nvim left the key hanging for 15s, and the temp file was world-readable. PR #35.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-09-14T10:07:30.573Z",
+          "branch": "pane-scrollback-in-nvim",
+          "pullRequest": 35
         }
       ]
     }
