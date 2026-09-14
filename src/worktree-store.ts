@@ -102,6 +102,19 @@ export function livingEntries(
   return entries.filter((entry) => exists(entry.worktreePath));
 }
 
+// Whether a worktree is still the app's to keep, which is not the same question as whether its folder
+// is there. `git worktree remove` unlinks the folder before it answers, so a sweep landing in that gap
+// reads a living record as dead, hands its pane back to the project, and the kill that follows the
+// removal then finds no pane in the worktree — leaving the agent running in a folder git has just
+// deleted, writing errors into a pane the app counts as free. A path a removal is part way through is
+// that handler's to drop, not the sweep's.
+export function stillLiving(
+  removing: ReadonlySet<string>,
+  exists: (path: string) => boolean,
+): (path: string) => boolean {
+  return (path) => removing.has(path) || exists(path);
+}
+
 // Records giving their pane up, because the shell it named is not there any more: every record at
 // launch, since no shell outlives the app, and one project's records when that project is closed. Both
 // are the same sentence about the same fact, so both ask this rather than each rewriting it.

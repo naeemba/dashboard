@@ -4,6 +4,7 @@ import {
   entryForCard,
   entryForPath,
   livingEntries,
+  stillLiving,
   parseWorktrees,
   withEntry,
   withoutPanes,
@@ -90,6 +91,21 @@ describe('livingEntries', () => {
   it('drops entries whose folder has gone', () => {
     const gone = { ...entry, cardId: 'other', worktreePath: '/gone' };
     expect(livingEntries([entry, gone], (path) => path !== '/gone')).toEqual([entry]);
+  });
+});
+
+describe('stillLiving', () => {
+  // The five-second sweep landing in the gap `git worktree remove` leaves: git has already unlinked the
+  // folder, and without this the record is called dead, its pane goes back to the project, and the kill
+  // that follows the removal finds nothing — leaving the agent running in a folder that is gone.
+  it('keeps a path a removal is part way through, whatever the disk says', () => {
+    expect(stillLiving(new Set(['/gone']), () => false)('/gone')).toBe(true);
+  });
+
+  it('asks the disk about every other path', () => {
+    const living = stillLiving(new Set(), (path) => path === '/here');
+    expect(living('/here')).toBe(true);
+    expect(living('/gone')).toBe(false);
   });
 });
 

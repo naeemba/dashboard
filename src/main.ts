@@ -39,6 +39,7 @@ import {
   entryForPath,
   livingEntries,
   readWorktrees,
+  stillLiving,
   withEntry,
   withoutPanes,
   withoutWorktree,
@@ -218,10 +219,10 @@ function setWorktrees(next: WorktreeEntry[]): void {
 // What it does not do is kill whatever is running: a folder that went by other means may still have an
 // agent doing something, and that is not this function's to decide.
 function dropDeadWorktrees(): void {
-  // A folder mid-removal reads as living: git unlinks it before `worktree remove` returns, and the
-  // record is that handler's to drop. Whether a tick that found nothing is worth a write is
-  // setWorktrees' to say, so there is no second answer to that question here.
-  const living = livingEntries(worktrees, (path) => removingWorktrees.has(path) || existsSync(path));
+  // Whether a tick that found nothing is worth a write is setWorktrees' to say, so there is no second
+  // answer to that question here. What counts as living is stillLiving's — a folder mid-removal is not
+  // dead just because git has already unlinked it.
+  const living = livingEntries(worktrees, stillLiving(removingWorktrees, existsSync));
   for (const entry of worktrees) if (!living.includes(entry)) releaseWorktreePanes(entry);
   setWorktrees(living);
 }
@@ -675,7 +676,12 @@ ipcMain.handle('worktree:check', async () => {
 // question is worth asking, and refusing forever would mean the only way out is the command line.
 ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
   const entry = entryForPath(worktrees, worktreePath);
-  if (!entry) return { ok: false, message: 'no such worktree', dirty: [] };
+  // A path with no record is the removal having already happened — the sweep dropped it while the
+  // dialog's question was on screen, or a second `d` landed on a row that had gone. There is nothing to
+  // remove and no project to ask git from, and the goal state already holds, so this answers yes rather
+  // than refusing. Refusing sends the dialog down its failure path and offers to force-delete a folder
+  // that is not there.
+  if (!entry) return { ok: true, message: '', dirty: [] };
   removingWorktrees.add(worktreePath);
   try {
     // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is

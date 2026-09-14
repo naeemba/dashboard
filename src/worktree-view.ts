@@ -12,14 +12,14 @@ import type { WorktreeEntry } from './worktree-store';
 // is the landing having happened — there is nothing to say about a key that did what it looked like.
 export type JumpToWorktree = (entry: WorktreeEntry) => string;
 
-// The open dialog's render, or null when nothing is open — only one overlay is ever up at a time.
-// A record can change while this list is sitting on screen: an agent removes its own worktree, main's
-// sweep notices, and the dialog would go on offering a row whose folder is gone. renderer.ts calls
-// this from the one place every change arrives, so the list is drawn from the same copy the boards are.
-let renderOpenDialog: (() => void) | null = null;
-export function redrawWorktrees(): void {
-  renderOpenDialog?.();
-}
+// `closed` resolves when the dialog goes; `redraw` is how the owner tells it the records underneath
+// have changed, since the list reads them live but has no way to hear main's sweep. A record can go
+// while this is sitting on screen — an agent removes its own worktree — and without the redraw the
+// dialog goes on offering a row whose folder is gone.
+export type WorktreeDialog = {
+  closed: Promise<void>;
+  redraw(): void;
+};
 
 // Every worktree the app has made, and the one screen they are removed from. Nothing here removes
 // anything on its own: a worktree whose branch has merged is still a folder you may have something
@@ -40,7 +40,10 @@ export function openWorktrees(
   // it is open.
   worktrees: () => readonly WorktreeEntry[],
   jump: JumpToWorktree,
-): Promise<void> {
+): WorktreeDialog {
+  // Assigned by the executor, which runs before the Promise constructor returns — so it is the real
+  // render by the time anyone outside can call it.
+  let redraw = (): void => {};
   let highlighted = 0;
   // Filled in after the rows are already on screen: git is asked once the list has painted, not
   // before, so removing a worktree never waits on it. What the cell says while these three are in
@@ -49,9 +52,8 @@ export function openWorktrees(
   let unreadable = new Set<string>();
   let dirtyChecked = false;
 
-  return new Promise<void>((resolve) => {
+  const closed = new Promise<void>((resolve) => {
     function finish(): void {
-      renderOpenDialog = null;
       remove();
       resolve();
     }
@@ -177,6 +179,9 @@ export function openWorktrees(
         'Enter removes it. Escape keeps it. The folder and everything in it goes; the branch stays.');
       dialog.focus();
       if (!first) return;
+      // The row is read before the question and acted on after it, and five seconds is long enough for
+      // an agent to remove its own worktree while the sheet is up. Nothing is re-checked here: a path
+      // with no record is a removal that has already happened, and main answers it that way.
       const attempt = await bridge.removeWorktree(entry.worktreePath, false);
       if (!attempt.ok) {
         const forced = await confirmOverlay(forcedQuestion(entry, attempt),
@@ -214,8 +219,9 @@ export function openWorktrees(
       }
     });
 
-    renderOpenDialog = render;
+    redraw = render;
     render();
     void refresh();
   });
+  return { closed, redraw };
 }
