@@ -17,8 +17,6 @@ export type CardsOptions = {
   // screens read the same file — this page and that project's own tab — and neither may clear a
   // message the other put on the bar.
   onError(slot: number, message: string): void;
-  // Passed straight through: a card shipped from here belongs to one of the stacked projects, and what
-  // is in flight is the same one record wherever it was shipped from.
   // Handed straight to every stacked board, so all of them draw their badges from the renderer's one
   // copy of the record.
   worktrees(): readonly WorktreeEntry[];

@@ -154,7 +154,10 @@ describe('worktreesDiffer', () => {
     expect(worktreesDiffer([entry], withoutPanes([entry], '/projects/web'))).toBe(true);
   });
 
-  it('says yes when a worktree has gone', () => {
-    expect(worktreesDiffer([entry], livingEntries([entry], () => false))).toBe(true);
+  // withEntry moves the card it rewrites to the end, so a re-record that changed nothing still says
+  // yes. One redraw too many costs a frame; one too few leaves a card naming a worktree that is gone.
+  it('says yes when a re-record only reorders the list', () => {
+    const other: WorktreeEntry = { ...entry, cardId: 'card-2', worktreePath: '/projects/web-other' };
+    expect(worktreesDiffer([entry, other], withEntry([entry, other], entry))).toBe(true);
   });
 });

@@ -7,7 +7,7 @@ import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
-import { openWorktrees } from './worktree-view';
+import { openWorktrees, redrawWorktrees } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, paneName, startsEditor, terminalId,
@@ -106,8 +106,9 @@ function projectPages(): Page[] {
 // then sit in a worktree with the status bar calling it "terminal 2".
 let worktrees: WorktreeEntry[] = [];
 // The folder each pane's shell was started in, keyed by terminal id, which is what says whether a pane
-// is in a worktree. Main's copy, never a second one kept here: it rides along with the records below
-// on the same message, because only main knows where a pane is and the two change together.
+// is in a worktree. Main's copy, never a second one kept here, and it rides along with the records
+// because only main knows where a pane is. When a message carries it is setWorktrees' to say — see
+// main.ts, where that is decided.
 let paneDirectories: Record<string, string> = {};
 function applyWorktrees(list: WorktreeList): void {
   worktrees = list.entries;
@@ -118,6 +119,9 @@ function applyWorktrees(list: WorktreeList): void {
   // only one that needs it — arriving at any other re-opens its board, and on the manager this one call
   // is every project's board at once, since the stack of them is that page's board.
   pages[activeIndex].board?.redraw();
+  // And the worktree dialog, if it is the thing on screen: it lists the records themselves, so a row
+  // whose folder has gone has to leave the list under you rather than wait to be pressed.
+  redrawWorktrees();
 }
 
 // Everything status.ts needs to say what the right-hand span says about this page, read off the module
@@ -632,7 +636,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'worktrees') return void openWorktrees(bridge, jumpToWorktree).then(() => {
+  if (action.kind === 'worktrees') return void openWorktrees(bridge, () => worktrees, jumpToWorktree).then(() => {
     // The same reclaim every other dialog does, and it is what keeps the keyboard on a pane Enter
     // landed on: goToPane has already moved activeIndex, so this focuses where you were sent. A
     // removal made in the dialog has already reached the boards on its own.

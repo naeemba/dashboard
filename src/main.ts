@@ -89,6 +89,12 @@ const typedPanes = new Set<string>();
 // and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
 // the app.
 const shippingCards = new Set<string>();
+// The worktrees a removal is part way through. `git worktree remove` is awaited, and git unlinks the
+// folder before it answers, so without this the sweep lands in that gap, calls the record dead and
+// hands its pane back to the project — and the kill that follows the removal then finds no pane in the
+// worktree and leaves the agent running in a folder git has just deleted, writing errors into a pane
+// the app counts as free. Held for the length of the one removal, the way shippingCards is.
+const removingWorktrees = new Set<string>();
 const runCommand = promisify(execFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
@@ -212,11 +218,10 @@ function setWorktrees(next: WorktreeEntry[]): void {
 // What it does not do is kill whatever is running: a folder that went by other means may still have an
 // agent doing something, and that is not this function's to decide.
 function dropDeadWorktrees(): void {
-  const living = livingEntries(worktrees, existsSync);
-  // The usual answer, and the sweep below asks it every few seconds: nothing has gone. livingEntries
-  // only filters, so a count that has not moved is a list that has not moved, and the tick ends here
-  // rather than in a comparison of every record against itself.
-  if (living.length === worktrees.length) return;
+  // A folder mid-removal reads as living: git unlinks it before `worktree remove` returns, and the
+  // record is that handler's to drop. Whether a tick that found nothing is worth a write is
+  // setWorktrees' to say, so there is no second answer to that question here.
+  const living = livingEntries(worktrees, (path) => removingWorktrees.has(path) || existsSync(path));
   for (const entry of worktrees) if (!living.includes(entry)) releaseWorktreePanes(entry);
   setWorktrees(living);
 }
@@ -671,6 +676,7 @@ ipcMain.handle('worktree:check', async () => {
 ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
   const entry = entryForPath(worktrees, worktreePath);
   if (!entry) return { ok: false, message: 'no such worktree', dirty: [] };
+  removingWorktrees.add(worktreePath);
   try {
     // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is
     // not there, and node fails with `spawn git ENOENT` — its own failure to start a process, which
@@ -696,6 +702,10 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
       message: `not removed: ${error instanceof Error ? error.message : String(error)}`,
       dirty: [],
     };
+  } finally {
+    // In a finally, so a removal that throws part way cannot hold a dead record past the sweep for the
+    // rest of the run.
+    removingWorktrees.delete(worktreePath);
   }
 });
 
