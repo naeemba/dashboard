@@ -40,11 +40,30 @@ export function neighbor(index: number, direction: Direction): number {
 // The one spelling of a pane's name. The status bar and the bell's notification both say it, and a
 // second literal in either place is a name that goes stale the day the panes are renamed.
 //
-// A pane running an agent in a worktree says which branch it is on. The number stays in front of it —
-// lose the numbering and the focus keys stop making sense — so the branch is added, never swapped in.
-export function paneLabel(index: number, branch?: string): string {
-  const name = `terminal ${index + 1}`;
-  return branch === undefined ? name : `${name} · ${branch}`;
+// A pane running an agent in a worktree says which branch it is on, and a pane that has been named
+// says its name. The number stays in front of both — lose the numbering and the focus keys stop
+// making sense — so each is added, never swapped in.
+//
+// The name goes last of the three. The status bar is one line and the end of it is what a narrow
+// window drops first, so the order is what we can least afford to lose, first: which pane the
+// keyboard is in, then which checkout it is looking at, then what someone called it.
+// The editor is asked for by the same number every other pane is, because everything that lists a
+// project's panes walks paneIds and gets it last. `terminal 6` would name a pane that is not in the
+// grid and that no focus key reaches.
+export function paneLabel(index: number, branch?: string, name?: string): string {
+  const base = index === EDITOR_INDEX ? 'nvim' : `terminal ${index + 1}`;
+  return [base, branch, name].filter((part) => part !== undefined).join(' · ');
+}
+
+// What a pane is called, out of the two things that can call it something. A name you typed wins: a
+// title is a hint and nothing more, because the shell rewrites it on every prompt — take it over a
+// typed name and the name you chose is gone by the next `ls`.
+//
+// Blank is not a name. Clearing the typed name is how you go back to following the title, and a
+// program is free to set the title to nothing, so neither may leave a pane reading `terminal 3 · `.
+// The trim happens here, once, rather than at each of the three ends that store one.
+export function paneName(pane: { typedName?: string; title?: string }): string | undefined {
+  return pane.typedName?.trim() || pane.title?.trim() || undefined;
 }
 
 // The branch a pane is on, or undefined when it is on the project's own checkout. Kept beside

@@ -55,7 +55,8 @@ can receive the keystroke anyway.
 **Every dialog that reads `event.key` for itself must check `if
 (isModified(event)) return;` first, or a modified key does something in it
 that it was never meant to.** That is the help dialog, the card detail
-dialog, the delete confirmation, the picker's search box, the settings
+dialog, the delete confirmation, `promptOverlay`'s one-line box, the picker's
+search box, the settings
 screen, the card title and description editor, the worktree list, and the
 manager list — which
 asks `isBareCharacter` instead, because it takes Shift on purpose as the third
@@ -106,9 +107,10 @@ its first letter. That fixes the reading order but not the box: without
 the text runs away from the caret, ending punctuation lands on the wrong side,
 and Home and End take you to the opposite ends of what you see.
 
-Five boxes have it today: the card title in `board-view.ts`, the description in
+Six boxes have it today: the card title in `board-view.ts`, the description in
 `board-detail.ts`, the picker's search box, the settings screen's text fields,
-and the command box in `command-view.ts`. Nothing checks this — no test, no lint
+the command box in `command-view.ts`, and `promptOverlay`'s one line in
+`overlay.ts`. Nothing checks this — no test, no lint
 rule — which is why it is written
 down here.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds, paneLabel,
+  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds, paneLabel, paneName,
   startsEditor, terminalId,
 } from './terminals';
 
@@ -43,6 +43,48 @@ describe('paneLabel', () => {
   // for it.
   it('adds the branch when the pane is on a worktree', () => {
     expect(paneLabel(2, 'panes-name-themselves')).toBe('terminal 3 · panes-name-themselves');
+  });
+
+  // The name goes last so a truncated status bar drops it before it drops the branch, which is the
+  // part that stops a command landing in the wrong checkout.
+  // The editor is a pane like the others to everything that lists panes — the manager's rows, the
+  // sentence that refuses to close a project — and `terminal 6` names a pane that is not in the grid.
+  it('calls the editor nvim rather than a sixth terminal', () => {
+    expect(paneLabel(EDITOR_INDEX)).toBe('nvim');
+    expect(paneLabel(EDITOR_INDEX, undefined, 'board.json')).toBe('nvim · board.json');
+  });
+
+  it('adds the name after the branch, and reads without one', () => {
+    expect(paneLabel(2, undefined, 'dev server')).toBe('terminal 3 · dev server');
+    expect(paneLabel(2, 'panes-name-themselves', 'dev server'))
+      .toBe('terminal 3 · panes-name-themselves · dev server');
+  });
+});
+
+describe('paneName', () => {
+  it('has nothing to say about a pane that has never been named', () => {
+    expect(paneName({})).toBeUndefined();
+  });
+
+  // A title is a hint: the shell rewrites it on every prompt, so it is taken only when nothing better
+  // is set. Take it over a typed name and the name you chose is gone by the next `ls`.
+  it('prefers the name you typed over the title the program set', () => {
+    expect(paneName({ title: 'npm test' })).toBe('npm test');
+    expect(paneName({ typedName: 'dev server', title: 'npm test' })).toBe('dev server');
+  });
+
+  // Clearing the name is how you go back to following the title, so an empty name is no name rather
+  // than a pane labelled `terminal 3 · `. Same for a title, which a program can set to nothing at all.
+  it('ignores a name or a title that is blank', () => {
+    expect(paneName({ typedName: '', title: 'npm test' })).toBe('npm test');
+    expect(paneName({ typedName: '   ', title: '' })).toBeUndefined();
+    expect(paneName({ title: '  ' })).toBeUndefined();
+  });
+
+  // Trimmed once here rather than at each end that stores one: a name typed with a stray space is the
+  // same name, and the overlay, the session file and the title all arrive through this.
+  it('trims what it gives back', () => {
+    expect(paneName({ typedName: '  dev server  ' })).toBe('dev server');
   });
 });
 

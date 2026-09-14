@@ -6,7 +6,10 @@ const page = { path: '/Users/sharp/work/api', mode: 'board', focused: 3 };
 describe('parseSession', () => {
   it('keeps a saved layout as it was written', () => {
     expect(parseSession({ pages: [page], activeIndex: 0 }))
-      .toEqual({ pages: [{ path: '/Users/sharp/work/api', mode: 'board', focused: 3 }], activeIndex: 0 });
+      .toEqual({
+        pages: [{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [] }],
+        activeIndex: 0,
+      });
   });
 
   it('reads nothing out of a file that is not a session', () => {
@@ -18,7 +21,8 @@ describe('parseSession', () => {
   // A page with no project cannot be opened, so it goes. The rest of the layout still comes back.
   it('drops a page with no usable path and keeps the others', () => {
     const stored = { pages: [{ mode: 'nvim' }, page, { path: '' }], activeIndex: 1 };
-    expect(parseSession(stored).pages).toEqual([{ path: page.path, mode: 'board', focused: 3 }]);
+    expect(parseSession(stored).pages)
+      .toEqual([{ path: page.path, mode: 'board', focused: 3, names: [] }]);
   });
 
   // Restoring a view that does not exist would leave the page showing nothing at all.
@@ -38,6 +42,27 @@ describe('parseSession', () => {
     expect(parseSession({ pages: [page], activeIndex: 4 }).activeIndex).toBe(0);
     expect(parseSession({ pages: [page], activeIndex: -1 }).activeIndex).toBe(0);
     expect(parseSession({ pages: [], activeIndex: 0 }).activeIndex).toBe(0);
+  });
+
+  // A name is per pane, so it comes back as one slot per pane rather than a list of the panes that
+  // happen to have one — otherwise a name lands on the wrong pane the moment a middle one is unnamed.
+  it('puts the names back on the panes they were typed into', () => {
+    const stored = { pages: [{ ...page, names: ['dev server', null, 'claude', null, null] }] };
+    expect(parseSession(stored).pages[0].names).toEqual(['dev server', null, 'claude', null, null]);
+  });
+
+  // A file written before names existed is the common case, not an error, and every pane simply has
+  // no name. A names field that is not a list is the same answer.
+  it('gives every pane no name when the file does not say', () => {
+    expect(parseSession({ pages: [page] }).pages[0].names).toEqual([]);
+    expect(parseSession({ pages: [{ ...page, names: 'dev server' }] }).pages[0].names).toEqual([]);
+  });
+
+  // Whether a name is worth showing is paneName's to answer, so this only keeps the ones that are
+  // text at all. A number or an object in the slot would end up drawn on the pane as it is.
+  it('drops a name that is not text', () => {
+    expect(parseSession({ pages: [{ ...page, names: [7, {}, 'claude', null, false] }] }).pages[0].names)
+      .toEqual([null, null, 'claude', null, null]);
   });
 
   it('keeps the order the pages were written in, since that is the tab strip', () => {

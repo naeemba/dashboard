@@ -63,3 +63,10 @@ export function redrawsForBell(bell: Bell, onManager: boolean): boolean {
 export function waitingNames(panes: readonly { bell: Bell; name: string }[]): string[] {
   return panes.filter((pane) => isRinging(pane.bell)).map((pane) => pane.name);
 }
+
+// Whether any of them is asking, for the callers that only want the mark rather than the names — the
+// tab strip's dot. Beside waitingNames because it is the same question with the answer thrown away,
+// and asking it this way costs no pane a name nobody reads.
+export function anyWaiting(panes: readonly { bell: Bell }[]): boolean {
+  return panes.some((pane) => isRinging(pane.bell));
+}

@@ -4,8 +4,13 @@ import { TERMINAL_COUNT } from './terminals';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
 // was left on, and which pane had the keyboard. Not the shells themselves — those die with the app, and
-// every pane comes back empty at its project's directory.
-export type SessionPage = { path: string; mode: Mode; focused: number };
+// every pane comes back empty at its project's directory, and what each pane was called.
+//
+// `names` is one slot per pane of the grid, `null` for a pane nobody named. Not a list of the panes
+// that have one: with the panes that do not left out, a name lands on the wrong pane the moment a
+// middle pane is unnamed. Only the names you typed are here — a title a program set is gone with the
+// program that set it, so a restored pane says nothing until something in it speaks up.
+export type SessionPage = { path: string; mode: Mode; focused: number; names: (string | null)[] };
 export type Session = { pages: SessionPage[]; activeIndex: number };
 
 const EMPTY: Session = { pages: [], activeIndex: 0 };
@@ -27,9 +32,19 @@ function isPaneIndex(value: unknown): value is number {
 function toSessionPage(stored: unknown): SessionPage | null {
   // Destructuring anything that is not an object gives undefined fields, which the path check below
   // already rejects, so the only shape worth guarding against here is the one that would throw.
-  const { path, mode, focused } = (stored ?? {}) as { path?: unknown; mode?: unknown; focused?: unknown };
+  const { path, mode, focused, names } = (stored ?? {}) as
+    { path?: unknown; mode?: unknown; focused?: unknown; names?: unknown };
   if (typeof path !== 'string' || path === '') return null;
-  return { path, mode: isMode(mode) ? mode : 'terminals', focused: isPaneIndex(focused) ? focused : 0 };
+  return {
+    path,
+    mode: isMode(mode) ? mode : 'terminals',
+    focused: isPaneIndex(focused) ? focused : 0,
+    // Whether a stored name is worth showing — blank, all spaces — is paneName's to answer, at the one
+    // place all three kinds of name arrive. This keeps whatever is text and drops what is not, because
+    // anything else in a slot would be drawn on the pane exactly as it is. Its length is not forced to
+    // the grid: the restore reads it by pane, so a slot with no pane behind it is skipped anyway.
+    names: (Array.isArray(names) ? names : []).map((name) => (typeof name === 'string' ? name : null)),
+  };
 }
 
 export function parseSession(stored: unknown): Session {

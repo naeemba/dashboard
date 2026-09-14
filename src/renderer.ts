@@ -9,15 +9,17 @@ import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, startsEditor, terminalId } from './terminals';
+import {
+  EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, paneName, startsEditor, terminalId,
+} from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
-import { OVERLAY_SELECTOR, confirmOverlay } from './overlay';
-import { waitingNames } from './waiting';
+import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
+import { anyWaiting, waitingNames } from './waiting';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, positionAfterClose,
   projectPosition,
@@ -134,12 +136,25 @@ function statusPage(page: Page): StatusPage {
     pickerDescription: actionByName('project-picker')?.description ?? '',
     worktrees,
     focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
+    focusedName: paneName(page.panes[page.focused] ?? {}),
+    editorName: paneName(page.editor ?? {}),
   };
 }
 
 // The grid's five and the editor, which rings its bell like any other pane.
 function allPanes(page: Page): Pane[] {
   return page.editor === null ? page.panes : [...page.panes, page.editor];
+}
+
+// The same panes with what each is called right now. A pane's name moves — a program sets a title, you
+// type one — so it is worked out at the moment something asks rather than kept on the pane, and this is
+// the one place the asking happens: the manager's rows, the tab strip's waiting marks, the status bar's
+// list and the sentence that refuses to close a project all read it from here.
+//
+// No branch, which is the one thing the status bar adds for itself: it names a single pane and has the
+// room, where these are lists of six.
+function namedPanes(page: Page): (Pane & { name: string })[] {
+  return allPanes(page).map((pane, index) => ({ ...pane, name: paneLabel(index, undefined, paneName(pane)) }));
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
@@ -157,7 +172,7 @@ function renderStatus(panesOnly = false): void {
     const rows = managerRows(projectPages().map((entry) => ({
       project: entry.project,
       slot: entry.slot,
-      panes: allPanes(entry).map((pane) => ({
+      panes: namedPanes(entry).map((pane) => ({
         ...pane,
         tail: () => paneTail(pane.terminal),
         lastPrinted: () => paneLastLine(pane.terminal),
@@ -173,11 +188,11 @@ function renderStatus(panesOnly = false): void {
     const tab = document.createElement('span');
     tab.className = 'project';
     tab.classList.toggle('active', index === activeIndex);
-    tab.classList.toggle('waiting', waitingNames(allPanes(entry)).length > 0);
+    tab.classList.toggle('waiting', anyWaiting(allPanes(entry)));
     tab.textContent = entry.project.name;
     return tab;
   }));
-  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames(allPanes(page)));
+  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames(namedPanes(page)));
   saveSession();
 }
 
@@ -203,7 +218,13 @@ function saveSession(): void {
     // Counted in the filtered list: a dead page sitting before the active one would otherwise shift it,
     // and the active page may itself be the dead one, which lands on the first survivor.
     activeIndex: Math.max(0, live.indexOf(pages[activeIndex])),
-    pages: live.map((page) => ({ path: page.project.path, mode: page.mode, focused: page.focused })),
+    pages: live.map((page) => ({
+      path: page.project.path,
+      mode: page.mode,
+      focused: page.focused,
+      // The grid's five, which is every pane a name can be typed into; see namePane.
+      names: page.panes.map((pane) => pane.typedName ?? null),
+    })),
   };
   // Typing a card title redraws the status bar on every keystroke and changes nothing here.
   const encoded = JSON.stringify(session);
@@ -441,7 +462,7 @@ function setPage(project: Project, slot: number): void {
 function closeRefusalFor(page: Page): string {
   return closeRefusal(
     page.project.name,
-    allPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
+    namedPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
   );
 }
 
@@ -553,6 +574,26 @@ function openScrollback(page: Page): void {
   );
 }
 
+// Naming the focused pane. What you type wins over the title the program in it sets, and an empty box
+// clears it back to following the title — the overlay's two answers, kept apart here: null is a cancel
+// and changes nothing.
+//
+// The grid's five only, and nothing here enforces that: the action's scope does. `terminals` names the
+// one view the editor is not on, so the key cannot be pressed while the editor has the keyboard.
+function namePane(page: Page): void {
+  const pane = page.panes[page.focused];
+  if (!pane) return;
+  // The placeholder is what the pane is called with no name of yours, so you can see what you are
+  // overriding — and, on a pane already saying something useful, that there is nothing worth typing.
+  void promptOverlay('Name this pane', pane.typedName ?? '', pane.title?.trim() || 'unnamed').then((answer) => {
+    if (answer === null) return;
+    // Stored as typed and trimmed on the way out, by paneName, which is where every name arrives.
+    pane.typedName = answer;
+    // renderStatus writes the session file on its way out, which is what makes the name last a restart.
+    renderStatus();
+  });
+}
+
 function report(task: Promise<void>): void {
   task.then(
     // Clears its own message and no one else's: a project that opens says nothing about a board that
@@ -619,6 +660,7 @@ function apply(action: Action): void {
     case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
     case 'terminal-zoom': return toggleZoom(page);
     case 'terminal-scrollback': return openScrollback(page);
+    case 'terminal-name': return namePane(page);
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
@@ -810,6 +852,11 @@ async function restore(session: Session): Promise<void> {
       if (!page || page.project.missing) continue;
       showMode(page, entry.mode);
       page.focused = entry.focused;
+      // Only the names you typed come back. A title dies with the program that set it, so a restored
+      // pane says nothing until whatever starts in it speaks up.
+      entry.names.forEach((name, index) => {
+        if (name !== null && page.panes[index]) page.panes[index].typedName = name;
+      });
     }
   } finally {
     // Saving again from here on, so the landing below is what writes the restored layout back — with any
