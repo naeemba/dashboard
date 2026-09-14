@@ -548,7 +548,7 @@ function openScrollback(page: Page): void {
   const sending = bridge.openScrollback(page.slot, page.focused, paneScrollback(pane.terminal));
   setMode('nvim');
   sending.then(
-    (answer) => showError('scrollback', answer.message),
+    (answer) => showError('scrollback', answer.ok ? '' : answer.message),
     (error: unknown) => showError('scrollback', `Could not open the scrollback: ${String(error)}`),
   );
 }

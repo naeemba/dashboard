@@ -119,8 +119,9 @@ export function wipeArguments(socket: string, file: string): string[] {
 }
 
 // `--remote-tab` rather than `--remote`, so the scrollback arrives beside whatever you were editing
-// instead of over it. Pressing the key twice on the same pane returns to its tab rather than stacking
-// a second copy, because `:tab drop` finds the window the file is already in.
+// instead of over it. The wipe above has just closed the window this file was in, so `:tab drop` never
+// finds one to reuse: pressing the key twice on the same pane rebuilds the tab rather than returning to
+// it, and the rebuilt one lands after the tab you are on. Still one tab per pane, never a stack.
 export function tabArguments(socket: string, file: string): string[] {
   return ['--server', socket, '--remote-tab', file];
 }
