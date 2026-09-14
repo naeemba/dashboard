@@ -4,10 +4,12 @@ import {
   entryForCard,
   entryForPath,
   livingEntries,
+  stillLiving,
   parseWorktrees,
   withEntry,
   withoutPanes,
   withoutWorktree,
+  worktreesDiffer,
   type WorktreeEntry,
 } from './worktree-store';
 
@@ -92,6 +94,21 @@ describe('livingEntries', () => {
   });
 });
 
+describe('stillLiving', () => {
+  // The five-second sweep landing in the gap `git worktree remove` leaves: git has already unlinked the
+  // folder, and without this the record is called dead, its pane goes back to the project, and the kill
+  // that follows the removal finds nothing — leaving the agent running in a folder that is gone.
+  it('keeps a path a removal is part way through, whatever the disk says', () => {
+    expect(stillLiving(new Set(['/gone']), () => false)('/gone')).toBe(true);
+  });
+
+  it('asks the disk about every other path', () => {
+    const living = stillLiving(new Set(), (path) => path === '/here');
+    expect(living('/here')).toBe(true);
+    expect(living('/gone')).toBe(false);
+  });
+});
+
 describe('withoutPanes', () => {
   // The launch: no shell outlives the app, so nothing this file says was in pane 2 is in pane 2 a
   // moment later.
@@ -129,5 +146,34 @@ describe('claimsPane', () => {
 
   it('is undefined for the card taking the pane itself', () => {
     expect(claimsPane([entry], entry.projectPath, 2, entry.cardId)).toBeUndefined();
+  });
+});
+
+describe('worktreesDiffer', () => {
+  const entry: WorktreeEntry = {
+    cardId: 'card-1',
+    title: 'Ship it',
+    projectPath: '/projects/web',
+    branch: 'ship-it',
+    worktreePath: '/projects/web-ship-it',
+    pane: 2,
+    startedAt: '2026-09-14T00:00:00.000Z',
+  };
+
+  // Closing a project asks every record of that project to give its pane up. One that shipped nothing
+  // hands back what it was given, and nothing is written or redrawn for it.
+  it('says no when a closing project had no record to give up', () => {
+    expect(worktreesDiffer([entry], withoutPanes([entry], '/projects/api'))).toBe(false);
+  });
+
+  it('says yes when a record gives up its pane', () => {
+    expect(worktreesDiffer([entry], withoutPanes([entry], '/projects/web'))).toBe(true);
+  });
+
+  // withEntry moves the card it rewrites to the end, so a re-record that changed nothing still says
+  // yes. One redraw too many costs a frame; one too few leaves a card naming a worktree that is gone.
+  it('says yes when a re-record only reorders the list', () => {
+    const other: WorktreeEntry = { ...entry, cardId: 'card-2', worktreePath: '/projects/web-other' };
+    expect(worktreesDiffer([entry, other], withEntry([entry, other], entry))).toBe(true);
   });
 });

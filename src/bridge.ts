@@ -11,6 +11,12 @@ import type { WorktreeEntry } from './worktree-store';
 export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
 export type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string };
 
+// Everything in flight, and the folder each pane's shell was started in, keyed by terminal id. The
+// folders ride along with the records because the status bar's question is the two of them together:
+// is the pane I am in one of these checkouts. Only main knows where a pane is, so one message carries
+// both; which moments send one is setWorktrees' in main.ts to say.
+export type WorktreeList = { entries: WorktreeEntry[]; paneDirectories: Record<string, string> };
+
 export type DashboardBridge = {
   platform: string;
   getRecentProjects(): Promise<Project[]>;
@@ -56,16 +62,22 @@ export type DashboardBridge = {
   // Moving a card into Ship: the worktree, the branch, the pane and the agent. Answers with the
   // record it wrote, or with the message saying which step refused and why.
   shipCard(request: ShipRequest): Promise<ShipResult>;
-  // Every worktree the app has made, with the dead ones already dropped, and the folder each pane's
-  // shell is in, keyed by terminal id. The folders ride along with the records because the status
-  // bar's question is the two of them together: is the pane I am in one of these checkouts. Only
-  // main knows where a pane is, and both answers change at the same moments — a ship, a worktree
-  // removed, a project opened — so one round trip fetches both.
-  listWorktrees(): Promise<{ entries: WorktreeEntry[]; paneDirectories: Record<string, string> }>;
+  // The renderer's first read, with the dead records already dropped. The worktree dialog calls it on
+  // the way open for that sweep rather than for the answer — what the sweep drops comes back through
+  // onWorktreeChange, which is how every change after the first one arrives.
+  listWorktrees(): Promise<WorktreeList>;
+  // The same two answers again, unasked, whenever the records change — a ship, a worktree removed, a
+  // folder that went away outside the app. The pane directories ride along on that message rather than
+  // sending one of their own, so a pane that moved without a record moving (a project opened into a
+  // freed slot) is not news here; setWorktrees in main.ts is where that is decided and says why.
+  // It is what lets a board on screen be right about a change made from somewhere else — before this
+  // the renderer re-read the list on arriving at a board, so a card whose worktree went while you were
+  // looking at it kept its badge until you left.
+  onWorktreeChange(listener: (list: WorktreeList) => void): void;
   // Which of the current worktrees have uncommitted changes, decided by the same predicate
-  // worktree:remove asks. Separate from listWorktrees, which is read on every launch and after every
-  // ship, so a `git status` per worktree only runs for the one screen that shows the answer. A
-  // worktree git cannot read comes back unreadable rather than clean.
+  // worktree:remove asks. Separate from the record itself, which reaches the renderer at launch and
+  // then on every change, so a `git status` per worktree only runs for the one screen that shows the
+  // answer. A worktree git cannot read comes back unreadable rather than clean.
   dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
   // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
   // a second time naming them rather than deciding on its own what "dirty enough" means.

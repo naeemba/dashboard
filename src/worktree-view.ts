@@ -12,6 +12,15 @@ import type { WorktreeEntry } from './worktree-store';
 // is the landing having happened — there is nothing to say about a key that did what it looked like.
 export type JumpToWorktree = (entry: WorktreeEntry) => string;
 
+// `closed` resolves when the dialog goes; `redraw` is how the owner tells it the records underneath
+// have changed, since the list reads them live but has no way to hear main's sweep. A record can go
+// while this is sitting on screen — an agent removes its own worktree — and without the redraw the
+// dialog goes on offering a row whose folder is gone.
+export type WorktreeDialog = {
+  closed: Promise<void>;
+  redraw(): void;
+};
+
 // Every worktree the app has made, and the one screen they are removed from. Nothing here removes
 // anything on its own: a worktree whose branch has merged is still a folder you may have something
 // in, and a squash-merged branch does not read as merged anyway.
@@ -24,8 +33,17 @@ export type JumpToWorktree = (entry: WorktreeEntry) => string;
 // closed since — is the renderer's to answer, because only it knows which projects are open and where
 // their pages are; the sentence it hands back is shown on this dialog's own sheet rather than on a
 // status bar behind the overlay.
-export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Promise<void> {
-  let entries: WorktreeEntry[] = [];
+export function openWorktrees(
+  bridge: DashboardBridge,
+  // A getter onto the renderer's one copy of the records, not a snapshot taken on the way in — the
+  // boards read them the same way, and it is what lets a change made elsewhere reach this list while
+  // it is open.
+  worktrees: () => readonly WorktreeEntry[],
+  jump: JumpToWorktree,
+): WorktreeDialog {
+  // Assigned by the executor, which runs before the Promise constructor returns — so it is the real
+  // render by the time anyone outside can call it.
+  let redraw = (): void => {};
   let highlighted = 0;
   // Filled in after the rows are already on screen: git is asked once the list has painted, not
   // before, so removing a worktree never waits on it. What the cell says while these three are in
@@ -34,7 +52,7 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
   let unreadable = new Set<string>();
   let dirtyChecked = false;
 
-  return new Promise<void>((resolve) => {
+  const closed = new Promise<void>((resolve) => {
     function finish(): void {
       remove();
       resolve();
@@ -52,6 +70,7 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
     dialog.focus();
 
     function render(): void {
+      const entries = worktrees();
       heading.textContent = `Worktrees (${entries.length})`;
       highlighted = clampIndex(highlighted, entries.length - 1);
       list.replaceChildren(...orderedWorktrees(entries).map((entry, index) => {
@@ -110,8 +129,11 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
       render();
     }
 
+    // The sweep asked for now rather than on the next tick, which is the one thing this screen wants
+    // on the way in. What it finds is not kept here: a record it drops comes back through the
+    // renderer's copy and the redraw above, the same way every other change reaches this list.
     async function refresh(): Promise<void> {
-      entries = (await bridge.listWorktrees()).entries;
+      await bridge.listWorktrees();
       render();
       void refreshDirtiness();
     }
@@ -128,7 +150,7 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
     // whose worktree has no pane, and one whose project has been closed since it shipped, both have
     // somewhere the reader has to be told about rather than a keystroke that appears to do nothing.
     async function goToHighlighted(): Promise<void> {
-      const entry = orderedWorktrees(entries)[highlighted];
+      const entry = orderedWorktrees(worktrees())[highlighted];
       if (!entry) return;
       const refusal = jump(entry);
       if (refusal === '') return finish();
@@ -151,12 +173,15 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
     // delete it`; without the offer here that worktree could never be removed from inside the app at
     // all, and neither could one whose removal failed for any other reason.
     async function removeHighlighted(): Promise<void> {
-      const entry = orderedWorktrees(entries)[highlighted];
+      const entry = orderedWorktrees(worktrees())[highlighted];
       if (!entry) return;
       const first = await confirmOverlay(`Remove the worktree for "${entry.title}"?`,
         'Enter removes it. Escape keeps it. The folder and everything in it goes; the branch stays.');
       dialog.focus();
       if (!first) return;
+      // The row is read before the question and acted on after it, and five seconds is long enough for
+      // an agent to remove its own worktree while the sheet is up. Nothing is re-checked here: a path
+      // with no record is a removal that has already happened, and main answers it that way.
       const attempt = await bridge.removeWorktree(entry.worktreePath, false);
       if (!attempt.ok) {
         const forced = await confirmOverlay(forcedQuestion(entry, attempt),
@@ -194,7 +219,9 @@ export function openWorktrees(bridge: DashboardBridge, jump: JumpToWorktree): Pr
       }
     });
 
+    redraw = render;
     render();
     void refresh();
   });
+  return { closed, redraw };
 }

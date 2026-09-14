@@ -150,7 +150,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'is in — no pane if every pane was already taken when it shipped, or if the app has restarted '
     + 'since, because no shell outlives it. Enter on a row goes to that pane; a row with no pane, and '
     + 'one whose project has been closed since it shipped, say so rather than doing nothing. '
-    + 'Nothing there is ever removed on its own; d does that, asking twice — the '
+    + 'A row leaves the list on its own only when its worktree has gone — removed in a pane, or deleted by hand; nothing is ever removed for you. d removes one, asking twice — the '
     + 'second question names the files if the worktree is dirty, and says why git refused if it '
     + 'refused for some other reason. The folder and everything in it goes, gitignored files '
     + 'included, and the pane its agent was in goes back to being a plain shell in the project. The '

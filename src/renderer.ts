@@ -7,7 +7,7 @@ import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
-import { openWorktrees } from './worktree-view';
+import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, paneName, startsEditor, terminalId,
@@ -16,6 +16,7 @@ import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
+import type { WorktreeList } from './bridge';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
@@ -104,21 +105,26 @@ function projectPages(): Page[] {
 // stack of boards lands in a project whose own board may never have been opened, and its pane would
 // then sit in a worktree with the status bar calling it "terminal 2".
 let worktrees: WorktreeEntry[] = [];
-// The folder each pane's shell was started in, keyed by terminal id, which is what says whether a
-// pane is in a worktree. Main's copy, never a second one kept here, and read again at launch and at
-// the three moments it can have changed: a ship, the worktree dialog closing, and arriving at a board.
+// The folder each pane's shell was started in, keyed by terminal id, which is what says whether a pane
+// is in a worktree. Main's copy, never a second one kept here, and it rides along with the records
+// because only main knows where a pane is. When a message carries it is setWorktrees' to say — see
+// main.ts, where that is decided.
 let paneDirectories: Record<string, string> = {};
-function refreshWorktrees(): void {
-  // A failure to read the local record costs a branch name, never the screen.
-  void bridge.listWorktrees().then((list) => {
-    worktrees = list.entries;
-    paneDirectories = list.paneDirectories;
-    renderStatus();
-    // The badges too, not only the status bar: remove a worktree with the board in front of you and
-    // its card would otherwise still read `shipped · <branch> · terminal 3` until you left and
-    // came back.
-    pages[activeIndex].board?.redraw();
-  }, () => undefined);
+// The open worktree dialog, or null. Held so main's sweep can redraw it, the same way the board holds
+// the open card dialog: it reads the records live, but nothing tells it one of them has gone.
+let worktreeDialog: WorktreeDialog | null = null;
+function applyWorktrees(list: WorktreeList): void {
+  worktrees = list.entries;
+  paneDirectories = list.paneDirectories;
+  renderStatus();
+  // The badges too, not only the status bar: a card whose worktree has gone would otherwise still read
+  // `shipped · <branch> · terminal 3` until you left the board and came back. The page in front is the
+  // only one that needs it — arriving at any other re-opens its board, and on the manager this one call
+  // is every project's board at once, since the stack of them is that page's board.
+  pages[activeIndex].board?.redraw();
+  // And the worktree dialog, if it is the thing on screen: it lists the records themselves, so a row
+  // whose folder has gone has to leave the list under you rather than wait to be pressed.
+  worktreeDialog?.redraw();
 }
 
 // Everything status.ts needs to say what the right-hand span says about this page, read off the module
@@ -330,12 +336,8 @@ function focusMode(page: Page, entering: boolean): void {
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
     // report() wrapper is needed here.
-    if (entering) {
-      // With the board, because a worktree removed outside the app is only noticed when main is next
-      // asked for the list, and the badges on this board are drawn from what that answers.
-      refreshWorktrees();
-      void page.board.open();
-    } else page.board.element.focus();
+    if (entering) void page.board.open();
+    else page.board.element.focus();
   }
   renderStatus();
 }
@@ -400,7 +402,6 @@ function buildManagerPage(): Page {
     // A slot each, and a different owner from the same project's own board, so the two screens reading
     // one file never clear each other's message.
     onError: (slot, message) => showError(`cards:${slot}`, message),
-    onShipped: refreshWorktrees,
     worktrees: () => worktrees,
   });
   const command = createCommandView({
@@ -439,7 +440,6 @@ const buildPage = createPageBuilder({
   onChanged: () => renderStatus(),
   onError: showError,
   managerInFront: () => pages[activeIndex].mode === 'manager',
-  onShipped: () => refreshWorktrees(),
   worktrees: () => worktrees,
 });
 
@@ -639,12 +639,16 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'worktrees') return void openWorktrees(bridge, jumpToWorktree).then(() => {
-    // The same reclaim every other dialog does, and it is what keeps the keyboard on a pane Enter
-    // landed on: goToPane has already moved activeIndex, so this focuses where you were sent.
-    showPage(activeIndex);
-    refreshWorktrees();
-  });
+  if (action.kind === 'worktrees') {
+    worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);
+    return void worktreeDialog.closed.then(() => {
+      worktreeDialog = null;
+      // The same reclaim every other dialog does, and it is what keeps the keyboard on a pane Enter
+      // landed on: goToPane has already moved activeIndex, so this focuses where you were sent. A
+      // removal made in the dialog has already reached the boards on its own.
+      showPage(activeIndex);
+    });
+  }
   const page = pages[activeIndex];
   // The one key aimed at the page rather than at a row: on a project it closes the project you are on.
   // The manager is not a project and has nothing of its own to close, so there it falls through to its
@@ -891,7 +895,12 @@ async function start(): Promise<void> {
   pagesElement.append(manager.element);
   pages.push(manager);
   renderStatus();
-  refreshWorktrees();
+  // Read once, then kept fresh by main, which owns the record and says when it changes — so nothing
+  // here polls for it. Both after the manager page is pushed, because drawing the status bar needs a
+  // page and the sweep for dead worktrees can land mid-launch.
+  // A failure to read the local record costs a branch name, never the screen.
+  void bridge.listWorktrees().then(applyWorktrees, () => undefined);
+  bridge.onWorktreeChange(applyWorktrees);
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
   shellCommand = loaded.shellCommand;
