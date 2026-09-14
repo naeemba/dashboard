@@ -12,7 +12,8 @@ import { isRinging, looksBusy, type Bell } from './waiting';
 
 // `typedName` and `title` are the two things that can call a pane something other than its number.
 // `typedName` is what you typed on it and survives a restart; `title` is what the program in it set,
-// through the escape sequence every shell writes on every prompt, and dies with the program. Which of
+// through the escape sequence every shell writes on every prompt, and dies with the program — the
+// exit handler in renderer.ts drops it, because nvim's own reset on the way out never arrives. Which of
 // the two wins is paneName's, in terminals.ts, beside the label they end up in — this only holds them.
 // `bell` is whether the pane is asking for you and whether its banner has already gone out, so a pane
 // that rings ten times does not raise ten of them.

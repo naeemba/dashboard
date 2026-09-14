@@ -93,8 +93,20 @@ describe('paneName', () => {
   // window with the full path pushes both off the window.
   it('cuts a name too long for the line it goes on', () => {
     const long = 'working on the pane naming card in the dashboard repository';
-    expect(paneName({ title: long })).toBe('working on the pane naming card in the …');
-    expect(paneName({ typedName: long })).toBe('working on the pane naming card in the …');
+    expect(paneName({ title: long })).toBe('working on the pane naming card in the…');
+    expect(paneName({ typedName: long })).toBe('working on the pane naming card in the…');
+  });
+
+  // The cut lands wherever the name happens to be long enough, which is as often just after a space as
+  // mid-word. Left there, the space sits in front of the ellipsis as a gap the ellipsis already says.
+  it('eats the space it cut at', () => {
+    expect(paneName({ title: `${'a'.repeat(38)} tail` })).toBe(`${'a'.repeat(38)}…`);
+  });
+
+  // A length counted in UTF-16 units cuts through the middle of an emoji, and the half that survives
+  // is drawn as a `\ufffd` in the status bar and the manager's row.
+  it('cuts on whole characters, not halves of one', () => {
+    expect(paneName({ title: '🙂'.repeat(41) })).toBe(`${'🙂'.repeat(39)}…`);
   });
 });
 

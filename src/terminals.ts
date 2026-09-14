@@ -74,7 +74,7 @@ const NAME_LIMIT = 40;
 export function paneName(pane: { typedName?: string; title?: string }): string | undefined {
   const name = pane.typedName?.trim() || pane.title?.trim() || undefined;
   if (name === undefined || name.length <= NAME_LIMIT) return name;
-  return `${name.slice(0, NAME_LIMIT - 1)}…`;
+  return `${[...name].slice(0, NAME_LIMIT - 1).join('').trimEnd()}…`;
 }
 
 // The branch a pane is on, or undefined when it is on the project's own checkout. Kept beside

@@ -59,8 +59,14 @@ describe('quoteForShell', () => {
 
 describe('editorArguments', () => {
   // Login and interactive both: -l is where a Mac PATH picks up Homebrew, -i is where it picks up the
-  // version managers the terminal panes already have. Spawn nvim directly and the pane dies with an exit
-  // code instead of opening an editor; drop -i and its language servers cannot find node.
+  // version managers the terminal panes already have.
+  //
+  // The `-c` is what makes the pane say which file is open: nvim's 'title' is off by default, so without
+  // it the pane reads a bare `nvim` whatever is loaded. titlestring with it, because nvim's own default
+  // title is the filename, the folder and a trailing "Nvim" — three times the width the status bar has.
+  //
+  // Spawn nvim directly and the pane dies with an exit code instead of opening an editor; drop -i and
+  // its language servers cannot find node.
   it('runs nvim through a login interactive POSIX shell', () => {
     expect(editorArguments('/bin/zsh', '/tmp/one.sock'))
       .toEqual(['-lic', "exec nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
@@ -73,15 +79,6 @@ describe('editorArguments', () => {
       .toEqual(['-Command', "nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
     expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe', '/tmp/one.sock'))
       .toEqual(['-Command', "nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
-  });
-
-  // The editor pane's name comes from the title escape sequence nvim prints, and nvim's 'title' is off
-  // by default — without this the pane reads a bare `nvim` whatever file is open. titlestring with it,
-  // because nvim's own default title is the filename, the folder and a trailing "Nvim", which is three
-  // times the width the status bar has for it.
-  it('turns the nvim title on and asks for the filename alone', () => {
-    const [, command] = editorArguments('/bin/zsh', '/tmp/one.sock');
-    expect(command).toContain("-c 'set title titlestring=%t'");
   });
 
   // The socket sits wherever the operating system puts this app's temp folder, and that path is not

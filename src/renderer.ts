@@ -818,6 +818,10 @@ bridge.onExit((id, exitCode) => {
   const pane = panesById.get(id);
   if (!pane) return;
   pane.exited = true;
+  // The title dies with the program that set it, which is here. Left standing, the bar names a file
+  // nothing has open: quit nvim and the pane still reads `nvim · board.json` until you press Enter and
+  // the next nvim prints its own. A typed name is untouched — that one is yours and survives a restart.
+  pane.title = undefined;
   pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
   // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
   // find out about a pane on a project you are not on.
