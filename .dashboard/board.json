@@ -104,16 +104,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "cb2603ea-ca53-4d69-ba28-0cded705cf46",
-          "title": "Main broadcasts worktree changes so the renderer stops polling worktrees.json",
-          "notes": "Every write to the worktree record in main sends worktree:changed with the new record; the board view and the manager's stacked boards redraw from it instead of reading worktrees.json for themselves. Fixes the card that keeps showing a branch whose worktree was removed. Discarding a worktree and opening tig in one both change worktrees and need this to be seen at once.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-14T13:06:10.438Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -404,6 +395,16 @@
           "updatedAt": "2026-09-14T12:06:55.643Z",
           "branch": "panes-name-themselves",
           "pullRequest": 36
+        },
+        {
+          "id": "cb2603ea-ca53-4d69-ba28-0cded705cf46",
+          "title": "Main broadcasts worktree changes so the renderer stops polling worktrees.json",
+          "notes": "Shipped in #37, branch worktree-changes-broadcast. setWorktrees in main.ts is the one place the record changes after launch: it assigns, writes worktrees.json and sends worktree:change carrying the records and the folder each pane's shell was started in. The four writers that each did the assign-and-write by hand -- a ship, a removal, a project closing, the dead-worktree sweep -- go through it, and the renderer holds a copy that arrives rather than one it fetches.\n\nThe poll on arriving at a board is gone, and onShipped with it: a ship's record write broadcasts on its own, so the callback threaded through page.ts, board-view.ts and cards-view.ts had nothing left to do.\n\nA worktree taken away outside the app is still not an event anything hears, so the sweep for it runs on a five-second timer rather than only when a board is opened. Deliberately a poll: one existsSync per record, against a watcher per worktree whose delete event is not the same on macOS and Linux. fs.watch is the upgrade if five seconds is ever too slow.\n\nworktreesDiffer is the new decision, in worktree-store.ts with tests. Not every writer knows whether it changed anything: closing a project asks every record of that project to give its pane up, and one that never shipped a card hands back what it was given. The hand-written guard that used to sit at that call site is gone with it. The sweep never reaches the predicate -- livingEntries only filters, so a count that has not moved is a list that has not moved.\n\nNot run in the app. Tests, tsc and eslint are clean; the installed build needs a rebuild and restart to pick it up.\n\nUnblocks the discard-a-worktree card and the tig card, which both change worktrees and need the change seen at once.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-14T13:19:46.431Z",
+          "branch": "worktree-changes-broadcast",
+          "pullRequest": 37
         }
       ]
     }
