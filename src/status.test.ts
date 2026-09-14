@@ -40,6 +40,12 @@ describe('modeLabel', () => {
     expect(modeLabel(page({ mode: 'nvim' }))).toBe('nvim');
   });
 
+  // nvim sets the terminal title to the file it has open, the same way a shell does, and the manager's
+  // row for that pane says so. Answer a bare 'nvim' here and one pane has two names.
+  it('adds the file nvim has open, when nvim has said what it is', () => {
+    expect(modeLabel(page({ mode: 'nvim', editorName: 'board.json' }))).toBe('nvim · board.json');
+  });
+
   it('names the board and its label on board mode', () => {
     expect(modeLabel(page({ mode: 'board', boardLabel: 'Doing · high' }))).toBe('board · Doing · high');
   });

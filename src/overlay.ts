@@ -60,6 +60,61 @@ export function confirmOverlay(message: string, keysLine: string): Promise<boole
   });
 }
 
+// The same sheet with a box to type in instead of a question to answer. Enter takes what you typed,
+// Escape and a click on the dark margin leave it alone. Kept beside confirmOverlay because the two are
+// one dialog with a different middle: the same Enter-or-Escape guard, which is a rule CLAUDE.md keeps a
+// list of by hand, so a third copy of it somewhere else is a line on that list nobody adds.
+//
+// Empty and cancelled are different answers. Empty is a thing you typed — for the caller to read as
+// "none of mine" — where null is you never meant to open this.
+//
+// The keys line is the caller's to write, like confirmOverlay's and for the same reason: only the
+// caller knows what an empty box means to it, and that is the one thing about this dialog nothing on
+// screen would otherwise say.
+export function promptOverlay(
+  question: string,
+  current: string,
+  placeholder: string,
+  keysLine: string,
+): Promise<string | null> {
+  return new Promise<string | null>((resolve) => {
+    function close(answer: string | null): void {
+      remove();
+      resolve(answer);
+    }
+
+    const { dialog, remove } = openOverlay('prompt', () => close(null));
+
+    const label = document.createElement('p');
+    label.className = 'prompt-question';
+    label.textContent = question;
+
+    const input = document.createElement('input');
+    input.className = 'prompt-input';
+    input.value = current;
+    input.placeholder = placeholder;
+    // Every box you type into carries this: without it a Persian name runs away from the caret, and
+    // Home and End go to the opposite ends of what you see.
+    input.dir = 'auto';
+    const keys = document.createElement('p');
+    keys.className = 'prompt-keys';
+    keys.textContent = keysLine;
+    dialog.append(label, input, keys);
+    input.focus();
+    input.select();
+
+    dialog.addEventListener('keydown', (event) => {
+      // A capital is typed with Shift, and this guard is why that still works: it stops the dialog
+      // acting on the keystroke, and the input takes the character like any other. Without it a stray
+      // Cmd+Enter answers a question you were still typing into.
+      if (isModified(event)) return;
+      if (event.key !== 'Enter' && event.key !== 'Escape') return;
+      event.preventDefault();
+      close(event.key === 'Enter' ? input.value : null);
+    });
+  });
+}
+
 // What "a dialog owns the keyboard" matches, for asking either way round: is this keystroke inside a
 // dialog, and is any dialog up at all. It lives here because this is where a sheet gets its class, so
 // a new dialog opened through openOverlay is covered without a second list to keep in step.

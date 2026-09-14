@@ -660,7 +660,11 @@ textarea.board-edit {
   background: var(--black);
 }
 
-.confirm-dialog {
+/* One box in the middle of the sheet asking one thing, whether that is a question to answer or a
+   line to type. Two names rather than one because the dialogs are two, but they are meant to look
+   the same and this is what keeps them that way. */
+.confirm-dialog,
+.prompt-dialog {
   max-width: 420px;
   padding: 20px 24px;
 }
@@ -670,10 +674,24 @@ textarea.board-edit {
   font-size: 14px;
 }
 
-.confirm-keys {
+/* Shared with .prompt-question and .prompt-keys: the small grey line beside the thing being asked. */
+.confirm-keys,
+.prompt-keys,
+.prompt-question {
   margin: 0;
   font-size: 12px;
   opacity: 0.6;
+}
+
+.prompt-question {
+  margin-bottom: 4px;
+}
+
+/* Under the box rather than over it, where the confirm dialog's keys line sits: the question names the
+   thing, the box is what you are looking at, and the keys are what you read once you wonder how to get
+   out of it. */
+.prompt-keys {
+  margin-top: 8px;
 }
 
 .card-detail-dialog {
@@ -774,7 +792,8 @@ textarea.board-edit {
 
 .picker-search,
 .card-detail-add,
-.command-input {
+.command-input,
+.prompt-input {
   font: inherit;
   color: inherit;
   background: none;
@@ -784,9 +803,15 @@ textarea.board-edit {
   outline: none;
 }
 
-.card-detail-add {
+/* Shared with .prompt-input: both fill the width of the box they sit in. The margin is the card
+   dialog's own, where the box sits between rows. */
+.card-detail-add,
+.prompt-input {
   width: 100%;
   box-sizing: border-box;
+}
+
+.card-detail-add {
   margin: 8px 0;
 }
 

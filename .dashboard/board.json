@@ -32,13 +32,6 @@
           "parent": null
         },
         {
-          "id": "fc2bf7b0-d488-4a95-9599-c76e9004f3a2",
-          "title": "Panes name themselves",
-          "notes": "`api . dev server` instead of `api . terminal 3`. One small change and everything else reads better: the waiting list, the notification banner, the status bar, and which pane is on which worktree.\n\nMostly automatic, from three sources, best first:\n\n1. The program names itself. A terminal title is an escape sequence any program can print -- `printf '\\033]0;dev server\\007'` -- and xterm.js already parses it and fires an event nobody listens to. Shells set it on every prompt. Claude Code can be told to set it to whatever it is working on, from a line in the project's CLAUDE.md, and then the pane says so while it works.\n2. The command it was started with. When the startup commands put `npm run dev` in pane 2, the name is already known.\n3. A name you typed, which beats both -- otherwise the next prompt wipes it.\n\nA title is a hint, not a label: shells rewrite it on every command, so taken blindly the name flickers with every `ls`. Take it only when nothing better is set.\n\n`paneLabel` is already the one place a pane's name is spelled and every other part of the app reads it from there, so this is that function preferring a stored name. An unnamed pane still says `terminal 3` -- lose the numbering and the focus keys stop making sense.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5864b231-b04b-436c-9680-c721a740b335",
           "title": "Read a project's file in a view that does bidi",
           "notes": "Persian prose cannot be read in a pane and never will be, so the way to read a Persian roadmap or README is a screen the app draws itself -- Chromium lays it out correctly there, and the one rule in index.css already covers every element outside a pane.\n\nThe open question the design turns on is how the file is chosen: a picker over the project's folder, or whatever file nvim currently has open.\n\nKeyboard-first, so it is a row in actions.ts and a section in help.ts.\n\nRelated: the notes mode card is this same screen for a file the app owns. This one is for a file the project owns.",
@@ -118,15 +111,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
-          "title": "Add a manager page as the first tab, giving an overview across projects",
-          "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything. What exactly goes on it still needs discussion and review.",
-          "priority": "medium",
-          "parent": null
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -399,6 +384,24 @@
           "updatedAt": "2026-09-14T10:07:30.573Z",
           "branch": "pane-scrollback-in-nvim",
           "pullRequest": 35
+        },
+        {
+          "id": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+          "title": "Add a manager page as the first tab, giving an overview across projects",
+          "notes": "A manager for the dashboard app itself, distinct from the other projects. It sits as the first tab, like every other project, but instead of five shells it shows an overview: what is happening, what is waiting on us, everything.\n\nDone — every one of its nine subtasks shipped. What the page is now, in the order it arrived:\n\n- A first tab that is not a project, holding a list rather than panes. #17\n- One row per project, with each project's lists inside it. #18\n- The waiting list, with Enter jumping to the pane that is asking. #18\n- Dead panes said out loud on the row. #18\n- A waiting row carries the pane's last five lines, and a character typed on it goes to that pty. #22\n- Ctrl+B on the manager stacks one board per open project, edited where it sits. #23\n- Send one command to many panes. #30\n- Every pane is a row, quiet ones included, with what it last printed and how long ago. #29\n- A strip of three sections along the top — general, board, command — walked by Alt+H and Alt+L. Behind the third: one shell command run across the projects you mark, one row per project saying how it exited. #28\n\nThe open question the card was written around — what exactly goes on the page — is answered by the nine above and needs no further review.\n\nThe loose end its last subtask named, that projects start collapsed rather than showing every pane, is not true any more: #29 gave every pane a row, and there is no collapse left in manager.ts or manager-view.ts.\n\nKnown cost, recorded in CLAUDE.md and not a bug to chase: on a project's own board Ctrl+H lists the three keys that belong only to the manager, and pressing them there does nothing.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-14T11:40:34.580Z"
+        },
+        {
+          "id": "fc2bf7b0-d488-4a95-9599-c76e9004f3a2",
+          "title": "Panes name themselves",
+          "notes": "`api . dev server` instead of `api . terminal 3`. One small change and everything else reads better: the waiting list, the notification banner, the status bar, and which pane is on which worktree.\n\nShipped in PR #36, branch panes-name-themselves. Two sources rather than the card's three, and paneName is the one place that picks between them: a name you typed on Alt+N wins over the title the program set, because a title is a hint the shell rewrites on every prompt. Blank is not a name either way, which is what makes an empty box the way back to following the title. The number stays in front and the branch stays between it and the name, so a truncated status bar drops what you called a pane before it drops which checkout it is in.\n\nPane.name is deleted. It was the label worked out once when the pane was built, and the manager read it, so a name that moves could never have reached the list. paneLabel learned that pane six is nvim rather than terminal 6, which is the one place that was ever spelled.\n\nnvim names its own pane after the file it has open, through the same escape sequence, so the status bar says `nvim . board.json` where it said `nvim`. Without that the manager's row and the status bar are one pane under two names.\n\nThe dialog is promptOverlay, beside confirmOverlay: the same sheet and the same Enter-or-Escape guard with a box instead of a question. Both of CLAUDE.md's hand-kept lists name it.\n\nTyped names go in the session file. Titles do not -- one dies with the program that set it.\n\nLeft out on purpose: the third source, a name from the command that started the pane, because nothing starts commands in panes yet -- that is the startup-commands card. No debounce on the title: a shell writes two per command and the guard drops the repeats, so typing is free, but a program that rewrites its title as it works redraws at whatever rate it prints.\n\nWorth its own card: the manager's rows still show no branch, as before. Now that they carry names it reads worse than it did -- two agents in two worktrees both say `terminal 2 . claude`, and that list is the screen you go to precisely because you cannot see them all at once.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-14T12:06:55.643Z",
+          "branch": "panes-name-themselves",
+          "pullRequest": 36
         }
       ]
     }

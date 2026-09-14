@@ -59,16 +59,26 @@ describe('quoteForShell', () => {
 
 describe('editorArguments', () => {
   // Login and interactive both: -l is where a Mac PATH picks up Homebrew, -i is where it picks up the
-  // version managers the terminal panes already have. Spawn nvim directly and the pane dies with an exit
-  // code instead of opening an editor; drop -i and its language servers cannot find node.
+  // version managers the terminal panes already have.
+  //
+  // The `-c` is what makes the pane say which file is open: nvim's 'title' is off by default, so without
+  // it the pane reads a bare `nvim` whatever is loaded. titlestring with it, because nvim's own default
+  // title is the filename, the folder and a trailing "Nvim" — three times the width the status bar has.
+  //
+  // Spawn nvim directly and the pane dies with an exit code instead of opening an editor; drop -i and
+  // its language servers cannot find node.
   it('runs nvim through a login interactive POSIX shell', () => {
-    expect(editorArguments('/bin/zsh', '/tmp/one.sock')).toEqual(['-lic', 'exec nvim --listen /tmp/one.sock']);
-    expect(editorArguments('/opt/homebrew/bin/fish', '/tmp/one.sock')).toEqual(['-lic', 'exec nvim --listen /tmp/one.sock']);
+    expect(editorArguments('/bin/zsh', '/tmp/one.sock'))
+      .toEqual(['-lic', "exec nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
+    expect(editorArguments('/opt/homebrew/bin/fish', '/tmp/one.sock'))
+      .toEqual(['-lic', "exec nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
   });
 
   it('uses the PowerShell spelling for PowerShell', () => {
-    expect(editorArguments('powershell.exe', '/tmp/one.sock')).toEqual(['-Command', 'nvim --listen /tmp/one.sock']);
-    expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe', '/tmp/one.sock')).toEqual(['-Command', 'nvim --listen /tmp/one.sock']);
+    expect(editorArguments('powershell.exe', '/tmp/one.sock'))
+      .toEqual(['-Command', "nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
+    expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe', '/tmp/one.sock'))
+      .toEqual(['-Command', "nvim --listen /tmp/one.sock -c 'set title titlestring=%t'"]);
   });
 
   // The socket sits wherever the operating system puts this app's temp folder, and that path is not
@@ -77,9 +87,9 @@ describe('editorArguments', () => {
   // quoting as garbage and SHELL_COMMAND lets a Mac run pwsh.
   it('quotes a socket path with a space in it, in either shell', () => {
     expect(editorArguments('/bin/zsh', '/tmp/my sockets/one.sock'))
-      .toEqual(['-lic', "exec nvim --listen '/tmp/my sockets/one.sock'"]);
+      .toEqual(['-lic', "exec nvim --listen '/tmp/my sockets/one.sock' -c 'set title titlestring=%t'"]);
     expect(editorArguments('powershell.exe', 'C:\\Users\\My Name\\Temp\\one.sock'))
-      .toEqual(['-Command', "nvim --listen 'C:\\Users\\My Name\\Temp\\one.sock'"]);
+      .toEqual(['-Command', "nvim --listen 'C:\\Users\\My Name\\Temp\\one.sock' -c 'set title titlestring=%t'"]);
   });
 });
 

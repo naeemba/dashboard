@@ -10,9 +10,13 @@ import { isRinging, looksBusy, type Bell } from './waiting';
 // their questions of the screen rather than of the bytes. Lifted out of renderer.ts when that file
 // reached its size ceiling; it is the group in there that needs nothing but a pane.
 
-// `name` is what the status bar and the bell's notification call the pane; `bell` is whether the pane
-// is asking for you and whether its banner has already gone out, so a pane that rings ten times does
-// not raise ten of them.
+// `typedName` and `title` are the two things that can call a pane something other than its number.
+// `typedName` is what you typed on it and survives a restart; `title` is what the program in it set,
+// through the escape sequence every shell writes on every prompt, and dies with the program — the
+// exit handler in renderer.ts drops it, because nvim's own reset on the way out never arrives. Which of
+// the two wins is paneName's, in terminals.ts, beside the label they end up in — this only holds them.
+// `bell` is whether the pane is asking for you and whether its banner has already gone out, so a pane
+// that rings ten times does not raise ten of them.
 // `bellTimer` is the one verdict a pane has pending on its own bell, held so a second ring inside the
 // wait joins it rather than starting another.
 // `lastPrintedAt` is when the pty last sent anything, which is what the manager prints an age from. It
@@ -30,7 +34,8 @@ export type Pane = {
   terminal: Terminal;
   fit: FitAddon;
   exited: boolean;
-  name: string;
+  typedName?: string;
+  title?: string;
   bell: Bell;
   bellTimer?: number;
   lastPrintedAt: number;

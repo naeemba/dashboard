@@ -61,8 +61,17 @@ export function quoteForShell(value: string, shellCommand: string): string {
 // `--listen` is how anything else reaches this nvim once it is up: Ctrl+` sends the focused pane's
 // scrollback to it over that socket. nvim creates the socket as it starts, well before its plugins
 // finish, so the wait is the shell's startup and nothing more.
+//
+// `-c set title titlestring=%t` is what makes the editor pane say which file it has open. nvim's
+// 'title' is off by default, so without it nvim never prints the title escape sequence and the pane
+// reads a bare `nvim` forever. `titlestring` is set with it because nvim's own default title is
+// `board.json (/Users/you/project) - Nvim` — the folder you are already in, and a second "Nvim" after
+// the one paneLabel puts at the front — and the status bar is one line with no room for it. `%t` is
+// the file's tail, so the pane reads `nvim · board.json`. `-c` runs after the user's config, so it
+// wins over a config that left 'title' off or set a titlestring of its own.
 export function editorArguments(shellCommand: string, socket: string): string[] {
-  const command = `nvim --listen ${quoteForShell(socket, shellCommand)}`;
+  const command = `nvim --listen ${quoteForShell(socket, shellCommand)} `
+    + `-c ${quoteForShell('set title titlestring=%t', shellCommand)}`;
   return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', `exec ${command}`];
 }
 

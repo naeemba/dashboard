@@ -13,7 +13,7 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, paneLabel, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, paneLabel, paneName, terminalId } from './terminals';
 import { isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -121,7 +121,7 @@ export function fitPanes(page: Page): void {
 // whose folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane
 // needs from the renderer are handed over once rather than on every call.
 export function createPageBuilder(options: PageOptions): (project: Project, slot: number) => Page {
-  function buildPane(view: HTMLElement, id: string, page: Page, name: string, onFocus?: () => void): Pane {
+  function buildPane(view: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');
     container.className = 'pane';
     view.append(container);
@@ -145,7 +145,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     terminal.loadAddon(new WebLinksAddon((_event, uri) => options.bridge.openExternal(uri)));
     terminal.open(container);
 
-    const pane: Pane = { terminal, fit, exited: false, name, bell: 'quiet', lastPrintedAt: 0 };
+    const pane: Pane = { terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0 };
     terminal.onData((data) => {
       if (!pane.exited) {
         options.bridge.sendInput(id, data);
@@ -169,6 +169,19 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       terminal.input(`${paths.map((entry) => quoteForShell(entry, options.shellCommand())).join(' ')} `);
     });
     terminal.onResize(({ cols, rows }) => options.bridge.resize(id, cols, rows));
+    // The other thing a program in a pane can say about itself, and as cheap to listen for as the bell:
+    // the title escape sequence, which every shell writes on every prompt and which an agent can be told
+    // to set to whatever it is working on. It is only a hint — paneName is where it loses to a name you
+    // typed — so this stores it and nothing more.
+    //
+    // Redrawn only when the label actually moves. A shell sets the title twice per command, at the
+    // prompt and again when the command starts, and most of those say what it already said; without this
+    // the status bar and the manager's list rebuild on every keystroke that ends in Enter.
+    terminal.onTitleChange((title) => {
+      const before = paneName(pane);
+      pane.title = title;
+      if (paneName(pane) !== before) options.onChanged();
+    });
     // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
     // to listen for: no reading the output, no guessing from how long it has been quiet.
     // The pane you are looking at is the one whose keystrokes go to xterm's hidden textarea, so asking
@@ -201,7 +214,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
         // still behind something else now, which is when it would actually appear.
         if (raisesNotification(document.hasFocus(), pane.bell)) {
           pane.bell = 'notified';
-          options.bridge.notify(page.project.name, `${pane.name} is waiting`, id);
+          options.bridge.notify(page.project.name, `${paneLabel(index, undefined, paneName(pane))} is waiting`, id);
         }
       }, BELL_SETTLE_MS);
     });
@@ -257,7 +270,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     element.append(...Object.values(views));
     for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
       const id = terminalId(slot, terminalIndex);
-      const pane = buildPane(views.terminals, id, page, paneLabel(terminalIndex), () => {
+      const pane = buildPane(views.terminals, id, page, terminalIndex, () => {
         if (page.focused === terminalIndex) return;
         page.focused = terminalIndex;
         options.onChanged();
@@ -266,7 +279,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       panesById.set(id, pane);
     }
     const editorId = terminalId(slot, EDITOR_INDEX);
-    page.editor = buildPane(views.nvim, editorId, page, 'nvim');
+    page.editor = buildPane(views.nvim, editorId, page, EDITOR_INDEX);
     panesById.set(editorId, page.editor);
     page.board = createBoardView({
       projectPath: project.path,

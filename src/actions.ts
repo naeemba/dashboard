@@ -23,6 +23,7 @@ export type Action =
   | { kind: 'terminal-input'; data: string }
   | { kind: 'terminal-zoom' }
   | { kind: 'terminal-scrollback' }
+  | { kind: 'terminal-name' }
   | { kind: 'board-select'; direction: Direction }
   | { kind: 'board-move'; direction: Direction }
   | { kind: 'board-attach' }
@@ -240,6 +241,13 @@ export const ACTIONS: readonly ActionEntry[] = [
   // a backquote already reaches the shell as no bytes at all — unlike Alt with a letter, which arrives
   // as an escape sequence something in the pane may want. macOS does not want it either: the only
   // system hotkey on that key is Cmd+`, which moves between an app's windows.
+  // Alt+N, in the Alt family the other pane keys live in. Ctrl+N is nvim's mode key and its
+  // autocomplete besides, so it cannot be taken. The cost in the pane is whatever the shell does with
+  // Esc N, which is the same cost Alt+H/J/K/L and Alt+F already pay.
+  {
+    name: 'terminal-name', description: 'Name this pane', group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-name' }, mac: 'Alt+N', other: 'Alt+N',
+  },
   {
     name: 'terminal-scrollback', description: "Open this pane's scrollback in nvim",
     group: 'terminals', scope: 'terminals',

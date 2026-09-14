@@ -1,4 +1,4 @@
-import { branchOfPane, paneLabel } from './terminals';
+import { EDITOR_INDEX, branchOfPane, paneLabel } from './terminals';
 import type { Mode } from './modes';
 
 // What the right-hand end of the status bar says: which view you are on, and for terminals which pane
@@ -25,6 +25,14 @@ export type StatusPage = {
   // Where the focused pane's shell is, which is what says whether it is in a worktree. The pane
   // number is not enough: two panes can be in one checkout and a record names only one of them.
   focusedDirectory: string;
+  // What the focused pane calls itself, worked out by paneName, or undefined for a pane nobody and
+  // nothing has named. Resolved by the caller like everything else here, because it comes off a live
+  // pane and this file never touches one.
+  focusedName?: string;
+  // The same for the editor, which is the focused pane on the nvim screen and is not in `panes`. Its
+  // own field rather than folded into the one above, because the two screens read different panes and
+  // the caller knows which is which without being told the mode twice.
+  editorName?: string;
 };
 
 // The manager is where a launch with nothing saved lands, and with no project open there is nothing on
@@ -45,11 +53,15 @@ export function modeLabel(page: StatusPage): string {
   if (page.mode === 'manager') {
     return managerLabel(page.hasProjects, page.managerStatusLabel, page.pickerBinding, page.pickerDescription);
   }
-  if (page.mode === 'nvim') return 'nvim';
+  // nvim names the pane after whatever file it has open, through the same title escape sequence a
+  // shell uses, so this goes through paneLabel like every other pane rather than answering a bare
+  // 'nvim'. Say it here and not there, and the manager's row reads `nvim · board.json` while the
+  // status bar on that very screen says `nvim` — one pane with two answers.
+  if (page.mode === 'nvim') return paneLabel(EDITOR_INDEX, undefined, page.editorName);
   if (page.mode === 'board') return `board · ${page.boardLabel}`;
   if (page.mode === 'command') return page.commandStatusLabel;
   if (page.paneCount === 0) return '';
-  return paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory));
+  return paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory), page.focusedName);
 }
 
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the
