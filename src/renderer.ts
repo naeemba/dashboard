@@ -3,7 +3,6 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import './worktrees.css';
-import { clampIndex } from './clamp-index';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
@@ -20,7 +19,8 @@ import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay } from './overlay';
 import { waitingNames } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
+  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, positionAfterClose,
+  projectPosition,
 } from './manager';
 import { createManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
@@ -479,7 +479,7 @@ function closeProject(slot: number): void {
     // it was the last one, which is the manager at worst. A close from the manager's own list is the
     // other case and needs none of this: the manager holds the first tab and never moves off it, so
     // what leaves is always behind the page you are looking at.
-    if (closingPosition === activeIndex) landOn(clampIndex(closingPosition, pages.length - 1));
+    if (closingPosition === activeIndex) landOn(positionAfterClose(closingPosition, pages.length));
     // The row leaves the list, the tab leaves the strip, and the session file is written without it.
     renderStatus();
   });
@@ -567,7 +567,9 @@ function apply(action: Action): void {
   const page = pages[activeIndex];
   // The one key aimed at the page rather than at a row: on a project it closes the project you are on.
   // The manager is not a project and has nothing of its own to close, so there it falls through to its
-  // list, where the highlight says which project is meant.
+  // list, where the highlight says which project is meant. Its other two sections have no highlight
+  // naming one project, so the key does nothing on them and Ctrl+H still lists it; CLAUDE.md's help
+  // section says why.
   if (action.kind === 'project-close' && isProjectPage(page)) return closeProject(page.slot);
   switch (action.kind) {
     case 'project-last': {

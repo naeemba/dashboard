@@ -75,6 +75,26 @@ function asRecord(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
+// What an action used to be called in settings.json, for the actions that have been renamed. `name` is
+// the key the file is written under, so a rename that does not read the old spelling loses whatever the
+// user had bound — their key stops working, the shipped default takes over, and nothing on screen says
+// the binding moved. The old line is read only where the new one is absent, so a file holding both is
+// the new one's to answer.
+// Add a row here in the same change that renames an action, or the rename is a silent unbinding.
+const RENAMED_ACTIONS: Record<string, string> = { 'project-close': 'manager-close' };
+
+// What the file has to say about an action: its own line, or the line it was written under before it
+// was renamed. Asked with `in` rather than `??`, because an explicit null is the user saying "no key at
+// all" and has to beat the old line — read it as absent and a file that unbound the key gets the key
+// back under its old spelling.
+// The old line is left in the file rather than migrated: nothing ships under it, so the launch tidy
+// keeps it, and it sits there inert — read only while the new line is missing, and never a clash.
+function storedBinding(storedKeys: Record<string, unknown>, name: string): unknown {
+  if (name in storedKeys) return storedKeys[name];
+  const previous = RENAMED_ACTIONS[name];
+  return previous === undefined ? undefined : storedKeys[previous];
+}
+
 export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const defaults = defaultSettings(isMac);
   const raw = asRecord(stored);
@@ -85,7 +105,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
   const bindings = ACTIONS.map((entry) => ({
-    entry, ...toBinding(storedKeys[entry.name], entry, isMac),
+    entry, ...toBinding(storedBinding(storedKeys, entry.name), entry, isMac),
   }));
   return withoutDuplicates({
     shellCommand: typeof raw.shellCommand === 'string' ? raw.shellCommand : '',

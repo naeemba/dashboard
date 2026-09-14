@@ -194,6 +194,20 @@ So all three stay board scope and all three are still listed on a project's own
 board, doing nothing. What to watch for: the next thing that wants Escape on a
 project's board will not fire, and will not say why.
 
+The close key is the second one, for the same reason read the other way round.
+Ctrl+Q is global, so Ctrl+H lists it on all five screens, and it closes the
+project whose page you are on. The manager's page is not a project. Its list has
+a highlight, so the key closes the project the highlight is on; its board and its
+command screen have no highlight naming one project — the board shows every
+project's cards at once, the command screen a set of marked projects — so there
+is no project the key could mean, and it does nothing there.
+
+What that looks like: press Alt+L from the manager's list to its board, then
+Ctrl+Q. Nothing happens, and Ctrl+H on that screen still says `Ctrl+Q  Close this
+project`. Same on the command screen. `help.test.ts` cannot catch it — it checks
+that `mapShortcut` answers to every key the dialog names, and `mapShortcut` does
+answer, with an action nothing on those two screens acts on.
+
 ## Checks
 
     npm test        # vitest

@@ -77,7 +77,9 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'sections';
 
 export type ActionEntry = {
-  // Stable: it is the key in settings.json, so renaming one loses whatever the user had bound to it.
+  // It is the key in settings.json, so renaming one is renaming a line in the user's file. A rename
+  // needs a row in settings.ts's RENAMED_ACTIONS in the same change, or the key they bound stops
+  // working and the shipped default takes over with nothing on screen saying so.
   name: string;
   // The sentence the help dialog prints, written for someone who has not been told.
   description: string;
@@ -150,9 +152,16 @@ export const ACTIONS: readonly ActionEntry[] = [
   // Global, so it closes the project you are looking at — the page under the key, without going to a
   // list to point at it first.
   // Ctrl+Q on both platforms, rather than the Cmd+W every application closes a window with: this closes
-  // a project, not the window, and the two are worth keeping apart. Ctrl+Q is XON in a terminal, the key
-  // that resumes output after a Ctrl+S — but Ctrl+S is the project picker, so no pane here can be stopped
-  // with XOFF in the first place and there is nothing for XON to start again.
+  // a project, not the window, and the two are worth keeping apart.
+  // The cost of taking it: Ctrl+Q is XON in a terminal, the key that starts output again after an XOFF,
+  // and flow control is live in every pane here — `stty -a` inside one prints `ixon`, `stop = ^S`,
+  // `start = ^Q`. You cannot type the stop key, because Ctrl+S is the project picker, but typing is not
+  // the only way in: paste a block carrying a literal ^S — a copied terminal log, anything half-binary —
+  // and it reaches the pty and stops the output, with the key that would start it again now closing the
+  // project instead.
+  // What makes that cheap rather than a wedged pane is `ixany`, on in that same line: any key resumes a
+  // stopped pane, so it costs one keystroke. `ixany` is a macOS default and not a universal one, so a
+  // platform that ships `-ixany` needs a different key here rather than the same `other: 'Ctrl+Q'`.
   {
     name: 'project-close', description: 'Close this project: its page and its shells',
     group: 'projects', scope: 'global',

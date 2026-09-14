@@ -21,6 +21,18 @@ describe('parseSettings', () => {
     expect(settings.keys['project-picker']).toBe('Ctrl+S');
   });
 
+  it('keeps a binding written under an action\'s old name', () => {
+    expect(parseSettings({ keys: { 'manager-close': 'Cmd+Shift+K' } }, true).keys['project-close'])
+      .toBe('Cmd+Shift+K');
+  });
+
+  it('lets the new name win over the old one, including when it unbinds the key', () => {
+    const both = { 'manager-close': 'Cmd+Shift+K', 'project-close': 'Ctrl+Shift+X' };
+    expect(parseSettings({ keys: both }, true).keys['project-close']).toBe('Ctrl+Shift+X');
+    const unbound = { 'manager-close': 'Cmd+Shift+K', 'project-close': null };
+    expect(parseSettings({ keys: unbound }, true).keys['project-close']).toBeNull();
+  });
+
   it('tells an unbound action apart from a missing one', () => {
     expect(parseSettings({ keys: { help: null } }, true).keys.help).toBeNull();
     expect(parseSettings({ keys: {} }, true).keys.help).toBe('Ctrl+H');

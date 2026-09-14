@@ -1,4 +1,5 @@
 import { relativeAge } from './age';
+import { clampIndex } from './clamp-index';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
 import { isRinging, type Bell } from './waiting';
@@ -38,6 +39,18 @@ export function projectPosition(index: number): number {
 // of -1 too — lands on the manager.
 export function landingPosition(saved: number, firstProject: number): number {
   return saved === -1 ? Math.max(firstProject, 0) : saved;
+}
+
+// Which tab the window lands on when the project you were standing on is closed. `remaining` is how many
+// pages are left once it has gone: the project that slid into the closed tab takes its position, and the
+// last project closed lands on the tab to its left — the manager at worst, since the manager holds tab 0
+// and never leaves.
+// A count rather than a last index, because a count is what the caller has in its hand after the splice
+// and the subtraction is the part that is easy to get wrong. Off by one here and a close lands on a
+// position past the end of the list: focusMode reads `page.mode` of nothing and throws, so the closed
+// tab stays drawn, the keyboard is nowhere, and only a relaunch gets the window back.
+export function positionAfterClose(closed: number, remaining: number): number {
+  return clampIndex(closed, remaining - 1);
 }
 
 // What a pane somewhere else can want from you. Two things are worth crossing the app for: a pane is
