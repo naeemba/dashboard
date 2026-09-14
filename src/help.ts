@@ -2,6 +2,7 @@ import { ACTIONS, defaultBinding, type ActionEntry, type ActionGroup } from './a
 import { isSection } from './manager-sections';
 import { type Mode } from './modes';
 import { openOverlay } from './overlay';
+import { PANE_SCROLLBACK } from './pane';
 import type { Settings } from './settings';
 import { isModified } from './shortcuts';
 
@@ -32,9 +33,19 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'yellow and says which pane on the right, and raises a system notification once if the window '
     + 'is behind something else. Clicking that notification brings the app forward on that pane. '
     + 'Going to the pane clears it. A bell is checked a second later against what the pane has on '
-    + 'screen, so an agent that rings on its way past something and keeps working is left alone.',
+    + 'screen, so an agent that rings on its way past something and keeps working is left alone. '
+    + 'The scrollback key takes you to the nvim screen with the pane you are looking at open there as a '
+    + `file — the last ${PANE_SCROLLBACK} lines it printed, scrollback and screen alike, which is as far `
+    + 'back as a pane remembers. The pane keeps running meanwhile, and the file is a copy: editing it '
+    + 'changes nothing in the pane it came from.',
   nvim: 'One nvim filling the window. It starts the first time you press the nvim key for this '
-    + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again.',
+    + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again, and so does '
+    + 'coming back to this screen — the scrollback key needs a running nvim to hand a file to. '
+    + 'The scrollback key on the terminals screen sends the pane you are looking at here as a file in '
+    + 'a new tab, so an agent transcript can be searched and yanked with real editor tools. It arrives '
+    + 'whatever you were editing, unsaved changes and all, and it is a copy: editing it changes '
+    + 'nothing in the pane it came from, and pressing the key again on that pane throws your edits away '
+    + 'for a fresh copy. Each pane gets a tab of its own, so two of them can be read side by side.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
     + 'straight to disk, so there is no save key and undo is the only way back. The file is re-read '
     + 'each time you enter the board, and again while you are looking at it if something else writes '

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds, paneLabel,
-  terminalId,
+  startsEditor, terminalId,
 } from './terminals';
 
 describe('paneIds', () => {
@@ -79,5 +79,21 @@ describe('modeOfPane', () => {
     expect(modeOfPane(0)).toBe('terminals');
     expect(modeOfPane(TERMINAL_COUNT - 1)).toBe('terminals');
     expect(modeOfPane(EDITOR_INDEX)).toBe('nvim');
+  });
+});
+
+describe('startsEditor', () => {
+  it('starts nvim the first time it is asked for', () => {
+    expect(startsEditor({ started: false, exited: false })).toBe(true);
+  });
+
+  it('leaves a running nvim alone, so coming back to it does not throw away what is open', () => {
+    expect(startsEditor({ started: true, exited: false })).toBe(false);
+  });
+
+  // Quit nvim, go and look at a test run, come back: the pane restarts rather than sitting on its
+  // exit line. The scrollback key needs this — it has nothing to hand a file to otherwise.
+  it('starts it again after it has been quit', () => {
+    expect(startsEditor({ started: true, exited: true })).toBe(true);
   });
 });

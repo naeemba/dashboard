@@ -18,9 +18,10 @@ import { tailLines } from './manager';
 import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, terminalId } from './terminals';
 import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
 import { isBoardChange, isBoardFile } from './board-watch';
+import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -179,10 +180,25 @@ function dropDeadWorktrees(): void {
   worktrees = living;
 }
 
+// Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
+// decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
+ipcMain.handle('scrollback:open', (_event, slot: number, index: number, text: string) => (
+  openScrollback(app.getPath('temp'), shellCommand, slot, index, text)
+));
+
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
   if (entry === undefined) return;
-  const args = entry.args === 'editor' ? editorArguments(shellCommand) : entry.args;
+  // The editor's socket is named after the slot, so the pane that is restarted listens where the same
+  // pane listened before and nothing has to be told the name again. Anything left behind by a previous
+  // run — a crash, a kill -9 — is cleared first: nvim refuses to listen on a path that already exists,
+  // and the pane would show a one-line error instead of an editor.
+  let args = entry.args;
+  if (args === 'editor') {
+    const socket = editorSocket(app.getPath('temp'), paneFromId(id).slot);
+    removeSocket(socket);
+    args = editorArguments(shellCommand, socket);
+  }
   let terminalProcess: pty.IPty;
   try {
     terminalProcess = pty.spawn(shellCommand, args, {
@@ -795,6 +811,9 @@ function createWindow(): void {
 app.on('ready', createWindow);
 app.on('will-quit', () => {
   for (const shellProcess of shells.values()) shellProcess.kill();
+  // The transcripts this run put in the temp folder go with it, rather than sitting there until
+  // something else tidies up.
+  dropScrollbackFiles();
   // A task child is spawned detached, in a process group of its own, so it outlives the app unless it
   // is killed here as well — five `npm test` runs still burning CPU with no window naming them.
   stopTasks();

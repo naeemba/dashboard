@@ -28,6 +28,12 @@ export type DashboardBridge = {
   notify(title: string, body: string, paneId: string): void;
   // A click on that banner, coming back with the id it was raised for.
   onNotificationClick(listener: (paneId: string) => void): void;
+  // Ctrl+`: the focused pane's scrollback, on its way to the project's nvim. The text travels rather
+  // than the pane's id, because only the renderer has the buffer — main has the pty, which is the
+  // bytes going past, not the screen they built. The pane's own index travels too: each pane gets its
+  // own file, so two of them can be read side by side. Answers ok-or-why-not, the shape shipCard and
+  // removeWorktree already answer in, rather than leaving an empty string to mean it worked.
+  openScrollback(slot: number, index: number, text: string): Promise<{ ok: boolean; message: string }>;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;

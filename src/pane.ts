@@ -19,6 +19,13 @@ import { isRinging, looksBusy, type Bell } from './waiting';
 // is the arrival of the bytes, not a change in what they say: a spinner redrawing the same line keeps
 // the pane young, and that is the answer wanted — a pane drawing a spinner is not a pane nobody has
 // touched since this morning. Zero until the first byte, which is a pane that has printed nothing.
+// How far back a pane remembers, ten times xterm's default of a thousand. The number lives here
+// because paneScrollback is what the size is for: the scrollback key hands the whole buffer to nvim,
+// and an agent that has been working for an hour is well past a thousand lines — at the default the
+// file opens with the top silently missing and nothing saying where it was cut. page.ts builds the
+// terminal with it and the help dialog names it, so the two cannot say different numbers.
+export const PANE_SCROLLBACK = 10000;
+
 export type Pane = {
   terminal: Terminal;
   fit: FitAddon;
@@ -33,6 +40,9 @@ export type Pane = {
 // paneLastLine can be tested without building a terminal. xterm's own Terminal satisfies both.
 export type PaneBuffer = {
   baseY: number;
+  // Every line the pane holds, the scrollback above the screen included. `baseY` is where the screen
+  // starts inside it, which is what separates the two readers below.
+  length: number;
   getLine(row: number): { translateToString(trim: boolean): string } | undefined;
 };
 export type PaneTerminal = { rows: number; buffer: { active: PaneBuffer } };
@@ -44,10 +54,17 @@ export function paneScreen(terminal: PaneTerminal): string[] {
   return Array.from({ length: terminal.rows }, (_value, row) => paneRow(buffer, row));
 }
 
-// One row of what is on screen, counted from the top of it. Both readers go through here, so neither
-// can drift into reading the scrollback or leaving the trailing spaces on.
+// One line by its own number in the buffer, scrollback and screen alike. The trailing spaces come off
+// here and nowhere else: xterm pads every line out to the full width, and a reader that forgets is a
+// row of the manager padded to eighty columns, or a file of whitespace in an editor.
+function bufferLine(buffer: PaneBuffer, row: number): string {
+  return buffer.getLine(row)?.translateToString(true) ?? '';
+}
+
+// One row of what is on screen, counted from the top of it. Both screen readers go through here, so
+// neither can drift into reading the scrollback.
 function paneRow(buffer: PaneBuffer, row: number): string {
-  return buffer.getLine(buffer.baseY + row)?.translateToString(true) ?? '';
+  return bufferLine(buffer, buffer.baseY + row);
 }
 
 // What the manager prints on a row, which is the last few lines of the same screen. The bell reads
@@ -82,4 +99,22 @@ export function paneLastLine(terminal: PaneTerminal): string {
 // `Pane` satisfies it.
 export function paneUse(pane: { exited: boolean; bell: Bell; terminal: PaneTerminal }): PaneUse {
   return { exited: pane.exited, busy: isRinging(pane.bell) || looksBusy(paneScreen(pane.terminal)) };
+}
+
+// The whole pane as a file: everything it holds, top of the scrollback to the last line printed. What
+// Ctrl+` hands to nvim, so an agent's transcript can be searched and yanked with real editor tools.
+//
+// The blank rows below the prompt go. A pane holds thousands of lines and shows perhaps forty; the rest
+// of the buffer is empty rows waiting to be written into, and keeping them opens the file at the bottom
+// of a screenful of nothing with the transcript somewhere above — the thing the key exists to stop.
+// Blank lines *inside* the output stay: they are the agent's own spacing.
+//
+// Unlike paneScreen, this one is deliberately the scrollback. Scrolling a pane by hand must not change
+// what the manager says about it, but it must not change what you get here either — you asked for the
+// pane, not for the forty lines of it that happen to be showing.
+export function paneScrollback(terminal: PaneTerminal): string {
+  const buffer = terminal.buffer.active;
+  const rows = Array.from({ length: buffer.length }, (_value, row) => bufferLine(buffer, row));
+  const text = rows.join('\n').trimEnd();
+  return text === '' ? '' : `${text}\n`;
 }

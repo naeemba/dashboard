@@ -57,8 +57,13 @@ export function quoteForShell(value: string, shellCommand: string): string {
 // costs about three quarters of a second, paid once when you first press Ctrl+N for a project, not per
 // keystroke. `exec` leaves nvim as the pane's only process rather than parking a shell above it for as
 // long as the pane is open.
-export function editorArguments(shellCommand: string): string[] {
-  return isPowerShell(shellCommand) ? ['-Command', 'nvim'] : ['-lic', 'exec nvim'];
+//
+// `--listen` is how anything else reaches this nvim once it is up: Ctrl+` sends the focused pane's
+// scrollback to it over that socket. nvim creates the socket as it starts, well before its plugins
+// finish, so the wait is the shell's startup and nothing more.
+export function editorArguments(shellCommand: string, socket: string): string[] {
+  const command = `nvim --listen ${quoteForShell(socket, shellCommand)}`;
+  return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', `exec ${command}`];
 }
 
 // The agent pane runs `claude` through the same shell the editor pane runs nvim through, and for the
@@ -88,4 +93,14 @@ export function agentArguments(shellCommand: string, prompt: string): string[] {
 // stdout and fall back to stderr only when stdout is empty.
 export function taskArguments(shellCommand: string, command: string): string[] {
   return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', command];
+}
+
+// Asking the shell where a program is. `command -v` is a POSIX builtin and PowerShell has no such
+// thing — hand it one and it errors, so a Windows machine with nvim right there on the PATH is told
+// nvim is not on its PATH. `Get-Command` is the PowerShell spelling, and `.Source` is the part of the
+// object that is the path; without -ErrorAction it writes an error record instead of printing nothing.
+export function locateCommand(shellCommand: string, program: string): string {
+  return isPowerShell(shellCommand)
+    ? `(Get-Command ${program} -ErrorAction SilentlyContinue).Source`
+    : `command -v ${program}`;
 }
