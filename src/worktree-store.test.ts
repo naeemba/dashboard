@@ -8,6 +8,7 @@ import {
   withEntry,
   withoutPanes,
   withoutWorktree,
+  worktreesDiffer,
   type WorktreeEntry,
 } from './worktree-store';
 
@@ -129,5 +130,31 @@ describe('claimsPane', () => {
 
   it('is undefined for the card taking the pane itself', () => {
     expect(claimsPane([entry], entry.projectPath, 2, entry.cardId)).toBeUndefined();
+  });
+});
+
+describe('worktreesDiffer', () => {
+  const entry: WorktreeEntry = {
+    cardId: 'card-1',
+    title: 'Ship it',
+    projectPath: '/projects/web',
+    branch: 'ship-it',
+    worktreePath: '/projects/web-ship-it',
+    pane: 2,
+    startedAt: '2026-09-14T00:00:00.000Z',
+  };
+
+  // Closing a project asks every record of that project to give its pane up. One that shipped nothing
+  // hands back what it was given, and nothing is written or redrawn for it.
+  it('says no when a closing project had no record to give up', () => {
+    expect(worktreesDiffer([entry], withoutPanes([entry], '/projects/api'))).toBe(false);
+  });
+
+  it('says yes when a record gives up its pane', () => {
+    expect(worktreesDiffer([entry], withoutPanes([entry], '/projects/web'))).toBe(true);
+  });
+
+  it('says yes when a worktree has gone', () => {
+    expect(worktreesDiffer([entry], livingEntries([entry], () => false))).toBe(true);
   });
 });

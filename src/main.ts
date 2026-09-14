@@ -42,12 +42,13 @@ import {
   withEntry,
   withoutPanes,
   withoutWorktree,
+  worktreesDiffer,
   writeWorktrees,
   type WorktreeEntry,
 } from './worktree-store';
 import type { Settings } from './settings';
 import { moveCardToColumn, selectionOf, shipColumnIndex, type Board } from './board';
-import type { ShipRequest, ShipResult } from './bridge';
+import type { ShipRequest, ShipResult, WorktreeList } from './bridge';
 
 if (started) app.quit();
 
@@ -170,15 +171,65 @@ function releaseWorktreePanes(entry: WorktreeEntry): void {
   }
 }
 
+// The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
+// is where the two of them being one answer is explained.
+//
+// The directories are read straight off terminalCommands rather than tracked beside it, so there is
+// one copy of them. It is the spawn cwd, not the shell's: `cd` in a pane never reaches here, so the
+// branch the status bar prints is the one the pane was opened in.
+function worktreeList(): WorktreeList {
+  return {
+    entries: worktrees,
+    paneDirectories: Object.fromEntries(
+      Array.from(terminalCommands, ([id, command]) => [id, command.directory]),
+    ),
+  };
+}
+
+// The one place the record changes after launch. Every writer goes through it, so the file on disk and
+// the screen are the same fact — a writer that updated one and not the other is how a card goes on
+// naming a worktree that is not there any more. Whether a rewrite is worth a message is
+// worktreesDiffer's to say.
+//
+// The records are what it looks at, not the pane directories riding along with them, and that is enough
+// rather than lucky: the only two things that move a pane into or out of a worktree are a ship and a
+// worktree removed, and both change a record here. A pane whose folder changes for any other reason —
+// a project closed, a project opened in a freed slot, an agent exiting — has moved between two
+// ordinary checkouts, which is not something the status bar prints or a badge reads.
+function setWorktrees(next: WorktreeEntry[]): void {
+  const changed = worktreesDiffer(worktrees, next);
+  worktrees = next;
+  // Neither half runs for a rewrite of what is already there — closing a project that shipped nothing
+  // is one. The file already holds these bytes, written by whoever last changed them, and the board on
+  // screen would be torn down and redrawn for a record nobody touched.
+  if (!changed) return;
+  writeWorktrees(worktreesFile, worktrees);
+  sendToRenderer('worktree:change', worktreeList());
+}
+
 // Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand
 // outside the app strands a pane exactly the way one removed inside it used to, so the two share this.
 // What it does not do is kill whatever is running: a folder that went by other means may still have an
 // agent doing something, and that is not this function's to decide.
 function dropDeadWorktrees(): void {
   const living = livingEntries(worktrees, existsSync);
+  // The usual answer, and the sweep below asks it every few seconds: nothing has gone. livingEntries
+  // only filters, so a count that has not moved is a list that has not moved, and the tick ends here
+  // rather than in a comparison of every record against itself.
+  if (living.length === worktrees.length) return;
   for (const entry of worktrees) if (!living.includes(entry)) releaseWorktreePanes(entry);
-  worktrees = living;
+  setWorktrees(living);
 }
+
+// A worktree taken away outside the app — `git worktree remove` typed in a pane, an agent tidying up
+// after itself, an rm -rf — is not an event anything here hears. It used to be noticed only when the
+// renderer next asked for the list, which is on arriving at a board: sit on the manager's stack of
+// boards while an agent removes its own worktree and the card goes on reading
+// `shipped · fix-login · terminal 3` until you leave the screen and come back to it.
+//
+// A handful of existsSync every few seconds, and the sweep is silent unless something has actually
+// gone.
+setInterval(dropDeadWorktrees, 5000).unref();
 
 // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
 // decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
@@ -376,11 +427,9 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     terminalCommands.delete(id);
     typedPanes.delete(id);
   }
-  // Nothing to rewrite for a project that never shipped a card. Worth the question: this is the
-  // process every other project's pane bytes flow through, and a write stops all of them.
-  if (!worktrees.some((entry) => entry.projectPath === closing.path && entry.pane !== null)) return;
-  worktrees = withoutPanes(worktrees, closing.path);
-  writeWorktrees(worktreesFile, worktrees);
+  // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
+  // knows it: withoutPanes hands back the same records and nothing is written or sent.
+  setWorktrees(withoutPanes(worktrees, closing.path));
 });
 // Read once at startup and written back whenever the layout changes, so a crash loses at most the
 // change you were making rather than every project you had open.
@@ -448,8 +497,7 @@ ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
-  worktrees = withEntry(worktrees, entry);
-  writeWorktrees(worktreesFile, worktrees);
+  setWorktrees(withEntry(worktrees, entry));
   return entry;
 }
 
@@ -588,21 +636,16 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
   }
 });
 
+// The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
+// a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
 ipcMain.handle('worktree:list', () => {
   dropDeadWorktrees();
-  writeWorktrees(worktreesFile, worktrees);
-  // Where each pane's shell was started, read straight off terminalCommands rather than tracked
-  // beside it, so there is one copy of it. It is the spawn cwd, not the shell's: `cd` in a pane never
-  // reaches here, so the branch the status bar prints is the one the pane was opened in.
-  const paneDirectories = Object.fromEntries(
-    Array.from(terminalCommands, ([id, command]) => [id, command.directory]),
-  );
-  return { entries: worktrees, paneDirectories };
+  return worktreeList();
 });
 
-// A channel of its own rather than riding along on worktree:list, which the renderer reads at launch,
-// after every ship and whenever the dialog closes. A `git status` per worktree behind all of those
-// would be that many process spawns for an answer only the worktree dialog shows.
+// A channel of its own rather than riding along on worktree:list and worktree:change, which reach the
+// renderer at launch and after every ship, removal and project close. A `git status` per worktree
+// behind all of those would be that many process spawns for an answer only the worktree dialog shows.
 //
 // blockingChanges is the same predicate worktree:remove asks, so the two can never disagree about
 // what counts as dirty. Run concurrently — this is main, and every pane's bytes flow through it — and
@@ -645,8 +688,7 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
       if (command.directory === worktreePath) shells.get(id)?.kill();
     }
     releaseWorktreePanes(entry);
-    worktrees = withoutWorktree(worktrees, worktreePath);
-    writeWorktrees(worktreesFile, worktrees);
+    setWorktrees(withoutWorktree(worktrees, worktreePath));
     return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
   } catch (error: unknown) {
     return {

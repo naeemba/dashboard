@@ -90,13 +90,6 @@
           "parent": null
         },
         {
-          "id": "cb2603ea-ca53-4d69-ba28-0cded705cf46",
-          "title": "Main broadcasts worktree changes so the renderer stops polling worktrees.json",
-          "notes": "Every write to the worktree record in main sends worktree:changed with the new record; the board view and the manager's stacked boards redraw from it instead of reading worktrees.json for themselves. Fixes the card that keeps showing a branch whose worktree was removed. Discarding a worktree and opening tig in one both change worktrees and need this to be seen at once.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "7b0a129d-0180-47ec-9b74-46e7a3af5dda",
           "title": "Token usage per project: this five-hour window, this week, and all time",
           "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
@@ -111,7 +104,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "cb2603ea-ca53-4d69-ba28-0cded705cf46",
+          "title": "Main broadcasts worktree changes so the renderer stops polling worktrees.json",
+          "notes": "Every write to the worktree record in main sends worktree:changed with the new record; the board view and the manager's stacked boards redraw from it instead of reading worktrees.json for themselves. Fixes the card that keeps showing a branch whose worktree was removed. Discarding a worktree and opening tig in one both change worktrees and need this to be seen at once.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-14T13:06:10.438Z"
+        }
+      ]
     },
     {
       "name": "Done",

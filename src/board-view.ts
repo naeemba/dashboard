@@ -56,9 +56,6 @@ export type BoardOptions = {
   // lands, must not leave its own previous failure sitting on screen. Another producer's message is
   // not this board's to clear, which the renderer enforces.
   onError(message: string): void;
-  // A card has just been shipped, so the record of what is in flight has a row this board's caller has
-  // not seen. Which panes are on a worktree is the status bar's question, not this board's.
-  onShipped(): void;
   // Everything in flight, asked for on every render rather than fetched and held here. One copy of
   // worktrees.json in the renderer, so a worktree removed from the Ctrl+Shift+W list cannot leave a
   // card on the board behind it still reading `shipped · <branch> · terminal 3`.
@@ -440,7 +437,6 @@ export function createBoardView(options: BoardOptions): BoardView {
         const landed = selectionOf(state.board, card.id);
         if (landed) apply(applyAutomaticChange(state, movedBack(landed, from)));
         else render();
-        options.onShipped();
       },
       (error: unknown) => options.onError(`ship failed: ${String(error)}`),
     );

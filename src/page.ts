@@ -42,7 +42,6 @@ export type PageOptions = {
   // something new to say to. waiting.ts holds why.
   managerInFront(): boolean;
   // A ship leaves a new worktree behind, and the badges are drawn from the list of them.
-  onShipped(): void;
   worktrees(): readonly WorktreeEntry[];
 };
 
@@ -288,7 +287,6 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       onChanged: options.onChanged,
       // A slot each, so one project's board never clears another one's failure.
       onError: (message) => options.onError(`board:${slot}`, message),
-      onShipped: options.onShipped,
       worktrees: options.worktrees,
     });
     views.board.append(page.board.element);

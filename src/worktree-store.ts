@@ -133,3 +133,17 @@ export function claimsPane(
   return entries.find((entry) => entry.projectPath === projectPath
     && entry.pane === pane && entry.cardId !== cardId);
 }
+
+// Whether a rewrite of the record is worth writing down and telling the screen about. Not every writer
+// knows: closing a project asks every record of that project to give its pane up, and a project that
+// never shipped a card hands back exactly what it was given.
+//
+// Order counts, and that is the cheap side of the trade: withEntry moves the card it rewrites to the
+// end, so re-recording a card with nothing changed about it can still say yes. One redraw too many
+// costs a frame; one too few leaves a card naming a worktree that is gone.
+export function worktreesDiffer(
+  before: readonly WorktreeEntry[],
+  after: readonly WorktreeEntry[],
+): boolean {
+  return JSON.stringify(before) !== JSON.stringify(after);
+}
