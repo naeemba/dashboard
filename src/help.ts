@@ -79,13 +79,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Only a pane that is asking takes a key that way: a pane that has died wants Enter in the '
     + 'pane itself, and one getting on with its work is left alone. A project with nothing to report '
     + 'says quiet beside its name, and still opens to show what its panes are up to. '
-    + 'A project is also closed from this list, which is the only way out of one short of quitting: its '
-    + 'page, its five shells and its editor go, whatever was in them, and the next launch opens without '
-    + 'it. The close refuses while a pane in it has an agent working or a question waiting, and names '
-    + 'the panes in the way. What it cannot see is a pane running an ordinary long command — a dev '
-    + 'server, a tail, vim — which reads as idle here exactly as it does on the command screen, so a '
-    + 'close it allows is not a promise that nothing was running — which is why it asks first, and '
-    + 'Enter is what takes the project away.',
+    + 'The close key works from here too, and this is the one screen where it needs a highlight: there '
+    + 'is no project behind this page, so what it takes is the project the selection is on. What it '
+    + 'takes and what stops it are the same everywhere, and the Projects section below says both.',
   command: 'One command, run in the projects you mark. Type it once — `npm audit`, `npm outdated`, '
     + 'the test suite — and choose how it runs. Enter gives every marked project a process of its own '
     + 'and puts the answers side by side: each row shows how its project exited and the last line it '
@@ -116,7 +112,14 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
     + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '
     + 'through the manager on the way round. The window opens on the projects the last run was left '
-    + 'on, and closing it asks first, because it kills every shell in every project.',
+    + 'on, and closing it asks first, because it kills every shell in every project. '
+    + 'The close key takes one project away instead, the one whose page you are on: its page, its five '
+    + 'shells and its editor go, whatever was in them, its tab goes with it and the next tab along '
+    + 'takes its place, and the next launch opens without it. It refuses while a pane in that project '
+    + 'has an agent working or a question waiting, and names the panes in the way. What it cannot see '
+    + 'is a pane running an ordinary long command — a dev server, a tail, vim — which reads as idle '
+    + 'exactly as it does on the command screen, so a close it allows is not a promise that nothing '
+    + 'was running — which is why it asks first, and Enter is what takes the project away.',
   app: 'Every key on this list can be changed, and so can the colours, the font and the shell. They '
     + 'are kept in ~/.config/dashboard/settings.json, which you can also edit by hand. It holds only '
     + 'what you changed; anything you left alone follows the app\'s default, including when that '

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MANAGER_SLOT, alertSummary, canOpen, isAlerting, isProjectPage, landingPosition, lineKey,
-  managerLines, managerRows, paneAge, projectPosition, slotOfLine, tailLines, takesAnswer,
+  managerLines, managerRows, paneAge, positionAfterClose, projectPosition, slotOfLine, tailLines,
+  takesAnswer,
   type PaneSummary,
 } from './manager';
 import type { Bell } from './waiting';
@@ -54,6 +55,26 @@ describe('landingPosition', () => {
 
   it('lands on the manager only when no project survived', () => {
     expect(landingPosition(-1, -1)).toBe(0);
+  });
+});
+
+// `remaining` is how many projects are left once the closed one is spliced out, so the first three
+// cases open four pages — the manager and three projects — and the last opens two.
+describe('positionAfterClose', () => {
+  it('lands on the project that slid into the closed tab', () => {
+    expect(positionAfterClose(1, 3)).toBe(1);
+  });
+
+  it('does the same for a project closed from the middle', () => {
+    expect(positionAfterClose(2, 3)).toBe(2);
+  });
+
+  it('lands on the tab to the left when the last project is closed', () => {
+    expect(positionAfterClose(3, 3)).toBe(2);
+  });
+
+  it('lands on the manager when the only project is closed', () => {
+    expect(positionAfterClose(1, 1)).toBe(0);
   });
 });
 

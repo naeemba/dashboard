@@ -36,7 +36,7 @@ export type Action =
   | { kind: 'cards-project'; direction: 'previous' | 'next' }
   | { kind: 'manager-select'; direction: 'up' | 'down' }
   | { kind: 'manager-open' }
-  | { kind: 'manager-close' }
+  | { kind: 'project-close' }
   | { kind: 'section-move'; direction: 'previous' | 'next' }
   | { kind: 'command-select'; direction: 'up' | 'down' }
   | { kind: 'command-open' }
@@ -77,7 +77,9 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'sections';
 
 export type ActionEntry = {
-  // Stable: it is the key in settings.json, so renaming one loses whatever the user had bound to it.
+  // It is the key in settings.json, so renaming one is renaming a line in the user's file. A rename
+  // needs a row in settings.ts's RENAMED_ACTIONS in the same change, or the key they bound stops
+  // working and the shipped default takes over with nothing on screen saying so.
   name: string;
   // The sentence the help dialog prints, written for someone who has not been told.
   description: string;
@@ -147,6 +149,24 @@ export const ACTIONS: readonly ActionEntry[] = [
       family: 'project-move', familyDescription: 'Move this project to that tab',
     };
   }),
+  // Global, so it closes the project you are looking at — the page under the key, without going to a
+  // list to point at it first.
+  // Ctrl+Q on both platforms, rather than the Cmd+W every application closes a window with: this closes
+  // a project, not the window, and the two are worth keeping apart.
+  // The cost of taking it: Ctrl+Q is XON in a terminal, the key that starts output again after an XOFF,
+  // and flow control is live in every pane here — `stty -a` inside one prints `ixon`, `stop = ^S`,
+  // `start = ^Q`. You cannot type the stop key, because Ctrl+S is the project picker, but typing is not
+  // the only way in: paste a block carrying a literal ^S — a copied terminal log, anything half-binary —
+  // and it reaches the pty and stops the output, with the key that would start it again now closing the
+  // project instead.
+  // What makes that cheap rather than a wedged pane is `ixany`, on in that same line: any key resumes a
+  // stopped pane, so it costs one keystroke. `ixany` is a macOS default and not a universal one, so a
+  // platform that ships `-ixany` needs a different key here rather than the same `other: 'Ctrl+Q'`.
+  {
+    name: 'project-close', description: 'Close this project: its page and its shells',
+    group: 'projects', scope: 'global',
+    action: { kind: 'project-close' }, mac: 'Ctrl+Q', other: 'Ctrl+Q',
+  },
   {
     name: 'help', description: 'Open this dialog', group: 'app', scope: 'global',
     action: { kind: 'help' }, mac: 'Ctrl+H', other: 'Ctrl+H',
@@ -310,15 +330,6 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'manager-open', description: "Show a project's panes, or go to the pane",
     group: 'manager', scope: 'manager', action: { kind: 'manager-open' }, mac: 'Enter', other: 'Enter',
-  },
-  // The close key every application uses, and here it closes a project rather than the window. It can
-  // be taken safely even though the manager sends keys to panes: a modified key is never one of those —
-  // isBareCharacter refuses Ctrl, Cmd and Alt — so nothing that could reach a shell is lost. Off macOS
-  // Ctrl+W is backward-kill-word in a shell, which is why worktrees takes Shift with it; this one is
-  // manager scope, and the manager has no shell to type into.
-  {
-    name: 'manager-close', description: 'Close the selected project: its page and its shells',
-    group: 'manager', scope: 'manager', action: { kind: 'manager-close' }, mac: 'Cmd+W', other: 'Ctrl+W',
   },
   // The strip along the top of the manager page. manager-page scope, because they have to work on all
   // three sections and one of those is board mode, which every project also has — a project's board

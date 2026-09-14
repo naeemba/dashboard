@@ -19,7 +19,8 @@ import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay } from './overlay';
 import { waitingNames } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, projectPosition,
+  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, positionAfterClose,
+  projectPosition,
 } from './manager';
 import { createManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
@@ -328,7 +329,15 @@ function showPage(index: number, arriving = false): void {
   // only needs its keyboard focus back, not a fresh arrival at its mode.
   if (next === activeIndex) return focusMode(pages[activeIndex], arriving);
   previousSlot = pages[activeIndex].slot;
-  activeIndex = next;
+  landOn(next);
+}
+
+// Put this page on screen and every other one away, then give it the keyboard. Split out of showPage
+// for the one caller that cannot go through it: a close takes the page you are standing on out of the
+// list, so there is no page to come from and no previous tab to remember — the tab that took its place
+// simply has to appear.
+function landOn(index: number): void {
+  activeIndex = index;
   pages.forEach((page, pageIndex) => {
     page.element.hidden = pageIndex !== activeIndex;
   });
@@ -423,10 +432,10 @@ function closeRefusalFor(page: Page): string {
   );
 }
 
-// Closing a project from the manager's list. Everything it takes is gone for good — five shells, the
-// editor, and whatever was running in them — so what can stop it, and the sentence saying so, are
-// close-project.ts's. A pane that has exited or is sitting at a prompt stops nothing, so the question
-// below is asked whether or not anything was in the way.
+// Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
+// takes is gone for good — five shells, the editor, and whatever was running in them — so what can stop
+// it, and the sentence saying so, are close-project.ts's. A pane that has exited or is sitting at a
+// prompt stops nothing, so the question below is asked whether or not anything was in the way.
 // The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
 // pane id that named this project names nothing from here on.
 function closeProject(slot: number): void {
@@ -464,10 +473,13 @@ function closeProject(slot: number): void {
     bridge.closeProject(slot);
     discardPanes(slot);
     closingPage.element.remove();
-    // activeIndex needs no adjusting: the manager holds the first tab and never moves off it, a project
-    // is always behind it, and this key is only heard on the manager — so what leaves the list is always
-    // behind the page you are looking at.
     pages.splice(closingPosition, 1);
+    // The page that went can be the one you were standing on, since the key closes the project you are
+    // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
+    // it was the last one, which is the manager at worst. A close from the manager's own list is the
+    // other case and needs none of this: the manager holds the first tab and never moves off it, so
+    // what leaves is always behind the page you are looking at.
+    if (closingPosition === activeIndex) landOn(positionAfterClose(closingPosition, pages.length));
     // The row leaves the list, the tab leaves the strip, and the session file is written without it.
     renderStatus();
   });
@@ -553,6 +565,12 @@ function apply(action: Action): void {
     refreshWorktrees();
   });
   const page = pages[activeIndex];
+  // The one key aimed at the page rather than at a row: on a project it closes the project you are on.
+  // The manager is not a project and has nothing of its own to close, so there it falls through to its
+  // list, where the highlight says which project is meant. Its other two sections have no highlight
+  // naming one project, so the key does nothing on them and Ctrl+H still lists it; CLAUDE.md's help
+  // section says why.
+  if (action.kind === 'project-close' && isProjectPage(page)) return closeProject(page.slot);
   switch (action.kind) {
     case 'project-last': {
       const position = positionOfSlot(previousSlot);
