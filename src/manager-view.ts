@@ -257,7 +257,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // A pane row closes its project, rather than doing nothing: the close key is aimed at a project
       // and the panes on screen are that project's, so the key means the same thing wherever the
       // highlight is inside the block. Which project a line belongs to is manager.ts's to answer.
-      if (action.kind === 'manager-close') {
+      if (action.kind === 'project-close') {
         const line = lines[selected];
         if (line) options.onClose(slotOfLine(line));
       }
