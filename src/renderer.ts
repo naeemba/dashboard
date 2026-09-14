@@ -9,7 +9,7 @@ import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, terminalId } from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, startsEditor, terminalId } from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
 import type { Session } from './session';
@@ -278,9 +278,12 @@ function setMode(mode: Mode): void {
 // nothing is going to create before telling you nvim did not start.
 function startEditor(page: Page): void {
   if (!page.editor) return;
-  if (page.editorStarted && !page.editor.exited) return;
+  if (!startsEditor({ started: page.editorStarted, exited: page.editor.exited })) return;
   page.editorStarted = true;
   page.editor.exited = false;
+  // The same reset the Enter path in page.ts does. Without it the `[exited 0] press Enter to restart`
+  // line stays in the pane's scrollback and reappears the next time nvim drops the alt screen.
+  page.editor.terminal.reset();
   bridge.restart(terminalId(page.slot, EDITOR_INDEX));
   bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
 }
@@ -542,10 +545,10 @@ async function showPicker(): Promise<void> {
 function openScrollback(page: Page): void {
   const pane = page.panes[page.focused];
   if (!pane) return;
-  const sending = bridge.openScrollback(page.slot, paneScrollback(pane.terminal));
+  const sending = bridge.openScrollback(page.slot, page.focused, paneScrollback(pane.terminal));
   setMode('nvim');
   sending.then(
-    (message) => showError('scrollback', message),
+    (answer) => showError('scrollback', answer.message),
     (error: unknown) => showError('scrollback', `Could not open the scrollback: ${String(error)}`),
   );
 }

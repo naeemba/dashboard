@@ -19,6 +19,13 @@ import { isRinging, looksBusy, type Bell } from './waiting';
 // is the arrival of the bytes, not a change in what they say: a spinner redrawing the same line keeps
 // the pane young, and that is the answer wanted — a pane drawing a spinner is not a pane nobody has
 // touched since this morning. Zero until the first byte, which is a pane that has printed nothing.
+// How far back a pane remembers, ten times xterm's default of a thousand. The number lives here
+// because paneScrollback is what the size is for: the scrollback key hands the whole buffer to nvim,
+// and an agent that has been working for an hour is well past a thousand lines — at the default the
+// file opens with the top silently missing and nothing saying where it was cut. page.ts builds the
+// terminal with it and the help dialog names it, so the two cannot say different numbers.
+export const PANE_SCROLLBACK = 10000;
+
 export type Pane = {
   terminal: Terminal;
   fit: FitAddon;

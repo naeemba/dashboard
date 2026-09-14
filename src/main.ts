@@ -1,7 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { execFile, spawn } from 'node:child_process';
-import { existsSync, readFileSync, rmSync, watch, type FSWatcher } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
@@ -22,6 +21,7 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, terminalId } from './terminals';
 import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
 import { isBoardChange, isBoardFile } from './board-watch';
+import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -180,102 +180,23 @@ function dropDeadWorktrees(): void {
   worktrees = living;
 }
 
-// Where a project's editor listens. Under the app's own temp folder, one per slot, so two projects
-// open at once do not answer for each other. Removed when the pane is spawned rather than when it dies:
-// a crash never gets to clean up, and the next spawn has to work anyway.
-function editorSocket(slot: number): string {
-  return path.join(app.getPath('temp'), `dashboard-nvim-${slot}.sock`);
-}
-
-// Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim.
-
-// Where nvim is, found once and remembered. The PATH problem every spawn here has — an app launched
-// from the Dock inherits almost none of one — but this runs on a keypress rather than on a pane spawn,
-// and the login shell that solves it costs about three quarters of a second. Paying that on every press
-// is the difference between a key that opens a tab and a key you wait for.
-//
-// Remembered for the life of the app, so nvim moving house wants a restart. That is the same deal the
-// editor pane already has: it resolves nvim through the shell when the pane spawns and holds it for as
-// long as the pane lives.
-let nvimPath: string | null = null;
-
-async function findNvim(): Promise<string | null> {
-  if (nvimPath !== null) return nvimPath;
-  try {
-    // The last line, because a login shell with something chatty in its rc files prints that first.
-    const { stdout } = await runCommand(shellCommand, taskArguments(shellCommand, 'command -v nvim'));
-    const found = stdout.trim().split('\n').pop() ?? '';
-    nvimPath = found === '' ? null : found;
-  } catch {
-    nvimPath = null;
-  }
-  return nvimPath;
-}
-
-// The wait is for a cold start. The key works from terminals mode, where the editor may never have been
-// opened, so the renderer starts nvim and this waits for the socket it creates — about a second, nearly
-// all of it the login shell's own startup. Polled rather than watched: a watch on a folder for one
-// filename is more machinery for the same answer, and this runs once per keypress.
-// ponytail: polls every 50ms for up to 15s, which is the shell's startup with room to spare. If a
-// slower machine ever times out, the fix is a longer wait, not a faster poll.
-const SOCKET_POLL_MS = 50;
-const SOCKET_WAIT_MS = 15000;
-
-async function waitForSocket(socket: string): Promise<boolean> {
-  for (let waited = 0; waited < SOCKET_WAIT_MS; waited += SOCKET_POLL_MS) {
-    if (existsSync(socket)) return true;
-    await new Promise((resolve) => setTimeout(resolve, SOCKET_POLL_MS));
-  }
-  return existsSync(socket);
-}
-
-ipcMain.handle('scrollback:open', async (_event, slot: number, text: string): Promise<string> => {
-  // Asked before the wait, not after. A machine with no nvim has an editor pane that exits on the spot
-  // and a socket that is never coming, so without this the answer is fifteen seconds of nothing followed
-  // by a message about a start that was never going to happen.
-  const nvim = await findNvim();
-  if (nvim === null) return 'nvim is not on your PATH, so there is nowhere to put the scrollback';
-  const file = path.join(app.getPath('temp'), `dashboard-scrollback-${slot}.txt`);
-  try {
-    // Owner-only, and never written into a file that is already there. A pane's scrollback is whatever
-    // was on your screen — an agent's transcript, a .env someone catted, a token a command echoed — and
-    // the temp folder is shared. The default mode would leave all of that readable by every account on
-    // the machine. The remove-then-`wx` pair is the other half: without it, a file planted at this path
-    // by someone else is a file this writes your scrollback into, mode and all.
-    rmSync(file, { force: true });
-    await writeFile(file, text, { mode: 0o600, flag: 'wx' });
-  } catch (error) {
-    return `could not write the scrollback: ${(error as Error).message}`;
-  }
-  const socket = editorSocket(slot);
-  // Said rather than swallowed. Every other outcome puts a file in front of you; this one leaves the
-  // editor showing whatever it was showing, and without a message that reads as the key doing nothing.
-  if (!await waitForSocket(socket)) return 'nvim did not start, so there was nowhere to put the scrollback';
-  try {
-    // No shell: nvim's own path, and the arguments handed over as words. Nothing here has to be quoted,
-    // which is the whole reason the path is resolved once rather than run through a shell each time.
-    // `--remote-tab` rather than `--remote`, which is `:edit` and refuses a buffer with unsaved changes.
-    // A new tab always has somewhere to go, so the key cannot fail on account of what you were editing —
-    // and it is `:tab drop` underneath, so pressing the key twice returns to the tab rather than
-    // stacking a second copy of the same file.
-    await runCommand(nvim, ['--server', socket, '--remote-tab', file]);
-    return '';
-  } catch (error) {
-    return `nvim would not open the scrollback: ${(error as Error).message}`;
-  }
-});
+// Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
+// decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
+ipcMain.handle('scrollback:open', (_event, slot: number, index: number, text: string) => (
+  openScrollback(app.getPath('temp'), shellCommand, slot, index, text)
+));
 
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
   if (entry === undefined) return;
   // The editor's socket is named after the slot, so the pane that is restarted listens where the same
-  // pane listened before and nothing has to be told the name again. A socket left behind by a previous
-  // run — a crash, a kill -9 — is removed first: nvim refuses to listen on a path that already exists,
+  // pane listened before and nothing has to be told the name again. Anything left behind by a previous
+  // run — a crash, a kill -9 — is cleared first: nvim refuses to listen on a path that already exists,
   // and the pane would show a one-line error instead of an editor.
   let args = entry.args;
   if (args === 'editor') {
-    const socket = editorSocket(paneFromId(id).slot);
-    rmSync(socket, { force: true });
+    const socket = editorSocket(app.getPath('temp'), paneFromId(id).slot);
+    removeSocket(socket);
     args = editorArguments(shellCommand, socket);
   }
   let terminalProcess: pty.IPty;
@@ -890,6 +811,9 @@ function createWindow(): void {
 app.on('ready', createWindow);
 app.on('will-quit', () => {
   for (const shellProcess of shells.values()) shellProcess.kill();
+  // The transcripts this run put in the temp folder go with it, rather than sitting there until
+  // something else tidies up.
+  dropScrollbackFiles();
   // A task child is spawned detached, in a process group of its own, so it outlives the app unless it
   // is killed here as well — five `npm test` runs still burning CPU with no window naming them.
   stopTasks();

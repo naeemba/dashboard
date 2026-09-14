@@ -94,3 +94,13 @@ export function agentArguments(shellCommand: string, prompt: string): string[] {
 export function taskArguments(shellCommand: string, command: string): string[] {
   return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', command];
 }
+
+// Asking the shell where a program is. `command -v` is a POSIX builtin and PowerShell has no such
+// thing — hand it one and it errors, so a Windows machine with nvim right there on the PATH is told
+// nvim is not on its PATH. `Get-Command` is the PowerShell spelling, and `.Source` is the part of the
+// object that is the path; without -ErrorAction it writes an error record instead of printing nothing.
+export function locateCommand(shellCommand: string, program: string): string {
+  return isPowerShell(shellCommand)
+    ? `(Get-Command ${program} -ErrorAction SilentlyContinue).Source`
+    : `command -v ${program}`;
+}

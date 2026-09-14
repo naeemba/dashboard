@@ -76,3 +76,15 @@ export function paneFromId(id: string): { slot: number; index: number } {
 export function modeOfPane(index: number): Mode {
   return index === EDITOR_INDEX ? 'nvim' : 'terminals';
 }
+
+// Whether asking for nvim has to start it. Two ways in — arriving on the nvim screen, and the
+// scrollback key, which needs a live nvim to hand a file to — and the question belongs here rather
+// than at each of them: with the condition left to the callers, the second one wrote its own and got a
+// different one, and the third would have copied whichever it read first.
+//
+// What the different one looked like: quit nvim, press the scrollback key, and it waits fifteen
+// seconds for a socket nothing is going to create before telling you nvim did not start. So a pane
+// that has exited starts again, which is also what the nvim screen does when you come back to it.
+export function startsEditor(editor: { started: boolean; exited: boolean }): boolean {
+  return !editor.started || editor.exited;
+}

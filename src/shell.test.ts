@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentArguments, editorArguments, pickShell, quoteForShell, taskArguments } from './shell';
+import { agentArguments, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
 import { defaultSettings } from './settings';
 
 describe('pickShell', () => {
@@ -71,12 +71,28 @@ describe('editorArguments', () => {
     expect(editorArguments('C:\\Program Files\\PowerShell\\pwsh.exe', '/tmp/one.sock')).toEqual(['-Command', 'nvim --listen /tmp/one.sock']);
   });
 
-  // The socket sits under the app's own temp folder, and on Windows that path holds the user's name —
-  // which can have a space in it. Unquoted, nvim is told to listen on the half before the space and the
-  // pane dies on the rest.
-  it('quotes a socket path with a space in it', () => {
+  // The socket sits wherever the operating system puts this app's temp folder, and that path is not
+  // ours to promise anything about — a space in it is allowed. Unquoted, nvim is told to listen on the
+  // half before the space and the pane dies on the rest. Both shells, because each reads the other's
+  // quoting as garbage and SHELL_COMMAND lets a Mac run pwsh.
+  it('quotes a socket path with a space in it, in either shell', () => {
     expect(editorArguments('/bin/zsh', '/tmp/my sockets/one.sock'))
       .toEqual(['-lic', "exec nvim --listen '/tmp/my sockets/one.sock'"]);
+    expect(editorArguments('powershell.exe', 'C:\\Users\\My Name\\Temp\\one.sock'))
+      .toEqual(['-Command', "nvim --listen 'C:\\Users\\My Name\\Temp\\one.sock'"]);
+  });
+});
+
+describe('locateCommand', () => {
+  it('asks a POSIX shell with its own builtin', () => {
+    expect(locateCommand('/bin/zsh', 'nvim')).toBe('command -v nvim');
+  });
+
+  // PowerShell has no `command`. Handed one it errors, the lookup comes back empty, and a Windows
+  // machine with nvim on its PATH is told nvim is not on its PATH.
+  it('asks PowerShell in the only spelling it has', () => {
+    expect(locateCommand('powershell.exe', 'nvim'))
+      .toBe('(Get-Command nvim -ErrorAction SilentlyContinue).Source');
   });
 });
 
