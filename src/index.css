@@ -674,8 +674,9 @@ textarea.board-edit {
   font-size: 14px;
 }
 
-/* Shared with .prompt-question: the small grey line beside the thing being asked. */
+/* Shared with .prompt-question and .prompt-keys: the small grey line beside the thing being asked. */
 .confirm-keys,
+.prompt-keys,
 .prompt-question {
   margin: 0;
   font-size: 12px;
@@ -684,6 +685,13 @@ textarea.board-edit {
 
 .prompt-question {
   margin-bottom: 4px;
+}
+
+/* Under the box rather than over it, where the confirm dialog's keys line sits: the question names the
+   thing, the box is what you are looking at, and the keys are what you read once you wonder how to get
+   out of it. */
+.prompt-keys {
+  margin-top: 8px;
 }
 
 .card-detail-dialog {

@@ -67,7 +67,16 @@ export function confirmOverlay(message: string, keysLine: string): Promise<boole
 //
 // Empty and cancelled are different answers. Empty is a thing you typed — for the caller to read as
 // "none of mine" — where null is you never meant to open this.
-export function promptOverlay(question: string, current: string, placeholder: string): Promise<string | null> {
+//
+// The keys line is the caller's to write, like confirmOverlay's and for the same reason: only the
+// caller knows what an empty box means to it, and that is the one thing about this dialog nothing on
+// screen would otherwise say.
+export function promptOverlay(
+  question: string,
+  current: string,
+  placeholder: string,
+  keysLine: string,
+): Promise<string | null> {
   return new Promise<string | null>((resolve) => {
     function close(answer: string | null): void {
       remove();
@@ -87,7 +96,10 @@ export function promptOverlay(question: string, current: string, placeholder: st
     // Every box you type into carries this: without it a Persian name runs away from the caret, and
     // Home and End go to the opposite ends of what you see.
     input.dir = 'auto';
-    dialog.append(label, input);
+    const keys = document.createElement('p');
+    keys.className = 'prompt-keys';
+    keys.textContent = keysLine;
+    dialog.append(label, input, keys);
     input.focus();
     input.select();
 

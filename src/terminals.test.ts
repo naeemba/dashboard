@@ -86,6 +86,16 @@ describe('paneName', () => {
   it('trims what it gives back', () => {
     expect(paneName({ typedName: '  dev server  ' })).toBe('dev server');
   });
+
+  // A title is whatever the program in the pane printed, and neither place a name is drawn can shrink
+  // below its text: the status bar is one line whose right end says which pane is ringing, and the
+  // manager's row keeps its state and age at the far end. Unbounded, one zsh theme that titles the
+  // window with the full path pushes both off the window.
+  it('cuts a name too long for the line it goes on', () => {
+    const long = 'working on the pane naming card in the dashboard repository';
+    expect(paneName({ title: long })).toBe('working on the pane naming card in the …');
+    expect(paneName({ typedName: long })).toBe('working on the pane naming card in the …');
+  });
 });
 
 describe('branchOfPane', () => {

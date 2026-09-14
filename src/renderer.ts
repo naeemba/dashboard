@@ -491,6 +491,9 @@ function closeProject(slot: number): void {
     `Close ${page.project.name}?`,
     'Enter closes it, its five shells and its editor. Escape keeps it.',
   ).then((confirmed) => {
+    // The keyboard back to the page first, for the same reason namePane does it: the sheet that held the
+    // focus has gone, so answering Escape here would otherwise leave you unable to type in any pane.
+    showPage(activeIndex);
     if (!confirmed) return;
     // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
     // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
@@ -585,12 +588,19 @@ function namePane(page: Page): void {
   if (!pane) return;
   // The placeholder is what the pane is called with no name of yours, so you can see what you are
   // overriding — and, on a pane already saying something useful, that there is nothing worth typing.
-  void promptOverlay('Name this pane', pane.typedName ?? '', pane.title?.trim() || 'unnamed').then((answer) => {
-    if (answer === null) return;
+  void promptOverlay(
+    'Name this pane',
+    pane.typedName ?? '',
+    pane.title?.trim() || 'unnamed',
+    'Enter names it. An empty box goes back to following the title. Escape keeps what it has.',
+  ).then((answer) => {
     // Stored as typed and trimmed on the way out, by paneName, which is where every name arrives.
-    pane.typedName = answer;
-    // renderStatus writes the session file on its way out, which is what makes the name last a restart.
-    renderStatus();
+    if (answer !== null) pane.typedName = answer;
+    // The keyboard goes back to the pane whichever way the dialog went: the sheet that held it has been
+    // removed, so without this the keystrokes land on <body> and typing in the pane does nothing.
+    // showPage redraws the status on its way through, and that redraw writes the session file, which is
+    // what makes the name last a restart.
+    showPage(activeIndex);
   });
 }
 

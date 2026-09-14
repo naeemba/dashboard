@@ -55,6 +55,8 @@ export function paneLabel(index: number, branch?: string, name?: string): string
   return [base, branch, name].filter((part) => part !== undefined).join(' · ');
 }
 
+const NAME_LIMIT = 40;
+
 // What a pane is called, out of the two things that can call it something. A name you typed wins: a
 // title is a hint and nothing more, because the shell rewrites it on every prompt — take it over a
 // typed name and the name you chose is gone by the next `ls`.
@@ -62,8 +64,17 @@ export function paneLabel(index: number, branch?: string, name?: string): string
 // Blank is not a name. Clearing the typed name is how you go back to following the title, and a
 // program is free to set the title to nothing, so neither may leave a pane reading `terminal 3 · `.
 // The trim happens here, once, rather than at each of the three ends that store one.
+//
+// Cut to a length the two places a name is drawn can hold. A title is whatever the program in the
+// pane printed — a zsh theme that titles the window with the full path, an agent saying what it is
+// working on — and both the status bar's one line and the manager's row are flex rows that cannot
+// shrink below their text. A hundred-character title there pushes the right end off the window, and
+// the right end of the status bar is the part that says which pane is ringing. Cut once here, where
+// every name arrives, rather than in each of them.
 export function paneName(pane: { typedName?: string; title?: string }): string | undefined {
-  return pane.typedName?.trim() || pane.title?.trim() || undefined;
+  const name = pane.typedName?.trim() || pane.title?.trim() || undefined;
+  if (name === undefined || name.length <= NAME_LIMIT) return name;
+  return `${name.slice(0, NAME_LIMIT - 1)}…`;
 }
 
 // The branch a pane is on, or undefined when it is on the project's own checkout. Kept beside
