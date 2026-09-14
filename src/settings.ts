@@ -88,7 +88,11 @@ const RENAMED_ACTIONS: Record<string, string> = { 'project-close': 'manager-clos
 // all" and has to beat the old line — read it as absent and a file that unbound the key gets the key
 // back under its old spelling.
 // The old line is left in the file rather than migrated: nothing ships under it, so the launch tidy
-// keeps it, and it sits there inert — read only while the new line is missing, and never a clash.
+// keeps it, and it is read only while the new line is missing. It is not inert while it is read. A key
+// it names counts as `written`, so it settles ahead of a line typed later: hand-edit the file to give
+// the old name and some other action the same key and the other action is the one that loses it. Put
+// `"manager-close": "Cmd+Shift+K"` and `"help": "Cmd+Shift+K"` in a file and help comes back unbound,
+// with the key showing against "Close this project" on the settings screen — a row you never typed.
 function storedBinding(storedKeys: Record<string, unknown>, name: string): unknown {
   if (name in storedKeys) return storedKeys[name];
   const previous = RENAMED_ACTIONS[name];

@@ -58,7 +58,8 @@ describe('landingPosition', () => {
   });
 });
 
-// Four pages open — the manager and three projects — so `remaining` is 3 after any one of them goes.
+// `remaining` is how many projects are left once the closed one is spliced out, so the first three
+// cases open four pages — the manager and three projects — and the last opens two.
 describe('positionAfterClose', () => {
   it('lands on the project that slid into the closed tab', () => {
     expect(positionAfterClose(1, 3)).toBe(1);
