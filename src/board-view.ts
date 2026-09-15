@@ -8,6 +8,7 @@ import {
   deleteCardAndDescendants,
   descendantsOf,
   detachCard,
+  dropCard,
   hasSubtasks,
   landsInShip,
   moveCard,
@@ -23,6 +24,7 @@ import {
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
+import { dropRow } from './board-drag';
 import { putEditBack, takeEdit } from './carried-edit';
 import {
   addBlankCard,
@@ -368,7 +370,99 @@ export function createBoardView(options: BoardOptions): BoardView {
       bar.append(count);
       item.append(bar);
     }
+    // The mouse half of the board, native drag and drop rather than a gesture spelled out of pointer
+    // events: Chromium draws the card under the cursor, ends the drag when you let go anywhere, and
+    // gives up on Escape, none of which is worth writing again.
+    item.draggable = true;
+    item.addEventListener('dragstart', (event) => beginDrag(event, item, card));
+    // A drag abandoned outside any column still has to take the line off the card it last hovered.
+    item.addEventListener('dragend', () => markDrop(null, 0));
+    // A click moves the selection to the card first and then does what Enter does there.
+    item.addEventListener('click', () => clickCard(card));
     return item;
+  }
+
+  // Enter on a board opens the title, so that is what a click does. Nothing happens while a box is
+  // open: the click that closes it commits what you typed and leaves the highlight where the keyboard
+  // already was, which is the card you were naming and not the one you reached for.
+  function clickCard(card: Card): void {
+    const at = busy() ? null : selectionOf(state.board, card.id);
+    if (!at) return;
+    state = { ...state, selection: at };
+    startEditing('title');
+  }
+
+  // The board is not taking anything at this moment: a box is open, or a read is in flight and the
+  // board on screen is about to be replaced — applying a gesture to it would be applying it to cards
+  // you are not looking at. The keys, the clicks and the drags all bounce off this one answer.
+  function busy(): boolean {
+    return editing !== null || landedRead !== latestRead;
+  }
+
+  // Grabbing a card moves the selection onto it, so the highlight and the pointer never name two
+  // different rows.
+  //
+  // The class is moved by hand here, which is the one place in this file that does not redraw for a
+  // change of selection. Chromium takes the picture that follows the cursor after this handler
+  // returns, and render() replaces every card on the board — including this one. Redraw here and the
+  // picture is taken of a node that no longer exists, so the drag runs with nothing under the pointer.
+  function beginDrag(event: DragEvent, item: HTMLElement, card: Card): void {
+    const at = busy() ? null : selectionOf(state.board, card.id);
+    // Nothing to drag: refusing the gesture outright is better than a card that follows the cursor and
+    // then will not be let go of anywhere.
+    if (!at) return event.preventDefault();
+    // Chromium cancels a drag that carries nothing, and the id is what the drop looks the card up by.
+    event.dataTransfer?.setData('text/plain', card.id);
+    element.querySelector(SELECTED_CARD)?.classList.remove('selected');
+    item.classList.add('selected');
+    state = { ...state, selection: at };
+    // The status bar names the column the selection is in, and it has just changed columns' worth of
+    // meaning without a render to tell it.
+    options.onChanged();
+  }
+
+  // Where the card would land if you let go now, drawn as a line along the top of the card it would sit
+  // above — or along the bottom of the last one when the answer is the end of the column. Without it a
+  // drag into a column of a dozen cards is a guess: the gap between two cards is four pixels of
+  // background and nothing in it says which gap the cursor is in.
+  //
+  // An empty column gets no line. There is one place the card can go and the column is visibly empty,
+  // so there is nothing for a line to tell apart.
+  function markDrop(list: HTMLElement | null, row: number): void {
+    for (const marked of element.querySelectorAll('.drop-above, .drop-below')) {
+      marked.classList.remove('drop-above', 'drop-below');
+    }
+    const cards = list?.children;
+    if (!cards) return;
+    if (row < cards.length) cards[row]?.classList.add('drop-above');
+    else cards[cards.length - 1]?.classList.add('drop-below');
+  }
+
+  // The rows of a column as the pointer sees them. Measured here and decided in board-drag.ts, so the
+  // rule about which gap a pointer is in is somewhere a test can reach.
+  function midpointsOf(list: HTMLElement): number[] {
+    return [...list.children].map((item) => {
+      const box = item.getBoundingClientRect();
+      return box.top + box.height / 2;
+    });
+  }
+
+  // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
+  // agent: a column means the same thing however the card got there, and a drag that quietly skipped
+  // the ship would be a second, silent set of rules for the mouse.
+  function dropOnColumn(event: DragEvent, columnIndex: number, list: HTMLElement): void {
+    event.preventDefault();
+    markDrop(null, 0);
+    if (busy()) return;
+    // Found by id rather than taken from this board's selection. The manager stacks every open
+    // project's board in one scroller, so the card let go of here may belong to another one of them,
+    // and something dragged in from outside the app carries no id at all — either way this board has
+    // no such card and does nothing with it.
+    const at = selectionOf(state.board, event.dataTransfer?.getData('text/plain') ?? '');
+    if (!at) return;
+    const moving = cardAt(state.board, at);
+    change(dropCard(state.board, at, columnIndex, dropRow(midpointsOf(list), event.clientY)));
+    if (moving && landsInShip(state.board, at.column, state.selection, 'drop')) ship(moving, at.column);
   }
 
   function render(): void {
@@ -383,6 +477,15 @@ export function createBoardView(options: BoardOptions): BoardView {
       const list = document.createElement('ul');
       list.append(...column.cards.map((card, cardIndex) =>
         renderCard(card, columnIndex === state.selection.column && cardIndex === state.selection.card)));
+      // On the whole column, not the cards in it: a column you can only drop onto by hitting a card is
+      // a column you cannot drop into once it is empty, and the heading and the gap under the last card
+      // are both places a hand aims at. preventDefault is what makes the column a place a card can be
+      // let go of at all — without it the drop never fires and the card springs back.
+      section.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        markDrop(list, dropRow(midpointsOf(list), event.clientY));
+      });
+      section.addEventListener('drop', (event) => dropOnColumn(event, columnIndex, list));
       if (column.cards.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'board-empty';
@@ -523,9 +626,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // Every key on this screen is found by the window's one lookup and handed here. The board keeps no
     // key handling of its own, which is what stops a board key and its help row drifting apart.
     runAction(action: Action): void {
-      // A read is in flight and the board on screen is about to be replaced. Applying a keystroke to
-      // the board that is going away would be applying it to cards you are not looking at.
-      if (editing || landedRead !== latestRead) return;
+      if (busy()) return;
       switch (action.kind) {
         case 'board-select':
           state = { ...state, selection: moveSelection(state.board, state.selection, action.direction) };
