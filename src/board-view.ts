@@ -388,9 +388,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     // events: Chromium draws the card under the cursor, ends the drag when you let go anywhere, and
     // gives up on Escape, none of which is worth writing again.
     item.draggable = true;
-    item.addEventListener('dragstart', (event) => beginDrag(event, item, card));
-    // A drag abandoned outside any column still has to take the line off the card it last hovered.
-    item.addEventListener('dragend', clearDrop);
+    item.addEventListener('dragstart', (event) => beginDrag(event, card));
+    item.addEventListener('dragend', endDrag);
     // A click moves the selection to the card first and then does what Enter does there.
     item.addEventListener('click', () => clickCard(card));
     return item;
@@ -413,24 +412,27 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (selectCard(card)) startEditing('title');
   }
 
-  // Grabbing a card moves the selection onto it, so the highlight and the pointer never name two
-  // different rows.
+  // Grabbing a card moves the selection onto it, so that when the drag is over — dropped or abandoned —
+  // the highlight is on the card the pointer last had hold of rather than wherever it was before.
   //
-  // The class is moved by hand here, which is the one place in this file that does not redraw for a
-  // change of selection. Chromium takes the picture that follows the cursor after this handler
-  // returns, and render() replaces every card on the board — including this one. Redraw here and the
-  // picture is taken of a node that no longer exists, so the drag runs with nothing under the pointer.
-  function beginDrag(event: DragEvent, item: HTMLElement, card: Card): void {
+  // It does not redraw here, and does not move the highlight by hand either. Chromium takes the picture
+  // that follows the cursor after this handler returns, and render() replaces every card on the board
+  // including this one, so a redraw here hands the picture a node that no longer exists and the drag
+  // runs with nothing under the pointer. The redraw happens on dragend instead, which fires however the
+  // drag ends; the card under the cursor is what says where you are until then.
+  function beginDrag(event: DragEvent, card: Card): void {
     // Nothing to drag: refusing the gesture outright is better than a card that follows the cursor and
     // then will not be let go of anywhere.
     if (!selectCard(card)) return event.preventDefault();
     // Chromium cancels a drag that carries nothing, and the id is what the drop looks the card up by.
     event.dataTransfer?.setData('text/plain', card.id);
-    element.querySelector(SELECTED_CARD)?.classList.remove('selected');
-    item.classList.add('selected');
-    // The status bar names the column the selection is in, and it has just changed without a render to
-    // tell it.
-    options.onChanged();
+  }
+
+  // However the drag ended. A drop has already redrawn through change(); this is what puts the
+  // highlight on the grabbed card when you let go over nothing, or press Escape.
+  function endDrag(): void {
+    clearDrop();
+    render();
   }
 
   // Takes the line off whatever is carrying it, and calls off a frame that has not drawn yet — without
@@ -528,6 +530,10 @@ export function createBoardView(options: BoardOptions): BoardView {
       // are both places a hand aims at. preventDefault is what makes the column a place a card can be
       // let go of at all — without it the drop never fires and the card springs back.
       section.addEventListener('dragover', (event) => {
+        // preventDefault is what makes a column somewhere a card can be let go of, so withholding it
+        // while the board is busy turns the cursor into the one that says no. Without this the line
+        // promises a landing and the card snaps back with nothing on screen saying why.
+        if (busy()) return;
         event.preventDefault();
         markDropSoon(list, event.clientY);
       });

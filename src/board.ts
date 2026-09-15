@@ -123,8 +123,13 @@ export function shipColumnIndex(board: Board): number {
 // And it has to have come from somewhere else. A card already in Ship that is merely reordered has not
 // landed in it again, and neither has one pushed against the right-hand edge of a board somebody wrote
 // with Ship as its last column, where rightward moves nothing at all.
+// Written as the two gestures that ship rather than the one that does not, so a tag added to that union
+// later ships nothing until somebody says it should. `!== 'left'` reads the same today and fails the
+// other way: add a key that sends a card straight to a column, point it at Ship by mistake, and it
+// silently makes a worktree, takes a pane and starts an agent, with no test to fail over it.
 export function landsInShip(board: Board, from: number, moved: Selection, direction: Direction | 'drop'): boolean {
-  return direction !== 'left' && from !== moved.column && moved.column === shipColumnIndex(board);
+  const aimed = direction === 'right' || direction === 'drop';
+  return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
 }
 
 // Every board written before Ship existed has three columns, and getting the fourth should not mean
@@ -426,12 +431,10 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
     };
   }
 
-  const target = selection.column + (direction === 'right' ? 1 : -1);
-  if (target < 0 || target >= board.columns.length) return { board, selection };
   // The card keeps its row in the column it arrives at, or goes last if that column is shorter, so a
-  // card sent sideways stays roughly where your eye left it.
-  const row = Math.min(selection.card, board.columns[target].cards.length);
-  return relocateCard(board, selection, card, target, row);
+  // card sent sideways stays roughly where your eye left it. dropCard is what clamps it, so the rule is
+  // written once: teach the mouse a different landing and the key cannot keep the old one.
+  return dropCard(board, selection, selection.column + (direction === 'right' ? 1 : -1), selection.card);
 }
 
 // Straight to a column, wherever the card is now. moveCard walks one column at a time, which is what
