@@ -1,4 +1,5 @@
 import { EDITOR_INDEX, branchOfPane, paneLabel } from './terminals';
+import { formatTokens } from './usage';
 import type { Mode } from './modes';
 
 // What the right-hand end of the status bar says: which view you are on, and for terminals which pane
@@ -33,6 +34,10 @@ export type StatusPage = {
   // own field rather than folded into the one above, because the two screens read different panes and
   // the caller knows which is which without being told the mode twice.
   editorName?: string;
+  // What the agent in the focused pane has cost so far, or nought for a pane running no agent. The
+  // right-hand end of the bar is the only thing on a project's screen that names one pane, so it is
+  // where the one pane's figure belongs.
+  focusedTokens: number;
 };
 
 // The manager is where a launch with nothing saved lands, and with no project open there is nothing on
@@ -61,7 +66,11 @@ export function modeLabel(page: StatusPage): string {
   if (page.mode === 'board') return `board · ${page.boardLabel}`;
   if (page.mode === 'command') return page.commandStatusLabel;
   if (page.paneCount === 0) return '';
-  return paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory), page.focusedName);
+  const label = paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory), page.focusedName);
+  // Added rather than folded into paneLabel: that is the one spelling of what a pane is called, and a
+  // running total is not part of a name. The manager's rows and the bell's notification both print
+  // the label, and neither wants a number that moves every half minute in the middle of it.
+  return page.focusedTokens === 0 ? label : `${label} · ${formatTokens(page.focusedTokens)}`;
 }
 
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the

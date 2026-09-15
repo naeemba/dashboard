@@ -5,6 +5,7 @@ import {
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
+import { formatTokens, projectTokens } from './usage';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
@@ -100,13 +101,19 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     age.className = 'manager-age';
     age.textContent = paneAge(line.pane.lastPrintedAt);
 
+    // What the agent in this pane has cost. Nothing at all for a pane with no agent in it, which is
+    // most of them: a column of `0` down the list would say only that five shells are not Claude Code.
+    const tokens = document.createElement('span');
+    tokens.className = 'manager-tokens';
+    tokens.textContent = line.pane.tokens === 0 ? '' : formatTokens(line.pane.tokens);
+
     // What the pane has on screen, so the question can be read from here. A pane that has printed
     // nothing gets no empty block under it.
     const tail = document.createElement('pre');
     tail.className = 'manager-tail';
     tail.textContent = tailLines.join('\n');
     tail.hidden = tailLines.length === 0;
-    item.append(name, lastPrinted, state, age, tail);
+    item.append(name, lastPrinted, state, age, tokens, tail);
     return item;
   }
 
@@ -126,7 +133,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const summary = document.createElement('span');
     summary.className = 'manager-summary';
     summary.textContent = alertSummary(line.row.panes);
-    item.append(marker, name, summary);
+    // The five-hour figure, the week's and all time, in that order — soonest to widest, so the number
+    // that moves while you watch is the one nearest the rest of the row. Empty for a project nothing
+    // has ever been spent on, rather than three noughts.
+    const tokens = document.createElement('span');
+    tokens.className = 'manager-tokens';
+    tokens.textContent = projectTokens(line.row.tokens);
+    item.append(marker, name, summary, tokens);
     return item;
   }
 
@@ -233,6 +246,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
+        // Rewritten with the rest: an agent spends while its state stays `quiet`, so a figure left out
+        // of this redraw sits at what it was when the row was built.
+        const tokens = row?.querySelector('.manager-tokens');
+        if (tokens) tokens.textContent = line.pane.tokens === 0 ? '' : formatTokens(line.pane.tokens);
         const tail = row?.querySelector<HTMLElement>('.manager-tail');
         if (tail) {
           const block = tailBlock(line.pane);

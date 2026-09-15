@@ -2,6 +2,7 @@ import { relativeAge } from './age';
 import { clampIndex } from './clamp-index';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
+import { NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
 import { isRinging, type Bell } from './waiting';
 
 // Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
@@ -78,6 +79,9 @@ export type PaneSummary = {
   name: string;
   state: PaneState;
   lastPrintedAt: number;
+  // What the agent in this pane has cost so far, or nought for a pane running no agent at all — which
+  // is most of them, and which the row prints nothing for.
+  tokens: number;
   tail(): string[];
   lastPrinted(): string;
 };
@@ -125,12 +129,12 @@ export function takesAnswer(pane: PaneSummary): boolean {
   return pane.state === 'waiting';
 }
 
-export type ManagerRow = { slot: number; name: string; panes: PaneSummary[] };
+export type ManagerRow = { slot: number; name: string; panes: PaneSummary[]; tokens: Totals };
 
 // The shape the page needs from a project. Structural rather than the renderer's Page, so this file
 // stays testable without building a terminal.
 type ManagerPage = {
-  project: { name: string };
+  project: { name: string; path: string };
   slot: number;
   // `tail` and `lastPrinted` are functions because the answer comes off a live terminal: the row asks
   // for it at the moment it draws, so no copy of a pane's screen is kept anywhere to go stale.
@@ -151,15 +155,20 @@ function paneState(pane: { bell: Bell; exited: boolean }): PaneState {
 // project that drops off it while quiet is a project you cannot see is fine. Every pane under it, for
 // the same reason one line down: a shell nobody has touched since this morning says so by being on
 // the list with an age against it, and says nothing at all by being left off.
-export function managerRows(pages: readonly ManagerPage[]): ManagerRow[] {
+export function managerRows(
+  pages: readonly ManagerPage[],
+  usage: UsageSnapshot = NO_USAGE,
+): ManagerRow[] {
   return pages.map((page) => ({
     slot: page.slot,
     name: page.project.name,
+    tokens: usage.projects[page.project.path] ?? NO_TOTALS,
     panes: page.panes.map((pane, index) => ({
       index,
       name: pane.name,
       state: paneState(pane),
       lastPrintedAt: pane.lastPrintedAt,
+      tokens: usage.panes[terminalId(page.slot, index)] ?? 0,
       tail: () => pane.tail(),
       lastPrinted: () => pane.lastPrinted(),
     })),
