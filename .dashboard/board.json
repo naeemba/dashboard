@@ -90,22 +90,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "7b0a129d-0180-47ec-9b74-46e7a3af5dda",
-          "title": "Token usage per project: this five-hour window, this week, and all time",
-          "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-15T13:34:49.852Z",
-          "comments": [
-            {
-              "at": "2026-09-15T13:34:49.852Z",
-              "body": "Built, with two changes to the notes above. The figures go on the manager's existing project and pane rows rather than a fourth section, and the week runs Monday to Monday rather than from a reset time set in settings — nothing on the machine records that reset, so asking for it was the only way to know it.\n\nAlso per pane: each pane running a Claude Code agent carries what that agent has cost, on its manager row and at the right-hand end of the status bar. Which pane a session is in is not in any log; it comes from the process tree, since claude runs as a child of the shell the app spawned for the pane.\n\nusage.ts is the arithmetic, usage-store.ts the reading, pane-sessions.ts the pane. Measured on this machine: 4362 logs, first sweep 5s, every sweep after it 95ms."
-            }
-          ]
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -430,6 +415,22 @@
             {
               "at": "2026-09-15T11:55:03.112Z",
               "body": "Shipped in PR #39. The trail is a list on the card, appended and never rewritten; notes stays the description. c writes one from the board or from inside the open card, o reads them oldest first, and the card front says how many. board comment <id> <text> appends from a shell and board show <id> prints a card with its trail, which is the part board list has no room for. No author on an entry — nothing knows who is typing — and at is absent on a line written by hand, the way createdAt is."
+            }
+          ]
+        },
+        {
+          "id": "7b0a129d-0180-47ec-9b74-46e7a3af5dda",
+          "title": "Token usage per project: this five-hour window, this week, and all time",
+          "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-15T13:36:02.560Z",
+          "branch": "token-usage-per-project",
+          "pullRequest": 40,
+          "comments": [
+            {
+              "at": "2026-09-15T13:34:49.852Z",
+              "body": "Built, with two changes to the notes above. The figures go on the manager's existing project and pane rows rather than a fourth section, and the week runs Monday to Monday rather than from a reset time set in settings — nothing on the machine records that reset, so asking for it was the only way to know it.\n\nAlso per pane: each pane running a Claude Code agent carries what that agent has cost, on its manager row and at the right-hand end of the status bar. Which pane a session is in is not in any log; it comes from the process tree, since claude runs as a child of the shell the app spawned for the pane.\n\nusage.ts is the arithmetic, usage-store.ts the reading, pane-sessions.ts the pane. Measured on this machine: 4362 logs, first sweep 5s, every sweep after it 95ms."
             }
           ]
         }
