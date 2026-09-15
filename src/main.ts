@@ -14,6 +14,7 @@ import {
   type Project,
 } from './projects';
 import { baseName } from './base-name';
+import { git } from './git';
 import { isOpenableLink } from './links';
 import { tailLines } from './manager';
 import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
@@ -360,14 +361,6 @@ function startAgent(id: string, worktreePath: string, cardId: string): void {
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
-}
-
-// execFile, never a shell, so a card titled with a quote in it cannot become a command. Awaited
-// rather than sync: main is the process every pane's bytes flow through, and a fetch on a slow
-// network would otherwise stop all five shells painting until it returned.
-async function git(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await runCommand('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
-  return stdout.trim();
 }
 
 // origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
