@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { execFile, spawn } from 'node:child_process';
 import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
@@ -31,8 +32,12 @@ import {
   oneAtATime,
   runsAnAgent,
   worktreePathFor,
+  worktreesRoot,
   type PaneCommand,
 } from './ship';
+import { NO_USAGE, snapshotOf, type FileUsage, type UsageSnapshot } from './usage';
+import { liveSessions, sweepUsage } from './usage-store';
+import { parentProcesses, sessionsByPane } from './pane-sessions';
 import {
   claimsPane,
   entryForCard,
@@ -437,6 +442,57 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
   setWorktrees(withoutPanes(worktrees, closing.path));
 });
+// Claude Code's own session logs, read for what each project and each pane has cost. Read-only and
+// offline: nothing is asked of any server and nothing under ~/.claude is written. What the numbers
+// mean is usage.ts's, the reading is usage-store.ts's, and which pane a session belongs to is
+// pane-sessions.ts's — what is here is when the sweep runs.
+const claudeLogs = path.join(homedir(), '.claude', 'projects');
+const claudeSessions = path.join(homedir(), '.claude', 'sessions');
+// Kept across sweeps, which is what makes every sweep after the first one nearly free: a log whose
+// size has not moved is not opened at all.
+const usageFiles = new Map<string, FileUsage>();
+let usage: UsageSnapshot = NO_USAGE;
+
+async function sweepTokenUsage(): Promise<void> {
+  const now = Date.now();
+  await sweepUsage(claudeLogs, usageFiles, now);
+  // The process tree, which is the only thing that says which pane a session is running in. Without
+  // it the project figures still stand and the pane ones are simply absent — a machine with no `ps`
+  // loses the smaller half rather than the screen.
+  let tree: string;
+  try {
+    ({ stdout: tree } = await runCommand('ps', ['-eo', 'pid=,ppid=']));
+  } catch {
+    tree = '';
+  }
+  const panePids = new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id]));
+  const open = projects.flatMap((project) => (project === undefined
+    ? []
+    : [{ path: project.path, worktrees: worktreesRoot(project.path) }]));
+  usage = snapshotOf(
+    usageFiles.values(),
+    open,
+    sessionsByPane(parentProcesses(tree), panePids, await liveSessions(claudeSessions)),
+    now,
+  );
+  sendToRenderer('usage:change', usage);
+}
+
+// Chained rather than on an interval, so a sweep that takes longer than the gap — a first read of
+// half a gigabyte on a slow disk — cannot have the next one start on top of it.
+function sweepUsageLater(delay: number): void {
+  setTimeout(() => { void sweepTokenUsage().finally(() => sweepUsageLater(USAGE_SWEEP_MS)); }, delay).unref();
+}
+
+// Every half minute, which is the rate the manager's rows already redraw themselves at. The first one
+// waits: it is the only sweep that reads every log there has ever been, and a launch has five shells
+// and a window to get on screen first.
+const USAGE_SWEEP_MS = 30_000;
+sweepUsageLater(3_000);
+
+// The renderer's first read. Everything after it arrives unasked on usage:change.
+ipcMain.handle('usage:read', () => usage);
+
 // Read once at startup and written back whenever the layout changes, so a crash loses at most the
 // change you were making rather than every project you had open.
 ipcMain.handle('session:read', () => readSession(sessionFile));
