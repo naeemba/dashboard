@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runBoardCommand, formatList } from './board-cli';
+import { runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from './board';
 
@@ -315,5 +315,38 @@ describe('show', () => {
 
   it('refuses a card that is not there', () => {
     expect(run(emptyBoard(), 'show', 'nope')).toMatchObject({ ok: false, message: 'no card with id nope' });
+  });
+});
+
+// The window the second read closes: the app saved a comment onto this card after the command opened
+// the board. Run once on the stale board and that comment is written back out of existence.
+describe('runBoardCommandOnLatest', () => {
+  it('works from the board as it stands, not the one it was handed', () => {
+    const { board, id } = withCard();
+    const saved = boardAfter(board, 'comment', id, 'typed in the app');
+    const result = runBoardCommandOnLatest(board, ['comment', id, 'from the command line'], () => saved);
+    if (!result.ok || result.board === null) throw new Error('comment failed');
+    expect(cardById(result.board, id)?.comments?.map((comment) => comment.body)).toEqual([
+      'typed in the app',
+      'from the command line',
+    ]);
+  });
+
+  // Nothing to write means nothing to lose, so the re-read is skipped and `list` stays one read.
+  it('reads once when the command writes nothing', () => {
+    const { board } = withCard();
+    const readAgain = vi.fn(() => board);
+    expect(runBoardCommandOnLatest(board, ['list'], readAgain).ok).toBe(true);
+    expect(readAgain).not.toHaveBeenCalled();
+  });
+
+  // A refusal is the first run's, so the reason names the board the caller actually opened.
+  it('does not read again after a refusal', () => {
+    const readAgain = vi.fn(() => emptyBoard());
+    expect(runBoardCommandOnLatest(emptyBoard(), ['move', 'nope', 'Done'], readAgain)).toMatchObject({
+      ok: false,
+      message: 'no card with id nope',
+    });
+    expect(readAgain).not.toHaveBeenCalled();
   });
 });

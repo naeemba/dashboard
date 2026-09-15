@@ -244,3 +244,22 @@ export function runBoardCommand(
 
   return { ok: false, message: `no such command: ${command}\n\n${USAGE}` };
 }
+
+// Run twice when there is something to write: once on the board the caller opened, and again on the
+// board as it stands a moment before the write. The app saves the whole file on every keystroke, so
+// the board read at startup can be tens of milliseconds stale by the time the write goes out — and
+// writing the whole file back from it puts the board from before that keystroke over the top of it.
+// What that costs: somebody types a comment on a card and presses Escape while this is running, the
+// write lands after them, and their line is gone off the screen they just typed it on.
+//
+// ponytail: read-then-write, so a save landing inside the last microseconds still wins. A lock is the
+// next rung, when two writers are common enough to hit that window.
+export function runBoardCommandOnLatest(
+  board: Board,
+  args: readonly string[],
+  readAgain: () => Board,
+): CommandResult {
+  const opened = runBoardCommand(board, args);
+  if (!opened.ok || opened.board === null) return opened;
+  return runBoardCommand(readAgain(), args);
+}

@@ -73,9 +73,9 @@ code the app does, so a card it writes is a card the app wrote.
 
       board list
       board show <id>
-      board add <title> [--column <name>] [--priority <level>] [--notes <text>]
+      board add "<title>" [--column <name>] [--priority <level>] [--notes "<text>"]
       board move <id> <column>
-      board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
+      board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
       board comment <id> "<text>"
 
     Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field.

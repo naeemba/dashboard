@@ -8,9 +8,9 @@ export const USAGE = `board — the Dashboard board of the project you are in
 
   board list
   board show <id>
-  board add <title> [--column <name>] [--priority <level>] [--notes <text>]
+  board add "<title>" [--column <name>] [--priority <level>] [--notes "<text>"]
   board move <id> <column>
-  board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
+  board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
   board comment <id> "<text>"
 
 Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field.
