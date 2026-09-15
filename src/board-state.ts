@@ -1,6 +1,8 @@
 import {
   addCard,
+  addComment,
   branchFrom,
+  isCommentBody,
   cardAt,
   isTitle,
   selectionOf,
@@ -106,6 +108,15 @@ export function commitNotes(state: BoardState, notes: string): BoardState {
   // written, so the command line and this box cannot store the same text two ways.
   if (notes.trim() === cardAt(state.board, state.selection)?.notes.trim()) return state;
   return applyChange(state, setNotes(state.board, state.selection, notes));
+}
+
+// Escape commits, as with a description: Enter is a newline in a comment. An empty box says nothing
+// and adds nothing — a comment, unlike a description, cannot be cleared once written, so there is no
+// meaning left for an empty one to carry. addComment asks isCommentBody on the same text, so a box
+// that commits nothing cannot be one the card quietly kept.
+export function commitComment(state: BoardState, body: string): BoardState {
+  if (!isCommentBody(body)) return state;
+  return applyChange(state, addComment(state.board, state.selection, body));
 }
 
 // A board read from disk starts fresh: nothing on it can be undone back to what was in memory. The

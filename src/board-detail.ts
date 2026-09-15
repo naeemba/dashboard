@@ -52,10 +52,16 @@ export function cardMeta(board: Board, card: Card, now?: number): string {
   ].filter((part): part is string => part !== null).join(' · ');
 }
 
-// `closed` resolves with the card to select when the dialog goes; `redraw` is how the owner tells it
-// the board underneath has changed, since the dialog reads the live board but has no way to hear a write.
+// What the dialog leaves behind: the card to select, and whether the key that closed it was the one
+// asking to comment. The trail is read here and written on the board, so `c` in here is a way out
+// rather than a box of its own — two comment boxes committing on different keys is the thing this
+// avoids.
+export type CardDetailClose = { selection: Selection; comment: boolean };
+
+// `closed` resolves when the dialog goes; `redraw` is how the owner tells it the board underneath has
+// changed, since the dialog reads the live board but has no way to hear a write.
 export type CardDetail = {
-  closed: Promise<Selection>;
+  closed: Promise<CardDetailClose>;
   redraw(): void;
 };
 
@@ -65,7 +71,7 @@ export function openCardDetail(options: CardDetailOptions): CardDetail {
   // Assigned by the executor, which runs before the Promise constructor returns — so it is the real
   // render by the time anyone outside can call it.
   let redraw = (): void => {};
-  const closed = new Promise<Selection>((resolve) => {
+  const closed = new Promise<CardDetailClose>((resolve) => {
     // The card this dialog is about, followed by id rather than by row: a write landing while it is up
     // can move it to another row or another column. Empty for a dialog opened on no card, which is an
     // id no lookup below matches.
@@ -75,9 +81,9 @@ export function openCardDetail(options: CardDetailOptions): CardDetail {
     let highlighted = 0;
     let adding = false;
 
-    function close(selection: Selection): void {
+    function close(selection: Selection, comment = false): void {
       remove();
-      resolve(selection);
+      resolve({ selection, comment });
     }
 
     // Where the highlight goes when this closes: the card it was opened on, wherever a write has
@@ -126,6 +132,23 @@ export function openCardDetail(options: CardDetailOptions): CardDetail {
         notes.className = 'card-detail-notes';
         notes.textContent = card.notes;
         parts.push(notes);
+      }
+      // The trail, oldest first — this is the only screen that shows it, since the board itself only
+      // says how many there are. Appended and never rewritten, so reading down it is reading the card's
+      // history in the order it happened.
+      for (const comment of card.comments ?? []) {
+        const entry = document.createElement('p');
+        entry.className = 'card-detail-comment';
+        const when = document.createElement('span');
+        when.className = 'card-detail-comment-when';
+        // A comment written by hand carries no date, and one the clock cannot read says nothing rather
+        // than "Invalid Date" — the same ruling cardMeta makes about a card's own stamps.
+        when.textContent = comment.at === undefined ? '' : relativeAge(comment.at) ?? '';
+        const body = document.createElement('span');
+        body.className = 'card-detail-comment-body';
+        body.textContent = comment.body;
+        entry.append(when, body);
+        parts.push(entry);
       }
       if (children.length === 0 && !adding) {
         const empty = document.createElement('p');
@@ -186,7 +209,7 @@ export function openCardDetail(options: CardDetailOptions): CardDetail {
 
       const footer = document.createElement('p');
       footer.className = 'card-detail-footer';
-      footer.textContent = 'Arrows walk the subtasks. Enter goes to one. n adds one. Escape closes.';
+      footer.textContent = 'Arrows walk the subtasks. Enter goes to one. n adds one. c comments. Escape closes.';
       parts.push(footer);
 
       // A write landing while you are naming a subtask redraws this dialog under you, and
@@ -233,6 +256,9 @@ export function openCardDetail(options: CardDetailOptions): CardDetail {
           event.preventDefault();
           adding = true;
           return render();
+        case 'c':
+          event.preventDefault();
+          return close(openedAt(board), true);
       }
     });
 

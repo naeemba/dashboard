@@ -29,6 +29,7 @@ import {
   applyAutomaticChange,
   applyChange,
   commitBranch,
+  commitComment,
   commitNotes,
   commitPullRequest,
   commitTitle,
@@ -89,9 +90,15 @@ type EditableField = Extract<Action, { kind: 'board-edit' }>['field'];
 const COMMITS: Record<EditableField, (state: BoardState, value: string) => BoardState> = {
   title: commitTitle,
   notes: commitNotes,
+  comment: commitComment,
   branch: commitBranch,
   pullRequest: commitPullRequest,
 };
+
+// Which fields are typed over more than one line. They get a textarea, Enter makes a newline in them
+// and Escape is what commits — the other three are one line and end on Enter. Listed once, because a
+// field added to the textarea half and forgotten in the commit half is a box you cannot get out of.
+const MULTILINE: readonly EditableField[] = ['notes', 'comment'];
 
 // The card the keys are on. Exported because the manager's board, which stacks several of these in one
 // scroller, has to find it too — and a name that lives in one place cannot be renamed here and left
@@ -229,8 +236,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     input.focus();
     // A title, a branch and a pull request number are opened to replace, so they come up selected and
     // one keystroke retypes them. A description is opened to add a line to, and selecting it would let
-    // that keystroke wipe what is already there.
-    if (field === 'notes') input.setSelectionRange(input.value.length, input.value.length);
+    // that keystroke wipe what is already there; a comment box comes up empty, so there is nothing to
+    // select either way.
+    if (MULTILINE.includes(field)) input.setSelectionRange(input.value.length, input.value.length);
     else input.select();
   }
 
@@ -256,9 +264,12 @@ export function createBoardView(options: BoardOptions): BoardView {
   // function: a title is one line and Enter ends it, a description is many and Enter is a newline in it.
   function renderEditor(field: EditableField, value: string): HTMLElement {
     const input: HTMLInputElement | HTMLTextAreaElement =
-      field === 'notes' ? document.createElement('textarea') : document.createElement('input');
+      MULTILINE.includes(field) ? document.createElement('textarea') : document.createElement('input');
     input.className = 'board-edit';
     input.value = value;
+    // The comment box is the one that opens empty, so it is the one that has to say what it is. The
+    // others open holding the field they edit.
+    if (field === 'comment') input.placeholder = 'Comment';
     // A title or a description typed in Persian turns the box round as you type.
     input.dir = 'auto';
     // onkeydown rather than addEventListener: both tags declare it as taking a KeyboardEvent, which the
@@ -266,7 +277,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     input.onkeydown = (event) => {
       // Returning without preventDefault, so Cmd+A and Cmd+V still do what they do in any text box.
       if (isModified(event)) return;
-      const commits = field === 'notes' ? event.key === 'Escape' : event.key === 'Enter' || event.key === 'Escape';
+      const commits = MULTILINE.includes(field) ? event.key === 'Escape' : event.key === 'Enter' || event.key === 'Escape';
       if (!commits) return;
       event.preventDefault();
       commitEditing(field, input.value);
@@ -311,6 +322,17 @@ export function createBoardView(options: BoardOptions): BoardView {
       notes.className = 'board-notes';
       notes.textContent = card.notes;
       item.append(notes);
+    }
+    // The trail, as a count. The comments themselves are read behind `o`: a card with a long
+    // conversation on it would otherwise be a column of its own, and the board is meant to be read at
+    // a glance. Without this line nothing on the board says there is anything to open.
+    if (selected && editing === 'comment') {
+      item.append(renderEditor('comment', ''));
+    } else if (card.comments !== undefined) {
+      const trail = document.createElement('p');
+      trail.className = 'board-comments';
+      trail.textContent = card.comments.length === 1 ? '1 comment' : `${card.comments.length} comments`;
+      item.append(trail);
     }
     // What the card is in flight as: the branch, then the pull request it opened. Both are typed in,
     // and a card with neither takes no room for them. Without this the board can list a Doing column
@@ -455,9 +477,12 @@ export function createBoardView(options: BoardOptions): BoardView {
       makeId: () => crypto.randomUUID(),
       onChange: change,
     });
-    detail.closed.then((selection) => {
+    detail.closed.then(({ selection, comment }) => {
       detail = null;
       state = { ...state, selection };
+      // `c` in the dialog is a way out to this box rather than a box of its own: the trail is read in
+      // there and written here, on the card the dialog was sitting on.
+      if (comment) return startEditing('comment');
       element.focus();
       render();
     });

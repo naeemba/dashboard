@@ -5,6 +5,7 @@ import {
   applyAutomaticChange,
   applyChange,
   commitBranch,
+  commitComment,
   commitNotes,
   commitPullRequest,
   commitTitle,
@@ -291,5 +292,22 @@ describe('reloadBoard', () => {
     const edited = applyChange(start, renameCard(start.board, start.selection, 'changed'));
     expect(edited.previous).not.toBe(null);
     expect(reloadBoard(edited, board(['a'], [])).previous).toBe(null);
+  });
+});
+
+describe('commitComment', () => {
+  const first: Selection = { column: 0, card: 0 };
+  const start = state(board(['a']), first);
+
+  it('appends what was typed and leaves the box to be undone in one press', () => {
+    const commented = commitComment(start, 'found it');
+    expect(cardAt(commented.board, first)?.comments?.map((comment) => comment.body)).toEqual(['found it']);
+    expect(undoChange(commented).board).toBe(start.board);
+  });
+
+  // Press `c`, change your mind, press Escape: the box commits, and an empty comment is nothing to
+  // say. Writing one would spend the undo step belonging to the move you made just before it.
+  it('opening the box and closing it empty is not a change', () => {
+    expect(commitComment(start, '  \n ')).toBe(start);
   });
 });
