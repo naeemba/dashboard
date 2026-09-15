@@ -18,7 +18,10 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
               "createdAt": "2026-09-08T09:12:44.017Z",
               "updatedAt": "2026-09-08T09:12:44.017Z",
               "branch": "fix-resize-race",
-              "pullRequest": 14
+              "pullRequest": 14,
+              "comments": [
+                { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
+              ]
             }
           ]
         }
@@ -50,6 +53,12 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   before these fields existed, or written by hand without them, stays that way and the app never
   fills them in on read. `updatedAt` moves when one of that card's own fields changes, and when the
   card moves to another column — reordering a column leaves it alone.
+- `comments` is the card's comment trail, oldest first, or absent when nothing has been said. Each
+  entry is `{ "at": <ISO date>, "body": <text> }`; `at` may be absent, and an entry with a blank
+  `body` or no `body` is dropped when the app reads the file. It is append-only — write to it with
+  `board comment` and never by rewriting what is there. `notes` is the card's description and is
+  edited in place; everything said about the card over its life goes here instead, so recording a
+  finding cannot take out what somebody else wrote.
 - `branch` is the git branch the work is on, or absent. `pullRequest` is the pull request's number,
   a whole number above zero written without the `#`, or absent. Both are typed in — `b` edits the
   branch and `r` the pull request — and nothing fetches or refreshes them.
@@ -63,14 +72,21 @@ code the app does, so a card it writes is a card the app wrote.
     board — the Dashboard board of the project you are in
 
       board list
-      board add <title> [--column <name>] [--priority <level>] [--notes <text>]
+      board show <id>
+      board add "<title>" [--column <name>] [--priority <level>] [--notes "<text>"]
       board move <id> <column>
-      board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
+      board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
+      board comment <id> "<text>"
 
     Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field.
 
-Run it as `node "$DASHBOARD_BOARD" <command>`. `list` prints the column, the priority and the id of
-every card, which is where the id the other three want comes from.
+    --notes replaces the card's description. To record what you found, use `comment`: it appends to the
+    card's trail and takes nothing away. `show` prints one card with its description and its trail.
+
+Run it as `node "$DASHBOARD_BOARD" <command>`. `list` prints the column, the priority, the id and
+how many comments each card has — the id is the one `show`, `move`, `set` and `comment` want.
+`show` prints one card in full, including its comment trail, which is the part `list` has no room
+for.
 
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.

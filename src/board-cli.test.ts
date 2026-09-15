@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runBoardCommand, formatList } from './board-cli';
+import { runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from './board';
 
@@ -42,6 +42,16 @@ describe('list', () => {
     const { board, id } = withCard();
     const flying = boardAfter(board, 'set', id, '--branch', 'ship-it', '--pull-request', '14');
     expect(formatList(flying)).toContain('(ship-it · #14)');
+  });
+
+  // Without this the line for a card with twelve comments and the line for a card with none read the
+  // same, and finding which cards have anything to read means running `show` on every one of them.
+  it('says how many comments a card carries, and nothing when it carries none', () => {
+    const { board, id } = withCard();
+    expect(formatList(board)).not.toContain('comment');
+    expect(formatList(boardAfter(board, 'comment', id, 'first'))).toContain('(1 comment)');
+    const twice = boardAfter(boardAfter(board, 'comment', id, 'first'), 'comment', id, 'second');
+    expect(formatList(twice)).toContain('(2 comments)');
   });
 
   it('writes nothing', () => {
@@ -215,5 +225,128 @@ describe('the command itself', () => {
     if (result.ok) return;
     expect(result.message).toContain('no such command: delete');
     expect(result.message).toContain(USAGE);
+  });
+});
+
+describe('comment', () => {
+  it('appends to the card and says how many there are', () => {
+    const { board, id } = withCard();
+    const result = run(board, 'comment', id, 'The race is in the debounce.');
+    if (!result.ok || result.board === null) throw new Error(result.ok ? 'wrote nothing' : result.message);
+    expect(cardById(result.board, id)?.comments?.map((comment) => comment.body))
+      .toEqual(['The race is in the debounce.']);
+    expect(result.output).toContain('1 comment');
+  });
+
+  // The reason the command exists: `set --notes` is the only other way to write on a card, and it
+  // replaces. Two agents using it lose each other's findings.
+  it('leaves the description and the earlier comments alone', () => {
+    const { board, id } = withCard();
+    const described = boardAfter(board, 'set', id, '--notes', 'What the card is about');
+    const once = boardAfter(described, 'comment', id, 'first');
+    const twice = boardAfter(once, 'comment', id, 'second');
+    expect(cardById(twice, id)?.notes).toBe('What the card is about');
+    expect(cardById(twice, id)?.comments?.map((comment) => comment.body)).toEqual(['first', 'second']);
+  });
+
+  it('refuses a blank one, a missing one and a card that is not there', () => {
+    const { board, id } = withCard();
+    expect(run(board, 'comment', id, '   ')).toMatchObject({ ok: false });
+    expect(run(board, 'comment', id)).toMatchObject({ ok: false });
+    expect(run(board, 'comment', 'nope', 'hello')).toMatchObject({ ok: false, message: 'no card with id nope' });
+  });
+
+  // `comment <id> found a bug` reads as three arguments and would quietly keep only "found". Refusing
+  // is what tells the shell to quote it.
+  it('refuses a body that arrived as several words', () => {
+    const { board, id } = withCard();
+    expect(run(board, 'comment', id, 'found', 'a', 'bug')).toMatchObject({ ok: false });
+  });
+});
+
+describe('show', () => {
+  it('prints the card with its description and its trail, oldest first', () => {
+    const { board, id } = withCard('Ship it');
+    const described = boardAfter(board, 'set', id, '--notes', 'What the card is about');
+    const once = boardAfter(described, 'comment', id, 'first');
+    const twice = boardAfter(once, 'comment', id, 'second');
+    const result = run(twice, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output).toContain('Ship it');
+    expect(result.output).toContain('What the card is about');
+    expect(result.output.indexOf('first')).toBeLessThan(result.output.indexOf('second'));
+    // Reading a card is not a change to it.
+    expect(result.board).toBe(null);
+  });
+
+  // A card nobody has described yet: no blank line and no empty paragraph where the description would be.
+  it('leaves out the description when there is none', () => {
+    const { board, id } = withCard('Ship it');
+    const result = run(boardAfter(board, 'comment', id, 'only a comment'), 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    // Header, one blank, then the trail. A description would have sat on the third line.
+    expect(result.output.split('\n')[2]).toMatch(/^--- #1 /);
+    expect(result.output).toContain('only a comment');
+  });
+
+  // `at` is optional because a line written into board.json by hand has no time on it. Printing
+  // `undefined` beside it would read as a date the file does not have.
+  it('says so when a hand-written comment has no date', () => {
+    const { board, id } = withCard();
+    const written = boardAfter(board, 'comment', id, 'from a person');
+    const card = cardById(written, id);
+    if (!card?.comments) throw new Error('no trail');
+    card.comments[0] = { body: 'from a person' };
+    const result = run(written, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output).toContain('--- #1 · no date');
+  });
+
+  // The body is indented so only a separator ever starts at the left margin. A comment recording a
+  // diff hunk carries `--- a/src/board.ts`, and unindented it reads back as a second entry.
+  it('keeps a body that looks like a separator inside its own entry', () => {
+    const { board, id } = withCard();
+    const written = boardAfter(board, 'comment', id, '--- a/src/board.ts\n+++ b/src/board.ts');
+    const result = run(written, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output.split('\n').filter((line) => line.startsWith('--- '))).toHaveLength(1);
+    expect(result.output).toContain('  --- a/src/board.ts');
+  });
+
+  it('refuses a card that is not there', () => {
+    expect(run(emptyBoard(), 'show', 'nope')).toMatchObject({ ok: false, message: 'no card with id nope' });
+  });
+});
+
+// The window the second read closes: the app saved a comment onto this card after the command opened
+// the board. Run once on the stale board and that comment is written back out of existence.
+describe('runBoardCommandOnLatest', () => {
+  it('works from the board as it stands, not the one it was handed', () => {
+    const { board, id } = withCard();
+    const saved = boardAfter(board, 'comment', id, 'typed in the app');
+    const result = runBoardCommandOnLatest(board, ['comment', id, 'from the command line'], () => saved);
+    if (!result.ok || result.board === null) throw new Error('comment failed');
+    expect(cardById(result.board, id)?.comments?.map((comment) => comment.body)).toEqual([
+      'typed in the app',
+      'from the command line',
+    ]);
+  });
+
+  // Nothing to write means nothing to lose, so the re-read is skipped and `list` stays one read.
+  it('reads once when the command writes nothing', () => {
+    const { board } = withCard();
+    const readAgain = vi.fn(() => board);
+    expect(runBoardCommandOnLatest(board, ['list'], readAgain).ok).toBe(true);
+    expect(readAgain).not.toHaveBeenCalled();
+  });
+
+  // A refusal is the first run's, so the reason names the board the caller actually opened.
+  it('does not read again after a refusal', () => {
+    const readAgain = vi.fn(() => emptyBoard());
+    expect(runBoardCommandOnLatest(emptyBoard(), ['move', 'nope', 'Done'], readAgain)).toMatchObject({
+      ok: false,
+      message: 'no card with id nope',
+    });
+    expect(readAgain).not.toHaveBeenCalled();
   });
 });

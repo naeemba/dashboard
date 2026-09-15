@@ -88,15 +88,6 @@
           "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "e139d3ee-4a8b-4e08-91d8-ec8ef43b97f4",
-          "title": "A card keeps a comment trail, written from the app and from the command line",
-          "notes": "A card has one `notes` field and nothing else to write in. Everything said about a card over its life goes into that one block of text, so a finding, a decision and the original description are one paragraph after another with nothing saying who wrote which or when. Overwrite it from the command line and what was there is gone.\n\nWhat this adds is a list on the card: each entry a body and the time it was written. Appended, never rewritten, so an agent recording what it found cannot lose what someone typed by hand. `notes` stays what it is - the card's description, the thing you edit.\n\nIt has to be in the `board` command in the same change, because the command is how an agent working a card writes back, and an agent with only `set --notes` will keep clobbering the description. `board comment <id> <text>` to append and `board list` or a `show` to read them back.\n\nEvery piece of it is a piece that already exists: board.ts owns the operation and the app's keys call it, board-cli.ts calls the same one, board-store.ts reads and writes the file, and .dashboard/CLAUDE.md documents the field. An old board with no comments on a card reads as none - the same way createdAt is absent rather than guessed.\n\nOpen: whether an entry carries an author. Nothing in the app knows who is typing, and an agent could write whatever it liked, so a name would be a field nobody can trust. The time and the text may be the whole of it.\n\nThe board is a place where comments are read, so it is also a screen question: the detail dialog is where they fit, and the card front can say how many there are. Ctrl+H gets the key in the same change.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-09-15T11:07:17.039Z",
-          "updatedAt": "2026-09-15T11:07:17.040Z"
         }
       ]
     },
@@ -416,6 +407,23 @@
           "parent": null,
           "updatedAt": "2026-09-15T11:11:09.000Z",
           "pullRequest": 38
+        },
+        {
+          "id": "e139d3ee-4a8b-4e08-91d8-ec8ef43b97f4",
+          "title": "A card keeps a comment trail, written from the app and from the command line",
+          "notes": "A card has one `notes` field and nothing else to write in. Everything said about a card over its life goes into that one block of text, so a finding, a decision and the original description are one paragraph after another with nothing saying who wrote which or when. Overwrite it from the command line and what was there is gone.\n\nWhat this adds is a list on the card: each entry a body and the time it was written. Appended, never rewritten, so an agent recording what it found cannot lose what someone typed by hand. `notes` stays what it is - the card's description, the thing you edit.\n\nIt has to be in the `board` command in the same change, because the command is how an agent working a card writes back, and an agent with only `set --notes` will keep clobbering the description. `board comment <id> <text>` to append and `board list` or a `show` to read them back.\n\nEvery piece of it is a piece that already exists: board.ts owns the operation and the app's keys call it, board-cli.ts calls the same one, board-store.ts reads and writes the file, and .dashboard/CLAUDE.md documents the field. An old board with no comments on a card reads as none - the same way createdAt is absent rather than guessed.\n\nOpen: whether an entry carries an author. Nothing in the app knows who is typing, and an agent could write whatever it liked, so a name would be a field nobody can trust. The time and the text may be the whole of it.\n\nThe board is a place where comments are read, so it is also a screen question: the detail dialog is where they fit, and the card front can say how many there are. Ctrl+H gets the key in the same change.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-15T11:07:17.039Z",
+          "updatedAt": "2026-09-15T11:55:03.113Z",
+          "branch": "card-comment-trail",
+          "pullRequest": 39,
+          "comments": [
+            {
+              "at": "2026-09-15T11:55:03.112Z",
+              "body": "Shipped in PR #39. The trail is a list on the card, appended and never rewritten; notes stays the description. c writes one from the board or from inside the open card, o reads them oldest first, and the card front says how many. board comment <id> <text> appends from a shell and board show <id> prints a card with its trail, which is the part board list has no room for. No author on an entry — nothing knows who is typing — and at is absent on a line written by hand, the way createdAt is."
+            }
+          ]
         }
       ]
     }

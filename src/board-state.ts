@@ -1,5 +1,6 @@
 import {
   addCard,
+  addComment,
   branchFrom,
   cardAt,
   isTitle,
@@ -106,6 +107,14 @@ export function commitNotes(state: BoardState, notes: string): BoardState {
   // written, so the command line and this box cannot store the same text two ways.
   if (notes.trim() === cardAt(state.board, state.selection)?.notes.trim()) return state;
   return applyChange(state, setNotes(state.board, state.selection, notes));
+}
+
+// Escape commits, as with a description: Enter is a newline in a comment. Unlike the four above there
+// is nothing to compare against — a comment is appended rather than replacing a field — so the no-op
+// ruling is entirely addComment's: it hands back the same board for a blank body, and applyChange
+// leaves the state alone for a board that did not move.
+export function commitComment(state: BoardState, body: string): BoardState {
+  return applyChange(state, addComment(state.board, state.selection, body));
 }
 
 // A board read from disk starts fresh: nothing on it can be undone back to what was in memory. The

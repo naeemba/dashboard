@@ -1,5 +1,5 @@
-import { openBoard, projectRoot, writeBoard } from './board-store';
-import { runBoardCommand } from './board-cli';
+import { openBoard, projectRoot, readBoard, writeBoard } from './board-store';
+import { runBoardCommandOnLatest } from './board-cli';
 
 // The whole of the `board` program outside board-cli.ts: the current directory in, a file and a line
 // of output out. Every decision it could make is made there instead, where a test can reach it.
@@ -14,7 +14,10 @@ if (read.brokenFile !== null) {
   process.stderr.write(`board.json was damaged and has been kept as ${read.brokenFile}\n`);
 }
 
-const result = runBoardCommand(read.board, process.argv.slice(2));
+const args = process.argv.slice(2);
+// Run against the board as it stands a moment before the write, not the one opened above:
+// runBoardCommandOnLatest says why.
+const result = runBoardCommandOnLatest(read.board, args, () => readBoard(project).board);
 if (!result.ok) {
   process.stderr.write(`${result.message}\n`);
   process.exit(1);

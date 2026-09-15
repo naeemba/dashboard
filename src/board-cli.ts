@@ -1,9 +1,11 @@
 import {
   PRIORITIES,
   addCard,
+  addComment,
   branchFrom,
   columnNamed,
   flightParts,
+  isCommentBody,
   isPriority,
   isTitle,
   moveCardToColumn,
@@ -14,6 +16,7 @@ import {
   setPriority,
   setPullRequest,
   type Board,
+  type Card,
   type Selection,
 } from './board';
 import { USAGE } from './board-usage';
@@ -87,6 +90,14 @@ function withFields(board: Board, selection: Selection, flags: Map<string, strin
   return { board: next };
 }
 
+// How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch
+// and the pull request for the same reason the card front in the app does: without it, finding which
+// cards have anything to read means running `show` on every one of them.
+function commentCount(card: Card): string {
+  const trail = card.comments?.length ?? 0;
+  return trail === 0 ? '' : `${trail} ${trail === 1 ? 'comment' : 'comments'}`;
+}
+
 // One line per card, every column, left to right and top to bottom — the order the board draws them
 // in, so reading this and reading the screen give the same answer about what is where.
 export function formatList(board: Board): string {
@@ -96,15 +107,37 @@ export function formatList(board: Board): string {
   const priorityWidth = Math.max(...PRIORITIES.map((priority) => priority.length));
   return cards
     .map(({ column, card }) => {
-      const flight = flightParts(card);
+      const count = commentCount(card);
+      const parts = [...flightParts(card), ...(count === '' ? [] : [count])];
       return [
         column.padEnd(columnWidth),
         card.priority.padEnd(priorityWidth),
         card.id,
-        card.title + (flight.length === 0 ? '' : `  (${flight.join(' · ')})`),
+        card.title + (parts.length === 0 ? '' : `  (${parts.join(' · ')})`),
       ].join('  ');
     })
     .join('\n');
+}
+
+// One card in full: the line `list` prints for it, then its description, then its trail oldest
+// first. The trail is the half you cannot get from `list` — a line per card has nowhere to put it —
+// and reading it back is what stops the same finding being written twice.
+//
+// The body is indented two spaces so that only a separator ever sits hard against the left margin: a
+// comment recording a diff hunk starts its line `--- a/src/board.ts`, and unindented it would read
+// back as another entry, dated `a/src/board.ts`.
+function formatCard(column: string, card: Card): string {
+  const flight = flightParts(card);
+  return [
+    [column, card.priority, card.id, card.title].join('  '),
+    ...(flight.length === 0 ? [] : [flight.join(' · ')]),
+    ...(card.notes === '' ? [] : ['', card.notes]),
+    ...(card.comments ?? []).flatMap((comment, at) => [
+      '',
+      `--- #${at + 1} · ${comment.at ?? 'no date'}`,
+      comment.body.split('\n').map((line) => (line === '' ? '' : `  ${line}`)).join('\n'),
+    ]),
+  ].join('\n');
 }
 
 export function runBoardCommand(
@@ -185,5 +218,48 @@ export function runBoardCommand(
     };
   }
 
+  if (command === 'show') {
+    const [id, ...extra] = rest;
+    if (id === undefined) return { ok: false, message: 'show needs a card id' };
+    if (extra.length > 0) return { ok: false, message: 'show takes nothing after the id' };
+    const selection = selectionOf(board, id);
+    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const column = board.columns[selection.column];
+    return { ok: true, output: formatCard(column.name, column.cards[selection.card]), board: null };
+  }
+
+  if (command === 'comment') {
+    const [id, body, ...extra] = rest;
+    if (id === undefined || body === undefined) return { ok: false, message: 'comment needs a card id and something to say' };
+    if (extra.length > 0) return { ok: false, message: 'comment takes one piece of text; quote it' };
+    const selection = selectionOf(board, id);
+    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    // The same rule the board's own box and parseCard hold a comment to. Without a word here `board
+    // comment <id> ""` would answer as a success and append nothing.
+    if (!isCommentBody(body)) return { ok: false, message: 'comment needs something to say' };
+    const commented = addComment(board, selection, body);
+    const card = commented.board.columns[selection.column].cards[selection.card];
+    return { ok: true, output: `${card.title}  ·  ${commentCount(card)}`, board: commented.board };
+  }
+
   return { ok: false, message: `no such command: ${command}\n\n${USAGE}` };
+}
+
+// Run twice when there is something to write: once on the board the caller opened, and again on the
+// board as it stands a moment before the write. The app saves the whole file on every keystroke, so
+// the board read at startup can be tens of milliseconds stale by the time the write goes out — and
+// writing the whole file back from it puts the board from before that keystroke over the top of it.
+// What that costs: somebody types a comment on a card and presses Escape while this is running, the
+// write lands after them, and their line is gone off the screen they just typed it on.
+//
+// ponytail: read-then-write, so a save landing inside the last microseconds still wins. A lock is the
+// next rung, when two writers are common enough to hit that window.
+export function runBoardCommandOnLatest(
+  board: Board,
+  args: readonly string[],
+  readAgain: () => Board,
+): CommandResult {
+  const opened = runBoardCommand(board, args);
+  if (!opened.ok || opened.board === null) return opened;
+  return runBoardCommand(readAgain(), args);
 }

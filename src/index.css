@@ -462,6 +462,7 @@ body *:not(.pane, .pane *) {
    long branch name or a long parent title must not turn a card into three rows and push the column
    out of shape. */
 .board-parent,
+.board-comments,
 .board-flight,
 .board-shipped {
   font-size: 11px;
@@ -473,6 +474,7 @@ body *:not(.pane, .pane *) {
 
 .board-parent { margin: 0 0 4px; }
 .board-flight { margin: 4px 0 0; }
+.board-comments { margin: 4px 0 0; }
 
 /* A card in flight is live state, not a typed-in field like the branch or PR line beneath it, so it
    reads brighter than the 0.55 those use. */
@@ -709,6 +711,26 @@ textarea.board-edit {
 
 .card-detail-notes {
   margin: 12px 0;
+  white-space: pre-wrap;
+}
+
+/* One comment per line: the time it was written, then what it says. The trail is the card's history
+   and is read top to bottom, so each entry wraps rather than being cut short the way a card's
+   one-line badges are. */
+.card-detail-comment {
+  margin: 8px 0;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.card-detail-comment-when {
+  flex: 0 0 auto;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.card-detail-comment-body {
   white-space: pre-wrap;
 }
 
