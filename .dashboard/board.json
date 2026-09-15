@@ -41,13 +41,6 @@
           "updatedAt": "2026-09-09T00:00:00.000Z"
         },
         {
-          "id": "b7a28f07-06d5-4f5a-b513-0df0d818bd5d",
-          "title": "macOS may take Ctrl+1..9 for Mission Control, the keys that jump between tabs",
-          "notes": "src/actions.ts, the project-jump rows ship Ctrl+1..Ctrl+9 on the mac side. Mission Control's Switch to Desktop 1..9 are the same keys and come alive once you have a second Space. Where they are alive, Ctrl+2 slides you to another desktop instead of jumping to tab 2 - and project-jump is the most-pressed row in the table.\n\nSame shape as the bug PR #23 fixed for Ctrl+Up and Ctrl+Down, which macOS took for Mission Control and Application windows. That PR wrote the rule down above the table: Ctrl with an arrow belongs to macOS. Ctrl with a digit was not checked.\n\nNot confirmed. First step is ten seconds in System Settings > Keyboard > Keyboard Shortcuts > Mission Control on a machine with two Spaces. Ctrl+Shift+1..9 for project-move looks clear either way.\n\nIf it is real, the fix is not the swap made for the arrows: Cmd+1..Cmd+9 is already terminal-focus on the mac side, so this needs a different family. actions.test.ts already refuses two actions on one key per screen, so a bad swap fails there rather than shipping.\n\nhttps://github.com/naeemba/dashboard/issues/25\nhttps://github.com/naeemba/dashboard/pull/23",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "b7a4124e-af42-4f9f-9646-46a73124036a",
           "title": "Agent state per pane from Claude Code hooks, answered from the manager list",
           "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
@@ -95,6 +88,15 @@
           "notes": "Read Claude Code's session logs under ~/.claude/projects (JSONL; each line has usage counts, model, timestamp and cwd). Group by cwd to get per-project totals. Five-hour window is the rolling sum of the last five hours. Week is the sum since the last weekly reset, whose weekday and hour you set once in settings because the logs do not record it. Shown as a manager page section, one row per project with the three numbers, plus the current five-hour figure in the status bar. Tokens only, no dollars: a price table goes stale. Read-only and offline. The log format is Claude Code's own and may shift under an update.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "e139d3ee-4a8b-4e08-91d8-ec8ef43b97f4",
+          "title": "A card keeps a comment trail, written from the app and from the command line",
+          "notes": "A card has one `notes` field and nothing else to write in. Everything said about a card over its life goes into that one block of text, so a finding, a decision and the original description are one paragraph after another with nothing saying who wrote which or when. Overwrite it from the command line and what was there is gone.\n\nWhat this adds is a list on the card: each entry a body and the time it was written. Appended, never rewritten, so an agent recording what it found cannot lose what someone typed by hand. `notes` stays what it is - the card's description, the thing you edit.\n\nIt has to be in the `board` command in the same change, because the command is how an agent working a card writes back, and an agent with only `set --notes` will keep clobbering the description. `board comment <id> <text>` to append and `board list` or a `show` to read them back.\n\nEvery piece of it is a piece that already exists: board.ts owns the operation and the app's keys call it, board-cli.ts calls the same one, board-store.ts reads and writes the file, and .dashboard/CLAUDE.md documents the field. An old board with no comments on a card reads as none - the same way createdAt is absent rather than guessed.\n\nOpen: whether an entry carries an author. Nothing in the app knows who is typing, and an agent could write whatever it liked, so a name would be a field nobody can trust. The time and the text may be the whole of it.\n\nThe board is a place where comments are read, so it is also a screen question: the detail dialog is where they fit, and the card front can say how many there are. Ctrl+H gets the key in the same change.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-15T11:07:17.039Z",
+          "updatedAt": "2026-09-15T11:07:17.040Z"
         }
       ]
     },
@@ -405,6 +407,15 @@
           "updatedAt": "2026-09-14T13:19:46.431Z",
           "branch": "worktree-changes-broadcast",
           "pullRequest": 37
+        },
+        {
+          "id": "b7a28f07-06d5-4f5a-b513-0df0d818bd5d",
+          "title": "macOS may take Ctrl+1..9 for Mission Control, the keys that jump between tabs",
+          "notes": "src/actions.ts, the project-jump rows ship Ctrl+1..Ctrl+9 on the mac side. Mission Control's Switch to Desktop 1..9 are the same keys and come alive once you have a second Space. Where they are alive, Ctrl+2 slides you to another desktop instead of jumping to tab 2 - and project-jump is the most-pressed row in the table.\n\nSame shape as the bug PR #23 fixed for Ctrl+Up and Ctrl+Down, which macOS took for Mission Control and Application windows. That PR wrote the rule down above the table: Ctrl with an arrow belongs to macOS. Ctrl with a digit was not checked.\n\nChecked, and the check did not settle it. `defaults read com.apple.symbolichotkeys` holds Switch to Desktop as ids 118 upwards - but this machine's plist has been edited: ids 118..122 carry modifier 1048576, which is Cmd, not the 262144 that means Ctrl, and only desktops 1 to 5 have an entry at all. Every one reads `enabled = 0`, so nothing takes the keystroke here, and the file cannot say what a stock mac does with Ctrl+1.\n\nSo the clash cannot bite on this machine, and on a stock mac it is still an open question. The defaults stay. The rule is written above the ACTIONS table beside the one PR #23 left for the arrows, and the settings screen is the escape if the setting is ever turned on. Ctrl+Shift+1..9 for project-move looks clear either way.\n\nIf the defaults ever have to move, it cannot be the swap made for the arrows: Cmd+1..Cmd+9 is already terminal-focus on the mac side, so it needs a different family. actions.test.ts already refuses two actions on one key per screen, so a bad swap fails there rather than shipping.\n\nhttps://github.com/naeemba/dashboard/issues/25\nhttps://github.com/naeemba/dashboard/pull/23\n\nShipped in PR #38: the eight-line rule above the ACTIONS table, and the defaults left where they are. No key moved. The card that came out of it - a comment trail on a card, in the app and in the board command - is its own card in Todo.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-09-15T11:11:09.000Z",
+          "pullRequest": 38
         }
       ]
     }
