@@ -139,6 +139,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // open project's cards at once — to find the one node this file put the class on itself.
   let marked: Element | null = null;
   let markFrame = 0;
+  // The id of the card a left press landed on, or null. Held by id rather than by node because the
+  // press commits an open box, which replaces every card on the board — the node is gone by the time
+  // the button comes up, the id is not.
+  let pressed: string | null = null;
   // The open card dialog, or null. Held so a write that lands can redraw it: it reads the live board on
   // every key, but nothing tells it the file changed, so the subtasks on screen and the ones Enter acts
   // on would be two different lists.
@@ -397,7 +401,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     // before the button comes back up, and a click whose two halves have no ancestor left in common is
     // never dispatched at all, so the first press on a card would do nothing and you would have to
     // press it again. The card released over is on screen either way.
-    item.addEventListener('mouseup', (event) => { if (event.button === 0) clickCard(card); });
+    // Paired with the press, because mouseup is dispatched on whatever is under the pointer when the
+    // button comes up and bubbles: press on a column heading to select its text, drag down onto the
+    // first card, let go, and without this the card's title box opens with the text selected.
+    item.addEventListener('mousedown', () => { pressed = card.id; });
+    item.addEventListener('mouseup', (event) => {
+      const onThisCard = pressed === card.id;
+      pressed = null;
+      if (event.button === 0 && onThisCard) clickCard(card);
+    });
     return item;
   }
 
@@ -431,8 +443,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     // Nothing to drag: refusing the gesture outright is better than a card that follows the cursor and
     // then will not be let go of anywhere.
     if (!selectCard(card)) return event.preventDefault();
+    if (!event.dataTransfer) return;
     // Chromium cancels a drag that carries nothing, and the id is what the drop looks the card up by.
-    event.dataTransfer?.setData('text/plain', card.id);
+    event.dataTransfer.setData('text/plain', card.id);
+    // The board has one drag and it is a move. Left uninitialized, a cancelled dragover gives an
+    // operation of copy, and the cursor grows the green plus that says the card stays where it is.
+    event.dataTransfer.effectAllowed = 'move';
   }
 
   // However the drag ended. A drop has already redrawn through change(); this is what puts the
@@ -511,12 +527,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     // Before the row is read, so the line is gone whether or not this board has the card.
     clearDrop();
     if (busy()) return;
-    // Found by id rather than taken from this board's selection. The manager stacks every open
-    // project's board in one scroller, so the card let go of here may belong to another one of them,
-    // and something dragged in from outside the app carries no id at all — either way this board has
-    // no such card and does nothing with it.
-    const at = selectionOf(state.board, event.dataTransfer?.getData('text/plain') ?? '');
-    if (!at) return;
+    // Found by id rather than taken from this board's selection: the manager stacks every open
+    // project's board in one scroller, so the card let go of here may belong to another one of them.
+    const id = event.dataTransfer?.getData('text/plain') ?? '';
+    // Something dragged in from outside the app carries no card id, and there is nothing to say about
+    // it. A dragover cannot read the id, so the column drew a line promising this drop would land —
+    // the one refusal you can reach with the mouse, and the only place that knows it was refused.
+    if (id === '') return;
+    const at = selectionOf(state.board, id);
+    if (!at) return options.onError('That card belongs to another project — a card stays on the board it was made on');
     moveThenShip(at, dropCard(state.board, at, columnIndex, rowUnder(list, event.clientY)), 'drop');
   }
 
@@ -544,9 +563,13 @@ export function createBoardView(options: BoardOptions): BoardView {
         // with nothing on screen having said the column would not take it.
         if (busy()) {
           if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+          // A board can go busy mid-drag — a board:change from the command line starts a read — and the
+          // line drawn a moment ago would sit there saying the card lands here while the cursor says no.
+          clearDrop();
           return;
         }
         event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
         markDropSoon(list, event.clientY);
       });
       section.addEventListener('drop', (event) => dropOnColumn(event, columnIndex, list));
