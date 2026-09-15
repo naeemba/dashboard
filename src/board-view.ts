@@ -20,6 +20,7 @@ import {
   sortColumn,
   type Card,
   type Change,
+  type MoveGesture,
   type Selection,
 } from './board';
 import type { Action } from './actions';
@@ -44,7 +45,7 @@ import {
 import type { DashboardBridge } from './bridge';
 import { confirmOverlay } from './overlay';
 import { isModified } from './shortcuts';
-import { paneLabel, type Direction } from './terminals';
+import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
 
 export type BoardOptions = {
@@ -390,8 +391,13 @@ export function createBoardView(options: BoardOptions): BoardView {
     item.draggable = true;
     item.addEventListener('dragstart', (event) => beginDrag(event, card));
     item.addEventListener('dragend', endDrag);
-    // A click moves the selection to the card first and then does what Enter does there.
-    item.addEventListener('click', () => clickCard(card));
+    // A click moves the selection to the card first and then does what Enter does there — read off
+    // mouseup rather than click, because pressing on a card while another card's box is open commits
+    // that box on blur, which replaces every card on the board. The li the press landed on is detached
+    // before the button comes back up, and a click whose two halves have no ancestor left in common is
+    // never dispatched at all, so the first press on a card would do nothing and you would have to
+    // press it again. The card released over is on screen either way.
+    item.addEventListener('mouseup', (event) => { if (event.button === 0) clickCard(card); });
     return item;
   }
 
@@ -405,9 +411,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     return true;
   }
 
-  // Enter on a board opens the title, so that is what a click does. Nothing happens while a box is
-  // open: the click that closes it commits what you typed and leaves the highlight where the keyboard
-  // already was, which is the card you were naming and not the one you reached for.
+  // Enter on a board opens the title, so that is what a click does. A press that lands here while
+  // another card's box is open has already closed that box — renderEditor commits on blur, and blur
+  // comes with the press — so the keyboard is free by the time this runs and the selection moves on
+  // that same press.
   function clickCard(card: Card): void {
     if (selectCard(card)) startEditing('title');
   }
@@ -490,7 +497,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   //
   // `from` is where the card was a gesture ago, which is not always the selection — a drag is let go of
   // on a card the keyboard is not on.
-  function moveThenShip(from: Selection, next: Change, gesture: Direction | 'drop'): void {
+  function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
     const moving = cardAt(state.board, from);
     change(next);
     if (moving && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, from.column);
@@ -530,14 +537,28 @@ export function createBoardView(options: BoardOptions): BoardView {
       // are both places a hand aims at. preventDefault is what makes the column a place a card can be
       // let go of at all — without it the drop never fires and the card springs back.
       section.addEventListener('dragover', (event) => {
-        // preventDefault is what makes a column somewhere a card can be let go of, so withholding it
-        // while the board is busy turns the cursor into the one that says no. Without this the line
-        // promises a landing and the card snaps back with nothing on screen saying why.
-        if (busy()) return;
+        // dropEffect, not a withheld preventDefault: renderer.ts cancels dragover at the window so a
+        // file dropped on the page cannot navigate it, and one listener cancelling is enough to allow
+        // the drop however this one returns. dropEffect is read after that and does turn the cursor
+        // into the one that says no. Without it the card snaps back off dropOnColumn's own busy check
+        // with nothing on screen having said the column would not take it.
+        if (busy()) {
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+          return;
+        }
         event.preventDefault();
         markDropSoon(list, event.clientY);
       });
       section.addEventListener('drop', (event) => dropOnColumn(event, columnIndex, list));
+      // A board the pointer merely crossed never hears dragend — that fires at the card the drag
+      // started from, which on the manager's stack of boards can be another project's. Without this,
+      // pass over a column until the line appears and then press Escape, and the line stays hard
+      // against a card nothing is being dropped into until something else redraws that board, which
+      // nothing does. relatedTarget is where the pointer went: still inside this column means it only
+      // moved between the cards in it.
+      section.addEventListener('dragleave', (event) => {
+        if (!(event.relatedTarget instanceof Node) || !section.contains(event.relatedTarget)) clearDrop();
+      });
       if (column.cards.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'board-empty';

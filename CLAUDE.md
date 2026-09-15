@@ -33,6 +33,13 @@ the highlight sits on another leaves the pointer and the keyboard naming two
 different rows. You click `web` to open it, press Enter, and `api` collapses —
 you opened one project and closed another.
 
+One level up, on the manager's stack of boards: a mouse gesture that reaches one of
+those boards makes that board the active one before the gesture runs. Otherwise you
+click a card on `api`, press Shift+Right, and a card in `web` moves — into Ship if it
+was in Todo, which makes a worktree and starts an agent on the project you were not
+looking at. `api`'s highlight moved too, but an inactive board's outline is turned off
+in the CSS, so nothing on screen says where the keyboard is.
+
 That holds on a row where Enter does nothing too — the selection still moves,
 and you still have to see it move. A quiet project has nothing to open, so the
 click does only the moving; if the screen is not redrawn for it, the highlight

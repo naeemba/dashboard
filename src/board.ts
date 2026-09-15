@@ -109,6 +109,11 @@ export function shipColumnIndex(board: Board): number {
   return columnNamed(board, SHIP_COLUMN);
 }
 
+// What moved a card: one of the four arrow steps, or the pointer letting go of it. Named here, where
+// the value is read, because the view writes the same union on the function that hands it over — two
+// spellings of one idea, and the union is one somebody will add to.
+export type MoveGesture = Direction | 'drop';
+
 // Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
 // produced, the selection it left behind, and `from`, the column the card was in a keystroke earlier.
 //
@@ -127,8 +132,8 @@ export function shipColumnIndex(board: Board): number {
 // later ships nothing until somebody says it should. `!== 'left'` reads the same today and fails the
 // other way: add a key that sends a card straight to a column, point it at Ship by mistake, and it
 // silently makes a worktree, takes a pane and starts an agent, with no test to fail over it.
-export function landsInShip(board: Board, from: number, moved: Selection, direction: Direction | 'drop'): boolean {
-  const aimed = direction === 'right' || direction === 'drop';
+export function landsInShip(board: Board, from: number, moved: Selection, gesture: MoveGesture): boolean {
+  const aimed = gesture === 'right' || gesture === 'drop';
   return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
 }
 

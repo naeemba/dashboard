@@ -70,6 +70,18 @@ export function createCardsView(options: CardsOptions): BoardView {
     });
     const section = document.createElement('section');
     section.className = 'cards-project';
+    // A mouse gesture that reaches a stacked board makes that board the active one first. mousedown,
+    // because it comes before both halves of a click and before dragstart, so one listener covers the
+    // click and the drag. Without it the pointer and the keyboard end up on two different projects:
+    // click a card on `api`, then press Shift+Right, and a card in `web` moves — into Ship if it was
+    // in Todo, which makes a worktree and starts an agent on the project you were not looking at.
+    // `api`'s own highlight moved, but an inactive board's outline is turned off in the CSS, so
+    // nothing on screen says where the keyboard is.
+    section.addEventListener('mousedown', () => {
+      if (page.project.path === activePath) return;
+      setActive(paths.indexOf(page.project.path));
+      options.onChanged();
+    });
     const heading = document.createElement('h2');
     heading.textContent = page.project.name;
     section.append(heading, view.element);
