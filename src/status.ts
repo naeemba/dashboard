@@ -1,5 +1,5 @@
 import { EDITOR_INDEX, branchOfPane, paneLabel } from './terminals';
-import { formatTokens } from './usage';
+import { paneTokens } from './usage';
 import type { Mode } from './modes';
 
 // What the right-hand end of the status bar says: which view you are on, and for terminals which pane
@@ -70,7 +70,8 @@ export function modeLabel(page: StatusPage): string {
   // Added rather than folded into paneLabel: that is the one spelling of what a pane is called, and a
   // running total is not part of a name. The manager's rows and the bell's notification both print
   // the label, and neither wants a number that moves every half minute in the middle of it.
-  return page.focusedTokens === 0 ? label : `${label} · ${formatTokens(page.focusedTokens)}`;
+  const tokens = paneTokens(page.focusedTokens);
+  return tokens === '' ? label : `${label} · ${tokens}`;
 }
 
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the

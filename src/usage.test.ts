@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FIVE_HOURS, formatTokens, ranInProject, retainFrom, tokensOf, totalsOf, weekStart,
-  type FileUsage,
+  FIVE_HOURS, formatTokens, paneTokens, projectTokens, ranInProject, retainFrom, tokensOf, totalsOf,
+  weekStart, type FileUsage,
 } from './usage';
 
 // Monday 15 September 2026, 09:00 local.
@@ -97,5 +97,20 @@ describe('formatTokens', () => {
     expect(formatTokens(2e9)).toBe('2B');
     expect(formatTokens(12_400_000)).toBe('12.4M');
     expect(formatTokens(9_200)).toBe('9.2K');
+  });
+});
+
+describe('what a figure worth nought prints', () => {
+  it('prints nothing for a pane with no agent in it, rather than a nought', () => {
+    expect(paneTokens(0)).toBe('');
+    expect(paneTokens(9_200)).toBe('9.2K');
+  });
+
+  it('prints nothing for a project never worked on, rather than three noughts', () => {
+    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 0 })).toBe('');
+  });
+
+  it('keeps a quiet week beside a busy history, since all time is what says it is worth a row', () => {
+    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 2e9 })).toBe('0  0  2B');
   });
 });

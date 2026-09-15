@@ -5,6 +5,7 @@ import {
   takesAnswer,
   type PaneSummary,
 } from './manager';
+import { NO_TOTALS } from './usage';
 import type { Bell } from './waiting';
 
 // The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
@@ -123,7 +124,7 @@ describe('managerRows', () => {
 
   it('gives a project the sweep has not reached yet nought rather than nothing at all', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1')])]);
-    expect(rows[0].tokens).toEqual({ fiveHours: 0, week: 0, allTime: 0 });
+    expect(rows[0].tokens).toEqual(NO_TOTALS);
     expect(rows[0].panes[0].tokens).toBe(0);
   });
 
@@ -169,7 +170,7 @@ describe('managerRows', () => {
 
   it('keeps a project with no panes at all, so a dead project still has a row', () => {
     expect(managerRows([page('gone', 2, [])])).toEqual([
-      { slot: 2, name: 'gone', panes: [], tokens: { fiveHours: 0, week: 0, allTime: 0 } },
+      { slot: 2, name: 'gone', panes: [], tokens: NO_TOTALS },
     ]);
   });
 });
@@ -211,7 +212,7 @@ describe('alertSummary', () => {
 
 describe('managerLines', () => {
   const row = (slot: number, name: string, panes: PaneSummary[] = []) => (
-    { slot, name, panes, tokens: { fiveHours: 0, week: 0, allTime: 0 } }
+    { slot, name, panes, tokens: NO_TOTALS }
   );
   const pane = { ...summary('waiting'), index: 1, name: 'terminal 2' };
 
@@ -239,7 +240,7 @@ describe('managerLines', () => {
 });
 
 describe('lineKey', () => {
-  const row = { slot: 2, name: 'api', panes: [], tokens: { fiveHours: 0, week: 0, allTime: 0 } };
+  const row = { slot: 2, name: 'api', panes: [], tokens: NO_TOTALS };
 
   it('tells a project from the panes under it', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
@@ -248,7 +249,7 @@ describe('lineKey', () => {
 });
 
 describe('slotOfLine', () => {
-  const row = { slot: 2, name: 'api', panes: [], tokens: { fiveHours: 0, week: 0, allTime: 0 } };
+  const row = { slot: 2, name: 'api', panes: [], tokens: NO_TOTALS };
 
   it('gives a pane row the project it sits under, which is what the close key is aimed at', () => {
     expect(slotOfLine({ kind: 'project', row, open: false })).toBe(2);
@@ -258,7 +259,7 @@ describe('slotOfLine', () => {
 
 describe('canOpen', () => {
   it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
-    const tokens = { fiveHours: 0, week: 0, allTime: 0 };
+    const tokens = NO_TOTALS;
     expect(canOpen({ slot: 0, name: 'api', panes: [], tokens })).toBe(false);
     expect(canOpen({ slot: 0, name: 'api', panes: [summary('quiet')], tokens })).toBe(true);
   });

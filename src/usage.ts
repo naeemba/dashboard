@@ -80,11 +80,15 @@ function sum(samples: readonly Sample[], from: number): number {
 }
 
 export function totalsOf(files: Iterable<FileUsage>, now: number): Totals {
+  // Both boundaries worked out once. weekStart builds a Date and walks it back to Monday, and the
+  // loop below runs over every log on the machine for every open project.
+  const week = weekStart(now);
+  const fiveHours = now - FIVE_HOURS;
   const totals = { fiveHours: 0, week: 0, allTime: 0 };
   for (const file of files) {
     totals.allTime += file.allTime;
-    totals.week += sum(file.samples, weekStart(now));
-    totals.fiveHours += sum(file.samples, now - FIVE_HOURS);
+    totals.week += sum(file.samples, week);
+    totals.fiveHours += sum(file.samples, fiveHours);
   }
   return totals;
 }
@@ -148,7 +152,19 @@ export const NO_USAGE: UsageSnapshot = { projects: {}, panes: {} };
 // The three figures as one string, which is what a project row prints. Spaced rather than punctuated:
 // the row already uses `·` between a pane's state and its age, and three numbers joined with it read
 // as one sentence instead of three columns.
-export function projectTokens(totals: Totals | undefined): string {
-  if (totals === undefined || totals.allTime === 0) return '';
+//
+// Empty for a project nothing has ever been spent on, rather than three noughts.
+export function projectTokens(totals: Totals): string {
+  if (totals.allTime === 0) return '';
   return [totals.fiveHours, totals.week, totals.allTime].map(formatTokens).join('  ');
+}
+
+// The one figure a pane prints, and the other half of the same rule: nought is printed as nothing at
+// all. Here beside projectTokens rather than at each of the three places that draw one — the first
+// draw of a manager row, the timer's redraw of it, and the status bar — because "is this figure worth
+// showing" is the same question in all three and a copy of it in a drawing file is a copy nobody
+// thinks to grep. Teach this one that a pane under a thousand tokens is startup noise worth hiding,
+// and all three go quiet together.
+export function paneTokens(tokens: number): string {
+  return tokens === 0 ? '' : formatTokens(tokens);
 }

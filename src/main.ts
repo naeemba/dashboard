@@ -455,16 +455,15 @@ let usage: UsageSnapshot = NO_USAGE;
 
 async function sweepTokenUsage(): Promise<void> {
   const now = Date.now();
-  await sweepUsage(claudeLogs, usageFiles, now);
-  // The process tree, which is the only thing that says which pane a session is running in. Without
-  // it the project figures still stand and the pane ones are simply absent — a machine with no `ps`
-  // loses the smaller half rather than the screen.
-  let tree: string;
-  try {
-    ({ stdout: tree } = await runCommand('ps', ['-eo', 'pid=,ppid=']));
-  } catch {
-    tree = '';
-  }
+  // Three reads that need nothing from each other: the logs, the process tree, and the sessions
+  // Claude Code has running. The tree is the only thing that says which pane a session is in, and a
+  // machine with no `ps` answers with none — the project figures still stand and the pane ones are
+  // simply absent, which is the smaller half rather than the screen.
+  const [, tree, sessions] = await Promise.all([
+    sweepUsage(claudeLogs, usageFiles, now),
+    runCommand('ps', ['-eo', 'pid=,ppid=']).then(({ stdout }) => stdout, () => ''),
+    liveSessions(claudeSessions),
+  ]);
   const panePids = new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id]));
   const open = projects.flatMap((project) => (project === undefined
     ? []
@@ -472,7 +471,7 @@ async function sweepTokenUsage(): Promise<void> {
   usage = snapshotOf(
     usageFiles.values(),
     open,
-    sessionsByPane(parentProcesses(tree), panePids, await liveSessions(claudeSessions)),
+    sessionsByPane(parentProcesses(tree), panePids, sessions),
     now,
   );
   sendToRenderer('usage:change', usage);
