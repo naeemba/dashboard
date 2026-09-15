@@ -90,16 +90,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "d738c37e-e3dc-4b61-998b-bbdb1180cf61",
-          "title": "Move a card on the board with the mouse",
-          "notes": "Drag a card between columns and within a column with the mouse, doing what Shift+Arrow does from the keyboard. The drag moves the selection to that card first, so the highlight and the pointer name the same row.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-15T14:35:32.776Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -424,6 +415,22 @@
             {
               "at": "2026-09-15T11:55:03.112Z",
               "body": "Shipped in PR #39. The trail is a list on the card, appended and never rewritten; notes stays the description. c writes one from the board or from inside the open card, o reads them oldest first, and the card front says how many. board comment <id> <text> appends from a shell and board show <id> prints a card with its trail, which is the part board list has no room for. No author on an entry — nothing knows who is typing — and at is absent on a line written by hand, the way createdAt is."
+            }
+          ]
+        },
+        {
+          "id": "d738c37e-e3dc-4b61-998b-bbdb1180cf61",
+          "title": "Move a card on the board with the mouse",
+          "notes": "Drag a card between columns and within a column with the mouse, doing what Shift+Arrow does from the keyboard. The drag moves the selection to that card first, so the highlight and the pointer name the same row.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-15T14:48:15.776Z",
+          "branch": "card-drag-with-mouse",
+          "pullRequest": 41,
+          "comments": [
+            {
+              "at": "2026-09-15T14:48:15.776Z",
+              "body": "Shipped in PR #41. Native HTML5 drag and drop: a card is draggable, a column takes the drop, and dropCard in board.ts lands it on a column and a row. The row rule lives in board-drag.ts with its test — a card is claimed from its middle down, so the bottom half of the last card means the end of the column. A drop into Ship ships, so landsInShip now takes 'drop' beside the four directions. A click moves the selection onto a card and opens its title. Cost: text inside a card can no longer be selected with the mouse, because the card is draggable."
             }
           ]
         }
