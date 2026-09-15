@@ -119,10 +119,12 @@ let usage: UsageSnapshot = NO_USAGE;
 // the open card dialog: it reads the records live, but nothing tells it one of them has gone.
 let worktreeDialog: WorktreeDialog | null = null;
 // Only the status bar and the manager's rows read these, and renderStatus draws both — so one call is
-// the whole redraw, and on every other screen it is the status bar alone.
+// the whole redraw, and on every other screen it is the status bar alone. The rows are written in
+// place rather than rebuilt: a sweep arrives on its own schedule, and a list replaced under someone
+// reading it loses the line they had selected and scrolls back to the highlight.
 function applyUsage(next: UsageSnapshot): void {
   usage = next;
-  renderStatus();
+  renderStatus(true);
 }
 
 function applyWorktrees(list: WorktreeList): void {

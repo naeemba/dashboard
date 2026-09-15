@@ -149,6 +149,18 @@ export function snapshotOf(
 
 export const NO_USAGE: UsageSnapshot = { projects: {}, panes: {} };
 
+// Whether a sweep found anything worth telling the screen about. Almost every sweep reads the same
+// numbers back — nobody is working in most of the open projects — and a message for those is a redraw
+// of every row on the manager, every half minute, under someone who is sitting there reading it.
+// worktreesDiffer holds the same line over the worktree records.
+//
+// Order counts, the way it does there, and for the same cheap trade: the pane keys come off a Map that
+// a shell closing and reopening reorders. That says yes with no figure moved, and costs one rewrite of
+// text already on screen — the rows are written in place now, not rebuilt.
+export function usageDiffers(previous: UsageSnapshot, next: UsageSnapshot): boolean {
+  return JSON.stringify(previous) !== JSON.stringify(next);
+}
+
 // The three figures as one string, which is what a project row prints. Spaced rather than punctuated:
 // the row already uses `·` between a pane's state and its age, and three numbers joined with it read
 // as one sentence instead of three columns.

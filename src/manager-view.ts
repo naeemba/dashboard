@@ -240,15 +240,20 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Kept, so the status bar reads the selected pane's age off the same numbers the row shows.
       lines = fresh;
       lines.forEach((line, index) => {
-        if (line.kind !== 'pane') return;
         const row = list.children[index];
+        // Rewritten with the rest: an agent spends while its state stays `quiet`, so a figure left out
+        // of this redraw sits at what it was when the row was built. The project's three go the same
+        // way as a pane's one — writing them here is what lets a sweep move a figure without the list
+        // being torn down and rebuilt under someone reading it.
+        const tokens = row?.querySelector('.manager-tokens');
+        if (line.kind === 'project') {
+          if (tokens) tokens.textContent = projectTokens(line.row.tokens);
+          return;
+        }
         const lastPrinted = row?.querySelector('.manager-last-printed');
         if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
-        // Rewritten with the rest: an agent spends while its state stays `quiet`, so a figure left out
-        // of this redraw sits at what it was when the row was built.
-        const tokens = row?.querySelector('.manager-tokens');
         if (tokens) tokens.textContent = paneTokens(line.pane.tokens);
         const tail = row?.querySelector<HTMLElement>('.manager-tail');
         if (tail) {

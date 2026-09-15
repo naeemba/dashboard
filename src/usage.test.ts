@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FIVE_HOURS, formatTokens, paneTokens, projectTokens, ranInProject, retainFrom, tokensOf, totalsOf,
-  weekStart, type FileUsage,
+  FIVE_HOURS, formatTokens, paneTokens, projectTokens, ranInProject, retainFrom, snapshotOf, tokensOf,
+  totalsOf, usageDiffers, weekStart, type FileUsage,
 } from './usage';
 
-// Monday 15 September 2026, 09:00 local.
+// Monday 14 September 2026, 09:00 local. It has to be a Monday: every weekStart and retainFrom
+// expectation below is written against that boundary.
 const MONDAY_MORNING = new Date(2026, 8, 14, 9, 0, 0).getTime();
 
 function fileWith(samples: { at: number; tokens: number }[], allTime = 0): FileUsage {
@@ -112,5 +113,58 @@ describe('what a figure worth nought prints', () => {
 
   it('keeps a quiet week beside a busy history, since all time is what says it is worth a row', () => {
     expect(projectTokens({ fiveHours: 0, week: 0, allTime: 2e9 })).toBe('0  0  2B');
+  });
+});
+
+describe('snapshotOf', () => {
+  const project = '/Users/sharp/work/api';
+  const worktrees = '/Users/sharp/work/api.worktrees';
+
+  function fileIn(directory: string, session: string, tokens: number): FileUsage {
+    return { size: 0, directory, session, allTime: tokens, samples: [{ at: MONDAY_MORNING, tokens }] };
+  }
+
+  it('counts the worktrees beside a project towards it, not only the checkout', () => {
+    const files = [fileIn(project, 'a', 10), fileIn(`${worktrees}/fix-login`, 'b', 5)];
+    const snapshot = snapshotOf(files, [{ path: project, worktrees }], new Map(), MONDAY_MORNING);
+    expect(snapshot.projects[project]).toEqual({ fiveHours: 15, week: 15, allTime: 15 });
+  });
+
+  it('leaves a session that ran somewhere else out of the project', () => {
+    const files = [fileIn('/Users/sharp/work/api-docs', 'a', 10)];
+    const snapshot = snapshotOf(files, [{ path: project, worktrees }], new Map(), MONDAY_MORNING);
+    expect(snapshot.projects[project]).toEqual({ fiveHours: 0, week: 0, allTime: 0 });
+  });
+
+  it("gives a pane its session's whole cost, the subagents' own files included", () => {
+    const files = [fileIn(project, 'a', 10), fileIn(project, 'a', 7), fileIn(project, 'b', 99)];
+    const snapshot = snapshotOf(
+      files, [{ path: project, worktrees }], new Map([['0-1', 'a']]), MONDAY_MORNING,
+    );
+    expect(snapshot.panes).toEqual({ '0-1': 17 });
+  });
+
+  it('gives a pane whose session has written nothing yet a nought rather than nothing', () => {
+    const snapshot = snapshotOf([], [], new Map([['0-1', 'a']]), MONDAY_MORNING);
+    expect(snapshot.panes).toEqual({ '0-1': 0 });
+  });
+});
+
+describe('usageDiffers', () => {
+  const totals = { fiveHours: 1, week: 2, allTime: 3 };
+
+  it('says no to a sweep that read the same figures back', () => {
+    expect(usageDiffers(
+      { projects: { '/p': totals }, panes: { '0-1': 5 } },
+      { projects: { '/p': { ...totals } }, panes: { '0-1': 5 } },
+    )).toBe(false);
+  });
+
+  it('says yes to a figure that moved, and to a pane that came or went', () => {
+    expect(usageDiffers(
+      { projects: { '/p': totals }, panes: {} },
+      { projects: { '/p': { ...totals, fiveHours: 2 } }, panes: {} },
+    )).toBe(true);
+    expect(usageDiffers({ projects: {}, panes: {} }, { projects: {}, panes: { '0-1': 0 } })).toBe(true);
   });
 });

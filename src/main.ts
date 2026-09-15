@@ -35,7 +35,7 @@ import {
   worktreesRoot,
   type PaneCommand,
 } from './ship';
-import { NO_USAGE, snapshotOf, type FileUsage, type UsageSnapshot } from './usage';
+import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
 import { liveSessions, sweepUsage } from './usage-store';
 import { parentProcesses, sessionsByPane } from './pane-sessions';
 import {
@@ -468,19 +468,28 @@ async function sweepTokenUsage(): Promise<void> {
   const open = projects.flatMap((project) => (project === undefined
     ? []
     : [{ path: project.path, worktrees: worktreesRoot(project.path) }]));
-  usage = snapshotOf(
+  const next = snapshotOf(
     usageFiles.values(),
     open,
     sessionsByPane(parentProcesses(tree), panePids, sessions),
     now,
   );
-  sendToRenderer('usage:change', usage);
+  // Nothing crosses for a sweep that found the same figures. Whether that is worth a message is
+  // usageDiffers's to say.
+  const changed = usageDiffers(usage, next);
+  usage = next;
+  if (changed) sendToRenderer('usage:change', usage);
 }
 
 // Chained rather than on an interval, so a sweep that takes longer than the gap — a first read of
 // half a gigabyte on a slow disk — cannot have the next one start on top of it.
 function sweepUsageLater(delay: number): void {
-  setTimeout(() => { void sweepTokenUsage().finally(() => sweepUsageLater(USAGE_SWEEP_MS)); }, delay).unref();
+  // The catch is not optional: `finally` re-throws what it was handed, and an unhandled rejection in
+  // the main process is an uncaught exception that takes every pane's shell with it. A sweep that
+  // finishes into a window that has just closed is the way there.
+  setTimeout(() => {
+    void sweepTokenUsage().catch(() => undefined).finally(() => sweepUsageLater(USAGE_SWEEP_MS));
+  }, delay).unref();
 }
 
 // Every half minute, which is the rate the manager's rows already redraw themselves at. The first one

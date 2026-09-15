@@ -79,8 +79,12 @@ async function readAppended(file: string, from: number, size: number): Promise<{
     // it is counted again from the start rather than read from an offset inside it.
     const start = size < from ? 0 : from;
     const buffer = Buffer.allocUnsafe(size - start);
-    await handle.read(buffer, 0, size - start, start);
-    const text = buffer.toString('utf8');
+    // Only the bytes that were actually read. `allocUnsafe` hands back whatever was in that heap
+    // memory, and a short read — the file cleared between the stat and here — would otherwise have the
+    // tail of it decoded as content: one stale `\n` in there and `size` moves past lines nobody
+    // counted, whose tokens are then gone for the life of the app.
+    const { bytesRead } = await handle.read(buffer, 0, size - start, start);
+    const text = buffer.subarray(0, bytesRead).toString('utf8');
     const lastBreak = text.lastIndexOf('\n');
     // Nothing whole yet. Left for the next sweep, which reads the same bytes again with the rest of
     // the line behind them.

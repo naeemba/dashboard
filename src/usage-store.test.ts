@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile, appendFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { sweepUsage } from './usage-store';
+import { liveSessions, sweepUsage } from './usage-store';
 import { totalsOf, type FileUsage } from './usage';
 
 const NOW = new Date(2026, 8, 14, 9, 0, 0).getTime();
@@ -104,5 +104,51 @@ describe('sweepUsage', () => {
 
   it('answers with nothing when there are no logs on the machine at all', async () => {
     expect([...(await sweepUsage(path.join(root, 'absent'), new Map(), NOW)).values()]).toEqual([]);
+  });
+});
+
+describe('liveSessions', () => {
+  async function sessionsDirectory(files: Record<string, string>): Promise<string> {
+    const directory = path.join(root, 'sessions');
+    await mkdir(directory, { recursive: true });
+    for (const [name, body] of Object.entries(files)) {
+      await writeFile(path.join(directory, name), body);
+    }
+    return directory;
+  }
+
+  it('reads the pid and session out of each record', async () => {
+    const directory = await sessionsDirectory({
+      '900.json': JSON.stringify({ pid: 900, sessionId: 'a' }),
+    });
+    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a' }]);
+  });
+
+  it('ignores a file that is not one of the records', async () => {
+    const directory = await sessionsDirectory({
+      '900.json': JSON.stringify({ pid: 900, sessionId: 'a' }),
+      'notes.txt': 'not a record',
+    });
+    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a' }]);
+  });
+
+  it('drops a record missing a pid or a session rather than reading undefined off it', async () => {
+    const directory = await sessionsDirectory({
+      '900.json': JSON.stringify({ sessionId: 'a' }),
+      '901.json': JSON.stringify({ pid: 901 }),
+    });
+    expect(await liveSessions(directory)).toEqual([]);
+  });
+
+  it('keeps the whole sweep when one record is half-written', async () => {
+    const directory = await sessionsDirectory({
+      '900.json': '{"pid": 900, "sessi',
+      '901.json': JSON.stringify({ pid: 901, sessionId: 'b' }),
+    });
+    expect(await liveSessions(directory)).toEqual([{ pid: 901, session: 'b' }]);
+  });
+
+  it('answers with nothing when Claude Code has never run on this machine', async () => {
+    expect(await liveSessions(path.join(root, 'absent'))).toEqual([]);
   });
 });
