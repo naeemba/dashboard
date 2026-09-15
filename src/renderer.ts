@@ -119,9 +119,8 @@ let usage: UsageSnapshot = NO_USAGE;
 // the open card dialog: it reads the records live, but nothing tells it one of them has gone.
 let worktreeDialog: WorktreeDialog | null = null;
 // Only the status bar and the manager's rows read these, and renderStatus draws both — so one call is
-// the whole redraw, and on every other screen it is the status bar alone. The rows are written in
-// place rather than rebuilt: a sweep arrives on its own schedule, and a list replaced under someone
-// reading it loses the line they had selected and scrolls back to the highlight.
+// the whole redraw, and on every other screen it is the status bar alone. It asks for the rows-only
+// redraw, which writes the figures into the rows already on screen — refreshRows says why.
 function applyUsage(next: UsageSnapshot): void {
   usage = next;
   renderStatus(true);
@@ -179,11 +178,11 @@ function namedPanes(page: Page): (Pane & { name: string })[] {
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
-// `panesOnly` is the timer's redraw below, which has nothing to change on a row but the line its pane
-// last printed and how long ago that was. Everything else here runs either way, so the status bar
-// still reads the age off the selection and the tab strip is still the one this function has always
-// drawn.
-function renderStatus(panesOnly = false): void {
+// `rowsOnly` is the redraw asked for by the timer below and by a token sweep, which has nothing to
+// change on the manager but the handful of fields refreshRows writes. Everything else here runs either
+// way, so the status bar still reads the age off the selection and the tab strip is still the one this
+// function has always drawn.
+function renderStatus(rowsOnly = false): void {
   const page = pages[activeIndex];
   // Before the status bar reads its label off the selection. The rows are the pages themselves, so a
   // bell, an exit or a project opening all reach the manager through the redraw they already cause —
@@ -199,7 +198,7 @@ function renderStatus(panesOnly = false): void {
         lastPrinted: () => paneLastLine(pane.terminal),
       })),
     })), usage);
-    if (panesOnly) page.manager?.refreshPanes(rows);
+    if (rowsOnly) page.manager?.refreshRows(rows);
     else page.manager?.render(rows);
   }
   titleElement.textContent = `📁 ${page.project.name}`;

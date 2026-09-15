@@ -25,10 +25,10 @@ export type ManagerView = {
   // The rows are read from the renderer's pages, which are the live ones — the page holds none of its
   // own, so a bell that arrives while you are looking at it shows up on the next redraw.
   render(rows: readonly ManagerRow[]): void;
-  // The timer's redraw: the three things on a pane row that change while nothing else does — the line
-  // it last printed, how long ago that was, and the block of screen under a row that is asking you
-  // something.
-  refreshPanes(rows: readonly ManagerRow[]): void;
+  // The in-place redraw, asked for by the timer and by a token sweep: the fields that change while the
+  // list itself does not — on a pane row the line it last printed, how long ago that was, its figure,
+  // and the block of screen under a row that is asking you something; on a project row its figures.
+  refreshRows(rows: readonly ManagerRow[]): void;
   statusLabel(): string;
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
   // board has, and for the same reason: one place decides what every key on every screen does.
@@ -223,11 +223,11 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // pane printing calls nothing — the bytes go into the terminal and that is all — so without this
     // a quiet row's line only moves when a keystroke, a bell or an exit forces a whole redraw, and
     // the age sits beside it saying `just now` about text from ten minutes ago.
-    // The three spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
+    // The spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
     // to the highlight and throw away the line you had selected to copy out, under someone who is
     // sitting there reading it. The state span is not touched — every state change ends in a full
     // redraw of its own.
-    refreshPanes(rows: readonly ManagerRow[]): void {
+    refreshRows(rows: readonly ManagerRow[]): void {
       // Written into the rows that are on screen, so this writes only while the fresh rows are those
       // rows. A project opened or a pane appeared means a full render is what caused it and a full
       // render is what draws it; writing into `list.children` on a shape that moved would put one
