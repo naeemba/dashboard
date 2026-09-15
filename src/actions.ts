@@ -113,6 +113,14 @@ function range(count: number): number[] {
 // Mission Control and Ctrl+Down is Application windows, both on out of the box, and the system takes
 // them before the app is told. A row that ships one on the mac side ships a key that does nothing
 // until the person finds the settings screen. Cmd with an arrow is free.
+//
+// Ctrl with a digit is the same shortcut one setting away. macOS keeps Switch to Desktop 1..9 on those
+// exact keystrokes — `defaults read com.apple.symbolichotkeys` lists them as ids 118 upwards, Ctrl and
+// the character — and they are off on the machine this was checked on, so the project-jump rows below
+// keep them. Tick one in System Settings > Keyboard Shortcuts > Mission Control and that digit slides
+// the screen to another desktop instead of jumping to the tab, with nothing in the app to blame. The
+// escape is the settings screen, which rebinds the row; the swap the arrows made is not available,
+// because Cmd with a digit is already terminal-focus here.
 export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'project-picker', description: 'Open the project list', group: 'projects', scope: 'global',
