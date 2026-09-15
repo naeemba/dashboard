@@ -453,7 +453,12 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   // However the drag ended. A drop has already redrawn through change(); this is what puts the
   // highlight on the grabbed card when you let go over nothing, or press Escape.
+  //
+  // It forgets the press too: a drag ends in dragend and no mouseup, so without this the card you
+  // dragged stays recorded, and the next press that starts off a card and releases over it opens its
+  // title box — the gesture the pairing above exists to refuse.
   function endDrag(): void {
+    pressed = null;
     clearDrop();
     render();
   }
