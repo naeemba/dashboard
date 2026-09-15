@@ -13,8 +13,8 @@ import {
   withShipColumn,
   type Board,
   type Card,
+  type CardComment,
   type Column,
-  type Comment,
 } from './board';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
@@ -110,9 +110,10 @@ code the app does, so a card it writes is a card the app wrote.
 
 ${USAGE.split('\n').map((line) => (line === '' ? '' : `    ${line}`)).join('\n')}
 
-Run it as \`node "$DASHBOARD_BOARD" <command>\`. \`list\` prints the column, the priority and the id of
-every card, which is where the id every other command wants comes from. \`show\` prints one of them in
-full, including its comment trail, which is the part \`list\` has no room for.
+Run it as \`node "$DASHBOARD_BOARD" <command>\`. \`list\` prints the column, the priority, the id and
+how many comments each card has — the id is the one \`show\`, \`move\`, \`set\` and \`comment\` want.
+\`show\` prints one card in full, including its comment trail, which is the part \`list\` has no room
+for.
 
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.
@@ -197,9 +198,9 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
 //
 // A comment with no body is dropped rather than kept: it would draw as a blank line in the trail with
 // a date beside it, and .dashboard/CLAUDE.md promises agents it is dropped.
-function parseComments(value: unknown): Comment[] | undefined {
+function parseComments(value: unknown): CardComment[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  const comments = value.flatMap((entry): Comment[] => (isRecord(entry) && isCommentBody(entry.body)
+  const comments = value.flatMap((entry): CardComment[] => (isRecord(entry) && isCommentBody(entry.body)
     ? [{ at: optionalText(entry.at), body: entry.body.trim() }]
     : []));
   return comments.length === 0 ? undefined : comments;

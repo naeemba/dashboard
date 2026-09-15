@@ -90,6 +90,14 @@ function withFields(board: Board, selection: Selection, flags: Map<string, strin
   return { board: next };
 }
 
+// How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch
+// and the pull request for the same reason the card front in the app does: without it, finding which
+// cards have anything to read means running `show` on every one of them.
+function commentCount(card: Card): string {
+  const trail = card.comments?.length ?? 0;
+  return trail === 0 ? '' : `${trail} ${trail === 1 ? 'comment' : 'comments'}`;
+}
+
 // One line per card, every column, left to right and top to bottom — the order the board draws them
 // in, so reading this and reading the screen give the same answer about what is where.
 export function formatList(board: Board): string {
@@ -99,12 +107,13 @@ export function formatList(board: Board): string {
   const priorityWidth = Math.max(...PRIORITIES.map((priority) => priority.length));
   return cards
     .map(({ column, card }) => {
-      const flight = flightParts(card);
+      const count = commentCount(card);
+      const parts = [...flightParts(card), ...(count === '' ? [] : [count])];
       return [
         column.padEnd(columnWidth),
         card.priority.padEnd(priorityWidth),
         card.id,
-        card.title + (flight.length === 0 ? '' : `  (${flight.join(' · ')})`),
+        card.title + (parts.length === 0 ? '' : `  (${parts.join(' · ')})`),
       ].join('  ');
     })
     .join('\n');
@@ -113,13 +122,21 @@ export function formatList(board: Board): string {
 // One card in full: the line `list` prints for it, then its description, then its trail oldest
 // first. The trail is the half you cannot get from `list` — a line per card has nowhere to put it —
 // and reading it back is what stops the same finding being written twice.
-export function formatCard(column: string, card: Card): string {
+//
+// The body is indented two spaces so that only a separator ever sits hard against the left margin: a
+// comment recording a diff hunk starts its line `--- a/src/board.ts`, and unindented it would read
+// back as another entry, dated `a/src/board.ts`.
+function formatCard(column: string, card: Card): string {
   const flight = flightParts(card);
   return [
     [column, card.priority, card.id, card.title].join('  '),
     ...(flight.length === 0 ? [] : [flight.join(' · ')]),
     ...(card.notes === '' ? [] : ['', card.notes]),
-    ...(card.comments ?? []).flatMap((comment) => ['', `--- ${comment.at ?? 'no date'}`, comment.body]),
+    ...(card.comments ?? []).flatMap((comment, at) => [
+      '',
+      `--- #${at + 1} · ${comment.at ?? 'no date'}`,
+      comment.body.split('\n').map((line) => (line === '' ? '' : `  ${line}`)).join('\n'),
+    ]),
   ].join('\n');
 }
 
@@ -222,8 +239,7 @@ export function runBoardCommand(
     if (!isCommentBody(body)) return { ok: false, message: 'comment needs something to say' };
     const commented = addComment(board, selection, body);
     const card = commented.board.columns[selection.column].cards[selection.card];
-    const trail = card.comments?.length ?? 0;
-    return { ok: true, output: `${card.title}  ·  ${trail} ${trail === 1 ? 'comment' : 'comments'}`, board: commented.board };
+    return { ok: true, output: `${card.title}  ·  ${commentCount(card)}`, board: commented.board };
   }
 
   return { ok: false, message: `no such command: ${command}\n\n${USAGE}` };

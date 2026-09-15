@@ -44,6 +44,16 @@ describe('list', () => {
     expect(formatList(flying)).toContain('(ship-it · #14)');
   });
 
+  // Without this the line for a card with twelve comments and the line for a card with none read the
+  // same, and finding which cards have anything to read means running `show` on every one of them.
+  it('says how many comments a card carries, and nothing when it carries none', () => {
+    const { board, id } = withCard();
+    expect(formatList(board)).not.toContain('comment');
+    expect(formatList(boardAfter(board, 'comment', id, 'first'))).toContain('(1 comment)');
+    const twice = boardAfter(boardAfter(board, 'comment', id, 'first'), 'comment', id, 'second');
+    expect(formatList(twice)).toContain('(2 comments)');
+  });
+
   it('writes nothing', () => {
     const { board } = withCard();
     const result = run(board, 'list');
@@ -267,6 +277,40 @@ describe('show', () => {
     expect(result.output.indexOf('first')).toBeLessThan(result.output.indexOf('second'));
     // Reading a card is not a change to it.
     expect(result.board).toBe(null);
+  });
+
+  // A card nobody has described yet: no blank line and no empty paragraph where the description would be.
+  it('leaves out the description when there is none', () => {
+    const { board, id } = withCard('Ship it');
+    const result = run(boardAfter(board, 'comment', id, 'only a comment'), 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    // Header, one blank, then the trail. A description would have sat on the third line.
+    expect(result.output.split('\n')[2]).toMatch(/^--- #1 /);
+    expect(result.output).toContain('only a comment');
+  });
+
+  // `at` is optional because a line written into board.json by hand has no time on it. Printing
+  // `undefined` beside it would read as a date the file does not have.
+  it('says so when a hand-written comment has no date', () => {
+    const { board, id } = withCard();
+    const written = boardAfter(board, 'comment', id, 'from a person');
+    const card = cardById(written, id);
+    if (!card?.comments) throw new Error('no trail');
+    card.comments[0] = { body: 'from a person' };
+    const result = run(written, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output).toContain('--- #1 · no date');
+  });
+
+  // The body is indented so only a separator ever starts at the left margin. A comment recording a
+  // diff hunk carries `--- a/src/board.ts`, and unindented it reads back as a second entry.
+  it('keeps a body that looks like a separator inside its own entry', () => {
+    const { board, id } = withCard();
+    const written = boardAfter(board, 'comment', id, '--- a/src/board.ts\n+++ b/src/board.ts');
+    const result = run(written, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output.split('\n').filter((line) => line.startsWith('--- '))).toHaveLength(1);
+    expect(result.output).toContain('  --- a/src/board.ts');
   });
 
   it('refuses a card that is not there', () => {

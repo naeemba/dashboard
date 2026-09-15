@@ -482,7 +482,10 @@ export function createBoardView(options: BoardOptions): BoardView {
       state = { ...state, selection };
       // `c` in the dialog is a way out to this box rather than a box of its own: the trail is read in
       // there and written here, on the card the dialog was sitting on.
-      if (comment) return startEditing('comment');
+      // The card can be gone by the time this runs — a write landed while the dialog was up — and
+      // startEditing does nothing without one. Falling through is what puts the keyboard back on the
+      // board; skipping it leaves focus on <body> and no key works until you reach for the mouse.
+      if (comment && cardAt(state.board, state.selection)) return startEditing('comment');
       element.focus();
       render();
     });

@@ -18,7 +18,7 @@ export const DEFAULT_PRIORITY: Priority = 'medium';
 // `at` is absent when nobody knows, the way createdAt is: a line written into the file by hand has no
 // time on it, and stamping it on read would have every old comment claiming the moment the app first
 // opened the board.
-export type Comment = { at?: string; body: string };
+export type CardComment = { at?: string; body: string };
 
 export type Card = {
   id: string;
@@ -41,7 +41,7 @@ export type Card = {
   // The card's comment trail, oldest first, or absent when nothing has been said. Absent rather than
   // an empty list, for the same reason createdAt is absent: a board written before this existed reads
   // as no comments, and writing it back does not grow a field it never had.
-  comments?: Comment[];
+  comments?: CardComment[];
 };
 export type Column = { name: string; cards: Card[] };
 export type Board = { columns: Column[] };

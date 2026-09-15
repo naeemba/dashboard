@@ -76,16 +76,17 @@ code the app does, so a card it writes is a card the app wrote.
       board add <title> [--column <name>] [--priority <level>] [--notes <text>]
       board move <id> <column>
       board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
-      board comment <id> <text>
+      board comment <id> "<text>"
 
     Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field.
 
     --notes replaces the card's description. To record what you found, use `comment`: it appends to the
     card's trail and takes nothing away. `show` prints one card with its description and its trail.
 
-Run it as `node "$DASHBOARD_BOARD" <command>`. `list` prints the column, the priority and the id of
-every card, which is where the id every other command wants comes from. `show` prints one of them in
-full, including its comment trail, which is the part `list` has no room for.
+Run it as `node "$DASHBOARD_BOARD" <command>`. `list` prints the column, the priority, the id and
+how many comments each card has — the id is the one `show`, `move`, `set` and `comment` want.
+`show` prints one card in full, including its comment trail, which is the part `list` has no room
+for.
 
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.
