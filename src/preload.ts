@@ -35,6 +35,9 @@ const bridge: DashboardBridge = {
   cancelTasks: () => ipcRenderer.send('task:cancel'),
   onTaskUpdate: (listener) =>
     ipcRenderer.on('task:update', (_event, result) => listener(result)),
+  readUsage: () => ipcRenderer.invoke('usage:read'),
+  onUsageChange: (listener) =>
+    ipcRenderer.on('usage:change', (_event, usage) => listener(usage)),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

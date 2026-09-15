@@ -5,6 +5,7 @@ import {
   takesAnswer,
   type PaneSummary,
 } from './manager';
+import { NO_TOTALS } from './usage';
 import type { Bell } from './waiting';
 
 // The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
@@ -18,6 +19,7 @@ const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary 
   name: 'terminal 1',
   state,
   lastPrintedAt: 0,
+  tokens: 0,
   tail: () => tail,
   lastPrinted: () => tail.at(-1) ?? '',
 });
@@ -85,7 +87,7 @@ describe('managerRows', () => {
       name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
       tail(): string[]; lastPrinted(): string;
     }[],
-  ) => ({ project: { name }, slot, panes });
+  ) => ({ project: { name, path: `/work/${name}` }, slot, panes });
   const pane = (
     name: string, bell: Bell = 'quiet', exited = false, tail: string[] = [], lastPrintedAt = 0,
   ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });
@@ -94,8 +96,8 @@ describe('managerRows', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
     expect(rows.map((row) => ({ slot: row.slot, name: row.name }))).toEqual([{ slot: 3, name: 'api' }]);
     expect(drawn(rows[0].panes)).toEqual([
-      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0 },
-      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0 },
+      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
+      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
     ]);
   });
 
@@ -111,12 +113,27 @@ describe('managerRows', () => {
     ]);
   });
 
+  it('puts the project’s three figures on its row and each agent’s on its pane', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])], {
+      projects: { '/work/api': { fiveHours: 10, week: 20, allTime: 30 } },
+      panes: { '3:1': 4_000 },
+    });
+    expect(rows[0].tokens).toEqual({ fiveHours: 10, week: 20, allTime: 30 });
+    expect(rows[0].panes.map((entry) => entry.tokens)).toEqual([0, 4_000]);
+  });
+
+  it('gives a project the sweep has not reached yet nought rather than nothing at all', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1')])]);
+    expect(rows[0].tokens).toEqual(NO_TOTALS);
+    expect(rows[0].panes[0].tokens).toBe(0);
+  });
+
   it('carries what each pane printed and when, so the row can say how long ago', () => {
     const rows = managerRows([page('api', 0, [pane('terminal 1', 'quiet', false, ['ok'], 1_000)])]);
     expect(drawn(rows[0].panes)).toEqual([
       {
         index: 0, name: 'terminal 1', state: 'quiet', tail: ['ok'], lastPrinted: 'ok',
-        lastPrintedAt: 1_000,
+        lastPrintedAt: 1_000, tokens: 0,
       },
     ]);
   });
@@ -152,7 +169,9 @@ describe('managerRows', () => {
   });
 
   it('keeps a project with no panes at all, so a dead project still has a row', () => {
-    expect(managerRows([page('gone', 2, [])])).toEqual([{ slot: 2, name: 'gone', panes: [] }]);
+    expect(managerRows([page('gone', 2, [])])).toEqual([
+      { slot: 2, name: 'gone', panes: [], tokens: NO_TOTALS },
+    ]);
   });
 });
 
@@ -192,7 +211,9 @@ describe('alertSummary', () => {
 });
 
 describe('managerLines', () => {
-  const row = (slot: number, name: string, panes: PaneSummary[] = []) => ({ slot, name, panes });
+  const row = (slot: number, name: string, panes: PaneSummary[] = []) => (
+    { slot, name, panes, tokens: NO_TOTALS }
+  );
   const pane = { ...summary('waiting'), index: 1, name: 'terminal 2' };
 
   it('lists the projects and nothing else while every row is shut', () => {
@@ -219,7 +240,7 @@ describe('managerLines', () => {
 });
 
 describe('lineKey', () => {
-  const row = { slot: 2, name: 'api', panes: [] };
+  const row = { slot: 2, name: 'api', panes: [], tokens: NO_TOTALS };
 
   it('tells a project from the panes under it', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
@@ -228,7 +249,7 @@ describe('lineKey', () => {
 });
 
 describe('slotOfLine', () => {
-  const row = { slot: 2, name: 'api', panes: [] };
+  const row = { slot: 2, name: 'api', panes: [], tokens: NO_TOTALS };
 
   it('gives a pane row the project it sits under, which is what the close key is aimed at', () => {
     expect(slotOfLine({ kind: 'project', row, open: false })).toBe(2);
@@ -238,8 +259,9 @@ describe('slotOfLine', () => {
 
 describe('canOpen', () => {
   it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
-    expect(canOpen({ slot: 0, name: 'api', panes: [] })).toBe(false);
-    expect(canOpen({ slot: 0, name: 'api', panes: [summary('quiet')] })).toBe(true);
+    const tokens = NO_TOTALS;
+    expect(canOpen({ slot: 0, name: 'api', panes: [], tokens })).toBe(false);
+    expect(canOpen({ slot: 0, name: 'api', panes: [summary('quiet')], tokens })).toBe(true);
   });
 });
 

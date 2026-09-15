@@ -50,11 +50,18 @@ export function branchNameFor(title: string, cardId: string, taken: readonly str
 
 // Beside the project, never inside it. Nothing to add to a .gitignore, nvim and ripgrep in the real
 // checkout never walk into it, and a delete under dashboard.worktrees/ cannot reach dashboard/.
-export function worktreePathFor(projectPath: string, branch: string): string {
+//
+// Its own function because two questions need it and only one of them is making a worktree: the token
+// figures have to count a session that ran in a worktree towards the project it came from, and a
+// second spelling of where the folder goes is one that stops agreeing the day the layout changes.
+export function worktreesRoot(projectPath: string): string {
   // Through basename and dirname rather than string work, so a trailing slash does not turn
   // /Users/sharp/work/api/ into a folder called ".worktrees".
-  const name = basename(projectPath);
-  return join(dirname(projectPath), `${name}.worktrees`, branch);
+  return join(dirname(projectPath), `${basename(projectPath)}.worktrees`);
+}
+
+export function worktreePathFor(projectPath: string, branch: string): string {
+  return join(worktreesRoot(projectPath), branch);
 }
 
 // What a pane was asked to run and where. main holds one of these per pane; this is the shape of a row
