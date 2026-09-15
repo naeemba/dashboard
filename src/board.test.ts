@@ -9,6 +9,7 @@ import {
   cardById,
   childColumns,
   childrenOf,
+  addComment,
   cyclePriority,
   deleteCard,
   deleteCardAndDescendants,
@@ -20,6 +21,7 @@ import {
   landsInShip,
   moveCard,
   moveCardToColumn,
+  isCommentBody,
   moveSelection,
   pullRequestFrom,
   renameCard,
@@ -670,5 +672,55 @@ describe('pullRequestFrom', () => {
     for (const text of ['', 'fourteen', '0', '-3', '1.5', '#', 'PR 14', '0x10', '1e3', '0b1010']) {
       expect(pullRequestFrom(text)).toBe(null);
     }
+  });
+});
+
+describe('addComment', () => {
+  const first = { column: 0, card: 0 };
+
+  it('starts the trail on a card that has none', () => {
+    const commented = addComment(board(['Ship it']), first, 'The race is in the debounce.');
+    expect(commented.board.columns[0].cards[0].comments)
+      .toEqual([{ at: expect.any(String), body: 'The race is in the debounce.' }]);
+  });
+
+  // The whole point of the field: an agent recording what it found must not be able to take out what
+  // somebody typed by hand, the way `set --notes` does.
+  it('appends, oldest first, and leaves what is there alone', () => {
+    const once = addComment(board(['Ship it']), first, 'first');
+    const twice = addComment(once.board, first, 'second');
+    expect(twice.board.columns[0].cards[0].comments?.map((comment) => comment.body)).toEqual(['first', 'second']);
+  });
+
+  it('trims what it is given', () => {
+    const commented = addComment(board(['Ship it']), first, '  padded\n');
+    expect(commented.board.columns[0].cards[0].comments?.[0].body).toBe('padded');
+  });
+
+  // The same board back, which is what keeps a blank box out of the undo step and off the disk.
+  it('adds nothing for a blank body', () => {
+    const start = board(['Ship it']);
+    expect(addComment(start, first, '   ').board).toBe(start);
+  });
+
+  it('adds nothing when there is no card to comment on', () => {
+    const start = board([]);
+    expect(addComment(start, first, 'anything').board).toBe(start);
+  });
+
+  it('ages the card, the way every other field change does', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-01T00:00:00.000Z'));
+    const commented = addComment(board(['Ship it']), first, 'found it');
+    expect(commented.board.columns[0].cards[0].updatedAt).toBe('2026-03-01T00:00:00.000Z');
+    vi.useRealTimers();
+  });
+});
+
+describe('isCommentBody', () => {
+  it('takes any text with something in it and refuses the rest', () => {
+    expect(isCommentBody('found it')).toBe(true);
+    expect(isCommentBody('two\nlines')).toBe(true);
+    for (const value of ['', '   ', '\n', undefined, null, 3, {}]) expect(isCommentBody(value)).toBe(false);
   });
 });

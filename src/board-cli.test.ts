@@ -217,3 +217,59 @@ describe('the command itself', () => {
     expect(result.message).toContain(USAGE);
   });
 });
+
+describe('comment', () => {
+  it('appends to the card and says how many there are', () => {
+    const { board, id } = withCard();
+    const result = run(board, 'comment', id, 'The race is in the debounce.');
+    if (!result.ok || result.board === null) throw new Error(result.ok ? 'wrote nothing' : result.message);
+    expect(cardById(result.board, id)?.comments?.map((comment) => comment.body))
+      .toEqual(['The race is in the debounce.']);
+    expect(result.output).toContain('1 comment');
+  });
+
+  // The reason the command exists: `set --notes` is the only other way to write on a card, and it
+  // replaces. Two agents using it lose each other's findings.
+  it('leaves the description and the earlier comments alone', () => {
+    const { board, id } = withCard();
+    const described = boardAfter(board, 'set', id, '--notes', 'What the card is about');
+    const once = boardAfter(described, 'comment', id, 'first');
+    const twice = boardAfter(once, 'comment', id, 'second');
+    expect(cardById(twice, id)?.notes).toBe('What the card is about');
+    expect(cardById(twice, id)?.comments?.map((comment) => comment.body)).toEqual(['first', 'second']);
+  });
+
+  it('refuses a blank one, a missing one and a card that is not there', () => {
+    const { board, id } = withCard();
+    expect(run(board, 'comment', id, '   ')).toMatchObject({ ok: false });
+    expect(run(board, 'comment', id)).toMatchObject({ ok: false });
+    expect(run(board, 'comment', 'nope', 'hello')).toMatchObject({ ok: false, message: 'no card with id nope' });
+  });
+
+  // `comment <id> found a bug` reads as three arguments and would quietly keep only "found". Refusing
+  // is what tells the shell to quote it.
+  it('refuses a body that arrived as several words', () => {
+    const { board, id } = withCard();
+    expect(run(board, 'comment', id, 'found', 'a', 'bug')).toMatchObject({ ok: false });
+  });
+});
+
+describe('show', () => {
+  it('prints the card with its description and its trail, oldest first', () => {
+    const { board, id } = withCard('Ship it');
+    const described = boardAfter(board, 'set', id, '--notes', 'What the card is about');
+    const once = boardAfter(described, 'comment', id, 'first');
+    const twice = boardAfter(once, 'comment', id, 'second');
+    const result = run(twice, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output).toContain('Ship it');
+    expect(result.output).toContain('What the card is about');
+    expect(result.output.indexOf('first')).toBeLessThan(result.output.indexOf('second'));
+    // Reading a card is not a change to it.
+    expect(result.board).toBe(null);
+  });
+
+  it('refuses a card that is not there', () => {
+    expect(run(emptyBoard(), 'show', 'nope')).toMatchObject({ ok: false, message: 'no card with id nope' });
+  });
+});

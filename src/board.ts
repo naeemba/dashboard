@@ -8,6 +8,18 @@ export type Priority = typeof PRIORITIES[number];
 // sorted and a card always draws its colour.
 export const DEFAULT_PRIORITY: Priority = 'medium';
 
+// One thing said about a card, and when it was said. Appended and never rewritten, so a finding an
+// agent records cannot take out what somebody typed by hand — which is the whole difference between
+// this and `notes`, the one field both of them edit in place.
+//
+// No author. Nothing in the app knows who is typing and an agent could write whatever it liked, so a
+// name here would be a field nobody could trust.
+//
+// `at` is absent when nobody knows, the way createdAt is: a line written into the file by hand has no
+// time on it, and stamping it on read would have every old comment claiming the moment the app first
+// opened the board.
+export type Comment = { at?: string; body: string };
+
 export type Card = {
   id: string;
   title: string;
@@ -26,6 +38,10 @@ export type Card = {
   // the number brings auth, the network and a question about when it refreshes.
   branch?: string;
   pullRequest?: number;
+  // The card's comment trail, oldest first, or absent when nothing has been said. Absent rather than
+  // an empty list, for the same reason createdAt is absent: a board written before this existed reads
+  // as no comments, and writing it back does not grow a field it never had.
+  comments?: Comment[];
 };
 export type Column = { name: string; cards: Card[] };
 export type Board = { columns: Column[] };
@@ -212,6 +228,25 @@ export function isTitle(value: unknown): value is string {
 export function branchFrom(text: string): string | undefined {
   const trimmed = text.trim();
   return trimmed === '' ? undefined : trimmed;
+}
+
+// Appends. The trail is the one thing on a card that is never rewritten: `board set --notes` from an
+// agent overwrites the description every time, and this is what that agent writes to instead.
+//
+// A blank body adds nothing, the same way a blank card is dropped — the callers that could type one
+// ask isCommentBody first and say so.
+export function addComment(board: Board, selection: Selection, body: string): Change {
+  const card = cardAt(board, selection);
+  if (!card || !isCommentBody(body)) return { board, selection };
+  const comments = [...(card.comments ?? []), { at: stamp(), body: body.trim() }];
+  return editCard(board, selection, { comments });
+}
+
+// What a comment has to have to be a comment. parseCard drops one written without it, the command
+// line refuses to append one, and the board's own box commits nothing — three places that must agree,
+// or the app draws a comment the command line says cannot exist.
+export function isCommentBody(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
 }
 
 export function setPriority(board: Board, selection: Selection, priority: Priority): Change {

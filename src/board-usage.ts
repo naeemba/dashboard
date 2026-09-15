@@ -7,8 +7,13 @@ import { PRIORITIES } from './board';
 export const USAGE = `board — the Dashboard board of the project you are in
 
   board list
+  board show <id>
   board add <title> [--column <name>] [--priority <level>] [--notes <text>]
   board move <id> <column>
   board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes <text>]
+  board comment <id> <text>
 
-Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field.`;
+Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field.
+
+--notes replaces the card's description. To record what you found, use \`comment\`: it appends to the
+card's trail and takes nothing away. \`show\` prints one card with its description and its trail.`;

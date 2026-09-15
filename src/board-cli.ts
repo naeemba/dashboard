@@ -1,9 +1,11 @@
 import {
   PRIORITIES,
   addCard,
+  addComment,
   branchFrom,
   columnNamed,
   flightParts,
+  isCommentBody,
   isPriority,
   isTitle,
   moveCardToColumn,
@@ -14,6 +16,7 @@ import {
   setPriority,
   setPullRequest,
   type Board,
+  type Card,
   type Selection,
 } from './board';
 import { USAGE } from './board-usage';
@@ -107,6 +110,22 @@ export function formatList(board: Board): string {
     .join('\n');
 }
 
+// One card in full: the line `list` prints for it, then its description, then its trail oldest
+// first. The trail is the half you cannot get from `list` — a line per card has nowhere to put it —
+// and reading it back is what stops the same finding being written twice.
+export function formatCard(column: string, card: Card): string {
+  const flight = flightParts(card);
+  const parts = [
+    [column, card.priority, card.id, card.title].join('  '),
+    ...(flight.length === 0 ? [] : [flight.join(' · ')]),
+    ...(card.notes === '' ? [] : ['', card.notes]),
+  ];
+  for (const comment of card.comments ?? []) {
+    parts.push('', `--- ${comment.at ?? 'no date'}`, comment.body);
+  }
+  return parts.join('\n');
+}
+
 export function runBoardCommand(
   board: Board,
   args: readonly string[],
@@ -183,6 +202,31 @@ export function runBoardCommand(
       output: [card.title, card.priority, ...flightParts(card)].join('  ·  '),
       board: fields.board,
     };
+  }
+
+  if (command === 'show') {
+    const [id, ...extra] = rest;
+    if (id === undefined) return { ok: false, message: 'show needs a card id' };
+    if (extra.length > 0) return { ok: false, message: 'show takes nothing after the id' };
+    const selection = selectionOf(board, id);
+    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const column = board.columns[selection.column];
+    return { ok: true, output: formatCard(column.name, column.cards[selection.card]), board: null };
+  }
+
+  if (command === 'comment') {
+    const [id, body, ...extra] = rest;
+    if (id === undefined || body === undefined) return { ok: false, message: 'comment needs a card id and something to say' };
+    if (extra.length > 0) return { ok: false, message: 'comment takes one piece of text; quote it' };
+    const selection = selectionOf(board, id);
+    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    // The same rule the board's own box and parseCard hold a comment to. Without a word here `board
+    // comment <id> ""` would answer as a success and append nothing.
+    if (!isCommentBody(body)) return { ok: false, message: 'comment needs something to say' };
+    const commented = addComment(board, selection, body);
+    const card = commented.board.columns[selection.column].cards[selection.card];
+    const trail = card.comments?.length ?? 0;
+    return { ok: true, output: `${card.title}  ·  ${trail} ${trail === 1 ? 'comment' : 'comments'}`, board: commented.board };
   }
 
   return { ok: false, message: `no such command: ${command}\n\n${USAGE}` };

@@ -72,6 +72,36 @@ describe('parseBoard', () => {
     expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, '1']);
   });
 
+  it('reads a comment trail, oldest first', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","comments":['
+      + '{"at":"2026-01-01T00:00:00.000Z","body":"first"},{"at":"2026-02-01T00:00:00.000Z","body":"second"}]}]}]}');
+    expect(board.columns[0].cards[0].comments).toEqual([
+      { at: '2026-01-01T00:00:00.000Z', body: 'first' },
+      { at: '2026-02-01T00:00:00.000Z', body: 'second' },
+    ]);
+  });
+
+  // A line someone wrote into the file by hand. Stamping it on read would have it claim the moment
+  // the app first opened the board.
+  it('keeps a comment written without a date', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","comments":[{"body":"by hand"}]}]}]}');
+    expect(board.columns[0].cards[0].comments).toEqual([{ body: 'by hand' }]);
+  });
+
+  it('drops a comment with nothing in it and keeps the rest', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","comments":['
+      + '{"body":"  "},{"at":"2026-01-01T00:00:00.000Z"},"not a comment",{"body":" kept "}]}]}]}');
+    expect(board.columns[0].cards[0].comments).toEqual([{ body: 'kept' }]);
+  });
+
+  // A card that has never been commented on must be written back without the field, or every board
+  // grows one the first time this version reads it.
+  it('reads a card with no comments, and one whose comments are all rubbish, as having none', () => {
+    const board = parseBoard('{"columns":[{"name":"Todo","cards":['
+      + '{"id":"1","title":"a"},{"id":"2","title":"b","comments":[]},{"id":"3","title":"c","comments":"soon"}]}]}');
+    expect(board.columns[0].cards.map((card) => card.comments)).toEqual([undefined, undefined, undefined]);
+  });
+
   // A board written before subtasks existed. Every card is top-level, which is what it is.
   it('reads a card with no parent field as top-level', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}');

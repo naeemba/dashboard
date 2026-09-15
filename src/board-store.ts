@@ -6,6 +6,7 @@ import { USAGE } from './board-usage';
 import {
   DEFAULT_PRIORITY,
   emptyBoard,
+  isCommentBody,
   isPriority,
   isPullRequestNumber,
   isTitle,
@@ -13,6 +14,7 @@ import {
   type Board,
   type Card,
   type Column,
+  type Comment,
 } from './board';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
@@ -55,7 +57,10 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
               "createdAt": "2026-09-08T09:12:44.017Z",
               "updatedAt": "2026-09-08T09:12:44.017Z",
               "branch": "fix-resize-race",
-              "pullRequest": 14
+              "pullRequest": 14,
+              "comments": [
+                { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
+              ]
             }
           ]
         }
@@ -87,6 +92,12 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   before these fields existed, or written by hand without them, stays that way and the app never
   fills them in on read. \`updatedAt\` moves when one of that card's own fields changes, and when the
   card moves to another column — reordering a column leaves it alone.
+- \`comments\` is the card's comment trail, oldest first, or absent when nothing has been said. Each
+  entry is \`{ "at": <ISO date>, "body": <text> }\`; \`at\` may be absent, and an entry with a blank
+  \`body\` or no \`body\` is dropped when the app reads the file. It is append-only — write to it with
+  \`board comment\` and never by rewriting what is there. \`notes\` is the card's description and is
+  edited in place; everything said about the card over its life goes here instead, so recording a
+  finding cannot take out what somebody else wrote.
 - \`branch\` is the git branch the work is on, or absent. \`pullRequest\` is the pull request's number,
   a whole number above zero written without the \`#\`, or absent. Both are typed in — \`b\` edits the
   branch and \`r\` the pull request — and nothing fetches or refreshes them.
@@ -100,7 +111,8 @@ code the app does, so a card it writes is a card the app wrote.
 ${USAGE.split('\n').map((line) => (line === '' ? '' : `    ${line}`)).join('\n')}
 
 Run it as \`node "$DASHBOARD_BOARD" <command>\`. \`list\` prints the column, the priority and the id of
-every card, which is where the id the other three want comes from.
+every card, which is where the id every other command wants comes from. \`show\` prints one of them in
+full, including its comment trail, which is the part \`list\` has no room for.
 
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.
@@ -176,7 +188,21 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
     updatedAt: optionalText(value.updatedAt),
     branch: optionalText(value.branch),
     pullRequest: isPullRequestNumber(value.pullRequest) ? value.pullRequest : undefined,
+    comments: parseComments(value.comments),
   };
+}
+
+// undefined rather than an empty list, so a card that has never been commented on is written back
+// without the field — a board from before comments existed round-trips as the file it was.
+//
+// A comment with no body is dropped rather than kept: it would draw as a blank line in the trail with
+// a date beside it, and .dashboard/CLAUDE.md promises agents it is dropped.
+function parseComments(value: unknown): Comment[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const comments = value.flatMap((entry): Comment[] => (isRecord(entry) && isCommentBody(entry.body)
+    ? [{ at: optionalText(entry.at), body: entry.body.trim() }]
+    : []));
+  return comments.length === 0 ? undefined : comments;
 }
 
 function parseColumn(value: unknown, makeId: () => string): Column | null {
