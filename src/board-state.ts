@@ -2,7 +2,6 @@ import {
   addCard,
   addComment,
   branchFrom,
-  isCommentBody,
   cardAt,
   isTitle,
   selectionOf,
@@ -110,12 +109,11 @@ export function commitNotes(state: BoardState, notes: string): BoardState {
   return applyChange(state, setNotes(state.board, state.selection, notes));
 }
 
-// Escape commits, as with a description: Enter is a newline in a comment. An empty box says nothing
-// and adds nothing — a comment, unlike a description, cannot be cleared once written, so there is no
-// meaning left for an empty one to carry. addComment asks isCommentBody on the same text, so a box
-// that commits nothing cannot be one the card quietly kept.
+// Escape commits, as with a description: Enter is a newline in a comment. Unlike the four above there
+// is nothing to compare against — a comment is appended rather than replacing a field — so the no-op
+// ruling is entirely addComment's: it hands back the same board for a blank body, and applyChange
+// leaves the state alone for a board that did not move.
 export function commitComment(state: BoardState, body: string): BoardState {
-  if (!isCommentBody(body)) return state;
   return applyChange(state, addComment(state.board, state.selection, body));
 }
 

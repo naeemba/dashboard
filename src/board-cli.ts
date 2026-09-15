@@ -115,15 +115,12 @@ export function formatList(board: Board): string {
 // and reading it back is what stops the same finding being written twice.
 export function formatCard(column: string, card: Card): string {
   const flight = flightParts(card);
-  const parts = [
+  return [
     [column, card.priority, card.id, card.title].join('  '),
     ...(flight.length === 0 ? [] : [flight.join(' · ')]),
     ...(card.notes === '' ? [] : ['', card.notes]),
-  ];
-  for (const comment of card.comments ?? []) {
-    parts.push('', `--- ${comment.at ?? 'no date'}`, comment.body);
-  }
-  return parts.join('\n');
+    ...(card.comments ?? []).flatMap((comment) => ['', `--- ${comment.at ?? 'no date'}`, comment.body]),
+  ].join('\n');
 }
 
 export function runBoardCommand(
