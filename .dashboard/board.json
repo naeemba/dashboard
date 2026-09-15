@@ -55,13 +55,6 @@
           "parent": null
         },
         {
-          "id": "d738c37e-e3dc-4b61-998b-bbdb1180cf61",
-          "title": "Move a card on the board with the mouse",
-          "notes": "Drag a card between columns and within a column with the mouse, doing what Shift+Arrow does from the keyboard. The drag moves the selection to that card first, so the highlight and the pointer name the same row.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5344c823-38a4-4fdd-aee9-71c91ea94eed",
           "title": "Discard a card's worktree in one key",
           "notes": "On a card in Ship or Doing, one key removes its worktree, deletes the branch, and moves the card back to Todo, after a confirmation like delete. Refuses when the worktree has uncommitted changes, saying so; force needs a second confirmation. Open: whether a pane still running in that worktree blocks the discard or is killed first.",
@@ -431,6 +424,22 @@
             {
               "at": "2026-09-15T13:34:49.852Z",
               "body": "Built, with two changes to the notes above. The figures go on the manager's existing project and pane rows rather than a fourth section, and the week runs Monday to Monday rather than from a reset time set in settings — nothing on the machine records that reset, so asking for it was the only way to know it.\n\nAlso per pane: each pane running a Claude Code agent carries what that agent has cost, on its manager row and at the right-hand end of the status bar. Which pane a session is in is not in any log; it comes from the process tree, since claude runs as a child of the shell the app spawned for the pane.\n\nusage.ts is the arithmetic, usage-store.ts the reading, pane-sessions.ts the pane. Measured on this machine: 4362 logs, first sweep 5s, every sweep after it 95ms."
+            }
+          ]
+        },
+        {
+          "id": "d738c37e-e3dc-4b61-998b-bbdb1180cf61",
+          "title": "Move a card on the board with the mouse",
+          "notes": "Drag a card between columns and within a column with the mouse, doing what Shift+Arrow does from the keyboard. The drag moves the selection to that card first, so the highlight and the pointer name the same row.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-15T14:48:15.776Z",
+          "branch": "card-drag-with-mouse",
+          "pullRequest": 41,
+          "comments": [
+            {
+              "at": "2026-09-15T14:48:15.776Z",
+              "body": "Shipped in PR #41. Native HTML5 drag and drop: a card is draggable, a column takes the drop, and dropCard in board.ts lands it on a column and a row. The row rule lives in board-drag.ts with its test — a card is claimed from its middle down, so the bottom half of the last card means the end of the column. A drop into Ship ships, so landsInShip now takes 'drop' beside the four directions. A click moves the selection onto a card and opens its title. Cost: text inside a card can no longer be selected with the mouse, because the card is draggable."
             }
           ]
         }

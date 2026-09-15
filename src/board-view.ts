@@ -8,6 +8,7 @@ import {
   deleteCardAndDescendants,
   descendantsOf,
   detachCard,
+  dropCard,
   hasSubtasks,
   landsInShip,
   moveCard,
@@ -19,10 +20,12 @@ import {
   sortColumn,
   type Card,
   type Change,
+  type MoveGesture,
   type Selection,
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
+import { dropRow } from './board-drag';
 import { putEditBack, takeEdit } from './carried-edit';
 import {
   addBlankCard,
@@ -130,6 +133,16 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
+  // The card carrying the line that says where a dragged card would land, and the frame that will draw
+  // it. Held rather than searched for: a dragover fires on every mouse movement, and looking the marked
+  // card up by its own class each time walks every node on the board — on the manager that is every
+  // open project's cards at once — to find the one node this file put the class on itself.
+  let marked: Element | null = null;
+  let markFrame = 0;
+  // The id of the card a left press landed on, or null. Held by id rather than by node because the
+  // press commits an open box, which replaces every card on the board — the node is gone by the time
+  // the button comes up, the id is not.
+  let pressed: string | null = null;
   // The open card dialog, or null. Held so a write that lands can redraw it: it reads the live board on
   // every key, but nothing tells it the file changed, so the subtasks on screen and the ones Enter acts
   // on would be two different lists.
@@ -225,6 +238,14 @@ export function createBoardView(options: BoardOptions): BoardView {
   // the selection is now pointing at.
   function editingCardId(): string | undefined {
     return editing === null ? undefined : cardAt(state.board, state.selection)?.id;
+  }
+
+  // The board is not taking anything at this moment: a box is open, or a read is in flight and the
+  // board on screen is about to be replaced — applying a gesture to it would be applying it to cards
+  // you are not looking at. The keys, the clicks and the drags all bounce off this one answer, so a
+  // gesture added later finds it here rather than writing the condition out a fourth time.
+  function busy(): boolean {
+    return editing !== null || landedRead !== latestRead;
   }
 
   function startEditing(field: EditableField): void {
@@ -368,7 +389,159 @@ export function createBoardView(options: BoardOptions): BoardView {
       bar.append(count);
       item.append(bar);
     }
+    // The mouse half of the board, native drag and drop rather than a gesture spelled out of pointer
+    // events: Chromium draws the card under the cursor, ends the drag when you let go anywhere, and
+    // gives up on Escape, none of which is worth writing again.
+    item.draggable = true;
+    item.addEventListener('dragstart', (event) => beginDrag(event, card));
+    item.addEventListener('dragend', endDrag);
+    // A click moves the selection to the card first and then does what Enter does there — read off
+    // mouseup rather than click, because pressing on a card while another card's box is open commits
+    // that box on blur, which replaces every card on the board. The li the press landed on is detached
+    // before the button comes back up, and a click whose two halves have no ancestor left in common is
+    // never dispatched at all, so the first press on a card would do nothing and you would have to
+    // press it again. The card released over is on screen either way.
+    // Paired with the press, because mouseup is dispatched on whatever is under the pointer when the
+    // button comes up and bubbles: press on a column heading to select its text, drag down onto the
+    // first card, let go, and without this the card's title box opens with the text selected.
+    item.addEventListener('mousedown', () => { pressed = card.id; });
+    item.addEventListener('mouseup', (event) => {
+      const onThisCard = pressed === card.id;
+      pressed = null;
+      if (event.button === 0 && onThisCard) clickCard(card);
+    });
     return item;
+  }
+
+  // Puts the keyboard on the card the pointer is on, and says whether it could. Both gestures need it
+  // and the answer is the same for both: nothing moves while a box is open or a read is in flight, and
+  // nothing moves onto a card a write has already taken away.
+  function selectCard(card: Card): boolean {
+    const at = busy() ? null : selectionOf(state.board, card.id);
+    if (!at) return false;
+    state = { ...state, selection: at };
+    return true;
+  }
+
+  // Enter on a board opens the title, so that is what a click does. A press that lands here while
+  // another card's box is open has already closed that box — renderEditor commits on blur, and blur
+  // comes with the press — so the keyboard is free by the time this runs and the selection moves on
+  // that same press.
+  function clickCard(card: Card): void {
+    if (selectCard(card)) startEditing('title');
+  }
+
+  // Grabbing a card moves the selection onto it, so that when the drag is over — dropped or abandoned —
+  // the highlight is on the card the pointer last had hold of rather than wherever it was before.
+  //
+  // It does not redraw here, and does not move the highlight by hand either. Chromium takes the picture
+  // that follows the cursor after this handler returns, and render() replaces every card on the board
+  // including this one, so a redraw here hands the picture a node that no longer exists and the drag
+  // runs with nothing under the pointer. The redraw happens on dragend instead, which fires however the
+  // drag ends; the card under the cursor is what says where you are until then.
+  function beginDrag(event: DragEvent, card: Card): void {
+    // Nothing to drag: refusing the gesture outright is better than a card that follows the cursor and
+    // then will not be let go of anywhere.
+    if (!selectCard(card)) return event.preventDefault();
+    if (!event.dataTransfer) return;
+    // Chromium cancels a drag that carries nothing, and the id is what the drop looks the card up by.
+    event.dataTransfer.setData('text/plain', card.id);
+    // The board has one drag and it is a move. Left uninitialized, a cancelled dragover gives an
+    // operation of copy, and the cursor grows the green plus that says the card stays where it is.
+    event.dataTransfer.effectAllowed = 'move';
+  }
+
+  // However the drag ended. A drop has already redrawn through change(); this is what puts the
+  // highlight on the grabbed card when you let go over nothing, or press Escape.
+  //
+  // It forgets the press too: a drag ends in dragend and no mouseup, so without this the card you
+  // dragged stays recorded, and the next press that starts off a card and releases over it opens its
+  // title box — the gesture the pairing above exists to refuse.
+  function endDrag(): void {
+    pressed = null;
+    clearDrop();
+    render();
+  }
+
+  // Takes the line off whatever is carrying it, and calls off a frame that has not drawn yet — without
+  // that, a drag let go of or abandoned a few milliseconds after the last dragover leaves a line on the
+  // board pointing at a gap nothing is being dropped into.
+  function clearDrop(): void {
+    cancelAnimationFrame(markFrame);
+    markFrame = 0;
+    marked?.classList.remove('drop-above', 'drop-below');
+    marked = null;
+  }
+
+  // Where the card would land if you let go now, drawn as a line along the top of the card it would sit
+  // above — or along the bottom of the last one when the answer is the end of the column. Without it a
+  // drag into a column of a dozen cards is a guess: the gap between two cards is four pixels of
+  // background and nothing in it says which gap the cursor is in.
+  //
+  // An empty column gets no line. There is one place the card can go and the column is visibly empty,
+  // so there is nothing for a line to tell apart.
+  //
+  // One frame at a time. A dragover fires on every mouse movement and again every few hundred
+  // milliseconds while the cursor sits still, and reading a column's rows reads the box of every card
+  // in it — a whole layout each time, forced again by the class this then writes. The line can only be
+  // painted once a frame, so measuring more often than that buys a stutter and nothing else.
+  function markDropSoon(list: HTMLElement, pointerY: number): void {
+    if (markFrame) return;
+    markFrame = requestAnimationFrame(() => {
+      markFrame = 0;
+      clearDrop();
+      const cards = list.children;
+      const row = rowUnder(list, pointerY);
+      // The end of the column is the one landing with no card above it to draw on, so the last card
+      // carries the line under itself instead.
+      const above = row < cards.length;
+      marked = (above ? cards[row] : cards[cards.length - 1]) ?? null;
+      marked?.classList.add(above ? 'drop-above' : 'drop-below');
+    });
+  }
+
+  // Which row of this column the pointer is naming. Measured here and decided in board-drag.ts, so the
+  // rule about which gap a pointer is in is somewhere a test can reach — and asked in one place, so the
+  // line you were shown and the row you get cannot be two different answers.
+  function rowUnder(list: HTMLElement, pointerY: number): number {
+    const midpoints = [...list.children].map((item) => {
+      const box = item.getBoundingClientRect();
+      return box.top + box.height / 2;
+    });
+    return dropRow(midpoints, pointerY);
+  }
+
+  // A move, and the ship it may be. Both gestures that move a card come through here so the second half
+  // cannot be taught to one of them alone: teach the keystroke that a failed ship puts the card back and
+  // the drag would still be running the old version, with nothing failing until somebody drags a card
+  // onto Ship instead of pressing Shift+Right.
+  //
+  // `from` is where the card was a gesture ago, which is not always the selection — a drag is let go of
+  // on a card the keyboard is not on.
+  function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
+    const moving = cardAt(state.board, from);
+    change(next);
+    if (moving && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, from.column);
+  }
+
+  // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
+  // agent: a column means the same thing however the card got there, and a drag that quietly skipped
+  // the ship would be a second, silent set of rules for the mouse.
+  function dropOnColumn(event: DragEvent, columnIndex: number, list: HTMLElement): void {
+    event.preventDefault();
+    // Before the row is read, so the line is gone whether or not this board has the card.
+    clearDrop();
+    if (busy()) return;
+    // Found by id rather than taken from this board's selection: the manager stacks every open
+    // project's board in one scroller, so the card let go of here may belong to another one of them.
+    const id = event.dataTransfer?.getData('text/plain') ?? '';
+    // Something dragged in from outside the app carries no card id, and there is nothing to say about
+    // it. A dragover cannot read the id, so the column drew a line promising this drop would land —
+    // the one refusal you can reach with the mouse, and the only place that knows it was refused.
+    if (id === '') return;
+    const at = selectionOf(state.board, id);
+    if (!at) return options.onError('That card belongs to another project — a card stays on the board it was made on');
+    moveThenShip(at, dropCard(state.board, at, columnIndex, rowUnder(list, event.clientY)), 'drop');
   }
 
   function render(): void {
@@ -383,6 +556,37 @@ export function createBoardView(options: BoardOptions): BoardView {
       const list = document.createElement('ul');
       list.append(...column.cards.map((card, cardIndex) =>
         renderCard(card, columnIndex === state.selection.column && cardIndex === state.selection.card)));
+      // On the whole column, not the cards in it: a column you can only drop onto by hitting a card is
+      // a column you cannot drop into once it is empty, and the heading and the gap under the last card
+      // are both places a hand aims at. preventDefault is what makes the column a place a card can be
+      // let go of at all — without it the drop never fires and the card springs back.
+      section.addEventListener('dragover', (event) => {
+        // dropEffect, not a withheld preventDefault: renderer.ts cancels dragover at the window so a
+        // file dropped on the page cannot navigate it, and one listener cancelling is enough to allow
+        // the drop however this one returns. dropEffect is read after that and does turn the cursor
+        // into the one that says no. Without it the card snaps back off dropOnColumn's own busy check
+        // with nothing on screen having said the column would not take it.
+        if (busy()) {
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
+          // A board can go busy mid-drag — a board:change from the command line starts a read — and the
+          // line drawn a moment ago would sit there saying the card lands here while the cursor says no.
+          clearDrop();
+          return;
+        }
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+        markDropSoon(list, event.clientY);
+      });
+      section.addEventListener('drop', (event) => dropOnColumn(event, columnIndex, list));
+      // A board the pointer merely crossed never hears dragend — that fires at the card the drag
+      // started from, which on the manager's stack of boards can be another project's. Without this,
+      // pass over a column until the line appears and then press Escape, and the line stays hard
+      // against a card nothing is being dropped into until something else redraws that board, which
+      // nothing does. relatedTarget is where the pointer went: still inside this column means it only
+      // moved between the cards in it.
+      section.addEventListener('dragleave', (event) => {
+        if (!(event.relatedTarget instanceof Node) || !section.contains(event.relatedTarget)) clearDrop();
+      });
       if (column.cards.length === 0) {
         const empty = document.createElement('p');
         empty.className = 'board-empty';
@@ -523,22 +727,19 @@ export function createBoardView(options: BoardOptions): BoardView {
     // Every key on this screen is found by the window's one lookup and handed here. The board keeps no
     // key handling of its own, which is what stops a board key and its help row drifting apart.
     runAction(action: Action): void {
-      // A read is in flight and the board on screen is about to be replaced. Applying a keystroke to
-      // the board that is going away would be applying it to cards you are not looking at.
-      if (editing || landedRead !== latestRead) return;
+      if (busy()) return;
       switch (action.kind) {
         case 'board-select':
           state = { ...state, selection: moveSelection(state.board, state.selection, action.direction) };
           return render();
-        case 'board-move': {
-          const moving = cardAt(state.board, state.selection);
-          // The column the card is leaving, which both halves of a ship need: whether this move is the
+        case 'board-move':
+          // The row the card is leaving, which both halves of a ship need: whether this move is the
           // gesture at all, and where the card goes back to once the ship works.
-          const from = state.selection.column;
-          change(moveCard(state.board, state.selection, action.direction));
-          if (moving && landsInShip(state.board, from, state.selection, action.direction)) ship(moving, from);
-          return;
-        }
+          return moveThenShip(
+            state.selection,
+            moveCard(state.board, state.selection, action.direction),
+            action.direction,
+          );
         case 'board-attach': {
           // The one refusal worth explaining. The others — no card above, nothing selected — are
           // obvious from the screen. attachmentRing decides it on the same call, so the message cannot

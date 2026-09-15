@@ -536,6 +536,13 @@ body *:not(.pane, .pane *) {
   color: inherit;
 }
 
+/* Where a dragged card would land. Drawn on the card itself rather than in the gap between two of
+   them: the gap is 4px of background and a line in it is easy to miss, while a line hard against a
+   card's own edge says which side of that card the drop is on. `drop-below` marks the last card
+   only — every other landing is "above the card under the cursor". */
+.board-card.drop-above { box-shadow: inset 0 2px 0 var(--blue); }
+.board-card.drop-below { box-shadow: inset 0 -2px 0 var(--blue); }
+
 .board-edit {
   width: 100%;
   font: inherit;

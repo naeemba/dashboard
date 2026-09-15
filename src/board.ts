@@ -109,18 +109,32 @@ export function shipColumnIndex(board: Board): number {
   return columnNamed(board, SHIP_COLUMN);
 }
 
+// What moved a card: one of the four arrow steps, or the pointer letting go of it. Named here, where
+// the value is read, because the view writes the same union on the function that hands it over — two
+// spellings of one idea, and the union is one somebody will add to.
+export type MoveGesture = Direction | 'drop';
+
 // Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
 // produced, the selection it left behind, and `from`, the column the card was in a keystroke earlier.
 //
-// Rightward only. Ship sits second from the left, so without the direction a card dragged leftward out
-// of Doing would silently make a worktree, take a pane and start an agent — from a keystroke that
-// looks like putting something back.
+// Rightward only, for a keystroke. Ship sits second from the left, so without the direction a card
+// walked leftward out of Doing would silently make a worktree, take a pane and start an agent — from a
+// keystroke that looks like putting something back.
+//
+// `drop` is the pointer, and it is allowed from either side. Shift+Left is one step of a walk and says
+// nothing about where the walk was going; a card let go of on top of the Ship column was aimed there,
+// which is the only thing the direction was ever standing in for.
 //
 // And it has to have come from somewhere else. A card already in Ship that is merely reordered has not
 // landed in it again, and neither has one pushed against the right-hand edge of a board somebody wrote
 // with Ship as its last column, where rightward moves nothing at all.
-export function landsInShip(board: Board, from: number, moved: Selection, direction: Direction): boolean {
-  return direction === 'right' && from !== moved.column && moved.column === shipColumnIndex(board);
+// Written as the two gestures that ship rather than the one that does not, so a tag added to that union
+// later ships nothing until somebody says it should. `!== 'left'` reads the same today and fails the
+// other way: add a key that sends a card straight to a column, point it at Ship by mistake, and it
+// silently makes a worktree, takes a pane and starts an agent, with no test to fail over it.
+export function landsInShip(board: Board, from: number, moved: Selection, gesture: MoveGesture): boolean {
+  const aimed = gesture === 'right' || gesture === 'drop';
+  return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
 }
 
 // Every board written before Ship existed has three columns, and getting the fourth should not mean
@@ -422,12 +436,10 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
     };
   }
 
-  const target = selection.column + (direction === 'right' ? 1 : -1);
-  if (target < 0 || target >= board.columns.length) return { board, selection };
   // The card keeps its row in the column it arrives at, or goes last if that column is shorter, so a
-  // card sent sideways stays roughly where your eye left it.
-  const row = Math.min(selection.card, board.columns[target].cards.length);
-  return relocateCard(board, selection, card, target, row);
+  // card sent sideways stays roughly where your eye left it. dropCard is what clamps it, so the rule is
+  // written once: teach the mouse a different landing and the key cannot keep the old one.
+  return dropCard(board, selection, selection.column + (direction === 'right' ? 1 : -1), selection.card);
 }
 
 // Straight to a column, wherever the card is now. moveCard walks one column at a time, which is what
@@ -442,6 +454,32 @@ export function moveCardToColumn(board: Board, selection: Selection, target: num
     return { board, selection };
   }
   return relocateCard(board, selection, card, target, board.columns[target].cards.length);
+}
+
+// Where a pointer puts a card: a column, and a row in that column. A keystroke never needs to say the
+// row — Shift+Arrow walks one step and the step is the answer — so this is the one move that takes it.
+//
+// `row` reads the column as it looks now, before the card has left it: it is the row the card will sit
+// above, and `cards.length` means the end. Dragging a card downwards inside its own column therefore
+// lands one row higher than the number says, because lifting the card out has already pulled
+// everything below it up.
+//
+// A move inside one column does not stamp the card, and a move between two does — relocateCard says
+// why, and this is the same rule Shift+Up and Shift+Right already follow.
+export function dropCard(board: Board, selection: Selection, target: number, row: number): Change {
+  const card = cardAt(board, selection);
+  if (!card || target < 0 || target >= board.columns.length) return { board, selection };
+  // The clamp is against a length rather than a last index, because a card can land after the last one.
+  if (target !== selection.column) {
+    return relocateCard(board, selection, card, target, clampIndex(row, board.columns[target].cards.length));
+  }
+  const remaining = board.columns[target].cards.filter((_entry, at) => at !== selection.card);
+  const landing = clampIndex(row > selection.card ? row - 1 : row, remaining.length);
+  // Let go of where it already was. The same board back, so the undo step and the file are left alone —
+  // what every other no-op change in this file does.
+  if (landing === selection.card) return { board, selection };
+  remaining.splice(landing, 0, card);
+  return { board: replaceColumn(board, target, remaining), selection: { column: target, card: landing } };
 }
 
 // Every card on the board, columns left to right and rows top to bottom. That order is what children

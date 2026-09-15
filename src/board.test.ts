@@ -15,6 +15,7 @@ import {
   deleteCardAndDescendants,
   descendantsOf,
   detachCard,
+  dropCard,
   emptyBoard,
   hasSubtasks,
   isCommentBody,
@@ -144,6 +145,16 @@ describe('landsInShip', () => {
   // as putting a card back.
   it('says no to a card moved leftward into Ship from Doing', () => {
     expect(landsInShip(board, 2, { column: 1, card: 0 }, 'left')).toBe(false);
+  });
+
+  // The pointer is allowed in from either side. A drag aimed at Ship said where it was going; a
+  // leftward keystroke, the one the direction guard exists for, never did.
+  it('says yes to a card let go of on Ship from the column to its right', () => {
+    expect(landsInShip(board, 2, { column: 1, card: 0 }, 'drop')).toBe(true);
+  });
+
+  it('says no to a card let go of on the column it was already in', () => {
+    expect(landsInShip(board, 1, { column: 1, card: 0 }, 'drop')).toBe(false);
   });
 
   it('says no to a card reordered inside Ship', () => {
@@ -324,6 +335,58 @@ describe('deleteCardAndDescendants', () => {
     const result = deleteCardAndDescendants(start, { column: 0, card: 1 });
     expect(titles(result.board)).toEqual([['other', 'other2']]);
     expect(result.selection).toEqual({ column: 0, card: 0 });
+  });
+});
+
+describe('dropCard', () => {
+  const three = board(['a', 'b', 'c'], []);
+
+  it('lands a card on the row the pointer named in another column', () => {
+    const filled = board(['a'], ['x', 'y']);
+    expect(titles(dropCard(filled, { column: 0, card: 0 }, 1, 1).board)).toEqual([[], ['x', 'a', 'y']]);
+  });
+
+  it('lands a card last in another column when the row is the end of it', () => {
+    const filled = board(['a'], ['x', 'y']);
+    const dropped = dropCard(filled, { column: 0, card: 0 }, 1, 2);
+    expect(titles(dropped.board)).toEqual([[], ['x', 'y', 'a']]);
+    expect(dropped.selection).toEqual({ column: 1, card: 2 });
+  });
+
+  it('ages a card that crossed a column and leaves one that only changed rows alone', () => {
+    const crossed = dropCard(board(['a'], []), { column: 0, card: 0 }, 1, 0);
+    expect(crossed.board.columns[1].cards[0].updatedAt).toEqual(expect.any(String));
+    const reordered = dropCard(three, { column: 0, card: 0 }, 0, 3);
+    expect(reordered.board.columns[0].cards[2].updatedAt).toBeUndefined();
+  });
+
+  // The row is read in the column as it looks before the card is lifted out, so a card going down its
+  // own column lands one row above the number: taking it out pulls everything below it up.
+  it('reorders inside a column, counting the row before the card has left it', () => {
+    expect(titles(dropCard(three, { column: 0, card: 0 }, 0, 2).board)).toEqual([['b', 'a', 'c'], []]);
+    expect(titles(dropCard(three, { column: 0, card: 0 }, 0, 3).board)).toEqual([['b', 'c', 'a'], []]);
+    expect(titles(dropCard(three, { column: 0, card: 2 }, 0, 0).board)).toEqual([['c', 'a', 'b'], []]);
+  });
+
+  it('carries the selection to wherever the card landed', () => {
+    expect(dropCard(three, { column: 0, card: 0 }, 0, 3).selection).toEqual({ column: 0, card: 2 });
+  });
+
+  // Same board back, so the undo step and the file on disk are both left alone.
+  it('hands back the same board when the card was let go of where it already was', () => {
+    expect(dropCard(three, { column: 0, card: 1 }, 0, 1).board).toBe(three);
+    expect(dropCard(three, { column: 0, card: 1 }, 0, 2).board).toBe(three);
+  });
+
+  it('hands back the same board for a column that is not there and a column with no card in it', () => {
+    expect(dropCard(three, { column: 0, card: 0 }, 9, 0).board).toBe(three);
+    expect(dropCard(three, { column: 1, card: 0 }, 0, 0).board).toBe(three);
+  });
+
+  // The view measures the rows it draws, so it cannot name one that is not there — but dropCard is
+  // reached from outside the view too, and a row past the end has to mean the end.
+  it('clamps a row past the end of the column it lands in', () => {
+    expect(titles(dropCard(board(['a'], ['x']), { column: 0, card: 0 }, 1, 9).board)).toEqual([[], ['x', 'a']]);
   });
 });
 
