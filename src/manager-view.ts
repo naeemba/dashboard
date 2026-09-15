@@ -5,6 +5,7 @@ import {
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
+import { paneTokens, projectTokens } from './usage';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
@@ -24,10 +25,10 @@ export type ManagerView = {
   // The rows are read from the renderer's pages, which are the live ones — the page holds none of its
   // own, so a bell that arrives while you are looking at it shows up on the next redraw.
   render(rows: readonly ManagerRow[]): void;
-  // The timer's redraw: the three things on a pane row that change while nothing else does — the line
-  // it last printed, how long ago that was, and the block of screen under a row that is asking you
-  // something.
-  refreshPanes(rows: readonly ManagerRow[]): void;
+  // The in-place redraw, asked for by the timer and by a token sweep: the fields that change while the
+  // list itself does not — on a pane row the line it last printed, how long ago that was, its figure,
+  // and the block of screen under a row that is asking you something; on a project row its figures.
+  refreshRows(rows: readonly ManagerRow[]): void;
   statusLabel(): string;
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
   // board has, and for the same reason: one place decides what every key on every screen does.
@@ -100,13 +101,19 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     age.className = 'manager-age';
     age.textContent = paneAge(line.pane.lastPrintedAt);
 
+    // What the agent in this pane has cost. Nothing at all for a pane with no agent in it, which is
+    // most of them: a column of `0` down the list would say only that five shells are not Claude Code.
+    const tokens = document.createElement('span');
+    tokens.className = 'manager-tokens';
+    tokens.textContent = paneTokens(line.pane.tokens);
+
     // What the pane has on screen, so the question can be read from here. A pane that has printed
     // nothing gets no empty block under it.
     const tail = document.createElement('pre');
     tail.className = 'manager-tail';
     tail.textContent = tailLines.join('\n');
     tail.hidden = tailLines.length === 0;
-    item.append(name, lastPrinted, state, age, tail);
+    item.append(name, lastPrinted, state, age, tokens, tail);
     return item;
   }
 
@@ -126,7 +133,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const summary = document.createElement('span');
     summary.className = 'manager-summary';
     summary.textContent = alertSummary(line.row.panes);
-    item.append(marker, name, summary);
+    // The five-hour figure, the week's and all time, in that order — soonest to widest, so the number
+    // that moves while you watch is the one nearest the rest of the row. Empty for a project nothing
+    // has ever been spent on, rather than three noughts.
+    const tokens = document.createElement('span');
+    tokens.className = 'manager-tokens';
+    tokens.textContent = projectTokens(line.row.tokens);
+    item.append(marker, name, summary, tokens);
     return item;
   }
 
@@ -210,11 +223,11 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // pane printing calls nothing — the bytes go into the terminal and that is all — so without this
     // a quiet row's line only moves when a keystroke, a bell or an exit forces a whole redraw, and
     // the age sits beside it saying `just now` about text from ten minutes ago.
-    // The three spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
+    // The spans are rewritten in place rather than the list rebuilt: rebuilding would scroll back
     // to the highlight and throw away the line you had selected to copy out, under someone who is
     // sitting there reading it. The state span is not touched — every state change ends in a full
     // redraw of its own.
-    refreshPanes(rows: readonly ManagerRow[]): void {
+    refreshRows(rows: readonly ManagerRow[]): void {
       // Written into the rows that are on screen, so this writes only while the fresh rows are those
       // rows. A project opened or a pane appeared means a full render is what caused it and a full
       // render is what draws it; writing into `list.children` on a shape that moved would put one
@@ -227,12 +240,21 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Kept, so the status bar reads the selected pane's age off the same numbers the row shows.
       lines = fresh;
       lines.forEach((line, index) => {
-        if (line.kind !== 'pane') return;
         const row = list.children[index];
+        // Rewritten with the rest: an agent spends while its state stays `quiet`, so a figure left out
+        // of this redraw sits at what it was when the row was built. The project's three go the same
+        // way as a pane's one — writing them here is what lets a sweep move a figure without the list
+        // being torn down and rebuilt under someone reading it.
+        const tokens = row?.querySelector('.manager-tokens');
+        if (line.kind === 'project') {
+          if (tokens) tokens.textContent = projectTokens(line.row.tokens);
+          return;
+        }
         const lastPrinted = row?.querySelector('.manager-last-printed');
         if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
+        if (tokens) tokens.textContent = paneTokens(line.pane.tokens);
         const tail = row?.querySelector<HTMLElement>('.manager-tail');
         if (tail) {
           const block = tailBlock(line.pane);

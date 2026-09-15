@@ -4,6 +4,7 @@ import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { Settings } from './settings';
 import type { TaskResult } from './tasks';
+import type { UsageSnapshot } from './usage';
 import type { WorktreeEntry } from './worktree-store';
 
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
@@ -91,6 +92,11 @@ export type DashboardBridge = {
   // the end, because a row still saying `running` beside four that have answered is the point of the
   // screen.
   onTaskUpdate(listener: (result: TaskResult) => void): void;
+  // What each open project and each pane running an agent has cost in tokens, read out of Claude
+  // Code's own session logs. Read once on the way up and then pushed every half minute, the way the
+  // worktree records are: the numbers move on their own while nothing on screen does.
+  readUsage(): Promise<UsageSnapshot>;
+  onUsageChange(listener: (usage: UsageSnapshot) => void): void;
 };
 
 declare global {

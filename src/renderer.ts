@@ -3,6 +3,7 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import './worktrees.css';
+import './usage.css';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';
@@ -17,6 +18,7 @@ import type { Project } from './projects';
 import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
 import type { WorktreeList } from './bridge';
+import { NO_USAGE, type UsageSnapshot } from './usage';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
@@ -110,9 +112,20 @@ let worktrees: WorktreeEntry[] = [];
 // because only main knows where a pane is. When a message carries it is setWorktrees' to say — see
 // main.ts, where that is decided.
 let paneDirectories: Record<string, string> = {};
+// What each project and each pane has cost in tokens. Main sweeps Claude Code's logs and sends this
+// every half minute; nothing here computes a figure, the way nothing here computes a worktree.
+let usage: UsageSnapshot = NO_USAGE;
 // The open worktree dialog, or null. Held so main's sweep can redraw it, the same way the board holds
 // the open card dialog: it reads the records live, but nothing tells it one of them has gone.
 let worktreeDialog: WorktreeDialog | null = null;
+// Only the status bar and the manager's rows read these, and renderStatus draws both — so one call is
+// the whole redraw, and on every other screen it is the status bar alone. It asks for the rows-only
+// redraw, which writes the figures into the rows already on screen — refreshRows says why.
+function applyUsage(next: UsageSnapshot): void {
+  usage = next;
+  renderStatus(true);
+}
+
 function applyWorktrees(list: WorktreeList): void {
   worktrees = list.entries;
   paneDirectories = list.paneDirectories;
@@ -144,6 +157,7 @@ function statusPage(page: Page): StatusPage {
     focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
     focusedName: paneName(page.panes[page.focused] ?? {}),
     editorName: paneName(page.editor ?? {}),
+    focusedTokens: usage.panes[terminalId(page.slot, page.focused)] ?? 0,
   };
 }
 
@@ -164,11 +178,11 @@ function namedPanes(page: Page): (Pane & { name: string })[] {
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
-// `panesOnly` is the timer's redraw below, which has nothing to change on a row but the line its pane
-// last printed and how long ago that was. Everything else here runs either way, so the status bar
-// still reads the age off the selection and the tab strip is still the one this function has always
-// drawn.
-function renderStatus(panesOnly = false): void {
+// `rowsOnly` is the redraw asked for by the timer below and by a token sweep, which has nothing to
+// change on the manager but the handful of fields refreshRows writes. Everything else here runs either
+// way, so the status bar still reads the age off the selection and the tab strip is still the one this
+// function has always drawn.
+function renderStatus(rowsOnly = false): void {
   const page = pages[activeIndex];
   // Before the status bar reads its label off the selection. The rows are the pages themselves, so a
   // bell, an exit or a project opening all reach the manager through the redraw they already cause —
@@ -183,8 +197,8 @@ function renderStatus(panesOnly = false): void {
         tail: () => paneTail(pane.terminal),
         lastPrinted: () => paneLastLine(pane.terminal),
       })),
-    })));
-    if (panesOnly) page.manager?.refreshPanes(rows);
+    })), usage);
+    if (rowsOnly) page.manager?.refreshRows(rows);
     else page.manager?.render(rows);
   }
   titleElement.textContent = `📁 ${page.project.name}`;
@@ -901,6 +915,10 @@ async function start(): Promise<void> {
   // A failure to read the local record costs a branch name, never the screen.
   void bridge.listWorktrees().then(applyWorktrees, () => undefined);
   bridge.onWorktreeChange(applyWorktrees);
+  // The same arrangement for the token figures: read once, then pushed. A machine with no Claude Code
+  // logs on it answers with nothing and every row simply has no number against it.
+  void bridge.readUsage().then(applyUsage, () => undefined);
+  bridge.onUsageChange(applyUsage);
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
   shellCommand = loaded.shellCommand;

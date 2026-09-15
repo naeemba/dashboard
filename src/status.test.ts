@@ -14,6 +14,7 @@ function page(overrides: Partial<StatusPage>): StatusPage {
     pickerDescription: '',
     worktrees: [],
     focusedDirectory: '',
+    focusedTokens: 0,
     ...overrides,
   };
 }
@@ -97,5 +98,19 @@ describe('terminalStatus', () => {
     expect(terminalStatus(page({ mode: 'nvim' }), ['terminal 2', 'terminal 4'])).toBe(
       'nvim · terminal 2, terminal 4 waiting',
     );
+  });
+});
+
+describe('the focused pane’s tokens', () => {
+  it('says what the agent in the pane has cost, after the name', () => {
+    expect(modeLabel(page({ focusedTokens: 9_200_000 }))).toBe('terminal 1 · 9.2M');
+  });
+
+  it('says nothing for a pane with no agent in it, which is most of them', () => {
+    expect(modeLabel(page({ focusedTokens: 0 }))).toBe('terminal 1');
+  });
+
+  it('keeps out of the board, the manager and nvim, which name no single shell', () => {
+    expect(modeLabel(page({ mode: 'board', boardLabel: 'Todo', focusedTokens: 9_200_000 }))).toBe('board · Todo');
   });
 });
