@@ -27,10 +27,12 @@ describe('the notes file', () => {
     expect(readFileSync(notesPath(projectPath), 'utf8')).toBe('first');
   });
 
-  it('is an empty page rather than a throw when the name is a folder', () => {
+  // Anything that is not "no file" is a failure the screen has to hear about. Answer '' here and the
+  // box blanks, then saves the blank back over whatever was really on disk.
+  it('throws rather than reading an empty page when the name is a folder', () => {
     const projectPath = project();
     mkdirSync(notesPath(projectPath), { recursive: true });
-    expect(readNotes(projectPath)).toBe('');
+    expect(() => readNotes(projectPath)).toThrow();
   });
 
   it('leaves the old page whole when the rename cannot land', () => {

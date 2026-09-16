@@ -12,13 +12,17 @@ export function notesPath(projectPath: string): string {
   return join(projectPath, BOARD_DIRECTORY, NOTES_FILE);
 }
 
-// A project that has never had notes has no file, which is not a failure — it is an empty page. Nor
-// is a folder this app cannot read: the notes screen opens blank either way, and the first thing you
-// type is what decides whether a file exists.
+// A project that has never had notes has no file, which is not a failure — it is an empty page, and
+// the first thing you type is what decides whether a file exists.
+//
+// Every other reason a read can fail is one. Swallow an EMFILE or an EIO here and the box goes blank,
+// the placeholder says this project has never had notes, and the next character you type is written
+// whole over three months of them. The caller keeps what it was showing instead.
 export function readNotes(projectPath: string): string {
   try {
     return readFileSync(notesPath(projectPath), 'utf8');
-  } catch {
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     return '';
   }
 }
