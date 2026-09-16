@@ -64,6 +64,13 @@ export function worktreePathFor(projectPath: string, branch: string): string {
   return join(worktreesRoot(projectPath), branch);
 }
 
+// What the agent shipping a card is asked to do: the one command, and the card it is aimed at. A
+// function rather than the string spelled out at each call site, because a ship writes it twice — once
+// when it starts and once when it is finished after stopping part way — and two copies drift.
+export function workPrompt(cardId: string): string {
+  return `/work-card ${cardId}`;
+}
+
 // What a pane was asked to run and where. main holds one of these per pane; this is the shape of a row
 // in that map, here because what the shape means to a ship is decided here.
 export type PaneCommand = { args: string[] | 'editor'; directory: string };
