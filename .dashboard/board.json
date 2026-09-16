@@ -118,16 +118,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "5ca663da-52f2-4aea-adad-bb6ef9508682",
-          "title": "A board whose first read fails is written over by the next keystroke",
-          "notes": "PR #46 stops readBoard answering an EMFILE with an empty board, but the renderer starts on one and keeps it when the read throws.\n\nboard-view.ts:120 is 'let state: BoardState = initialBoardState()', which is emptyBoard(). readAgain's catch keeps 'next = state' -- right once a board has been read, wrong on the first read of the session -- and then sets 'landedRead = token' at line 181 whether or not the read threw, so busy() at line 248 is false and every key is live over a board nobody ever read.\n\nPress Ctrl+B on a project for the first time this session, the read hits EMFILE with five ptys and an editor per project, the status bar says 'Board not opened: ...' and the board draws empty. Press n: board-add runs apply(addBlankCard(...)), apply calls save() before a character is typed, and writeBoard puts a one-card board over the forty still on disk. Same loss PR #46 set out to stop; only the status bar line is new.\n\nEvery entry after the first is fine -- the cards are in memory and 'next = state' keeps them on screen.\n\nSmallest shape that closes it: a board that has never read successfully refuses the keys the way busy() already refuses them, so n bounces and the message stays on screen instead of the file being replaced.\n\nIssue: https://github.com/naeemba/dashboard/issues/47#issuecomment-5695611939\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024738125",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-16T10:54:36.388Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -513,6 +504,16 @@
               "body": "Shipped in PR #43. A fourth project view: one textarea filling the page, kept in .dashboard/notes.md beside the board. Ctrl+Shift+N — N names the mode, Ctrl+N is nvim's, and xterm sends no bytes for Ctrl+Shift with a letter so the panes lose nothing. No save key: written 400ms after you stop typing and again when you leave, read back on every arrival so an edit made in a pane shows up. The isModified guard the card asked for is not there because there is no handler to guard — the screen has no key of its own, so nothing reads event.key. MODE_KEYS became PROJECT_MODES, which is what session.ts was really asking it, and writeBoard's temp-then-rename came out as replaceFile so notes.md is replaced whole or not at all. Help, README and CLAUDE.md's two hand-kept lists moved with it."
             }
           ]
+        },
+        {
+          "id": "5ca663da-52f2-4aea-adad-bb6ef9508682",
+          "title": "A board whose first read fails is written over by the next keystroke",
+          "notes": "readBoard rethrows anything that is not ENOENT now, but the view starts on initialBoardState() -- emptyBoard(), which looks exactly like a project nobody has made a card in -- and readAgain set landedRead = token whether or not the read threw. So busy() said false and every key was live over a board nobody read. First Ctrl+B of the session, EMFILE with five ptys and an editor per project, board draws empty with \"Board not opened: ...\", press n and one card goes over the forty on disk.\n\nShipped in PR #48. BoardState gains showsTheFile, the name the notes page already gives the same fact. loadBoard is the only thing that sets it and the only way a read reaches the screen, so the failure path needs no code: a read that threw never assigns state, and neither does one that lost the staleness race. busy() asks the board rather than the view.\n\nIt began as a let in board-view.ts and moved onto the state because that file has no test and board-state.test.ts does. With it view-local, the line clearing the flag sat one line below the staleness guard; moving those two past each other hands the keys to a board that never went on screen, with npm test, tsc and eslint all still passing. Four tests now pin it.\n\nOut of scope and noted on the PR: a refused key says nothing -- n bounces silently and \"Board not opened: ...\" is wiped by the next status write. The notes screen has sayIfStranded for exactly this.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-16T11:05:38.383Z",
+          "branch": "board-first-read-refuses-keys",
+          "pullRequest": 48
         }
       ]
     }
