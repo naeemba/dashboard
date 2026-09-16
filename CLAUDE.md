@@ -48,7 +48,7 @@ from a row you cannot see.
 
 ## Mode keys pass through — Hard Rule
 
-Ctrl+T, Ctrl+N and Ctrl+B switch modes, except when they name the mode you are
+The four mode keys switch modes, except when they name the mode you are
 already in. There they are ignored, and the pane gets the keystroke.
 
 That is not an oversight. Ctrl+N is nvim's autocomplete and Ctrl+T is the
@@ -98,11 +98,20 @@ Three real exceptions read a key before the guard, all on purpose:
 
 If a handler reads a modified key anywhere else, it is stealing it.
 
-The mode keys are not `MODE_KEYS` any more. They are three rows in
+The mode keys are not `MODE_KEYS` any more — that name is gone, and what is
+left in `src/modes.ts` is `PROJECT_MODES`, which is what it always really was:
+the views a project's page has, and so the modes `session.ts` will restore a
+project onto. The keys themselves are four rows in
 `src/actions.ts` like any other action, which means they can be rebound, and
 the pass-through check at the top of this section runs against the action
 rather than the key — so if Ctrl+T becomes something else, the something else
 is what gets passed through, not the key that used to be Ctrl+T.
+
+A new project view is a row in `PROJECT_MODES`, a row in `MODES`, a row in
+`ACTIONS`, a view built in `page.ts`, a branch in `focusMode` and a branch in
+`modeLabel` — and a name and a blurb in `src/help.ts`, which the section below
+is about. Leave it out of `PROJECT_MODES` and everything works until you
+restart: the app comes back on terminals, and nothing says why.
 
 ## Every box you type into carries `dir="auto"` — Hard Rule
 
@@ -114,10 +123,11 @@ its first letter. That fixes the reading order but not the box: without
 the text runs away from the caret, ending punctuation lands on the wrong side,
 and Home and End take you to the opposite ends of what you see.
 
-Six boxes have it today: the card title in `board-view.ts`, the description in
+Seven boxes have it today: the card title in `board-view.ts`, the description in
 `board-detail.ts`, the picker's search box, the settings screen's text fields,
-the command box in `command-view.ts`, and `promptOverlay`'s one line in
-`overlay.ts`. Nothing checks this — no test, no lint
+the command box in `command-view.ts`, `promptOverlay`'s one line in
+`overlay.ts`, and the notes page in `notes-view.ts`. Nothing checks this — no
+test, no lint
 rule — which is why it is written
 down here.
 

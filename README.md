@@ -1,6 +1,6 @@
 # dashboard
 
-Keyboard-first terminal dashboard. Each project gets a page, shown three ways: five shells in a fixed grid, a full-window nvim, or a kanban board.
+Keyboard-first terminal dashboard. Each project gets a page, shown four ways: five shells in a fixed grid, a full-window nvim, a kanban board, or a page of notes.
 
 ## Setup
 
@@ -29,6 +29,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Terminals mode | Ctrl+T |
 | Nvim mode | Ctrl+N |
 | Board mode | Ctrl+B |
+| Notes mode | Ctrl+Shift+N |
 | Open the project list | Ctrl+S |
 | Back to the last project | Ctrl+O |
 | Jump to project N | Ctrl+1..9 |
@@ -65,7 +66,7 @@ key at all. Delete the file and everything — keys, theme, font, shell — goes
 
 ## Modes
 
-Each project remembers its own mode, so Ctrl+2 lands on project 2 in whatever view you left it in. The project keys work from all three; nothing else does — Mod+1..5 and Option+HJKL only mean something when the terminals are on screen.
+Each project remembers its own mode, so Ctrl+2 lands on project 2 in whatever view you left it in. The project keys work from all four; nothing else does — Mod+1..5 and Option+HJKL only mean something when the terminals are on screen.
 
 The key naming the mode you are already in is passed through to whatever is running there, so Ctrl+N still completes a word inside nvim and Ctrl+T still transposes characters in a shell. You leave a mode by naming a different one.
 
@@ -74,6 +75,10 @@ Nvim starts the first time you press Ctrl+N for that project, not at launch. Qui
 The board lives in `.dashboard/board.json` inside the project, alongside a `README.md` and a `CLAUDE.md` describing the format. The folder is created the first time you open the board. Committing it is your call — nothing touches `.gitignore`.
 
 Inside the board: arrows move the selection, Shift with an arrow moves the card itself, and the keys in the table above do the rest. A card carries a title, a description, and one of four priorities — `urgent`, `high`, `medium`, `low` — shown as a coloured stripe down its left edge and named in the status bar. `p` walks through the four, `s` sorts the column you are on with the urgent cards at the top. Every change is written straight to disk; there is no save key.
+
+The notes are one page of free text per project, kept in `.dashboard/notes.md` beside the board, for what is not a card. There is no save key there either: what you type is written a moment after you stop, and again when you leave the screen. The file is read again each time you arrive, so an edit made in a pane shows up. Nothing renders the markdown — the name is there so the file is worth opening in an editor.
+
+Ctrl+Shift+N rather than Ctrl+N, which is nvim's. xterm makes a control character for Ctrl with a letter and refuses the moment another modifier is held, so Ctrl+Shift with a letter never reached a pane as bytes anyway and this costs the shells nothing.
 
 Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that edits the board of the project you are in. It goes through the same code the app does.
 
