@@ -23,6 +23,7 @@ import {
   isDescendantOf,
   landsInShip,
   moveCard,
+  moveCardById,
   moveCardToColumn,
   moveSelection,
   pullRequestFrom,
@@ -127,6 +128,29 @@ describe('the Review column', () => {
   it('hands back the same board when Review is already there', () => {
     const board = emptyBoard();
     expect(withReviewColumn(board)).toBe(board);
+  });
+});
+
+describe('moveCardById', () => {
+  const board = {
+    columns: [
+      { name: 'Todo', cards: [{ id: 'a', title: 'a', notes: '', priority: 'medium' as const, parent: null }] },
+      { name: REVIEW_COLUMN, cards: [] },
+    ],
+  };
+
+  it('moves the card the id names', () => {
+    expect(moveCardById(board, 'a', 1)?.columns.map((column) => column.cards.map((card) => card.id)))
+      .toEqual([[], ['a']]);
+  });
+
+  // Null rather than the board unchanged, because every caller writes the answer to disk: an identical
+  // rewrite is a file whose mtime moved for nothing, which is a board redrawn under somebody's cursor.
+  it('is null when there is nothing to do', () => {
+    expect(moveCardById(board, 'a', 0)).toBeNull();
+    expect(moveCardById(board, 'nobody', 1)).toBeNull();
+    expect(moveCardById(board, 'a', -1)).toBeNull();
+    expect(moveCardById(board, 'a', 9)).toBeNull();
   });
 });
 

@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
-import { finishedPullRequest, intoReview, reviewPrompt, reviewRefused } from './review';
-import type { Board } from './board';
-import type { WorktreeRemoval } from './bridge';
+import { intoReview, reviewPrompt, reviewRefused } from './review';
+import { uncommittedCount } from './ship';
+import { cardById, type Board } from './board';
+import type { ShipResult, WorktreeRemoval } from './bridge';
 import type { WorktreeEntry } from './worktree-store';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on
@@ -22,21 +23,27 @@ export type ReviewPorts = {
   worktrees: () => readonly WorktreeEntry[];
   // The page a project is open on, or -1 when it is not open at all.
   slotOf: (projectPath: string) => number;
-  // A pane of that page nobody is using, or null when all five are taken.
-  freePaneIn: (slot: number) => number | null;
+  // A pane of that page nobody is using, or null when all five are taken. `freeing` is a pane about to
+  // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
+  // before anything is destroyed is the answer the pane is given after.
+  freePaneIn: (slot: number, freeing: number | null) => number | null;
   removeWorktree: (worktreePath: string, force: boolean) => Promise<WorktreeRemoval>;
   // Check the branch out again at the same path. No new branch and no base: the branch is already
   // there with the pull request on it, and everything the agent pushed is on it already.
-  addWorktree: (entry: WorktreeEntry) => Promise<void>;
-  // Record the worktree and start the agent on it. An empty string is that having worked; anything
-  // else is what stopped it, in words the card can carry.
-  startReview: (entry: WorktreeEntry, slot: number, prompt: string) => string;
+  addWorktree: (entry: WorktreeEntry) => Promise<unknown>;
+  // Record the worktree and start the agent on it, answering the way a ship does — with the record it
+  // wrote, or with the message saying which step refused.
+  startReview: (entry: WorktreeEntry, slot: number, prompt: string) => ShipResult;
   // Run this with the project's git queue held — the same queue the ships use, so a review and a ship
   // of two different cards in one repository cannot land on git's index lock together.
   queue: <T>(key: string, run: () => Promise<T>) => Promise<T>;
 };
 
-// The pull request on a worktree's own board, or null when the agent has not opened one yet.
+// The pull request on a worktree's own board, or null when the agent has not opened one yet. That
+// number is the whole signal: an agent that has opened a pull request has done the work, whatever
+// column it left the card in and whatever it said about it, and one that never gets that far never
+// writes the field — so a card that failed is left alone rather than reviewed. The worktree's own
+// board is where to look, because it is the copy the agent has been editing all along.
 //
 // parseBoard rather than readBoard: readBoard moves a board.json it cannot parse aside, and in a
 // worktree that file is tracked and committed. A sweep running on a timer must not delete a branch's
@@ -44,7 +51,7 @@ export type ReviewPorts = {
 function finishedIn(entry: WorktreeEntry): number | null {
   try {
     const text = readFileSync(join(entry.worktreePath, BOARD_FILE_PATH), 'utf8');
-    return finishedPullRequest(parseBoard(text), entry.cardId);
+    return cardById(parseBoard(text), entry.cardId)?.pullRequest ?? null;
   } catch {
     return null;
   }
@@ -77,16 +84,15 @@ async function swapWorktree(
   // line on it names the branch to go and look at.
   const removed = await ports.removeWorktree(entry.worktreePath, false);
   if (!removed.ok) {
-    const count = removed.dirty.length;
-    if (count === 0) return removed.message;
-    return `${count} uncommitted file${count === 1 ? '' : 's'} in ${entry.branch}`;
+    return removed.dirty.length === 0 ? removed.message : `${uncommittedCount(removed.dirty)} in ${entry.branch}`;
   }
   await ports.addWorktree(entry);
-  return ports.startReview(
+  const started = ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
     reviewPrompt(entry.cardId, pullRequest, entry.projectPath),
   );
+  return started.ok ? '' : started.message;
 }
 
 export type ReviewSweep = {
@@ -105,33 +111,42 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // same finished card on the next tick and spawn git at it again for as long as the app is open.
   const reviewed = new Set<string>();
 
-  async function run(): Promise<void> {
-    for (const entry of ports.worktrees()) {
-      if (entry.reviewing || reviewed.has(entry.cardId)) continue;
-      // Panes belong to an open project. A project closed right now is not a refusal: nothing is
-      // marked, and the sweep finds the card again the moment it is opened.
-      const slot = ports.slotOf(entry.projectPath);
-      if (slot === -1) continue;
-      const pullRequest = finishedIn(entry);
-      if (pullRequest === null) continue;
-      // A review needs a pane, and the card hands its own back the moment its worktree goes. A card
-      // that never got one needs a free pane already sitting there — and if there is not, nothing is
-      // marked and nothing is touched: free a pane and the next tick starts the review, rather than
-      // the card carrying a line about a pane that came free a second later.
-      if (entry.pane === null && ports.freePaneIn(slot) === null) continue;
-      reviewed.add(entry.cardId);
-      // Before the swap, and whether or not the swap works: the card is finished and nothing has
-      // checked it, which is the whole of what the column says.
-      editProjectBoard(entry.projectPath, (board) => intoReview(board, entry.cardId));
-      const message = await ports
-        .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
-        .catch((error: unknown) => `review failed: ${error instanceof Error ? error.message : String(error)}`);
-      // The card is the only place this can be said. A review starts on a timer rather than a
-      // keystroke, so there is no status bar waiting on an answer and nothing on screen it belongs to.
-      if (message !== '') {
-        editProjectBoard(entry.projectPath, (board) => reviewRefused(board, entry.cardId, message));
-      }
+  // One card, start to finish. Every guard in it is synchronous and runs before the first await —
+  // including the mark — so the whole list can be walked at once without two of them starting the
+  // same card.
+  async function reviewOne(entry: WorktreeEntry): Promise<void> {
+    if (entry.reviewing || reviewed.has(entry.cardId)) return;
+    // Panes belong to an open project. A project closed right now is not a refusal: nothing is marked,
+    // and the sweep finds the card again the moment it is opened.
+    const slot = ports.slotOf(entry.projectPath);
+    if (slot === -1) return;
+    const pullRequest = finishedIn(entry);
+    if (pullRequest === null) return;
+    // Asked before anything is removed, counting the card's own pane as the free one it is about to
+    // become. If there is still nothing going, nothing is marked and nothing is touched: free a pane
+    // and the next tick starts the review, rather than the worktree being destroyed first and the card
+    // left carrying a line about a pane that came free a second later.
+    if (ports.freePaneIn(slot, entry.pane) === null) return;
+    reviewed.add(entry.cardId);
+    // Before the swap, and whether or not the swap works: the card is finished and nothing has checked
+    // it, which is the whole of what the column says.
+    editProjectBoard(entry.projectPath, (board) => intoReview(board, entry.cardId));
+    const message = await ports
+      .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
+      .catch((error: unknown) => `review failed: ${error instanceof Error ? error.message : String(error)}`);
+    // The card is the only place this can be said. A review starts on a timer rather than a keystroke,
+    // so there is no status bar waiting on an answer and nothing on screen it belongs to.
+    if (message !== '') {
+      editProjectBoard(entry.projectPath, (board) => reviewRefused(board, entry.cardId, message));
     }
+  }
+
+  // Every card at once rather than one after another. Two cards finishing in the same tick are usually
+  // in different projects, and awaiting each in turn would leave the second sitting on `shipped` for
+  // however long the first one's git takes, with nothing on screen saying why. Two in the *same*
+  // project still go one at a time: that is what the queue is for.
+  async function run(): Promise<void> {
+    await Promise.all(ports.worktrees().map((entry) => reviewOne(entry)));
   }
 
   return { run, forget: (cardId) => reviewed.delete(cardId) };

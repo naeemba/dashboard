@@ -119,6 +119,13 @@ export function blockingChanges(porcelain: string): string[] {
     .filter((path) => path !== '' && !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
 
+// How many of them there are, said the same way wherever it is said. Two refusals read this list —
+// the ship's, and the review's when it will not throw a worktree away — and the app saying "2 files
+// uncommitted" in one place and "2 uncommitted files" in the other is one condition wearing two faces.
+export function uncommittedCount(files: readonly string[]): string {
+  return `${files.length} uncommitted file${files.length === 1 ? '' : 's'}`;
+}
+
 // Runs what is handed to it one at a time per key, in the order the calls arrived.
 //
 // The key a ship uses is the project. git locks the repository's index for the whole of `worktree add`

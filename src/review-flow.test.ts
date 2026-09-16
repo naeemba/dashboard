@@ -61,7 +61,10 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
         return { ok: true, message: '', dirty: [] };
       },
       addWorktree: async (added) => { log.added.push(added.branch); },
-      startReview: (_started, slot, prompt) => { log.started.push({ slot, prompt }); return ''; },
+      startReview: (started, slot, prompt) => {
+        log.started.push({ slot, prompt });
+        return { ok: true, entry: started };
+      },
       queue: (_key, run) => run(),
       ...over,
     },
@@ -117,8 +120,8 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Todo');
   });
 
-  // The card's own pane comes back when its worktree goes, so a card that has one is never held up.
-  // One that never got a pane needs a free one already sitting there.
+  // The pane question is asked before the worktree is destroyed, counting the card's own pane as the
+  // free one it is about to become — so a card that has one is never held up by the other four.
   it('waits for a pane when the card never had one of its own', async () => {
     const { entry } = flight(12);
     const { ports: made, log } = ports({ ...entry, pane: null }, { freePaneIn: () => null });
@@ -128,7 +131,10 @@ describe('reviewSweep', () => {
 
   it('swaps a card that has a pane even when every other pane is taken', async () => {
     const { entry } = flight(12);
-    const { ports: made, log } = ports(entry, { freePaneIn: () => null });
+    const { ports: made, log } = ports(entry, {
+      // The one the card is holding, and nothing else.
+      freePaneIn: (_slot, freeing) => freeing,
+    });
     await reviewSweep(made).run();
     expect(log.removed).toEqual([entry.worktreePath]);
   });
@@ -162,14 +168,30 @@ describe('reviewSweep', () => {
   // Shipping the card again is a new pull request, and it has to be reviewable.
   it('reviews a card again once it has been shipped again', async () => {
     const { entry } = flight(12);
+    let attempts = 0;
     const { ports: made } = ports(entry, {
-      removeWorktree: async () => ({ ok: false, message: 'not removed: locked', dirty: [] }),
+      removeWorktree: async () => {
+        attempts += 1;
+        return { ok: false, message: 'not removed: locked', dirty: [] };
+      },
     });
     const sweep = reviewSweep(made);
     await sweep.run();
+    await sweep.run();
+    expect(attempts).toBe(1);
     sweep.forget(CARD);
     await sweep.run();
-    expect(commentsOnCard(entry.projectPath)).toHaveLength(2);
+    expect(attempts).toBe(2);
+  });
+
+  // The worktree is swapped by then, so the only thing left to say is on the card.
+  it('says on the card when the pane could not be taken', async () => {
+    const { entry, projectPath } = flight(12);
+    const { ports: made } = ports(entry, {
+      startReview: () => ({ ok: false, message: 'api was closed mid-ship' }),
+    });
+    await reviewSweep(made).run();
+    expect(commentsOnCard(projectPath)).toEqual(['No review worktree: api was closed mid-ship']);
   });
 
   // git throwing must not take the sweep down with it, and the card has to say what happened.

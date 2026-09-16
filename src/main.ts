@@ -35,6 +35,7 @@ import {
   freePane,
   oneAtATime,
   runsAnAgent,
+  uncommittedCount,
   workPrompt,
   worktreePathFor,
   worktreesRoot,
@@ -58,7 +59,7 @@ import {
   type WorktreeEntry,
 } from './worktree-store';
 import type { Settings } from './settings';
-import { moveCardToColumn, selectionOf, shipColumnIndex, type Board } from './board';
+import { moveCardById, shipColumnIndex, type Board } from './board';
 import { reviewSweep } from './review-flow';
 import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 
@@ -410,7 +411,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
     projectPath = filePaths[0];
   }
   const picked = projectFromPath(projectPath);
-  const matchIndex = projects.findIndex((project) => project?.path === picked.path);
+  const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
   if (replaced) {
@@ -595,17 +596,28 @@ ipcMain.handle('notes:write', (_event, projectPath: string, text: string) => {
   writeNotes(projectPath, text);
 });
 
+// Which page a project is open on, or -1. Two questions want it — opening a project that is already
+// open, and finding the panes a review can take — and two copies of the walk would answer differently
+// the day a slot means something other than an index into this array.
+function slotOfProject(projectPath: string): number {
+  return projects.findIndex((project) => project?.path === projectPath);
+}
+
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   setWorktrees(withEntry(worktrees, entry));
   return entry;
 }
 
-// The lowest-numbered pane of this project that nobody is using, or null. Split out because the
-// review asks the same question a step earlier than the ship does — before it removes anything,
-// rather than after — and two spellings of "which panes are busy" would drift.
-function freePaneIn(slot: number): number | null {
+// The lowest-numbered pane of this project that nobody is using, or null. `freeing` is a pane that is
+// about to be handed back — the one a worktree on its way out is holding — counted as free.
+//
+// One function because the review asks a step earlier than the ship does: before it removes the card's
+// worktree, rather than after. Two spellings of "which panes are busy" would drift, and the drift costs
+// a worktree — the folder deleted, then no pane for the review, and a card saying so where the
+// checkout you were about to look at used to be.
+function freePaneIn(slot: number, freeing: number | null = null): number | null {
   const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
-    .filter((index) => paneIsBusy(terminalId(slot, index)));
+    .filter((index) => index !== freeing && paneIsBusy(terminalId(slot, index)));
   return freePane(busy, TERMINAL_COUNT);
 }
 
@@ -648,9 +660,9 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
 // covers the card never having been on the base branch's board at all.
 async function commitShipMove(entry: WorktreeEntry): Promise<void> {
   const board = readBoard(entry.worktreePath).board;
-  const from = selectionOf(board, entry.cardId);
-  if (!from) return;
-  writeBoard(entry.worktreePath, moveCardToColumn(board, from, shipColumnIndex(board)).board);
+  const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
+  if (!moved) return;
+  writeBoard(entry.worktreePath, moved);
   // Both halves name the board file. A resumed ship runs in a worktree that has been lived in, so
   // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
   // half-finished work under a board message.
@@ -670,16 +682,11 @@ const shipInProject = oneAtATime();
 // pages, the panes — and the two steps, which are the ones a ship already takes.
 const reviews = reviewSweep({
   worktrees: () => worktrees,
-  slotOf: (projectPath) => projects.findIndex((project) => project?.path === projectPath),
+  slotOf: slotOfProject,
   freePaneIn,
   removeWorktree,
-  addWorktree: async (entry) => {
-    await git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath);
-  },
-  startReview: (entry, slot, prompt) => {
-    const attached = attachPane(recordWorktree(entry), slot, prompt);
-    return attached.ok ? '' : attached.message;
-  },
+  addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
+  startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
   queue: shipInProject,
 });
 
@@ -690,8 +697,7 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
   const { projectPath, cardId, title, slot } = request;
   const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
   if (dirty.length > 0) {
-    const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
-    return { ok: false, message: `${count} uncommitted — commit or stash them first` };
+    return { ok: false, message: `${uncommittedCount(dirty)} — commit or stash them first` };
   }
 
   const base = await baseBranch(projectPath);

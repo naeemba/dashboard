@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { emptyBoard, setPullRequest, type Board } from './board';
-import { finishedPullRequest, intoReview, reviewPrompt, reviewRefused } from './review';
+import { emptyBoard, type Board } from './board';
+import { intoReview, reviewPrompt, reviewRefused } from './review';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
 
@@ -12,23 +12,6 @@ function boardWithCard(): Board {
       : column)),
   };
 }
-
-describe('finishedPullRequest', () => {
-  it('is the number the agent wrote on the card', () => {
-    const board = setPullRequest(boardWithCard(), { column: 0, card: 0 }, 12).board;
-    expect(finishedPullRequest(board, CARD)).toBe(12);
-  });
-
-  // The work is not finished until there is a pull request to review, and an agent that never gets
-  // that far never writes the field. A card left mid-flight is left alone rather than reviewed.
-  it('is null while the card carries no pull request', () => {
-    expect(finishedPullRequest(boardWithCard(), CARD)).toBeNull();
-  });
-
-  it('is null for a card the branch does not have', () => {
-    expect(finishedPullRequest(boardWithCard(), 'someone-else')).toBeNull();
-  });
-});
 
 describe('intoReview', () => {
   it('moves the card into Review', () => {
@@ -67,10 +50,27 @@ describe('reviewRefused', () => {
   it('is null for a card that is not on this board', () => {
     expect(reviewRefused(boardWithCard(), 'someone-else', 'whatever')).toBeNull();
   });
+
+  // The trail is append-only and the sweep tries each card once per run of the app, so a worktree that
+  // stays dirty would otherwise leave the card another copy of the same line every restart.
+  it('says nothing twice in a row', () => {
+    const said = reviewRefused(boardWithCard(), CARD, 'locked');
+    expect(reviewRefused(said as Board, CARD, 'locked')).toBeNull();
+  });
+
+  it('says a different reason even when one is already there', () => {
+    const said = reviewRefused(boardWithCard(), CARD, 'locked');
+    const again = reviewRefused(said as Board, CARD, '1 uncommitted file in ship-it');
+    expect(again?.columns[0].cards[0].comments).toHaveLength(2);
+  });
 });
 
 describe('reviewPrompt', () => {
   const prompt = reviewPrompt(CARD, 12, '/work/api');
+
+  it('quotes the project path, which is allowed a space in it', () => {
+    expect(reviewPrompt(CARD, 12, '/work/my api')).toContain("cd '/work/my api' &&");
+  });
 
   it('names the pull request to run the loop against', () => {
     expect(prompt).toContain('/pr-loop 12');
@@ -80,10 +80,10 @@ describe('reviewPrompt', () => {
   // The pane wakes up in a checkout of the branch, whose own .dashboard board is the branch's copy.
   // The move to Done is about the project's board, so the prompt has to say where that is.
   it('moves the card on the project board rather than the one under the pane', () => {
-    expect(prompt).toContain(`cd /work/api && node "$DASHBOARD_BOARD" move ${CARD} Done`);
+    expect(prompt).toContain(`cd '/work/api' && node "$DASHBOARD_BOARD" move ${CARD} Done`);
   });
 
   it('tells the agent where to say what happened when it cannot land the pull request', () => {
-    expect(prompt).toContain(`cd /work/api && node "$DASHBOARD_BOARD" comment ${CARD} "<what happened>"`);
+    expect(prompt).toContain(`cd '/work/api' && node "$DASHBOARD_BOARD" comment ${CARD} "<what happened>"`);
   });
 });
