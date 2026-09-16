@@ -30,8 +30,7 @@ const SAVE_DELAY_MS = 400;
 // the view's whole element, the way nvim is the whole of its own screen — so there is no key of its
 // own here and every keystroke that is not somebody's shortcut is a character. The window's one lookup
 // still answers Ctrl+B and the rest, because the box is not a dialog and OVERLAY_SELECTOR does not
-// name it. Tab is the one key this screen reads for itself, for the reason the picker's search box
-// reads it: see the listener below.
+// name it. Tab is the single exception, and the listener below says why.
 export function createNotesView(options: NotesOptions): NotesView {
   const element = document.createElement('textarea');
   element.className = 'notes-text';
