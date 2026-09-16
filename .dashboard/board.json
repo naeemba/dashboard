@@ -111,16 +111,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "7bd176c4-65d3-45b6-8237-58625797ea93",
-          "title": "A fifth column, Review: a finished card goes there and a pr-loop worktree carries its pull request to merged",
-          "notes": "A fifth column called Review, for work an agent has finished but nobody has checked.\n\nWhen Claude finishes a card, the card moves out of the in-progress column (Doing) into Review. The card's worktree is then closed and removed, and a new worktree is made in its place with a pane assigned to run pr-loop against the pull request that card produced.\n\nIf pr-loop finishes successfully, the pull request is approved and then merged. The card moves to Done when the pull request is merged.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-16T11:40:30.479Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -516,6 +507,16 @@
           "updatedAt": "2026-09-16T11:05:38.383Z",
           "branch": "board-first-read-refuses-keys",
           "pullRequest": 48
+        },
+        {
+          "id": "7bd176c4-65d3-45b6-8237-58625797ea93",
+          "title": "A fifth column, Review: a finished card goes there and a pr-loop worktree carries its pull request to merged",
+          "notes": "A fifth column called Review, for work an agent has finished but nobody has checked.\n\nWhen Claude finishes a card, the card moves out of the in-progress column (Doing) into Review. The card's worktree is then closed and removed, and a new worktree is made in its place with a pane assigned to run pr-loop against the pull request that card produced.\n\nIf pr-loop finishes successfully, the pull request is approved and then merged. The card moves to Done when the pull request is merged.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-16T12:06:43.222Z",
+          "branch": "a-fifth-column-review-a-finished-card-goes",
+          "pullRequest": 49
         }
       ]
     }
