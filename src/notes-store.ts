@@ -1,0 +1,30 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { BOARD_DIRECTORY, replaceFile } from './board-store';
+
+// A page of free text per project, beside the board in the project's own .dashboard folder, so it
+// commits or is ignored with everything else the dashboard keeps about a project. Markdown by
+// extension only: nothing here parses it, and nothing on screen renders it. The name is what makes
+// the file worth opening in an editor or reading on a forge rather than only in this app.
+export const NOTES_FILE = 'notes.md';
+
+export function notesPath(projectPath: string): string {
+  return join(projectPath, BOARD_DIRECTORY, NOTES_FILE);
+}
+
+// A project that has never had notes has no file, which is not a failure — it is an empty page. Nor
+// is a folder this app cannot read: the notes screen opens blank either way, and the first thing you
+// type is what decides whether a file exists.
+export function readNotes(projectPath: string): string {
+  try {
+    return readFileSync(notesPath(projectPath), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+// Unlike reading, a failed write is reported: the screen would otherwise show a page of notes that is
+// not on disk, and the next launch would open blank with nothing having said why.
+export function writeNotes(projectPath: string, text: string): void {
+  replaceFile(notesPath(projectPath), text);
+}

@@ -22,6 +22,7 @@ import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, typ
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, terminalId } from './terminals';
 import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
+import { readNotes, writeNotes } from './notes-store';
 import { isBoardChange, isBoardFile } from './board-watch';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
@@ -557,6 +558,15 @@ ipcMain.handle('board:read', (_event, projectPath: string) => {
 // the renderer: it already has the board it just sent.
 ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
   boardTexts.set(projectPath, writeBoard(projectPath, board));
+});
+
+// The project's page of notes. No watcher and no seeding: the notes are one box one person types
+// into, and a project that has never had any has no file until the first keystroke lands.
+ipcMain.handle('notes:read', (_event, projectPath: string) => readNotes(projectPath));
+// invoke, not send, for the same reason board:write is: a write that fails rejects in the renderer
+// and reaches the status bar, rather than leaving a page on screen that is not on disk.
+ipcMain.handle('notes:write', (_event, projectPath: string, text: string) => {
+  writeNotes(projectPath, text);
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
