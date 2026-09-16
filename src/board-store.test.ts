@@ -63,6 +63,7 @@ describe('parseBoard', () => {
     expect(board.columns).toEqual([
       { name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium', parent: null }] },
       { name: 'Ship', cards: [] },
+      { name: 'Review', cards: [] },
     ]);
   });
 
@@ -189,14 +190,14 @@ describe('parseBoard', () => {
   // A blank title counts as no title: kept, it would be a card you cannot see but can still select.
   it('drops a column with no name and a card with no title', () => {
     const board = parseBoard('{"columns":[{"cards":[]},{"name":"Todo","cards":[{"id":"1"},{"id":"2","title":"  "},{"id":"3","title":"a"}]}]}');
-    expect(columnNames(board)).toEqual(['Todo', 'Ship']);
+    expect(columnNames(board)).toEqual(['Todo', 'Ship', 'Review']);
     expect(board.columns[0].cards.map((card) => card.title)).toEqual(['a']);
   });
 
   it('fills in a missing cards array and missing notes', () => {
     const board = parseBoard('{"columns":[{"name":"Todo"},{"name":"Doing","cards":[{"id":"1","title":"a"}]}]}');
     expect(board.columns[0].cards).toEqual([]);
-    expect(columnNames(board)).toEqual(['Todo', 'Ship', 'Doing']);
+    expect(columnNames(board)).toEqual(['Todo', 'Ship', 'Doing', 'Review']);
     expect(board.columns[2].cards[0].notes).toBe('');
   });
 
@@ -254,7 +255,7 @@ describe('parseBoard', () => {
 
 describe('readBoard', () => {
   it('returns an empty board when the project has no .dashboard folder', () => {
-    expect(columnNames(readBoard(project()).board)).toEqual(['Todo', 'Ship', 'Doing', 'Done']);
+    expect(columnNames(readBoard(project()).board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
   it('reads back what writeBoard wrote', () => {
@@ -262,13 +263,13 @@ describe('readBoard', () => {
     writeBoard(path, {
       columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium', parent: null }] }],
     });
-    expect(columnNames(readBoard(path).board)).toEqual(['Later', 'Ship']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Later', 'Ship', 'Review']);
   });
 
   it('survives a damaged file', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Ship', 'Doing', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
   // A missing file is not damage: there is nothing to salvage, so no .broken file appears.
@@ -310,15 +311,15 @@ describe('readBoard', () => {
     expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json'))).toBe(false);
     const second = readBoard(path);
     expect(second.brokenFile).toBeNull();
-    expect(columnNames(second.board)).toEqual(['Todo', 'Ship', 'Doing', 'Done']);
+    expect(columnNames(second.board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
-  it('gives a three-column board read from disk its Ship column', () => {
+  it('gives a three-column board read from disk its Ship and Review columns', () => {
     const path = project();
     writeRaw(path, JSON.stringify({
       columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }, { name: 'Done', cards: [] }],
     }));
-    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Ship', 'Doing', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 });
 

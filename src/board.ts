@@ -79,7 +79,17 @@ export function selectionOf(board: Board, id: string): Selection | null {
 // moment somebody adds a column and the name is what board.json actually carries.
 export const SHIP_COLUMN = 'Ship';
 
-const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', 'Done'];
+// Where a card goes when the agent that was working it has opened a pull request and nothing has
+// checked it yet. The one column on this board the app moves a card into by itself: everywhere else
+// a column is somebody's decision, and here the decision was already made by the pull request
+// existing. Named rather than positioned, for the reason SHIP_COLUMN is.
+export const REVIEW_COLUMN = 'Review';
+
+// Named only because withReviewColumn puts Review in front of it. Nothing else in the app treats
+// Done as special: a board is whatever columns its file holds.
+const DONE_COLUMN = 'Done';
+
+const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -107,6 +117,10 @@ export function columnNamed(board: Board, name: string): number {
 
 export function shipColumnIndex(board: Board): number {
   return columnNamed(board, SHIP_COLUMN);
+}
+
+export function reviewColumnIndex(board: Board): number {
+  return columnNamed(board, REVIEW_COLUMN);
 }
 
 // What moved a card: one of the four arrow steps, or the pointer letting go of it. Named here, where
@@ -145,6 +159,19 @@ export function withShipColumn(board: Board): Board {
   if (shipColumnIndex(board) !== -1) return board;
   const columns = [...board.columns];
   columns.splice(1, 0, { name: SHIP_COLUMN, cards: [] });
+  return withColumns(board, columns);
+}
+
+// The same repair for Review. Placed by the column it comes before rather than by a number, because
+// the number is different on every board: it is fourth on the shipped four, and second on a board
+// somebody wrote with two columns. Review is the last stop before a card is finished, so it goes just
+// left of Done — and on a board with no Done at all it goes on the end, which is the same sentence
+// about a board that never named one.
+export function withReviewColumn(board: Board): Board {
+  if (reviewColumnIndex(board) !== -1) return board;
+  const done = columnNamed(board, DONE_COLUMN);
+  const columns = [...board.columns];
+  columns.splice(done === -1 ? columns.length : done, 0, { name: REVIEW_COLUMN, cards: [] });
   return withColumns(board, columns);
 }
 

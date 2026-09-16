@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_PRIORITY,
+  REVIEW_COLUMN,
   SHIP_COLUMN,
   addCard,
   addChildCard,
@@ -26,10 +27,12 @@ import {
   moveSelection,
   pullRequestFrom,
   renameCard,
+  reviewColumnIndex,
   selectionOf,
   setNotes,
   shipColumnIndex,
   sortColumn,
+  withReviewColumn,
   withShipColumn,
   type Board,
   type Priority,
@@ -63,15 +66,17 @@ function parents(result: Board): Record<string, string | null> {
 }
 
 describe('emptyBoard', () => {
-  it('opens with four empty columns', () => {
-    expect(emptyBoard().columns.map((column) => column.name)).toEqual(['Todo', SHIP_COLUMN, 'Doing', 'Done']);
+  it('opens with five empty columns', () => {
+    expect(emptyBoard().columns.map((column) => column.name))
+      .toEqual(['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
     expect(emptyBoard().columns.every((column) => column.cards.length === 0)).toBe(true);
   });
 });
 
 describe('the Ship column', () => {
   it('is second from the left on a new board', () => {
-    expect(emptyBoard().columns.map((column) => column.name)).toEqual(['Todo', SHIP_COLUMN, 'Doing', 'Done']);
+    expect(emptyBoard().columns.map((column) => column.name))
+      .toEqual(['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
   });
 
   it('finds Ship whatever case it is written in', () => {
@@ -90,6 +95,38 @@ describe('the Ship column', () => {
   it('hands back the same board when Ship is already there', () => {
     const board = emptyBoard();
     expect(withShipColumn(board)).toBe(board);
+  });
+});
+
+describe('the Review column', () => {
+  it('is fourth from the left on a new board', () => {
+    expect(reviewColumnIndex(emptyBoard())).toBe(3);
+  });
+
+  it('finds Review whatever case it is written in', () => {
+    expect(reviewColumnIndex({ columns: [{ name: 'review', cards: [] }] })).toBe(0);
+    expect(reviewColumnIndex({ columns: [{ name: 'Todo', cards: [] }] })).toBe(-1);
+  });
+
+  // Placed by the column it comes before rather than by a number: a card reaches Review last before
+  // it is finished, so it goes in front of Done wherever Done happens to be.
+  it('inserts an empty Review in front of Done', () => {
+    const old = { columns: [{ name: 'Todo', cards: [] }, { name: 'Done', cards: [] }] };
+    expect(withReviewColumn(old).columns.map((column) => column.name))
+      .toEqual(['Todo', REVIEW_COLUMN, 'Done']);
+    expect(withReviewColumn(old).columns[1].cards).toEqual([]);
+  });
+
+  it('puts Review on the end of a board that never named a Done', () => {
+    const old = { columns: [{ name: 'Todo', cards: [] }, { name: 'Shipped', cards: [] }] };
+    expect(withReviewColumn(old).columns.map((column) => column.name))
+      .toEqual(['Todo', 'Shipped', REVIEW_COLUMN]);
+  });
+
+  // The same object back, so a board that already has one neither burns an undo step nor is rewritten.
+  it('hands back the same board when Review is already there', () => {
+    const board = emptyBoard();
+    expect(withReviewColumn(board)).toBe(board);
   });
 });
 
