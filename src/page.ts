@@ -6,7 +6,7 @@ import { createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
 import type { ManagerView } from './manager-view';
-import type { Mode } from './modes';
+import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
@@ -75,7 +75,7 @@ const BELL_SETTLE_MS = 1000;
 export type Page = {
   project: Project;
   element: HTMLElement;
-  // Only the views this page actually has. A project has three; the manager has one; a dead project
+  // Only the views this page actually has. A project has four; the manager has three; a dead project
   // has none, and that is what stops the mode keys switching it to a view that was never built.
   views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
@@ -247,7 +247,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
   function buildPage(project: Project, slot: number): Page {
     const element = document.createElement('section');
     element.className = 'page';
-    const views: Record<'terminals' | 'nvim' | 'board' | 'notes', HTMLElement> = {
+    const views: Record<ProjectMode, HTMLElement> = {
       terminals: document.createElement('div'),
       nvim: document.createElement('div'),
       board: document.createElement('div'),
@@ -297,9 +297,8 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     });
     views.board.append(page.board.element);
     page.notes = createNotesView({
+      bridge: options.bridge,
       projectPath: project.path,
-      read: (projectPath) => options.bridge.readNotes(projectPath),
-      write: (projectPath, text) => options.bridge.writeNotes(projectPath, text),
       // A slot each, like the board's, so one project's notes never clear another one's failure.
       onError: (message) => options.onError(`notes:${slot}`, message),
     });

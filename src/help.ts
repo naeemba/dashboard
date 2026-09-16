@@ -106,7 +106,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'This screen has no keys of its own, so everything that is not one of the keys below is a '
     + 'character in the box.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
-    + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open last '
+    + 'terminal, nvim and notes keys do nothing here. It is where the window lands when nothing was open last '
     + 'time. Three sections are named along the top — general, board, command — and the board key still '
     + 'comes straight here to the board. '
     + 'This one lists every open project and what its panes want from you — one asking a question, one that '

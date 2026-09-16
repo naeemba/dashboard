@@ -351,7 +351,7 @@ function focusMode(page: Page, entering: boolean): void {
     // Re-read on arrival, like the board: the file may have been edited in a pane, or by the agent
     // working in this project's worktree, since you were last here. open() takes the keyboard itself.
     if (entering) void page.notes.open();
-    else page.notes.focus();
+    else page.notes.element.focus();
   }
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
@@ -402,7 +402,7 @@ function landOn(index: number): void {
 
 // The one page with no folder behind it, so none of what buildPage makes: no shells, no editor and no
 // page of notes. It has two views — the list of what every project's panes want, and every project's
-// board — and the mode keys for the two it does not have do nothing here.
+// board — and the mode keys for the three it does not have do nothing here.
 // Its board is a board like any other as far as this file is concerned: same field, same mode, same
 // four functions. What is behind it is one real board per open project rather than one for a folder.
 function buildManagerPage(): Page {
