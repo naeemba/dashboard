@@ -20,7 +20,9 @@ import { tailLines } from './manager';
 import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
 import { TITLE_BAR_HEIGHT } from './theme';
-import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, terminalId } from './terminals';
+import {
+  EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
+} from './terminals';
 import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
 import { readNotes, writeNotes } from './notes-store';
 import { isBoardChange, isBoardFile } from './board-watch';
@@ -117,6 +119,10 @@ let settings = readSettings(settingsFile, isMac);
 tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
+// How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
+// now as much as for the ones that do, since a pty is spawned here and the window it draws into is
+// only visible on the other side of the wire. sizeOfPane is where the rule lives.
+const paneSizes = new Map<string, PaneSize>();
 // The `board` command, handed to every pane as DASHBOARD_BOARD so an agent in any project can move
 // its own card without hand-editing JSON. .dashboard/CLAUDE.md is where it is documented, and that
 // file is seeded into every project the app touches.
@@ -265,10 +271,11 @@ function spawnTerminal(id: string): void {
   }
   let terminalProcess: pty.IPty;
   try {
+    const { cols, rows } = sizeOfPane(paneSizes, id);
     terminalProcess = pty.spawn(shellCommand, args, {
       name: 'xterm-256color',
-      cols: 80,
-      rows: 24,
+      cols,
+      rows,
       cwd: entry.directory,
       env: paneEnvironment,
     });
@@ -431,6 +438,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     terminalProcess?.kill();
     terminalCommands.delete(id);
     typedPanes.delete(id);
+    paneSizes.delete(id);
   }
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
@@ -540,7 +548,13 @@ ipcMain.on('pty:input', (_event, id: string, data: string) => {
   typedPanes.add(id);
   shells.get(id)?.write(data);
 });
-ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => shells.get(id)?.resize(cols, rows));
+// Recorded whether or not a shell is listening, because the pane that has none is exactly the pane
+// about to get one: a pane whose shell exited, the editor before nvim is started, a pane a ship is
+// about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
+ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
+  paneSizes.set(id, { cols, rows });
+  shells.get(id)?.resize(cols, rows);
+});
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
 });

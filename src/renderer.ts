@@ -33,7 +33,9 @@ import { createCommandView } from './command-view';
 import { closeRefusal } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneScrollback, paneTail, paneUse, type Pane } from './pane';
-import { createPageBuilder, discardPanes, fitPanes, panesById, restylePanes, type Page } from './page';
+import {
+  createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, type Page,
+} from './page';
 import { createSectionStrip } from './section-strip';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
@@ -326,7 +328,6 @@ function startEditor(page: Page): void {
   // line stays in the pane's scrollback and reappears the next time nvim drops the alt screen.
   page.editor.terminal.reset();
   bridge.restart(terminalId(page.slot, EDITOR_INDEX));
-  bridge.resize(terminalId(page.slot, EDITOR_INDEX), page.editor.terminal.cols, page.editor.terminal.rows);
 }
 
 // `entering` is true for a genuine arrival at the page's current mode — switching modes, or switching to
@@ -368,10 +369,7 @@ function positionOfSlot(slot: number | null): number {
 
 // Hidden pages keep their layout (visibility, not display), so every pane can be fit.
 function fitAllPages(): void {
-  for (const page of pages) {
-    fitPanes(page);
-    page.editor?.fit.fit();
-  }
+  for (const page of pages) fitPage(page);
 }
 
 // `arriving` forces the landing to count as a genuine arrival even when the page is already the active
@@ -471,10 +469,14 @@ function setPage(project: Project, slot: number): void {
   if (existing === -1) {
     pagesElement.append(page.element);
     pages.push(page);
-    return;
+  } else {
+    pages[existing].element.replaceWith(page.element);
+    pages[existing] = page;
   }
-  pages[existing].element.replaceWith(page.element);
-  pages[existing] = page;
+  // The fit belongs to putting the page on screen, not to the callers. A pane can only be measured once
+  // it is in the document, and main has already spawned this page's shells at whatever size it last
+  // heard — so until this runs, every one of them is drawing at a width nobody chose.
+  fitPage(page);
 }
 
 // Asked twice — once before the question and once with the answer — so it is one function. What the
@@ -560,7 +562,6 @@ async function openProject(projectPath: string | null): Promise<void> {
   if (!opened) return showPage(activeIndex);
   if (opened.replaced) {
     setPage(opened.project, opened.index);
-    fitAllPages();
   }
   const position = positionOfSlot(opened.index);
   if (position !== -1) showPage(position);

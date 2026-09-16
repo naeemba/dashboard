@@ -120,6 +120,15 @@ export function fitPanes(page: Page): void {
   for (const pane of page.panes) pane.fit.fit();
 }
 
+// Every pty of one page: the grid's five and the editor. What a page needs the moment it reaches the
+// screen, because until it is measured no pane has told main how big it is, and main spawns the page's
+// shells at whatever it was last told. Separate from fitPanes because the zoom key wants only the grid
+// — the editor is on a view of its own and never carries the zoom class.
+export function fitPage(page: Page): void {
+  fitPanes(page);
+  page.editor?.fit.fit();
+}
+
 // Builds the page for one project: its four views, its five shells and its editor — or, for a project
 // whose folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane
 // needs from the renderer are handed over once rather than on every call.
@@ -158,7 +167,6 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
         pane.exited = false;
         terminal.reset();
         options.bridge.restart(id);
-        options.bridge.resize(id, terminal.cols, terminal.rows);
       }
     });
     // Dropping files types their absolute paths at the prompt, quoted, the way a terminal is expected to

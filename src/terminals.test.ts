@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds, paneLabel, paneName,
-  startsEditor, terminalId,
+  DEFAULT_PANE_SIZE, EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds,
+  paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
 } from './terminals';
 
 describe('paneIds', () => {
@@ -159,5 +159,22 @@ describe('startsEditor', () => {
   // exit line. The scrollback key needs this — it has nothing to hand a file to otherwise.
   it('starts it again after it has been quit', () => {
     expect(startsEditor({ started: true, exited: true })).toBe(true);
+  });
+});
+
+describe('sizeOfPane', () => {
+  // A ship takes a pane that is already on screen and starts the agent in it. The pane was measured
+  // long ago and nothing about it changes, so no new size is ever sent — spawn at the default and the
+  // agent draws its prompt box at 80 columns inside a pane twice that wide, and stays there.
+  it('gives a measured pane the size it reported', () => {
+    const sizes = new Map([['0:2', { cols: 163, rows: 42 }]]);
+    expect(sizeOfPane(sizes, '0:2')).toEqual({ cols: 163, rows: 42 });
+  });
+
+  // Matches xterm's own starting size on purpose. A pane nobody has measured is 80x24 in the renderer
+  // too, so both halves agree from the first byte and the first fit has nothing to correct.
+  it('gives an unmeasured pane the size a fresh terminal already is', () => {
+    expect(sizeOfPane(new Map(), '0:2')).toBe(DEFAULT_PANE_SIZE);
+    expect(DEFAULT_PANE_SIZE).toEqual({ cols: 80, rows: 24 });
   });
 });
