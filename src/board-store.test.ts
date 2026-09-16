@@ -295,6 +295,14 @@ describe('readBoard', () => {
     expect(readFileSync(brokenPath, 'utf8')).toBe('{"columns": [');
   });
 
+  // A folder where the .broken file has to go: the only way to make the salvage rename fail on demand.
+  it('throws when a damaged file cannot be moved aside', () => {
+    const path = project();
+    writeRaw(path, '{"columns": [');
+    mkdirSync(join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE), { recursive: true });
+    expect(() => readBoard(path)).toThrow();
+  });
+
   it('takes the plain no-file path on the read after a salvage', () => {
     const path = project();
     writeRaw(path, '{"columns": [');

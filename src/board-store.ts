@@ -301,12 +301,9 @@ export function readBoard(projectPath: string): BoardRead {
     return { board: parseBoard(text), brokenFile: null };
   } catch {
     const brokenFile = brokenBoardPath(projectPath);
-    try {
-      renameSync(filePath, brokenFile);
-    } catch {
-      // Salvage is a courtesy, not a requirement: the board must still open even if the rename fails.
-      return { board: emptyBoard(), brokenFile: null };
-    }
+    // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
+    // the header is about and goes out the same door.
+    renameSync(filePath, brokenFile);
     return { board: emptyBoard(), brokenFile };
   }
 }
