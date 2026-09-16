@@ -45,3 +45,13 @@ export function mayWrite(state: NotesState): boolean {
 export function mayRead(state: NotesState, boxText: string): boolean {
   return state.savedText === undefined ? boxText === '' : state.savedText === boxText;
 }
+
+// A box that can neither be read into nor written out of: the pair of the two refusals above, asked as
+// one question so the message on screen is derived from what the view decides rather than repeating it.
+//
+// It is a first arrival whose read failed and was then typed into. Nothing is known about the file, so
+// reading now would take what you typed off the screen; nothing was ever shown, so writing would put it
+// over a file that may hold three months of notes. Every arrival after that one finds it the same way.
+export function isStranded(state: NotesState, boxText: string): boolean {
+  return !mayRead(state, boxText) && !mayWrite(state);
+}

@@ -1,5 +1,6 @@
 import type { DashboardBridge } from './bridge';
 import {
+  isStranded,
   mayRead,
   mayWrite,
   readFailed,
@@ -12,8 +13,8 @@ import {
 export type NotesOptions = {
   bridge: DashboardBridge;
   projectPath: string;
-  // The status bar's error span. A write that lands clears whatever it replaces, the way the board's
-  // does — nothing else knows the message has gone stale.
+  // The status bar's error span. A write or a read that lands clears whatever it replaces, the way the
+  // board's does — nothing else knows the message has gone stale.
   onError(message: string): void;
 };
 
@@ -36,6 +37,11 @@ export type NotesView = {
 // keystroke later still writes what you typed into it; and the quit dialog asks before the window
 // goes, which is far longer than this.
 const SAVE_DELAY_MS = 400;
+
+// What the bar says about a box nothing can save and nothing may read over. The way out is to copy the
+// text somewhere, and nothing else on screen would say so: the placeholder is gone, the box looks like
+// any other page of notes, and the failure that started it scrolled off the bar rounds ago.
+const STRANDED_NOTES = 'Notes were typed before the file was read: nothing here is saved. Copy it out.';
 
 // One page of free text per project, kept in .dashboard/notes.md. A textarea and nothing else — it is
 // the view's whole element, the way nvim is the whole of its own screen — so there is no key of its
@@ -70,13 +76,19 @@ export function createNotesView(options: NotesOptions): NotesView {
   let latestRead = 0;
 
   function write(): Promise<void> {
+    // Asked here and not only at the keystroke that set the timer. A read can fail while the 400ms is
+    // running — you are typing into the box the whole time the read is away — and the box it shuts is
+    // the box this write would send. Both ways in go through here: the timer and the arrival's flush.
+    if (!mayWrite(state)) return Promise.resolve();
     // The text as it goes out, not as it is by the time the write answers: you keep typing while it
     // is away, and what the file ends up holding is what was sent.
     const text = element.value;
     return options.bridge.writeNotes(options.projectPath, text).then(
       () => {
         state = writeLanded(state, text);
-        options.onError('');
+        // Only while the box is still the file's. A write sent before an arrival's read failed lands
+        // after it, and clearing then would wipe the message about a box that is now shut.
+        if (mayWrite(state)) options.onError('');
       },
       (error: unknown) => {
         options.onError(`Notes not saved: ${String(error)}`);
@@ -94,8 +106,14 @@ export function createNotesView(options: NotesOptions): NotesView {
     return write();
   }
 
+  // Said on every arrival that refuses to read, not once at the failure that started it: showError
+  // keeps a message only while the owner matches, so the one posted at the failure is gone as soon as
+  // anything else has taken the span, and the box that nothing can save would be silent from then on.
+  function sayIfStranded(): void {
+    if (isStranded(state, element.value)) options.onError(STRANDED_NOTES);
+  }
+
   element.addEventListener('input', () => {
-    if (!mayWrite(state)) return;
     window.clearTimeout(pending);
     pending = window.setTimeout(() => {
       pending = undefined;
@@ -113,8 +131,11 @@ export function createNotesView(options: NotesOptions): NotesView {
       const token = ++latestRead;
       // The box holds something the file does not: a sentence a write never took, or a paragraph
       // typed into a box a read never filled. Reading would replace it with the older page and it
-      // would be gone from the box as well as the file. The message from the failure is already up.
-      if (!mayRead(state, element.value)) return;
+      // would be gone from the box as well as the file.
+      if (!mayRead(state, element.value)) {
+        sayIfStranded();
+        return;
+      }
       let text: string;
       try {
         text = await options.bridge.readNotes(options.projectPath);
@@ -122,7 +143,8 @@ export function createNotesView(options: NotesOptions): NotesView {
         // Said out loud rather than thrown. The box keeps whatever it was showing, which is the last
         // thing that was on disk, so a folder that has gone unreadable does not also blank the page in
         // front of you and then save the blank back over it. On a first arrival it was showing
-        // nothing, so the box stays shut for typing until a read lands, and the message says so.
+        // nothing, so the box is shut for writing from here on, and type into it before a read lands
+        // and it is shut for reading too — sayIfStranded is what keeps saying so.
         if (token === latestRead) {
           state = readFailed(state);
           options.onError(`Notes not read, so nothing is written: ${String(error)}`);
@@ -132,7 +154,11 @@ export function createNotesView(options: NotesOptions): NotesView {
       // A read another one has overtaken says nothing: the newer one is the page you asked for. And
       // the box is asked again because you have the keyboard while the read is away — the focus above
       // is taken before it on purpose — so a character typed into the gap is text like any other.
-      if (token !== latestRead || !mayRead(state, element.value)) return;
+      if (token !== latestRead) return;
+      if (!mayRead(state, element.value)) {
+        sayIfStranded();
+        return;
+      }
       element.value = text;
       state = readLanded(text);
       // A read that lands clears the failure it replaces; nothing else knows the message is stale.

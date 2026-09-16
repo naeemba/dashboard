@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isStranded,
   mayRead,
   mayWrite,
   readFailed,
@@ -47,6 +48,18 @@ describe('what the notes box may do', () => {
     expect(mayRead(read, 'friday\nmonday\n')).toBe(false);
     // And a write that did land moves the file on, so the arrival after that one reads again.
     expect(mayRead(writeLanded(read, 'friday\nmonday\n'), 'friday\nmonday\n')).toBe(true);
+  });
+
+  it('calls a box stranded when it can neither be read into nor written out', () => {
+    // First arrival, the read failed, and nothing stopped you typing. Reading would take the half page
+    // off the screen, writing would put it over a file nobody has seen — so neither happens, on this
+    // arrival or any after it, and the bar has to say so every time rather than once.
+    const typedAfterAFailedFirstRead = readFailed(UNREAD_NOTES);
+    expect(isStranded(typedAfterAFailedFirstRead, 'the staging password')).toBe(true);
+    // An untouched box on a first arrival is not stranded: it reads.
+    expect(isStranded(typedAfterAFailedFirstRead, '')).toBe(false);
+    // Nor is a sentence a write did not take. The file was read once, so the box may still be written.
+    expect(isStranded(readLanded('friday\n'), 'friday\nmonday\n')).toBe(false);
   });
 
   it('does not take an empty file for a file nobody has read', () => {
