@@ -34,9 +34,16 @@ function run(): void {
 // already uses. The reads and the write are the paths that throw — a board that cannot be read, a
 // board that cannot be replaced — and without this those two are the only ones that answer an agent
 // with a node stack trace instead of a sentence.
+//
+// The shape of the error picks which one you get. Every fs failure carries an errno `code`, and those
+// are the ones a sentence answers: nothing about `EACCES: permission denied, open '.dashboard/board.json'`
+// gets clearer with a stack. Anything without a code is a bug in here, and a bug printed as one
+// sentence leaves an agent `Cannot read properties of undefined (reading 'title')` and no file to open,
+// so those keep their stack.
 try {
   run();
 } catch (error: unknown) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  const failure = error as NodeJS.ErrnoException;
+  process.stderr.write(`${failure?.code ? failure.message : (failure?.stack ?? String(error))}\n`);
   process.exit(1);
 }
