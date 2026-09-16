@@ -112,11 +112,13 @@ the pass-through check at the top of this section runs against the action
 rather than the key — so if Ctrl+T becomes something else, the something else
 is what gets passed through, not the key that used to be Ctrl+T.
 
-A new project view is a row in `PROJECT_MODES`, a row in `MODES`, a row in
-`ACTIONS`, a view built in `page.ts`, a branch in `focusMode` and a branch in
-`modeLabel` — and a name and a blurb in `src/help.ts`, which the section below
-is about. Leave it out of `PROJECT_MODES` and everything works until you
-restart: the app comes back on terminals, and nothing says why.
+A new project view is a row in `PROJECT_MODES`, a row in `ACTIONS`, a view built
+in `page.ts`, a branch in `focusMode` and a branch in `modeLabel` — and a name
+and a blurb in `src/help.ts`, which the section below is about. `MODES` is not
+on that list: it is `PROJECT_MODES` plus the manager's own two, so the row you
+add is already in it. That was the row to forget — a view in `MODES` and not in
+`PROJECT_MODES` worked until you restarted, and then the app came back on
+terminals with nothing saying why.
 
 ## Every box you type into carries `dir="auto"` — Hard Rule
 
