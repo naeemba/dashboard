@@ -278,6 +278,14 @@ describe('readBoard', () => {
     expect(existsSync(join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE))).toBe(false);
   });
 
+  // A folder stands in for every errno that is not ENOENT — EMFILE, EIO, EACCES — because it is the
+  // only one a test can make on demand.
+  it('throws rather than reading an empty board when board.json is a folder', () => {
+    const path = project();
+    mkdirSync(join(path, BOARD_FILE_PATH), { recursive: true });
+    expect(() => readBoard(path)).toThrow();
+  });
+
   it('moves a damaged file aside and says where it went', () => {
     const path = project();
     writeRaw(path, '{"columns": [');

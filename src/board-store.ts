@@ -284,12 +284,17 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
 // cannot be parsed is different — those bytes are the only copy of someone's cards, so they are moved
 // aside rather than overwritten by the next save. Once moved, the next read takes the ordinary
 // no-file path, so this only ever fires once per damaged file.
+//
+// Every other reason the read can fail is a failure and is thrown. Answer an EMFILE or an EIO with an
+// empty board and the board draws with no cards and nothing in the status bar; the next card you add
+// is saved over the forty that are still sitting on disk.
 export function readBoard(projectPath: string): BoardRead {
   const filePath = boardPath(projectPath);
   let text: string;
   try {
     text = readFileSync(filePath, 'utf8');
-  } catch {
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     return { board: emptyBoard(), brokenFile: null };
   }
   try {

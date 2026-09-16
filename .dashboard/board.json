@@ -25,13 +25,6 @@
           "parent": null
         },
         {
-          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
-          "title": "A fourth mode: notes, one page of them per project",
-          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5864b231-b04b-436c-9680-c721a740b335",
           "title": "Read a project's file in a view that does bidi",
           "notes": "Persian prose cannot be read in a pane and never will be, so the way to read a Persian roadmap or README is a screen the app draws itself -- Chromium lays it out correctly there, and the one rule in index.css already covers every element outside a pane.\n\nThe open question the design turns on is how the file is chosen: a picker over the project's folder, or whatever file nvim currently has open.\n\nKeyboard-first, so it is a row in actions.ts and a section in help.ts.\n\nRelated: the notes mode card is this same screen for a file the app owns. This one is for a file the project owns.",
@@ -74,6 +67,14 @@
           "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
+          "title": "A fourth mode: notes, one page of them per project",
+          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-16T07:43:59.840Z"
         }
       ]
     },
@@ -83,7 +84,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "7af68346-5bee-4566-b99c-13f9f02972e2",
+          "title": "A failed board read is a failure, not an empty board",
+          "notes": "readBoard turns every reason readFileSync can throw into a board with no cards. A missing file is right -- that is \"no board yet\". An EMFILE with five ptys and an editor open per project, an EIO off a network folder, a permission that changed underneath, are not: the board draws empty with nothing in the status bar, and the next card you type is written whole over the forty that are still on disk.\n\nOnly ENOENT is an empty board. Everything else throws, the way readNotes already does. board-view's readAgain has the catch that reports it -- \"Board not opened: ...\" with render() still running on the board in memory, so the cards stay on screen.\n\nGitHub issue #45.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-16T09:32:05.293555Z",
+          "updatedAt": "2026-09-16T09:32:05.293555Z"
+        }
+      ]
     },
     {
       "name": "Done",
