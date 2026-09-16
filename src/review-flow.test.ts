@@ -13,11 +13,13 @@ function folder(): string {
   return mkdtempSync(join(tmpdir(), 'dashboard-review-'));
 }
 
-function boardWithCard(pullRequest: number | null): Board {
+// One card in Todo. Another id gives a board that parses and has cards on it, none of them this card:
+// the deleted card, as against the empty board that has lost every card at once.
+function boardWithCard(pullRequest: number | null, id = CARD): Board {
   const board = emptyBoard();
   const withCard = {
     columns: board.columns.map((column, at) => (at === 0
-      ? { ...column, cards: [{ id: CARD, title: 'Ship it', notes: '', priority: 'medium' as const, parent: null }] }
+      ? { ...column, cards: [{ id, title: 'Ship it', notes: '', priority: 'medium' as const, parent: null }] }
       : column)),
   };
   return pullRequest === null ? withCard : setPullRequest(withCard, { column: 0, card: 0 }, pullRequest).board;
@@ -165,6 +167,33 @@ describe('reviewSweep', () => {
     await reviewSweep(made).run();
     expect(log.removed).toEqual([]);
     expect(log.started).toEqual([]);
+  });
+
+  // The deleted card. Its worktree stays on disk for good, so without the mark it reads two boards every
+  // five seconds for the rest of the run for an answer that cannot change.
+  it('asks once about a card a populated board has lost', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, boardWithCard(null, 'b0a1'));
+    const { ports: made, log } = ports(entry);
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    // Put the card back and it stays marked: that id is gone, and a ship of a new card calls forget.
+    writeBoard(projectPath, boardWithCard(null));
+    await sweep.run();
+    expect(log.removed).toEqual([]);
+  });
+
+  // The salvaged board. Every card is missing at once and every one of them comes back the moment the
+  // file is restored, so marking here would stop reviews until the app was restarted.
+  it('asks again about a card an empty board has lost once the board is back', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, emptyBoard());
+    const { ports: made, log } = ports(entry);
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    writeBoard(projectPath, boardWithCard(null));
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
   });
 
   // Panes belong to an open project. Nothing is marked, so opening the project starts the review.

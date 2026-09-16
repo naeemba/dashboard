@@ -6,8 +6,11 @@ import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type 
 // are a second half of.
 
 // The project's board with the card in Review, or null when there is nothing to move: a card already
-// there, one that was made on the branch and has never been on the project's board, or a board
-// somebody has taken the Review column out of.
+// in Review or past it, or a board somebody has taken the Review column out of.
+//
+// A card the board does not mention answers null too, but the sweep cannot reach here with one:
+// awaitsReview says null for it and reviewOne returns on that before the move is asked for. The only
+// way this sees a missing card is the board changing between those two reads in the same tick.
 export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
 }

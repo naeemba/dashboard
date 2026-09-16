@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
 import { uncommittedCount } from './ship';
-import { cardById, type Board } from './board';
+import { allCards, cardById, type Board } from './board';
 import type { ShipResult, WorktreeRemoval } from './bridge';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -161,9 +161,20 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     }
     // Neither answer: no board to read, or a board with no row for this card — the card was deleted after
     // its review, or a board.json that would not parse was moved aside and the empty one that replaced it
-    // has lost every card at once. Nothing is marked and nothing is touched, because the one thing the
-    // sweep can say about a card it cannot find is written on that card.
-    if (awaits === null) return;
+    // has lost every card at once. Nothing is touched either way, because the one thing the sweep can say
+    // about a card it cannot find is written on that card.
+    //
+    // Whether it is marked is the difference between those two. A deleted card is never coming back with
+    // that id and its worktree stays on disk — the review prompt says not to remove it — so leaving it
+    // unmarked costs two board reads every five seconds for the rest of the run, which is the cost the
+    // branch above marks to avoid. A board that was moved aside is the opposite: restore it from git and
+    // every card is back, and a sweep that marked them all in between would start no review again until
+    // you restarted, with nothing on screen saying why. An empty board is that case, so a board with
+    // cards on it that does not have this one is the deletion, and only that one is marked.
+    if (awaits === null) {
+      if (board !== null && allCards(board).length > 0) reviewed.add(entry.cardId);
+      return;
+    }
     // Asked before anything is removed, counting the card's own pane as the free one it is about to
     // become. If there is still nothing going, nothing is marked and nothing is touched: free a pane
     // and the next tick starts the review, rather than the worktree being destroyed first and the card

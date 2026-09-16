@@ -1002,6 +1002,15 @@ function createWindow(): void {
     }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      // Chromium throttles a hidden page's timers, and after five minutes behind another window that
+      // is once a minute. Everything this app does on a beat is a renderer timer: the pane refresh, the
+      // bell, and the report saying which panes still have an agent working in them. Main's review
+      // sweep is a Node timer and keeps its five seconds, so with throttling on it reads a report a
+      // minute old, decides the agent has gone quiet and removes the worktree out from under a push
+      // that is still running. Minimise the window while a shipped card is being worked and the commit
+      // dies with the folder. A grid of terminals is not a page that should stop ticking when it is
+      // behind something.
+      backgroundThrottling: false,
     },
   });
   // Closing the window kills every shell on every page, and there is no getting a long-running task

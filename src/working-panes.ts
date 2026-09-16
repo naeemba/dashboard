@@ -17,6 +17,10 @@
 // you something: it prints neither busy pattern — that is what the pane's reading of "busy" is for —
 // and its bell goes quiet the moment you look at the pane, so it reads idle while it is plainly alive.
 // A question you answer inside the floor never reaches the sweep.
+//
+// All of which measures staleness, so it only holds while the reports keep their interval. Main's
+// window turns Chromium's background throttling off for that, among the other things this app does on
+// a renderer timer; the reason lives beside the window.
 
 // How often the renderer reports, and how often the sweep that reads the reports runs. One number, in
 // one place, for both: halve it to make reviews feel quicker and the report follows, rather than main
