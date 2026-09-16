@@ -155,15 +155,17 @@ held its own copy of the 6-to-72 range. A size the settings screen accepted
 could still get silently discarded the next time the file was read, with
 nothing on screen saying why.
 
-Twelve predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
+Thirteen predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
 `pullRequestFrom` and `isCommentBody` in `board.ts`, `holderOfBinding`,
 `isHexColor`, `isFontSize` and `withoutShipped` in `settings.ts`,
 `blockingChanges` in `ship.ts` — which both the ship's refusal and the message
 listing the files in the way call, so the count on screen is exactly the list
 that caused it — and `mayRead`, `mayWrite` and `isStranded` in `notes-state.ts`,
 where the notes box decides what it refuses and the status bar asks it what to
-say. A refusal worth a message reuses one of these or adds a thirteenth — never
-a second copy of the condition.
+say, and `mayEdit` in `board-state.ts`, which the board asks before every
+gesture and again when one bounces, so the key that does nothing and the
+sentence explaining it read the same field. A refusal worth a message reuses one
+of these or adds a fourteenth — never a second copy of the condition.
 
 `withoutShipped` is the same idea one step over: it decides what a line has to
 be before it belongs in settings.json, and both writers ask it — the save and

@@ -4,6 +4,7 @@ import {
   addBlankCard,
   applyAutomaticChange,
   applyChange,
+  boardIsBusy,
   commitBranch,
   commitComment,
   commitNotes,
@@ -238,6 +239,26 @@ describe('showsTheFile', () => {
     expect(moved.showsTheFile).toBe(true);
     expect(undoChange(moved).showsTheFile).toBe(true);
     expect(addBlankCard(read, 'new').showsTheFile).toBe(true);
+  });
+});
+
+// What the flag is for. Without this, dropping the middle term of boardIsBusy is a tidy that passes
+// every test above and hands the keys back to a board nobody read.
+describe('boardIsBusy', () => {
+  const read = loadBoard(initialBoardState(), board(['a']));
+
+  it('is busy on a board no read has filled, with nothing else going on', () => {
+    expect(boardIsBusy(initialBoardState(), false, false)).toBe(true);
+  });
+
+  // A read that threw is not in flight — it finished — so the read flag alone cannot stand in for it.
+  it('is not busy on a board a read filled, with nothing else going on', () => {
+    expect(boardIsBusy(read, false, false)).toBe(false);
+  });
+
+  it('is busy while a box is open or a read is in flight', () => {
+    expect(boardIsBusy(read, true, false)).toBe(true);
+    expect(boardIsBusy(read, false, true)).toBe(true);
   });
 });
 

@@ -31,6 +31,7 @@ import {
   addBlankCard,
   applyAutomaticChange,
   applyChange,
+  boardIsBusy,
   commitBranch,
   commitComment,
   commitNotes,
@@ -38,6 +39,7 @@ import {
   commitTitle,
   initialBoardState,
   loadBoard,
+  mayEdit,
   reloadBoard,
   undoChange,
   type BoardState,
@@ -240,17 +242,21 @@ export function createBoardView(options: BoardOptions): BoardView {
     return editing === null ? undefined : cardAt(state.board, state.selection)?.id;
   }
 
-  // The board is not taking anything at this moment: a box is open, a read is in flight and the board
-  // on screen is about to be replaced, or these cards never came from the file — applying a gesture to
-  // any of those would be applying it to cards you are not looking at. The keys, the clicks and the
-  // drags all bounce off this one answer, so a gesture added later finds it here rather than writing
-  // the condition out a fourth time.
-  //
-  // The last two look like one fact and are not. `landedRead` says a read is in flight, which a read
-  // that threw is not — it finished. showsTheFile outlives the read, and only a read that works can
-  // set it. Collapse them and the first failed read goes live again.
+  // The keys, the clicks and the drags all bounce off this one answer, so a gesture added later finds
+  // it here rather than writing the condition out a fourth time. What counts as busy is board-state's
+  // to say, and board-state.test.ts is what pins it.
   function busy(): boolean {
-    return editing !== null || !state.showsTheFile || landedRead !== latestRead;
+    return boardIsBusy(state, editing !== null, landedRead !== latestRead);
+  }
+
+  // A key that bounced has to say so when the bounce outlasts the keystroke. A box being open and a
+  // read being in flight are both over in a moment and the screen shows both. A board nobody read
+  // shows three empty columns each offering `n adds a card`, and stays that way for the session — so
+  // without a word here you press `n`, then `d`, then an arrow, and nothing happens or ever will.
+  function sayIfUnread(): void {
+    if (!mayEdit(state)) {
+      options.onError('This board was not read, so nothing may be saved over it. Leave this screen and come back to read it again.');
+    }
   }
 
   function startEditing(field: EditableField): void {
@@ -423,7 +429,12 @@ export function createBoardView(options: BoardOptions): BoardView {
   // onto a card a write has already taken away.
   function selectCard(card: Card): boolean {
     const at = busy() ? null : selectionOf(state.board, card.id);
-    if (!at) return false;
+    if (!at) {
+      // The mouse half of the same silence: a click and a grab both bounce off a board nobody read,
+      // and neither of them draws a cursor that says so the way a refused drop does.
+      sayIfUnread();
+      return false;
+    }
     state = { ...state, selection: at };
     return true;
   }
@@ -732,7 +743,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // Every key on this screen is found by the window's one lookup and handed here. The board keeps no
     // key handling of its own, which is what stops a board key and its help row drifting apart.
     runAction(action: Action): void {
-      if (busy()) return;
+      if (busy()) return sayIfUnread();
       switch (action.kind) {
         case 'board-select':
           state = { ...state, selection: moveSelection(state.board, state.selection, action.direction) };
