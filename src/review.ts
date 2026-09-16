@@ -31,11 +31,18 @@ export function reviewRefused(board: Board, cardId: string, reason: string): Boa
 // stops at a report and the card wants the pull request landed — and because the card's last move,
 // into Done, has to happen on the project's board rather than on the branch the pane is sitting on.
 //
+// A path for a shell to read, in single quotes. A project folder is allowed a space in it, and an
+// apostrophe too — `/Users/sharp/Bob's api`. Inside single quotes the only way to write one is to shut
+// the quotes, escape it, and open them again, which is what the replace does.
+function quotedPath(path: string): string {
+  return `'${path.replaceAll("'", String.raw`'\''`)}'`;
+}
+
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in: the worktree is a checkout of the branch, and its own .dashboard
-// board is the branch's copy. The path is quoted because a project folder is allowed a space in it.
+// board is the branch's copy.
 export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string): string {
-  const board = `cd '${projectPath}' && node "$DASHBOARD_BOARD"`;
+  const board = `cd ${quotedPath(projectPath)} && node "$DASHBOARD_BOARD"`;
   return [
     `Review pull request #${pullRequest} and land it. It came from card ${cardId} on the board of ${projectPath}.`,
     '',

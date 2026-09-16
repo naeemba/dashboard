@@ -23,6 +23,10 @@ export type ReviewPorts = {
   worktrees: () => readonly WorktreeEntry[];
   // The page a project is open on, or -1 when it is not open at all.
   slotOf: (projectPath: string) => number;
+  // Whether an agent is still running in this pane. The same question `worktree:create` asks before it
+  // will touch a card's existing worktree, for the same reason: the folder is about to be removed, and
+  // `git worktree remove` kills every shell sitting in it.
+  runsAgentIn: (slot: number, pane: number | null) => boolean;
   // A pane of that page nobody is using, or null when all five are taken. `freeing` is a pane about to
   // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
   // before anything is destroyed is the answer the pane is given after.
@@ -120,6 +124,12 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // and the sweep finds the card again the moment it is opened.
     const slot = ports.slotOf(entry.projectPath);
     if (slot === -1) return;
+    // The pull request number is not the agent being done. `/work-card` pushes the commit carrying it
+    // and keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
+    // taking the folder away here kills the shell before `git push` runs and the fix never reaches the
+    // pull request the review is about to approve. Nothing is marked, so the sweep picks the card up
+    // the moment the agent exits.
+    if (ports.runsAgentIn(slot, entry.pane)) return;
     const pullRequest = finishedIn(entry);
     if (pullRequest === null) return;
     // Asked before anything is removed, counting the card's own pane as the free one it is about to

@@ -151,10 +151,6 @@ export function landsInShip(board: Board, from: number, moved: Selection, gestur
   return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
 }
 
-// Every board written before Ship existed has three columns, and getting the fourth should not mean
-// hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
-// card pays nothing for it. The same board back when it already has one, so reading a board is not a
-// change to it.
 // One column the board is missing, put in at `at`. The same board back when it already has one, so
 // reading a board is not a change to it. Both repairs below go through here rather than each spelling
 // the guard and the splice out: they differ only in where the column belongs, and a rule written twice
@@ -166,6 +162,9 @@ function withColumn(board: Board, name: string, at: number): Board {
   return withColumns(board, columns);
 }
 
+// Every board written before Ship existed has three columns, and getting the fourth should not mean
+// hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
+// card pays nothing for it.
 export function withShipColumn(board: Board): Board {
   return withColumn(board, SHIP_COLUMN, 1);
 }
@@ -474,12 +473,6 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
   return dropCard(board, selection, selection.column + (direction === 'right' ? 1 : -1), selection.card);
 }
 
-// Straight to a column, wherever the card is now. moveCard walks one column at a time, which is what
-// a keystroke means and not what a ship means: the worktree's board has the card wherever the last
-// merge left it, and the ship has to put it in Ship in one go from any of them.
-//
-// It lands last in the column it arrives at rather than keeping its row, because the caller is not a
-// cursor and has no row to keep.
 // The card named by its id, moved to a column — or null when there is nothing to do: no such card, no
 // such column, or the card is already there. Null rather than the board unchanged, because every
 // caller writes the answer to disk and an identical rewrite is a file whose mtime moved for nothing,
@@ -495,6 +488,12 @@ export function moveCardById(board: Board, cardId: string, target: number): Boar
   return moved === board ? null : moved;
 }
 
+// Straight to a column, wherever the card is now. moveCard walks one column at a time, which is what
+// a keystroke means and not what a ship means: the worktree's board has the card wherever the last
+// merge left it, and the ship has to put it in Ship in one go from any of them.
+//
+// It lands last in the column it arrives at rather than keeping its row, because the caller is not a
+// cursor and has no row to keep.
 export function moveCardToColumn(board: Board, selection: Selection, target: number): Change {
   const card = board.columns[selection.column]?.cards[selection.card];
   if (!card || target < 0 || target >= board.columns.length || target === selection.column) {

@@ -52,6 +52,7 @@ import {
   readWorktrees,
   stillLiving,
   withEntry,
+  withoutPane,
   withoutPanes,
   withoutWorktree,
   worktreesDiffer,
@@ -645,7 +646,7 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
   // worktree. Taking the pane is what ends that claim, so the old record gives it up here — one record
   // per pane in this project — claimsPane holds why the project half of that matters.
   const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
-  if (claimed) recordWorktree({ ...claimed, pane: null });
+  if (claimed) recordWorktree(withoutPane(claimed));
   startAgent(terminalId(slot, pane), entry.worktreePath, prompt);
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
@@ -683,6 +684,7 @@ const shipInProject = oneAtATime();
 const reviews = reviewSweep({
   worktrees: () => worktrees,
   slotOf: slotOfProject,
+  runsAgentIn: (slot, pane) => pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane))),
   freePaneIn,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
@@ -732,9 +734,9 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
   const { projectPath, cardId, title, slot } = request;
   dropDeadWorktrees();
-  // A card being shipped is a card whose last review, if it had one, is over: the worktree it ran in
-  // has been removed by hand or this ship would be refused below. Left marked, the pull request this
-  // ship goes on to open would never be reviewed for the rest of the run, with nothing saying why.
+  // A card being shipped is a card whose last review, if it had one, is over. Left marked, the pull
+  // request this ship goes on to open would never be reviewed for the rest of the run, with nothing
+  // saying why. This is half the mark; the other half is `reviewing` on the record, cleared below.
   reviews.forget(cardId);
 
   // Already shipped, and still being worked on — a second worktree for the same card is the mistake
@@ -761,7 +763,10 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
       // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
       // it runs git in the same repository.
       await commitShipMove(existing);
-      return attachPane(existing, slot, workPrompt(cardId));
+      // `reviewing: false` is the other half of the forget above. A record that was the review keeps
+      // the flag through this spread otherwise, and the sweep skips the card for good: the pull
+      // request this ship opens is never reviewed, with nothing on screen saying why.
+      return attachPane({ ...existing, reviewing: false }, slot, workPrompt(cardId));
     });
   } catch (error: unknown) {
     return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };

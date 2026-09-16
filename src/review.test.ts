@@ -72,6 +72,14 @@ describe('reviewPrompt', () => {
     expect(reviewPrompt(CARD, 12, '/work/my api')).toContain("cd '/work/my api' &&");
   });
 
+  // A folder is allowed an apostrophe too, and one left raw ends the quotes early: the agent is handed
+  // `cd '/work/Bob's api'`, which is not the command anyone meant — and the fallback that tells the
+  // card what went wrong is built from the same string, so the card sits in Review saying nothing.
+  it('escapes an apostrophe in the project path', () => {
+    const prompt = reviewPrompt(CARD, 12, "/work/Bob's api");
+    expect(prompt).toContain(String.raw`cd '/work/Bob'\''s api' &&`);
+  });
+
   it('names the pull request to run the loop against', () => {
     expect(prompt).toContain('/pr-loop 12');
     expect(prompt).toContain('gh pr merge 12 --merge');

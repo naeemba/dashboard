@@ -55,6 +55,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
     ports: {
       worktrees: () => [entry],
       slotOf: () => 0,
+      runsAgentIn: () => false,
       freePaneIn: () => 0,
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
@@ -108,6 +109,23 @@ describe('reviewSweep', () => {
     const { ports: made, log } = ports({ ...entry, reviewing: true });
     await reviewSweep(made).run();
     expect(log.removed).toEqual([]);
+  });
+
+  // The number lands on the card mid-run: /work-card pushes that commit and keeps going. Take the
+  // folder then and `git worktree remove` kills the shell before the next push, so a commit that is on
+  // the branch never reaches the pull request the review is about to approve.
+  it('waits for the agent that opened the pull request to exit', async () => {
+    const { entry, projectPath } = flight(12);
+    let running = true;
+    const { ports: made, log } = ports(entry, { runsAgentIn: () => running });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    expect(log.removed).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Todo');
+    // Nothing was marked, so the tick after it exits picks the card up.
+    running = false;
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
   });
 
   // Panes belong to an open project. Nothing is marked, so opening the project starts the review.
