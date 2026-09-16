@@ -104,6 +104,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Arriving is also the only time the file is read. An edit made in a pane — or by an agent '
     + 'working in this project — shows up when you next come here; while you are sitting on this '
     + 'screen the box you are typing in is what gets written, and it wins. '
+    + 'If that read fails the status bar says so, and nothing is written until a later arrival '
+    + 'does read the file: a box you were never shown the file in must not be saved over it. '
     + 'It is a plain box and nothing more: nothing parses the markdown and nothing renders it. The '
     + 'name is there so the file is worth opening in an editor or reading on a forge. '
     + 'This screen has no keys of its own — everything that is not one of the keys below is a '
