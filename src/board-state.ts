@@ -32,10 +32,22 @@ export type BoardState = {
   // keystroke with an undo step of its own. `n` sets it: adding the blank card and committing the
   // typed title are two changes that have to undo as one, so only the first spends the step.
   nextChangeIsAutomatic: boolean;
+  // Whether these cards came from the file. A board starts as emptyBoard(), which looks exactly like a
+  // project nobody has made a card in — so a read that fails leaves a screen saying there is nothing
+  // here, and a screen the keys are live on is one `n` away from saving that nothing over the forty
+  // cards still on disk. The notes page calls the same fact showsTheFile.
+  showsTheFile: boolean;
 };
 
 export function initialBoardState(): BoardState {
-  return { board: emptyBoard(), selection: { column: 0, card: 0 }, previous: null, nextChangeIsAutomatic: false };
+  return {
+    board: emptyBoard(),
+    selection: { column: 0, card: 0 },
+    previous: null,
+    nextChangeIsAutomatic: false,
+    // The lie is manufactured here — this empty board is not the project's — so this is where it owns up.
+    showsTheFile: false,
+  };
 }
 
 // Every operation in board.ts returns the same board object, unchanged, when it has nothing to do —
@@ -49,6 +61,7 @@ export function applyChange(state: BoardState, next: Change): BoardState {
     selection: next.selection,
     previous: state.nextChangeIsAutomatic ? state.previous : { board: state.board, selection: state.selection },
     nextChangeIsAutomatic: false,
+    showsTheFile: state.showsTheFile,
   };
 }
 
@@ -71,7 +84,7 @@ export function applyAutomaticChange(state: BoardState, next: Change): BoardStat
 
 export function undoChange(state: BoardState): BoardState {
   if (state.previous === null) return state;
-  return { ...state.previous, previous: null, nextChangeIsAutomatic: false };
+  return { ...state.previous, previous: null, nextChangeIsAutomatic: false, showsTheFile: state.showsTheFile };
 }
 
 export function addBlankCard(state: BoardState, id: string): BoardState {
@@ -126,6 +139,9 @@ export function loadBoard(state: BoardState, board: Board): BoardState {
     selection: { column: clampIndex(state.selection.column, board.columns.length - 1), card: 0 },
     previous: null,
     nextChangeIsAutomatic: false,
+    // This board is the file's. Every other way a state is built spreads one of these, so a read is the
+    // only thing that can make it true and no failure path has to remember to leave it false.
+    showsTheFile: true,
   };
 }
 

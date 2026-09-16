@@ -240,12 +240,17 @@ export function createBoardView(options: BoardOptions): BoardView {
     return editing === null ? undefined : cardAt(state.board, state.selection)?.id;
   }
 
-  // The board is not taking anything at this moment: a box is open, or a read is in flight and the
-  // board on screen is about to be replaced — applying a gesture to it would be applying it to cards
-  // you are not looking at. The keys, the clicks and the drags all bounce off this one answer, so a
-  // gesture added later finds it here rather than writing the condition out a fourth time.
+  // The board is not taking anything at this moment: a box is open, a read is in flight and the board
+  // on screen is about to be replaced, or these cards never came from the file — applying a gesture to
+  // any of those would be applying it to cards you are not looking at. The keys, the clicks and the
+  // drags all bounce off this one answer, so a gesture added later finds it here rather than writing
+  // the condition out a fourth time.
+  //
+  // The last two look like one fact and are not. `landedRead` says a read is in flight, which a read
+  // that threw is not — it finished. showsTheFile outlives the read, and only a read that works can
+  // set it. Collapse them and the first failed read goes live again.
   function busy(): boolean {
-    return editing !== null || landedRead !== latestRead;
+    return editing !== null || !state.showsTheFile || landedRead !== latestRead;
   }
 
   function startEditing(field: EditableField): void {
@@ -414,8 +419,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   // Puts the keyboard on the card the pointer is on, and says whether it could. Both gestures need it
-  // and the answer is the same for both: nothing moves while a box is open or a read is in flight, and
-  // nothing moves onto a card a write has already taken away.
+  // and the answer is the same for both: nothing moves while the board is busy(), and nothing moves
+  // onto a card a write has already taken away.
   function selectCard(card: Card): boolean {
     const at = busy() ? null : selectionOf(state.board, card.id);
     if (!at) return false;

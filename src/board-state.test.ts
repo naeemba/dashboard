@@ -211,6 +211,36 @@ describe('loadBoard', () => {
   });
 });
 
+// The rule the board's keys hang off: a board nobody read is not this project's, so nothing may be
+// saved over it. The two states are indistinguishable by their cards — both are empty — so this is
+// the only thing that tells them apart.
+describe('showsTheFile', () => {
+  it('is false on the board the screen starts on, which no read has filled', () => {
+    expect(initialBoardState().showsTheFile).toBe(false);
+  });
+
+  it('is true once a read has landed', () => {
+    expect(loadBoard(initialBoardState(), board(['a'])).showsTheFile).toBe(true);
+    expect(reloadBoard(initialBoardState(), board(['a'])).showsTheFile).toBe(true);
+  });
+
+  // A read that works on an empty project still makes the board the project's own, or the keys would
+  // stay dead on every project nobody has made a card in yet.
+  it('is true after a read of a project with no cards', () => {
+    expect(loadBoard(initialBoardState(), board([])).showsTheFile).toBe(true);
+  });
+
+  // Every other way a state is built carries it, so an edit or an undo cannot quietly hand the keys
+  // back to a board nobody read — nor take them away from one that was.
+  it('survives a change and an undo', () => {
+    const read = loadBoard(initialBoardState(), board(['a'], []));
+    const moved = applyChange(read, moveCard(read.board, read.selection, 'right'));
+    expect(moved.showsTheFile).toBe(true);
+    expect(undoChange(moved).showsTheFile).toBe(true);
+    expect(addBlankCard(read, 'new').showsTheFile).toBe(true);
+  });
+});
+
 describe('commitBranch', () => {
   const first = { column: 0, card: 0 };
 
