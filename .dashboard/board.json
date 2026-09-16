@@ -107,6 +107,10 @@
     },
     {
       "name": "Ship",
+      "cards": []
+    },
+    {
+      "name": "Doing",
       "cards": [
         {
           "id": "7bd176c4-65d3-45b6-8237-58625797ea93",
@@ -114,13 +118,9 @@
           "notes": "A fifth column called Review, for work an agent has finished but nobody has checked.\n\nWhen Claude finishes a card, the card moves out of the in-progress column (Doing) into Review. The card's worktree is then closed and removed, and a new worktree is made in its place with a pane assigned to run pr-loop against the pull request that card produced.\n\nIf pr-loop finishes successfully, the pull request is approved and then merged. The card moves to Done when the pull request is merged.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-16T11:33:04.986Z"
+          "updatedAt": "2026-09-16T11:40:30.479Z"
         }
       ]
-    },
-    {
-      "name": "Doing",
-      "cards": []
     },
     {
       "name": "Done",
