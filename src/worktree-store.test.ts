@@ -21,11 +21,26 @@ const entry: WorktreeEntry = {
   worktreePath: '/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves',
   pane: 2,
   startedAt: '2026-09-10T09:14:22.104Z',
+  reviewing: false,
 };
 
 describe('parseWorktrees', () => {
   it('keeps an entry as it was written', () => {
     expect(parseWorktrees({ entries: [entry] })).toEqual([entry]);
+  });
+
+  // The flag is on disk for one reason: to outlive a restart. Round-tripping a `false` proves nothing —
+  // every test here passes with the field read as `false` outright, and then a restart mid-review has
+  // the sweep take the reviewer's own worktree away and start a second review on the card.
+  it('keeps a record that was the review marked as one', () => {
+    expect(parseWorktrees({ entries: [{ ...entry, reviewing: true }] })[0].reviewing).toBe(true);
+  });
+
+  // Every worktrees file written before the field existed. None of them is a review.
+  it('reads a record with no reviewing field as not the review', () => {
+    const written: Record<string, unknown> = { ...entry };
+    delete written.reviewing;
+    expect(parseWorktrees({ entries: [written] })[0].reviewing).toBe(false);
   });
 
   it('reads nothing out of a file that is not a record of worktrees', () => {
@@ -149,6 +164,13 @@ describe('claimsPane', () => {
   });
 });
 
+describe('withoutPanes', () => {
+  // The shell that was reviewing is dead either way, so the flag describing it goes with the pane.
+  it('takes the review mark off a record that gives up its pane', () => {
+    expect(withoutPanes([{ ...entry, reviewing: true }])[0]).toMatchObject({ pane: null, reviewing: false });
+  });
+});
+
 describe('worktreesDiffer', () => {
   const entry: WorktreeEntry = {
     cardId: 'card-1',
@@ -158,6 +180,7 @@ describe('worktreesDiffer', () => {
     worktreePath: '/projects/web-ship-it',
     pane: 2,
     startedAt: '2026-09-14T00:00:00.000Z',
+    reviewing: false,
   };
 
   // Closing a project asks every record of that project to give its pane up. One that shipped nothing

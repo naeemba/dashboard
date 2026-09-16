@@ -64,6 +64,13 @@ export function worktreePathFor(projectPath: string, branch: string): string {
   return join(worktreesRoot(projectPath), branch);
 }
 
+// What the agent shipping a card is asked to do: the one command, and the card it is aimed at. A
+// function rather than the string spelled out at each call site, because a ship writes it twice — once
+// when it starts and once when it is finished after stopping part way — and two copies drift.
+export function workPrompt(cardId: string): string {
+  return `/work-card ${cardId}`;
+}
+
 // What a pane was asked to run and where. main holds one of these per pane; this is the shape of a row
 // in that map, here because what the shape means to a ship is decided here.
 export type PaneCommand = { args: string[] | 'editor'; directory: string };
@@ -110,6 +117,13 @@ export function blockingChanges(porcelain: string): string[] {
     // git quotes a path with a space or a non-ASCII character in it.
     .map((path) => path.replace(/^"|"$/g, ''))
     .filter((path) => path !== '' && !path.startsWith(`${BOARD_DIRECTORY}/`));
+}
+
+// How many of them there are, said the same way wherever it is said. Two refusals read this list —
+// the ship's, and the review's when it will not throw a worktree away — and the app saying "2 files
+// uncommitted" in one place and "2 uncommitted files" in the other is one condition wearing two faces.
+export function uncommittedCount(files: readonly string[]): string {
+  return `${files.length} uncommitted file${files.length === 1 ? '' : 's'}`;
 }
 
 // Runs what is handed to it one at a time per key, in the order the calls arrived.

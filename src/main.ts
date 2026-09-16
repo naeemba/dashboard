@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
-import { execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -16,9 +16,8 @@ import {
 import { baseName } from './base-name';
 import { git } from './git';
 import { isOpenableLink } from './links';
-import { tailLines } from './manager';
-import { agentArguments, editorArguments, pickShell, taskArguments } from './shell';
-import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
+import { agentArguments, editorArguments, pickShell } from './shell';
+import { taskRunner } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
@@ -28,6 +27,7 @@ import { readNotes, writeNotes } from './notes-store';
 import { isBoardChange, isBoardFile } from './board-watch';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
+import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
   blockingChanges,
@@ -35,6 +35,8 @@ import {
   freePane,
   oneAtATime,
   runsAnAgent,
+  uncommittedCount,
+  workPrompt,
   worktreePathFor,
   worktreesRoot,
   type PaneCommand,
@@ -50,6 +52,7 @@ import {
   readWorktrees,
   stillLiving,
   withEntry,
+  withoutPane,
   withoutPanes,
   withoutWorktree,
   worktreesDiffer,
@@ -57,8 +60,9 @@ import {
   type WorktreeEntry,
 } from './worktree-store';
 import type { Settings } from './settings';
-import { moveCardToColumn, selectionOf, shipColumnIndex, type Board } from './board';
-import type { ShipRequest, ShipResult, WorktreeList } from './bridge';
+import { moveCardById, shipColumnIndex, type Board } from './board';
+import { reviewSweep } from './review-flow';
+import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 
 if (started) app.quit();
 
@@ -168,6 +172,30 @@ function paneIsBusy(id: string): boolean {
   return typedPanes.has(id) || runsAnAgent(terminalCommands.get(id));
 }
 
+// Whether an agent is running in this card's pane. One spelling of it, because two things ask: the ship
+// refuses a card that is already being worked, and the review sweep will not take a worktree away from
+// a shell sitting in it. Two copies drift — widen the ship's half to count a pane you have typed into,
+// leave the sweep's alone, and five seconds later the sweep removes the folder out from under that
+// shell.
+function agentRunsIn(slot: number, pane: number | null): boolean {
+  return pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane)));
+}
+
+// What the renderer can see and main cannot: which panes still have an agent working in them. The
+// reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
+const agentsAtWork = workingPanes();
+ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
+
+// The question the review asks, which is the one above with "and has not finished" on the end. A ship
+// is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
+// looking at says why. The sweep runs on a five-second timer with nobody to tell, so an answer that
+// only goes false when you close the pane by hand would mean no review ever starts by itself — the
+// card sits in Ship reading `shipped · fix-login · terminal 3` all day with nothing on screen saying
+// the app is waiting on you.
+function agentWorksIn(slot: number, pane: number | null): boolean {
+  return pane !== null && agentRunsIn(slot, pane) && agentsAtWork.works(terminalId(slot, pane), Date.now());
+}
+
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
@@ -248,7 +276,10 @@ function dropDeadWorktrees(): void {
 //
 // A handful of existsSync every few seconds, and the sweep is silent unless something has actually
 // gone.
-setInterval(dropDeadWorktrees, 5000).unref();
+// The same tick asks every in-flight worktree whether its agent has finished. Not awaited and nothing
+// waits on it: one tick's review is still running when the next arrives — git takes seconds — and the
+// sweep guards against starting the same card twice.
+setInterval(() => { dropDeadWorktrees(); void reviews.run(); }, WORKING_REPORT_MS).unref();
 
 // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
 // decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
@@ -361,11 +392,18 @@ function spawnProject(project: Project, projectIndex: number): void {
 // 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
 // exists to say. The old shell is killed first: retargeting a pane that is still running one would
 // leave two processes writing to the same id.
-function startAgent(id: string, worktreePath: string, cardId: string): void {
+//
+// The prompt is the caller's, because there are two agents now: the one that works a card, and the one
+// that reviews the pull request the first one opened.
+function startAgent(id: string, worktreePath: string, prompt: string): void {
   terminalCommands.set(id, {
-    args: agentArguments(shellCommand, `/work-card ${cardId}`),
+    args: agentArguments(shellCommand, prompt),
     directory: worktreePath,
   });
+  // Working from this instant, rather than from the first report that catches its spinner. The reports
+  // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
+  // and the sweep in between would read the pane as quiet and take the folder away from the agent.
+  agentsAtWork.started(id, Date.now());
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -402,7 +440,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
     projectPath = filePaths[0];
   }
   const picked = projectFromPath(projectPath);
-  const matchIndex = projects.findIndex((project) => project?.path === picked.path);
+  const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
   if (replaced) {
@@ -587,14 +625,34 @@ ipcMain.handle('notes:write', (_event, projectPath: string, text: string) => {
   writeNotes(projectPath, text);
 });
 
+// Which page a project is open on, or -1. Two questions want it — opening a project that is already
+// open, and finding the panes a review can take — and two copies of the walk would answer differently
+// the day a slot means something other than an index into this array.
+function slotOfProject(projectPath: string): number {
+  return projects.findIndex((project) => project?.path === projectPath);
+}
+
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   setWorktrees(withEntry(worktrees, entry));
   return entry;
 }
 
+// The lowest-numbered pane of this project that nobody is using, or null. `freeing` is a pane that is
+// about to be handed back — the one a worktree on its way out is holding — counted as free.
+//
+// One function because the review asks a step earlier than the ship does: before it removes the card's
+// worktree, rather than after. Two spellings of "which panes are busy" would drift, and the drift costs
+// a worktree — the folder deleted, then no pane for the review, and a card saying so where the
+// checkout you were about to look at used to be.
+function freePaneIn(slot: number, freeing: number | null = null): number | null {
+  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
+    .filter((index) => index !== freeing && paneIsBusy(terminalId(slot, index)));
+  return freePane(busy, TERMINAL_COUNT);
+}
+
 // Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
 // ship of a card whose worktree exists but never got one.
-function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
+function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipResult {
   // The project can be closed while the git half of a ship is still running, and its slot is empty from
   // then on. Without this the agent would start in a pane of a page nobody has — running, unreadable
   // and unreachable until the app quits. The worktree is already made and recorded, so shipping the
@@ -605,9 +663,7 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
       message: `${baseName(entry.projectPath)} was closed mid-ship — the worktree is made, ship it again for a pane`,
     };
   }
-  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
-    .filter((index) => paneIsBusy(terminalId(slot, index)));
-  const pane = freePane(busy, TERMINAL_COUNT);
+  const pane = freePaneIn(slot);
   if (pane === null) {
     return {
       ok: false,
@@ -618,8 +674,8 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
   // worktree. Taking the pane is what ends that claim, so the old record gives it up here — one record
   // per pane in this project — claimsPane holds why the project half of that matters.
   const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
-  if (claimed) recordWorktree({ ...claimed, pane: null });
-  startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);
+  if (claimed) recordWorktree(withoutPane(claimed));
+  startAgent(terminalId(slot, pane), entry.worktreePath, prompt);
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
@@ -633,9 +689,9 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
 // covers the card never having been on the base branch's board at all.
 async function commitShipMove(entry: WorktreeEntry): Promise<void> {
   const board = readBoard(entry.worktreePath).board;
-  const from = selectionOf(board, entry.cardId);
-  if (!from) return;
-  writeBoard(entry.worktreePath, moveCardToColumn(board, from, shipColumnIndex(board)).board);
+  const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
+  if (!moved) return;
+  writeBoard(entry.worktreePath, moved);
   // Both halves name the board file. A resumed ship runs in a worktree that has been lived in, so
   // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
   // half-finished work under a board message.
@@ -646,8 +702,23 @@ async function commitShipMove(entry: WorktreeEntry): Promise<void> {
   }
 }
 
-// Ships in one project run one after another, never together; ship.ts says why.
+// Ships in one project run one after another, never together; ship.ts says why. A review of a card in
+// that project is queued behind them too: it runs `git worktree` twice in the same repository.
 const shipInProject = oneAtATime();
+
+// The other half of a ship, which runs on the tick above rather than on a keystroke. Every decision in
+// it is review-flow.ts's; what is handed over here is only what this file knows — the records, the
+// pages, the panes — and the two steps, which are the ones a ship already takes.
+const reviews = reviewSweep({
+  worktrees: () => worktrees,
+  slotOf: slotOfProject,
+  agentWorksIn,
+  freePaneIn,
+  removeWorktree,
+  addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
+  startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
+  queue: shipInProject,
+});
 
 // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
 // back as a message the board's status bar prints; everything before it is left as it was. Every git
@@ -656,8 +727,7 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
   const { projectPath, cardId, title, slot } = request;
   const dirty = blockingChanges(await git(['status', '--porcelain'], projectPath));
   if (dirty.length > 0) {
-    const count = `${dirty.length} file${dirty.length === 1 ? '' : 's'}`;
-    return { ok: false, message: `${count} uncommitted — commit or stash them first` };
+    return { ok: false, message: `${uncommittedCount(dirty)} — commit or stash them first` };
   }
 
   const base = await baseBranch(projectPath);
@@ -682,23 +752,27 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
   // nothing knows about is the thing that piles up unseen.
   const entry = recordWorktree({
     cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
+    reviewing: false,
   });
 
   await commitShipMove(entry);
-  return attachPane(entry, slot);
+  return attachPane(entry, slot, workPrompt(cardId));
 }
 
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
   const { projectPath, cardId, title, slot } = request;
   dropDeadWorktrees();
+  // A card being shipped is a card whose last review, if it had one, is over. Left marked, the pull
+  // request this ship goes on to open would never be reviewed for the rest of the run, with nothing
+  // saying why. This is half the mark; the other half is `reviewing` on the record, cleared below.
+  reviews.forget(cardId);
 
   // Already shipped, and still being worked on — a second worktree for the same card is the mistake
   // the record exists to catch. The pane on the record is not the question: a record keeps naming its
   // pane after the agent exits, so Enter on the worktree list still lands on the shell it left behind.
   // What refuses the ship is an agent actually running in there.
   const existing = entryForCard(worktrees, cardId);
-  if (existing && existing.pane !== null
-    && runsAnAgent(terminalCommands.get(terminalId(slot, existing.pane)))) {
+  if (existing && agentRunsIn(slot, existing.pane)) {
     return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
   }
 
@@ -716,7 +790,10 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
       // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
       // it runs git in the same repository.
       await commitShipMove(existing);
-      return attachPane(existing, slot);
+      // `reviewing: false` is the other half of the forget above. A record that was the review keeps
+      // the flag through this spread otherwise, and the sweep skips the card for good: the pull
+      // request this ship opens is never reviewed, with nothing on screen saying why.
+      return attachPane({ ...existing, reviewing: false }, slot, workPrompt(cardId));
     });
   } catch (error: unknown) {
     return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -759,7 +836,10 @@ ipcMain.handle('worktree:check', async () => {
 
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
 // question is worth asking, and refusing forever would mean the only way out is the command line.
-ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
+//
+// A function rather than only a handler, because the review takes the same step: a card whose agent
+// has finished has its worktree thrown away before a fresh one is made on the branch.
+async function removeWorktree(worktreePath: string, force: boolean): Promise<WorktreeRemoval> {
   const entry = entryForPath(worktrees, worktreePath);
   // A path with no record is the removal having already happened — the sweep dropped it while the
   // dialog's question was on screen, or a second `d` landed on a row that had gone. There is nothing to
@@ -798,104 +878,22 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
     // rest of the run.
     removingWorktrees.delete(worktreePath);
   }
+}
+
+ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean) => (
+  removeWorktree(worktreePath, force)
+));
+
+// The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
+// over here is only what this file knows — the way to the renderer, and the shell the settings screen
+// last picked.
+const tasks = taskRunner({
+  send: (result) => sendToRenderer('task:update', result),
+  shellCommand: () => shellCommand,
 });
 
-// Every process the current run started, each beside the project it is running in. The path is kept
-// here because cancelling has to name every project it stopped — a row told nothing sits on `running`
-// forever, and the process it was waiting for is already dead.
-let runningTasks: RunningTask<ReturnType<typeof spawn>>[] = [];
-// Which run a process belongs to. Without it, killing run 3 and starting run 4 in the same breath lets
-// run 3's dying processes report "cancelled" for projects run 4 has already marked "running" — the
-// row goes backwards in front of you and stays wrong until the next run.
-let currentRun = 0;
-
-function killTask(child: ReturnType<typeof spawn>): void {
-  try {
-    // The negative pid is the process group, which is what `detached` bought: `npm audit` spawns
-    // children, and killing only the shell leaves them running with nothing on screen naming them.
-    // Windows has no process groups to kill this way, so the child goes on its own there.
-    if (process.platform === 'win32' || child.pid === undefined) child.kill();
-    else process.kill(-child.pid, 'SIGTERM');
-  } catch {
-    // Already gone.
-  }
-}
-
-function stopTasks(): void {
-  for (const task of runningTasks) killTask(task.child);
-  runningTasks = [];
-}
-
-function sendTask(result: TaskResult): void {
-  sendToRenderer('task:update', result);
-}
-
-// Stop whatever is running and tell every project that it was stopped. Both the cancel key and a
-// fresh run come through here: a new run kills the previous one, and a project the new run does not
-// name would otherwise sit on `running` forever, waiting for a process that is already dead.
-//
-// The paths are read before the processes are killed, and the run number moves with them, so each
-// project is told exactly once — from here, rather than a second time as its own close event arrives.
-function stopAndTell(): void {
-  const paths = runningTasks.map((task) => task.projectPath);
-  stopTasks();
-  currentRun += 1;
-  for (const projectPath of paths) {
-    sendTask({ projectPath, state: 'cancelled', exitCode: null, lastLine: '', tail: [] });
-  }
-}
-
-// Shared by every way a process can end (failed to start, or exited), rather than repeated in each
-// listener. Both guards live in `finishedTasks` beside their test; this is the wiring that applies
-// what it answers.
-function finishTask(child: ReturnType<typeof spawn>, run: number, result: TaskResult): void {
-  const finished = finishedTasks(runningTasks, child, run, currentRun);
-  runningTasks = finished.tasks;
-  if (finished.send) sendTask(result);
-}
-
-ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => {
-  stopAndTell();
-  const run = currentRun;
-  for (const projectPath of projectPaths) {
-    sendTask({ projectPath, state: 'running', exitCode: null, lastLine: '', tail: [] });
-    // Not a pty and not one of the five panes: a command that borrows a shell throws away whatever was
-    // in it, which is the whole reason this screen exists rather than sending keystrokes to panes.
-    // stdin is closed rather than left as a pipe nobody ever writes to. A command that asks a question
-    // would block on an answer that cannot arrive, leaving the row on `running` with nothing on screen
-    // saying a question was asked; closed, the same command fails at once and the row shows what it said.
-    const child = spawn(shellCommand, taskArguments(shellCommand, command), {
-      cwd: projectPath, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    // Both streams into one buffer. A tool that reports on stderr — most of them, for a summary — would
-    // otherwise leave the row showing the last thing it happened to say on stdout.
-    let output = '';
-    child.stdout?.on('data', (chunk: Buffer) => { output += chunk.toString(); });
-    child.stderr?.on('data', (chunk: Buffer) => { output += chunk.toString(); });
-    // The shell itself could not be started. There is no exit code for that, so the row says the one
-    // a shell says for a command it cannot find, and the message is what the last line shows.
-    child.on('error', (error: Error) => {
-      finishTask(child, run, {
-        projectPath, state: 'done', exitCode: 127, lastLine: error.message, tail: [error.message],
-      });
-    });
-    child.on('close', (code: number | null, signal: string | null) => {
-      finishTask(child, run, {
-        projectPath,
-        // A signal rather than a code is this app killing it, which is the only thing that sends one
-        // here. A command that dies of its own signal is rare enough to read as cancelled.
-        state: signal === null ? 'done' : 'cancelled',
-        exitCode: code,
-        lastLine: lastPrintableLine(output),
-        // The same five lines, chosen by the same rule, as the manager's pane rows.
-        tail: tailLines(printableLines(output)),
-      });
-    });
-    runningTasks.push({ child, projectPath });
-  }
-});
-
-ipcMain.on('task:cancel', stopAndTell);
+ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => tasks.run(command, projectPaths));
+ipcMain.on('task:cancel', () => tasks.cancel());
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -917,6 +915,15 @@ function createWindow(): void {
     }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      // Chromium throttles a hidden page's timers, and after five minutes behind another window that
+      // is once a minute. Everything this app does on a beat is a renderer timer: the pane refresh, the
+      // bell, and the report saying which panes still have an agent working in them. Main's review
+      // sweep is a Node timer and keeps its five seconds, so with throttling on it reads a report a
+      // minute old, decides the agent has gone quiet and removes the worktree out from under a push
+      // that is still running. Minimise the window while a shipped card is being worked and the commit
+      // dies with the folder. A grid of terminals is not a page that should stop ticking when it is
+      // behind something.
+      backgroundThrottling: false,
     },
   });
   // Closing the window kills every shell on every page, and there is no getting a long-running task
@@ -959,6 +966,6 @@ app.on('will-quit', () => {
   dropScrollbackFiles();
   // A task child is spawned detached, in a process group of its own, so it outlives the app unless it
   // is killed here as well — five `npm test` runs still burning CPU with no window naming them.
-  stopTasks();
+  tasks.stop();
 });
 app.on('window-all-closed', () => app.quit());

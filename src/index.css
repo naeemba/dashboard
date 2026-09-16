@@ -34,7 +34,7 @@ body {
    xterm.js lays out a grid of cells and reorders nothing, nvim does not do it either, so Persian
    inside a pane reads back to front whatever this file says.
 
-   Order only: the alignment stays put, so four columns of cards still line up down their left edge.
+   Order only: the alignment stays put, so five columns of cards still line up down their left edge.
    The boxes you type into carry dir="auto" instead, which turns the box round as well, the way a text
    field does in any browser. */
 body *:not(.pane, .pane *) {
@@ -456,7 +456,7 @@ body *:not(.pane, .pane *) {
   margin-bottom: 4px;
   background: var(--black);
   overflow-wrap: anywhere;
-  /* The priority reads as a stripe down the edge, so it is legible at a glance across four columns
+  /* The priority reads as a stripe down the edge, so it is legible at a glance across five columns
      without spending a word of the card on it. The status bar names the one you are on. */
   border-left: 3px solid;
 }

@@ -79,7 +79,17 @@ export function selectionOf(board: Board, id: string): Selection | null {
 // moment somebody adds a column and the name is what board.json actually carries.
 export const SHIP_COLUMN = 'Ship';
 
-const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', 'Done'];
+// Where a card goes when the agent that was working it has opened a pull request and nothing has
+// checked it yet. The one column on this board the app moves a card into by itself: everywhere else
+// a column is somebody's decision, and here the decision was already made by the pull request
+// existing. Named rather than positioned, for the reason SHIP_COLUMN is.
+export const REVIEW_COLUMN = 'Review';
+
+// Named only because withReviewColumn puts Review in front of it. Nothing else in the app treats
+// Done as special: a board is whatever columns its file holds.
+const DONE_COLUMN = 'Done';
+
+const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -107,6 +117,10 @@ export function columnNamed(board: Board, name: string): number {
 
 export function shipColumnIndex(board: Board): number {
   return columnNamed(board, SHIP_COLUMN);
+}
+
+export function reviewColumnIndex(board: Board): number {
+  return columnNamed(board, REVIEW_COLUMN);
 }
 
 // What moved a card: one of the four arrow steps, or the pointer letting go of it. Named here, where
@@ -137,15 +151,32 @@ export function landsInShip(board: Board, from: number, moved: Selection, gestur
   return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
 }
 
+// One column the board is missing, put in at `at`. The same board back when it already has one, so
+// reading a board is not a change to it. Both repairs below go through here rather than each spelling
+// the guard and the splice out: they differ only in where the column belongs, and a rule written twice
+// is a rule that gets fixed once.
+function withColumn(board: Board, name: string, at: number): Board {
+  if (columnNamed(board, name) !== -1) return board;
+  const columns = [...board.columns];
+  columns.splice(at, 0, { name, cards: [] });
+  return withColumns(board, columns);
+}
+
 // Every board written before Ship existed has three columns, and getting the fourth should not mean
 // hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
-// card pays nothing for it. The same board back when it already has one, so reading a board is not a
-// change to it.
+// card pays nothing for it.
 export function withShipColumn(board: Board): Board {
-  if (shipColumnIndex(board) !== -1) return board;
-  const columns = [...board.columns];
-  columns.splice(1, 0, { name: SHIP_COLUMN, cards: [] });
-  return withColumns(board, columns);
+  return withColumn(board, SHIP_COLUMN, 1);
+}
+
+// The same repair for Review. Placed by the column it comes before rather than by a number, because
+// the number is different on every board: it is fourth on the shipped four, and second on a board
+// somebody wrote with two columns. Review is the last stop before a card is finished, so it goes just
+// left of Done — and on a board with no Done at all it goes on the end, which is the same sentence
+// about a board that never named one.
+export function withReviewColumn(board: Board): Board {
+  const done = columnNamed(board, DONE_COLUMN);
+  return withColumn(board, REVIEW_COLUMN, done === -1 ? board.columns.length : done);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {
@@ -440,6 +471,21 @@ export function moveCard(board: Board, selection: Selection, direction: Directio
   // card sent sideways stays roughly where your eye left it. dropCard is what clamps it, so the rule is
   // written once: teach the mouse a different landing and the key cannot keep the old one.
   return dropCard(board, selection, selection.column + (direction === 'right' ? 1 : -1), selection.card);
+}
+
+// The card named by its id, moved to a column — or null when there is nothing to do: no such card, no
+// such column, or the card is already there. Null rather than the board unchanged, because every
+// caller writes the answer to disk and an identical rewrite is a file whose mtime moved for nothing,
+// which is a board redrawn under somebody's cursor. The selection goes with it and is dropped here:
+// these are moves nobody is watching, made by the app rather than by a keystroke.
+export function moveCardById(board: Board, cardId: string, target: number): Board | null {
+  const at = selectionOf(board, cardId);
+  if (!at) return null;
+  // moveCardToColumn hands back the board it was given for every move that changes nothing — the card
+  // already in that column, a target that is not a column at all. Asking it rather than listing those
+  // cases again is what stops the two disagreeing about what "nothing to do" means.
+  const moved = moveCardToColumn(board, at, target).board;
+  return moved === board ? null : moved;
 }
 
 // Straight to a column, wherever the card is now. moveCard walks one column at a time, which is what

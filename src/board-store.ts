@@ -10,6 +10,7 @@ import {
   isPriority,
   isPullRequestNumber,
   isTitle,
+  withReviewColumn,
   withShipColumn,
   type Board,
   type Card,
@@ -72,9 +73,15 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   Dashboard app to make a git worktree for that card, check out a branch named
   after it, and start an agent in one of the project's panes. Put a card there
   only when you mean to start it.
-- A card's column on the \`main\` branch says what has been merged. While work
-  is in flight the card's column lives on that work's own branch, and arrives
-  here when the pull request does.
+- The \`Review\` column is the app's own. Once the agent working a card has put a
+  pull request number on it, the app moves the card there, throws that card's
+  worktree away and makes a fresh one on the pull request's branch with an agent
+  reviewing it. Nothing happens if you move a card there yourself: it is where
+  the app puts things, not a button.
+- A card's column on the \`main\` branch says what has been merged, and \`Review\`
+  is the one exception — a card there has a pull request open and nothing has
+  checked it. While work is in flight the card's column lives on that work's own
+  branch, and arrives here when the pull request does.
 - \`cards\` is ordered. The first card is at the top of its column.
 - \`id\` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
   written without one, or with an id another card already used, is given a fresh one the next time
@@ -278,7 +285,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return withShipColumn({ columns: repairCards(columns, makeId) });
+  return withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) }));
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but

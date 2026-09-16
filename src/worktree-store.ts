@@ -16,6 +16,11 @@ export type WorktreeEntry = {
   // use. Null is a real state, not a missing field.
   pane: number | null;
   startedAt: string;
+  // Whether this is the review worktree rather than the one the card was worked in. The two look the
+  // same on disk — same project, same card, same branch — and only this says which agent is in there,
+  // so without it the sweep that starts a review would find the review it just started and start
+  // another one, every five seconds, for as long as the app is open.
+  reviewing: boolean;
 };
 
 const TEXT_FIELDS = ['cardId', 'title', 'projectPath', 'branch', 'worktreePath', 'startedAt'] as const;
@@ -38,6 +43,9 @@ function toEntry(stored: unknown): WorktreeEntry | null {
     worktreePath: record.worktreePath as string,
     pane: isPane(record.pane) ? record.pane : null,
     startedAt: record.startedAt as string,
+    // Anything but true reads as false, so a file written before this field existed describes what it
+    // actually holds: worktrees a card was worked in, none of them a review.
+    reviewing: record.reviewing === true,
   };
 }
 
@@ -115,6 +123,20 @@ export function stillLiving(
   return (path) => removing.has(path) || exists(path);
 }
 
+// One record giving its pane up. `reviewing` goes with the pane, because it is a sentence about the
+// shell that has just died: it says the agent in this pane is reviewing rather than working. Left set
+// on a record with no pane, it is a review nothing is running — the badge reads reviewing forever, the
+// sweep skips the card, and shipping it again starts a work agent where a review belonged. Cleared,
+// the sweep finds the card on its next tick and reviews it again, which is what a review whose shell
+// died means.
+//
+// Its own function because three places hand a pane back — launch, a project closing, and a ship
+// taking the pane off another card's record — and a copy of this that forgot the flag would be that
+// bug again in the one place nobody looked.
+export function withoutPane(entry: WorktreeEntry): WorktreeEntry {
+  return { ...entry, pane: null, reviewing: false };
+}
+
 // Records giving their pane up, because the shell it named is not there any more: every record at
 // launch, since no shell outlives the app, and one project's records when that project is closed. Both
 // are the same sentence about the same fact, so both ask this rather than each rewriting it.
@@ -125,7 +147,7 @@ export function withoutPanes(
   projectPath?: string,
 ): WorktreeEntry[] {
   return entries.map((entry) => (
-    projectPath === undefined || entry.projectPath === projectPath ? { ...entry, pane: null } : entry
+    projectPath === undefined || entry.projectPath === projectPath ? withoutPane(entry) : entry
   ));
 }
 

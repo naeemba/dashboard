@@ -338,12 +338,16 @@ export function createBoardView(options: BoardOptions): BoardView {
     // What this card has in flight on this machine. Not on the board and not in git: the card's
     // column on main is about what has merged, so without this a card an agent is working on sits in
     // Todo looking untouched — and gets shipped a second time.
+    //
+    // A worktree that is reviewing says so. The card is in Review by then, which says the work is
+    // finished; what the badge adds is that a pane on this machine is the thing reviewing it, so the
+    // pull request is not sitting there waiting for you.
     const flying = inFlight.get(card.id);
     if (flying) {
       const badge = document.createElement('p');
       badge.className = 'board-shipped';
       const pane = flying.pane === null ? 'no pane' : paneLabel(flying.pane);
-      badge.textContent = `shipped · ${flying.branch} · ${pane}`;
+      badge.textContent = `${flying.reviewing ? 'reviewing' : 'shipped'} · ${flying.branch} · ${pane}`;
       item.append(badge);
     }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
