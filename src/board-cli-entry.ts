@@ -1,5 +1,5 @@
 import { openBoard, projectRoot, readBoard, writeBoard } from './board-store';
-import { runBoardCommandOnLatest } from './board-cli';
+import { failureLine, runBoardCommandOnLatest } from './board-cli';
 
 // The whole of the `board` program outside board-cli.ts: the current directory in, a file and a line
 // of output out. Every decision it could make is made there instead, where a test can reach it.
@@ -33,17 +33,11 @@ function run(): void {
 // One door out for every failure: a line on stderr and exit 1, the same shape a refused command
 // already uses. The reads and the write are the paths that throw — a board that cannot be read, a
 // board that cannot be replaced — and without this those two are the only ones that answer an agent
-// with a node stack trace instead of a sentence.
-//
-// The shape of the error picks which one you get. Every fs failure carries an errno `code`, and those
-// are the ones a sentence answers: nothing about `EACCES: permission denied, open '.dashboard/board.json'`
-// gets clearer with a stack. Anything without a code is a bug in here, and a bug printed as one
-// sentence leaves an agent `Cannot read properties of undefined (reading 'title')` and no file to open,
-// so those keep their stack.
+// with a node stack trace instead of a sentence. What the line says is failureLine's decision, in
+// board-cli.ts with the rest of them.
 try {
   run();
 } catch (error: unknown) {
-  const failure = error as NodeJS.ErrnoException | null;
-  process.stderr.write(`${(failure?.code ? failure.message : failure?.stack) ?? String(error)}\n`);
+  process.stderr.write(`${failureLine(error)}\n`);
   process.exit(1);
 }
