@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { MODE_KEYS, type Mode } from './modes';
+import { PROJECT_MODES, type Mode } from './modes';
 import { TERMINAL_COUNT } from './terminals';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
@@ -15,11 +15,11 @@ export type Session = { pages: SessionPage[]; activeIndex: number };
 
 const EMPTY: Session = { pages: [], activeIndex: 0 };
 
-// The modes a project can be left on are already spelled once, as what the three mode keys select.
-// Reading them back off that list is what keeps a new mode from being restorable everywhere except out
-// of this file, and what keeps the manager's mode — which no project can be on — out of a saved page.
+// The modes a project can be left on are already spelled once, in modes.ts. Reading them back off
+// that list is what keeps a new project view from being restorable everywhere except out of this
+// file, and what keeps the manager's modes — which no project can be on — out of a saved page.
 function isMode(value: unknown): value is Mode {
-  return Object.values(MODE_KEYS).some((mode) => mode === value);
+  return PROJECT_MODES.some((mode) => mode === value);
 }
 
 function isPaneIndex(value: unknown): value is number {

@@ -69,12 +69,47 @@
           "parent": null
         },
         {
-          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
-          "title": "A fourth mode: notes, one page of them per project",
-          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
+          "id": "7bd176c4-65d3-45b6-8237-58625797ea93",
+          "title": "A fifth column, Review: a finished card goes there and a pr-loop worktree carries its pull request to merged",
+          "notes": "A fifth column called Review, for work an agent has finished but nobody has checked.\n\nWhen Claude finishes a card, the card moves out of the in-progress column (Doing) into Review. The card's worktree is then closed and removed, and a new worktree is made in its place with a pane assigned to run pr-loop against the pull request that card produced.\n\nIf pr-loop finishes successfully, the pull request is approved and then merged. The card moves to Done when the pull request is merged.",
           "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-16T07:43:59.840Z"
+          "parent": null
+        },
+        {
+          "id": "76710e0f-2058-4cb9-a9c5-3cdfbcede709",
+          "title": "readBoard treats any failed read as an empty board, and the next card overwrites the file",
+          "notes": "src/board-store.ts:293 catches every read failure and answers with an empty board. EMFILE with five ptys and an editor per project, an EIO off a network folder, a permission that changed under you — all of them draw a board with empty columns and nothing saying why (brokenFile is null, so not even the salvage message appears). Press n, type a card, and save() replaces board.json with a board holding one card. Todo, Doing and Done are gone, and the old bytes were never moved aside because they never parsed badly.\n\nThe fix is the line PR #43 wrote one file over in readNotes: if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; — plus the board view doing what the notes view now does with a failed read, which is say so and refuse to write the screen back over the file. Rethrowing changes a contract the startup path and board-cli.ts both rely on, which is why it was out of scope for #43.\n\nIssue: https://github.com/naeemba/dashboard/issues/44\nReview: https://github.com/naeemba/dashboard/pull/43",
+          "priority": "medium"
+        },
+        {
+          "id": "970c2598-be07-4322-9c8d-fee81c95764b",
+          "title": "readBoard turns a failed read into an empty board",
+          "notes": "src/board-store.ts line 293 catches every reason readFileSync can throw and returns an empty board. A missing file is 'no board yet' and that is right; EMFILE with five ptys and an editor open per project, an EIO off a network folder, or a permission that changed under you are not, and they come back the same way with brokenFile null, so nothing reaches the status bar.\n\nThe cost: you open a project whose board holds forty cards, the read fails, the board draws empty with no message. You assume you are on the wrong project, press n and type a card title. apply sees the board move, save() runs, writeBoard replaces board.json with one card, and the forty are gone.\n\nPR #43 fixed exactly this in readNotes (e734d56): rethrow anything that is not ENOENT. readAgain already has the catch that reports it (Board not opened: ...) with render() still running on the board in memory, so a failed read leaves the cards on screen. Its own piece of work because throwing changes a contract every caller on the startup path relies on — renderer.ts and session.ts have to be read with it.\n\nIssue: https://github.com/naeemba/dashboard/issues/45\nReview comment: https://github.com/naeemba/dashboard/pull/43#discussion_r4024308832",
+          "priority": "medium"
+        },
+        {
+          "id": "461ac540-d2e9-457f-9465-85200a00ccd6",
+          "title": "readBoard swallows every read failure into an empty board",
+          "notes": "readNotes now rethrows anything that is not ENOENT, and readBoard one file over still does not: every failure comes back as { board: emptyBoard(), brokenFile: null }. A missing file is \"no board yet\" and that is right; EMFILE with five ptys and an editor open per project, an EIO off a network folder, or a permission that changed underneath is not.\n\nWhat it looks like: you open a project whose board holds forty cards. The read fails. The board draws empty with no message, because brokenFile is null and readAgain cannot tell that from a project nobody has made a card in. You assume you are on the wrong project, press n, and type a card title. apply sees the board move and calls save(), and writeBoard replaces board.json with one card. The forty are gone and nothing on screen said a word.\n\nThe shape is readNotes's — if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; — and readAgain already has the catch that reports it, with render() still running on the board in memory, so a failed read leaves the cards you had on screen rather than an empty column.\n\nIts own card rather than part of the notes pull request because the fix changes a contract every caller on the startup path relies on: renderer.ts and session.ts have to be read along with it. Raised on https://github.com/naeemba/dashboard/pull/43#discussion_r4024308832.",
+          "priority": "high"
+        },
+        {
+          "id": "02b53b13-3974-4669-bab2-9b414848b6b1",
+          "title": "A failed readWorktrees truncates worktrees.json on launch",
+          "notes": "readWorktrees in src/worktree-store.ts catches every reason the read can fail into [], and main.ts:88-89 reads it and writes the result straight back at launch:\n\n  let worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));\n  writeWorktrees(worktreesFile, worktrees);\n\nSo one EMFILE or EIO at launch empties the file, unconditionally, with nobody pressing a key. Three worktrees in flight disappear from the worktree list, and shipping one of those cards again makes a second branch and a second folder -- the orphan the record exists to prevent.\n\nThe same shape PR #46 gave readBoard fixes it: only ENOENT is \"nothing recorded yet\", everything else throws.\n\nreadSession and readSettings should stay swallowing: both fall back to a default that is genuinely right when the file cannot be read, and neither writes that fallback back over the file. readWorktrees is the one that does.\n\nIssue: https://github.com/naeemba/dashboard/issues/47\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024618634",
+          "priority": "medium"
+        },
+        {
+          "id": "5ca663da-52f2-4aea-adad-bb6ef9508682",
+          "title": "A board whose first read fails is written over by the next keystroke",
+          "notes": "PR #46 stops readBoard answering an EMFILE with an empty board, but the renderer starts on one and keeps it when the read throws.\n\nboard-view.ts:120 is 'let state: BoardState = initialBoardState()', which is emptyBoard(). readAgain's catch keeps 'next = state' -- right once a board has been read, wrong on the first read of the session -- and then sets 'landedRead = token' at line 181 whether or not the read threw, so busy() at line 248 is false and every key is live over a board nobody ever read.\n\nPress Ctrl+B on a project for the first time this session, the read hits EMFILE with five ptys and an editor per project, the status bar says 'Board not opened: ...' and the board draws empty. Press n: board-add runs apply(addBlankCard(...)), apply calls save() before a character is typed, and writeBoard puts a one-card board over the forty still on disk. Same loss PR #46 set out to stop; only the status bar line is new.\n\nEvery entry after the first is fine -- the cards are in memory and 'next = state' keeps them on screen.\n\nSmallest shape that closes it: a board that has never read successfully refuses the keys the way busy() already refuses them, so n bounces and the message stays on screen instead of the file being replaced.\n\nIssue: https://github.com/naeemba/dashboard/issues/47#issuecomment-5695611939\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024738125",
+          "priority": "medium"
+        },
+        {
+          "id": "20dca045-6a45-43eb-998b-0bf43d783ef5",
+          "title": "A which-key overlay: press a key and see what it starts",
+          "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.",
+          "priority": "medium"
         }
       ]
     },
@@ -452,6 +487,22 @@
             {
               "at": "2026-09-15T14:48:15.776Z",
               "body": "Shipped in PR #41. Native HTML5 drag and drop: a card is draggable, a column takes the drop, and dropCard in board.ts lands it on a column and a row. The row rule lives in board-drag.ts with its test — a card is claimed from its middle down, so the bottom half of the last card means the end of the column. A drop into Ship ships, so landsInShip now takes 'drop' beside the four directions. A click moves the selection onto a card and opens its title. Cost: text inside a card can no longer be selected with the mouse, because the card is draggable."
+            }
+          ]
+        },
+        {
+          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
+          "title": "A fourth mode: notes, one page of them per project",
+          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-16T08:00:32.203Z",
+          "branch": "a-fourth-mode-notes-one-page-of-them-per-pr",
+          "pullRequest": 43,
+          "comments": [
+            {
+              "at": "2026-09-16T08:00:32.203Z",
+              "body": "Shipped in PR #43. A fourth project view: one textarea filling the page, kept in .dashboard/notes.md beside the board. Ctrl+Shift+N — N names the mode, Ctrl+N is nvim's, and xterm sends no bytes for Ctrl+Shift with a letter so the panes lose nothing. No save key: written 400ms after you stop typing and again when you leave, read back on every arrival so an edit made in a pane shows up. The isModified guard the card asked for is not there because there is no handler to guard — the screen has no key of its own, so nothing reads event.key. MODE_KEYS became PROJECT_MODES, which is what session.ts was really asking it, and writeBoard's temp-then-rename came out as replaceFile so notes.md is replaced whole or not at all. Help, README and CLAUDE.md's two hand-kept lists moved with it."
             }
           ]
         }

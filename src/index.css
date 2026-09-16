@@ -172,6 +172,31 @@ body *:not(.pane, .pane *) {
   display: grid;
 }
 
+/* One box, the whole page. It is the only view with nothing around it — no heading, no rows, no keys
+   of its own — because a page of notes is the text and nothing else. */
+.view-notes {
+  display: grid;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--background);
+}
+
+.notes-text {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  /* The grab handle a textarea comes with is a control the keyboard cannot reach, and there is
+     nothing to resize against: the box is the page. */
+  resize: none;
+}
+
+.notes-text::placeholder {
+  color: var(--brightBlack);
+}
+
 /* The manager: prose and lists, no panes. It takes the keyboard when you arrive, and a focus ring
    around the whole page says nothing useful, so the tab strip is what marks it instead. */
 .view-manager,

@@ -62,6 +62,13 @@ describe('mapShortcut', () => {
     expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), mac, 'nvim')).toBeNull();
     expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), mac, 'board'))
       .toEqual({ kind: 'mode-set', mode: 'nvim' });
+    // Shift is what keeps Ctrl+Shift+N off nvim's autocomplete, so it is a different binding from the
+    // one above and passes through on its own screen rather than on nvim's.
+    expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true, shiftKey: true }), mac, 'board'))
+      .toEqual({ kind: 'mode-set', mode: 'notes' });
+    expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true, shiftKey: true }), mac, 'notes')).toBeNull();
+    expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), mac, 'notes'))
+      .toEqual({ kind: 'mode-set', mode: 'nvim' });
   });
 
   it('keeps the board keys on the board, so a bare D never reaches a shell', () => {

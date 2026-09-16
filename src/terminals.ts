@@ -100,6 +100,29 @@ export function paneFromId(id: string): { slot: number; index: number } {
   return { slot, index };
 }
 
+// The size a pty is born at. Main spawns every pty and cannot see the window, so the only size it has
+// is the last one the pane's terminal reported — a pane is measured in the renderer and says so on
+// `pty:resize`, and that is the same message that resizes the live pty, so the record and the pty can
+// never be two different numbers.
+//
+// The fallback is xterm's own starting size, not a guess: a pane that has never reported is a terminal
+// nobody has measured yet, and its renderer half is 80x24 too until the first fit. Get this wrong and
+// the two disagree from the first byte.
+//
+// What it costs to skip the record and spawn at the fallback anyway: ship a card into a pane that is
+// already on screen at 160 columns, and the agent draws its prompt box half the width of the pane and
+// stays there — nothing has changed on the renderer's side, so no resize is ever sent to correct it.
+export type PaneSize = {
+  cols: number;
+  rows: number;
+};
+
+export const DEFAULT_PANE_SIZE: PaneSize = { cols: 80, rows: 24 };
+
+export function sizeOfPane(sizes: ReadonlyMap<string, PaneSize>, id: string): PaneSize {
+  return sizes.get(id) ?? DEFAULT_PANE_SIZE;
+}
+
 // Which view a pane is on. The editor is the only pane not in the grid, so landing on it means
 // switching the page to nvim first — otherwise you arrive at a project showing five shells with the
 // pane you were sent to nowhere on screen.
