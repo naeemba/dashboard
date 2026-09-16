@@ -171,6 +171,17 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // every card is back, and a sweep that marked them all in between would start no review again until
     // you restarted, with nothing on screen saying why. An empty board is that case, so a board with
     // cards on it that does not have this one is the deletion, and only that one is marked.
+    //
+    // What that costs, and it is a real card: the same id can come back. `d` deletes and `u` puts the
+    // board back with the card exactly as it was, and `git checkout .dashboard/board.json` undoes a
+    // `board` command that dropped one card off a board that still has others. Either is the deletion
+    // as far as this line is concerned, and one tick — five seconds — is all it takes to land in
+    // between. The card is then back in Ship reading `shipped · fix-login · terminal 3`, with its
+    // worktree still on disk and its pull request number still on the branch's board, and no review
+    // ever starts for it again until you restart the app or ship the card again. The mark stays anyway:
+    // asking the board whether the card has come back is the read the mark exists to avoid, so there is
+    // no cheap version of this that covers it. If it becomes worth more than this paragraph, `forget`
+    // is already exported and `board:change` already fires in main for every open project's folder.
     if (awaits === null) {
       if (board !== null && allCards(board).length > 0) reviewed.add(entry.cardId);
       return;

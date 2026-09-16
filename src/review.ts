@@ -6,9 +6,14 @@ import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type 
 // are a second half of.
 
 // The project's board with the card in Review, or null when there is nothing to move: a card already
-// in Review or past it, or a board somebody has taken the Review column out of.
+// in Review, or a board somebody has taken the Review column out of.
 //
-// A card the board does not mention answers null too, but the sweep cannot reach here with one:
+// A card *past* Review is not one of those. This moves to a column by number, so a card sitting in Done
+// is dragged back into Review with a pull request that merged last week. Nothing does that today only
+// because reviewOne asks awaitsReview first and returns on false — the refusal is one line up the call,
+// not here, and a second caller has to ask too.
+//
+// A card the board does not mention answers null, but the sweep cannot reach here with one:
 // awaitsReview says null for it and reviewOne returns on that before the move is asked for. The only
 // way this sees a missing card is the board changing between those two reads in the same tick.
 export function intoReview(board: Board, cardId: string): Board | null {
