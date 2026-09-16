@@ -104,6 +104,12 @@
           "title": "A board whose first read fails is written over by the next keystroke",
           "notes": "PR #46 stops readBoard answering an EMFILE with an empty board, but the renderer starts on one and keeps it when the read throws.\n\nboard-view.ts:120 is 'let state: BoardState = initialBoardState()', which is emptyBoard(). readAgain's catch keeps 'next = state' -- right once a board has been read, wrong on the first read of the session -- and then sets 'landedRead = token' at line 181 whether or not the read threw, so busy() at line 248 is false and every key is live over a board nobody ever read.\n\nPress Ctrl+B on a project for the first time this session, the read hits EMFILE with five ptys and an editor per project, the status bar says 'Board not opened: ...' and the board draws empty. Press n: board-add runs apply(addBlankCard(...)), apply calls save() before a character is typed, and writeBoard puts a one-card board over the forty still on disk. Same loss PR #46 set out to stop; only the status bar line is new.\n\nEvery entry after the first is fine -- the cards are in memory and 'next = state' keeps them on screen.\n\nSmallest shape that closes it: a board that has never read successfully refuses the keys the way busy() already refuses them, so n bounces and the message stays on screen instead of the file being replaced.\n\nIssue: https://github.com/naeemba/dashboard/issues/47#issuecomment-5695611939\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024738125",
           "priority": "medium"
+        },
+        {
+          "id": "20dca045-6a45-43eb-998b-0bf43d783ef5",
+          "title": "A which-key overlay: press a key and see what it starts",
+          "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.",
+          "priority": "medium"
         }
       ]
     },
