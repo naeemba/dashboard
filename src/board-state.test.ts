@@ -4,12 +4,14 @@ import {
   addBlankCard,
   applyAutomaticChange,
   applyChange,
+  boardIsBusy,
   commitBranch,
   commitComment,
   commitNotes,
   commitPullRequest,
   commitTitle,
   initialBoardState,
+  isUnreadForGood,
   loadBoard,
   reloadBoard,
   undoChange,
@@ -208,6 +210,73 @@ describe('loadBoard', () => {
   it('pulls the selection back onto a board with fewer columns', () => {
     const start = state(board(['a'], ['b'], ['c']), { column: 2, card: 4 });
     expect(loadBoard(start, board(['x'])).selection).toEqual({ column: 0, card: 0 });
+  });
+});
+
+// The rule the board's keys hang off: a board nobody read is not this project's, so nothing may be
+// saved over it. The two states are indistinguishable by their cards — both are empty — so this is
+// the only thing that tells them apart.
+describe('showsTheFile', () => {
+  it('is false on the board the screen starts on, which no read has filled', () => {
+    expect(initialBoardState().showsTheFile).toBe(false);
+  });
+
+  it('is true once a read has landed', () => {
+    expect(loadBoard(initialBoardState(), board(['a'])).showsTheFile).toBe(true);
+    expect(reloadBoard(initialBoardState(), board(['a'])).showsTheFile).toBe(true);
+  });
+
+  // A read that works on an empty project still makes the board the project's own, or the keys would
+  // stay dead on every project nobody has made a card in yet.
+  it('is true after a read of a project with no cards', () => {
+    expect(loadBoard(initialBoardState(), board([])).showsTheFile).toBe(true);
+  });
+
+  // Every other way a state is built carries it, so an edit or an undo cannot quietly hand the keys
+  // back to a board nobody read — nor take them away from one that was.
+  it('survives a change and an undo', () => {
+    const read = loadBoard(initialBoardState(), board(['a'], []));
+    const moved = applyChange(read, moveCard(read.board, read.selection, 'right'));
+    expect(moved.showsTheFile).toBe(true);
+    expect(undoChange(moved).showsTheFile).toBe(true);
+    expect(addBlankCard(read, 'new').showsTheFile).toBe(true);
+  });
+});
+
+// What the flag is for. Without this, dropping the middle term of boardIsBusy is a tidy that passes
+// every test above and hands the keys back to a board nobody read.
+describe('boardIsBusy', () => {
+  const read = loadBoard(initialBoardState(), board(['a']));
+
+  it('is busy on a board no read has filled, with nothing else going on', () => {
+    expect(boardIsBusy(initialBoardState(), false, false)).toBe(true);
+  });
+
+  // A read that threw is not in flight — it finished — so the read flag alone cannot stand in for it.
+  it('is not busy on a board a read filled, with nothing else going on', () => {
+    expect(boardIsBusy(read, false, false)).toBe(false);
+  });
+
+  it('is busy while a box is open or a read is in flight', () => {
+    expect(boardIsBusy(read, true, false)).toBe(true);
+    expect(boardIsBusy(read, false, true)).toBe(true);
+  });
+});
+
+// The sentence the status bar says, which is narrower than the bounce: the first read makes both of
+// boardIsBusy's last two terms true at once, and saying the board was never read while the read that
+// fills it is still out sends you off a screen that was about to work.
+describe('isUnreadForGood', () => {
+  it('says nothing while the first read is still out', () => {
+    expect(isUnreadForGood(initialBoardState(), true)).toBe(false);
+  });
+
+  it('speaks up once that read has come back empty-handed', () => {
+    expect(isUnreadForGood(initialBoardState(), false)).toBe(true);
+  });
+
+  it('says nothing about a board a read filled', () => {
+    expect(isUnreadForGood(loadBoard(initialBoardState(), board(['a'])), false)).toBe(false);
   });
 });
 
