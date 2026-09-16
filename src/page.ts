@@ -7,6 +7,7 @@ import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
 import type { ManagerView } from './manager-view';
 import type { Mode } from './modes';
+import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
 import type { Project } from './projects';
@@ -84,6 +85,9 @@ export type Page = {
   editor: Pane | null;
   editorStarted: boolean;
   board: BoardView | null;
+  // A project's page of notes. Null on the manager page and on a dead project, for the same reason
+  // their boards are: there is no folder to keep a notes.md in.
+  notes: NotesView | null;
   // Only the manager page has one, the way only a project page has a board.
   manager: ManagerView | null;
   // Only the manager page has these two either — the strip above the sections and the screen one of
@@ -116,7 +120,7 @@ export function fitPanes(page: Page): void {
   for (const pane of page.panes) pane.fit.fit();
 }
 
-// Builds the page for one project: its three views, its five shells and its editor — or, for a project
+// Builds the page for one project: its four views, its five shells and its editor — or, for a project
 // whose folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane
 // needs from the renderer are handed over once rather than on every call.
 export function createPageBuilder(options: PageOptions): (project: Project, slot: number) => Page {
@@ -243,10 +247,11 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
   function buildPage(project: Project, slot: number): Page {
     const element = document.createElement('section');
     element.className = 'page';
-    const views: Record<'terminals' | 'nvim' | 'board', HTMLElement> = {
+    const views: Record<'terminals' | 'nvim' | 'board' | 'notes', HTMLElement> = {
       terminals: document.createElement('div'),
       nvim: document.createElement('div'),
       board: document.createElement('div'),
+      notes: document.createElement('div'),
     };
     for (const [mode, view] of Object.entries(views)) {
       view.className = `view view-${mode}`;
@@ -254,7 +259,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     }
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-      editorStarted: false, board: null, manager: null, command: null, strip: null,
+      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -262,7 +267,8 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     if (project.missing) {
       element.classList.add('missing');
       element.textContent = `Directory not found: ${project.path}`;
-      // A dead project has no views: there is nothing to run nvim in and nowhere to keep a board.
+      // A dead project has no views: there is nothing to run nvim in and nowhere to keep a board or
+      // a page of notes.
       page.views = {};
       return page;
     }
@@ -290,6 +296,14 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       worktrees: options.worktrees,
     });
     views.board.append(page.board.element);
+    page.notes = createNotesView({
+      projectPath: project.path,
+      read: (projectPath) => options.bridge.readNotes(projectPath),
+      write: (projectPath, text) => options.bridge.writeNotes(projectPath, text),
+      // A slot each, like the board's, so one project's notes never clear another one's failure.
+      onError: (message) => options.onError(`notes:${slot}`, message),
+    });
+    views.notes.append(page.notes.element);
     return page;
   }
 

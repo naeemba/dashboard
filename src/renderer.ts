@@ -347,6 +347,12 @@ function focusMode(page: Page, entering: boolean): void {
     if (entering) startEditor(page);
     page.editor.terminal.focus();
   }
+  if (page.mode === 'notes' && page.notes) {
+    // Re-read on arrival, like the board: the file may have been edited in a pane, or by the agent
+    // working in this project's worktree, since you were last here. open() takes the keyboard itself.
+    if (entering) void page.notes.open();
+    else page.notes.focus();
+  }
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
     // report() wrapper is needed here.
@@ -394,9 +400,9 @@ function landOn(index: number): void {
   focusMode(pages[activeIndex], true);
 }
 
-// The one page with no folder behind it, so none of what buildPage makes: no shells and no editor. It
-// has two views — the list of what every project's panes want, and every project's board — and the
-// mode keys for the two it does not have do nothing here.
+// The one page with no folder behind it, so none of what buildPage makes: no shells, no editor and no
+// page of notes. It has two views — the list of what every project's panes want, and every project's
+// board — and the mode keys for the two it does not have do nothing here.
 // Its board is a board like any other as far as this file is concerned: same field, same mode, same
 // four functions. What is behind it is one real board per open project rather than one for a folder.
 function buildManagerPage(): Page {
@@ -435,7 +441,7 @@ function buildManagerPage(): Page {
     project: MANAGER_PROJECT, element,
     views: { manager: manager.element, board: cards.element, command: command.element },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, manager, command, strip,
+    board: cards, notes: null, manager, command, strip,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.
