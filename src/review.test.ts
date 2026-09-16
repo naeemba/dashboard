@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { emptyBoard, type Board } from './board';
-import { intoReview, reviewPrompt, reviewRefused } from './review';
+import { emptyBoard, moveCardById, type Board } from './board';
+import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
 
@@ -12,6 +12,34 @@ function boardWithCard(): Board {
       : column)),
   };
 }
+
+describe('awaitsReview', () => {
+  it('is true for a card still waiting to be worked', () => {
+    expect(awaitsReview(boardWithCard(), CARD)).toBe(true);
+  });
+
+  // A review that died with the app leaves the card here. There is nothing else to go on, so it is
+  // reviewed again.
+  it('is true for a card sitting in Review', () => {
+    expect(awaitsReview(moveCardById(boardWithCard(), CARD, 3) as Board, CARD)).toBe(true);
+  });
+
+  // The review's whole job is this move, so a card past Review has had one — and only this says so
+  // once the restart has taken the mark off the record.
+  it('is false for a card the review already moved to Done', () => {
+    expect(awaitsReview(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBe(false);
+  });
+
+  it('is true for a card made on the branch that the project has never seen', () => {
+    expect(awaitsReview(boardWithCard(), 'made-on-the-branch')).toBe(true);
+  });
+
+  // No Review column is no column to be past.
+  it('is true on a board with no Review column', () => {
+    const board = { columns: [{ name: 'Done', cards: [{ id: CARD, title: 'a', notes: '', priority: 'medium' as const, parent: null }] }] };
+    expect(awaitsReview(board, CARD)).toBe(true);
+  });
+});
 
 describe('intoReview', () => {
   it('moves the card into Review', () => {

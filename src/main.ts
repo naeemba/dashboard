@@ -172,6 +172,36 @@ function paneIsBusy(id: string): boolean {
   return typedPanes.has(id) || runsAnAgent(terminalCommands.get(id));
 }
 
+// Whether an agent is running in this card's pane. One spelling of it, because two things ask: the ship
+// refuses a card that is already being worked, and the review sweep will not take a worktree away from
+// a shell sitting in it. Two copies drift — widen the ship's half to count a pane you have typed into,
+// leave the sweep's alone, and five seconds later the sweep removes the folder out from under that
+// shell.
+function agentRunsIn(slot: number, pane: number | null): boolean {
+  return pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane)));
+}
+
+// Every pane the renderer can see an agent still working in, replaced whole on each report. Main owns
+// the ptys, so it knows a process is there, which is a different question: the pane runs `exec claude`
+// and Claude Code sits at its prompt when it has finished rather than exiting. Only the screen tells
+// the two apart — the spinner and the interrupt key — and only the renderer has the screen.
+//
+// Empty until the first report arrives, a few seconds after launch, and that is the safe way round:
+// no record has a pane at launch, since withoutPanes takes them all off, so the one reader below has
+// nothing to ask about yet.
+let workingPanes = new Set<string>();
+ipcMain.on('pty:working', (_event, ids: string[]) => { workingPanes = new Set(ids); });
+
+// The question the review asks, which is the one above with "and has not finished" on the end. A ship
+// is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
+// looking at says why. The sweep runs on a five-second timer with nobody to tell, so an answer that
+// only goes false when you close the pane by hand would mean no review ever starts by itself — the
+// card sits in Ship reading `shipped · fix-login · terminal 3` all day with nothing on screen saying
+// the app is waiting on you.
+function agentWorksIn(slot: number, pane: number | null): boolean {
+  return pane !== null && agentRunsIn(slot, pane) && workingPanes.has(terminalId(slot, pane));
+}
+
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
@@ -684,7 +714,7 @@ const shipInProject = oneAtATime();
 const reviews = reviewSweep({
   worktrees: () => worktrees,
   slotOf: slotOfProject,
-  runsAgentIn: (slot, pane) => pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane))),
+  agentWorksIn,
   freePaneIn,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
@@ -744,8 +774,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
   // pane after the agent exits, so Enter on the worktree list still lands on the shell it left behind.
   // What refuses the ship is an agent actually running in there.
   const existing = entryForCard(worktrees, cardId);
-  if (existing && existing.pane !== null
-    && runsAnAgent(terminalCommands.get(terminalId(slot, existing.pane)))) {
+  if (existing && agentRunsIn(slot, existing.pane)) {
     return { ok: false, message: `"${title}" is already shipped on ${existing.branch}` };
   }
 

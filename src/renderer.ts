@@ -839,6 +839,26 @@ bridge.onData((id, data) => {
 // rows are all it has to change, so the list is not rebuilt under someone who is reading it.
 const PANE_REFRESH_MS = 30_000;
 window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
+
+// Telling main which panes have an agent still working in them. It cannot see this for itself: it holds
+// the pty and so knows a process is there, and the pane runs `exec claude`, which sits at its prompt
+// when the card is done rather than exiting. The review sweep is what needs the answer — it takes a
+// card's worktree away, and `git worktree remove` kills every shell in that folder — and without this
+// it waits on an exit that only arrives when you close the pane by hand, so no review ever starts.
+//
+// paneUse is the reading, the same one the command screen picks a free pane with, so "still working"
+// has one spelling. On the sweep's own interval: a report the sweep never reads is one nobody wanted.
+//
+// Every pane, including the ones no card was ever shipped into, because working out which pane a
+// worktree record names means pairing its project with a slot and that pairing is main's. The cost is
+// one screen laid out per pane per five seconds; if it ever shows, the narrowing is to report only the
+// panes the records name.
+const WORKING_REPORT_MS = 5_000;
+window.setInterval(() => {
+  const working: string[] = [];
+  for (const [id, pane] of panesById) if (paneUse(pane).busy) working.push(id);
+  bridge.reportWorkingPanes(working);
+}, WORKING_REPORT_MS);
 bridge.onExit((id, exitCode) => {
   const pane = panesById.get(id);
   if (!pane) return;

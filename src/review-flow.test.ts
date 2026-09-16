@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, readBoard, writeBoard } from './board-store';
-import { emptyBoard, setPullRequest, type Board } from './board';
+import { emptyBoard, moveCardById, setPullRequest, type Board } from './board';
 import { reviewSweep, type ReviewPorts } from './review-flow';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -55,7 +55,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
     ports: {
       worktrees: () => [entry],
       slotOf: () => 0,
-      runsAgentIn: () => false,
+      agentWorksIn: () => false,
       freePaneIn: () => 0,
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
@@ -114,18 +114,43 @@ describe('reviewSweep', () => {
   // The number lands on the card mid-run: /work-card pushes that commit and keeps going. Take the
   // folder then and `git worktree remove` kills the shell before the next push, so a commit that is on
   // the branch never reaches the pull request the review is about to approve.
-  it('waits for the agent that opened the pull request to exit', async () => {
+  it('waits for the agent that opened the pull request to stop working', async () => {
     const { entry, projectPath } = flight(12);
-    let running = true;
-    const { ports: made, log } = ports(entry, { runsAgentIn: () => running });
+    let working = true;
+    const { ports: made, log } = ports(entry, { agentWorksIn: () => working });
     const sweep = reviewSweep(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Todo');
-    // Nothing was marked, so the tick after it exits picks the card up.
-    running = false;
+    // Nothing was marked, so the tick after it goes quiet picks the card up.
+    working = false;
     await sweep.run();
     expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
+  // A review that ended the way it was meant to leaves its worktree on disk — the prompt says not to
+  // remove it — and the pull request number stays written on the branch's board. Restart the app and
+  // the mark on the record is gone with the pane, so the card's own column is the only thing left
+  // saying the review already happened.
+  it('leaves a card the review already moved past Review alone', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    const { ports: made, log } = ports(entry);
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    expect(log.removed).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
+  // The card is still in Review, so nothing reviewed it to the end: the shell died with the app. That
+  // one is reviewed again, which is what losing a review means.
+  it('reviews a card again when the last review died in Review', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 3) ?? boardWithCard(null));
+    const { ports: made, log } = ports(entry);
+    await reviewSweep(made).run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+    expect(columnOfCard(projectPath)).toBe('Review');
   });
 
   // Panes belong to an open project. Nothing is marked, so opening the project starts the review.

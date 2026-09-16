@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
-import { intoReview, reviewPrompt, reviewRefused } from './review';
+import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
 import { uncommittedCount } from './ship';
 import { cardById, type Board } from './board';
 import type { ShipResult, WorktreeRemoval } from './bridge';
@@ -23,10 +23,12 @@ export type ReviewPorts = {
   worktrees: () => readonly WorktreeEntry[];
   // The page a project is open on, or -1 when it is not open at all.
   slotOf: (projectPath: string) => number;
-  // Whether an agent is still running in this pane. The same question `worktree:create` asks before it
-  // will touch a card's existing worktree, for the same reason: the folder is about to be removed, and
-  // `git worktree remove` kills every shell sitting in it.
-  runsAgentIn: (slot: number, pane: number | null) => boolean;
+  // Whether an agent is still working in this pane. Not whether one is running: the pane is `exec
+  // claude`, and Claude Code sits at its prompt when the card is done rather than exiting, so "a
+  // process is there" would be true until somebody closed the pane by hand and no review would ever
+  // start by itself. Working is read off the pane's screen, which only the renderer can see; main.ts
+  // says how the answer gets there.
+  agentWorksIn: (slot: number, pane: number | null) => boolean;
   // A pane of that page nobody is using, or null when all five are taken. `freeing` is a pane about to
   // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
   // before anything is destroyed is the answer the pane is given after.
@@ -56,6 +58,17 @@ function finishedIn(entry: WorktreeEntry): number | null {
   try {
     const text = readFileSync(join(entry.worktreePath, BOARD_FILE_PATH), 'utf8');
     return cardById(parseBoard(text), entry.cardId)?.pullRequest ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// The project's board, or null when it cannot be read. Null is not "no card here": a board the sweep
+// cannot open says nothing about whether the card has been reviewed, and the guard below leaves that
+// decision to the mark on the record rather than acting on an answer it does not have.
+function projectBoard(projectPath: string): Board | null {
+  try {
+    return readBoard(projectPath).board;
   } catch {
     return null;
   }
@@ -109,10 +122,11 @@ export type ReviewSweep = {
 };
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
-  // Cards a review has already been started for, or tried for and refused. Kept for the run rather
-  // than on the record, because the record only changes when the swap works: one that stopped at a
-  // dirty worktree leaves the old entry exactly as it was, and without this the sweep would find the
-  // same finished card on the next tick and spawn git at it again for as long as the app is open.
+  // Cards a review has already been started for, tried for and refused, or finished in a run before
+  // this one. Kept for the run rather than on the record, because the record only changes when the swap
+  // works: one that stopped at a dirty worktree leaves the old entry exactly as it was, and without
+  // this the sweep would find the same finished card on the next tick and spawn git at it again for as
+  // long as the app is open.
   const reviewed = new Set<string>();
 
   // One card, start to finish. Every guard in it is synchronous and runs before the first await —
@@ -128,10 +142,21 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // and keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
     // taking the folder away here kills the shell before `git push` runs and the fix never reaches the
     // pull request the review is about to approve. Nothing is marked, so the sweep picks the card up
-    // the moment the agent exits.
-    if (ports.runsAgentIn(slot, entry.pane)) return;
+    // the moment the agent stops working.
+    if (ports.agentWorksIn(slot, entry.pane)) return;
     const pullRequest = finishedIn(entry);
     if (pullRequest === null) return;
+    // A card that has already been through this. The number on the branch's board is written once and
+    // stays written, so it goes on saying "finished" long after the review that read it merged the
+    // pull request — and the record outlives the review too, since the review worktree is removed by
+    // hand. The project's board is what tells the two apart; review.ts holds why it is the only thing
+    // that can. Marked rather than just skipped, so a card whose worktree is left lying around does
+    // not cost a board read every five seconds for the rest of the run.
+    const board = projectBoard(entry.projectPath);
+    if (board && !awaitsReview(board, entry.cardId)) {
+      reviewed.add(entry.cardId);
+      return;
+    }
     // Asked before anything is removed, counting the card's own pane as the free one it is about to
     // become. If there is still nothing going, nothing is marked and nothing is touched: free a pane
     // and the next tick starts the review, rather than the worktree being destroyed first and the card

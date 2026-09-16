@@ -15,6 +15,7 @@ const bridge: DashboardBridge = {
   sendInput: (id, data) => ipcRenderer.send('pty:input', id, data),
   resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
   restart: (id) => ipcRenderer.send('pty:restart', id),
+  reportWorkingPanes: (ids) => ipcRenderer.send('pty:working', ids),
   onData: (listener) => ipcRenderer.on('pty:data', (_event, id, data) => listener(id, data)),
   onExit: (listener) => ipcRenderer.on('pty:exit', (_event, id, exitCode) => listener(id, exitCode)),
   getSession: () => ipcRenderer.invoke('session:read'),

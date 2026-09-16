@@ -50,6 +50,12 @@ export type DashboardBridge = {
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;
+  // Every pane with an agent still working in it, sent on a timer and read by the review sweep. The
+  // same direction as openScrollback and for the same reason: main has the pty, which is the bytes
+  // going past, not the screen they built — and "still working" is a thing you can only see on the
+  // screen. Whole list each time rather than a change at a time, so a report that goes missing costs
+  // one tick's answer instead of leaving a pane marked as working for the rest of the run.
+  reportWorkingPanes(ids: string[]): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;
