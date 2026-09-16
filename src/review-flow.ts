@@ -63,9 +63,10 @@ function finishedIn(entry: WorktreeEntry): number | null {
   }
 }
 
-// The project's board, or null when it cannot be read. Null is not "no card here": a board the sweep
-// cannot open says nothing about whether the card has been reviewed, and the guard below leaves that
-// decision to the mark on the record rather than acting on an answer it does not have.
+// The project's board, or null when it cannot be read at all. Null is not "no card here": a board the
+// sweep cannot open says nothing about whether the card has been reviewed, and the guard below leaves
+// the card alone rather than acting on an answer it does not have. A board that opens but does not
+// mention the card is the same silence, said by awaitsReview instead.
 function projectBoard(projectPath: string): Board | null {
   try {
     return readBoard(projectPath).board;
@@ -153,10 +154,16 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // that can. Marked rather than just skipped, so a card whose worktree is left lying around does
     // not cost a board read every five seconds for the rest of the run.
     const board = projectBoard(entry.projectPath);
-    if (board && !awaitsReview(board, entry.cardId)) {
+    const awaits = board === null ? null : awaitsReview(board, entry.cardId);
+    if (awaits === false) {
       reviewed.add(entry.cardId);
       return;
     }
+    // Neither answer: no board to read, or a board with no row for this card — the card was deleted after
+    // its review, or a board.json that would not parse was moved aside and the empty one that replaced it
+    // has lost every card at once. Nothing is marked and nothing is touched, because the one thing the
+    // sweep can say about a card it cannot find is written on that card.
+    if (awaits === null) return;
     // Asked before anything is removed, counting the card's own pane as the free one it is about to
     // become. If there is still nothing going, nothing is marked and nothing is touched: free a pane
     // and the next tick starts the review, rather than the worktree being destroyed first and the card

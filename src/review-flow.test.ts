@@ -153,6 +153,20 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Review');
   });
 
+  // The card has left the project's board — deleted once its review was done, or lost with a board.json
+  // that would not parse and was moved aside. The worktree outlives it by design, and a board that does
+  // not mention the card cannot say whether it has been reviewed, so the sweep says nothing and touches
+  // nothing: reviewing it would re-cut the worktree and run /pr-loop at a pull request that merged weeks
+  // ago, with no card anywhere to print that on.
+  it('leaves a card the project board no longer mentions alone', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, emptyBoard());
+    const { ports: made, log } = ports(entry);
+    await reviewSweep(made).run();
+    expect(log.removed).toEqual([]);
+    expect(log.started).toEqual([]);
+  });
+
   // Panes belong to an open project. Nothing is marked, so opening the project starts the review.
   it('waits for a closed project rather than refusing the card', async () => {
     const { entry, projectPath } = flight(12);

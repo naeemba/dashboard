@@ -30,8 +30,12 @@ describe('awaitsReview', () => {
     expect(awaitsReview(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBe(false);
   });
 
-  it('is true for a card made on the branch that the project has never seen', () => {
-    expect(awaitsReview(boardWithCard(), 'made-on-the-branch')).toBe(true);
+  // Not true — the card is gone from the board, deleted after its review or lost with a board.json that
+  // would not parse, and the worktree outlives it because the review prompt says not to remove it. Told
+  // "review it", the sweep re-cuts that worktree and runs /pr-loop at a pull request that merged last
+  // week, with no card left to say so on.
+  it('is null for a card this board does not mention', () => {
+    expect(awaitsReview(boardWithCard(), 'no-longer-on-the-board')).toBeNull();
   });
 
   // No Review column is no column to be past.

@@ -28,6 +28,7 @@ import { readNotes, writeNotes } from './notes-store';
 import { isBoardChange, isBoardFile } from './board-watch';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
+import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
   blockingChanges,
@@ -181,16 +182,10 @@ function agentRunsIn(slot: number, pane: number | null): boolean {
   return pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane)));
 }
 
-// Every pane the renderer can see an agent still working in, replaced whole on each report. Main owns
-// the ptys, so it knows a process is there, which is a different question: the pane runs `exec claude`
-// and Claude Code sits at its prompt when it has finished rather than exiting. Only the screen tells
-// the two apart — the spinner and the interrupt key — and only the renderer has the screen.
-//
-// Empty until the first report arrives, a few seconds after launch, and that is the safe way round:
-// no record has a pane at launch, since withoutPanes takes them all off, so the one reader below has
-// nothing to ask about yet.
-let workingPanes = new Set<string>();
-ipcMain.on('pty:working', (_event, ids: string[]) => { workingPanes = new Set(ids); });
+// What the renderer can see and main cannot: which panes still have an agent working in them. The
+// reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
+const agentsAtWork = workingPanes();
+ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
 
 // The question the review asks, which is the one above with "and has not finished" on the end. A ship
 // is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
@@ -199,7 +194,7 @@ ipcMain.on('pty:working', (_event, ids: string[]) => { workingPanes = new Set(id
 // card sits in Ship reading `shipped · fix-login · terminal 3` all day with nothing on screen saying
 // the app is waiting on you.
 function agentWorksIn(slot: number, pane: number | null): boolean {
-  return pane !== null && agentRunsIn(slot, pane) && workingPanes.has(terminalId(slot, pane));
+  return pane !== null && agentRunsIn(slot, pane) && agentsAtWork.works(terminalId(slot, pane), Date.now());
 }
 
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
@@ -285,7 +280,7 @@ function dropDeadWorktrees(): void {
 // The same tick asks every in-flight worktree whether its agent has finished. Not awaited and nothing
 // waits on it: one tick's review is still running when the next arrives — git takes seconds — and the
 // sweep guards against starting the same card twice.
-setInterval(() => { dropDeadWorktrees(); void reviews.run(); }, 5000).unref();
+setInterval(() => { dropDeadWorktrees(); void reviews.run(); }, WORKING_REPORT_MS).unref();
 
 // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
 // decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
@@ -406,6 +401,10 @@ function startAgent(id: string, worktreePath: string, prompt: string): void {
     args: agentArguments(shellCommand, prompt),
     directory: worktreePath,
   });
+  // Working from this instant, rather than from the first report that catches its spinner. The reports
+  // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
+  // and the sweep in between would read the pane as quiet and take the folder away from the agent.
+  agentsAtWork.started(id, Date.now());
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);

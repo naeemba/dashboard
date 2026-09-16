@@ -22,14 +22,21 @@ export function intoReview(board: Board, cardId: string): Board | null {
 // restart finds a card sitting in Done with a pull request number still on the branch's board, pulls it
 // back into Review, re-cuts the worktree and runs `/pr-loop` at a pull request that merged last week.
 //
-// A card the project's board has never heard of is still reviewed: it was made on the branch, and there
-// is no column to read. So is one on a board somebody has taken Review out of — that board cannot say a
-// card is past a column it does not have.
-export function awaitsReview(board: Board, cardId: string): boolean {
+// Null is the third answer, for a card this board does not mention, and it means "I cannot say" rather
+// than "review it". Such a card cannot be one made on the branch: every worktree the sweep walks was cut
+// from a card sitting on the project's board. It is a card that has left the board since — you deleted
+// it once the review was done, or readBoard found a board.json it could not parse, moved it aside and
+// handed back an empty board, which loses every card at once. Answer "review it" there and the first
+// tick re-cuts the worktree and runs /pr-loop at a pull request that merged last week, with no card left
+// anywhere to say so on. The sweep leaves a board it cannot open alone, and this is the same silence.
+//
+// A board somebody has taken Review out of is different, and still true: the card is there, and a board
+// with no Review column cannot say a card is past a column it does not have.
+export function awaitsReview(board: Board, cardId: string): boolean | null {
   const at = selectionOf(board, cardId);
+  if (!at) return null;
   const review = reviewColumnIndex(board);
-  if (!at || review === -1) return true;
-  return at.column <= review;
+  return review === -1 || at.column <= review;
 }
 
 // The project's board with a line on the card saying why no review is running. The card is the only
