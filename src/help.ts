@@ -106,8 +106,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'screen the box you are typing in is what gets written, and it wins. '
     + 'It is a plain box and nothing more: nothing parses the markdown and nothing renders it. The '
     + 'name is there so the file is worth opening in an editor or reading on a forge. '
-    + 'This screen has no keys of its own, so everything that is not one of the keys below is a '
-    + 'character in the box.',
+    + 'This screen has no keys of its own — everything that is not one of the keys below is a '
+    + 'character in the box. Tab is the one thing it stops: the box is the whole screen, so Tab would '
+    + 'take the keyboard somewhere you cannot see, and it does nothing here instead.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
     + 'terminal, nvim and notes keys do nothing here. It is where the window lands when nothing was open last '
     + 'time. Three sections are named along the top — general, board, command — and the board key still '

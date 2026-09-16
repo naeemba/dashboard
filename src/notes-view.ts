@@ -28,9 +28,10 @@ const SAVE_DELAY_MS = 400;
 
 // One page of free text per project, kept in .dashboard/notes.md. A textarea and nothing else — it is
 // the view's whole element, the way nvim is the whole of its own screen — so there is no key of its
-// own here, every keystroke that is not somebody's shortcut is a character, and no handler reads
-// event.key, which is why there is no isModified guard to get wrong. The window's one lookup still
-// answers Ctrl+B and the rest, because the box is not a dialog and OVERLAY_SELECTOR does not name it.
+// own here and every keystroke that is not somebody's shortcut is a character. The window's one lookup
+// still answers Ctrl+B and the rest, because the box is not a dialog and OVERLAY_SELECTOR does not
+// name it. Tab is the one key this screen reads for itself, for the reason the picker's search box
+// reads it: see the listener below.
 export function createNotesView(options: NotesOptions): NotesView {
   const element = document.createElement('textarea');
   element.className = 'notes-text';
@@ -39,6 +40,14 @@ export function createNotesView(options: NotesOptions): NotesView {
   // Every box you type into carries this. Without it a Persian note runs away from the caret, ending
   // punctuation lands on the wrong side, and Home and End go to the opposite ends of what you see.
   element.dir = 'auto';
+
+  // Nothing else on this screen is focusable and Tab is bound to nothing here, so the browser's own
+  // Tab would take the keyboard out of the box with nothing on screen saying where it went — and the
+  // mode key cannot bring it back, because it names the mode you are already on. Shift+Tab the same
+  // way, which is why this comes before any question about modifiers.
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab') event.preventDefault();
+  });
 
   let pending: number | undefined;
 

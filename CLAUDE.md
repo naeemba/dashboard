@@ -66,7 +66,7 @@ dialog, the delete confirmation, `promptOverlay`'s one-line box, the picker's
 search box, the settings
 screen, the card title and description editor, the worktree list, and the
 manager list — which
-asks `isBareCharacter` instead, because it takes Shift on purpose as the third
+asks `isBareCharacter` instead, because it takes Shift on purpose as the fourth
 exception below. Both predicates read the same list of the three modifiers that
 are not typing, so a fourth added to `stopsTyping` reaches both. Two of them
 got this wrong before the rule was written down here. Take Ctrl+N in the card
@@ -83,10 +83,15 @@ rows in `src/actions.ts` now — not special cases written into a handler. A
 plain `Tab` binding simply cannot match `Ctrl+Tab`, so the window switcher
 still gets it, and nobody had to write code to let it past.
 
-Three real exceptions read a key before the guard, all on purpose:
+Four real exceptions read a key before the guard, all on purpose:
 
 - Tab, in the picker's search box. Nothing else in that dialog is focusable,
   so Tab and Shift+Tab would drop focus into the pane behind the overlay.
+- Tab, in the notes box, for the same reason one screen out. The box is the
+  whole of that screen, so Tab takes the keyboard out of it with nothing on
+  screen saying where it went, and Ctrl+Shift+N cannot bring it back — it names
+  the mode you are already on and passes through. It is the only key that
+  screen reads, so there is nothing after it for a guard to protect.
 - Every key, in the settings screen, while a row is armed. A row waiting for a
   binding has to read Ctrl, Cmd, Alt and Shift, or those four are the only keys
   you could never bind. It is one keystroke long and puts the guard back
