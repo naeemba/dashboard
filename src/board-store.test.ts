@@ -283,7 +283,7 @@ describe('readBoard', () => {
   it('throws rather than reading an empty board when board.json is a folder', () => {
     const path = project();
     mkdirSync(join(path, BOARD_FILE_PATH), { recursive: true });
-    expect(() => readBoard(path)).toThrow();
+    expect(() => readBoard(path)).toThrow(/EISDIR/);
   });
 
   it('moves a damaged file aside and says where it went', () => {
