@@ -5,6 +5,7 @@ import {
   mayWrite,
   readFailed,
   readLanded,
+  strandedMessage,
   UNREAD_NOTES,
   writeLanded,
   type NotesState,
@@ -60,6 +61,17 @@ describe('what the notes box may do', () => {
     expect(isStranded(typedAfterAFailedFirstRead, '')).toBe(false);
     // Nor is a sentence a write did not take. The file was read once, so the box may still be written.
     expect(isStranded(readLanded('friday\n'), 'friday\nmonday\n')).toBe(false);
+    // The other stranded box: the file was read, a later re-read failed, and a line was typed on top of
+    // the page that was already on screen. Neither may happen to it either.
+    expect(isStranded(readFailed(readLanded('friday\n')), 'friday\nmonday\n')).toBe(true);
+  });
+
+  it('names the way out that works for the box it is talking about', () => {
+    // A box nothing was ever read into reads again as soon as it is empty; a box holding the page a
+    // failed re-read left behind reads again once it matches that page. Telling someone to empty the
+    // second one throws away three months of notes.
+    expect(strandedMessage(readFailed(UNREAD_NOTES))).toContain('empty the box');
+    expect(strandedMessage(readFailed(readLanded('friday\n')))).toContain('undo back');
   });
 
   it('does not take an empty file for a file nobody has read', () => {

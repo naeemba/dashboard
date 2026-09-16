@@ -49,9 +49,22 @@ export function mayRead(state: NotesState, boxText: string): boolean {
 // A box that can neither be read into nor written out of: the pair of the two refusals above, asked as
 // one question so the message on screen is derived from what the view decides rather than repeating it.
 //
-// It is a first arrival whose read failed and was then typed into. Nothing is known about the file, so
-// reading now would take what you typed off the screen; nothing was ever shown, so writing would put it
-// over a file that may hold three months of notes. Every arrival after that one finds it the same way.
+// It is a box typed into after a read failed: on a first arrival, or on a later one over the page the
+// last good read left. Reading now would take what you typed off the screen, and writing would put it
+// over a file nobody could read. Every arrival after that one finds it the same way, until the box is
+// made to match the file again — which is not the same gesture in the two cases, so `strandedMessage`
+// below is what says which.
 export function isStranded(state: NotesState, boxText: string): boolean {
   return !mayRead(state, boxText) && !mayWrite(state);
+}
+
+// What the bar says about a stranded box. Two different boxes reach `isStranded`, and the way out of
+// one is not the way out of the other: a box that was never filled reads again as soon as it is empty,
+// while a box holding a page a failed re-read left behind reads again once it matches that page. The
+// same fact both predicates above read — whether anything is known about the file — says which it is,
+// so the view asks here rather than keeping a second copy of it.
+export function strandedMessage(state: NotesState): string {
+  return state.savedText === undefined
+    ? 'Notes were typed before the file was read: nothing here is saved. Copy it out, then empty the box to read the file.'
+    : 'Notes were typed after a failed read: nothing here is saved. Copy it out, then undo back to the page that was here.';
 }

@@ -5,6 +5,7 @@ import {
   mayWrite,
   readFailed,
   readLanded,
+  strandedMessage,
   UNREAD_NOTES,
   writeLanded,
   type NotesState,
@@ -37,11 +38,6 @@ export type NotesView = {
 // keystroke later still writes what you typed into it; and the quit dialog asks before the window
 // goes, which is far longer than this.
 const SAVE_DELAY_MS = 400;
-
-// What the bar says about a box nothing can save and nothing may read over. The way out is to copy the
-// text somewhere, and nothing else on screen would say so: the placeholder is gone, the box looks like
-// any other page of notes, and the failure that started it scrolled off the bar rounds ago.
-const STRANDED_NOTES = 'Notes were typed before the file was read: nothing here is saved. Copy it out.';
 
 // One page of free text per project, kept in .dashboard/notes.md. A textarea and nothing else — it is
 // the view's whole element, the way nvim is the whole of its own screen — so there is no key of its
@@ -110,7 +106,7 @@ export function createNotesView(options: NotesOptions): NotesView {
   // keeps a message only while the owner matches, so the one posted at the failure is gone as soon as
   // anything else has taken the span, and the box that nothing can save would be silent from then on.
   function sayIfStranded(): void {
-    if (isStranded(state, element.value)) options.onError(STRANDED_NOTES);
+    if (isStranded(state, element.value)) options.onError(strandedMessage(state));
   }
 
   element.addEventListener('input', () => {
