@@ -255,13 +255,24 @@ Left inline, nothing pins it. Someone swaps `document.hasFocus()` for a window
 flag, every test still passes, and a bell from the pane you are staring at
 starts turning your own project yellow.
 
-The main-process event handlers in `main.ts` are exempt. The quit guard is the
-example: `askingToQuit` has no branch of its own to test — it only says whether
-the dialog is already up. What could actually break is Electron's plumbing
-around it, and every piece of that is Electron's, not ours: `preventDefault` on
-`close`, a promise from `dialog.showMessageBox`, `destroy()` raising no second
-close. A test for it is a test of mocks, which passes whatever we do to the real
-handler. So these stay inline, and a change to one is read rather than run.
+The main process's event wiring and its spawning are exempt — wherever they
+live, not `main.ts` the file. The quit guard is the example: `askingToQuit` has
+no branch of its own to test — it only says whether the dialog is already up.
+What could actually break is Electron's plumbing around it, and every piece of
+that is Electron's, not ours: `preventDefault` on `close`, a promise from
+`dialog.showMessageBox`, `destroy()` raising no second close. A test for it is a
+test of mocks, which passes whatever we do to the real handler. So these stay
+untested, and a change to one is read rather than run.
+
+The exemption travels with the code, not with the filename. `task-runner.ts`
+lives outside `main.ts` and is still covered: it spawns a process, listens to it
+and hands the lines on, so a test of it is a test of `spawn` and three mocked
+listeners. What it does not cover is a decision that moves out alongside the
+wiring — which report to send when a process ends is `finishedTasks` in
+`tasks.ts`, with `tasks.test.ts` beside it. `review-flow.ts` takes the same ports
+shape and is not exempt for taking it: the order a ship's second half happens in
+is a decision, and `review-flow.test.ts` pins it. So wiring is exempt wherever it
+sits, and a branch owes a test wherever it sits.
 
 ## The board has two writers — Hard Rule
 
