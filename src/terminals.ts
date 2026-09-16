@@ -112,10 +112,10 @@ export function paneFromId(id: string): { slot: number; index: number } {
 // What it costs to skip the record and spawn at the fallback anyway: ship a card into a pane that is
 // already on screen at 160 columns, and the agent draws its prompt box half the width of the pane and
 // stays there — nothing has changed on the renderer's side, so no resize is ever sent to correct it.
-export interface PaneSize {
+export type PaneSize = {
   cols: number;
   rows: number;
-}
+};
 
 export const DEFAULT_PANE_SIZE: PaneSize = { cols: 80, rows: 24 };
 

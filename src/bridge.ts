@@ -105,6 +105,9 @@ export type DashboardBridge = {
 };
 
 declare global {
+  // The one `interface` in src/, and it has to be: this adds a property to a Window that already
+  // exists, which is declaration merging — the exact thing the rule turns off everywhere else.
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     dashboard: DashboardBridge;
   }
