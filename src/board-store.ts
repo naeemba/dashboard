@@ -126,7 +126,8 @@ field not listed above.
 
 export const EXPLANATION_FOR_PEOPLE = `# .dashboard
 
-Project state for the Dashboard app. \`board.json\` holds this project's kanban board.
+Project state for the Dashboard app. \`board.json\` holds this project's kanban board, and
+\`notes.md\` — if it is here — is the project's page of free text, for what is not a card.
 
 Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\` if it is yours alone.
 
@@ -306,26 +307,19 @@ export function readBoard(projectPath: string): BoardRead {
   }
 }
 
-// Answers with the bytes it wrote. Main keeps the last of them per project and compares them against
-// what the folder watcher finds, which is how the app's own saves are told apart from the command
-// line's — without it every keystroke on the board would come back as somebody else's change and
-// redraw the board out from under the selection.
+// How every file the dashboard keeps about a project is written: to a temporary file beside it first,
+// then renamed over it. A rename within a directory is atomic on every platform this app runs on, so a
+// crash or a full disk mid-write leaves either the old file or the new one, never a truncated one.
+// Without it the app itself would be the main producer of the corruption the salvage path in readBoard
+// exists to clean up after, and the notes would come back with the second half of a page missing.
 //
-// Unlike reading, a failed write is reported. Swallowing it would show cards on screen that are not
-// on disk, and the next launch would silently lose them.
-//
-// Written to a temporary file first, then renamed over board.json: a rename within a directory is
-// atomic on every platform this app runs on, so a crash or a full disk mid-write leaves either the
-// old file or the new one, never a truncated one. Without this, the app itself would be the main
-// producer of the corruption the salvage path in readBoard exists to clean up after.
-export function writeBoard(projectPath: string, board: Board): string {
-  const directory = join(projectPath, BOARD_DIRECTORY);
-  mkdirSync(directory, { recursive: true });
-  const temporaryPath = join(directory, `${BOARD_FILE}.tmp`);
-  const text = `${JSON.stringify(board, null, 2)}\n`;
+// The folder is made on the way, because the first write to a project is what creates .dashboard.
+export function replaceFile(filePath: string, text: string): void {
+  mkdirSync(dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.tmp`;
   writeFileSync(temporaryPath, text);
   try {
-    renameSync(temporaryPath, boardPath(projectPath));
+    renameSync(temporaryPath, filePath);
   } catch (error: unknown) {
     try {
       unlinkSync(temporaryPath);
@@ -334,6 +328,20 @@ export function writeBoard(projectPath: string, board: Board): string {
     }
     throw error;
   }
+}
+
+// Answers with the bytes it wrote. Main keeps the last of them per project and compares them against
+// what the folder watcher finds, which is how the app's own saves are told apart from the command
+// line's — without it every keystroke on the board would come back as somebody else's change and
+// redraw the board out from under the selection.
+//
+// Unlike reading, a failed write is reported. Swallowing it would show cards on screen that are not
+// on disk, and the next launch would silently lose them.
+//
+// It writes through replaceFile, so the file is replaced whole or not at all.
+export function writeBoard(projectPath: string, board: Board): string {
+  const text = `${JSON.stringify(board, null, 2)}\n`;
+  replaceFile(boardPath(projectPath), text);
   return text;
 }
 

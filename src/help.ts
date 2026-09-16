@@ -13,7 +13,8 @@ export type Shortcut = { keys: string; action: string };
 export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 export const MODE_NAMES: Record<Mode, string> = {
-  terminals: 'Terminals', nvim: 'nvim', board: 'Board', manager: 'Manager', command: 'Command',
+  terminals: 'Terminals', nvim: 'nvim', board: 'Board', notes: 'Notes',
+  manager: 'Manager', command: 'Command',
 };
 
 // What each screen and each group is, for the person who has not been told. The things worth knowing
@@ -92,8 +93,32 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Every pane also carries DASHBOARD_BOARD, the path to a command that lists cards and moves them '
     + 'from a shell: run `node "$DASHBOARD_BOARD"` in a project to see what it takes. It is how an '
     + 'agent working a card moves its own, and .dashboard/CLAUDE.md in each project spells it out.',
+  notes: 'One page of free text for this project, kept in .dashboard/notes.md beside the board, so it '
+    + 'commits or is ignored with everything else the dashboard keeps about a project. It is for what '
+    + 'is not a card: the command you can never remember, what the staging password is, where you had '
+    + 'got to on Friday. '
+    + 'There is no save key. What you type is written a moment after you stop typing, wherever you '
+    + 'are by then — nothing runs when you leave, the wait simply finishes on its own. Arriving '
+    + 'writes anything still waiting before it reads, so switching away and straight back shows what '
+    + 'you just wrote rather than the page from before it. '
+    + 'A write that did not land leaves the box holding a sentence the file never took, and arriving '
+    + 'keeps it rather than reading the older page over it, however long ago that write went out. '
+    + 'Arriving is also the only time the file is read. An edit made in a pane — or by an agent '
+    + 'working in this project — shows up when you next come here; while you are sitting on this '
+    + 'screen the box you are typing in is what gets written, and it wins. '
+    + 'If that read fails the status bar says so, and nothing is written from then on: a box you '
+    + 'were never shown the file in must not be saved over it. Type into it anyway and no later '
+    + 'arrival reads either — reading now would take what you typed off the screen. The bar says so '
+    + 'on every arrival, and it names the way back: copy the text out, then make the box match the '
+    + 'file again — empty it where nothing was ever read, or undo back to the page that was there — '
+    + 'and the next arrival reads. Either way the file is exactly as it was. '
+    + 'It is a plain box and nothing more: nothing parses the markdown and nothing renders it. The '
+    + 'name is there so the file is worth opening in an editor or reading on a forge. '
+    + 'This screen has no keys of its own — everything that is not one of the keys below is a '
+    + 'character in the box. Tab is the one thing it stops: the box is the whole screen, so Tab would '
+    + 'take the keyboard somewhere you cannot see, and it does nothing here instead.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
-    + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open last '
+    + 'terminal, nvim and notes keys do nothing here. It is where the window lands when nothing was open last '
     + 'time. Three sections are named along the top — general, board, command — and the board key still '
     + 'comes straight here to the board. '
     + 'This one lists every open project and what its panes want from you — one asking a question, one that '
@@ -137,7 +162,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
   sections: 'The manager is three screens with one strip of names above them. These two keys walk it, '
     + 'from any of the three. The arrows are deliberately not these keys: on the board they move '
     + 'between cards.',
-  modes: 'A project is shown three ways and remembers which one you left it on, so jumping to it '
+  modes: 'A project is shown four ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The manager has three of its own, named along the top: its '
     + 'list of what the panes want, every project\'s board, and one command run across projects.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
@@ -177,6 +202,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
 // have names.
 export const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
   nvim: [{ keys: 'Everything else', action: 'Goes straight to nvim' }],
+  notes: [{ keys: 'Everything else', action: 'Goes into the notes' }],
   manager: [{ keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane' }],
   command: [{ keys: 'Space', action: 'Mark or unmark the project under the selection' }],
 };
@@ -203,8 +229,8 @@ function familyRow(entries: ActionEntry[], keys: Settings['keys'], isMac: boolea
 // An action with no key gets no row: this dialog answers "what can I press here", and you cannot press
 // an unbound action. The settings screen is where every action is listed whether it has a key or not.
 // `group` takes a Mode as well, because screenShortcuts asks for the group named after the screen you
-// are on and nvim is a screen with no group: no action has it, so the list comes back empty and its
-// keys are printed from UNBOUND_SHORTCUTS instead.
+// are on and nvim and notes are screens with no group: no action has either, so the list comes back
+// empty and their keys are printed from UNBOUND_SHORTCUTS instead.
 function groupShortcuts(
   group: ActionGroup | Mode, mode: Mode, keys: Settings['keys'], isMac: boolean,
 ): Shortcut[] {
@@ -231,8 +257,8 @@ function groupShortcuts(
   return rows;
 }
 
-// The group named after the screen, then whatever that screen takes without a binding. nvim has no
-// group at all, so its list is only the second half.
+// The group named after the screen, then whatever that screen takes without a binding. nvim and notes
+// have no group at all, so their lists are only the second half.
 // The manager's three screens get one more, and only there: `onManagerPage` is the same question
 // `hears` asks before firing a manager-page action, asked here so the dialog never lists a key that
 // question would refuse. A project's own board is `isSection(mode)` too, and must not get these rows.

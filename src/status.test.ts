@@ -51,6 +51,12 @@ describe('modeLabel', () => {
     expect(modeLabel(page({ mode: 'board', boardLabel: 'Doing · high' }))).toBe('board · Doing · high');
   });
 
+  // One box, no selection in it and no key of its own. Without the branch this falls through to the
+  // pane label and names a terminal you are not looking at.
+  it('names notes on the notes screen, rather than a pane behind it', () => {
+    expect(modeLabel(page({ mode: 'notes' }))).toBe('notes');
+  });
+
   it('lets the command screen name what the selection is on', () => {
     expect(modeLabel(page({ mode: 'command', commandStatusLabel: 'api · marked · exit 0' })))
       .toBe('api · marked · exit 0');

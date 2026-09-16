@@ -25,13 +25,6 @@
           "parent": null
         },
         {
-          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
-          "title": "A fourth mode: notes, one page of them per project",
-          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5864b231-b04b-436c-9680-c721a740b335",
           "title": "Read a project's file in a view that does bidi",
           "notes": "Persian prose cannot be read in a pane and never will be, so the way to read a Persian roadmap or README is a screen the app draws itself -- Chromium lays it out correctly there, and the one rule in index.css already covers every element outside a pane.\n\nThe open question the design turns on is how the file is chosen: a picker over the project's folder, or whatever file nvim currently has open.\n\nKeyboard-first, so it is a row in actions.ts and a section in help.ts.\n\nRelated: the notes mode card is this same screen for a file the app owns. This one is for a file the project owns.",
@@ -79,7 +72,8 @@
           "id": "7bd176c4-65d3-45b6-8237-58625797ea93",
           "title": "A fifth column, Review: a finished card goes there and a pr-loop worktree carries its pull request to merged",
           "notes": "A fifth column called Review, for work an agent has finished but nobody has checked.\n\nWhen Claude finishes a card, the card moves out of the in-progress column (Doing) into Review. The card's worktree is then closed and removed, and a new worktree is made in its place with a pane assigned to run pr-loop against the pull request that card produced.\n\nIf pr-loop finishes successfully, the pull request is approved and then merged. The card moves to Done when the pull request is merged.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "76710e0f-2058-4cb9-a9c5-3cdfbcede709",
@@ -464,6 +458,22 @@
             {
               "at": "2026-09-15T14:48:15.776Z",
               "body": "Shipped in PR #41. Native HTML5 drag and drop: a card is draggable, a column takes the drop, and dropCard in board.ts lands it on a column and a row. The row rule lives in board-drag.ts with its test — a card is claimed from its middle down, so the bottom half of the last card means the end of the column. A drop into Ship ships, so landsInShip now takes 'drop' beside the four directions. A click moves the selection onto a card and opens its title. Cost: text inside a card can no longer be selected with the mouse, because the card is draggable."
+            }
+          ]
+        },
+        {
+          "id": "c6bbd9d6-0559-41ae-9833-87c4f6777270",
+          "title": "A fourth mode: notes, one page of them per project",
+          "notes": "A project gets somewhere to write things down that are not a card. Free text, one page, kept with the project rather than on the board: `.dashboard/notes.md` beside board.json, so it commits or is ignored with everything else the dashboard keeps about a project.\n\nIt is a mode like the other three, which means it is a row in actions.ts, a fourth entry in the views record, and a fourth Mode in modes.ts -- session.ts checks a restored mode against that same list, so a saved page comes back on the notes screen the way it comes back on the board. Ctrl+T, Ctrl+N and Ctrl+B are taken and Ctrl+N is the obvious letter, so the default binding needs choosing.\n\nTwo rules it has to keep. The mode key passes through to the pane once you are already in the mode. And the editor reads event.key for itself, so it needs the isModified guard or a modified key does something in it that it was never meant to.\n\nCtrl+H is part of the change: a new section with its own blurb saying what the screen is.\n\nIt inherits bidi for free: the one rule in index.css covers every element outside a pane, so a page of Persian notes reads correctly the day the mode exists. The editor is a box you type into, so it carries dir=\"auto\" like the other four.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-16T08:00:32.203Z",
+          "branch": "a-fourth-mode-notes-one-page-of-them-per-pr",
+          "pullRequest": 43,
+          "comments": [
+            {
+              "at": "2026-09-16T08:00:32.203Z",
+              "body": "Shipped in PR #43. A fourth project view: one textarea filling the page, kept in .dashboard/notes.md beside the board. Ctrl+Shift+N — N names the mode, Ctrl+N is nvim's, and xterm sends no bytes for Ctrl+Shift with a letter so the panes lose nothing. No save key: written 400ms after you stop typing and again when you leave, read back on every arrival so an edit made in a pane shows up. The isModified guard the card asked for is not there because there is no handler to guard — the screen has no key of its own, so nothing reads event.key. MODE_KEYS became PROJECT_MODES, which is what session.ts was really asking it, and writeBoard's temp-then-rename came out as replaceFile so notes.md is replaced whole or not at all. Help, README and CLAUDE.md's two hand-kept lists moved with it."
             }
           ]
         }

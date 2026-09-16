@@ -64,6 +64,10 @@ export function modeLabel(page: StatusPage): string {
   // status bar on that very screen says `nvim` — one pane with two answers.
   if (page.mode === 'nvim') return paneLabel(EDITOR_INDEX, undefined, page.editorName);
   if (page.mode === 'board') return `board · ${page.boardLabel}`;
+  // One box, no selection in it and no key of its own, so there is nothing on that screen for this
+  // end of the bar to follow. Without the branch it would fall through to the pane label below and
+  // name a terminal you are not looking at.
+  if (page.mode === 'notes') return 'notes';
   if (page.mode === 'command') return page.commandStatusLabel;
   if (page.paneCount === 0) return '';
   const label = paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory), page.focusedName);

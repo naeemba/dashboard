@@ -208,6 +208,17 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'mode-board', description: 'Board mode', group: 'modes', scope: 'global',
     action: { kind: 'mode-set', mode: 'board' }, mac: 'Ctrl+B', other: 'Ctrl+B',
   },
+  // Shift on purpose, and the same reasoning as worktrees above read the other way round. N is the
+  // letter that names this mode, and Ctrl+N is nvim's — both the mode key and, once you are in nvim,
+  // its autocomplete. Shift keeps the letter without taking either.
+  //
+  // It costs the pane nothing. xterm makes a control character for Ctrl with A-Z and refuses the
+  // moment any other modifier is held, so Ctrl+Shift with a letter has always reached a pane as no
+  // bytes at all — there is nothing here for this row to take away.
+  {
+    name: 'mode-notes', description: 'Notes mode', group: 'modes', scope: 'global',
+    action: { kind: 'mode-set', mode: 'notes' }, mac: 'Ctrl+Shift+N', other: 'Ctrl+Shift+N',
+  },
   // Ctrl+1..9 belongs to the projects on every platform, so off macOS there is no modifier left to
   // reach a pane by number. Shipping unbound is better than shipping a key that cannot work.
   ...range(TERMINAL_COUNT).map((number): ActionEntry => ({

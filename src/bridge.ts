@@ -54,6 +54,11 @@ export type DashboardBridge = {
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.
   onBoardChange(listener: (projectPath: string) => void): void;
+  // The project's page of notes, read and written whole. There is no change event to go with these:
+  // the notes are one box that one person types into, where the board is a file an agent moves cards
+  // in while you are looking at it.
+  readNotes(projectPath: string): Promise<string>;
+  writeNotes(projectPath: string, text: string): Promise<void>;
   // The settings, and the shell that was resolved from them. One call, because the renderer needs
   // both before it builds a pane and they are decided together.
   getSettings(): Promise<{ settings: Settings; shellCommand: string }>;
@@ -100,6 +105,9 @@ export type DashboardBridge = {
 };
 
 declare global {
+  // The one `interface` in src/, and it has to be: this adds a property to a Window that already
+  // exists, which is declaration merging — the exact thing the rule turns off everywhere else.
+  // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
   interface Window {
     dashboard: DashboardBridge;
   }

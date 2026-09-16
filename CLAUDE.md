@@ -48,7 +48,7 @@ from a row you cannot see.
 
 ## Mode keys pass through — Hard Rule
 
-Ctrl+T, Ctrl+N and Ctrl+B switch modes, except when they name the mode you are
+The four mode keys switch modes, except when they name the mode you are
 already in. There they are ignored, and the pane gets the keystroke.
 
 That is not an oversight. Ctrl+N is nvim's autocomplete and Ctrl+T is the
@@ -66,7 +66,7 @@ dialog, the delete confirmation, `promptOverlay`'s one-line box, the picker's
 search box, the settings
 screen, the card title and description editor, the worktree list, and the
 manager list — which
-asks `isBareCharacter` instead, because it takes Shift on purpose as the third
+asks `isBareCharacter` instead, because it takes Shift on purpose as the fourth
 exception below. Both predicates read the same list of the three modifiers that
 are not typing, so a fourth added to `stopsTyping` reaches both. Two of them
 got this wrong before the rule was written down here. Take Ctrl+N in the card
@@ -83,10 +83,15 @@ rows in `src/actions.ts` now — not special cases written into a handler. A
 plain `Tab` binding simply cannot match `Ctrl+Tab`, so the window switcher
 still gets it, and nobody had to write code to let it past.
 
-Three real exceptions read a key before the guard, all on purpose:
+Four real exceptions read a key before the guard, all on purpose:
 
 - Tab, in the picker's search box. Nothing else in that dialog is focusable,
   so Tab and Shift+Tab would drop focus into the pane behind the overlay.
+- Tab, in the notes box, for the same reason one screen out. The box is the
+  whole of that screen, so Tab takes the keyboard out of it with nothing on
+  screen saying where it went, and Ctrl+Shift+N cannot bring it back — it names
+  the mode you are already on and passes through. It is the only key that
+  screen reads, so there is nothing after it for a guard to protect.
 - Every key, in the settings screen, while a row is armed. A row waiting for a
   binding has to read Ctrl, Cmd, Alt and Shift, or those four are the only keys
   you could never bind. It is one keystroke long and puts the guard back
@@ -98,11 +103,22 @@ Three real exceptions read a key before the guard, all on purpose:
 
 If a handler reads a modified key anywhere else, it is stealing it.
 
-The mode keys are not `MODE_KEYS` any more. They are three rows in
+The mode keys are not `MODE_KEYS` any more — that name is gone, and what is
+left in `src/modes.ts` is `PROJECT_MODES`, which is what it always really was:
+the views a project's page has, and so the modes `session.ts` will restore a
+project onto. The keys themselves are four rows in
 `src/actions.ts` like any other action, which means they can be rebound, and
 the pass-through check at the top of this section runs against the action
 rather than the key — so if Ctrl+T becomes something else, the something else
 is what gets passed through, not the key that used to be Ctrl+T.
+
+A new project view is a row in `PROJECT_MODES`, a row in `ACTIONS`, a view built
+in `page.ts`, a branch in `focusMode` and a branch in `modeLabel` — and a name
+and a blurb in `src/help.ts`, which the section below is about. `MODES` is not
+on that list: it is `PROJECT_MODES` plus the manager's own two, so the row you
+add is already in it. That was the row to forget — a view in `MODES` and not in
+`PROJECT_MODES` worked until you restarted, and then the app came back on
+terminals with nothing saying why.
 
 ## Every box you type into carries `dir="auto"` — Hard Rule
 
@@ -114,10 +130,11 @@ its first letter. That fixes the reading order but not the box: without
 the text runs away from the caret, ending punctuation lands on the wrong side,
 and Home and End take you to the opposite ends of what you see.
 
-Six boxes have it today: the card title in `board-view.ts`, the description in
+Seven boxes have it today: the card title in `board-view.ts`, the description in
 `board-detail.ts`, the picker's search box, the settings screen's text fields,
-the command box in `command-view.ts`, and `promptOverlay`'s one line in
-`overlay.ts`. Nothing checks this — no test, no lint
+the command box in `command-view.ts`, `promptOverlay`'s one line in
+`overlay.ts`, and the notes page in `notes-view.ts`. Nothing checks this — no
+test, no lint
 rule — which is why it is written
 down here.
 
@@ -138,13 +155,15 @@ held its own copy of the 6-to-72 range. A size the settings screen accepted
 could still get silently discarded the next time the file was read, with
 nothing on screen saying why.
 
-Nine predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
+Twelve predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
 `pullRequestFrom` and `isCommentBody` in `board.ts`, `holderOfBinding`,
-`isHexColor`, `isFontSize` and `withoutShipped` in `settings.ts`, and
+`isHexColor`, `isFontSize` and `withoutShipped` in `settings.ts`,
 `blockingChanges` in `ship.ts` — which both the ship's refusal and the message
 listing the files in the way call, so the count on screen is exactly the list
-that caused it. A refusal worth a message reuses one of these or adds a tenth —
-never a second copy of the condition.
+that caused it — and `mayRead`, `mayWrite` and `isStranded` in `notes-state.ts`,
+where the notes box decides what it refuses and the status bar asks it what to
+say. A refusal worth a message reuses one of these or adds a thirteenth — never
+a second copy of the condition.
 
 `withoutShipped` is the same idea one step over: it decides what a line has to
 be before it belongs in settings.json, and both writers ask it — the save and
