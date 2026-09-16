@@ -125,6 +125,17 @@
       "name": "Done",
       "cards": [
         {
+          "id": "7af68346-5bee-4566-b99c-13f9f02972e2",
+          "title": "A failed board read is a failure, not an empty board",
+          "notes": "readBoard turns every reason readFileSync can throw into a board with no cards. A missing file is right -- that is \"no board yet\". An EMFILE with five ptys and an editor open per project, an EIO off a network folder, a permission that changed underneath, are not: the board draws empty with nothing in the status bar, and the next card you type is written whole over the forty that are still on disk.\n\nOnly ENOENT is an empty board. Everything else throws, the way readNotes already does. board-view's readAgain has the catch that reports it -- \"Board not opened: ...\" with render() still running on the board in memory, so the cards stay on screen.\n\nGitHub issue #45.\n\nShipped in PR #46. readBoard rethrows anything that is not ENOENT. board:read reaches readAgain's catch, which leaves the cards on screen; commitShipMove reaches runShip's, which says \"ship failed: ...\". The `board` command had nowhere to put it, so its body now runs inside one try that writes a line to stderr and exits 1 -- that covers writeBoard too, which was stack-tracing for the same reasons.\n\nOut of scope and noted on the PR: readWorktrees has the same defect and main.ts writes its result straight back, so a failed read truncates worktrees.json on launch with no card needed.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-16T09:32:05.293555Z",
+          "updatedAt": "2026-09-16T09:36:19.180521Z",
+          "pullRequest": 46,
+          "branch": "board-read-failure-is-a-failure"
+        },
+        {
           "id": "2033fcf6-714b-4642-bda0-f0f9f409a36f",
           "title": "A command line for the board, so agents can work it",
           "notes": "Shipped in PR #33. `DASHBOARD_BOARD` is on every pane the app opens: the path to a command that lists cards and moves them from a shell — list, add, move, set — over the board of the project you are in. Every decision it makes is a call into board.ts, so a card it writes is a card the app wrote.\n\nThe second half is that the app notices. Main watches each open project's .dashboard folder and sends board:change, and the board on screen re-reads without moving your selection. The folder, not the file, because a save renames a temporary file over board.json; and against the bytes the app itself last wrote, or every keystroke on a board would redraw it under your cursor.\n\nFour rules stopped being written twice on the way: columnNamed, isTitle, branchFrom and openBoard. The seeded .dashboard/CLAUDE.md prints the command's own usage rather than retyping it.\n\nNot verified: npm run package. The asar-unpack path is reasoned from the config, not seen — worth one packaged run before merging.",
