@@ -11,6 +11,7 @@ import {
   commitPullRequest,
   commitTitle,
   initialBoardState,
+  isUnreadForGood,
   loadBoard,
   reloadBoard,
   undoChange,
@@ -259,6 +260,23 @@ describe('boardIsBusy', () => {
   it('is busy while a box is open or a read is in flight', () => {
     expect(boardIsBusy(read, true, false)).toBe(true);
     expect(boardIsBusy(read, false, true)).toBe(true);
+  });
+});
+
+// The sentence the status bar says, which is narrower than the bounce: the first read makes both of
+// boardIsBusy's last two terms true at once, and saying the board was never read while the read that
+// fills it is still out sends you off a screen that was about to work.
+describe('isUnreadForGood', () => {
+  it('says nothing while the first read is still out', () => {
+    expect(isUnreadForGood(initialBoardState(), true)).toBe(false);
+  });
+
+  it('speaks up once that read has come back empty-handed', () => {
+    expect(isUnreadForGood(initialBoardState(), false)).toBe(true);
+  });
+
+  it('says nothing about a board a read filled', () => {
+    expect(isUnreadForGood(loadBoard(initialBoardState(), board(['a'])), false)).toBe(false);
   });
 });
 

@@ -67,6 +67,16 @@ export function boardIsBusy(state: BoardState, editing: boolean, readInFlight: b
   return editing || !mayEdit(state) || readInFlight;
 }
 
+// The one bounce worth a sentence, out of the three above: these cards never came from the file and no
+// read is on its way to bring them, so the board stays empty until you leave the screen and come back.
+//
+// The read in flight is why this is not simply `!mayEdit`. During the very first read both facts are
+// true at once — nothing has been read yet, and a read is out — and a `n` typed into that gap would be
+// told the board was never read a moment before the read lands and fills it.
+export function isUnreadForGood(state: BoardState, readInFlight: boolean): boolean {
+  return !mayEdit(state) && !readInFlight;
+}
+
 // Every operation in board.ts returns the same board object, unchanged, when it has nothing to do —
 // moving the last card further down, deleting from an empty column. This hands back the same state
 // object for those, so a no-op neither burns the undo step nor rewrites the file: a real change made

@@ -38,8 +38,8 @@ import {
   commitPullRequest,
   commitTitle,
   initialBoardState,
+  isUnreadForGood,
   loadBoard,
-  mayEdit,
   reloadBoard,
   undoChange,
   type BoardState,
@@ -250,11 +250,13 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   // A key that bounced has to say so when the bounce outlasts the keystroke. A box being open and a
-  // read being in flight are both over in a moment and the screen shows both. A board nobody read
-  // shows three empty columns each offering `n adds a card`, and stays that way for the session — so
-  // without a word here you press `n`, then `d`, then an arrow, and nothing happens or ever will.
+  // read in flight are both over in a moment and the screen shows both — including the first read,
+  // which is the one where a board nobody has read yet is also a board a read is about to fill. A
+  // board whose read came back empty-handed shows three empty columns each offering `n adds a card`,
+  // and stays that way for the session — so without a word here you press `n`, then `d`, then an
+  // arrow, and nothing happens or ever will.
   function sayIfUnread(): void {
-    if (!mayEdit(state)) {
+    if (isUnreadForGood(state, landedRead !== latestRead)) {
       options.onError('This board was not read, so nothing may be saved over it. Leave this screen and come back to read it again.');
     }
   }
