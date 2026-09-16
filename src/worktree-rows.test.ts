@@ -11,6 +11,7 @@ function entry(cardId: string, startedAt: string): WorktreeEntry {
     worktreePath: `/work/api.worktrees/${cardId}`,
     pane: null,
     startedAt,
+    reviewing: false,
   };
 }
 

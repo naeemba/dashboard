@@ -21,6 +21,7 @@ const entry: WorktreeEntry = {
   worktreePath: '/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves',
   pane: 2,
   startedAt: '2026-09-10T09:14:22.104Z',
+  reviewing: false,
 };
 
 describe('parseWorktrees', () => {
@@ -158,6 +159,7 @@ describe('worktreesDiffer', () => {
     worktreePath: '/projects/web-ship-it',
     pane: 2,
     startedAt: '2026-09-14T00:00:00.000Z',
+    reviewing: false,
   };
 
   // Closing a project asks every record of that project to give its pane up. One that shipped nothing

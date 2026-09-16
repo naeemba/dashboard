@@ -16,6 +16,11 @@ export type WorktreeEntry = {
   // use. Null is a real state, not a missing field.
   pane: number | null;
   startedAt: string;
+  // Whether this is the review worktree rather than the one the card was worked in. The two look the
+  // same on disk — same project, same card, same branch — and only this says which agent is in there,
+  // so without it the sweep that starts a review would find the review it just started and start
+  // another one, every five seconds, for as long as the app is open.
+  reviewing: boolean;
 };
 
 const TEXT_FIELDS = ['cardId', 'title', 'projectPath', 'branch', 'worktreePath', 'startedAt'] as const;
@@ -38,6 +43,9 @@ function toEntry(stored: unknown): WorktreeEntry | null {
     worktreePath: record.worktreePath as string,
     pane: isPane(record.pane) ? record.pane : null,
     startedAt: record.startedAt as string,
+    // Anything but true reads as false, so a file written before this field existed describes what it
+    // actually holds: worktrees a card was worked in, none of them a review.
+    reviewing: record.reviewing === true,
   };
 }
 
