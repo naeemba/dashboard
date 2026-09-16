@@ -554,10 +554,15 @@ ipcMain.on('pty:restart', (_event, id: string) => {
 // is a convenience — writing the two explanation files — so a read-only project folder must not cost
 // the user a board.json that is sitting right there and perfectly readable.
 ipcMain.handle('board:read', (_event, projectPath: string) => {
-  const read = openBoard(projectPath);
-  // After the read, which is what creates .dashboard on a project that has never had a board.
-  watchBoard(projectPath);
-  return read;
+  try {
+    return openBoard(projectPath);
+  } finally {
+    // After the read, which is what creates .dashboard on a project that has never had a board — and
+    // in a finally, because a read that throws still leaves a folder worth watching. Without it a
+    // board whose read failed would sit there never noticing the command line, and Ctrl+B cannot get
+    // you a second try: it names the mode you are already in, so it goes to the pane instead.
+    watchBoard(projectPath);
+  }
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
 // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
