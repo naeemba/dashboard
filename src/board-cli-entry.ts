@@ -43,7 +43,7 @@ function run(): void {
 try {
   run();
 } catch (error: unknown) {
-  const failure = error as NodeJS.ErrnoException;
-  process.stderr.write(`${failure?.code ? failure.message : (failure?.stack ?? String(error))}\n`);
+  const failure = error as NodeJS.ErrnoException | null;
+  process.stderr.write(`${(failure?.code ? failure.message : failure?.stack) ?? String(error)}\n`);
   process.exit(1);
 }

@@ -558,9 +558,8 @@ ipcMain.handle('board:read', (_event, projectPath: string) => {
     return openBoard(projectPath);
   } finally {
     // After the read, which is what creates .dashboard on a project that has never had a board — and
-    // in a finally, because a read that throws still leaves a folder worth watching. Without it a
-    // board whose read failed would sit there never noticing the command line, and Ctrl+B cannot get
-    // you a second try: it names the mode you are already in, so it goes to the pane instead.
+    // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
+    // that board never notices the command line again for as long as you stay on the screen.
     watchBoard(projectPath);
   }
 });
