@@ -101,6 +101,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'are by then — nothing runs when you leave, the wait simply finishes on its own. Arriving '
     + 'writes anything still waiting before it reads, so switching away and straight back shows what '
     + 'you just wrote rather than the page from before it. '
+    + 'A write that did not land leaves the box holding a sentence the file never took, and arriving '
+    + 'keeps it rather than reading the older page over it, however long ago that write went out. '
     + 'Arriving is also the only time the file is read. An edit made in a pane — or by an agent '
     + 'working in this project — shows up when you next come here; while you are sitting on this '
     + 'screen the box you are typing in is what gets written, and it wins. '

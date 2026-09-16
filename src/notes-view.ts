@@ -1,4 +1,13 @@
 import type { DashboardBridge } from './bridge';
+import {
+  mayRead,
+  mayWrite,
+  readFailed,
+  readLanded,
+  UNREAD_NOTES,
+  writeLanded,
+  type NotesState,
+} from './notes-state';
 
 export type NotesOptions = {
   bridge: DashboardBridge;
@@ -12,9 +21,10 @@ export type NotesView = {
   element: HTMLTextAreaElement;
   // Arriving: whatever has not been written yet goes to disk first, then the file is read back. The
   // flush is what stops a quick Ctrl+B and straight back landing on the page from before your last
-  // sentence. A flush that fails skips the read, so the box keeps the sentence the file did not
-  // take. Never rejects — a read or a write that fails reports itself through onError — so the
-  // caller has nothing to catch.
+  // sentence. The read only happens where the file agrees with the box — a sentence no write took,
+  // whether it was the flush just now or one that failed ten minutes ago, is kept instead of being
+  // replaced by the older page. Never rejects — a read or a write that fails reports itself through
+  // onError — so the caller has nothing to catch.
   open(): Promise<void>;
 };
 
@@ -51,36 +61,41 @@ export function createNotesView(options: NotesOptions): NotesView {
 
   let pending: number | undefined;
 
-  // Whether the box holds what the file holds. Only a read that landed makes it true, and nothing is
-  // written while it is false: on a first arrival whose read failed, the box is empty because it was
-  // never filled, not because the file is. Let one character through and 400ms later it is the file.
-  let holdsTheFile = false;
+  // What the file is known to hold, and whether the box was ever shown it. notes-state.ts is where
+  // both questions this screen asks of that are answered, and where they are tested.
+  let state: NotesState = UNREAD_NOTES;
 
-  // Answers whether the write landed, so arriving can tell a box that is on disk from one that is not.
-  function write(): Promise<boolean> {
-    return options.bridge.writeNotes(options.projectPath, element.value).then(
+  // Which arrival's read is the current one. Two arrivals close together leave two reads in flight,
+  // and the older one coming back last would put the older page in the box.
+  let latestRead = 0;
+
+  function write(): Promise<void> {
+    // The text as it goes out, not as it is by the time the write answers: you keep typing while it
+    // is away, and what the file ends up holding is what was sent.
+    const text = element.value;
+    return options.bridge.writeNotes(options.projectPath, text).then(
       () => {
+        state = writeLanded(state, text);
         options.onError('');
-        return true;
       },
       (error: unknown) => {
         options.onError(`Notes not saved: ${String(error)}`);
-        return false;
       },
     );
   }
 
-  // Whatever the timer was holding, now. Answers with the write so the read on arrival can wait for
-  // it; with nothing pending there is nothing to wait for and nothing that can have failed.
-  function flush(): Promise<boolean> {
-    if (pending === undefined) return Promise.resolve(true);
+  // Whatever the timer was holding, now, so arriving can wait for it. Whether it landed is not
+  // answered here — a write that failed before the timer was even set is just as much a reason to
+  // leave the box alone, and only what the file is known to hold can tell the two apart.
+  function flush(): Promise<void> {
+    if (pending === undefined) return Promise.resolve();
     window.clearTimeout(pending);
     pending = undefined;
     return write();
   }
 
   element.addEventListener('input', () => {
-    if (!holdsTheFile) return;
+    if (!mayWrite(state)) return;
     window.clearTimeout(pending);
     pending = window.setTimeout(() => {
       pending = undefined;
@@ -94,21 +109,34 @@ export function createNotesView(options: NotesOptions): NotesView {
       // Focus before the read, the way the board takes it: the view you came from is already hidden,
       // so until the box has the keyboard a character typed straight after the mode key lands nowhere.
       element.focus();
-      // A flush that failed leaves the box holding a sentence that never reached the file. Reading now
-      // would replace it with the older page from disk, and the sentence would be gone from both. The
-      // message is already up; keep the text and leave the file alone.
-      if (!(await flush())) return;
+      await flush();
+      const token = ++latestRead;
+      // The box holds something the file does not: a sentence a write never took, or a paragraph
+      // typed into a box a read never filled. Reading would replace it with the older page and it
+      // would be gone from the box as well as the file. The message from the failure is already up.
+      if (!mayRead(state, element.value)) return;
+      let text: string;
       try {
-        element.value = await options.bridge.readNotes(options.projectPath);
-        holdsTheFile = true;
+        text = await options.bridge.readNotes(options.projectPath);
       } catch (error: unknown) {
         // Said out loud rather than thrown. The box keeps whatever it was showing, which is the last
         // thing that was on disk, so a folder that has gone unreadable does not also blank the page in
         // front of you and then save the blank back over it. On a first arrival it was showing
         // nothing, so the box stays shut for typing until a read lands, and the message says so.
-        holdsTheFile = false;
-        options.onError(`Notes not read, so nothing is written: ${String(error)}`);
+        if (token === latestRead) {
+          state = readFailed(state);
+          options.onError(`Notes not read, so nothing is written: ${String(error)}`);
+        }
+        return;
       }
+      // A read another one has overtaken says nothing: the newer one is the page you asked for. And
+      // the box is asked again because you have the keyboard while the read is away — the focus above
+      // is taken before it on purpose — so a character typed into the gap is text like any other.
+      if (token !== latestRead || !mayRead(state, element.value)) return;
+      element.value = text;
+      state = readLanded(text);
+      // A read that lands clears the failure it replaces; nothing else knows the message is stale.
+      options.onError('');
     },
   };
 }
