@@ -12,6 +12,12 @@ import type { WorktreeEntry } from './worktree-store';
 export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
 export type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string };
 
+// What a removal answers. `dirty` is the files in the way when the answer is no, so the dialog can ask
+// a second time naming them rather than deciding on its own what "dirty enough" means. Named here
+// rather than written out at each use, because three places hold it now: main, the review that takes
+// the same step, and the bridge below.
+export type WorktreeRemoval = { ok: boolean; message: string; dirty: string[] };
+
 // Everything in flight, and the folder each pane's shell was started in, keyed by terminal id. The
 // folders ride along with the records because the status bar's question is the two of them together:
 // is the pane I am in one of these checkouts. Only main knows where a pane is, so one message carries
@@ -87,7 +93,7 @@ export type DashboardBridge = {
   dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
   // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
   // a second time naming them rather than deciding on its own what "dirty enough" means.
-  removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string; dirty: string[] }>;
+  removeWorktree(worktreePath: string, force: boolean): Promise<WorktreeRemoval>;
   // One command, run in each of these projects at once, each in its own process. Not a pty and not a
   // pane: a command that borrows a shell throws away whatever was in it.
   runTask(command: string, projectPaths: string[]): void;

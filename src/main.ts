@@ -35,6 +35,7 @@ import {
   freePane,
   oneAtATime,
   runsAnAgent,
+  workPrompt,
   worktreePathFor,
   worktreesRoot,
   type PaneCommand,
@@ -58,7 +59,8 @@ import {
 } from './worktree-store';
 import type { Settings } from './settings';
 import { moveCardToColumn, selectionOf, shipColumnIndex, type Board } from './board';
-import type { ShipRequest, ShipResult, WorktreeList } from './bridge';
+import { reviewSweep } from './review-flow';
+import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 
 if (started) app.quit();
 
@@ -248,7 +250,10 @@ function dropDeadWorktrees(): void {
 //
 // A handful of existsSync every few seconds, and the sweep is silent unless something has actually
 // gone.
-setInterval(dropDeadWorktrees, 5000).unref();
+// The same tick asks every in-flight worktree whether its agent has finished. Not awaited and nothing
+// waits on it: one tick's review is still running when the next arrives — git takes seconds — and the
+// sweep guards against starting the same card twice.
+setInterval(() => { dropDeadWorktrees(); void reviews.run(); }, 5000).unref();
 
 // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
 // decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
@@ -361,9 +366,12 @@ function spawnProject(project: Project, projectIndex: number): void {
 // 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
 // exists to say. The old shell is killed first: retargeting a pane that is still running one would
 // leave two processes writing to the same id.
-function startAgent(id: string, worktreePath: string, cardId: string): void {
+//
+// The prompt is the caller's, because there are two agents now: the one that works a card, and the one
+// that reviews the pull request the first one opened.
+function startAgent(id: string, worktreePath: string, prompt: string): void {
   terminalCommands.set(id, {
-    args: agentArguments(shellCommand, `/work-card ${cardId}`),
+    args: agentArguments(shellCommand, prompt),
     directory: worktreePath,
   });
   shells.get(id)?.kill();
@@ -592,9 +600,18 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   return entry;
 }
 
+// The lowest-numbered pane of this project that nobody is using, or null. Split out because the
+// review asks the same question a step earlier than the ship does — before it removes anything,
+// rather than after — and two spellings of "which panes are busy" would drift.
+function freePaneIn(slot: number): number | null {
+  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
+    .filter((index) => paneIsBusy(terminalId(slot, index)));
+  return freePane(busy, TERMINAL_COUNT);
+}
+
 // Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
 // ship of a card whose worktree exists but never got one.
-function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
+function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipResult {
   // The project can be closed while the git half of a ship is still running, and its slot is empty from
   // then on. Without this the agent would start in a pane of a page nobody has — running, unreadable
   // and unreachable until the app quits. The worktree is already made and recorded, so shipping the
@@ -605,9 +622,7 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
       message: `${baseName(entry.projectPath)} was closed mid-ship — the worktree is made, ship it again for a pane`,
     };
   }
-  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
-    .filter((index) => paneIsBusy(terminalId(slot, index)));
-  const pane = freePane(busy, TERMINAL_COUNT);
+  const pane = freePaneIn(slot);
   if (pane === null) {
     return {
       ok: false,
@@ -619,7 +634,7 @@ function attachPane(entry: WorktreeEntry, slot: number): ShipResult {
   // per pane in this project — claimsPane holds why the project half of that matters.
   const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
   if (claimed) recordWorktree({ ...claimed, pane: null });
-  startAgent(terminalId(slot, pane), entry.worktreePath, entry.cardId);
+  startAgent(terminalId(slot, pane), entry.worktreePath, prompt);
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
@@ -646,8 +661,27 @@ async function commitShipMove(entry: WorktreeEntry): Promise<void> {
   }
 }
 
-// Ships in one project run one after another, never together; ship.ts says why.
+// Ships in one project run one after another, never together; ship.ts says why. A review of a card in
+// that project is queued behind them too: it runs `git worktree` twice in the same repository.
 const shipInProject = oneAtATime();
+
+// The other half of a ship, which runs on the tick above rather than on a keystroke. Every decision in
+// it is review-flow.ts's; what is handed over here is only what this file knows — the records, the
+// pages, the panes — and the two steps, which are the ones a ship already takes.
+const reviews = reviewSweep({
+  worktrees: () => worktrees,
+  slotOf: (projectPath) => projects.findIndex((project) => project?.path === projectPath),
+  freePaneIn,
+  removeWorktree,
+  addWorktree: async (entry) => {
+    await git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath);
+  },
+  startReview: (entry, slot, prompt) => {
+    const attached = attachPane(recordWorktree(entry), slot, prompt);
+    return attached.ok ? '' : attached.message;
+  },
+  queue: shipInProject,
+});
 
 // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
 // back as a message the board's status bar prints; everything before it is left as it was. Every git
@@ -682,15 +716,20 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
   // nothing knows about is the thing that piles up unseen.
   const entry = recordWorktree({
     cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
+    reviewing: false,
   });
 
   await commitShipMove(entry);
-  return attachPane(entry, slot);
+  return attachPane(entry, slot, workPrompt(cardId));
 }
 
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
   const { projectPath, cardId, title, slot } = request;
   dropDeadWorktrees();
+  // A card being shipped is a card whose last review, if it had one, is over: the worktree it ran in
+  // has been removed by hand or this ship would be refused below. Left marked, the pull request this
+  // ship goes on to open would never be reviewed for the rest of the run, with nothing saying why.
+  reviews.forget(cardId);
 
   // Already shipped, and still being worked on — a second worktree for the same card is the mistake
   // the record exists to catch. The pane on the record is not the question: a record keeps naming its
@@ -716,7 +755,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
       // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
       // it runs git in the same repository.
       await commitShipMove(existing);
-      return attachPane(existing, slot);
+      return attachPane(existing, slot, workPrompt(cardId));
     });
   } catch (error: unknown) {
     return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
@@ -759,7 +798,10 @@ ipcMain.handle('worktree:check', async () => {
 
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
 // question is worth asking, and refusing forever would mean the only way out is the command line.
-ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean) => {
+//
+// A function rather than only a handler, because the review takes the same step: a card whose agent
+// has finished has its worktree thrown away before a fresh one is made on the branch.
+async function removeWorktree(worktreePath: string, force: boolean): Promise<WorktreeRemoval> {
   const entry = entryForPath(worktrees, worktreePath);
   // A path with no record is the removal having already happened — the sweep dropped it while the
   // dialog's question was on screen, or a second `d` landed on a row that had gone. There is nothing to
@@ -798,7 +840,11 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
     // rest of the run.
     removingWorktrees.delete(worktreePath);
   }
-});
+}
+
+ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean) => (
+  removeWorktree(worktreePath, force)
+));
 
 // Every process the current run started, each beside the project it is running in. The path is kept
 // here because cancelling has to name every project it stopped — a row told nothing sits on `running`
