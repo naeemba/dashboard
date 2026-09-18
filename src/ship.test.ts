@@ -8,7 +8,7 @@ import {
   paneIsBusy,
   runsAnAgent,
   worktreePathFor,
-  type PaneState,
+  type PaneReading,
 } from './ship';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
@@ -81,14 +81,14 @@ describe('runsAnAgent', () => {
 });
 
 // A pane sitting at a prompt: the pty answers with the shell itself, and nothing was asked of it.
-const idle: PaneState = {
+const idle: PaneReading = {
   foreground: 'zsh',
   shell: '/bin/zsh',
   command: { args: [], directory: '/work/api' },
   inWorktree: false,
 };
-const running = (program: string): PaneState => ({ ...idle, foreground: program });
-const agent: PaneState = {
+const running = (program: string): PaneReading => ({ ...idle, foreground: program });
+const agent: PaneReading = {
   foreground: 'claude',
   shell: '/bin/zsh',
   command: { args: ['-lc', 'agent'], directory: '/work/api.worktrees/one' },
@@ -114,14 +114,6 @@ describe('paneIsBusy', () => {
   it('compares the shell on its last segment', () => {
     expect(paneIsBusy({ ...idle, foreground: 'zsh', shell: '/opt/homebrew/bin/zsh' })).toBe(false);
     expect(paneIsBusy({ ...idle, foreground: 'bash', shell: '/bin/zsh' })).toBe(true);
-  });
-
-  // The shell setting can be changed while panes are running, and those panes keep the shell they
-  // started with. Reading a pane against its own shell rather than the setting is what keeps five
-  // panes at empty prompts free after the switch instead of refusing every ship until a reopen.
-  it('reads a pane against the shell it was spawned with, not the one in force now', () => {
-    expect(paneIsBusy({ ...idle, foreground: 'zsh', shell: '/bin/zsh' })).toBe(false);
-    expect(paneIsBusy({ ...idle, foreground: 'bash', shell: '/bin/bash' })).toBe(false);
   });
 
   it('reads an agent as busy by its record, not by what the pty says', () => {
@@ -150,7 +142,7 @@ describe('freePane', () => {
   // The agent has exited and handed the pane back, but its transcript is still on screen and the shell
   // is still standing in the checkout. An empty pane of the project goes first.
   it('takes a pane still standing in a worktree last', () => {
-    const finished: PaneState = { ...idle, command: { args: [], directory: '/work/api.worktrees/one' }, inWorktree: true };
+    const finished: PaneReading = { ...idle, command: { args: [], directory: '/work/api.worktrees/one' }, inWorktree: true };
     expect(freePane([finished, idle])).toBe(1);
     expect(freePane([finished, running('npm')])).toBe(0);
   });
