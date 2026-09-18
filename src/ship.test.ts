@@ -91,7 +91,12 @@ const agent: PaneState = {
 const SHELL = '/bin/zsh';
 
 describe('paneIsBusy', () => {
-  it('reads a pane at a prompt as free, whatever has been typed in it', () => {
+  // A prompt is the whole of what the pty reports, so three panes are this one state: an empty pane,
+  // a pane with a line typed and not submitted, and a pane with `npm run dev &` running behind the
+  // prompt. All three are free and a ship takes all three, killing the job in the third. runsAProgram
+  // says why telling them apart costs more than it buys — flip this to busy only alongside a reading
+  // that can, or all five panes go permanently in use again.
+  it('reads a pane at a prompt as free, whatever has been typed or backgrounded in it', () => {
     expect(paneIsBusy(idle, SHELL)).toBe(false);
   });
 
@@ -113,6 +118,13 @@ describe('paneIsBusy', () => {
   // A pane whose shell has died has nothing running in it and nothing to kill.
   it('reads a pane with no shell as free', () => {
     expect(paneIsBusy({ ...idle, foreground: undefined }, SHELL)).toBe(false);
+  });
+
+  // Every pane on Windows, where main hands over no foreground at all: the pty there reports the
+  // terminal type it was spawned with rather than a process, so nothing is read and nothing is in
+  // the way. The agent record is the only thing left holding a pane, and it still does.
+  it('keeps a pane with no foreground reading only by its agent record', () => {
+    expect(paneIsBusy({ ...agent, foreground: undefined }, SHELL)).toBe(true);
   });
 });
 

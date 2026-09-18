@@ -104,8 +104,25 @@ export type PaneState = {
 // nothing ever took back: pressing Ctrl+L in the five terminals to tidy them marked all five as in use
 // for the rest of the run, and every ship after that was refused with five empty prompts on screen.
 //
-// The corner it cuts is the other way round: a line you have typed and not submitted reads as a prompt,
-// so the pane can be taken and the line goes with it. What is lost is a command you had not run yet.
+// The reading is unix-only. main's foregroundOf answers nothing on Windows, where the pty reports its
+// terminal type rather than a foreground process, so every pane there is free and only the agent record
+// keeps one.
+//
+// Two things read as a prompt without being one, and a ship takes the pane and kills the shell in it.
+//
+// A line you have typed and not submitted: what is lost is a command you had not run yet.
+//
+// A job you put in the background — `npm run dev &` — is the expensive one. The shell is back at its
+// prompt, so the foreground is the shell and this answers false; ship a card, the pane is taken, and
+// the dev server goes down with the shell, with nothing on screen having said that pane was doing
+// anything. What would catch it is reading the shell's children rather than its foreground, and that
+// is not done here because a shell at an empty prompt has children on a real machine: powerlevel10k
+// leaves a gitstatusd running under every zsh for the life of the shell. Counting any child would put
+// all five panes permanently in use from launch — the same dead end the typed-pane mark produced,
+// which is what this change exists to remove. Telling a prompt's daemon from a job you started means
+// reading the process group rather than the parent, and that is its own piece of work.
+//
+// help.ts says both out loud, because the ship's blurb is where someone learns what a ship can take.
 function runsAProgram(foreground: string | undefined, shellCommand: string): boolean {
   return foreground !== undefined && baseName(foreground) !== baseName(shellCommand);
 }

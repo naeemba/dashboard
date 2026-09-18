@@ -164,7 +164,17 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
 // go between a shell dying and its exit arriving here, and a pane with nothing running in it is the
 // right answer for a shell that has just died anyway — so a reading that fails is not one that takes a
 // ship down with it.
+//
+// Unix only, which is why win32 answers nothing at all. `IPty.process` is a real foreground reading on
+// unix — node-pty's UnixTerminal calls tcgetpgrp(fd) and names whoever holds the terminal — but
+// WindowsTerminal's getter hands back the pty's *name*, which is the `xterm-256color` spawnTerminal
+// asked for and never changes. Passing that on would have every pane on Windows read as running a
+// program called xterm-256color from launch, every ship refused with five of them listed, and no
+// gesture that clears it. Nothing is read there, so nothing is in the way: Windows gets the
+// lowest-free-pane behaviour, and what a ship there can take out from under you is the same corner
+// runsAProgram names below, one pane wider.
 function foregroundOf(id: string): string | undefined {
+  if (process.platform === 'win32') return undefined;
   try {
     return shells.get(id)?.process;
   } catch {
