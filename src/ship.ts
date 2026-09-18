@@ -87,10 +87,18 @@ export function runsAnAgent(command: PaneCommand | undefined): command is PaneCo
 
 // One pane of a project as a ship sees it. `foreground` is what the pty says is running in the pane at
 // the moment it is asked — the shell itself when the pane is sitting at a prompt, and undefined when the
-// shell has gone. `command` is what the pane was asked to run. `inWorktree` is the pane still standing in
-// a card's checkout rather than the project.
+// shell has gone. `shell` is the shell this pane was spawned with. `command` is what the pane was asked
+// to run. `inWorktree` is the pane still standing in a card's checkout rather than the project.
+//
+// The shell is the pane's own, not the setting. The setting changes under panes that are already
+// running, and its own screen says so: a pane started as zsh is still zsh after you switch the setting
+// to bash. Comparing the pty's answer against the setting would read all five panes of every open
+// project as running a program the moment you changed it, and refuse every ship until each project was
+// closed and reopened. A pane respawned after the change really is on the new shell, and the pane's own
+// record gets that right too.
 export type PaneState = {
   foreground: string | undefined;
+  shell: string | undefined;
   command: PaneCommand | undefined;
   inWorktree: boolean;
 };
@@ -123,14 +131,16 @@ export type PaneState = {
 // reading the process group rather than the parent, and that is its own piece of work.
 //
 // help.ts says both out loud, because the ship's blurb is where someone learns what a ship can take.
-function runsAProgram(foreground: string | undefined, shellCommand: string): boolean {
-  return foreground !== undefined && baseName(foreground) !== baseName(shellCommand);
+function runsAProgram(foreground: string | undefined, shell: string | undefined): boolean {
+  // No shell recorded means no pty was ever spawned, which is the same nothing-is-running answer an
+  // undefined foreground gives.
+  return foreground !== undefined && shell !== undefined && baseName(foreground) !== baseName(shell);
 }
 
 // Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: an agent
 // is recorded in it, or its shell is running something right now.
-export function paneIsBusy(pane: PaneState, shellCommand: string): boolean {
-  return runsAnAgent(pane.command) || runsAProgram(pane.foreground, shellCommand);
+export function paneIsBusy(pane: PaneState): boolean {
+  return runsAnAgent(pane.command) || runsAProgram(pane.foreground, pane.shell);
 }
 
 // The pane a ship takes: the lowest-numbered one nobody is using, or null when every one is taken.
@@ -139,10 +149,10 @@ export function paneIsBusy(pane: PaneState, shellCommand: string): boolean {
 // free — but the shell in it is sitting in that checkout under the agent's transcript, and a ship kills
 // the shell in the pane it takes. Lowest-first on its own takes terminal 1 back from the card you are
 // reading while terminals 2 to 5 sit at empty prompts.
-export function freePane(panes: readonly PaneState[], shellCommand: string): number | null {
+export function freePane(panes: readonly PaneState[]): number | null {
   const free = panes
     .map((pane, index) => ({ pane, index }))
-    .filter(({ pane }) => !paneIsBusy(pane, shellCommand));
+    .filter(({ pane }) => !paneIsBusy(pane));
   return (free.find(({ pane }) => !pane.inWorktree) ?? free[0])?.index ?? null;
 }
 
@@ -150,9 +160,9 @@ export function freePane(panes: readonly PaneState[], shellCommand: string): num
 // on, so what this lists is exactly what stopped it. Each pane says what was seen running in it, because
 // the answer is a reading taken the moment you pressed the key: a ship refused by a prompt hook that was
 // still going says `terminal 3 git` rather than leaving you to wonder which pane it meant.
-export function busyPanes(panes: readonly PaneState[], shellCommand: string): string {
+export function busyPanes(panes: readonly PaneState[]): string {
   return panes
-    .flatMap((pane, index) => (paneIsBusy(pane, shellCommand)
+    .flatMap((pane, index) => (paneIsBusy(pane)
       ? [`${paneLabel(index)} ${runsAnAgent(pane.command) ? 'an agent' : pane.foreground}`]
       : []))
     .join(', ');

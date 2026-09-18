@@ -126,6 +126,12 @@ const shells = new Map<string, pty.IPty>();
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
 const paneSizes = new Map<string, PaneSize>();
+// The shell each pane was actually spawned with, written when the pty starts. Not the shellCommand
+// above: that is the live setting, and changing it leaves every already-running pane on the shell it
+// started with — which is what the settings screen tells you. A ship reads what the pty says is in the
+// foreground against this, so switching the setting cannot make five panes sitting at prompts read as
+// running a program and refuse every ship after it.
+const paneShells = new Map<string, string>();
 // The `board` command, handed to every pane as DASHBOARD_BOARD so an agent in any project can move
 // its own card without hand-editing JSON. .dashboard/CLAUDE.md is where it is documented, and that
 // file is seeded into every project the app touches.
@@ -326,6 +332,10 @@ function spawnTerminal(id: string): void {
     sendToRenderer('pty:exit', id, 127);
     return;
   }
+  // What this pane is running from now on, whatever the setting moves to afterwards. Written here
+  // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
+  // through this function, so one line covers every pane that exists.
+  paneShells.set(id, shellCommand);
   terminalProcess.onData((data) => sendToRenderer('pty:data', id, data));
   terminalProcess.onExit(({ exitCode }) => {
     // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
@@ -481,6 +491,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     terminalProcess?.kill();
     terminalCommands.delete(id);
     paneSizes.delete(id);
+    paneShells.delete(id);
   }
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
@@ -648,7 +659,7 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // a worktree — the folder deleted, then no pane for the review, and a card saying so where the
 // checkout you were about to look at used to be.
 function freePaneIn(slot: number, freeing: number | null = null): number | null {
-  return freePane(paneStatesIn(slot, freeing), shellCommand);
+  return freePane(paneStatesIn(slot, freeing));
 }
 
 // Every pane of the project as ship.ts reads them.
@@ -657,11 +668,14 @@ function paneStatesIn(slot: number, freeing: number | null): PaneState[] {
   return Array.from({ length: TERMINAL_COUNT }, (_value, index): PaneState => {
     // The pane being handed back is described as one with nothing in it, which is what it is a moment
     // later. Said once here rather than field by field, so a field added below cannot forget it.
-    if (index === freeing) return { foreground: undefined, command: undefined, inWorktree: false };
+    if (index === freeing) {
+      return { foreground: undefined, shell: undefined, command: undefined, inWorktree: false };
+    }
     const id = terminalId(slot, index);
     const command = terminalCommands.get(id);
     return {
       foreground: foregroundOf(id),
+      shell: paneShells.get(id),
       command,
       inWorktree: command !== undefined && command.directory !== projectPath,
     };
@@ -682,12 +696,12 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
     };
   }
   const states = paneStatesIn(slot, null);
-  const pane = freePane(states, shellCommand);
+  const pane = freePane(states);
   if (pane === null) {
     return {
       ok: false,
       message: `every pane in ${baseName(entry.projectPath)} is in use — `
-        + `${busyPanes(states, shellCommand)} — free one and ship again`,
+        + `${busyPanes(states)} — free one and ship again`,
     };
   }
   // The pane may still be named by another card's record, whose agent has exited and left it in that
