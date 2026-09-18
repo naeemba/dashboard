@@ -41,7 +41,7 @@ import {
   worktreePathFor,
   worktreesRoot,
   type PaneCommand,
-  type PaneState,
+  type PaneReading,
 } from './ship';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
 import { liveSessions, sweepUsage } from './usage-store';
@@ -659,13 +659,13 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // a worktree — the folder deleted, then no pane for the review, and a card saying so where the
 // checkout you were about to look at used to be.
 function freePaneIn(slot: number, freeing: number | null = null): number | null {
-  return freePane(paneStatesIn(slot, freeing));
+  return freePane(paneReadingsIn(slot, freeing));
 }
 
 // Every pane of the project as ship.ts reads them.
-function paneStatesIn(slot: number, freeing: number | null): PaneState[] {
+function paneReadingsIn(slot: number, freeing: number | null): PaneReading[] {
   const projectPath = projects[slot]?.path;
-  return Array.from({ length: TERMINAL_COUNT }, (_value, index): PaneState => {
+  return Array.from({ length: TERMINAL_COUNT }, (_value, index): PaneReading => {
     // The pane being handed back is described as one with nothing in it, which is what it is a moment
     // later. Said once here rather than field by field, so a field added below cannot forget it.
     if (index === freeing) {
@@ -695,13 +695,13 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
       message: `${baseName(entry.projectPath)} was closed mid-ship — the worktree is made, ship it again for a pane`,
     };
   }
-  const states = paneStatesIn(slot, null);
-  const pane = freePane(states);
+  const readings = paneReadingsIn(slot, null);
+  const pane = freePane(readings);
   if (pane === null) {
     return {
       ok: false,
       message: `every pane in ${baseName(entry.projectPath)} is in use — `
-        + `${busyPanes(states)} — free one and ship again`,
+        + `${busyPanes(readings)} — free one and ship again`,
     };
   }
   // The pane may still be named by another card's record, whose agent has exited and left it in that

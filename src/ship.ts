@@ -96,7 +96,7 @@ export function runsAnAgent(command: PaneCommand | undefined): command is PaneCo
 // project as running a program the moment you changed it, and refuse every ship until each project was
 // closed and reopened. A pane respawned after the change really is on the new shell, and the pane's own
 // record gets that right too.
-export type PaneState = {
+export type PaneReading = {
   foreground: string | undefined;
   shell: string | undefined;
   command: PaneCommand | undefined;
@@ -139,7 +139,7 @@ function runsAProgram(foreground: string | undefined, shell: string | undefined)
 
 // Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: an agent
 // is recorded in it, or its shell is running something right now.
-export function paneIsBusy(pane: PaneState): boolean {
+export function paneIsBusy(pane: PaneReading): boolean {
   return runsAnAgent(pane.command) || runsAProgram(pane.foreground, pane.shell);
 }
 
@@ -149,7 +149,7 @@ export function paneIsBusy(pane: PaneState): boolean {
 // free — but the shell in it is sitting in that checkout under the agent's transcript, and a ship kills
 // the shell in the pane it takes. Lowest-first on its own takes terminal 1 back from the card you are
 // reading while terminals 2 to 5 sit at empty prompts.
-export function freePane(panes: readonly PaneState[]): number | null {
+export function freePane(panes: readonly PaneReading[]): number | null {
   const free = panes
     .map((pane, index) => ({ pane, index }))
     .filter(({ pane }) => !paneIsBusy(pane));
@@ -160,7 +160,7 @@ export function freePane(panes: readonly PaneState[]): number | null {
 // on, so what this lists is exactly what stopped it. Each pane says what was seen running in it, because
 // the answer is a reading taken the moment you pressed the key: a ship refused by a prompt hook that was
 // still going says `terminal 3 git` rather than leaving you to wonder which pane it meant.
-export function busyPanes(panes: readonly PaneState[]): string {
+export function busyPanes(panes: readonly PaneReading[]): string {
   return panes
     .flatMap((pane, index) => (paneIsBusy(pane)
       ? [`${paneLabel(index)} ${runsAnAgent(pane.command) ? 'an agent' : pane.foreground}`]
