@@ -315,6 +315,7 @@ function setMode(mode: Mode): void {
   if (!page.views[mode]) return;
   showMode(page, mode);
   focusMode(page, true);
+  refreshWhichKey();
 }
 
 // nvim, running by the time this returns — started if it has never run, started again if it was quit.
@@ -399,6 +400,7 @@ function landOn(index: number): void {
     page.element.hidden = pageIndex !== activeIndex;
   });
   focusMode(pages[activeIndex], true);
+  refreshWhichKey();
 }
 
 // The one page with no folder behind it, so none of what buildPage makes: no shells, no editor and no
@@ -731,8 +733,17 @@ function trackWhichKey(event: KeyboardEvent): void {
   if (step.kind === 'unchanged') return;
   if (step.kind === 'hide') return hideWhichKey();
   whichKeyHeld = step.held;
+  refreshWhichKey();
+}
+
+// The rows are built from the page and the mode the modifier went down on, and nothing about holding a
+// modifier rebuilds them. Every key that changes the screen also takes the strip away, so from the
+// keyboard they cannot go stale; a click on a section name or on a manager row changes both while the
+// modifier is still down. So this is called wherever the screen changes, beside renderStatus.
+function refreshWhichKey(): void {
+  if (!whichKeyHeld) return;
   const page = pages[activeIndex];
-  whichKey.show(whichKeyRows(step.held, settings.keys, page.mode, !isProjectPage(page), isMac));
+  whichKey.show(whichKeyRows(whichKeyHeld, settings.keys, page.mode, !isProjectPage(page), isMac));
 }
 
 // A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
