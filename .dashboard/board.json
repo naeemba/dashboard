@@ -95,22 +95,28 @@
           "notes": "readWorktrees in src/worktree-store.ts catches every reason the read can fail into [], and main.ts:88-89 reads it and writes the result straight back at launch:\n\n  let worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));\n  writeWorktrees(worktreesFile, worktrees);\n\nSo one EMFILE or EIO at launch empties the file, unconditionally, with nobody pressing a key. Three worktrees in flight disappear from the worktree list, and shipping one of those cards again makes a second branch and a second folder -- the orphan the record exists to prevent.\n\nThe same shape PR #46 gave readBoard fixes it: only ENOENT is \"nothing recorded yet\", everything else throws.\n\nreadSession and readSettings should stay swallowing: both fall back to a default that is genuinely right when the file cannot be read, and neither writes that fallback back over the file. readWorktrees is the one that does.\n\nIssue: https://github.com/naeemba/dashboard/issues/47\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024618634",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "20dca045-6a45-43eb-998b-0bf43d783ef5",
-          "title": "A which-key overlay: press a key and see what it starts",
-          "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.",
-          "priority": "medium",
-          "parent": null
         }
       ]
     },
     {
       "name": "Ship",
-      "cards": []
+      "cards": [
+        {
+          "id": "20dca045-6a45-43eb-998b-0bf43d783ef5",
+          "title": "A which-key overlay: press a key and see what it starts",
+          "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-18T12:05:28.194Z"
+        }
+      ]
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": []
     },
     {
