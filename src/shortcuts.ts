@@ -1,4 +1,4 @@
-import { ACTIONS, type Action, type ActionScope } from './actions';
+import { ACTIONS, type Action, type ActionEntry, type ActionScope } from './actions';
 import { matchesBinding, type KeyInput } from './binding';
 import { isSection } from './manager-sections';
 import type { Mode } from './modes';
@@ -17,8 +17,26 @@ export function isModified(input: KeyInput): boolean {
 // The three modifiers that turn a keystroke into somebody's shortcut instead of a character. Shift is
 // not one of them, which is the only difference between the two predicates either side of this — so
 // they are written as one list, and a fourth modifier added here reaches both.
-function stopsTyping(input: KeyInput): boolean {
-  return input.metaKey || input.ctrlKey || input.altKey;
+//
+// Each is written twice over: the flag it sets on a keystroke, and the name its own key arrives under.
+// One list all the same, because the two readers want different halves of it — the dialogs read the
+// flags, and the which-key strip has to recognise the key you pressed by name. Add a fourth here and
+// the strip answers to it the same day the dialogs start refusing it.
+const NOT_TYPING: Record<string, (input: KeyInput) => boolean> = {
+  Control: (input) => input.ctrlKey,
+  Meta: (input) => input.metaKey,
+  Alt: (input) => input.altKey,
+};
+
+export function stopsTyping(input: KeyInput): boolean {
+  return Object.values(NOT_TYPING).some((isHeld) => isHeld(input));
+}
+
+// Whether the key is a modifier and nothing else, which is the which-key strip's cue. Shift counts
+// here and not above: holding it is typing a capital, but letting go of it while Ctrl is still down is
+// still a question about Ctrl, and the strip has to hear that release to widen back out.
+export function isModifierKey(key: string): boolean {
+  return key === 'Shift' || Object.hasOwn(NOT_TYPING, key);
 }
 
 // Whether the keystroke is a character somebody typed rather than a key with a name. Every key that
@@ -46,6 +64,17 @@ export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): b
   return scope === mode;
 }
 
+// The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a word
+// in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different one.
+// Asked about the action rather than the key, so it holds whatever the mode has been rebound to.
+//
+// Exported because shortcut-rows.ts asks it too, so the file that decides a key does nothing and the
+// one row builder that prints both the help dialog's list and the which-key panel's cannot come to
+// disagree about which keys those are.
+export function passesThrough(entry: ActionEntry, mode: Mode): boolean {
+  return entry.action.kind === 'mode-set' && entry.action.mode === mode;
+}
+
 export function mapShortcut(
   input: KeyInput,
   keys: Settings['keys'],
@@ -55,10 +84,7 @@ export function mapShortcut(
   for (const entry of ACTIONS) {
     if (!hears(entry.scope, mode, onManagerPage)) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
-    // The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a
-    // word in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different
-    // one. Checked on the action rather than the key, so it holds whatever the mode has been rebound to.
-    if (entry.action.kind === 'mode-set' && entry.action.mode === mode) return null;
+    if (passesThrough(entry, mode)) return null;
     return entry.action;
   }
   // The table order decides a tie. Two actions can only share a key if the file was hand-edited into

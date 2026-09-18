@@ -38,6 +38,8 @@ import {
   createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, type Page,
 } from './page';
 import { createSectionStrip } from './section-strip';
+import { whichKeyRows, whichKeyStep, type Held } from './which-key';
+import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 
@@ -313,6 +315,7 @@ function setMode(mode: Mode): void {
   if (!page.views[mode]) return;
   showMode(page, mode);
   focusMode(page, true);
+  refreshWhichKey();
 }
 
 // nvim, running by the time this returns — started if it has never run, started again if it was quit.
@@ -397,6 +400,7 @@ function landOn(index: number): void {
     page.element.hidden = pageIndex !== activeIndex;
   });
   focusMode(pages[activeIndex], true);
+  refreshWhichKey();
 }
 
 // The one page with no folder behind it, so none of what buildPage makes: no shells, no editor and no
@@ -710,8 +714,46 @@ function apply(action: Action): void {
   }
 }
 
+const whichKey = createWhichKey();
+// The modifiers the strip last answered, null while it is down. which-key.ts decides what each
+// keystroke does to it; this is only where the answer is kept.
+let whichKeyHeld: Held | null = null;
+
+const dialogOpen = (): boolean => document.querySelector(OVERLAY_SELECTOR) !== null;
+
+function hideWhichKey(): void {
+  whichKeyHeld = null;
+  whichKey.hide();
+}
+
+// Every press and release, whether the strip is up or not: adding Shift to a held Ctrl is a different
+// question, and pressing a key that starts something is the answer being taken.
+function trackWhichKey(event: KeyboardEvent): void {
+  const step = whichKeyStep(event, dialogOpen, whichKeyHeld);
+  if (step.kind === 'unchanged') return;
+  if (step.kind === 'hide') return hideWhichKey();
+  whichKeyHeld = step.held;
+  refreshWhichKey();
+}
+
+// The rows are built from the page and the mode the modifier went down on, and nothing about holding a
+// modifier rebuilds them. Every key that changes the screen also takes the strip away, so from the
+// keyboard they cannot go stale; a click on a section name or on a manager row changes both while the
+// modifier is still down. So this is called wherever the screen changes, beside renderStatus.
+function refreshWhichKey(): void {
+  if (!whichKeyHeld) return;
+  const page = pages[activeIndex];
+  whichKey.show(whichKeyRows(whichKeyHeld, settings.keys, page.mode, !isProjectPage(page), isMac));
+}
+
+// A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
+// listener, so the panel would sit there over a window nobody is typing into.
+window.addEventListener('blur', hideWhichKey);
+window.addEventListener('keyup', trackWhichKey, true);
+
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
+  trackWhichKey(event);
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;

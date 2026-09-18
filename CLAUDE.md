@@ -238,6 +238,15 @@ project`. Same on the command screen. `help.test.ts` cannot catch it — it chec
 that `mapShortcut` answers to every key the dialog names, and `mapShortcut` does
 answer, with an action nothing on those two screens acts on.
 
+Both of those two go for the which-key strip as well — the third thing reading
+that table, and the one that needs nothing from you. Hold Ctrl, Cmd or Alt
+without pressing a key and it names every key that modifier can still start
+here, printed from `src/actions.ts` and filtered by the same `hears` the
+window's lookup asks, so a row added there is on the strip the day it exists —
+and a row that does nothing on a screen is listed there too, for the same
+reason. The blurb stays yours: the strip says what a key does, never what a
+screen is.
+
 ## Checks
 
     npm test        # vitest
@@ -297,6 +306,14 @@ against what the app itself last wrote, or the app is its own loudest writer —
 every keystroke on a board saves, and the board would be re-read and redrawn
 underneath your cursor thirty times a minute. `isBoardChange` in
 `board-watch.ts` is that rule, with the test.
+
+A card with a pull request open goes in `Review`, not `Done`. `board-store.ts`
+says it: a column on `main` says what has been merged, and `Review` is the one
+exception — a pull request open and nothing has checked it. That beats the
+global instruction to move a card to Done once the PR is ready, which is
+written for boards with no Review column. Otherwise the board on `main` says a
+feature is finished and checked while nobody has looked at it, and `Review`
+sits empty in front of the person whose job it is to look.
 
 ## IPC channels are `<noun>:<verb>`
 
