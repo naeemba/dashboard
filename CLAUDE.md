@@ -238,6 +238,15 @@ project`. Same on the command screen. `help.test.ts` cannot catch it — it chec
 that `mapShortcut` answers to every key the dialog names, and `mapShortcut` does
 answer, with an action nothing on those two screens acts on.
 
+Both of those two go for the which-key strip as well — the third thing reading
+that table, and the one that needs nothing from you. Hold Ctrl, Cmd or Alt
+without pressing a key and it names every key that modifier can still start
+here, printed from `src/actions.ts` and filtered by the same `hears` the
+window's lookup asks, so a row added there is on the strip the day it exists —
+and a row that does nothing on a screen is listed there too, for the same
+reason. The blurb stays yours: the strip says what a key does, never what a
+screen is.
+
 ## Checks
 
     npm test        # vitest
