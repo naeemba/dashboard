@@ -68,10 +68,9 @@ export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): b
 // in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different one.
 // Asked about the action rather than the key, so it holds whatever the mode has been rebound to.
 //
-// Exported because three places ask it and they must not each keep their own copy: this file decides
-// that the key does nothing, the help dialog says so on the row, and the which-key panel says so on
-// its row. Let them drift and a key the app has stopped passing through is still listed as passed
-// through, which is a sentence nobody would disbelieve.
+// Exported because shortcut-rows.ts asks it too, so the file that decides a key does nothing and the
+// one row builder that prints both the help dialog's list and the which-key panel's cannot come to
+// disagree about which keys those are.
 export function passesThrough(entry: ActionEntry, mode: Mode): boolean {
   return entry.action.kind === 'mode-set' && entry.action.mode === mode;
 }
