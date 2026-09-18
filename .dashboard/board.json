@@ -114,6 +114,12 @@
           "title": "Notes mode on the manager page, kept in the home directory",
           "notes": "The manager page gets a notes screen of its own, for notes that are not about any one project. Stored in a .dashboard directory in the home directory rather than beside a project's board.",
           "priority": "medium"
+        },
+        {
+          "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
+          "title": "A board of the manager's own, kept in the home directory",
+          "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
+          "priority": "medium"
         }
       ]
     },
