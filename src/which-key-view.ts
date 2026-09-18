@@ -24,9 +24,11 @@ export function createWhichKey(): WhichKey {
   }
 
   // No rows is not an empty strip: holding Alt on the board starts nothing, and a bar with nothing in
-  // it covering the bottom of the screen would be the app looking broken rather than answering.
+  // it covering the bottom of the screen would be the app looking broken rather than answering. The
+  // panel paints nothing while it is empty — `.which-key:empty` in the CSS — rather than leaving
+  // `display`, because leaving it starts the 400ms wait over. Touch Alt with Ctrl held and the rows
+  // go; let Alt go again and they are back that instant, with your finger still on Ctrl.
   function show(rows: Shortcut[]): void {
-    if (rows.length === 0) return hide();
     panel.replaceChildren(...rows.map((shortcut) => {
       const row = document.createElement('div');
       row.className = 'which-key-row';

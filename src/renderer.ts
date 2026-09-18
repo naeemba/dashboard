@@ -38,7 +38,7 @@ import {
   createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, type Page,
 } from './page';
 import { createSectionStrip } from './section-strip';
-import { heldPrefix, whichKeyRows } from './which-key';
+import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
@@ -713,32 +713,26 @@ function apply(action: Action): void {
 }
 
 const whichKey = createWhichKey();
-// The modifiers held when the strip was last asked, so the same question is not asked twice. A
-// modifier held down may repeat, and rebuilding the strip thirty times a second over a pane is a
-// flicker nobody asked for. Empty is nothing held, which is also the strip being down.
-let whichKeyHeld = '';
+// The modifiers the strip last answered, null while it is down. which-key.ts decides what each
+// keystroke does to it; this is only where the answer is kept.
+let whichKeyHeld: Held | null = null;
+
+const dialogOpen = (): boolean => document.querySelector(OVERLAY_SELECTOR) !== null;
 
 function hideWhichKey(): void {
-  if (whichKeyHeld === '') return;
-  whichKeyHeld = '';
+  whichKeyHeld = null;
   whichKey.hide();
 }
 
 // Every press and release, whether the strip is up or not: adding Shift to a held Ctrl is a different
-// question, and pressing a key that starts something is the answer being taken. which-key.ts says
-// which of those a keystroke is and what the strip would answer; the wait before it appears is the
-// strip's own, in the CSS.
+// question, and pressing a key that starts something is the answer being taken.
 function trackWhichKey(event: KeyboardEvent): void {
-  // heldPrefix first and the dialog second, not the other way round. heldPrefix is a lookup in a set
-  // of four names and says no to every character anybody types; the dialog check walks a document full
-  // of terminal rows. A dialog owns the keyboard while it is up, so nothing the strip lists could fire.
-  const held = heldPrefix(event);
-  if (held === null || document.querySelector(OVERLAY_SELECTOR)) return hideWhichKey();
-  const signature = `${held.ctrl}${held.meta}${held.alt}${held.shift}`;
-  if (signature === whichKeyHeld) return;
-  whichKeyHeld = signature;
+  const step = whichKeyStep(event, dialogOpen, whichKeyHeld);
+  if (step.kind === 'unchanged') return;
+  if (step.kind === 'hide') return hideWhichKey();
+  whichKeyHeld = step.held;
   const page = pages[activeIndex];
-  whichKey.show(whichKeyRows(held, settings.keys, page.mode, !isProjectPage(page), isMac));
+  whichKey.show(whichKeyRows(step.held, settings.keys, page.mode, !isProjectPage(page), isMac));
 }
 
 // A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup

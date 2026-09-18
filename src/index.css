@@ -1037,6 +1037,15 @@ textarea.board-edit {
   pointer-events: none;
 }
 
+/* A list that narrows to nothing keeps its place in `display` — leaving it is what restarts the wait
+   above — and paints nothing instead. An empty bar across the bottom of the screen would read as the
+   app having broken rather than as an answer. */
+.which-key:empty {
+  padding: 0;
+  border-top: none;
+  background: none;
+}
+
 .which-key-row {
   display: flex;
   gap: 10px;

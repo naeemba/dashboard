@@ -7,9 +7,6 @@ import type { Settings } from './settings';
 import { shortcutRows, type Shortcut } from './shortcut-rows';
 import { isModified } from './shortcuts';
 
-// A row of this dialog is a row of any list of keys, and shortcut-rows.ts builds both. Re-exported
-// because the dialog's own Section is made of them.
-export type { Shortcut };
 // The blurb says what the screen is; the shortcuts say how to work it. A key list on its own teaches
 // someone the gestures and not the thing they are gestures for.
 export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };

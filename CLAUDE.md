@@ -307,6 +307,14 @@ every keystroke on a board saves, and the board would be re-read and redrawn
 underneath your cursor thirty times a minute. `isBoardChange` in
 `board-watch.ts` is that rule, with the test.
 
+A card with a pull request open goes in `Review`, not `Done`. `board-store.ts`
+says it: a column on `main` says what has been merged, and `Review` is the one
+exception — a pull request open and nothing has checked it. That beats the
+global instruction to move a card to Done once the PR is ready, which is
+written for boards with no Review column. Otherwise the board on `main` says a
+feature is finished and checked while nobody has looked at it, and `Review`
+sits empty in front of the person whose job it is to look.
+
 ## IPC channels are `<noun>:<verb>`
 
 The thing first, then what you do to it: `link:open`, `session:write`,

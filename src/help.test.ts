@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MODE_NAMES, UNBOUND_SHORTCUTS, helpSections, type Shortcut } from './help';
+import { MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
+import type { Shortcut } from './shortcut-rows';
 import { mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
