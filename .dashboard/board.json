@@ -95,6 +95,24 @@
           "notes": "readWorktrees in src/worktree-store.ts catches every reason the read can fail into [], and main.ts:88-89 reads it and writes the result straight back at launch:\n\n  let worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));\n  writeWorktrees(worktreesFile, worktrees);\n\nSo one EMFILE or EIO at launch empties the file, unconditionally, with nobody pressing a key. Three worktrees in flight disappear from the worktree list, and shipping one of those cards again makes a second branch and a second folder -- the orphan the record exists to prevent.\n\nThe same shape PR #46 gave readBoard fixes it: only ENOENT is \"nothing recorded yet\", everything else throws.\n\nreadSession and readSettings should stay swallowing: both fall back to a default that is genuinely right when the file cannot be read, and neither writes that fallback back over the file. readWorktrees is the one that does.\n\nIssue: https://github.com/naeemba/dashboard/issues/47\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024618634",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
+          "title": "Search cards on the board",
+          "notes": "",
+          "priority": "medium"
+        },
+        {
+          "id": "ff9b2462-7ae6-4cc9-85e7-6bd8de56ef3c",
+          "title": "Notes mode on the manager page, kept in the home directory",
+          "notes": "The manager page gets a notes screen of its own, for notes that are not about any one project. Stored in a .dashboard directory in the home directory rather than beside a project's board.",
+          "priority": "medium"
+        },
+        {
+          "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
+          "title": "A board of the manager's own, kept in the home directory",
+          "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
+          "priority": "medium"
         }
       ]
     },
