@@ -38,6 +38,8 @@ import {
   createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, type Page,
 } from './page';
 import { createSectionStrip } from './section-strip';
+import { heldPrefix, whichKeyRows } from './which-key';
+import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 
@@ -710,8 +712,43 @@ function apply(action: Action): void {
   }
 }
 
+const whichKey = createWhichKey();
+// The modifiers held when the strip was last asked, so the same question is not asked twice. A
+// modifier held down may repeat, and rebuilding the strip thirty times a second over a pane is a
+// flicker nobody asked for. Empty is nothing held, which is also the strip being down.
+let whichKeyHeld = '';
+
+function hideWhichKey(): void {
+  if (whichKeyHeld === '') return;
+  whichKeyHeld = '';
+  whichKey.hide();
+}
+
+// Every press and release, whether the strip is up or not: adding Shift to a held Ctrl is a different
+// question, and pressing a key that starts something is the answer being taken. which-key.ts says
+// which of those a keystroke is and what the strip would answer; the wait before it appears is the
+// strip's own, in the CSS.
+function trackWhichKey(event: KeyboardEvent): void {
+  // heldPrefix first and the dialog second, not the other way round. heldPrefix is a lookup in a set
+  // of four names and says no to every character anybody types; the dialog check walks a document full
+  // of terminal rows. A dialog owns the keyboard while it is up, so nothing the strip lists could fire.
+  const held = heldPrefix(event);
+  if (held === null || document.querySelector(OVERLAY_SELECTOR)) return hideWhichKey();
+  const signature = `${held.ctrl}${held.meta}${held.alt}${held.shift}`;
+  if (signature === whichKeyHeld) return;
+  whichKeyHeld = signature;
+  const page = pages[activeIndex];
+  whichKey.show(whichKeyRows(held, settings.keys, page.mode, !isProjectPage(page), isMac));
+}
+
+// A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
+// listener, so the panel would sit there over a window nobody is typing into.
+window.addEventListener('blur', hideWhichKey);
+window.addEventListener('keyup', trackWhichKey, true);
+
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
+  trackWhichKey(event);
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
