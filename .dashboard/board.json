@@ -116,6 +116,13 @@
           "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "7186e23e-5d75-43ce-ba2a-df10a9e86e0a",
+          "title": "Clean up the numbers on the manager list and fill the empty page",
+          "notes": "The manager page's rows show raw-looking figures like '40.9M 774M 3.1B' and '466.1M 2.4B 8B' next to 'quiet' — three unlabelled numbers per row, nothing saying what they are, and inconsistent widths so the columns do not line up. Also the rest of the page is empty: the list sits in the middle and everything below it is blank.",
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
