@@ -142,7 +142,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // The pull request number is not the agent being done. `/work-card` pushes the commit carrying it
     // and keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
     // taking the folder away here kills the shell before `git push` runs and the fix never reaches the
-    // pull request the review is about to approve. Nothing is marked, so the sweep picks the card up
+    // pull request the review is about to merge. Nothing is marked, so the sweep picks the card up
     // the moment the agent stops working.
     if (ports.agentWorksIn(slot, entry.pane)) return;
     const pullRequest = finishedIn(entry);

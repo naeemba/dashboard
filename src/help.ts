@@ -89,7 +89,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'number alone is not enough, since it keeps working after it pushes that, and taking its folder '
     + 'away mid-run would take the work with it — the card lands in Review, the '
     + 'worktree the work was written in is thrown away, and a fresh one is cut from the same branch in '
-    + 'the same folder with a pane that reviews the pull request, approves it and merges it. The badge '
+    + 'the same folder with a pane that reviews the pull request and merges it. The badge '
     + 'reads reviewing while that runs, and the card reaches Done when the pull request is merged. '
     + 'A card already past Review is never reviewed again, however long its worktree is left lying '
     + 'around. '

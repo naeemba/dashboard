@@ -117,6 +117,13 @@ describe('reviewPrompt', () => {
     expect(prompt).toContain('gh pr merge 12 --merge');
   });
 
+  // The pane runs as the author of the pull request, and GitHub refuses an approval from the author.
+  // Ask for one and the agent burns a turn on a command that can only fail, then stops at step 4 and
+  // leaves a landable pull request sitting in Review saying the approval was refused.
+  it('does not ask for an approval the author cannot give', () => {
+    expect(prompt).not.toContain('--approve');
+  });
+
   // The pane wakes up in a checkout of the branch, whose own .dashboard board is the branch's copy.
   // The move to Done is about the project's board, so the prompt has to say where that is.
   it('moves the card on the project board rather than the one under the pane', () => {
