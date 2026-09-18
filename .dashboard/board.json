@@ -102,6 +102,12 @@
           "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
+          "title": "Search cards on the board",
+          "notes": "",
+          "priority": "medium"
         }
       ]
     },
