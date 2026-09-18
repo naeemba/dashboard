@@ -155,12 +155,15 @@ held its own copy of the 6-to-72 range. A size the settings screen accepted
 could still get silently discarded the next time the file was read, with
 nothing on screen saying why.
 
-Thirteen predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
+Fourteen predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
 `pullRequestFrom` and `isCommentBody` in `board.ts`, `holderOfBinding`,
 `isHexColor`, `isFontSize` and `withoutShipped` in `settings.ts`,
 `blockingChanges` in `ship.ts` — which both the ship's refusal and the message
 listing the files in the way call, so the count on screen is exactly the list
-that caused it — and `mayRead`, `mayWrite` and `isStranded` in `notes-state.ts`,
+that caused it — `paneIsBusy` in the same file, which `freePane` asks to pick a
+pane and `busyPanes` asks again to name the ones that stopped it, so a ship that
+says every pane is in use lists exactly the panes it would not take — and
+`mayRead`, `mayWrite` and `isStranded` in `notes-state.ts`,
 where the notes box decides what it refuses and the status bar asks it what to
 say, and `mayEdit` in `board-state.ts`, which the board asks before every
 gesture and again when one bounces, so the key that does nothing and the

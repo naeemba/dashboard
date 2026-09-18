@@ -32,6 +32,7 @@ import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from 
 import {
   blockingChanges,
   branchNameFor,
+  busyPanes,
   freePane,
   oneAtATime,
   runsAnAgent,
@@ -40,6 +41,7 @@ import {
   worktreePathFor,
   worktreesRoot,
   type PaneCommand,
+  type PaneState,
 } from './ship';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
 import { liveSessions, sweepUsage } from './usage-store';
@@ -95,9 +97,6 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
 let worktrees: WorktreeEntry[] = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
 writeWorktrees(worktreesFile, worktrees);
-// Which panes you have typed into. Half of what makes a pane somebody's; paneIsBusy has the other
-// half, which is read rather than kept here.
-const typedPanes = new Set<string>();
 // The cards whose ship is running right now. Two ships of one card both get past the already-shipped
 // check before either has recorded anything, and the second record replaces the first: two branches
 // and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
@@ -161,22 +160,23 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
 }
 
-// Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: you
-// typed in it, or an agent is running in it — and the second is read off terminalCommands rather than
-// tracked beside it, so the two can never disagree.
-//
-// Tracked, they did. Answering an agent's prompt put the pane in typedPanes, and the agent exiting
-// took it straight back out: your own shell, with what you had typed in it, read as free, and the next
-// ship killed it out from under you.
-function paneIsBusy(id: string): boolean {
-  return typedPanes.has(id) || runsAnAgent(terminalCommands.get(id));
+// What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty can
+// go between a shell dying and its exit arriving here, and a pane with nothing running in it is the
+// right answer for a shell that has just died anyway — so a reading that fails is not one that takes a
+// ship down with it.
+function foregroundOf(id: string): string | undefined {
+  try {
+    return shells.get(id)?.process;
+  } catch {
+    return undefined;
+  }
 }
 
 // Whether an agent is running in this card's pane. One spelling of it, because two things ask: the ship
 // refuses a card that is already being worked, and the review sweep will not take a worktree away from
-// a shell sitting in it. Two copies drift — widen the ship's half to count a pane you have typed into,
-// leave the sweep's alone, and five seconds later the sweep removes the folder out from under that
-// shell.
+// a shell sitting in it. Two copies drift — widen the ship's half to count a pane whose agent has
+// finished, leave the sweep's alone, and five seconds later the sweep removes the folder out from
+// under that shell.
 function agentRunsIn(slot: number, pane: number | null): boolean {
   return pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane)));
 }
@@ -208,13 +208,12 @@ function releaseAgentPane(id: string): void {
 }
 
 // The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
-// plain shell in the project, since the folder it was in is not there any more. The typedPanes line
-// is what hands the pane back — you asked for the worktree to go, so what you typed answering its
-// agent is not a claim on the pane any more.
+// plain shell in the project, since the folder it was in is not there any more. That is also what puts
+// the pane back at the front of the queue a ship picks from — freePane holds why a pane standing in a
+// worktree is taken last, and this one is not standing in it any more.
 function releaseWorktreePanes(entry: WorktreeEntry): void {
   for (const [id, command] of terminalCommands) {
     if (command.directory !== entry.worktreePath) continue;
-    typedPanes.delete(id);
     terminalCommands.set(id, { args: [], directory: entry.projectPath });
   }
 }
@@ -378,10 +377,6 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
-    // A brand new shell in this slot, so nobody has typed into it — even if someone typed into the
-    // project that used to be here. Left set, opening a fresh project into a slot you had worked in
-    // would tell the next ship every pane was in use.
-    typedPanes.delete(id);
     terminalCommands.set(id, { args: [], directory: project.path });
     spawnTerminal(id);
   }
@@ -475,7 +470,6 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     shells.delete(id);
     terminalProcess?.kill();
     terminalCommands.delete(id);
-    typedPanes.delete(id);
     paneSizes.delete(id);
   }
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
@@ -583,7 +577,6 @@ ipcMain.on('link:open', (_event, url: string) => {
   if (isOpenableLink(url)) shell.openExternal(url);
 });
 ipcMain.on('pty:input', (_event, id: string, data: string) => {
-  typedPanes.add(id);
   shells.get(id)?.write(data);
 });
 // Recorded whether or not a shell is listening, because the pane that has none is exactly the pane
@@ -645,9 +638,24 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // a worktree — the folder deleted, then no pane for the review, and a card saying so where the
 // checkout you were about to look at used to be.
 function freePaneIn(slot: number, freeing: number | null = null): number | null {
-  const busy = Array.from({ length: TERMINAL_COUNT }, (_value, index) => index)
-    .filter((index) => index !== freeing && paneIsBusy(terminalId(slot, index)));
-  return freePane(busy, TERMINAL_COUNT);
+  return freePane(paneStatesIn(slot, freeing), shellCommand);
+}
+
+// Every pane of the project as ship.ts reads them.
+function paneStatesIn(slot: number, freeing: number | null): PaneState[] {
+  const projectPath = projects[slot]?.path;
+  return Array.from({ length: TERMINAL_COUNT }, (_value, index): PaneState => {
+    // The pane being handed back is described as one with nothing in it, which is what it is a moment
+    // later. Said once here rather than field by field, so a field added below cannot forget it.
+    if (index === freeing) return { foreground: undefined, command: undefined, inWorktree: false };
+    const id = terminalId(slot, index);
+    const command = terminalCommands.get(id);
+    return {
+      foreground: foregroundOf(id),
+      command,
+      inWorktree: command !== undefined && command.directory !== projectPath,
+    };
+  });
 }
 
 // Give the worktree a pane, if there is one going. Split out because it is also the whole of a second
@@ -663,11 +671,13 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
       message: `${baseName(entry.projectPath)} was closed mid-ship — the worktree is made, ship it again for a pane`,
     };
   }
-  const pane = freePaneIn(slot);
+  const states = paneStatesIn(slot, null);
+  const pane = freePane(states, shellCommand);
   if (pane === null) {
     return {
       ok: false,
-      message: `every pane in ${baseName(entry.projectPath)} is in use — free one and ship again`,
+      message: `every pane in ${baseName(entry.projectPath)} is in use — `
+        + `${busyPanes(states, shellCommand)} — free one and ship again`,
     };
   }
   // The pane may still be named by another card's record, whose agent has exited and left it in that

@@ -1,5 +1,7 @@
 import { basename, dirname, join } from 'node:path';
+import { baseName } from './base-name';
 import { BOARD_DIRECTORY } from './board-store';
+import { paneLabel } from './terminals';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
 // commands; what to call things, which pane to take and what counts as being in the way is here,
@@ -83,14 +85,60 @@ export function runsAnAgent(command: PaneCommand | undefined): command is PaneCo
   return command !== undefined && command.args !== 'editor' && command.args.length > 0;
 }
 
-// The lowest-numbered pane that is nobody's, or null when every one is taken. What makes a pane
-// somebody's is main's to say — it is the one that sees both the keystrokes and what each pane was
-// asked to run — so this is handed the answer rather than working it out.
-export function freePane(busy: readonly number[], count: number): number | null {
-  for (let index = 0; index < count; index += 1) {
-    if (!busy.includes(index)) return index;
-  }
-  return null;
+// One pane of a project as a ship sees it. `foreground` is what the pty says is running in the pane at
+// the moment it is asked — the shell itself when the pane is sitting at a prompt, and undefined when the
+// shell has gone. `command` is what the pane was asked to run. `inWorktree` is the pane still standing in
+// a card's checkout rather than the project.
+export type PaneState = {
+  foreground: string | undefined;
+  command: PaneCommand | undefined;
+  inWorktree: boolean;
+};
+
+// What the pty reports against the shell the pane was started as, compared on the last segment because
+// the two are spelled differently at each end: the pane is spawned with `/bin/zsh` and the pty answers
+// `zsh`. A pane waiting at a prompt reports the shell itself; anything else is a program you started.
+//
+// A reading, not a record, so it is exactly as true as the pane is — and that is the point. The pane's
+// use was tracked before, and what was tracked was whether you had ever pressed a key in it, which
+// nothing ever took back: pressing Ctrl+L in the five terminals to tidy them marked all five as in use
+// for the rest of the run, and every ship after that was refused with five empty prompts on screen.
+//
+// The corner it cuts is the other way round: a line you have typed and not submitted reads as a prompt,
+// so the pane can be taken and the line goes with it. What is lost is a command you had not run yet.
+function runsAProgram(foreground: string | undefined, shellCommand: string): boolean {
+  return foreground !== undefined && baseName(foreground) !== baseName(shellCommand);
+}
+
+// Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: an agent
+// is recorded in it, or its shell is running something right now.
+export function paneIsBusy(pane: PaneState, shellCommand: string): boolean {
+  return runsAnAgent(pane.command) || runsAProgram(pane.foreground, shellCommand);
+}
+
+// The pane a ship takes: the lowest-numbered one nobody is using, or null when every one is taken.
+//
+// A pane still standing in a worktree goes last. Its agent has exited and handed the pane back, so it is
+// free — but the shell in it is sitting in that checkout under the agent's transcript, and a ship kills
+// the shell in the pane it takes. Lowest-first on its own takes terminal 1 back from the card you are
+// reading while terminals 2 to 5 sit at empty prompts.
+export function freePane(panes: readonly PaneState[], shellCommand: string): number | null {
+  const free = panes
+    .map((pane, index) => ({ pane, index }))
+    .filter(({ pane }) => !paneIsBusy(pane, shellCommand));
+  return (free.find(({ pane }) => !pane.inWorktree) ?? free[0])?.index ?? null;
+}
+
+// Why the ship could not have one, named rather than counted — the same states the refusal was decided
+// on, so what this lists is exactly what stopped it. Each pane says what was seen running in it, because
+// the answer is a reading taken the moment you pressed the key: a ship refused by a prompt hook that was
+// still going says `terminal 3 git` rather than leaving you to wonder which pane it meant.
+export function busyPanes(panes: readonly PaneState[], shellCommand: string): string {
+  return panes
+    .flatMap((pane, index) => (paneIsBusy(pane, shellCommand)
+      ? [`${paneLabel(index)} ${runsAnAgent(pane.command) ? 'an agent' : pane.foreground}`]
+      : []))
+    .join(', ');
 }
 
 // The changed files that stop a ship, read from `git status --porcelain`. The refusal and the message
