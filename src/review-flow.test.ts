@@ -115,7 +115,7 @@ describe('reviewSweep', () => {
 
   // The number lands on the card mid-run: /work-card pushes that commit and keeps going. Take the
   // folder then and `git worktree remove` kills the shell before the next push, so a commit that is on
-  // the branch never reaches the pull request the review is about to approve.
+  // the branch never reaches the pull request the review is about to merge.
   it('waits for the agent that opened the pull request to stop working', async () => {
     const { entry, projectPath } = flight(12);
     let working = true;
