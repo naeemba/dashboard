@@ -1,4 +1,4 @@
-import { ACTIONS, type Action, type ActionScope } from './actions';
+import { ACTIONS, type Action, type ActionEntry, type ActionScope } from './actions';
 import { matchesBinding, type KeyInput } from './binding';
 import { isSection } from './manager-sections';
 import type { Mode } from './modes';
@@ -17,7 +17,11 @@ export function isModified(input: KeyInput): boolean {
 // The three modifiers that turn a keystroke into somebody's shortcut instead of a character. Shift is
 // not one of them, which is the only difference between the two predicates either side of this — so
 // they are written as one list, and a fourth modifier added here reaches both.
-function stopsTyping(input: KeyInput): boolean {
+//
+// Exported for the which-key strip, which opens on one of these three held on its own and must not
+// keep a fourth list of them: add a modifier here and the strip answers to it the same day the dialogs
+// start refusing it.
+export function stopsTyping(input: KeyInput): boolean {
   return input.metaKey || input.ctrlKey || input.altKey;
 }
 
@@ -46,6 +50,18 @@ export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): b
   return scope === mode;
 }
 
+// The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a word
+// in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different one.
+// Asked about the action rather than the key, so it holds whatever the mode has been rebound to.
+//
+// Exported because three places ask it and they must not each keep their own copy: this file decides
+// that the key does nothing, the help dialog says so on the row, and the which-key panel says so on
+// its row. Let them drift and a key the app has stopped passing through is still listed as passed
+// through, which is a sentence nobody would disbelieve.
+export function passesThrough(entry: ActionEntry, mode: Mode): boolean {
+  return entry.action.kind === 'mode-set' && entry.action.mode === mode;
+}
+
 export function mapShortcut(
   input: KeyInput,
   keys: Settings['keys'],
@@ -55,10 +71,7 @@ export function mapShortcut(
   for (const entry of ACTIONS) {
     if (!hears(entry.scope, mode, onManagerPage)) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
-    // The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a
-    // word in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different
-    // one. Checked on the action rather than the key, so it holds whatever the mode has been rebound to.
-    if (entry.action.kind === 'mode-set' && entry.action.mode === mode) return null;
+    if (passesThrough(entry, mode)) return null;
     return entry.action;
   }
   // The table order decides a tie. Two actions can only share a key if the file was hand-edited into

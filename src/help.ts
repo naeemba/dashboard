@@ -1,13 +1,15 @@
-import { ACTIONS, defaultBinding, type ActionEntry, type ActionGroup } from './actions';
+import { type ActionGroup } from './actions';
 import { isSection } from './manager-sections';
 import { type Mode } from './modes';
 import { openOverlay } from './overlay';
 import { PANE_SCROLLBACK } from './pane';
 import type { Settings } from './settings';
+import { shortcutRows, type Shortcut } from './shortcut-rows';
 import { isModified } from './shortcuts';
 
-// One row of the help dialog: the keys you press, and what they do.
-export type Shortcut = { keys: string; action: string };
+// A row of this dialog is a row of any list of keys, and shortcut-rows.ts builds both. Re-exported
+// because the dialog's own Section is made of them.
+export type { Shortcut };
 // The blurb says what the screen is; the shortcuts say how to work it. A key list on its own teaches
 // someone the gestures and not the thing they are gestures for.
 export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
@@ -191,7 +193,13 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'is a pane running an ordinary long command — a dev server, a tail, vim — which reads as idle '
     + 'exactly as it does on the command screen, so a close it allows is not a promise that nothing '
     + 'was running — which is why it asks first, and Enter is what takes the project away.',
-  app: 'Every key on this list can be changed, and so can the colours, the font and the shell. They '
+  app: 'There is a second way to find a key, for when you know you are reaching for one and not which. '
+    + 'Hold Ctrl, Cmd or Alt without pressing anything else and a strip along the bottom names every '
+    + 'key that modifier can still start on the screen you are on, each row saying what is left to '
+    + 'press. Add a second modifier and the list narrows to what that one reaches; let it go and the '
+    + 'list widens again. Press the key and it does the thing, as though the strip had never been '
+    + 'there. Shift on its own does not open it — Shift is how you write a capital. '
+    + 'Every key on this list can be changed, and so can the colours, the font and the shell. They '
     + 'are kept in ~/.config/dashboard/settings.json, which you can also edit by hand. It holds only '
     + 'what you changed; anything you left alone follows the app\'s default, including when that '
     + 'default moves. The app tidies the file each time it starts, so a line you write that already '
@@ -221,54 +229,22 @@ export const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
   command: [{ keys: 'Space', action: 'Mark or unmark the project under the selection' }],
 };
 
-function isUntouched(entries: ActionEntry[], keys: Settings['keys'], isMac: boolean): boolean {
-  return entries.every((entry) => keys[entry.name] === defaultBinding(entry, isMac));
-}
-
-// A numbered run — the nine project keys, the five pane keys — prints as one row while all of it still
-// holds the keys it shipped with. Move one and every one is listed, because "Ctrl+1…Ctrl+9" would then
-// be naming a key that does something else.
-function familyRow(entries: ActionEntry[], keys: Settings['keys'], isMac: boolean): Shortcut[] {
-  const bound = entries.filter((entry) => keys[entry.name] !== null);
-  if (bound.length === 0) return [];
-  if (bound.length === entries.length && entries.length > 1 && isUntouched(entries, keys, isMac)) {
-    return [{
-      keys: `${keys[bound[0].name]}…${keys[bound[bound.length - 1].name]}`,
-      action: entries[0].familyDescription ?? entries[0].description,
-    }];
-  }
-  return bound.map((entry) => ({ keys: keys[entry.name]!, action: entry.description }));
-}
-
-// An action with no key gets no row: this dialog answers "what can I press here", and you cannot press
-// an unbound action. The settings screen is where every action is listed whether it has a key or not.
+// One group of the action table, each row spelling the whole binding. An action with no key gets no
+// row: this dialog answers "what can I press here", and you cannot press an unbound action. The
+// settings screen is where every action is listed whether it has a key or not.
 // `group` takes a Mode as well, because screenShortcuts asks for the group named after the screen you
 // are on and nvim and notes are screens with no group: no action has either, so the list comes back
 // empty and their keys are printed from UNBOUND_SHORTCUTS instead.
 function groupShortcuts(
   group: ActionGroup | Mode, mode: Mode, keys: Settings['keys'], isMac: boolean,
 ): Shortcut[] {
-  const rows: Shortcut[] = [];
-  const families = new Set<string>();
-  for (const entry of ACTIONS) {
-    if (entry.group !== group) continue;
-    if (entry.family !== undefined) {
-      if (families.has(entry.family)) continue;
-      families.add(entry.family);
-      rows.push(...familyRow(ACTIONS.filter((row) => row.family === entry.family), keys, isMac));
-      continue;
-    }
-    const binding = keys[entry.name];
-    if (binding === null) continue;
-    // The key naming the mode you are already in is listed too — it is passed through to whatever runs
-    // there, and that is worth saying rather than leaving it a mystery.
-    const passedThrough = entry.action.kind === 'mode-set' && entry.action.mode === mode;
-    rows.push({
-      keys: binding,
-      action: passedThrough ? 'already here — the screen gets the keystroke' : entry.description,
-    });
-  }
-  return rows;
+  return shortcutRows({
+    wants: (entry) => entry.group === group,
+    label: (entry) => keys[entry.name] ?? null,
+    mode,
+    keys,
+    isMac,
+  });
 }
 
 // The group named after the screen, then whatever that screen takes without a binding. nvim and notes
