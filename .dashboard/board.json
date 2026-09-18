@@ -136,18 +136,7 @@
     },
     {
       "name": "Review",
-      "cards": [
-        {
-          "id": "20dca045-6a45-43eb-998b-0bf43d783ef5",
-          "title": "A which-key overlay: press a key and see what it starts",
-          "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.\n\nShipped in PR #50. Hold Ctrl, Cmd or Alt with nothing else and a strip along the bottom names every key that modifier can still start on the screen you are on, each row saying what is left to press. Add a second modifier and the list narrows. It is not a dialog — it never takes the keyboard, so the key you press next still fires. Shift alone does not open it: a capital is typed with Shift. The rows come from the same builder the help dialog uses, so the two lists cannot drift; the 400ms wait is an animation delay rather than a timer.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-18T13:20:49.770Z",
-          "branch": "a-which-key-overlay-press-a-key-and-see-wha",
-          "pullRequest": 50
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -553,6 +542,16 @@
           "updatedAt": "2026-09-16T12:06:43.222Z",
           "branch": "a-fifth-column-review-a-finished-card-goes",
           "pullRequest": 49
+        },
+        {
+          "id": "20dca045-6a45-43eb-998b-0bf43d783ef5",
+          "title": "A which-key overlay: press a key and see what it starts",
+          "notes": "Like which-key for nvim. Press a key and the app shows every feature reachable from it, rather than having to open Ctrl+H and read the whole help dialog.\n\nShipped in PR #50. Hold Ctrl, Cmd or Alt with nothing else and a strip along the bottom names every key that modifier can still start on the screen you are on, each row saying what is left to press. Add a second modifier and the list narrows. It is not a dialog — it never takes the keyboard, so the key you press next still fires. Shift alone does not open it: a capital is typed with Shift. The rows come from the same builder the help dialog uses, so the two lists cannot drift; the 400ms wait is an animation delay rather than a timer.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-18T13:53:20.903Z",
+          "branch": "a-which-key-overlay-press-a-key-and-see-wha",
+          "pullRequest": 50
         }
       ]
     }
