@@ -211,36 +211,6 @@ body *:not(.pane, .pane *) {
   outline: none;
 }
 
-/* The manager's list is a handful of rows on a tall screen, and everything under it used to be blank
-   to the bottom of the window. A flex column is what lets the total below push itself onto the foot
-   of the page with `margin-top`, so the list has a bottom as well as a top.
-   Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be
-   squeezed into the page rather than scrolling inside it, and its rows would spill over the total. */
-.view-manager {
-  display: flex;
-  flex-direction: column;
-}
-
-.view-manager > * {
-  flex: 0 0 auto;
-}
-
-/* Nothing but the three names, so there is no name at the left to push them across. */
-.manager-head {
-  justify-content: flex-end;
-}
-
-.manager-total {
-  margin-top: auto;
-  border-top: 1px solid var(--brightBlack);
-}
-
-/* Takes the space between the label and the figures, the way a row's summary does with its auto
-   margin. How quiet it is comes off the list below with the rest of the page's quiet text. */
-.manager-total .manager-name {
-  flex: 1 1 auto;
-}
-
 .view-manager h1 {
   margin: 0 0 8px;
   font-size: 1rem;

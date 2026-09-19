@@ -138,6 +138,24 @@ test, no lint
 rule — which is why it is written
 down here.
 
+## `hidden` only hides what the stylesheet left alone — Hard Rule
+
+`element.hidden = true` hides by way of the browser's own `[hidden] { display:
+none }`, and any `display` in our CSS beats it. **So whenever a class gets a
+`display`, every element that class hides with the attribute needs a
+`.thing[hidden] { display: none }` beside it.**
+
+What it looks like: the manager's column names and its total joined the rows'
+`display: flex` so they would line up with them. Close every project and the
+page says "No project is open, so there is nothing to watch yet." with `5h week
+all` sitting over an empty list and a rule across the foot of the window holding
+three blank cells. `.view[hidden]` in `index.css` is the same trap the other way
+round — there the `display` is on purpose, so the views hide with `visibility`
+instead.
+
+No test can catch this: jsdom applies no user-agent stylesheet, so `hidden =
+true` reads back as hidden there whatever the CSS says.
+
 ## A refusal is explained where it is decided — Hard Rule
 
 When one place decides to refuse something and another prints the message, the
