@@ -1,21 +1,74 @@
-/* The token figures on the manager's rows. Their own file because index.css is already past the size
-   this project holds a file to, and the rule there is that new rules go somewhere new rather than
-   making it longer. */
+/* The token figures on the manager's rows, the names above them and the total under them. Their own
+   file because index.css is already past the size this project holds a file to, and the rule there is
+   that new rules go somewhere new rather than making it longer. */
 
-/* At the far end of the row, after the state and the age. Those two already carry the auto margin
-   that pushes the group right, so this only needs its own space in front of it — a second auto margin
-   here would split the group apart and strand the number in the middle of the row.
-   Tabular figures so the columns line up down the list: without them a row of 1s is visibly narrower
-   than a row of 8s and the numbers wander. */
+/* One column. At the far end of the row, after the state and the age — those two already carry the
+   auto margin that pushes the group right, so this only needs its own space in front of it; a second
+   auto margin here would split the group apart and strand the number in the middle of the row.
+   A width and an alignment, which is what makes it a column rather than a number: the figures are
+   four to six characters and change length as they grow, so left-aligned they wander and there is
+   nothing above them a name could sit over. Right-aligned in a box of the same width, every row ends
+   on one edge, a pane's single figure lands under `all` where it belongs, and the names above the
+   list line up with what they name.
+   Tabular figures for the same reason one step down: a row of 1s is visibly narrower than a row of
+   8s otherwise, and the digits themselves wander inside the column. */
 .manager-tokens {
   flex: 0 0 auto;
+  min-width: 7ch;
   padding-left: 12px;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.6;
 }
 
 /* A project's three figures are wider than a pane's one and are the line you scan down, so they keep
-   the full brightness the name has. */
-.manager-project .manager-tokens {
+   the full brightness the name has. The total at the foot sums those three and is read the same way. */
+.manager-project .manager-tokens,
+.manager-total .manager-tokens {
   opacity: 0.75;
+}
+
+/* The manager's list is a handful of rows on a tall screen, and everything under it used to be blank.
+   A flex column is what lets the total below push itself to the foot of the page with `margin-top`,
+   so the list has a bottom as well as a top instead of trailing off into the empty half.
+   Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be
+   squeezed into the page rather than scrolling inside it, and its rows would spill over the total. */
+.view-manager {
+  display: flex;
+  flex-direction: column;
+}
+
+.view-manager > * {
+  flex: 0 0 auto;
+}
+
+/* The names above the columns and the total below them: one more row of the list's shape — the same
+   width cap and the same padding — so a name, the figures under it and the total at the foot all end
+   on one right edge. Neither is in the list itself, because the list's children are the lines the
+   keyboard walks and a row the highlight can never reach does not belong among them. border-box so
+   the padding comes out of the 120ch rather than being added to it, which is how a plain `li` inside
+   the capped list already behaves. */
+.manager-head,
+.manager-total {
+  display: flex;
+  box-sizing: border-box;
+  max-width: 120ch;
+  padding: 4px 8px;
+}
+
+/* Nothing but the three names, so there is no name at the left to push them across. */
+.manager-head {
+  justify-content: flex-end;
+}
+
+.manager-total {
+  margin-top: auto;
+  border-top: 1px solid rgb(255 255 255 / 10%);
+}
+
+/* Takes the space between the label and the figures, the way a row's summary does with its auto
+   margin. Quiet, because the three figures beside it are what the line is for. */
+.manager-total .manager-name {
+  flex: 1 1 auto;
+  opacity: 0.6;
 }
