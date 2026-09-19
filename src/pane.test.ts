@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Bell } from './waiting';
-import { paneLastLine, paneScreen, paneScrollback, paneUse, type PaneTerminal } from './pane';
+import { paneLastLine, paneLooksBusy, paneScreen, paneScrollback, type PaneTerminal } from './pane';
 
 // A screen of `rows` lines starting at `baseY`, with the scrollback above it filled with lines that
 // must never be read.
@@ -40,19 +40,20 @@ describe('paneLastLine', () => {
   });
 });
 
-describe('paneUse', () => {
-  const live = (bell: Bell, screen: string) => ({ exited: false, bell, terminal: terminal([screen]) });
+describe('paneLooksBusy', () => {
+  const live = (bell: Bell, screen: string) => ({ bell, terminal: terminal([screen]) });
 
   it('holds a pane whose agent has stopped to ask, which prints neither busy pattern', () => {
-    expect(paneUse(live('waiting', 'Continue? [Y/n]')).busy).toBe(true);
+    expect(paneLooksBusy(live('waiting', 'Continue? [Y/n]'))).toBe(true);
   });
 
   it('holds a pane whose agent is still working, whatever its bell says', () => {
-    expect(paneUse(live('quiet', 'esc to interrupt')).busy).toBe(true);
+    expect(paneLooksBusy(live('quiet', 'esc to interrupt'))).toBe(true);
   });
 
-  it('frees a pane running an ordinary long command, which is all this can tell', () => {
-    expect(paneUse(live('quiet', 'VITE ready in 300 ms'))).toEqual({ exited: false, busy: false });
+  it('reads a pane running an ordinary long command as quiet — no agent is at work in it, and what is '
+    + 'running there is main\'s question rather than this one', () => {
+    expect(paneLooksBusy(live('quiet', 'VITE ready in 300 ms'))).toBe(false);
   });
 });
 

@@ -32,18 +32,22 @@ import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from 
 import {
   blockingChanges,
   branchNameFor,
-  busyPanes,
   changedFiles,
-  freePane,
   oneAtATime,
-  runsAnAgent,
   uncommittedCount,
   workPrompt,
   worktreePathFor,
   worktreesRoot,
+} from './ship';
+import {
+  busyPanes,
+  freePane,
+  runsAnAgent,
+  shipCanTake,
   type PaneCommand,
   type PaneReading,
-} from './ship';
+  type PaneUse,
+} from './pane-reading';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
 import { liveSessions, sweepUsage } from './usage-store';
 import { parentProcesses, sessionsByPane } from './pane-sessions';
@@ -202,6 +206,28 @@ function agentRunsIn(slot: number, pane: number | null): boolean {
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
 const agentsAtWork = workingPanes();
 ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
+
+// The other direction, and the one thing only main can answer: the reading of a project's five shells,
+// for the two screens that also have to know what is running in a pane. pane-reading.ts holds what
+// the shape is for and why they stopped reading it off the panes themselves.
+//
+// The reading itself, not an answer made from it, because the two ask different things of it: the pick
+// wants the worktree tie-break, and the refusal wants to name the program it found.
+//
+// `exited` is the one field a reading has no room for, and it is main's too — the shells map here is
+// what `pty:exit` is sent from, so the renderer's own flag is a copy of this one.
+//
+// The editor is not in it. It runs nvim for as long as the project is open, so on this reading it is
+// busy from launch — a pane no command could ever land in and a project that could never be closed.
+//
+// A project with no slot here answers with nothing at all, and nothing is the truth: every shell this
+// app has is in this file, so a project main cannot place has none left to run anything.
+ipcMain.handle('panes:read', (_event, projectPath: string): PaneUse[] => {
+  const slot = slotOfProject(projectPath);
+  if (slot === -1) return [];
+  return paneReadingsIn(slot, null)
+    .map((pane, index) => ({ ...pane, exited: !shells.has(terminalId(slot, index)) }));
+});
 
 // The question the review asks, which is the one above with "and has not finished" on the end. A ship
 // is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
@@ -660,10 +686,12 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // a worktree — the folder deleted, then no pane for the review, and a card saying so where the
 // checkout you were about to look at used to be.
 function freePaneIn(slot: number, freeing: number | null = null): number | null {
-  return freePane(paneReadingsIn(slot, freeing));
+  // What counts as free is shipCanTake's, the same answer attachPane picks by: a pane the review is
+  // handed is one the ship would take.
+  return freePane(paneReadingsIn(slot, freeing), shipCanTake);
 }
 
-// Every pane of the project as ship.ts reads them.
+// Every pane of the project as pane-reading.ts reads them.
 function paneReadingsIn(slot: number, freeing: number | null): PaneReading[] {
   const projectPath = projects[slot]?.path;
   return Array.from({ length: TERMINAL_COUNT }, (_value, index): PaneReading => {
@@ -697,7 +725,7 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
     };
   }
   const readings = paneReadingsIn(slot, null);
-  const pane = freePane(readings);
+  const pane = freePane(readings, shipCanTake);
   if (pane === null) {
     return {
       ok: false,
