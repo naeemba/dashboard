@@ -180,7 +180,10 @@ Fourteen predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
 listing the files in the way call, so the count on screen is exactly the list
 that caused it — `paneIsBusy` in the same file, which `freePane` asks to pick a
 pane and `busyPanes` asks again to name the ones that stopped it, so a ship that
-says every pane is in use lists exactly the panes it would not take — and
+says every pane is in use lists exactly the panes it would not take, and which
+the renderer asks too, over `panes:use`, because the command screen picking a
+pane to type into and the close refusing over the panes it would kill are the
+same question a ship asks and used to answer it for themselves — and
 `mayRead`, `mayWrite` and `isStranded` in `notes-state.ts`,
 where the notes box decides what it refuses and the status bar asks it what to
 say, and `mayEdit` in `board-state.ts`, which the board asks before every
