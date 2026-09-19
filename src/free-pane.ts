@@ -20,7 +20,7 @@ export function paneIsFree(pane: PaneUse): boolean {
   return !pane.exited && !paneIsBusy(pane);
 }
 
-// The pane a command lands in, or null when the project has none going. The order is ship.ts's, the
+// The pane a command lands in, or null when the project has none going. The order is freePane's, the
 // same one a ship takes a pane in: lowest-numbered, except that a pane still standing in a card's
 // worktree goes last. So a pane a ship steps around is one this steps around too, and a line you send
 // to every project does not land in a finished card's checkout while four empty prompts sit below it.

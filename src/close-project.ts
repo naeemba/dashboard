@@ -5,9 +5,10 @@ import { paneIsBusy, programIn, type PaneUse } from './pane-reading';
 // with something running in it. Both halves live here: the key asks this before it closes anything,
 // and the status bar prints what comes back, so the refusal and the message cannot come to disagree.
 
-// What this reads off a pane, which is free-pane.ts's reading with the pane's name on it. A dev
+// What this reads off a pane, which is pane-reading.ts's reading with the pane's name on it. A dev
 // server, a tail or vim in a pane holds the project open, the same way it holds a pane back from a
-// ship. What it cannot see is a job you put in the background — runsAProgram in ship.ts says why.
+// ship. What it cannot see is a job you put in the background — runsAProgram in pane-reading.ts
+// says why.
 export type ClosingPane = PaneUse & { name: string };
 
 // The refusal, or an empty string when nothing is in the way.

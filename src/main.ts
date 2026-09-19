@@ -207,8 +207,8 @@ const agentsAtWork = workingPanes();
 ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
 
 // The other direction, and the one thing only main can answer: the reading of a project's five shells,
-// for the two screens that also have to know what is running in a pane. free-pane.ts holds what the
-// shape is for and why they stopped reading it off the panes themselves.
+// for the two screens that also have to know what is running in a pane. pane-reading.ts holds what
+// the shape is for and why they stopped reading it off the panes themselves.
 //
 // The reading itself, not an answer made from it, because the two ask different things of it: the pick
 // wants the worktree tie-break, and the refusal wants to name the program it found.
@@ -690,7 +690,7 @@ function freePaneIn(slot: number, freeing: number | null = null): number | null 
   return freePane(paneReadingsIn(slot, freeing), shipCanTake);
 }
 
-// Every pane of the project as ship.ts reads them.
+// Every pane of the project as pane-reading.ts reads them.
 function paneReadingsIn(slot: number, freeing: number | null): PaneReading[] {
   const projectPath = projects[slot]?.path;
   return Array.from({ length: TERMINAL_COUNT }, (_value, index): PaneReading => {

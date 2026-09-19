@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { paneIsFree } from './free-pane';
 import {
   busyPanes, freePane, paneIsBusy, runsAnAgent, shipCanTake, type PaneReading,
 } from './pane-reading';
@@ -85,10 +86,9 @@ describe('freePane', () => {
     const dead = { ...idle, exited: true };
     const inWorktree = { ...idle, exited: false, inWorktree: true };
     const alive = { ...idle, exited: false };
-    const canTakeALine = (pane: typeof dead): boolean => !pane.exited && !paneIsBusy(pane);
-    expect(freePane([dead, inWorktree, alive], canTakeALine)).toBe(2);
-    expect(freePane([dead, inWorktree], canTakeALine)).toBe(1);
-    expect(freePane([dead], canTakeALine)).toBe(null);
+    expect(freePane([dead, inWorktree, alive], paneIsFree)).toBe(2);
+    expect(freePane([dead, inWorktree], paneIsFree)).toBe(1);
+    expect(freePane([dead], paneIsFree)).toBe(null);
   });
 });
 

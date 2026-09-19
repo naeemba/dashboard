@@ -57,9 +57,9 @@ export type DashboardBridge = {
   // screen. Whole list each time rather than a change at a time, so a report that goes missing costs
   // one tick's answer instead of leaving a pane marked as working for the rest of the run.
   reportWorkingPanes(ids: string[]): void;
-  // A project's five shells as free-pane.ts reads them, in pane order, the editor left out. Asked of
+  // A project's five shells as pane-reading.ts reads them, in pane order, the editor left out. Asked of
   // main because every field is the pty's: what it has in the foreground, and whether it is still
-  // there. free-pane.ts says what the shape is for and why the screens stopped reading it off the
+  // there. pane-reading.ts says what the shape is for and why the screens stopped reading it off the
   // panes themselves.
   //
   // A project main has no slot for answers with nothing. The command screen reads that as a project it
