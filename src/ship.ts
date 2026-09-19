@@ -74,8 +74,29 @@ export function workPrompt(cardId: string): string {
   return `/work-card ${cardId}`;
 }
 
-// The changed files that stop a ship, read from `git status --porcelain`. The refusal and the message
-// that explains it both call this, so the count on screen is exactly the list that caused it.
+// Every file `git status --porcelain` named, whatever it is. This is git's own answer, so it is the
+// one to ask wherever git is the thing doing the refusing: `git worktree remove` counts the whole
+// working tree and will not be talked out of it.
+//
+// What asking the narrower question there costs, and it is the bug this split was written for: a
+// worktree whose only change is the board move the agent has just written passes the app's check,
+// so nothing is refused and nothing is listed — and then git refuses anyway, and the only thing left
+// to put on the card is a raw `fatal: ... contains modified or untracked files`.
+export function changedFiles(porcelain: string): string[] {
+  return porcelain
+    .split('\n')
+    // `XY path`, so the path starts at column 3. A rename is `XY old -> new`, but only a rename —
+    // splitting on ' -> ' unconditionally would misread a plain add of a file literally named
+    // "a -> b.ts" as one.
+    .filter((line) => line.length > 3)
+    .map((line) => (line.slice(0, 2).includes('R') ? line.slice(3).split(' -> ').pop() ?? '' : line.slice(3)))
+    // git quotes a path with a space or a non-ASCII character in it.
+    .map((path) => path.replace(/^"|"$/g, ''))
+    .filter((path) => path !== '');
+}
+
+// The changed files that stop a ship. The refusal and the message that explains it both call this, so
+// the count on screen is exactly the list that caused it.
 //
 // .dashboard/ is the one exemption, and the whole folder rather than board.json alone. A project
 // that has never committed the folder is reported as the single line `?? .dashboard/` — git collapses
@@ -88,21 +109,13 @@ export function workPrompt(cardId: string): string {
 // explanation files. Nothing in the flow touches the project's checkout: the worktree is cut from
 // origin and the board it reads and commits is the worktree's own.
 export function blockingChanges(porcelain: string): string[] {
-  return porcelain
-    .split('\n')
-    // `XY path`, so the path starts at column 3. A rename is `XY old -> new`, but only a rename —
-    // splitting on ' -> ' unconditionally would misread a plain add of a file literally named
-    // "a -> b.ts" as one.
-    .filter((line) => line.length > 3)
-    .map((line) => (line.slice(0, 2).includes('R') ? line.slice(3).split(' -> ').pop() ?? '' : line.slice(3)))
-    // git quotes a path with a space or a non-ASCII character in it.
-    .map((path) => path.replace(/^"|"$/g, ''))
-    .filter((path) => path !== '' && !path.startsWith(`${BOARD_DIRECTORY}/`));
+  return changedFiles(porcelain).filter((path) => !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
 
-// How many of them there are, said the same way wherever it is said. Two refusals read this list —
-// the ship's, and the review's when it will not throw a worktree away — and the app saying "2 files
-// uncommitted" in one place and "2 uncommitted files" in the other is one condition wearing two faces.
+// How many of them there are, for the ship's refusal — the one place a count is worth printing,
+// because somebody pressed a key and is waiting on the answer in the status bar. The refusals nobody
+// is watching say it without a number: the review's line lands on a card and is written again on
+// every tick, so a count in it is a new sentence each time the agent saves another file.
 export function uncommittedCount(files: readonly string[]): string {
   return `${files.length} uncommitted file${files.length === 1 ? '' : 's'}`;
 }

@@ -178,21 +178,35 @@ Fifteen predicates exist for this reason: `hasSubtasks`, `attachmentRing`,
 `isHexColor`, `isFontSize` and `withoutShipped` in `settings.ts`,
 `blockingChanges` in `ship.ts` — which both the ship's refusal and the message
 listing the files in the way call, so the count on screen is exactly the list
-that caused it — `paneIsBusy` in `pane-reading.ts`, which `freePane` asks to
-pick a pane and `busyPanes` asks again to name the ones that stopped it, so a
-ship that says every pane is in use lists exactly the panes it would not take,
-and which the renderer asks too, over `panes:read`, because the command screen
-picking a pane to type into and the close refusing over the panes it would kill
-are the same question a ship asks and used to answer for themselves — and
-`programIn` beside it, which is the words for what one of those panes is
-running, so a ship refused by terminal 3 and a close refused by terminal 3
-describe it the same way rather than `terminal 3 npm` in one place and
-`terminal 3` in the other — and `mayRead`, `mayWrite` and `isStranded` in `notes-state.ts`,
+that caused it — `changedFiles` beneath it, which is the same list without the
+`.dashboard/` exemption and is the one the worktree list and the review ask,
+because there the refusal is git's own and git counts that folder — `paneIsBusy`
+in `pane-reading.ts`, which `freePane` asks to pick a pane and `busyPanes` asks
+again to name the ones that stopped it, so a ship that says every pane is in
+use lists exactly the panes it would not take, and which the renderer asks too,
+over `panes:read`, because the command screen picking a pane to type into and
+the close refusing over the panes it would kill are the same question a ship
+asks and used to answer for themselves — and `programIn` beside it, which is
+the words for what one of those panes is running, so a ship refused by terminal
+3 and a close refused by terminal 3 describe it the same way rather than
+`terminal 3 npm` in one place and `terminal 3` in the other — and `mayRead`,
+`mayWrite` and `isStranded` in `notes-state.ts`,
 where the notes box decides what it refuses and the status bar asks it what to
 say, and `mayEdit` in `board-state.ts`, which the board asks before every
 gesture and again when one bounces, so the key that does nothing and the
 sentence explaining it read the same field. A refusal worth a message reuses one
 of these or adds a sixteenth — never a second copy of the condition.
+
+The two answers to "is this worktree dirty" are the sharpest case of the rule
+read backwards: a predicate is only worth anything if it asks the same question
+as whatever is doing the refusing. `blockingChanges` skips `.dashboard/` on purpose, because the
+Ship move that started a ship is uncommitted in the project checkout and a ship
+that counted it would refuse itself. Ask that question before `git worktree
+remove` and it answers "nothing in the way" about a worktree git is about to
+refuse, so the app's own message never prints and a raw `fatal: ... contains
+modified or untracked files` lands on the card instead. Both were real: the `d`
+key on the worktree list, and the review sweep, which then wrote the card off
+for the rest of the run.
 
 `withoutShipped` is the same idea one step over: it decides what a line has to
 be before it belongs in settings.json, and both writers ask it — the save and
@@ -341,6 +355,20 @@ global instruction to move a card to Done once the PR is ready, which is
 written for boards with no Review column. Otherwise the board on `main` says a
 feature is finished and checked while nobody has looked at it, and `Review`
 sits empty in front of the person whose job it is to look.
+
+**The move into `Done` happens on the branch first, and only then is the pull
+request merged.** The branch's board is the copy the merge carries into `main`,
+so a card moved after the merge never reaches `main` at all. Move it afterwards
+and `main` goes on committing `Review` for a feature that shipped weeks ago,
+while the only copy saying `Done` is an uncommitted change in one person's
+checkout — true on screen, true nowhere else, and never converging. This repo's
+own board was found exactly like that: `origin/main` saying `Review` for a
+merged card and the working tree saying `Done`.
+
+The app's board is moved too, after the merge, because it is what is on screen
+and nothing on screen changes when a merge happens on a server. Both moves, in
+that order: branch, merge, app. `reviewPrompt` in `review.ts` is where it is
+written down, and `review.test.ts` pins the order.
 
 ## IPC channels are `<noun>:<verb>`
 

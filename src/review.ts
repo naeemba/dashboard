@@ -1,4 +1,6 @@
 import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type Board } from './board';
+import { BOARD_FILE_PATH } from './board-store';
+import { posixQuoted } from './shell';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -51,9 +53,11 @@ export function awaitsReview(board: Board, cardId: string): boolean | null {
 // place the app can say it: a review starts on a timer rather than a keystroke, so there is no status
 // bar waiting on an answer and nothing on screen that the failure belongs to.
 //
-// Null when the card already ends on this very line. The trail is append-only and the sweep tries each
-// card once per run of the app, so without this the card grows another copy of "1 uncommitted file in
-// ship-it" every time you restart, for as long as the worktree stays dirty.
+// Null when the card already ends on this very line. The trail is append-only, and the one refusal the
+// sweep retries is a dirty worktree — every five seconds, for as long as it stays dirty — so without
+// this a worktree somebody abandoned mid-change would bury its own card under a copy of "uncommitted
+// changes in ship-it" a tick. It matches the whole sentence, which is why that line carries no file
+// count: a number in it changes as the agent saves, and every new number is a line this lets through.
 export function reviewRefused(board: Board, cardId: string, reason: string): Board | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;
@@ -62,33 +66,71 @@ export function reviewRefused(board: Board, cardId: string, reason: string): Boa
   return addComment(board, at, line).board;
 }
 
-// A path for a shell to read, in single quotes. A project folder is allowed a space in it, and an
-// apostrophe too — `/Users/sharp/Bob's api`. Inside single quotes the only way to write one is to shut
-// the quotes, escape it, and open them again, which is what the replace does.
-function quotedPath(path: string): string {
-  return `'${path.replaceAll("'", String.raw`'\''`)}'`;
-}
-
 // What the review pane is asked to do. One prompt rather than a bare `/pr-loop`, because the loop
-// stops at a report and the card wants the pull request landed — and because the card's last move,
-// into Done, has to happen on the project's board rather than on the branch the pane is sitting on.
+// stops at a report and the card wants the pull request landed — and because that last move, into
+// Done, lands on two boards in an order that matters.
+//
+// The branch's board is the one the merge carries into main, so it is moved and pushed first, while
+// the pull request is still open. The project's board is the running app's own copy, and it is moved
+// after, once the merge has actually happened — before that there is nothing to show.
+//
+// Done in the other order, the merge carries whatever the branch happened to say, which is `Review`,
+// and main goes on committing `Review` for a card that landed weeks ago. The only copy that says
+// `Done` is then an uncommitted change in somebody's checkout, and it never becomes true for anyone
+// else. This project's own board was found in exactly that state: `origin/main` saying `Review` for
+// a merged card, the working tree saying `Done`, and the two never converging.
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in: the worktree is a checkout of the branch, and its own .dashboard
 // board is the branch's copy.
-export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string): string {
-  const board = `cd ${quotedPath(projectPath)} && node "$DASHBOARD_BOARD"`;
+export function reviewPrompt(
+  cardId: string, pullRequest: number, projectPath: string, title: string,
+): string {
+  const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
+  // One command, so the move and the commit that makes it real cannot be separated. A board written
+  // and left uncommitted is the whole of the bug above, and it is also what the sweep trips over when
+  // it comes to take a worktree away.
+  //
+  // Safe to run twice, the way commitShipMove is and for the reason it gives: a card already in Done
+  // stages nothing, and the commit would stop the chain before the push and before the merge — so a
+  // review pane restarted after getting this far would leave a landable pull request sitting there,
+  // reporting that git said no. Both halves name the board file, so a worktree that has been lived in
+  // cannot have the agent's own staged work swept into a commit about a card.
+  const file = `-- ${BOARD_FILE_PATH}`;
+  const commit = `git commit -m ${posixQuoted(`board: "${title}" is done`)} ${file}`;
+  const land = [
+    `node "$DASHBOARD_BOARD" move ${cardId} Done`,
+    `git add ${file}`,
+    `{ git diff --cached --quiet ${file} || ${commit}; }`,
+    'git push',
+  ].join(' && ');
   return [
     `Review pull request #${pullRequest} and land it. It came from card ${cardId} on the board of ${projectPath}.`,
     '',
     `1. Run /pr-loop ${pullRequest} and let it finish.`,
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-    `   conflict with the base branch, merge it with \`gh pr merge ${pullRequest} --merge\`. Do not`,
-    '   approve it: you are the author, and GitHub refuses an approval from the author. The pull',
-    '   request does not need one to merge.',
-    `3. Once it is merged, move the card to Done: \`${board} move ${cardId} Done\`.`,
-    '4. Any other ending — the loop stopped short, the merge was refused, the pull request conflicts —',
-    '   is where you stop. Leave the card in Review and say what happened on it:',
+    '   conflict with the base branch, land it in this order and no other:',
+    '',
+    `   a. \`${land}\``,
+    '',
+    "      That is this branch's board, the one under this pane, and it is what the merge carries",
+    '      into main. The column has to be right before the merge, not after: move it afterwards and',
+    '      main commits `Review` for a card that has landed, and the only copy saying `Done` is an',
+    "      uncommitted change in a checkout nobody else has.",
+    '',
+    `   b. \`gh pr merge ${pullRequest} --merge\`. Do not approve it: you are the author, and GitHub`,
+    '      refuses an approval from the author. The pull request does not need one to merge.',
+    '',
+    `   c. \`${board} move ${cardId} Done\``,
+    '',
+    "      That is the project's own board — the running app's copy, not this branch's — and it is",
+    '      what the card looks like on screen. Only after the merge, because before it there is',
+    '      nothing to show. It now says what (a) just put on main, which is the point of that order.',
+    '',
+    '3. Any other ending — the loop stopped short, the merge was refused, the pull request conflicts —',
+    "   is where you stop, and the card stays in Review on the project's board. If you already got",
+    '   as far as (a), leave that commit where it is rather than undoing it: a column on a branch is',
+    '   a claim about that branch and comes true only if it merges. Say what happened on the card:',
     `   \`${board} comment ${cardId} "<what happened>"\`.`,
     '',
     'Do not remove this worktree, and do not quit, kill or rebuild any running app.',

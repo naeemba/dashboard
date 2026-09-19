@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  blockingChanges, branchNameFor, oneAtATime, worktreePathFor,
+  blockingChanges, branchNameFor, changedFiles, oneAtATime, worktreePathFor,
 } from './ship';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
@@ -58,6 +58,22 @@ describe('worktreePathFor', () => {
   it('is not confused by a trailing slash on the project path', () => {
     expect(worktreePathFor('/Users/sharp/work/api/', 'bump-deps'))
       .toBe('/Users/sharp/work/api.worktrees/bump-deps');
+  });
+});
+
+describe('changedFiles', () => {
+  // The whole point of the split: git counts .dashboard/ when it refuses to give up a worktree, so the
+  // check that runs a moment before git's has to count it too. A worktree holding nothing but the board
+  // move the agent just wrote is dirty, and saying otherwise is how a review ends up with a raw
+  // `fatal: ... contains modified or untracked files` on its card.
+  it('counts the board file, which the ship exempts', () => {
+    expect(changedFiles(' M .dashboard/board.json\n')).toEqual(['.dashboard/board.json']);
+    expect(changedFiles('?? .dashboard/\n')).toEqual(['.dashboard/']);
+  });
+
+  it('names every changed file and nothing when there are none', () => {
+    expect(changedFiles(' M src/board.ts\n?? docs/notes.md\n')).toEqual(['src/board.ts', 'docs/notes.md']);
+    expect(changedFiles('')).toEqual([]);
   });
 });
 

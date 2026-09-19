@@ -168,10 +168,10 @@ export function openWorktrees(
     }
 
     // Asked twice, and the forced removal is offered whatever the first one failed on — not only on
-    // uncommitted changes. git counts files this app's dirty check exempts, .dashboard/ and everything
-    // gitignored among them, so a worktree this list calls clean is refused with `use --force to
-    // delete it`; without the offer here that worktree could never be removed from inside the app at
-    // all, and neither could one whose removal failed for any other reason.
+    // uncommitted changes. git counts files this app's dirty check exempts, everything gitignored
+    // among them, so a worktree this list calls clean is refused with `use --force to delete it`;
+    // without the offer here that worktree could never be removed from inside the app at all, and
+    // neither could one whose removal failed for any other reason.
     async function removeHighlighted(): Promise<void> {
       const entry = orderedWorktrees(worktrees())[highlighted];
       if (!entry) return;
