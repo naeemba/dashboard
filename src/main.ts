@@ -853,9 +853,8 @@ ipcMain.handle('worktree:list', () => {
 // changedFiles is the same predicate worktree:remove asks, so the two can never disagree about what
 // counts as dirty — and it is git's own answer rather than the ship's narrower one, because git is
 // what refuses the removal this row's `d` is about to ask for. Run concurrently — this is main, and
-// every pane's bytes flow through it — and
-// a worktree git cannot read (moved, deleted by hand) comes back unreadable rather than clean, since
-// silence is not the same thing as no changes.
+// every pane's bytes flow through it — and a worktree git cannot read (moved, deleted by hand) comes
+// back unreadable rather than clean, since silence is not the same thing as no changes.
 ipcMain.handle('worktree:check', async () => {
   const results = await Promise.all(worktrees.map(async (entry) => {
     try {
@@ -891,6 +890,7 @@ async function removeWorktree(worktreePath: string, force: boolean): Promise<Wor
     // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
     // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
     // folder has vanished, so the question is skipped rather than asked and lost.
+    //
     // changedFiles, not blockingChanges: this refusal exists to ask before git does, and git counts
     // .dashboard/ like any other folder. Ask the ship's narrower question here and a worktree holding
     // nothing but an uncommitted board move sails past, straight into git saying no in its own words.
