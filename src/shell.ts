@@ -38,12 +38,21 @@ export function isPowerShell(shellCommand: string): boolean {
   return POWERSHELL.test(baseName(shellCommand));
 }
 
+// One word in single quotes the way every POSIX shell reads them. Inside single quotes the only way
+// to write an apostrophe is to shut the quotes, escape it, and open them again. Exported because the
+// review prompt builds shell lines for an agent to run and needs the same escape — two copies of this
+// formula is one of them getting an edge case fixed and the other not.
+//
+// Always quotes, unlike quoteForShell below, which lets a plain path through bare so a dropped path
+// still looks like a path at a prompt.
+export function posixQuoted(word: string): string {
+  return `'${word.replaceAll("'", "'\\''")}'`;
+}
+
 export function quoteForShell(value: string, shellCommand: string): string {
   if (SHELL_SAFE.test(value)) return value;
-  const escaped = isPowerShell(shellCommand)
-    ? value.replaceAll("'", "''")
-    : value.replaceAll("'", "'\\''");
-  return `'${escaped}'`;
+  if (isPowerShell(shellCommand)) return `'${value.replaceAll("'", "''")}'`;
+  return posixQuoted(value);
 }
 
 // The editor pane runs nvim, and nvim has to be found on PATH. An app launched from the Dock inherits

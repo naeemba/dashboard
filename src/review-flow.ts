@@ -141,7 +141,7 @@ async function swapWorktree(
   const started = ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
-    reviewPrompt(entry.cardId, pullRequest, entry.projectPath),
+    reviewPrompt(entry.cardId, pullRequest, entry.projectPath, entry.title),
   );
   return { message: started.ok ? '' : started.message, again: false };
 }
