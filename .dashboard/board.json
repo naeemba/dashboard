@@ -121,6 +121,10 @@
     },
     {
       "name": "Ship",
+      "cards": []
+    },
+    {
+      "name": "Doing",
       "cards": [
         {
           "id": "7186e23e-5d75-43ce-ba2a-df10a9e86e0a",
@@ -131,10 +135,6 @@
           "updatedAt": "2026-09-18T14:15:04.840Z"
         }
       ]
-    },
-    {
-      "name": "Doing",
-      "cards": []
     },
     {
       "name": "Review",
