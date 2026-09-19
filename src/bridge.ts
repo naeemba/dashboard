@@ -1,5 +1,6 @@
 import type { Project } from './projects';
 import type { Board } from './board';
+import type { PaneUse } from './pane-reading';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { Settings } from './settings';
@@ -56,6 +57,15 @@ export type DashboardBridge = {
   // screen. Whole list each time rather than a change at a time, so a report that goes missing costs
   // one tick's answer instead of leaving a pane marked as working for the rest of the run.
   reportWorkingPanes(ids: string[]): void;
+  // A project's five shells as pane-reading.ts reads them, in pane order, the editor left out. Asked of
+  // main because every field is the pty's: what it has in the foreground, and whether it is still
+  // there. pane-reading.ts says what the shape is for and why the screens stopped reading it off the
+  // panes themselves.
+  //
+  // A project main has no slot for answers with nothing. The command screen reads that as a project it
+  // could not reach and names it; the close reads it as nothing to lose and goes ahead, which is what
+  // an empty list means — main holds every shell, so a project it has no slot for has no shells left.
+  readPanes(projectPath: string): Promise<PaneUse[]>;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;

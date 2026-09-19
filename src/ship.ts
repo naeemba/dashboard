@@ -1,11 +1,12 @@
 import { basename, dirname, join } from 'node:path';
-import { baseName } from './base-name';
 import { BOARD_DIRECTORY } from './board-store';
-import { paneLabel } from './terminals';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
-// commands; what to call things, which pane to take and what counts as being in the way is here,
-// where a test can pin it.
+// commands; what to call things and what counts as being in the way is here, where a test can pin it.
+//
+// Which pane to take is next door, in pane-reading.ts, with the rest of what a pane can be asked. The
+// command screen and the close ask the same questions of a pane now, and they run in the renderer —
+// which cannot import this file, because BOARD_DIRECTORY drags board-store.ts and node:fs in with it.
 
 // How long a branch name may get. Past this the card id on the end pushes it out of what a shell
 // prompt shows, and a branch you cannot read is a branch you check out by mistake.
@@ -71,101 +72,6 @@ export function worktreePathFor(projectPath: string, branch: string): string {
 // when it starts and once when it is finished after stopping part way — and two copies drift.
 export function workPrompt(cardId: string): string {
   return `/work-card ${cardId}`;
-}
-
-// What a pane was asked to run and where. main holds one of these per pane; this is the shape of a row
-// in that map, here because what the shape means to a ship is decided here.
-export type PaneCommand = { args: string[] | 'editor'; directory: string };
-
-// An agent's pane, which is the only one carrying a command of its own. The five terminals run nothing
-// — an empty array — and the editor's args are the string 'editor', which is not a command but a note
-// saying to work nvim's out at spawn time, so that quitting nvim leaves a pane Enter starts it in
-// again. Counting either as an agent's would take a pane out of the ship's reach for good.
-export function runsAnAgent(command: PaneCommand | undefined): command is PaneCommand {
-  return command !== undefined && command.args !== 'editor' && command.args.length > 0;
-}
-
-// One pane of a project as a ship sees it. `foreground` is what the pty says is running in the pane at
-// the moment it is asked — the shell itself when the pane is sitting at a prompt, and undefined when the
-// shell has gone. `shell` is the shell this pane was spawned with. `command` is what the pane was asked
-// to run. `inWorktree` is the pane still standing in a card's checkout rather than the project.
-//
-// The shell is the pane's own, not the setting. The setting changes under panes that are already
-// running, and its own screen says so: a pane started as zsh is still zsh after you switch the setting
-// to bash. Comparing the pty's answer against the setting would read all five panes of every open
-// project as running a program the moment you changed it, and refuse every ship until each project was
-// closed and reopened. A pane respawned after the change really is on the new shell, and the pane's own
-// record gets that right too.
-export type PaneReading = {
-  foreground: string | undefined;
-  shell: string | undefined;
-  command: PaneCommand | undefined;
-  inWorktree: boolean;
-};
-
-// What the pty reports against the shell the pane was started as, compared on the last segment because
-// the two are spelled differently at each end: the pane is spawned with `/bin/zsh` and the pty answers
-// `zsh`. A pane waiting at a prompt reports the shell itself; anything else is a program you started.
-//
-// A reading, not a record, so it is exactly as true as the pane is — and that is the point. The pane's
-// use was tracked before, and what was tracked was whether you had ever pressed a key in it, which
-// nothing ever took back: pressing Ctrl+L in the five terminals to tidy them marked all five as in use
-// for the rest of the run, and every ship after that was refused with five empty prompts on screen.
-//
-// The reading is unix-only. main's foregroundOf answers nothing on Windows, where the pty reports its
-// terminal type rather than a foreground process, so every pane there is free and only the agent record
-// keeps one.
-//
-// Two things read as a prompt without being one, and a ship takes the pane and kills the shell in it.
-//
-// A line you have typed and not submitted: what is lost is a command you had not run yet.
-//
-// A job you put in the background — `npm run dev &` — is the expensive one. The shell is back at its
-// prompt, so the foreground is the shell and this answers false; ship a card, the pane is taken, and
-// the dev server goes down with the shell, with nothing on screen having said that pane was doing
-// anything. What would catch it is reading the shell's children rather than its foreground, and that
-// is not done here because a shell at an empty prompt has children on a real machine: powerlevel10k
-// leaves a gitstatusd running under every zsh for the life of the shell. Counting any child would put
-// all five panes permanently in use from launch — the same dead end the typed-pane mark produced,
-// which is what this change exists to remove. Telling a prompt's daemon from a job you started means
-// reading the process group rather than the parent, and that is its own piece of work.
-//
-// help.ts says both out loud, because the ship's blurb is where someone learns what a ship can take.
-function runsAProgram(foreground: string | undefined, shell: string | undefined): boolean {
-  // No shell recorded means no pty was ever spawned, which is the same nothing-is-running answer an
-  // undefined foreground gives.
-  return foreground !== undefined && shell !== undefined && baseName(foreground) !== baseName(shell);
-}
-
-// Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: an agent
-// is recorded in it, or its shell is running something right now.
-export function paneIsBusy(pane: PaneReading): boolean {
-  return runsAnAgent(pane.command) || runsAProgram(pane.foreground, pane.shell);
-}
-
-// The pane a ship takes: the lowest-numbered one nobody is using, or null when every one is taken.
-//
-// A pane still standing in a worktree goes last. Its agent has exited and handed the pane back, so it is
-// free — but the shell in it is sitting in that checkout under the agent's transcript, and a ship kills
-// the shell in the pane it takes. Lowest-first on its own takes terminal 1 back from the card you are
-// reading while terminals 2 to 5 sit at empty prompts.
-export function freePane(panes: readonly PaneReading[]): number | null {
-  const free = panes
-    .map((pane, index) => ({ pane, index }))
-    .filter(({ pane }) => !paneIsBusy(pane));
-  return (free.find(({ pane }) => !pane.inWorktree) ?? free[0])?.index ?? null;
-}
-
-// Why the ship could not have one, named rather than counted — the same states the refusal was decided
-// on, so what this lists is exactly what stopped it. Each pane says what was seen running in it, because
-// the answer is a reading taken the moment you pressed the key: a ship refused by a prompt hook that was
-// still going says `terminal 3 git` rather than leaving you to wonder which pane it meant.
-export function busyPanes(panes: readonly PaneReading[]): string {
-  return panes
-    .flatMap((pane, index) => (paneIsBusy(pane)
-      ? [`${paneLabel(index)} ${runsAnAgent(pane.command) ? 'an agent' : pane.foreground}`]
-      : []))
-    .join(', ');
 }
 
 // The changed files that stop a ship, read from `git status --porcelain`. The refusal and the message

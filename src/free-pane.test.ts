@@ -1,21 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import { freePaneIndex, planSend, sendSummary, type ProjectPanes } from './free-pane';
+import type { PaneUse } from './pane-reading';
 
-const free = { exited: false, busy: false };
-const busy = { exited: false, busy: true };
-const dead = { exited: true, busy: false };
+// A shell sitting at its own prompt, which is what a pane nobody is using reads as.
+const free: PaneUse = {
+  exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
+};
+const busy: PaneUse = { ...free, foreground: 'npm' };
+const dead: PaneUse = { ...free, exited: true };
+// The agent has exited and handed the pane back, so nothing is running in it — but its shell is still
+// standing in the card's checkout, which is why a pane of the project goes first.
+const finished: PaneUse = { ...free, inWorktree: true };
 
 describe('freePaneIndex', () => {
   it('takes the first pane that is neither dead nor busy', () => {
     expect(freePaneIndex([dead, busy, free, free])).toBe(2);
   });
 
-  it('answers -1 when every pane is busy, so the project is skipped rather than interrupted', () => {
-    expect(freePaneIndex([busy, busy, dead])).toBe(-1);
+  it('answers null when every pane is busy, so the project is skipped rather than interrupted', () => {
+    expect(freePaneIndex([busy, busy, dead])).toBe(null);
   });
 
-  it('answers -1 for a project with no panes at all', () => {
-    expect(freePaneIndex([])).toBe(-1);
+  it('answers null for a project with no panes at all', () => {
+    expect(freePaneIndex([])).toBe(null);
+  });
+
+  // The same order a ship takes a pane in, so a line sent to every project does not land in a finished
+  // card's checkout while an empty prompt of the project itself sits below it.
+  it('takes a pane still standing in a card\'s worktree last, the way a ship does', () => {
+    expect(freePaneIndex([finished, free])).toBe(1);
+    expect(freePaneIndex([finished, busy])).toBe(0);
   });
 });
 

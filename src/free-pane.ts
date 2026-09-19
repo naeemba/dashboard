@@ -1,37 +1,31 @@
+import { freePane, paneIsBusy, type PaneUse } from './pane-reading';
+
 // Which pane a command from the command screen lands in, and which projects it cannot land in at all.
 // That screen marks projects, not panes, so something has to pick one pane per project — and a project
 // whose panes are all busy has to be named rather than quietly missed. Kept here rather than in the
 // renderer so the picking and the sentence that reports it are one file and cannot word the same run
 // two ways.
 
-// What the picking reads off one pane. Two flags rather than a terminal, so this file is testable
-// without building one. `busy` is "a line typed here would be read by an agent rather than a shell",
-// as far as anything can tell that without shell integration — which is narrower than it sounds, and
-// `paneUse` in pane.ts, where the flag is worked out, is where that is spelled out.
-export type PaneUse = { exited: boolean; busy: boolean };
-
 // `missing` is a project whose folder has gone. Its page is still open and still has a row on the
 // command screen, so it reaches the planning and has to leave by a door of its own: it has no panes
 // at all, and "no free pane in api" would send you looking for a busy pane that does not exist.
 export type ProjectPanes = { name: string; path: string; missing: boolean; panes: readonly PaneUse[] };
 
-// The first pane that can take a command, or -1 when the project has none. First rather than any
-// cleverer choice: the panes are in the order they are on screen, so the command lands in the topmost
-// free one and you know where to look for it without hunting.
-// A dead pane is skipped for the same reason the manager will not answer one — there is no shell
-// behind it to read the line — and a busy pane because a line typed at an agent is not a command, it
-// is a message to the agent. How much of "an agent has this pane" that flag can actually catch is
-// paneUse's to say, in pane.ts, and is narrower than the word busy sounds.
-export function freePaneIndex(panes: readonly PaneUse[]): number {
-  return panes.findIndex(paneIsFree);
+// Whether a pane can take a line of shell, which is what this screen picks by. shipCanTake in
+// pane-reading.ts is the ship's answer to the same question, and this is where the two part: a dead
+// pane is skipped here for the same reason the manager will not answer one — there is no shell behind
+// it to read the line — while a ship takes one gladly, since it spawns a shell in whatever pane it
+// takes. Everything else about the two answers is paneIsBusy, spelled once next door.
+export function paneIsFree(pane: PaneUse): boolean {
+  return !pane.exited && !paneIsBusy(pane);
 }
 
-// Whether a pane can take a line of shell. One place says so, because two screens ask opposite halves
-// of it: this one picks the free pane, and closing a project refuses over the panes that are neither
-// free nor dead. Spelled twice with the sign flipped, a third flag added to PaneUse would reach one of
-// them — and a pane the command screen will not type into would be one a close kills without a word.
-export function paneIsFree(pane: PaneUse): boolean {
-  return !pane.exited && !pane.busy;
+// The pane a command lands in, or null when the project has none going. The order is freePane's, the
+// same one a ship takes a pane in: lowest-numbered, except that a pane still standing in a card's
+// worktree goes last. So a pane a ship steps around is one this steps around too, and a line you send
+// to every project does not land in a finished card's checkout while four empty prompts sit below it.
+export function freePaneIndex(panes: readonly PaneUse[]): number | null {
+  return freePane(panes, paneIsFree);
 }
 
 export type SendPlan = {
@@ -53,7 +47,7 @@ export function planSend(projects: readonly ProjectPanes[]): SendPlan {
       continue;
     }
     const paneIndex = freePaneIndex(project.panes);
-    if (paneIndex === -1) skipped.push(project.name);
+    if (paneIndex === null) skipped.push(project.name);
     else sends.push({ path: project.path, paneIndex });
   }
   return { sends, skipped, gone };

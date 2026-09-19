@@ -16,7 +16,10 @@ export type CommandOptions = {
   // The other way to run it: typed into a live shell rather than a process of its own. Which pane in
   // each project takes it is free-pane.ts's answer, and the plan it hands back is what this screen
   // reports — a project that had no free pane is named, never silently left out.
-  runInPanes(command: string, projectPaths: string[]): SendPlan;
+  //
+  // A promise because what is running in each pane is main's to say, and asking is a round trip. The
+  // line is typed once the answer is back, so the gap is one tick and nothing is on screen for it.
+  runInPanes(command: string, projectPaths: string[]): Promise<SendPlan>;
   cancelTasks(): void;
   // What an action is bound to right now, read fresh on every redraw rather than handed over once, so
   // rebinding a key in the settings screen rewrites the hint under the list and the status bar with it
@@ -85,6 +88,8 @@ export function createCommandView(options: CommandOptions): CommandView {
   // the same fix for the same reason.
   let selectedKey = COMMAND_KEY;
   let running = false;
+  // Whether a fan-out to the panes is still waiting on main for the panes it may use.
+  let sending = false;
   // What the last run into the panes did. Held rather than printed and forgotten, because that run
   // leaves nothing on this screen: the output is in a shell on another page, so without this line a
   // command sent to five panes and a command sent to none look identical here.
@@ -169,10 +174,19 @@ export function createCommandView(options: CommandOptions): CommandView {
   // Into the shells instead. Nothing is marked as running here: once the line is typed the pane owns
   // it, and this screen has no way to know when it finishes — that is the trade for being able to take
   // over mid-run, which is the whole reason for this key.
-  function runInPanes(): void {
+  async function runInPanes(): Promise<void> {
+    // One run at a time. Which pane takes the line is a question to main now, and nothing on screen
+    // changes while the answer is out — so holding the key sends the command into every pane twice,
+    // the second time on top of the first, with the status bar only ever reporting the last of them.
+    if (sending) return;
     const job = pending();
     if (job === null) return;
-    lastSend = sendSummary(options.runInPanes(job.command, job.paths));
+    sending = true;
+    try {
+      lastSend = sendSummary(await options.runInPanes(job.command, job.paths));
+    } finally {
+      sending = false;
+    }
     // Back to the box, because the box is the only row whose label carries that sentence. The key
     // fires from any row — press it with the selection on a project and the one line saying the run
     // missed two projects would be written down and never shown.
@@ -296,7 +310,7 @@ export function createCommandView(options: CommandOptions): CommandView {
     runAction(action: Action): void {
       if (action.kind === 'command-select') return move(action.direction);
       if (action.kind === 'command-open') return open();
-      if (action.kind === 'command-run-in-panes') return runInPanes();
+      if (action.kind === 'command-run-in-panes') return void runInPanes();
       if (action.kind === 'command-cancel') return cancel();
     },
     update(result: TaskResult): void {

@@ -32,9 +32,9 @@ import {
 import { createManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
-import { closeRefusal } from './close-project';
+import { closeRefusal, closingPanes } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
-import { paneLastLine, paneScrollback, paneTail, paneUse, type Pane } from './pane';
+import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
   createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, type Page,
 } from './page';
@@ -104,6 +104,9 @@ let activeIndex = 0;
 // Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
+// Whether a close is already waiting on main for the panes it would take. closeProject says what a
+// second one costs.
+let closing = false;
 
 function projectPages(): Page[] {
   return pages.filter(isProjectPage);
@@ -486,12 +489,18 @@ function setPage(project: Project, slot: number): void {
 }
 
 // Asked twice — once before the question and once with the answer — so it is one function. What the
-// flags catch and what the sentence says are close-project.ts's; this only reads them off live panes.
-function closeRefusalFor(page: Page): string {
-  return closeRefusal(
-    page.project.name,
-    namedPanes(page).map((pane) => ({ name: pane.name, ...paneUse(pane) })),
-  );
+// flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
+// `panes:read`, and this only puts the names to it.
+//
+// The five shells, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
+// for as long as the project is open, so on a reading of what the pty has in the foreground it is busy
+// from launch, and a close that counted it would refuse every time with `nvim` named as the thing in
+// the way. It was never much of a signal on the old reading either: it blocked a close only while its
+// bell was ringing or its screen happened to match an agent's spinner. What guards a half-finished
+// edit in nvim is the question below, which is asked whether or not anything is in the way.
+async function closeRefusalFor(page: Page): Promise<string> {
+  const uses = await bridge.readPanes(page.project.path);
+  return closeRefusal(page.project.name, closingPanes(uses, namedPanes(page)));
 }
 
 // Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
@@ -500,13 +509,28 @@ function closeRefusalFor(page: Page): string {
 // prompt stops nothing, so the question below is asked whether or not anything was in the way.
 // The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
 // pane id that named this project names nothing from here on.
-function closeProject(slot: number): void {
+async function closeProject(slot: number): Promise<void> {
+  // One close at a time, the same guard runInPanes has and for the same reason: what stops a close is
+  // a question to main now, and nothing on screen changes while the answer is out. Two presses in that
+  // window build two confirm sheets. Answer the top one and the project closes correctly — the sheet
+  // underneath stays on screen with nothing focusing it, the page behind goes on taking every key
+  // because the window's guard only fires when focus is inside an overlay, and no key clears it.
+  if (closing) return;
   const position = positionOfSlot(slot);
   const page = pages[position];
   // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
   // has already gone.
   if (!page || !isProjectPage(page)) return;
-  const refusal = closeRefusalFor(page);
+  closing = true;
+  let refusal: string;
+  try {
+    refusal = await closeRefusalFor(page);
+  } finally {
+    // In a finally, because readPanes is an IPC call and can reject: a flag left up by one failed
+    // round trip would make Ctrl+Q do nothing for the rest of the run. Nothing yields between here
+    // and the sheet below, so no keystroke can arrive in the gap.
+    closing = false;
+  }
   if (refusal !== '') return showError('close', refusal);
   // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
   // is: cancelling the dialog leaves no path back here to clear it.
@@ -518,23 +542,26 @@ function closeProject(slot: number): void {
   void confirmOverlay(
     `Close ${page.project.name}?`,
     'Enter closes it, its five shells and its editor. Escape keeps it.',
-  ).then((confirmed) => {
+  ).then(async (confirmed) => {
     // The keyboard back to the page first, for the same reason namePane does it: the sheet that held the
     // focus has gone, so answering Escape here would otherwise leave you unable to type in any pane.
     showPage(activeIndex);
     if (!confirmed) return;
     // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
     // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
-    // found afresh here.
-    const closingPosition = positionOfSlot(slot);
-    if (closingPosition === -1) return;
-    // Whatever page holds this slot is a project page, because the slot is the same one the check at
-    // the top answered for and isProjectPage reads nothing else.
-    const closingPage = pages[closingPosition];
+    // found afresh here. Whatever page holds this slot is a project page, because the slot is the same
+    // one the check at the top answered for and isProjectPage reads nothing else.
+    const closingPage = pages[positionOfSlot(slot)];
+    if (!closingPage) return;
     // Read again with the page and for the same reason: the answer was given over a quiet project, and
     // a pane that took an agent or a question while the dialog was up is one the close refuses over.
-    const late = closeRefusalFor(closingPage);
+    const late = await closeRefusalFor(closingPage);
     if (late !== '') return showError('close', late);
+    // The page's place in the list, found after that question rather than before it: asking main is a
+    // round trip, and a project closed from elsewhere while it was out shifts every page after it
+    // along. The index taken before would splice a different project out of the list.
+    const closingPosition = positionOfSlot(slot);
+    if (closingPosition === -1) return;
     bridge.closeProject(slot);
     discardPanes(slot);
     closingPage.element.remove();
@@ -682,7 +709,7 @@ function apply(action: Action): void {
   // list, where the highlight says which project is meant. Its other two sections have no highlight
   // naming one project, so the key does nothing on them and Ctrl+H still lists it; CLAUDE.md's help
   // section says why.
-  if (action.kind === 'project-close' && isProjectPage(page)) return closeProject(page.slot);
+  if (action.kind === 'project-close' && isProjectPage(page)) return void closeProject(page.slot);
   switch (action.kind) {
     case 'project-last': {
       const position = positionOfSlot(previousSlot);
@@ -826,12 +853,17 @@ function jumpToWorktree(entry: WorktreeEntry): string {
 // pane in each of them takes the line, and which projects can take it at all, is free-pane.ts's to
 // answer. terminal.input is the same door answerPane and a dropped file already go through, and the
 // carriage return is what an Enter in the pane sends.
-function sendToPanes(command: string, paths: readonly string[]): SendPlan {
+async function sendToPanes(command: string, paths: readonly string[]): Promise<SendPlan> {
   // One array, both jobs: what planSend is asked about, and where the line is then delivered. Two
   // collections built from the same filter is how a project comes to be planned for and not written
   // to, or written to after the plan has left it out.
   const chosen = projectPages().filter((page) => paths.includes(page.project.path));
-  const plan = planSend(chosen.map((page) => ({
+  // Every project's panes read at once rather than one after another, so what the plan is built from is
+  // as near to one moment as this can make it. Asked of main: what is running in a pane is the pty's
+  // foreground process, and reading the pane's own screen instead is what typed a line on top of a dev
+  // server that had printed its banner and gone quiet.
+  const uses = await Promise.all(chosen.map((page) => bridge.readPanes(page.project.path)));
+  const plan = planSend(chosen.map((page, index) => ({
     name: page.project.name,
     path: page.project.path,
     // A project whose folder has gone keeps its page, and that page has no panes — so free-pane.ts is
@@ -839,7 +871,7 @@ function sendToPanes(command: string, paths: readonly string[]): SendPlan {
     missing: page.project.missing,
     // The five shells, never the editor. It rings a bell like a pane and is listed like one, but a
     // line of shell typed into nvim is not a command, it is an edit to whatever file is open.
-    panes: page.panes.map(paneUse),
+    panes: uses[index],
   })));
   // The plan's own answer, keyed by the path it names, so nothing here decides a second time which
   // projects the command reaches. A path with no entry is one the plan deliberately left out — every
@@ -890,10 +922,11 @@ window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
 // card's worktree away, and `git worktree remove` kills every shell in that folder — and without this
 // it waits on an exit that only arrives when you close the pane by hand, so no review ever starts.
 //
-// paneUse is the reading, the same one the command screen picks a free pane with, so "still working"
-// has one spelling. One report is a sample and not an answer, and what main makes of a run of them is
-// working-panes.ts's, which is also where the interval below comes from — the same number the sweep
-// that reads the reports ticks on, written once so halving one halves the other.
+// paneLooksBusy is the reading, and it is the screen's, not main's — the one question about a pane
+// that a foreground process cannot answer, which is why it goes this way round while "is anything
+// running in this pane" goes the other. One report is a sample and not an answer, and what main makes
+// of a run of them is working-panes.ts's, which is also where the interval below comes from — the same
+// number the sweep that reads the reports ticks on, written once so halving one halves the other.
 //
 // Every pane, including the ones no card was ever shipped into, because working out which pane a
 // worktree record names means pairing its project with a slot and that pairing is main's. The cost is
@@ -901,7 +934,7 @@ window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
 // panes the records name.
 window.setInterval(() => {
   const working: string[] = [];
-  for (const [id, pane] of panesById) if (paneUse(pane).busy) working.push(id);
+  for (const [id, pane] of panesById) if (paneLooksBusy(pane)) working.push(id);
   bridge.reportWorkingPanes(working);
 }, WORKING_REPORT_MS);
 bridge.onExit((id, exitCode) => {

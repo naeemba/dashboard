@@ -1,6 +1,5 @@
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
-import type { PaneUse } from './free-pane';
 import { isPrinted, tailLines } from './manager';
 import { isRinging, looksBusy, type Bell } from './waiting';
 
@@ -91,19 +90,25 @@ export function paneLastLine(terminal: PaneTerminal): string {
   return '';
 }
 
-// What free-pane.ts picks from, read off one live pane. `busy` is the two things this app can actually
-// tell: an agent still working, which looksBusy reads off the screen — the same question the bell asks
-// before it believes a ring — and a pane still flagged as asking, which prints neither busy pattern and
-// is the pane a command would be submitted into as the answer.
+// Whether a pane has an agent in it that is still going, which is the one question about a pane that
+// only the screen can answer. Main holds the pty and so knows a process is there; it cannot tell an
+// agent mid-work from one sitting at its own prompt with the card finished. Two things count as still
+// going: a spinner, which looksBusy reads — the same question the bell asks before it believes a ring
+// — and a pane still flagged as asking, which prints neither busy pattern and is an agent waiting on
+// an answer from you.
+//
 // The flag is the weaker half and stays weak on purpose: focusing a pane clears its bell, because
 // arriving at the pane is the answer to whatever it asked. So a pane whose agent asked something you
-// have already glanced at reads as free again, the same way a dev server does — once the mark is off,
-// nothing on screen separates a question from a prompt. A longer-lived flag would need its own answer
-// for when it clears, and there is not one without shell integration either.
+// have already glanced at reads as quiet again. working-panes.ts in main is what covers that gap, by
+// keeping a pane working for a while after the last report that named it.
+//
+// This is not the question the command screen and the close ask any more. Theirs is `paneIsBusy` in
+// pane-reading.ts, which says why a screen could never have answered it.
+//
 // Structural rather than `Pane` so the branch can be tested without building an xterm terminal; a real
 // `Pane` satisfies it.
-export function paneUse(pane: { exited: boolean; bell: Bell; terminal: PaneTerminal }): PaneUse {
-  return { exited: pane.exited, busy: isRinging(pane.bell) || looksBusy(paneScreen(pane.terminal)) };
+export function paneLooksBusy(pane: { bell: Bell; terminal: PaneTerminal }): boolean {
+  return isRinging(pane.bell) || looksBusy(paneScreen(pane.terminal));
 }
 
 // The whole pane as a file: everything it holds, top of the scrollback to the last line printed. What
