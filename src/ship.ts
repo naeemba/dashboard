@@ -206,10 +206,10 @@ export function blockingChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
 
-// How many of them there are, said the same way wherever it is said. Three refusals read a list of
-// them — the ship's, the worktree list's when it will not delete a dirty folder, and the review's
-// when it will not throw one away — and the app saying "2 files uncommitted" in one place and
-// "2 uncommitted files" in the other is one condition wearing two faces.
+// How many of them there are, for the ship's refusal — the one place a count is worth printing,
+// because somebody pressed a key and is waiting on the answer in the status bar. The refusals nobody
+// is watching say it without a number: the review's line lands on a card and is written again on
+// every tick, so a count in it is a new sentence each time the agent saves another file.
 export function uncommittedCount(files: readonly string[]): string {
   return `${files.length} uncommitted file${files.length === 1 ? '' : 's'}`;
 }

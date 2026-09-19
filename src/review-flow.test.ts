@@ -235,7 +235,7 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.added).toEqual([]);
     expect(commentsOnCard(projectPath))
-      .toEqual(['No review worktree: 2 uncommitted files in ship-it, waiting for the commit']);
+      .toEqual(['No review worktree: uncommitted changes in ship-it, waiting for the commit']);
   });
 
   // The bug this was written for. `/work-card` writes the pull request number onto the branch's board
@@ -263,17 +263,22 @@ describe('reviewSweep', () => {
   // One line, however many ticks it takes. The trail is append-only, so a worktree somebody walked away
   // from mid-change would otherwise bury its own card under a copy of the same sentence every five
   // seconds.
+  //
+  // The agent keeps saving while it sits there, so the file list grows between ticks. The line is only
+  // one line if nothing in it counts them — reviewRefused matches the whole sentence, so a count would
+  // make each tick a new one and stack them all.
   it('says a dirty worktree once however many times it retries', async () => {
     const { entry, projectPath } = flight(12);
+    const dirtying = [['src/a.ts'], ['src/a.ts', 'src/b.ts'], ['src/a.ts', 'src/b.ts', 'src/c.ts']];
     const { ports: made } = ports(entry, {
-      removeWorktree: async () => ({ ok: false, message: '', dirty: ['src/a.ts'] }),
+      removeWorktree: async () => ({ ok: false, message: '', dirty: dirtying.shift() ?? ['src/a.ts'] }),
     });
     const sweep = reviewSweep(made);
     await sweep.run();
     await sweep.run();
     await sweep.run();
     expect(commentsOnCard(projectPath))
-      .toEqual(['No review worktree: 1 uncommitted file in ship-it, waiting for the commit']);
+      .toEqual(['No review worktree: uncommitted changes in ship-it, waiting for the commit']);
   });
 
   // The refusal leaves the record exactly as it was, so only the mark stops the next tick spawning git

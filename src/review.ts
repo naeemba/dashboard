@@ -55,8 +55,9 @@ export function awaitsReview(board: Board, cardId: string): boolean | null {
 //
 // Null when the card already ends on this very line. The trail is append-only, and the one refusal the
 // sweep retries is a dirty worktree — every five seconds, for as long as it stays dirty — so without
-// this a worktree somebody abandoned mid-change would bury its own card under a copy of "1 uncommitted
-// file in ship-it" a tick.
+// this a worktree somebody abandoned mid-change would bury its own card under a copy of "uncommitted
+// changes in ship-it" a tick. It matches the whole sentence, which is why that line carries no file
+// count: a number in it changes as the agent saves, and every new number is a line this lets through.
 export function reviewRefused(board: Board, cardId: string, reason: string): Board | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;

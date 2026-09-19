@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
-import { uncommittedCount } from './ship';
 import { allCards, cardById, type Board } from './board';
 import type { ShipResult, WorktreeRemoval } from './bridge';
 import type { WorktreeEntry } from './worktree-store';
@@ -135,7 +134,12 @@ async function swapWorktree(
     // until somebody restarted the app. If a board ever grows big enough for that to be felt, the
     // thing to do is ask git whether the worktree is dirty before the mark rather than after, not to
     // go back to writing the card off.
-    return { message: `${uncommittedCount(removed.dirty)} in ${entry.branch}, waiting for the commit`, again: true };
+    //
+    // No file count in it. This is the one line the sweep writes again on every tick, and reviewRefused
+    // only recognises a repeat by matching the whole sentence — so a count would make `2 uncommitted
+    // files` and `3 uncommitted files` two different lines and stack both on the card as the agent
+    // saves. The branch is named; the files are a `git status` away.
+    return { message: `uncommitted changes in ${entry.branch}, waiting for the commit`, again: true };
   }
   await ports.addWorktree(entry);
   const started = ports.startReview(
