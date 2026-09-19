@@ -28,6 +28,7 @@ import { isBoardChange, isBoardFile } from './board-watch';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
+import type { PaneUse } from './free-pane';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
   blockingChanges,
@@ -35,6 +36,7 @@ import {
   busyPanes,
   freePane,
   oneAtATime,
+  paneIsBusy,
   runsAnAgent,
   uncommittedCount,
   workPrompt,
@@ -201,6 +203,28 @@ function agentRunsIn(slot: number, pane: number | null): boolean {
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
 const agentsAtWork = workingPanes();
 ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
+
+// The other direction, and the one thing only main can answer: what is running in each of a project's
+// five shells. The command screen picks a pane to type into and closing a project refuses over the
+// panes it would kill, and both used to work that out from what the panes had on their screens — where
+// a dev server that has printed its banner looks exactly like a shell at a prompt. So `npm run dev` in
+// terminal 1 read as free, and a line sent from the command screen was typed on top of it. This is the
+// reading a ship already takes, so the three screens have one answer between them rather than two that
+// disagree.
+//
+// The editor is not in it. It runs nvim for as long as the project is open, so on this reading it is
+// busy from launch — a pane no command could ever land in and a project that could never be closed.
+//
+// A project with no slot here answers with nothing at all, and nothing is the truth: every shell this
+// app has is in this file, so a project main cannot place has none left to run anything.
+ipcMain.handle('panes:use', (_event, projectPath: string): PaneUse[] => {
+  const slot = slotOfProject(projectPath);
+  if (slot === -1) return [];
+  return paneReadingsIn(slot, null).map((pane, index) => ({
+    exited: !shells.has(terminalId(slot, index)),
+    busy: paneIsBusy(pane),
+  }));
+});
 
 // The question the review asks, which is the one above with "and has not finished" on the end. A ship
 // is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
