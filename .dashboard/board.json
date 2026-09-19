@@ -125,20 +125,22 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "7186e23e-5d75-43ce-ba2a-df10a9e86e0a",
           "title": "Clean up the numbers on the manager list and fill the empty page",
-          "notes": "The manager page's rows show raw-looking figures like '40.9M 774M 3.1B' and '466.1M 2.4B 8B' next to 'quiet' — three unlabelled numbers per row, nothing saying what they are, and inconsistent widths so the columns do not line up. Also the rest of the page is empty: the list sits in the middle and everything below it is blank.",
+          "notes": "The three token figures are three named columns now. projectTokens returns one string per column instead of the three joined into `40.9M  774M  3.1B`, and always as many as there are columns, so a project nothing has been spent on keeps the row's shape. Each is drawn in a cell of fixed width, right-aligned with tabular figures, and the names `5h  week  all` are printed once above the list from the same TOKEN_COLUMNS the figures come from — so a fourth window added later is a column with a name on it, and the test beside usage.ts fails if the two lists stop matching. A pane's one figure lands under `all`, which is where the right edges put it and what it means.\n\nsumTotals adds every open project together and a line along the foot of the page prints it in those same three columns, so the page has a bottom instead of running blank to the edge of the window. The middle is still empty: the list is short, and something to put there is its own card.\n\nThe head and the foot take their cap and padding from the selectors that already decide a row's shape rather than a copy — with copies, widening the list moved only the rows and `all` slid off the figure it names. The divider above the total was a hardcoded white that stayed a pale smear under a light theme; it takes var(--brightBlack) like every other separator. writeTokens takes the figures rather than a project's Totals, so the pane row goes through it too, and it skips a cell whose figure has not moved.\n\nAlignment is the part no test covers, so it was checked in a browser against the real stylesheets: head, every project row, the pane's single figure and the foot all land on exactly three right edges. help.ts updated. Tests, tsc and eslint all pass. PR #54.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-18T14:15:04.840Z"
+          "updatedAt": "2026-09-18T14:15:04.840Z",
+          "branch": "clean-up-the-numbers-on-the-manager-list-an",
+          "pullRequest": 54
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
