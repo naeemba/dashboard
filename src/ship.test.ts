@@ -3,6 +3,7 @@ import {
   blockingChanges,
   branchNameFor,
   busyPanes,
+  changedFiles,
   freePane,
   oneAtATime,
   paneIsBusy,
@@ -152,6 +153,22 @@ describe('busyPanes', () => {
   it('names each busy pane and what was seen running in it', () => {
     expect(busyPanes([running('npm'), idle, agent]))
       .toBe('terminal 1 npm, terminal 3 an agent');
+  });
+});
+
+describe('changedFiles', () => {
+  // The whole point of the split: git counts .dashboard/ when it refuses to give up a worktree, so the
+  // check that runs a moment before git's has to count it too. A worktree holding nothing but the board
+  // move the agent just wrote is dirty, and saying otherwise is how a review ends up with a raw
+  // `fatal: ... contains modified or untracked files` on its card.
+  it('counts the board file, which the ship exempts', () => {
+    expect(changedFiles(' M .dashboard/board.json\n')).toEqual(['.dashboard/board.json']);
+    expect(changedFiles('?? .dashboard/\n')).toEqual(['.dashboard/']);
+  });
+
+  it('names every changed file and nothing when there are none', () => {
+    expect(changedFiles(' M src/board.ts\n?? docs/notes.md\n')).toEqual(['src/board.ts', 'docs/notes.md']);
+    expect(changedFiles('')).toEqual([]);
   });
 });
 

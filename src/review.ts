@@ -51,9 +51,10 @@ export function awaitsReview(board: Board, cardId: string): boolean | null {
 // place the app can say it: a review starts on a timer rather than a keystroke, so there is no status
 // bar waiting on an answer and nothing on screen that the failure belongs to.
 //
-// Null when the card already ends on this very line. The trail is append-only and the sweep tries each
-// card once per run of the app, so without this the card grows another copy of "1 uncommitted file in
-// ship-it" every time you restart, for as long as the worktree stays dirty.
+// Null when the card already ends on this very line. The trail is append-only, and the one refusal the
+// sweep retries is a dirty worktree — every five seconds, for as long as it stays dirty — so without
+// this a worktree somebody abandoned mid-change would bury its own card under a copy of "1 uncommitted
+// file in ship-it" a tick.
 export function reviewRefused(board: Board, cardId: string, reason: string): Board | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;

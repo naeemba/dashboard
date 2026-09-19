@@ -54,6 +54,14 @@ export type ReviewPorts = {
 // parseBoard rather than readBoard: readBoard moves a board.json it cannot parse aside, and in a
 // worktree that file is tracked and committed. A sweep running on a timer must not delete a branch's
 // board because the agent in it wrote a broken one.
+//
+// The working copy, and not `git show HEAD:` of the same path, which is the obvious answer to the
+// number being readable a moment before the commit that makes it true. Two reasons it is not taken.
+// It would not close the hole: `/work-card` pushes the commit carrying the number and keeps going —
+// the /simplify pass this repo asks for, a follow-up commit — so a worktree can be dirty long after
+// the number is committed, and the swap has to survive that anyway. And it would put a `git show`
+// per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
+// that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
 function finishedIn(entry: WorktreeEntry): number | null {
   try {
     const text = readFileSync(join(entry.worktreePath, BOARD_FILE_PATH), 'utf8');
@@ -90,19 +98,44 @@ function editProjectBoard(projectPath: string, edit: (board: Board) => Board | n
   }
 }
 
-// What went wrong, or an empty string when nothing did.
+// How a swap ended. `message` is what to say on the card, empty when there is nothing to say, and
+// `again` is whether the next tick should try this card once more.
+//
+// Those are two questions rather than one because a dirty worktree answers them differently from
+// every other refusal: it is not a review that failed, it is a review that is early.
+type Swap = { message: string; again: boolean };
+
 async function swapWorktree(
   ports: ReviewPorts,
   entry: WorktreeEntry,
   pullRequest: number,
   slot: number,
-): Promise<string> {
+): Promise<Swap> {
   // Not forced. What is uncommitted in a worktree exists nowhere else, and an agent that left
   // something behind is exactly the case worth stopping for — the card still lands in Review, and the
   // line on it names the branch to go and look at.
   const removed = await ports.removeWorktree(entry.worktreePath, false);
   if (!removed.ok) {
-    return removed.dirty.length === 0 ? removed.message : `${uncommittedCount(removed.dirty)} in ${entry.branch}`;
+    if (removed.dirty.length === 0) return { message: removed.message, again: false };
+    // Uncommitted files are usually the agent's own last breath. The pull request number is written
+    // onto the branch's board and then committed, and a write and its commit are never the same act,
+    // so there is always a window where the number is on disk and the commit is not — and git will
+    // not give up a worktree with a change in it. A moment later it would. So the card is asked about
+    // again on the next tick rather than written off for the rest of the run. `/work-card` asks for
+    // both in one shell command to keep that window short, which narrows it and cannot close it.
+    //
+    // A worktree that stays dirty — an agent that really did walk away mid-change — is the price, and
+    // this paragraph is the only thing that names it. Unmarked, the card runs the whole of reviewOne
+    // again every five seconds for as long as the app is open: the branch's board read and parsed,
+    // the project's read and parsed three times over, and one `git status`. The two board writes and
+    // the removal are never reached — the card is already in Review and already carries this line, so
+    // both edits come back null — which is what keeps it to reads.
+    //
+    // Small reads on a five-second timer, against a pull request that would otherwise sit unreviewed
+    // until somebody restarted the app. If a board ever grows big enough for that to be felt, the
+    // thing to do is ask git whether the worktree is dirty before the mark rather than after, not to
+    // go back to writing the card off.
+    return { message: `${uncommittedCount(removed.dirty)} in ${entry.branch}, waiting for the commit`, again: true };
   }
   await ports.addWorktree(entry);
   const started = ports.startReview(
@@ -110,7 +143,7 @@ async function swapWorktree(
     slot,
     reviewPrompt(entry.cardId, pullRequest, entry.projectPath),
   );
-  return started.ok ? '' : started.message;
+  return { message: started.ok ? '' : started.message, again: false };
 }
 
 export type ReviewSweep = {
@@ -125,9 +158,12 @@ export type ReviewSweep = {
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // Cards a review has already been started for, tried for and refused, or finished in a run before
   // this one. Kept for the run rather than on the record, because the record only changes when the swap
-  // works: one that stopped at a dirty worktree leaves the old entry exactly as it was, and without
-  // this the sweep would find the same finished card on the next tick and spawn git at it again for as
-  // long as the app is open.
+  // works: one that stopped short leaves the old entry exactly as it was, and without this the sweep
+  // would find the same finished card on the next tick and spawn git at it again for as long as the
+  // app is open.
+  //
+  // The one refusal that comes back off is a worktree with uncommitted files in it. That is the agent
+  // still finishing rather than a review that failed, and swapWorktree says why it is the exception.
   const reviewed = new Set<string>();
 
   // One card, start to finish. Every guard in it is synchronous and runs before the first await —
@@ -195,13 +231,20 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // Before the swap, and whether or not the swap works: the card is finished and nothing has checked
     // it, which is the whole of what the column says.
     editProjectBoard(entry.projectPath, (board) => intoReview(board, entry.cardId));
-    const message = await ports
+    const swap = await ports
       .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
-      .catch((error: unknown) => `review failed: ${error instanceof Error ? error.message : String(error)}`);
+      .catch((error: unknown) => ({
+        message: `review failed: ${error instanceof Error ? error.message : String(error)}`,
+        again: false,
+      }));
+    // The mark comes back off for a card that was only early. Everything else keeps it: a locked
+    // repository, a pane that went, a git step that threw — none of those pass by themselves, and
+    // the card carries the line saying so until somebody acts on it.
+    if (swap.again) reviewed.delete(entry.cardId);
     // The card is the only place this can be said. A review starts on a timer rather than a keystroke,
     // so there is no status bar waiting on an answer and nothing on screen it belongs to.
-    if (message !== '') {
-      editProjectBoard(entry.projectPath, (board) => reviewRefused(board, entry.cardId, message));
+    if (swap.message !== '') {
+      editProjectBoard(entry.projectPath, (board) => reviewRefused(board, entry.cardId, swap.message));
     }
   }
 

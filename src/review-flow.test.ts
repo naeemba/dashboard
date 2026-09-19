@@ -234,11 +234,51 @@ describe('reviewSweep', () => {
     await reviewSweep(made).run();
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.added).toEqual([]);
-    expect(commentsOnCard(projectPath)).toEqual(['No review worktree: 2 uncommitted files in ship-it']);
+    expect(commentsOnCard(projectPath))
+      .toEqual(['No review worktree: 2 uncommitted files in ship-it, waiting for the commit']);
+  });
+
+  // The bug this was written for. `/work-card` writes the pull request number onto the branch's board
+  // and commits it a moment later, and a tick landing between those two finds the number there and
+  // board.json uncommitted. Marked for good, the pull request sits in Review with nobody reviewing it
+  // until the app restarts — which is a card nobody notices for a day.
+  it('tries a dirty worktree again on the next tick, and reviews it once the commit lands', async () => {
+    const { entry, projectPath } = flight(12);
+    let committed = false;
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+    });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    expect(log.added).toEqual([]);
+    committed = true;
+    await sweep.run();
+    expect(log.added).toEqual(['ship-it']);
+    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(columnOfCard(projectPath)).toBe('Review');
+  });
+
+  // One line, however many ticks it takes. The trail is append-only, so a worktree somebody walked away
+  // from mid-change would otherwise bury its own card under a copy of the same sentence every five
+  // seconds.
+  it('says a dirty worktree once however many times it retries', async () => {
+    const { entry, projectPath } = flight(12);
+    const { ports: made } = ports(entry, {
+      removeWorktree: async () => ({ ok: false, message: '', dirty: ['src/a.ts'] }),
+    });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    await sweep.run();
+    await sweep.run();
+    expect(commentsOnCard(projectPath))
+      .toEqual(['No review worktree: 1 uncommitted file in ship-it, waiting for the commit']);
   });
 
   // The refusal leaves the record exactly as it was, so only the mark stops the next tick spawning git
-  // at the same card again — and the card growing a second identical comment every five seconds.
+  // at the same card again. A locked repository is not a condition that passes by itself, which is what
+  // separates it from the dirty worktree above.
   it('tries a refused card once and not again', async () => {
     const { entry, projectPath } = flight(12);
     const { ports: made, log } = ports(entry, {
