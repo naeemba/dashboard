@@ -1,41 +1,42 @@
+import { freePane, paneIsBusy, type PaneReading } from './pane-reading';
+
 // Which pane a command from the command screen lands in, and which projects it cannot land in at all.
 // That screen marks projects, not panes, so something has to pick one pane per project — and a project
 // whose panes are all busy has to be named rather than quietly missed. Kept here rather than in the
 // renderer so the picking and the sentence that reports it are one file and cannot word the same run
 // two ways.
 
-// What the picking reads off one pane. Two flags rather than a terminal, so this file is testable
-// without building one. `busy` is "something is running in this pane", and it is main's answer, not
-// the renderer's: it comes over `panes:use` from `paneIsBusy` in ship.ts, which reads the pty's
-// foreground process. That is the same reading a ship takes before it takes a pane, and it is the
-// whole point — the command screen used to work `busy` out from what the pane had on its screen,
-// where a dev server that has printed its banner is indistinguishable from an empty prompt.
-export type PaneUse = { exited: boolean; busy: boolean };
+// One pane as this screen and the close read it. It is the ship's reading of the pane with one field
+// added, and both fields are main's: what the pty has in the foreground, and whether there is still a
+// pty at all. That is the point of the shape — the command screen used to work `busy` out from what the
+// pane had on its screen, where a dev server that has printed its banner and gone quiet is
+// indistinguishable from an empty prompt, so a line was typed on top of a running server.
+export type PaneUse = PaneReading & { exited: boolean };
 
 // `missing` is a project whose folder has gone. Its page is still open and still has a row on the
 // command screen, so it reaches the planning and has to leave by a door of its own: it has no panes
 // at all, and "no free pane in api" would send you looking for a busy pane that does not exist.
 export type ProjectPanes = { name: string; path: string; missing: boolean; panes: readonly PaneUse[] };
 
-// The first pane that can take a command, or -1 when the project has none. First rather than any
-// cleverer choice: the panes are in the order they are on screen, so the command lands in the topmost
-// free one and you know where to look for it without hunting.
-// A dead pane is skipped for the same reason the manager will not answer one — there is no shell
-// behind it to read the line — and a busy pane because the line would land on top of whatever is
-// already running there: at an agent, where it is a message rather than a command, or at a dev server,
-// where it is a line of text typed into its log.
-export function freePaneIndex(panes: readonly PaneUse[]): number {
-  return panes.findIndex(paneIsFree);
+// Whether a pane can take a line of shell. One place says so, because two screens ask opposite halves
+// of it: this one picks the pane a command lands in, and closing a project refuses over the panes that
+// are neither free nor dead. Spelled twice with the sign flipped, a field added to PaneUse would reach
+// one of them — and a pane the command screen will not type into would be one a close kills without a
+// word.
+//
+// A dead pane is skipped for the same reason the manager will not answer one: there is no shell behind
+// it to read the line. This is where the two pickers part — a ship takes a dead pane gladly, since it
+// spawns a shell in whatever pane it takes — and it is the only thing they differ on.
+export function paneIsFree(pane: PaneUse): boolean {
+  return !pane.exited && !paneIsBusy(pane);
 }
 
-// Whether a pane can take a line of shell. One place says so, because two screens ask opposite halves
-// of it: this one picks the free pane, and closing a project refuses over the panes that are neither
-// free nor dead. Spelled twice with the sign flipped, a third flag added to PaneUse would reach one of
-// them — and a pane the command screen will not type into would be one a close kills without a word.
-// Both halves read the same `busy` main sends, so the pane a command lands in, the pane a close will
-// take and the pane a ship takes are all decided by one reading of what is running.
-export function paneIsFree(pane: PaneUse): boolean {
-  return !pane.exited && !pane.busy;
+// The pane a command lands in, or null when the project has none going. The order is ship.ts's, the
+// same one a ship takes a pane in: lowest-numbered, except that a pane still standing in a card's
+// worktree goes last. So a pane a ship steps around is one this steps around too, and a line you send
+// to every project does not land in a finished card's checkout while four empty prompts sit below it.
+export function freePaneIndex(panes: readonly PaneUse[]): number | null {
+  return freePane(panes, paneIsFree);
 }
 
 export type SendPlan = {
@@ -57,7 +58,7 @@ export function planSend(projects: readonly ProjectPanes[]): SendPlan {
       continue;
     }
     const paneIndex = freePaneIndex(project.panes);
-    if (paneIndex === -1) skipped.push(project.name);
+    if (paneIndex === null) skipped.push(project.name);
     else sends.push({ path: project.path, paneIndex });
   }
   return { sends, skipped, gone };

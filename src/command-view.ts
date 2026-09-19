@@ -88,6 +88,8 @@ export function createCommandView(options: CommandOptions): CommandView {
   // the same fix for the same reason.
   let selectedKey = COMMAND_KEY;
   let running = false;
+  // Whether a fan-out to the panes is still waiting on main for the panes it may use.
+  let sending = false;
   // What the last run into the panes did. Held rather than printed and forgotten, because that run
   // leaves nothing on this screen: the output is in a shell on another page, so without this line a
   // command sent to five panes and a command sent to none look identical here.
@@ -173,9 +175,18 @@ export function createCommandView(options: CommandOptions): CommandView {
   // it, and this screen has no way to know when it finishes — that is the trade for being able to take
   // over mid-run, which is the whole reason for this key.
   async function runInPanes(): Promise<void> {
+    // One run at a time. Which pane takes the line is a question to main now, and nothing on screen
+    // changes while the answer is out — so holding the key sends the command into every pane twice,
+    // the second time on top of the first, with the status bar only ever reporting the last of them.
+    if (sending) return;
     const job = pending();
     if (job === null) return;
-    lastSend = sendSummary(await options.runInPanes(job.command, job.paths));
+    sending = true;
+    try {
+      lastSend = sendSummary(await options.runInPanes(job.command, job.paths));
+    } finally {
+      sending = false;
+    }
     // Back to the box, because the box is the only row whose label carries that sentence. The key
     // fires from any row — press it with the selection on a project and the one line saying the run
     // missed two projects would be written down and never shown.

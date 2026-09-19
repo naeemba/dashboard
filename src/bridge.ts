@@ -57,17 +57,15 @@ export type DashboardBridge = {
   // screen. Whole list each time rather than a change at a time, so a report that goes missing costs
   // one tick's answer instead of leaving a pane marked as working for the rest of the run.
   reportWorkingPanes(ids: string[]): void;
-  // A project's five shells as free-pane.ts reads them — dead, and busy — in pane order, the editor
-  // left out. Asked of main because both answers are the pty's: whether one is still there, and what
-  // it has in the foreground. Asked at all because the two screens that need it were reading the
-  // panes' own screens instead, where a dev server that has printed its banner and an empty prompt
-  // look the same. This is the reading a ship takes before it takes a pane, so the pane a command is
-  // typed into, the pane a close will kill and the pane a ship takes cannot disagree.
+  // A project's five shells as free-pane.ts reads them, in pane order, the editor left out. Asked of
+  // main because every field is the pty's: what it has in the foreground, and whether it is still
+  // there. free-pane.ts says what the shape is for and why the screens stopped reading it off the
+  // panes themselves.
   //
   // A project main has no slot for answers with nothing. The command screen reads that as a project it
   // could not reach and names it; the close reads it as nothing to lose and goes ahead, which is what
   // an empty list means — main holds every shell, so a project it has no slot for has no shells left.
-  paneUsesIn(projectPath: string): Promise<PaneUse[]>;
+  readPanes(projectPath: string): Promise<PaneUse[]>;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;

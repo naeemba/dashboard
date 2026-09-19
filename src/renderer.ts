@@ -486,8 +486,8 @@ function setPage(project: Project, slot: number): void {
 }
 
 // Asked twice — once before the question and once with the answer — so it is one function. What the
-// flags catch and what the sentence says are close-project.ts's; whether a pane has anything running
-// in it is main's, over `panes:use`, and this only puts the names to the answer.
+// flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
+// `panes:read`, and this only puts the names to it.
 //
 // The five shells, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
 // for as long as the project is open, so on a reading of what the pty has in the foreground it is busy
@@ -496,7 +496,8 @@ function setPage(project: Project, slot: number): void {
 // bell was ringing or its screen happened to match an agent's spinner. What guards a half-finished
 // edit in nvim is the question below, which is asked whether or not anything is in the way.
 async function closeRefusalFor(page: Page): Promise<string> {
-  const uses = await bridge.paneUsesIn(page.project.path);
+  const uses = await bridge.readPanes(page.project.path);
+  // namedPanes counts the editor and the reading does not, so the loop is driven by the shorter list.
   const names = namedPanes(page);
   return closeRefusal(page.project.name, uses.map((use, index) => ({ ...use, name: names[index].name })));
 }
@@ -543,7 +544,7 @@ async function closeProject(slot: number): Promise<void> {
     // The page's place in the list, found after that question rather than before it: asking main is a
     // round trip, and a project closed from elsewhere while it was out shifts every page after it
     // along. The index taken before would splice a different project out of the list.
-    const closingPosition = pages.indexOf(closingPage);
+    const closingPosition = positionOfSlot(slot);
     if (closingPosition === -1) return;
     bridge.closeProject(slot);
     discardPanes(slot);
@@ -845,7 +846,7 @@ async function sendToPanes(command: string, paths: readonly string[]): Promise<S
   // as near to one moment as this can make it. Asked of main: what is running in a pane is the pty's
   // foreground process, and reading the pane's own screen instead is what typed a line on top of a dev
   // server that had printed its banner and gone quiet.
-  const uses = await Promise.all(chosen.map((page) => bridge.paneUsesIn(page.project.path)));
+  const uses = await Promise.all(chosen.map((page) => bridge.readPanes(page.project.path)));
   const plan = planSend(chosen.map((page, index) => ({
     name: page.project.name,
     path: page.project.path,

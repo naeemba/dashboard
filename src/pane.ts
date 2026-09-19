@@ -102,10 +102,8 @@ export function paneLastLine(terminal: PaneTerminal): string {
 // have already glanced at reads as quiet again. working-panes.ts in main is what covers that gap, by
 // keeping a pane working for a while after the last report that named it.
 //
-// This is not the question the command screen and the close ask any more. They ask whether anything at
-// all is running in the pane, and that is the pty's foreground process, which is main's — `paneIsBusy`
-// in ship.ts, reached over `panes:use`. Reading a shell's screen could never answer it: a dev server
-// that has printed its banner and gone quiet looks exactly like a prompt.
+// This is not the question the command screen and the close ask any more. Theirs is `paneIsBusy` in
+// pane-reading.ts, which says why a screen could never have answered it.
 //
 // Structural rather than `Pane` so the branch can be tested without building an xterm terminal; a real
 // `Pane` satisfies it.
