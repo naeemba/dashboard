@@ -4,6 +4,7 @@ import '@fontsource/jetbrains-mono/700.css';
 import './index.css';
 import './worktrees.css';
 import './usage.css';
+import './manager.css';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
 import { type Mode } from './modes';

@@ -245,14 +245,30 @@ body *:not(.pane, .pane *) {
    row stopping short of it would highlight to a different width than the panes under it. Still
    capped rather than let loose: on a wide screen an uncapped row puts the state an arm's length from
    the name it belongs to. */
-.manager-list {
+.manager-list,
+.manager-head,
+.manager-total {
   max-width: 120ch;
 }
 
+/* A row's shape: how it lays its parts out and the space inside it. The names along the top of the
+   manager's list and the total along its foot are not rows — the keyboard reaches neither — but they
+   have to end on the same right edge as the rows do, or `all` stops sitting over the all-time figure
+   the moment somebody widens the list. So they take the cap above and the padding here rather than a
+   copy of both that nothing keeps honest. border-box so the padding comes out of the cap instead of
+   being added to it, which is what a stretched `li` inside the list already does for nothing. */
+.manager-list li,
+.command-list li,
+.manager-head,
+.manager-total {
+  display: flex;
+  box-sizing: border-box;
+  padding: 4px 8px;
+}
+
+/* Only the rows: the head and the foot are not something a click or the highlight can land on. */
 .manager-list li,
 .command-list li {
-  display: flex;
-  padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
 }
@@ -345,6 +361,7 @@ body *:not(.pane, .pane *) {
 .manager-last-printed,
 .manager-age,
 .manager-quiet,
+.manager-total .manager-name,
 .command-summary,
 .command-keys {
   opacity: 0.6;

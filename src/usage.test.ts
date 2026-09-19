@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FIVE_HOURS, formatTokens, paneTokens, projectTokens, ranInProject, retainFrom, snapshotOf, tokensOf,
+  FIVE_HOURS, formatTokens, paneTokens, projectTokens, ranInProject, retainFrom, snapshotOf,
+  sumTotals, TOKEN_COLUMNS, tokensOf,
   totalsOf, usageDiffers, weekStart, type FileUsage,
 } from './usage';
 
@@ -108,11 +109,32 @@ describe('what a figure worth nought prints', () => {
   });
 
   it('prints nothing for a project never worked on, rather than three noughts', () => {
-    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 0 })).toBe('');
+    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 0 })).toEqual(['', '', '']);
   });
 
   it('keeps a quiet week beside a busy history, since all time is what says it is worth a row', () => {
-    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 2e9 })).toBe('0  0  2B');
+    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 2e9 })).toEqual(['0', '0', '2B']);
+  });
+
+  // The row keeps its columns whatever it has to print in them, or a quiet project draws a row of a
+  // different shape to the ones above it and the list stops being columns at all.
+  it('gives a project a figure for every column there is a name for', () => {
+    expect(projectTokens({ fiveHours: 1, week: 2, allTime: 3 })).toHaveLength(TOKEN_COLUMNS.length);
+  });
+});
+
+describe('sumTotals', () => {
+  it('adds the three windows across every open project', () => {
+    expect(sumTotals([
+      { fiveHours: 1, week: 10, allTime: 100 },
+      { fiveHours: 2, week: 20, allTime: 200 },
+    ])).toEqual({ fiveHours: 3, week: 30, allTime: 300 });
+  });
+
+  // The foot of the page is drawn before the first sweep has run and on a window with nothing open,
+  // so an empty list has to add up to noughts rather than to nothing at all.
+  it('adds nothing up to noughts', () => {
+    expect(sumTotals([])).toEqual({ fiveHours: 0, week: 0, allTime: 0 });
   });
 });
 

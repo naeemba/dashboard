@@ -161,14 +161,32 @@ export function usageDiffers(previous: UsageSnapshot, next: UsageSnapshot): bool
   return JSON.stringify(previous) !== JSON.stringify(next);
 }
 
-// The three figures as one string, which is what a project row prints. Spaced rather than punctuated:
-// the row already uses `·` between a pane's state and its age, and three numbers joined with it read
-// as one sentence instead of three columns.
+// What each of the three figures is, named once above the list rather than on every row. Beside the
+// function that prints them, so a fourth window added below is a column with a name on it rather than
+// a fourth unlabelled number — the test beside this file fails if the two lists stop matching.
+export const TOKEN_COLUMNS = ['5h', 'week', 'all'] as const;
+
+// The three figures a project row prints: the five-hour window, the week and all time, soonest to
+// widest, so the number that moves while you watch is nearest the rest of the row.
 //
-// Empty for a project nothing has ever been spent on, rather than three noughts.
-export function projectTokens(totals: Totals): string {
-  if (totals.allTime === 0) return '';
-  return [totals.fiveHours, totals.week, totals.allTime].map(formatTokens).join('  ');
+// One string per column rather than the three joined into one. Joined, they are three numbers of
+// different widths in a single box — `40.9M  774M  3.1B` over `466.1M  2.4B  8B` — and nothing down
+// the list lines up, so there is no column to read and no place to put a name. Always three, even for
+// a project nothing has been spent on: the row keeps its columns and prints nothing in them, rather
+// than three noughts or a row that has lost its shape.
+export function projectTokens(totals: Totals): string[] {
+  if (totals.allTime === 0) return TOKEN_COLUMNS.map(() => '');
+  return [totals.fiveHours, totals.week, totals.allTime].map(formatTokens);
+}
+
+// Every open project's figures added together, which is what the line at the foot of the list prints.
+// The same three windows, so a column means the same thing at the bottom as it does up the list.
+export function sumTotals(totals: readonly Totals[]): Totals {
+  return totals.reduce((all, one) => ({
+    fiveHours: all.fiveHours + one.fiveHours,
+    week: all.week + one.week,
+    allTime: all.allTime + one.allTime,
+  }), NO_TOTALS);
 }
 
 // The one figure a pane prints, and the other half of the same rule: nought is printed as nothing at
