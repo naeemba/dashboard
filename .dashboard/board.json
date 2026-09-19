@@ -116,6 +116,12 @@
           "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "00e0d9d1-d776-430e-a6a5-ad9563c97da9",
+          "title": "Contain failures so one broken part cannot stop the app launching",
+          "notes": "Add error handling across the app so something broken does not break the whole app. The app should still launch, with some parts degraded, instead of failing outright.",
+          "priority": "medium"
         }
       ]
     },
