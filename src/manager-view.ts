@@ -5,7 +5,7 @@ import {
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { isBareCharacter } from './shortcuts';
-import { paneTokens, projectTokens, sumTotals, TOKEN_COLUMNS, type Totals } from './usage';
+import { paneTokens, projectTokens, sumTotals, TOKEN_COLUMNS } from './usage';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
@@ -64,14 +64,16 @@ function tokenCell(text: string): HTMLElement {
   return cell;
 }
 
-// The three figures written into a row that already has its cells. Both redraws come here and so does
-// the total at the foot, so a figure can move without the row being torn down and rebuilt under
-// someone reading it.
-function writeTokens(row: Element | null | undefined, totals: Totals): void {
+// Figures written into a row that already has its cells. Strings rather than a project's Totals, so
+// a project's three, a pane's one and the total at the foot are all written by this — teach a fourth
+// window to the rows and the pane row is not the one path that quietly kept its old writer.
+// Only a figure that has moved is written: the sweep runs over every row every half minute and almost
+// none of them have changed, and setting textContent replaces the text node either way.
+function writeTokens(row: Element | undefined, figures: readonly string[]): void {
   const cells = row?.querySelectorAll('.manager-tokens');
-  projectTokens(totals).forEach((text, column) => {
+  figures.forEach((text, column) => {
     const cell = cells?.[column];
-    if (cell) cell.textContent = text;
+    if (cell && cell.textContent !== text) cell.textContent = text;
   });
 }
 
@@ -93,7 +95,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // came to read pushed off the screen.
   const head = document.createElement('div');
   head.className = 'manager-head';
-  head.append(...TOKEN_COLUMNS.map((column) => tokenCell(column)));
+  head.append(...TOKEN_COLUMNS.map(tokenCell));
   // The foot of the page: every open project's three figures added up, in the same three columns.
   // The list is a handful of rows on a tall screen and everything under it was blank; this gives the
   // page a bottom, and says the one thing the rows cannot — what the whole machine has cost.
@@ -104,6 +106,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   totalName.textContent = 'all projects';
   total.append(totalName, ...TOKEN_COLUMNS.map(() => tokenCell('')));
   element.append(heading, empty, head, list, total);
+
+  // The foot, from one place: both draws want it and it is the line most likely to be changed in
+  // only one of them.
+  function drawTotal(rows: readonly ManagerRow[]): void {
+    writeTokens(total, projectTokens(sumTotals(rows.map((row) => row.tokens))));
+  }
 
   let lines: ManagerLine[] = [];
   // Which projects are showing their panes, kept by slot rather than by position: a project dragged
@@ -237,12 +245,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     element,
     render(rows: readonly ManagerRow[]): void {
       relayout(rows);
-      empty.hidden = rows.length > 0;
+      const anyOpen = rows.length > 0;
+      empty.hidden = anyOpen;
       // Nothing is open, so there are no columns to name and nothing to add up. Both go with the
       // list, leaving the sentence saying how to open a project on a page of its own.
-      head.hidden = rows.length === 0;
-      total.hidden = rows.length === 0;
-      writeTokens(total, sumTotals(rows.map((row) => row.tokens)));
+      head.hidden = !anyOpen;
+      total.hidden = !anyOpen;
+      drawTotal(rows);
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
         // A click moves the selection to the row first and then does what Enter does there.
@@ -272,7 +281,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Ahead of the check below, because the foot of the page is not one of the rows: it adds up
       // every open project whatever the list underneath it is doing, so a sweep that lands while a
       // row is opening still moves it.
-      writeTokens(total, sumTotals(rows.map((row) => row.tokens)));
+      drawTotal(rows);
       const fresh = managerLines(rows, opened);
       const sameRows = fresh.length === lines.length
         && fresh.every((line, index) => lineKey(line) === lineKey(lines[index]));
@@ -286,15 +295,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         // way as a pane's one — writing them here is what lets a sweep move a figure without the list
         // being torn down and rebuilt under someone reading it.
         if (line.kind === 'project') {
-          writeTokens(row, line.row.tokens);
+          writeTokens(row, projectTokens(line.row.tokens));
           return;
         }
         const lastPrinted = row?.querySelector('.manager-last-printed');
         if (lastPrinted) lastPrinted.textContent = printedLine(line.pane);
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
-        const tokens = row?.querySelector('.manager-tokens');
-        if (tokens) tokens.textContent = paneTokens(line.pane.tokens);
+        writeTokens(row, [paneTokens(line.pane.tokens)]);
         const tail = row?.querySelector<HTMLElement>('.manager-tail');
         if (tail) {
           const block = tailBlock(line.pane);

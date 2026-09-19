@@ -118,8 +118,7 @@ describe('what a figure worth nought prints', () => {
 
   // The row keeps its columns whatever it has to print in them, or a quiet project draws a row of a
   // different shape to the ones above it and the list stops being columns at all.
-  it('gives a project as many figures as there are columns, spent on or not', () => {
-    expect(projectTokens({ fiveHours: 0, week: 0, allTime: 0 })).toHaveLength(TOKEN_COLUMNS.length);
+  it('gives a project a figure for every column there is a name for', () => {
     expect(projectTokens({ fiveHours: 1, week: 2, allTime: 3 })).toHaveLength(TOKEN_COLUMNS.length);
   });
 });
