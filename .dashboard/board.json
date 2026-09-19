@@ -116,13 +116,6 @@
           "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "b62207c8-8e19-407c-ae88-5c82556c7ca4",
-          "title": "The ship and the command screen disagree about what a free pane is",
-          "notes": "Three things answer 'is this pane busy' and they answer differently. paneIsBusy in ship.ts reads the pty's real foreground process, so the ship refuses a pane running 'npm run dev'. looksBusy in waiting.ts scrapes the screen for an agent's spinner or its 'esc to interrupt' line, so the same pane reads free to the command screen's Cmd+Enter and to the close-project refusal — a command gets typed on top of your dev server. workingPanes in working-panes.ts is the third, and that one is not redundant: only the screen can tell an agent still working from an agent waiting on you, which the process table cannot see. So the fix is not one predicate replacing the other two — it is main sending each pane's foreground process to the renderer over the channel that already carries reports the other way, and paneIsFree in free-pane.ts reading both. The divergence predates the typedPanes change; that change made the ship's half accurate and left the other half alone.",
-          "priority": "medium",
-          "parent": null
         }
       ]
     },
@@ -169,6 +162,21 @@
             {
               "at": "2026-09-19T14:58:47.203Z",
               "body": "Shipped as PR #55. Main answers panes:read with the ship's reading of the five shells, and the command screen and the close both decide from it — so a dev server in terminal 1 no longer reads as a free pane. The pick is shared too, not just the reading: freePane takes what counts as free as an argument, since a ship takes a dead pane and a command screen cannot, and the worktree tie-break is the half they share. paneUse became paneLooksBusy and keeps only the screen's job, which the review sweep needs. freePane and paneIsBusy moved to a new pane-reading.ts: reaching them from the renderer had pulled ship.ts, board-store.ts and a stubbed node:fs into the window's bundle with no build error to say so."
+            }
+          ]
+        },
+        {
+          "id": "b62207c8-8e19-407c-ae88-5c82556c7ca4",
+          "title": "The ship and the command screen disagree about what a free pane is",
+          "notes": "Three things answer 'is this pane busy' and they answer differently. paneIsBusy in ship.ts reads the pty's real foreground process, so the ship refuses a pane running 'npm run dev'. looksBusy in waiting.ts scrapes the screen for an agent's spinner or its 'esc to interrupt' line, so the same pane reads free to the command screen's Cmd+Enter and to the close-project refusal — a command gets typed on top of your dev server. workingPanes in working-panes.ts is the third, and that one is not redundant: only the screen can tell an agent still working from an agent waiting on you, which the process table cannot see. So the fix is not one predicate replacing the other two — it is main sending each pane's foreground process to the renderer over the channel that already carries reports the other way, and paneIsFree in free-pane.ts reading both. The divergence predates the typedPanes change; that change made the ship's half accurate and left the other half alone.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-19T15:35:08.692Z",
+          "pullRequest": 55,
+          "comments": [
+            {
+              "at": "2026-09-19T15:35:08.692Z",
+              "body": "Duplicate of ef2ffd89 — same three-answers divergence, same fix: main sends each pane's foreground process to the renderer and free-pane.ts reads it. PR #55 covers both, so there is nothing left here to start an agent on."
             }
           ]
         }
