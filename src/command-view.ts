@@ -16,7 +16,10 @@ export type CommandOptions = {
   // The other way to run it: typed into a live shell rather than a process of its own. Which pane in
   // each project takes it is free-pane.ts's answer, and the plan it hands back is what this screen
   // reports — a project that had no free pane is named, never silently left out.
-  runInPanes(command: string, projectPaths: string[]): SendPlan;
+  //
+  // A promise because what is running in each pane is main's to say, and asking is a round trip. The
+  // line is typed once the answer is back, so the gap is one tick and nothing is on screen for it.
+  runInPanes(command: string, projectPaths: string[]): Promise<SendPlan>;
   cancelTasks(): void;
   // What an action is bound to right now, read fresh on every redraw rather than handed over once, so
   // rebinding a key in the settings screen rewrites the hint under the list and the status bar with it
@@ -169,10 +172,10 @@ export function createCommandView(options: CommandOptions): CommandView {
   // Into the shells instead. Nothing is marked as running here: once the line is typed the pane owns
   // it, and this screen has no way to know when it finishes — that is the trade for being able to take
   // over mid-run, which is the whole reason for this key.
-  function runInPanes(): void {
+  async function runInPanes(): Promise<void> {
     const job = pending();
     if (job === null) return;
-    lastSend = sendSummary(options.runInPanes(job.command, job.paths));
+    lastSend = sendSummary(await options.runInPanes(job.command, job.paths));
     // Back to the box, because the box is the only row whose label carries that sentence. The key
     // fires from any row — press it with the selection on a project and the one line saying the run
     // missed two projects would be written down and never shown.
@@ -296,7 +299,7 @@ export function createCommandView(options: CommandOptions): CommandView {
     runAction(action: Action): void {
       if (action.kind === 'command-select') return move(action.direction);
       if (action.kind === 'command-open') return open();
-      if (action.kind === 'command-run-in-panes') return runInPanes();
+      if (action.kind === 'command-run-in-panes') return void runInPanes();
       if (action.kind === 'command-cancel') return cancel();
     },
     update(result: TaskResult): void {

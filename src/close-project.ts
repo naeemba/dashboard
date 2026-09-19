@@ -5,10 +5,12 @@ import { paneIsFree, type PaneUse } from './free-pane';
 // with something running in it. Both halves live here: the key asks this before it closes anything,
 // and the status bar prints what comes back, so the refusal and the message cannot come to disagree.
 
-// What this reads off a pane. The same two flags free-pane.ts picks a pane by, and worked out in the
-// same place — `paneUse` in pane.ts, which is also where how much of "running" they can actually catch
-// is spelled out. It is narrower than the word sounds: a dev server, a tail or vim look exactly like a
-// shell sitting at its prompt, and a project whose panes are all doing that closes without a word.
+// What this reads off a pane. The same two flags free-pane.ts picks a pane by, with `busy` coming from
+// the same place — main's reading of what the pty has in the foreground, which is `paneIsBusy` in
+// ship.ts. So a dev server, a tail or vim in a pane holds the project open, the same way it holds a
+// pane back from a ship. What it still cannot see is a job you put in the background: the shell is
+// back at its prompt, so `npm run dev &` closes with the project and nothing says so. runsAProgram in
+// ship.ts is where that corner is spelled out.
 export type ClosingPane = PaneUse & { name: string };
 
 // The refusal, or an empty string when nothing is in the way.
