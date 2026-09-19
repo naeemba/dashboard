@@ -1,5 +1,4 @@
-import type { PaneUse } from './free-pane';
-import { paneIsBusy, programIn } from './pane-reading';
+import { paneIsBusy, programIn, type PaneUse } from './pane-reading';
 
 // Whether a project can be closed, and the sentence saying why not. Closing takes five shells and an
 // editor away at once and there is no undo for it, so the one thing worth stopping it for is a pane
@@ -27,4 +26,21 @@ export function closeRefusal(projectName: string, panes: readonly ClosingPane[])
     .map((pane) => `${pane.name} ${programIn(pane)}`);
   if (running.length === 0) return '';
   return `${projectName} is still running in ${running.join(', ')} — stop it and close again`;
+}
+
+// The readings main answers with, paired with the names the page has for its panes. The two lists do
+// not have to be the same length, so the shorter one drives: main answers with one reading per
+// terminal and the page names its editor as well, and a page whose folder has gone has no panes and
+// no editor at all.
+//
+// What the shorter list being the names costs, if this pairs off the readings instead: press Ctrl+Q on
+// a page reading `Directory not found: /work/api` and the pairing reaches for a name that is not
+// there. The promise nobody awaits rejects, and the close stops before the dialog — no refusal in the
+// status bar, no question, no page removed. That key is the only way to take a dead page off the tab
+// strip.
+export function closingPanes(
+  uses: readonly PaneUse[],
+  names: readonly { name: string }[],
+): ClosingPane[] {
+  return uses.slice(0, names.length).map((use, index) => ({ ...use, name: names[index].name }));
 }

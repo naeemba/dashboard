@@ -1,6 +1,6 @@
 import type { Project } from './projects';
 import type { Board } from './board';
-import type { PaneUse } from './free-pane';
+import type { PaneUse } from './pane-reading';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { Settings } from './settings';

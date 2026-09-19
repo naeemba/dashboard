@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  busyPanes, freePane, paneIsBusy, runsAnAgent, type PaneReading,
+  busyPanes, freePane, paneIsBusy, runsAnAgent, shipCanTake, type PaneReading,
 } from './pane-reading';
 
 describe('runsAnAgent', () => {
@@ -61,10 +61,6 @@ describe('paneIsBusy', () => {
 });
 
 describe('freePane', () => {
-  // The ship's own idea of free, which is the one main passes: nothing running in it. A dead pane is
-  // free to a ship — it spawns a shell in whatever pane it takes.
-  const shipCanTake = (pane: PaneReading): boolean => !paneIsBusy(pane);
-
   it('takes the lowest pane nothing is running in', () => {
     expect(freePane([idle, idle, idle], shipCanTake)).toBe(0);
     expect(freePane([running('npm'), agent, idle], shipCanTake)).toBe(2);

@@ -28,7 +28,6 @@ import { isBoardChange, isBoardFile } from './board-watch';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
-import type { PaneUse } from './free-pane';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
   blockingChanges,
@@ -42,10 +41,11 @@ import {
 import {
   busyPanes,
   freePane,
-  paneIsBusy,
   runsAnAgent,
+  shipCanTake,
   type PaneCommand,
   type PaneReading,
+  type PaneUse,
 } from './pane-reading';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
 import { liveSessions, sweepUsage } from './usage-store';
@@ -685,9 +685,9 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 // a worktree — the folder deleted, then no pane for the review, and a card saying so where the
 // checkout you were about to look at used to be.
 function freePaneIn(slot: number, freeing: number | null = null): number | null {
-  // A ship's own idea of free: nothing running in it. A dead pane counts, because a ship spawns a shell
-  // in whatever pane it takes — which is where the command screen's answer parts from this one.
-  return freePane(paneReadingsIn(slot, freeing), (pane) => !paneIsBusy(pane));
+  // What counts as free is shipCanTake's, the same answer attachPane picks by: a pane the review is
+  // handed is one the ship would take.
+  return freePane(paneReadingsIn(slot, freeing), shipCanTake);
 }
 
 // Every pane of the project as ship.ts reads them.
@@ -724,7 +724,7 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
     };
   }
   const readings = paneReadingsIn(slot, null);
-  const pane = freePane(readings, (reading) => !paneIsBusy(reading));
+  const pane = freePane(readings, shipCanTake);
   if (pane === null) {
     return {
       ok: false,

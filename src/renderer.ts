@@ -32,7 +32,7 @@ import {
 import { createManagerView } from './manager-view';
 import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
-import { closeRefusal } from './close-project';
+import { closeRefusal, closingPanes } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
@@ -104,6 +104,9 @@ let activeIndex = 0;
 // Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
+// Whether a close is already waiting on main for the panes it would take. closeProject says what a
+// second one costs.
+let closing = false;
 
 function projectPages(): Page[] {
   return pages.filter(isProjectPage);
@@ -497,9 +500,7 @@ function setPage(project: Project, slot: number): void {
 // edit in nvim is the question below, which is asked whether or not anything is in the way.
 async function closeRefusalFor(page: Page): Promise<string> {
   const uses = await bridge.readPanes(page.project.path);
-  // namedPanes counts the editor and the reading does not, so the loop is driven by the shorter list.
-  const names = namedPanes(page);
-  return closeRefusal(page.project.name, uses.map((use, index) => ({ ...use, name: names[index].name })));
+  return closeRefusal(page.project.name, closingPanes(uses, namedPanes(page)));
 }
 
 // Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
@@ -509,12 +510,27 @@ async function closeRefusalFor(page: Page): Promise<string> {
 // The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
 // pane id that named this project names nothing from here on.
 async function closeProject(slot: number): Promise<void> {
+  // One close at a time, the same guard runInPanes has and for the same reason: what stops a close is
+  // a question to main now, and nothing on screen changes while the answer is out. Two presses in that
+  // window build two confirm sheets. Answer the top one and the project closes correctly — the sheet
+  // underneath stays on screen with nothing focusing it, the page behind goes on taking every key
+  // because the window's guard only fires when focus is inside an overlay, and no key clears it.
+  if (closing) return;
   const position = positionOfSlot(slot);
   const page = pages[position];
   // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
   // has already gone.
   if (!page || !isProjectPage(page)) return;
-  const refusal = await closeRefusalFor(page);
+  closing = true;
+  let refusal: string;
+  try {
+    refusal = await closeRefusalFor(page);
+  } finally {
+    // In a finally, because readPanes is an IPC call and can reject: a flag left up by one failed
+    // round trip would make Ctrl+Q do nothing for the rest of the run. Nothing yields between here
+    // and the sheet below, so no keystroke can arrive in the gap.
+    closing = false;
+  }
   if (refusal !== '') return showError('close', refusal);
   // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
   // is: cancelling the dialog leaves no path back here to clear it.

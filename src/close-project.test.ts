@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { closeRefusal, type ClosingPane } from './close-project';
+import { closeRefusal, closingPanes, type ClosingPane } from './close-project';
+import type { PaneUse } from './pane-reading';
 
 // A shell sitting at its own prompt: nothing running in it, so it holds nothing open.
 const pane = (name: string, use: Partial<ClosingPane> = {}): ClosingPane => ({
@@ -29,5 +30,25 @@ describe('closeRefusal', () => {
 
   it('says nothing about a project whose folder went away, which has no panes at all', () => {
     expect(closeRefusal('web', [])).toBe('');
+  });
+});
+
+describe('closingPanes', () => {
+  const use: PaneUse = { exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false };
+
+  it('names each reading with the pane it belongs to', () => {
+    const named = closingPanes([use, { ...use, foreground: 'npm' }], [{ name: 'terminal 1' }, { name: 'terminal 2' }]);
+    expect(named).toEqual([{ ...use, name: 'terminal 1' }, { ...use, foreground: 'npm', name: 'terminal 2' }]);
+  });
+
+  // main answers with one reading per terminal and the page names its editor as well.
+  it('stops at the readings when there are more names than readings', () => {
+    const named = closingPanes([use], [{ name: 'terminal 1' }, { name: 'nvim' }]);
+    expect(named.map((pane) => pane.name)).toEqual(['terminal 1']);
+  });
+
+  // The one that used to throw, which stopped Ctrl+Q on a dead page before it could ask anything.
+  it('gives back nothing for a page whose folder has gone, which names no panes at all', () => {
+    expect(closingPanes([use, use, use, use, use], [])).toEqual([]);
   });
 });

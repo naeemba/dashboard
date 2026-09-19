@@ -37,6 +37,12 @@ export type PaneReading = {
   inWorktree: boolean;
 };
 
+// One pane as `panes:read` answers with it: the reading above with one field added, and both fields
+// are main's — what the pty has in the foreground, and whether there is still a pty at all. Here
+// rather than in free-pane.ts because it is the shape on the wire, which main and bridge.ts have to
+// name as well as the two screens that decide from it, and this is the module both processes import.
+export type PaneUse = PaneReading & { exited: boolean };
+
 // What the pty reports against the shell the pane was started as, compared on the last segment because
 // the two are spelled differently at each end: the pane is spawned with `/bin/zsh` and the pty answers
 // `zsh`. A pane waiting at a prompt reports the shell itself; anything else is a program you started.
@@ -77,6 +83,19 @@ export function paneIsBusy(pane: PaneReading): boolean {
   return runsAnAgent(pane.command) || runsAProgram(pane.foreground, pane.shell);
 }
 
+// What a ship counts as free, which is the whole of its pick apart from the order. Spelled here
+// because three places ask it — the ship's own pane, the pane the review is handed, and the test that
+// pins the order — and they have to stay one answer. Give one of them its own copy, then change what a
+// ship will take, and the two halves of one keystroke disagree: the review is handed a pane the ship
+// then refuses with `every pane in api is in use`.
+//
+// A dead pane counts. A ship spawns a shell in whatever pane it takes, so a pane whose shell has gone
+// is the best one it could have — which is the one thing this and the command screen's paneIsFree
+// differ on.
+export function shipCanTake(pane: PaneReading): boolean {
+  return !paneIsBusy(pane);
+}
+
 // Which of a project's panes to take, or null when there is none. The order is the whole of it, and it
 // is the half two pickers have to agree on: a ship takes a pane here, and the command screen types a
 // line into one, and a user who watched a ship step around terminal 1 expects the line to step around
@@ -90,8 +109,8 @@ export function paneIsBusy(pane: PaneReading): boolean {
 //
 // What counts as free is the caller's, because the two do not agree on a dead pane and should not: a
 // ship spawns a shell in the pane it takes, so a pane whose shell has gone is the best one it could
-// have, while a line typed at a pane with no shell behind it goes nowhere at all. free-pane.ts holds
-// the command screen's answer; both are built on paneIsBusy.
+// have, while a line typed at a pane with no shell behind it goes nowhere at all. shipCanTake above is
+// the ship's answer and free-pane.ts holds the command screen's; both are built on paneIsBusy.
 export function freePane<Pane extends { inWorktree: boolean }>(
   panes: readonly Pane[],
   isFree: (pane: Pane) => boolean,

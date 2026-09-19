@@ -1,4 +1,4 @@
-import { freePane, paneIsBusy, type PaneReading } from './pane-reading';
+import { freePane, paneIsBusy, type PaneUse } from './pane-reading';
 
 // Which pane a command from the command screen lands in, and which projects it cannot land in at all.
 // That screen marks projects, not panes, so something has to pick one pane per project — and a project
@@ -6,27 +6,16 @@ import { freePane, paneIsBusy, type PaneReading } from './pane-reading';
 // renderer so the picking and the sentence that reports it are one file and cannot word the same run
 // two ways.
 
-// One pane as this screen and the close read it. It is the ship's reading of the pane with one field
-// added, and both fields are main's: what the pty has in the foreground, and whether there is still a
-// pty at all. That is the point of the shape — the command screen used to work `busy` out from what the
-// pane had on its screen, where a dev server that has printed its banner and gone quiet is
-// indistinguishable from an empty prompt, so a line was typed on top of a running server.
-export type PaneUse = PaneReading & { exited: boolean };
-
 // `missing` is a project whose folder has gone. Its page is still open and still has a row on the
 // command screen, so it reaches the planning and has to leave by a door of its own: it has no panes
 // at all, and "no free pane in api" would send you looking for a busy pane that does not exist.
 export type ProjectPanes = { name: string; path: string; missing: boolean; panes: readonly PaneUse[] };
 
-// Whether a pane can take a line of shell. One place says so, because two screens ask opposite halves
-// of it: this one picks the pane a command lands in, and closing a project refuses over the panes that
-// are neither free nor dead. Spelled twice with the sign flipped, a field added to PaneUse would reach
-// one of them — and a pane the command screen will not type into would be one a close kills without a
-// word.
-//
-// A dead pane is skipped for the same reason the manager will not answer one: there is no shell behind
-// it to read the line. This is where the two pickers part — a ship takes a dead pane gladly, since it
-// spawns a shell in whatever pane it takes — and it is the only thing they differ on.
+// Whether a pane can take a line of shell, which is what this screen picks by. shipCanTake in
+// pane-reading.ts is the ship's answer to the same question, and this is where the two part: a dead
+// pane is skipped here for the same reason the manager will not answer one — there is no shell behind
+// it to read the line — while a ship takes one gladly, since it spawns a shell in whatever pane it
+// takes. Everything else about the two answers is paneIsBusy, spelled once next door.
 export function paneIsFree(pane: PaneUse): boolean {
   return !pane.exited && !paneIsBusy(pane);
 }
