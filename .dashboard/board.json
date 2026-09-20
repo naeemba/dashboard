@@ -132,6 +132,12 @@
           "parent": null,
           "createdAt": "2026-09-20T10:51:49.751Z",
           "updatedAt": "2026-09-20T10:51:49.751Z"
+        },
+        {
+          "id": "e753fd41-6dd2-4807-8659-17b981be26c3",
+          "title": "Show a version in the manager tab and on the app, so the installed build can be compared with main",
+          "notes": "Two versions on screen: one in the manager tab and one on the application itself, so the installed build can be compared against what is on main. Every merged card should bump the version correctly.",
+          "priority": "medium"
         }
       ]
     },
