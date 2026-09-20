@@ -247,3 +247,13 @@ The thing first, then what you do to it: `link:open`, `session:write`,
 `notify:show` did not — two verbs, nothing named. Grep for the channels that
 touch notifications and it does not sort next to them, so the next person adds
 `alert:send` and now there are three spellings of one idea.
+
+## Every merged card bumps the version
+
+`package.json`'s `version` is what the manager's foot line and the app itself
+show. A card that merges without moving it makes that number a lie: three more
+cards land, none touches the line, and the number on screen still says the
+build is current when it is three cards behind.
+
+Bump it in the same pull request that merges the card — patch for a fix, minor
+for a new capability, major for a break.
