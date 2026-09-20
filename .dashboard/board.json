@@ -118,10 +118,20 @@
           "parent": null
         },
         {
-          "id": "00e0d9d1-d776-430e-a6a5-ad9563c97da9",
+          "id": "b62207c8-8e19-407c-ae88-5c82556c7ca4",
+          "title": "The ship and the command screen disagree about what a free pane is",
+          "notes": "Three things answer 'is this pane busy' and they answer differently. paneIsBusy in ship.ts reads the pty's real foreground process, so the ship refuses a pane running 'npm run dev'. looksBusy in waiting.ts scrapes the screen for an agent's spinner or its 'esc to interrupt' line, so the same pane reads free to the command screen's Cmd+Enter and to the close-project refusal — a command gets typed on top of your dev server. workingPanes in working-panes.ts is the third, and that one is not redundant: only the screen can tell an agent still working from an agent waiting on you, which the process table cannot see. So the fix is not one predicate replacing the other two — it is main sending each pane's foreground process to the renderer over the channel that already carries reports the other way, and paneIsFree in free-pane.ts reading both. The divergence predates the typedPanes change; that change made the ship's half accurate and left the other half alone.",
+          "priority": "medium",
+          "parent": null
+        },
+        {
+          "id": "71fd6f1f-4a5e-4af3-a94e-41cc285ec47e",
           "title": "Contain failures so one broken part cannot stop the app launching",
           "notes": "Add error handling across the app so something broken does not break the whole app. The app should still launch, with some parts degraded, instead of failing outright.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-20T10:51:49.751Z",
+          "updatedAt": "2026-09-20T10:51:49.751Z"
         }
       ]
     },
@@ -135,58 +145,7 @@
     },
     {
       "name": "Review",
-      "cards": [
-        {
-          "id": "7186e23e-5d75-43ce-ba2a-df10a9e86e0a",
-          "title": "Clean up the numbers on the manager list and fill the empty page",
-          "notes": "The three token figures are three named columns now. projectTokens returns one string per column instead of the three joined into `40.9M  774M  3.1B`, and always as many as there are columns, so a project nothing has been spent on keeps the row's shape. Each is drawn in a cell of fixed width, right-aligned with tabular figures, and the names `5h  week  all` are printed once above the list from the same TOKEN_COLUMNS the figures come from — so a fourth window added later is a column with a name on it, and the test beside usage.ts fails if the two lists stop matching. A pane's one figure lands under `all`, which is where the right edges put it and what it means.\n\nsumTotals adds every open project together and a line along the foot of the page prints it in those same three columns, so the page has a bottom instead of running blank to the edge of the window. The middle is still empty: the list is short, and something to put there is its own card.\n\nThe head and the foot take their cap and padding from the selectors that already decide a row's shape rather than a copy — with copies, widening the list moved only the rows and `all` slid off the figure it names. The divider above the total was a hardcoded white that stayed a pale smear under a light theme; it takes var(--brightBlack) like every other separator. writeTokens takes the figures rather than a project's Totals, so the pane row goes through it too, and it skips a cell whose figure has not moved.\n\nAlignment is the part no test covers, so it was checked in a browser against the real stylesheets: head, every project row, the pane's single figure and the foot all land on exactly three right edges. help.ts updated. Tests, tsc and eslint all pass. PR #54.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-18T14:15:04.840Z",
-          "branch": "clean-up-the-numbers-on-the-manager-list-an",
-          "pullRequest": 54
-        },
-        {
-          "id": "0b555431-db8d-4b11-b712-9e98776a7704",
-          "title": "A pane you typed in should be free again when its shell is",
-          "notes": "Any keystroke adds a pane to typedPanes in main.ts, and nothing takes it out except closing the project, opening a project into the slot, or removing the worktree the pane sat in. So typing 'clear' or pressing Ctrl+L in the five terminals marks all five as busy for the rest of the session, and the ship refuses with 'every pane in <project> is in use — free one and ship again' while the screen shows five empty prompts. Today the only way out is closing the project and opening it again. The mark is right for a pane where you answered an agent's prompt and your work is still in it — the app just cannot tell that apart from a pane you pressed Enter in once.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-18T22:02:57.285Z",
-          "pullRequest": 52
-        },
-        {
-          "id": "ef2ffd89-973b-4b03-bc1d-3dc86388247d",
-          "title": "One answer to whether a pane is busy, not three",
-          "notes": "The command screen types on top of a pane that is already running something.\n\nThree things answer \"is this pane busy\" and they disagree. paneIsBusy in src/ship.ts reads the pty's foreground process, and a ship asks this one. paneUse in src/pane.ts builds busy from isRinging plus looksBusy, which scrapes the pane's screen for an agent's spinner, and freePaneIndex in src/free-pane.ts picks the pane a command lands in from that. workingPanes is the third and is not redundant — only the screen can tell an agent still working from one waiting on you.\n\nWhat it costs: run npm run dev in terminal 1. Ship a card and the ship skips that pane, correctly. Then open the command screen and send a line to every project. looksBusy finds no spinner, freePaneIndex hands back terminal 1, and the line is typed on top of the running dev server.\n\nThe divergence predates PR 52. That PR made the ship's half read the process table, which is the accurate half, and left the other alone — so the fix is to move the command screen's pick onto the same reading rather than to add a fourth answer. The catch is that paneIsBusy lives in main and reads a pty while the command screen picks in the renderer, so whatever carries the answer across the wire is the work.\n\nIssue: https://github.com/naeemba/dashboard/issues/53\nReview: https://github.com/naeemba/dashboard/pull/52",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-19T14:58:47.203Z",
-          "branch": "one-answer-to-whether-a-pane-is-busy-not-th",
-          "pullRequest": 55,
-          "comments": [
-            {
-              "at": "2026-09-19T14:58:47.203Z",
-              "body": "Shipped as PR #55. Main answers panes:read with the ship's reading of the five shells, and the command screen and the close both decide from it — so a dev server in terminal 1 no longer reads as a free pane. The pick is shared too, not just the reading: freePane takes what counts as free as an argument, since a ship takes a dead pane and a command screen cannot, and the worktree tie-break is the half they share. paneUse became paneLooksBusy and keeps only the screen's job, which the review sweep needs. freePane and paneIsBusy moved to a new pane-reading.ts: reaching them from the renderer had pulled ship.ts, board-store.ts and a stubbed node:fs into the window's bundle with no build error to say so."
-            }
-          ]
-        },
-        {
-          "id": "b62207c8-8e19-407c-ae88-5c82556c7ca4",
-          "title": "The ship and the command screen disagree about what a free pane is",
-          "notes": "Three things answer 'is this pane busy' and they answer differently. paneIsBusy in ship.ts reads the pty's real foreground process, so the ship refuses a pane running 'npm run dev'. looksBusy in waiting.ts scrapes the screen for an agent's spinner or its 'esc to interrupt' line, so the same pane reads free to the command screen's Cmd+Enter and to the close-project refusal — a command gets typed on top of your dev server. workingPanes in working-panes.ts is the third, and that one is not redundant: only the screen can tell an agent still working from an agent waiting on you, which the process table cannot see. So the fix is not one predicate replacing the other two — it is main sending each pane's foreground process to the renderer over the channel that already carries reports the other way, and paneIsFree in free-pane.ts reading both. The divergence predates the typedPanes change; that change made the ship's half accurate and left the other half alone.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-19T15:35:08.692Z",
-          "pullRequest": 55,
-          "comments": [
-            {
-              "at": "2026-09-19T15:35:08.692Z",
-              "body": "Duplicate of ef2ffd89 — same three-answers divergence, same fix: main sends each pane's foreground process to the renderer and free-pane.ts reads it. PR #55 covers both, so there is nothing left here to start an agent on."
-            }
-          ]
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -602,6 +561,73 @@
           "updatedAt": "2026-09-18T13:53:20.903Z",
           "branch": "a-which-key-overlay-press-a-key-and-see-wha",
           "pullRequest": 50
+        },
+        {
+          "id": "7186e23e-5d75-43ce-ba2a-df10a9e86e0a",
+          "title": "Clean up the numbers on the manager list and fill the empty page",
+          "notes": "The manager page's rows show raw-looking figures like '40.9M 774M 3.1B' and '466.1M 2.4B 8B' next to 'quiet' — three unlabelled numbers per row, nothing saying what they are, and inconsistent widths so the columns do not line up. Also the rest of the page is empty: the list sits in the middle and everything below it is blank.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-19T11:42:29.886Z"
+        },
+        {
+          "id": "0b555431-db8d-4b11-b712-9e98776a7704",
+          "title": "A pane you typed in should be free again when its shell is",
+          "notes": "Any keystroke adds a pane to typedPanes in main.ts, and nothing takes it out except closing the project, opening a project into the slot, or removing the worktree the pane sat in. So typing 'clear' or pressing Ctrl+L in the five terminals marks all five as busy for the rest of the session, and the ship refuses with 'every pane in <project> is in use — free one and ship again' while the screen shows five empty prompts. Today the only way out is closing the project and opening it again. The mark is right for a pane where you answered an agent's prompt and your work is still in it — the app just cannot tell that apart from a pane you pressed Enter in once.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-20T10:52:35.448Z",
+          "pullRequest": 52,
+          "comments": [
+            {
+              "at": "2026-09-20T10:52:35.448Z",
+              "body": "PR #52 merged 18 Sep. A pane is read against the shell it was spawned with, so a pane you only typed in is free again once its shell is."
+            }
+          ]
+        },
+        {
+          "id": "ef2ffd89-973b-4b03-bc1d-3dc86388247d",
+          "title": "One answer to whether a pane is busy, not three",
+          "notes": "The command screen types on top of a pane that is already running something.\n\nThree things answer \"is this pane busy\" and they disagree. paneIsBusy in src/ship.ts reads the pty's foreground process, and a ship asks this one. paneUse in src/pane.ts builds busy from isRinging plus looksBusy, which scrapes the pane's screen for an agent's spinner, and freePaneIndex in src/free-pane.ts picks the pane a command lands in from that. workingPanes is the third and is not redundant — only the screen can tell an agent still working from one waiting on you.\n\nWhat it costs: run npm run dev in terminal 1. Ship a card and the ship skips that pane, correctly. Then open the command screen and send a line to every project. looksBusy finds no spinner, freePaneIndex hands back terminal 1, and the line is typed on top of the running dev server.\n\nThe divergence predates PR 52. That PR made the ship's half read the process table, which is the accurate half, and left the other alone — so the fix is to move the command screen's pick onto the same reading rather than to add a fourth answer. The catch is that paneIsBusy lives in main and reads a pty while the command screen picks in the renderer, so whatever carries the answer across the wire is the work.\n\nIssue: https://github.com/naeemba/dashboard/issues/53\nReview: https://github.com/naeemba/dashboard/pull/52",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-20T10:52:35.468Z",
+          "pullRequest": 55,
+          "comments": [
+            {
+              "at": "2026-09-19T14:58:50.627Z",
+              "body": "No review worktree: not removed: Command failed: git worktree remove /Users/sharp/workspace/personal/dashboard.worktrees/one-answer-to-whether-a-pane-is-busy-not-th\nfatal: '/Users/sharp/workspace/personal/dashboard.worktrees/one-answer-to-whether-a-pane-is-busy-not-th' contains modified or untracked files, use --force to delete it"
+            },
+            {
+              "at": "2026-09-20T10:52:35.468Z",
+              "body": "PR #55 merged 19 Sep. paneIsBusy moved to pane-reading.ts and the renderer asks it over panes:read, so the ship, the command screen and the close all read the same answer."
+            }
+          ]
+        },
+        {
+          "id": "5fe009e4-5e1e-4874-9768-cae0e2cd2d1c",
+          "title": "A review that cannot take the worktree yet must try again, not give up",
+          "notes": "The sweep read the pull request number out of the worktree's board.json in the half-second before the agent committed it. board.json was therefore uncommitted, git refused to remove the worktree, and the card was marked tried-and-failed for the rest of the run. PR 55 sat in Review with nobody reviewing it until someone asked why.\n\nTwo faults behind it.\n\nblockingChanges exempts .dashboard/, which is right for a ship — the Ship move that started the ship is uncommitted in the project checkout — and wrong for removeWorktree, because git counts that folder and refuses. So the app checked, found nothing in the way, and then got a raw `fatal: ... contains modified or untracked files` back from git. The d key on the worktree list fails the same way.\n\nAnd a swap refused for a dirty worktree is not an answer. The agent commits a second later; the next tick would have worked. Marked for good, it never runs again until the app restarts.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-09-19T15:09:45.344Z",
+          "updatedAt": "2026-09-20T10:52:35.488Z",
+          "branch": "a-refused-review-tries-again",
+          "pullRequest": 56,
+          "comments": [
+            {
+              "at": "2026-09-19T15:18:08.529Z",
+              "body": "Opened as PR #56. changedFiles is git's whole answer to \"what changed\" and blockingChanges is that minus the .dashboard/ exemption; removeWorktree and worktree:check ask the first one, because git is what refuses them. A swap refused for uncommitted files now un-marks the card so the next tick tries again — every other refusal still keeps the mark. /work-card writes the board and commits it in one command now. PR 55 itself still needs the loop run by hand: the running app marked that card before this fix existed."
+            },
+            {
+              "at": "2026-09-19T15:51:36.785Z",
+              "body": "Second commit on PR #56: the review agent now moves the card to Done on the branch and pushes it before merging, so the merge carries the column into main. It moved the project's board after the merge instead, and that board is never committed — so main went on saying Review for shipped cards. This repo's own board is in that state for PR #54. The board move and its commit are one command, skipped when nothing is staged and scoped to the board file, the way commitShipMove already does it."
+            },
+            {
+              "at": "2026-09-20T10:52:35.488Z",
+              "body": "PR #56 merged 19 Sep. changedFiles is the dirty check without the .dashboard exemption, which is the one git's own refusal matches, and a swap refused for uncommitted files un-marks the card so the next tick tries again."
+            }
+          ]
         }
       ]
     }
