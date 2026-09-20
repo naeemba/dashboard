@@ -5,8 +5,9 @@
    copy here is a copy nothing keeps honest. */
 
 /* The manager's list is a handful of rows on a tall screen, and everything under it used to be blank
-   to the bottom of the window. A flex column is what lets the total below push itself onto the foot
-   of the page with `margin-top`, so the list has a bottom as well as a top.
+   to the bottom of the window. A flex column is what lets the last line below push itself and the
+   total above it onto the foot of the page with `margin-top`, so the list has a bottom as well as a
+   top.
    Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be
    squeezed into the page rather than scrolling inside it, and its rows would spill over the total. */
 .view-manager {
@@ -24,8 +25,20 @@
 }
 
 .manager-total {
-  margin-top: auto;
   border-top: 1px solid var(--brightBlack);
+}
+
+/* The build's version, the last line on the page. It carries the `margin-top: auto` rather than the
+   total above it, because it is the one line here that is never hidden: put the push on the total
+   and closing every project takes it away with it, leaving the version halfway up an empty page
+   instead of along its foot. The total is dragged down with it either way — free space goes above
+   the item with the auto margin, and nothing sits between the two. */
+.manager-version {
+  margin-top: auto;
+  max-width: 120ch;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  opacity: 0.6;
 }
 
 /* Takes the space between the label and the figures, the way a row's summary does with its auto

@@ -6,6 +6,7 @@ import {
 } from './manager';
 import { isBareCharacter } from './shortcuts';
 import { paneTokens, projectTokens, sumTotals, TOKEN_COLUMNS } from './usage';
+import { APP_VERSION } from './version';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
@@ -105,7 +106,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   totalName.className = 'manager-name';
   totalName.textContent = 'all projects';
   total.append(totalName, ...TOKEN_COLUMNS.map(() => tokenCell('')));
-  element.append(heading, empty, head, list, total);
+  // The last line on the page: which build of the app you are looking at. This one is never hidden,
+  // unlike the two above it — it is a fact about the app rather than about the projects, so it is
+  // still the answer on a window with nothing open, and it is what holds the foot of the page down
+  // when the total goes. version.ts says why the number is baked in rather than asked for.
+  const buildVersion = document.createElement('div');
+  buildVersion.className = 'manager-version';
+  buildVersion.textContent = `v${APP_VERSION}`;
+  element.append(heading, empty, head, list, total, buildVersion);
 
   // The foot, from one place: both draws want it and it is the line most likely to be changed in
   // only one of them.
