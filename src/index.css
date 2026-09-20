@@ -425,7 +425,7 @@ body *:not(.pane, .pane *) {
   outline-offset: 2px;
 }
 
-/* Same text-box look as .picker-search and .card-detail-add, below — one definition rather than a
+/* Same text-box look as .search-input and .card-detail-add, below — one definition rather than a
    third copy of the same declarations. Its own rule only for what those two do not need: growing to
    fill the label. */
 .command-input {
@@ -861,7 +861,7 @@ textarea.board-edit {
   color: var(--brightBlack);
 }
 
-.picker-search,
+.search-input,
 .card-detail-add,
 .command-input,
 .prompt-input {
@@ -887,9 +887,10 @@ textarea.board-edit {
 }
 
 /* Shared with .worktrees-list below: both are an overlay's one scrolling list of rows, walked with
-   the arrows, with the same padding and the same highlight. What differs between the two dialogs is
-   what goes inside a row, which stays in each dialog's own rules. */
-.picker-list,
+   the arrows, with the same padding and the same highlight. The first covers every dialog built on
+   searchOverlay — the project picker and the board's card search. What differs between them is what
+   goes inside a row, which stays in each dialog's own rules. */
+.search-list,
 .worktrees-list {
   flex: 1;
   overflow-y: auto;
@@ -898,7 +899,7 @@ textarea.board-edit {
   list-style: none;
 }
 
-.picker-list li,
+.search-list li,
 .worktrees-list li {
   display: flex;
   gap: 8px;
@@ -907,32 +908,39 @@ textarea.board-edit {
   cursor: pointer;
 }
 
-.picker-list li.highlighted,
+.search-list li.highlighted,
 .worktrees-list li.highlighted {
   background: var(--brightBlack);
 }
 
-.picker-name {
+.search-name {
   color: var(--brightWhite);
 }
 
-.picker-detail {
+.search-detail {
   overflow: hidden;
   color: var(--brightBlack);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.picker-list li.highlighted .picker-detail {
+.search-list li.highlighted .search-detail {
   color: var(--white);
 }
 
+/* The line a search that matched nothing leaves behind. Not a row: there is nothing to press Enter
+   on, so it takes neither the highlight nor the hand the rows give the pointer. */
+.search-list li.search-empty {
+  color: var(--brightBlack);
+  cursor: default;
+}
+
 /* The last row opens the folder dialog; the rule sets it apart from the projects above it. */
-.picker-list li.picker-new {
+.search-list li.picker-new {
   border-top: 1px solid var(--brightBlack);
 }
 
-.picker-list li.picker-new .picker-name {
+.search-list li.picker-new .search-name {
   color: var(--blue);
 }
 

@@ -1,3 +1,4 @@
+import { clampIndex } from './clamp-index';
 import { isModified } from './shortcuts';
 
 // The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
@@ -112,6 +113,118 @@ export function promptOverlay(
       event.preventDefault();
       close(event.key === 'Enter' ? input.value : null);
     });
+  });
+}
+
+// One row of a search list: what it is called, what else is worth saying about it, and what choosing
+// it answers with. The choice is the caller's own type — a project's path here, a card's id there —
+// so nothing about what a row means leaks into the dialog that draws it.
+export type SearchRow<Choice> = {
+  name: string;
+  detail: string;
+  choice: Choice;
+  // The row's own class, on top of the list's. Only a row that is not one of the things being
+  // searched needs one — the picker's line that opens a folder dialog.
+  className?: string;
+};
+
+// The third sheet: a box to type in with a list under it that the arrows walk, Enter takes the
+// highlighted row and Escape leaves. Two dialogs are this — the project picker and the board's card
+// search — and they differ only in what a row is and where the rows come from, so the dialog is here
+// and each caller keeps its own rows.
+//
+// `rows` is asked again on every keystroke rather than given a list once, because the list is a
+// function of what has been typed — and because the board can be written under an open search, so
+// the caller reads the live board each time it is asked.
+//
+// Undefined is the dialog being dismissed, which is not any row's choice. A caller whose rows carry
+// undefined as a choice of their own cannot tell the two apart; none does, and a row that means
+// "none of these" is better written as a row with a choice that says so.
+export function searchOverlay<Choice>(options: {
+  // The dialog's own class, which is also the prefix its parts are named with.
+  name: string;
+  placeholder: string;
+  rows: (query: string) => SearchRow<Choice>[];
+  // What the list says when nothing matched. A dialog whose list always has a row in it leaves it
+  // out, rather than carrying a sentence nothing can show.
+  empty?: string;
+}): Promise<Choice | undefined> {
+  let rows: SearchRow<Choice>[] = [];
+  let highlighted = 0;
+
+  return new Promise<Choice | undefined>((resolve) => {
+    function finish(choice: Choice | undefined): void {
+      remove();
+      resolve(choice);
+    }
+
+    const { dialog, remove } = openOverlay(options.name, () => finish(undefined));
+    const search = document.createElement('input');
+    search.className = 'search-input';
+    // A folder or a card with a Persian name is typed right to left, and the box turns round to match.
+    search.dir = 'auto';
+    search.placeholder = options.placeholder;
+    const list = document.createElement('ul');
+    list.className = 'search-list';
+    dialog.append(search, list);
+    search.focus();
+
+    function renderRow(row: SearchRow<Choice>, index: number): HTMLElement {
+      const item = document.createElement('li');
+      if (index === highlighted) item.classList.add('highlighted');
+      if (row.className) item.classList.add(row.className);
+      const name = document.createElement('span');
+      name.className = 'search-name';
+      name.textContent = row.name;
+      const detail = document.createElement('span');
+      detail.className = 'search-detail';
+      detail.textContent = row.detail;
+      item.append(name, detail);
+      item.addEventListener('click', () => finish(row.choice));
+      return item;
+    }
+
+    function render(): void {
+      rows = options.rows(search.value);
+      highlighted = clampIndex(highlighted, rows.length - 1);
+      list.replaceChildren(...rows.map(renderRow));
+      // Nothing matched, and an empty box under a search reads as a dialog that broke rather than as
+      // an answer. Not a row: there is nothing to press Enter on.
+      if (rows.length === 0 && options.empty !== undefined) {
+        const said = document.createElement('li');
+        said.className = 'search-empty';
+        said.textContent = options.empty;
+        list.append(said);
+      }
+      list.children[highlighted]?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function move(step: number): void {
+      if (rows.length === 0) return;
+      highlighted = (highlighted + step + rows.length) % rows.length;
+      render();
+    }
+
+    search.addEventListener('input', () => {
+      highlighted = 0;
+      render();
+    });
+    search.addEventListener('keydown', (event) => {
+      // Nothing else in the dialog is focusable, so Tab would drop focus into the pane behind the
+      // overlay — and so would Shift+Tab, which is why this comes before the modified keys are
+      // handed back.
+      if (event.key === 'Tab') return event.preventDefault();
+      if (isModified(event)) return;
+      switch (event.key) {
+        case 'Escape': return finish(undefined);
+        // Nothing matched means nothing to take, and a dialog that closes on an Enter that chose
+        // nothing is a dialog you have to open again.
+        case 'Enter': return rows.length === 0 ? undefined : finish(rows[highlighted].choice);
+        case 'ArrowDown': event.preventDefault(); return move(1);
+        case 'ArrowUp': event.preventDefault(); return move(-1);
+      }
+    });
+    render();
   });
 }
 
