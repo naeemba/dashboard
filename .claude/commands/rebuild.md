@@ -1,6 +1,8 @@
 ---
 description: Rebuild Dashboard and install it to /Applications without launching or quitting anything
 allowed-tools: Bash(./scripts/rebuild.sh)
+model: sonnet
+effort: low
 ---
 
 Run `./scripts/rebuild.sh` and report what it printed.
