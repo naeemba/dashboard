@@ -694,9 +694,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   // The board as a list you can type at, for a board too long to read: the card you pick up takes the
   // selection, and every board key then works on it as if you had walked there with the arrows.
   //
-  // The rows are asked of the live board on every keystroke, not of a list taken when the dialog
-  // opened: an agent moving its own card while the search is up would otherwise leave you choosing a
-  // row that says Doing about a card now in Review.
+  // The rows are asked of the live board each time what has been typed changes, not of a list taken
+  // when the dialog opened: an agent moving its own card while the search is up would otherwise leave
+  // you choosing a row that says Doing about a card the board has since moved to Review. Between one
+  // keystroke and the next the rows are still whatever the last one answered, so the next letter you
+  // type is what catches a card up.
   //
   // A card the search offered can be gone by the time you press Enter, for the same reason. Nothing
   // is said about it — the board behind the dialog has already redrawn without it — and the keyboard

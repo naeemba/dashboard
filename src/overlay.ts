@@ -133,9 +133,10 @@ export type SearchRow<Choice> = {
 // search — and they differ only in what a row is and where the rows come from, so the dialog is here
 // and each caller keeps its own rows.
 //
-// `rows` is asked again on every keystroke rather than given a list once, because the list is a
-// function of what has been typed — and because the board can be written under an open search, so
-// the caller reads the live board each time it is asked.
+// `rows` is asked again each time what has been typed changes rather than given a list once, because
+// the list is a function of what has been typed — and because the board can be written under an open
+// search, so the caller reads the live board each time it is asked. An arrow key is not a change to
+// what has been typed and does not ask again; the list it walks is the one the last keystroke left.
 //
 // Undefined is the dialog being dismissed, which is not any row's choice. A caller whose rows carry
 // undefined as a choice of their own cannot tell the two apart; none does, and a row that means
