@@ -159,15 +159,15 @@ export function searchOverlay<Choice>(options: {
     }
 
     const { dialog, remove } = openOverlay(options.name, () => finish(undefined));
-    const search = document.createElement('input');
-    search.className = 'search-input';
+    const box = document.createElement('input');
+    box.className = 'search-input';
     // A folder or a card with a Persian name is typed right to left, and the box turns round to match.
-    search.dir = 'auto';
-    search.placeholder = options.placeholder;
+    box.dir = 'auto';
+    box.placeholder = options.placeholder;
     const list = document.createElement('ul');
     list.className = 'search-list';
-    dialog.append(search, list);
-    search.focus();
+    dialog.append(box, list);
+    box.focus();
 
     function renderRow(row: SearchRow<Choice>, index: number): HTMLElement {
       const item = document.createElement('li');
@@ -184,8 +184,10 @@ export function searchOverlay<Choice>(options: {
       return item;
     }
 
-    function render(): void {
-      rows = options.rows(search.value);
+    // The list as it stands. Separate from asking for the rows, because an arrow key moves the
+    // highlight and nothing else: the board's search reads every card's description and trail to
+    // answer a query, and doing that again to move one row down is a whole search per keystroke.
+    function draw(): void {
       highlighted = clampIndex(highlighted, rows.length - 1);
       list.replaceChildren(...rows.map(renderRow));
       // Nothing matched, and an empty box under a search reads as a dialog that broke rather than as
@@ -199,17 +201,23 @@ export function searchOverlay<Choice>(options: {
       list.children[highlighted]?.scrollIntoView({ block: 'nearest' });
     }
 
+    // What has been typed has changed, so the answer has to be asked for again.
+    function search(): void {
+      rows = options.rows(box.value);
+      draw();
+    }
+
     function move(step: number): void {
       if (rows.length === 0) return;
       highlighted = (highlighted + step + rows.length) % rows.length;
-      render();
+      draw();
     }
 
-    search.addEventListener('input', () => {
+    box.addEventListener('input', () => {
       highlighted = 0;
-      render();
+      search();
     });
-    search.addEventListener('keydown', (event) => {
+    box.addEventListener('keydown', (event) => {
       // Nothing else in the dialog is focusable, so Tab would drop focus into the pane behind the
       // overlay — and so would Shift+Tab, which is why this comes before the modified keys are
       // handed back.
@@ -224,7 +232,7 @@ export function searchOverlay<Choice>(options: {
         case 'ArrowUp': event.preventDefault(); return move(-1);
       }
     });
-    render();
+    search();
   });
 }
 
