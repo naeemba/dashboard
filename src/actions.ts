@@ -30,6 +30,7 @@ export type Action =
   | { kind: 'board-detach' }
   | { kind: 'board-edit'; field: 'title' | 'notes' | 'branch' | 'pullRequest' | 'comment' }
   | { kind: 'board-open' }
+  | { kind: 'board-search' }
   | { kind: 'board-add' }
   | { kind: 'board-delete' }
   | { kind: 'board-priority' }
@@ -319,6 +320,10 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'board-open', description: 'Open the card: its notes, its parent, its subtasks',
     group: 'board', scope: 'board', action: { kind: 'board-open' }, mac: 'O', other: 'O',
+  },
+  {
+    name: 'board-search', description: 'Find a card by its title, or by something written on it',
+    group: 'board', scope: 'board', action: { kind: 'board-search' }, mac: '/', other: '/',
   },
   {
     name: 'board-add', description: 'Add a card',
