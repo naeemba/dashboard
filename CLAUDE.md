@@ -72,8 +72,9 @@ modifier exactly. A plain `Tab` binding cannot match `Ctrl+Tab`.
 
 Four exceptions read a key before the guard, all on purpose:
 
-- Tab, in the picker's search box. Nothing else there is focusable, so Tab would
-  drop focus into the pane behind the overlay.
+- Tab, in a search box — the project picker's and the board's card search, which
+  are one dialog in `searchOverlay`. Nothing else there is focusable, so Tab
+  would drop focus into the pane behind the overlay.
 - Tab, in the notes box, for the same reason one screen out. It is the only key
   that screen reads.
 - Every key, in the settings screen, while a row is armed — or Ctrl, Cmd, Alt

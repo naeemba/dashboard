@@ -45,7 +45,8 @@ import {
   type BoardState,
 } from './board-state';
 import type { DashboardBridge } from './bridge';
-import { confirmOverlay } from './overlay';
+import { cardRows } from './card-search';
+import { confirmOverlay, searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
@@ -690,6 +691,30 @@ export function createBoardView(options: BoardOptions): BoardView {
     );
   }
 
+  // The board as a list you can type at, for a board too long to read: the card you pick up takes the
+  // selection, and every board key then works on it as if you had walked there with the arrows.
+  //
+  // The rows are asked of the live board on every keystroke, not of a list taken when the dialog
+  // opened: an agent moving its own card while the search is up would otherwise leave you choosing a
+  // row that says Doing about a card now in Review.
+  //
+  // A card the search offered can be gone by the time you press Enter, for the same reason. Nothing
+  // is said about it — the board behind the dialog has already redrawn without it — and the keyboard
+  // goes back to the board rather than being left on a dialog that has closed.
+  function openSearch(): void {
+    searchOverlay({
+      name: 'card-search',
+      placeholder: 'Search cards',
+      rows: (query) => cardRows(state.board, query),
+      empty: 'No card matches.',
+    }).then((id) => {
+      element.focus();
+      const found = id === undefined ? null : selectionOf(state.board, id);
+      if (found) state = { ...state, selection: found };
+      render();
+    });
+  }
+
   // The dialog changes the board as you add subtasks, so each change goes through apply() as it
   // happens — same undo step, same write to disk as a change made on the board itself. It closes on
   // the card you asked for, or on the subtask you pressed Enter on.
@@ -779,6 +804,7 @@ export function createBoardView(options: BoardOptions): BoardView {
           return startEditing('title');
         case 'board-delete': return confirmDelete();
         case 'board-open': return openDetail();
+        case 'board-search': return openSearch();
         case 'board-undo': return apply(undoChange(state));
         // Everything else belongs to the renderer and never gets here.
         default: return;
