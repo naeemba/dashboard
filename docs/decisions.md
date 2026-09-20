@@ -1,0 +1,72 @@
+# Decisions already made
+
+Settled questions, kept out of `CLAUDE.md` so they are not re-sent on every
+turn. Read this before re-litigating one of them.
+
+## The three board-scope keys that do nothing on a project's board
+
+Board scope is wider than the manager's board. Two keys pick a project and one
+Escape goes back to the manager's list. All three are board scope, because the
+manager's board *is* a board. A project's own board therefore hears them too,
+where the first two have nowhere to go and Escape is swallowed by a
+`setMode('manager')` that finds no manager view. Ctrl+H lists all three there
+and they do nothing.
+
+Moving them was considered and rejected:
+
+- The two that pick a project do not move. `manager-page` is all three
+  sections, so Cmd+Up on the general list or the command screen would swap
+  which project's board waits behind them, with nothing on screen saying so.
+- Escape does not move. `mode-manager` on `manager-page` puts it on the command
+  screen, where `command-cancel` already holds it, and `actions.test.ts` fails
+  on the clash.
+
+Watch for: the next thing that wants Escape on a project's board will not fire,
+and will not say why.
+
+## Ctrl+Q does nothing on the manager's board or command screen
+
+Ctrl+Q is global, so Ctrl+H lists it on all five screens, and it closes the
+project whose page you are on. The manager's page is not a project. Its list
+has a highlight, so the key closes the highlighted project. Its board and
+command screen have no highlight naming one project, so there is no project the
+key could mean.
+
+Press Alt+L from the manager's list to its board, then Ctrl+Q. Nothing happens,
+and Ctrl+H still says `Ctrl+Q  Close this project`.
+
+`help.test.ts` cannot catch this. It checks that `mapShortcut` answers to every
+key the dialog names, and `mapShortcut` does answer — with an action nothing on
+those two screens acts on.
+
+## `MODE_KEYS` is gone
+
+`src/modes.ts` holds `PROJECT_MODES`, which is what that table always was: the
+views a project's page has, and so the modes `session.ts` restores a project
+onto. The four mode keys are ordinary rows in `src/actions.ts`, so they can be
+rebound, and the pass-through check runs against the action rather than the key.
+Rebind Ctrl+T and the new key is what passes through.
+
+`MODES` is `PROJECT_MODES` plus the manager's own two. A view added to `MODES`
+but not `PROJECT_MODES` works until you restart, and then the app comes back on
+terminals with nothing saying why.
+
+## Why the refusal rule exists
+
+It happened before `isFontSize` existed: `parseSettings` held its own copy of
+the 6-to-72 range. A size the settings screen accepted was silently discarded
+the next time the file was read, with nothing on screen saying why.
+
+`withoutShipped` is the same idea one step over. It decides what a line has to
+be before it belongs in settings.json, and both writers ask it — the save and
+the launch tidy. Add a `scrollback` setting that ships as 1000, teach only the
+save to leave it out, and an old file holding `"scrollback": 1000` is never
+tidied. When the shipped default moves to 5000, that person stays on 1000.
+
+## The which-key strip needs nothing from you
+
+Hold Ctrl, Cmd or Alt without pressing a key and it names every key that
+modifier can still start here. It is printed from `src/actions.ts` and filtered
+by the same `hears` the window's lookup asks, so a row added there is on the
+strip the day it exists — including a row that does nothing on that screen.
+The blurb stays yours: the strip says what a key does, never what a screen is.
