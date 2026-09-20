@@ -106,10 +106,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   totalName.className = 'manager-name';
   totalName.textContent = 'all projects';
   total.append(totalName, ...TOKEN_COLUMNS.map(() => tokenCell('')));
-  // The last line on the page: which build of the app you are looking at. This one is never hidden,
-  // unlike the two above it — it is a fact about the app rather than about the projects, so it is
-  // still the answer on a window with nothing open, and it is what holds the foot of the page down
-  // when the total goes. version.ts says why the number is baked in rather than asked for.
+  // The last line on the page: which build of the app you are looking at. Never hidden, unlike the
+  // two above it — it is a fact about the app rather than about the projects, so it is still the
+  // answer on a window with nothing open. version.ts says where the number comes from.
   const buildVersion = document.createElement('div');
   buildVersion.className = 'manager-version';
   buildVersion.textContent = `v${APP_VERSION}`;

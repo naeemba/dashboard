@@ -5,9 +5,8 @@
    copy here is a copy nothing keeps honest. */
 
 /* The manager's list is a handful of rows on a tall screen, and everything under it used to be blank
-   to the bottom of the window. A flex column is what lets the last line below push itself and the
-   total above it onto the foot of the page with `margin-top`, so the list has a bottom as well as a
-   top.
+   to the bottom of the window. A flex column is what lets the lines below the list sit on the foot of
+   the page, so the list has a bottom as well as a top.
    Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be
    squeezed into the page rather than scrolling inside it, and its rows would spill over the total. */
 .view-manager {
@@ -19,6 +18,20 @@
   flex: 0 0 auto;
 }
 
+/* What puts the foot on the foot: the list swallows whatever the window has spare, so everything
+   after it — the total, and the version under that — is pushed to the bottom. The spare space is
+   given to the list rather than taken as an auto top margin on one of those lines, because an auto
+   margin only ever moves the line carrying it. Put it on the total and the version rides down behind
+   it, but hide the total on a window with no project open and the push goes with it, stranding the
+   version halfway up the page. Put it on the version instead and the total is left at the top of the
+   page with a gap underneath it and its rule floating in the middle of nothing.
+   Grow but never shrink, so the promise above holds: a list taller than the window keeps its height
+   and scrolls rather than being squeezed. Written after the rule above, which it overrides at the
+   same specificity by coming later. */
+.manager-list {
+  flex: 1 0 auto;
+}
+
 /* Nothing but the three names, so there is no name at the left to push them across. */
 .manager-head {
   justify-content: flex-end;
@@ -26,19 +39,6 @@
 
 .manager-total {
   border-top: 1px solid var(--brightBlack);
-}
-
-/* The build's version, the last line on the page. It carries the `margin-top: auto` rather than the
-   total above it, because it is the one line here that is never hidden: put the push on the total
-   and closing every project takes it away with it, leaving the version halfway up an empty page
-   instead of along its foot. The total is dragged down with it either way — free space goes above
-   the item with the auto margin, and nothing sits between the two. */
-.manager-version {
-  margin-top: auto;
-  max-width: 120ch;
-  box-sizing: border-box;
-  padding: 4px 8px;
-  opacity: 0.6;
 }
 
 /* Takes the space between the label and the figures, the way a row's summary does with its auto
