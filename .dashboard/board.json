@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
-          "title": "Search cards on the board",
-          "notes": "",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "ff9b2462-7ae6-4cc9-85e7-6bd8de56ef3c",
           "title": "Notes mode on the manager page, kept in the home directory",
           "notes": "The manager page gets a notes screen of its own, for notes that are not about any one project. Stored in a .dashboard directory in the home directory rather than beside a project's board.",
@@ -137,13 +130,23 @@
           "id": "e753fd41-6dd2-4807-8659-17b981be26c3",
           "title": "Show a version in the manager tab and on the app, so the installed build can be compared with main",
           "notes": "Two versions on screen: one in the manager tab and one on the application itself, so the installed build can be compared against what is on main. Every merged card should bump the version correctly.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
     {
       "name": "Ship",
-      "cards": []
+      "cards": [
+        {
+          "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
+          "title": "Search cards on the board",
+          "notes": "",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-20T11:02:58.452Z"
+        }
+      ]
     },
     {
       "name": "Doing",
