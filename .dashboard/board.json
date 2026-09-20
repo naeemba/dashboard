@@ -145,18 +145,7 @@
     },
     {
       "name": "Review",
-      "cards": [
-        {
-          "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
-          "title": "Search cards on the board",
-          "notes": "",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-20T11:16:50.549Z",
-          "branch": "search-cards-on-the-board",
-          "pullRequest": 57
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -639,6 +628,16 @@
               "body": "PR #56 merged 19 Sep. changedFiles is the dirty check without the .dashboard exemption, which is the one git's own refusal matches, and a swap refused for uncommitted files un-marks the card so the next tick tries again."
             }
           ]
+        },
+        {
+          "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
+          "title": "Search cards on the board",
+          "notes": "",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-20T11:27:30.575Z",
+          "branch": "search-cards-on-the-board",
+          "pullRequest": 57
         }
       ]
     }
