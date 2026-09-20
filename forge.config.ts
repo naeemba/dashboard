@@ -8,8 +8,9 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const nodePty = '/node_modules/node-pty';
-// build/Release, not prebuilds/: Forge rebuilds it for Electron and post-install makes spawn-helper
-// executable, while the prebuilt spawn-helper ships without its exec bit and fails posix_spawnp.
+// build/Release, not prebuilds/: it is the one directory node-pty looks in first, and the copy
+// there has spawn-helper's exec bit, without which posix_spawnp fails. scripts/node-pty-built.sh
+// is what puts it there in a checkout npm left with prebuilds/ alone.
 const keep = [
   '/.vite',
   '/package.json',

@@ -6,8 +6,9 @@
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
+    "prestart": "./scripts/node-pty-built.sh",
     "start": "electron-forge start",
-    "prepackage": "./scripts/no-running-app.sh",
+    "prepackage": "./scripts/no-running-app.sh && ./scripts/node-pty-built.sh",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
