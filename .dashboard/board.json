@@ -141,6 +141,10 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
@@ -148,13 +152,11 @@
           "notes": "",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-20T11:03:32.884Z"
+          "updatedAt": "2026-09-20T11:16:50.549Z",
+          "branch": "search-cards-on-the-board",
+          "pullRequest": 57
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
