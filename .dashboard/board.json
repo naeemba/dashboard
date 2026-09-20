@@ -141,7 +141,13 @@
           "notes": "Two versions on screen: one in the manager tab and one on the application itself, so the installed build can be compared against what is on main. Every merged card should bump the version correctly.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-20T19:33:37.730Z"
+          "updatedAt": "2026-09-20T19:36:58.730Z",
+          "comments": [
+            {
+              "at": "2026-09-20T19:36:58.730Z",
+              "body": "The card asked for two versions on screen; that was wrong and the scope was cut to one. The foot of the manager page names the build you are running, and you compare it by eye with the version in package.json on main. The bump half moved out of the app: the prompt that starts an agent on a card now asks it to bump the project's version to match the change."
+            }
+          ]
         }
       ]
     },
