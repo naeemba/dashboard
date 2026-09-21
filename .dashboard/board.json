@@ -127,6 +127,10 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "ff9b2462-7ae6-4cc9-85e7-6bd8de56ef3c",
@@ -134,13 +138,11 @@
           "notes": "The manager page gets a notes screen of its own, for notes that are not about any one project. Stored in a .dashboard directory in the home directory rather than beside a project's board.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-21T07:47:15.739Z"
+          "updatedAt": "2026-09-21T08:05:53.840Z",
+          "branch": "notes-mode-on-the-manager-page-kept-in-the",
+          "pullRequest": 59
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
