@@ -100,7 +100,25 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
 // the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
-let worktrees: WorktreeEntry[] = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
+//
+// The read throws rather than answering an unreadable file with an empty list, and readWorktrees says
+// why. Nothing below could carry on without the list, so the launch stops here: a box naming the file,
+// then exit. showErrorBox is the only dialog there is before the app is ready — every other one wants
+// a window, and there is not going to be one — and the message is all anyone gets, so it names the
+// file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
+// half built and has nothing to shut down yet.
+let worktrees: WorktreeEntry[] = [];
+try {
+  worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
+} catch (error: unknown) {
+  dialog.showErrorBox(
+    'Dashboard cannot read its worktree record',
+    `${worktreesFile}\n\n${String(error)}\n\nNothing has been changed. Open Dashboard again once that file can be read.`,
+  );
+  app.exit(1);
+}
+// Outside the try: a failed write is worktree-store's to swallow, and inside it would read as a write
+// that can stop the launch.
 writeWorktrees(worktreesFile, worktrees);
 // The cards whose ship is running right now. Two ships of one card both get past the already-shipped
 // check before either has recorded anything, and the second record replaces the first: two branches

@@ -85,3 +85,26 @@ visible while that project was open, and would say the same number the foot
 line already says. Hold the foot line up against `package.json` on `main` —
 that is the comparison the card asked for, and it needs only the one line to
 make it.
+
+## An unreadable worktree record stops the launch
+
+`worktrees.json` cannot be read — EMFILE, EIO, a permissions change. The app
+shows a box naming the file and exits. It does not open with an empty list.
+
+Carrying on was considered and rejected. An empty list is not a safe fallback
+here, because the launch prunes it and writes it back: the emptiness goes over
+worktrees that are still on disk, they drop off Ctrl+W, and shipping one of
+those cards again makes a second branch and a second folder beside the first.
+Making it safe takes three new branches — skip every write for the run, say so
+on the worktree list instead of "nothing shipped", and refuse a ship that would
+record nothing — and each one missed puts the orphan back.
+
+A refused launch costs nothing but the launch. No shell exists yet, no project
+is open, and nothing is in flight inside the app, so there is no work to lose:
+you open it again. If the failure is permanent the box names the file, which is
+the one thing needed to fix it by hand.
+
+This is not how the board answers the same failure, and that is on purpose.
+`readBoard` throws into an IPC handler with a window already up, so the message
+reaches the status bar and the rest of the app keeps working. There is no status
+bar at launch.

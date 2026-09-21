@@ -1,15 +1,20 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   claimsPane,
   entryForCard,
   entryForPath,
   livingEntries,
+  readWorktrees,
   stillLiving,
   parseWorktrees,
   withEntry,
   withoutPanes,
   withoutWorktree,
   worktreesDiffer,
+  writeWorktrees,
   type WorktreeEntry,
 } from './worktree-store';
 
@@ -23,6 +28,88 @@ const entry: WorktreeEntry = {
   startedAt: '2026-09-10T09:14:22.104Z',
   reviewing: false,
 };
+
+// The file lives in the app's own folder, so a temporary one stands in for it.
+function worktreesFile(): string {
+  return join(mkdtempSync(join(tmpdir(), 'dashboard-worktrees-')), 'worktrees.json');
+}
+
+describe('readWorktrees', () => {
+  it('reads back what was written', () => {
+    const file = worktreesFile();
+    writeWorktrees(file, [entry]);
+    expect(readWorktrees(file)).toEqual([entry]);
+  });
+
+  // The first run on a machine, and every run before a card has been shipped. Nothing is recorded and
+  // nothing is wrong.
+  it('reads nothing when the file has never been written', () => {
+    expect(readWorktrees(worktreesFile())).toEqual([]);
+  });
+
+  // Half a record names no folder anyone can get back, and `git worktree list` is what rebuilds from
+  // there. Throwing instead would leave the app unable to open until someone deleted the file by hand.
+  // The bytes are not lost, though: they are moved aside rather than read as empty.
+  it('reads nothing out of text that is not JSON', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    expect(readWorktrees(file)).toEqual([]);
+  });
+
+  it('moves a damaged file aside instead of overwriting it with an empty list', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    readWorktrees(file);
+    const brokenFile = `${file}.broken`;
+    expect(existsSync(file)).toBe(false);
+    expect(readFileSync(brokenFile, 'utf8')).toBe('{"entries": [');
+  });
+
+  // Once the damaged file is moved aside, the next read takes the ordinary no-file path rather than
+  // salvaging again.
+  it('takes the plain no-file path on the read after a salvage', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    readWorktrees(file);
+    expect(readWorktrees(file)).toEqual([]);
+  });
+
+  // A folder stands in for every errno that is not ENOENT — EMFILE, EIO, EACCES — because it is the
+  // only one a test can make on demand. What an empty list costs the launch is readWorktrees' to say.
+  it('throws rather than reading nothing when the file cannot be read', () => {
+    const file = worktreesFile();
+    mkdirSync(file);
+    expect(() => readWorktrees(file)).toThrow(/EISDIR/);
+  });
+
+  // A folder where the .broken file has to go: the only way to make the salvage rename fail on demand.
+  it('throws when a damaged file cannot be moved aside', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    mkdirSync(`${file}.broken`);
+    expect(() => readWorktrees(file)).toThrow();
+  });
+});
+
+describe('writeWorktrees', () => {
+  // The shape on disk, not the round trip above: parse and write would agree with each other just as
+  // well after both had moved off `entries`, and every file an older build wrote would stop being
+  // read. That the write leaves no .tmp behind is replaceFile's own promise, pinned in
+  // board-store.test.ts.
+  it('writes the entries under the key the file has always used', () => {
+    const file = worktreesFile();
+    writeWorktrees(file, [entry]);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ entries: [entry] });
+  });
+
+  // A ship whose branch, folder and agent are all already there must not fail over the one part of it
+  // that can be done again.
+  it('says nothing when the file cannot be written', () => {
+    const file = worktreesFile();
+    mkdirSync(file);
+    expect(() => writeWorktrees(file, [entry])).not.toThrow();
+  });
+});
 
 describe('parseWorktrees', () => {
   it('keeps an entry as it was written', () => {
