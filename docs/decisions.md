@@ -14,8 +14,8 @@ and they do nothing.
 
 Moving them was considered and rejected:
 
-- The two that pick a project do not move. `manager-page` is all three
-  sections, so Cmd+Up on the general list or the command screen would swap
+- The two that pick a project do not move. `manager-page` is every section,
+  so Cmd+Up on the general list, the command screen or the notes would swap
   which project's board waits behind them, with nothing on screen saying so.
 - Escape does not move. `mode-manager` on `manager-page` puts it on the command
   screen, where `command-cancel` already holds it, and `actions.test.ts` fails
@@ -24,20 +24,20 @@ Moving them was considered and rejected:
 Watch for: the next thing that wants Escape on a project's board will not fire,
 and will not say why.
 
-## Ctrl+Q does nothing on the manager's board or command screen
+## Ctrl+Q does nothing on the manager's board, command or notes screen
 
-Ctrl+Q is global, so Ctrl+H lists it on all five screens, and it closes the
+Ctrl+Q is global, so Ctrl+H lists it on every screen, and it closes the
 project whose page you are on. The manager's page is not a project. Its list
-has a highlight, so the key closes the highlighted project. Its board and
-command screen have no highlight naming one project, so there is no project the
-key could mean.
+has a highlight, so the key closes the highlighted project. Its board, command
+screen and notes have no highlight naming one project, so there is no project
+the key could mean.
 
 Press Alt+L from the manager's list to its board, then Ctrl+Q. Nothing happens,
 and Ctrl+H still says `Ctrl+Q  Close this project`.
 
 `help.test.ts` cannot catch this. It checks that `mapShortcut` answers to every
 key the dialog names, and `mapShortcut` does answer — with an action nothing on
-those two screens acts on.
+those three screens acts on.
 
 ## `MODE_KEYS` is gone
 
