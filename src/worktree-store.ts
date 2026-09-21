@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { replaceFile } from './board-store';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
 // recents.json in the app's own folder rather than in the project, because it describes checkouts on
@@ -54,20 +55,39 @@ export function parseWorktrees(stored: unknown): WorktreeEntry[] {
   return (Array.isArray(entries) ? entries : []).flatMap((entry) => toEntry(entry) ?? []);
 }
 
-// Like the session and the recents, this is a convenience rather than state to recover: a missing or
-// damaged file means nothing is recorded, and a write that fails must not take down the ship that was
-// otherwise finished.
+// No file at all is the ordinary "nothing shipped yet" case, and text that is not JSON is the same
+// answer for a different reason: those bytes name no folder anyone can get back, and `git worktree
+// list` is what rebuilds from there.
+//
+// Every other reason the read can fail is a failure and is thrown. Answer an EMFILE or an EIO with an
+// empty list and launch writes that emptiness straight back over the file: three worktrees still
+// sitting on disk drop off the worktree list, and shipping one of those cards again makes a second
+// branch and a second folder beside the first — the orphan this file exists to prevent.
 export function readWorktrees(file: string): WorktreeEntry[] {
+  let text: string;
   try {
-    return parseWorktrees(JSON.parse(readFileSync(file, 'utf8')));
+    text = readFileSync(file, 'utf8');
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return [];
+  }
+  try {
+    return parseWorktrees(JSON.parse(text));
   } catch {
     return [];
   }
 }
 
+// Written the way every other file the dashboard keeps is: to a temporary file beside it, then renamed
+// over it. Straight into place, the app is the one thing most likely to produce the unreadable file
+// the read above has to answer for — a crash or a full disk halfway through leaves half a record.
+//
+// A write that fails is still swallowed, unlike a read: it happens at the end of a ship whose branch,
+// folder and agent are all already there, and throwing would fail the ship over the one part of it
+// that can be done again.
 export function writeWorktrees(file: string, entries: WorktreeEntry[]): void {
   try {
-    writeFileSync(file, JSON.stringify({ entries }, null, 2));
+    replaceFile(file, JSON.stringify({ entries }, null, 2));
   } catch {
     // Nothing recorded this time.
   }

@@ -1,15 +1,20 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   claimsPane,
   entryForCard,
   entryForPath,
   livingEntries,
+  readWorktrees,
   stillLiving,
   parseWorktrees,
   withEntry,
   withoutPanes,
   withoutWorktree,
   worktreesDiffer,
+  writeWorktrees,
   type WorktreeEntry,
 } from './worktree-store';
 
@@ -23,6 +28,64 @@ const entry: WorktreeEntry = {
   startedAt: '2026-09-10T09:14:22.104Z',
   reviewing: false,
 };
+
+// The file lives in the app's own folder, so a temporary one stands in for it.
+function worktreesFile(): string {
+  return join(mkdtempSync(join(tmpdir(), 'dashboard-worktrees-')), 'worktrees.json');
+}
+
+describe('readWorktrees', () => {
+  it('reads back what was written', () => {
+    const file = worktreesFile();
+    writeWorktrees(file, [entry]);
+    expect(readWorktrees(file)).toEqual([entry]);
+  });
+
+  // The first run on a machine, and every run before a card has been shipped. Nothing is recorded and
+  // nothing is wrong.
+  it('reads nothing when the file has never been written', () => {
+    expect(readWorktrees(worktreesFile())).toEqual([]);
+  });
+
+  // Half a record names no folder anyone can get back, and `git worktree list` is what rebuilds from
+  // there. Throwing instead would leave the app unable to open until someone deleted the file by hand.
+  it('reads nothing out of text that is not JSON', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    expect(readWorktrees(file)).toEqual([]);
+  });
+
+  // The whole point of the card this test belongs to. A folder stands in for every errno that is not
+  // ENOENT — EMFILE, EIO, EACCES — because it is the only one a test can make on demand.
+  //
+  // Answered with an empty list, launch writes that emptiness straight back: worktrees still sitting on
+  // disk drop off the list, and shipping one of those cards again makes a second branch and a second
+  // folder beside the first.
+  it('throws rather than reading nothing when the file cannot be read', () => {
+    const file = worktreesFile();
+    mkdirSync(file);
+    expect(() => readWorktrees(file)).toThrow(/EISDIR/);
+  });
+});
+
+describe('writeWorktrees', () => {
+  // Straight into place, a crash or a full disk halfway through leaves half a record — and the app
+  // would be the main producer of the unreadable file readWorktrees has to answer for.
+  it('leaves no temporary file behind', () => {
+    const file = worktreesFile();
+    writeWorktrees(file, [entry]);
+    expect(existsSync(`${file}.tmp`)).toBe(false);
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ entries: [entry] });
+  });
+
+  // A ship whose branch, folder and agent are all already there must not fail over the one part of it
+  // that can be done again.
+  it('says nothing when the file cannot be written', () => {
+    const file = worktreesFile();
+    mkdirSync(file);
+    expect(() => writeWorktrees(file, [entry])).not.toThrow();
+  });
+});
 
 describe('parseWorktrees', () => {
   it('keeps an entry as it was written', () => {
