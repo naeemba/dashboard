@@ -643,9 +643,9 @@ function apply(action: Action): void {
   const page = pages[activeIndex];
   // The one key aimed at the page rather than at a row: on a project it closes the project you are on.
   // The manager is not a project and has nothing of its own to close, so there it falls through to its
-  // list, where the highlight says which project is meant. Its other two sections have no highlight
-  // naming one project, so the key does nothing on them and Ctrl+H still lists it; CLAUDE.md's help
-  // section says why.
+  // list, where the highlight says which project is meant. Its other three sections — board, command
+  // and notes — have no highlight naming one project, so the key does nothing on them and Ctrl+H still
+  // lists it; CLAUDE.md's help section says why.
   if (action.kind === 'project-close' && isProjectPage(page)) return void closeProject(page.slot);
   switch (action.kind) {
     case 'project-last': {

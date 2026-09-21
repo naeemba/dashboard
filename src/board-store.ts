@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
@@ -149,9 +150,15 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 // The nearest board above you wins, and a project that has no board yet falls back to the repository,
 // which is the same root the app itself opens a project at. Neither found, the directory you are in is
 // the answer, so a folder that is not a repository still gets a board where you asked for one.
+// Stops before the home directory itself, never checking it, so the manager's own .dashboard
+// (dashboard-folder.ts puts its notes and, one day, its board there) cannot be mistaken for a
+// project. Without this, a `board` command run anywhere under $HOME that is neither a repository
+// nor has a board of its own climbs all the way up, finds the manager's .dashboard, and writes a
+// stray card into it — the exact failure this function otherwise exists to prevent.
 export function projectRoot(directory: string): string {
   const start = resolve(directory);
-  for (let at = start; at !== dirname(at); at = dirname(at)) {
+  const home = homedir();
+  for (let at = start; at !== dirname(at) && at !== home; at = dirname(at)) {
     if (existsSync(join(at, BOARD_DIRECTORY)) || existsSync(join(at, '.git'))) return at;
   }
   return start;

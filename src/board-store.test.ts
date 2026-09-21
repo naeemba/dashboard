@@ -1,7 +1,15 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// Lets one test stand in a fake home directory without touching the real one, since Vitest cannot
+// spy on a named ESM export directly.
+let homedirOverride: string | undefined;
+vi.mock('node:os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:os')>();
+  return { ...actual, homedir: () => homedirOverride ?? actual.homedir() };
+});
 import {
   BOARD_DIRECTORY,
   BOARD_FILE_PATH,
@@ -54,6 +62,22 @@ describe('projectRoot', () => {
   it('answers the directory itself when there is neither above it', () => {
     const root = project();
     expect(projectRoot(root)).toBe(root);
+  });
+
+  // The manager's own .dashboard (dashboard-folder.ts) sits directly in the home directory. Without
+  // this boundary, a folder under $HOME that is neither a repository nor has a board of its own would
+  // climb all the way there and be handed the manager's folder as if it were its project.
+  it('never climbs into the home directory itself', () => {
+    const home = project();
+    mkdirSync(join(home, BOARD_DIRECTORY));
+    const deep = join(home, 'Downloads', 'stray');
+    mkdirSync(deep, { recursive: true });
+    homedirOverride = home;
+    try {
+      expect(projectRoot(deep)).toBe(deep);
+    } finally {
+      homedirOverride = undefined;
+    }
   });
 });
 

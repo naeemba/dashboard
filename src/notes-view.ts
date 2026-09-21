@@ -60,10 +60,12 @@ export function createNotesView(options: NotesOptions): NotesView {
   // punctuation lands on the wrong side, and Home and End go to the opposite ends of what you see.
   element.dir = 'auto';
 
-  // Nothing else on this screen is focusable and Tab is bound to nothing here, so the browser's own
-  // Tab would take the keyboard out of the box with nothing on screen saying where it went — and the
-  // mode key cannot bring it back, because it names the mode you are already on. Shift+Tab the same
-  // way, which is why this comes before any question about modifiers.
+  // Tab is bound to nothing here, so the browser's own Tab would take the keyboard out of the box.
+  // On a project's page that's the whole screen and there is nothing else to land on; on the
+  // manager's page the section strip sits above it and its four names are focusable buttons, so Tab
+  // would leave the box for one of those with nothing on screen saying where it went — and the mode
+  // key cannot bring it back, because it names the mode you are already on. Shift+Tab the same way,
+  // which is why this comes before any question about modifiers.
   element.addEventListener('keydown', (event) => {
     if (event.key === 'Tab') event.preventDefault();
   });

@@ -57,12 +57,12 @@ describe('helpSections', () => {
   // handler answers to, on the screen the row is printed for. Checked on both sides of the one
   // distinction the dialog cannot read from `mode` alone: `terminals` and `board` here are a
   // project's own screens, off the manager page, where a manager-page key like section-previous is
-  // listed nowhere and so is not checked; `manager`, `board` and `command` are the manager's own
-  // screens, where those keys are printed and must actually fire.
+  // listed nowhere and so is not checked; `manager`, `board`, `command` and `notes` are the manager's
+  // own screens, where those keys are printed and must actually fire.
   it('names only keys mapShortcut actually answers to', () => {
     const cases: readonly (readonly [Mode, boolean])[] = [
       ['terminals', false], ['board', false],
-      ['manager', true], ['board', true], ['command', true],
+      ['manager', true], ['board', true], ['command', true], ['notes', true],
     ];
     for (const [mode, onManagerPage] of cases) {
       for (const section of helpSections(mode, onManagerPage, mac, true)) {
