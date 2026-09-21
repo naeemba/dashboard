@@ -100,8 +100,27 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
 // the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
-let worktrees: WorktreeEntry[] = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
-writeWorktrees(worktreesFile, worktrees);
+//
+// A read that fails stops the launch, because this line is the only thing that ever fills the list and
+// every write below replaces the file whole. Carry on with an empty list and the app spends the run
+// writing that emptiness over worktrees that are still on disk: they drop off Ctrl+W, and the next
+// ship of one of those cards makes a second branch and a second folder beside the first. A box and no
+// window costs one relaunch and leaves the file exactly as it was.
+let worktrees: WorktreeEntry[] = [];
+try {
+  worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
+  writeWorktrees(worktreesFile, worktrees);
+} catch (error: unknown) {
+  // showErrorBox is the only dialog there is before the app is ready. Every other one wants a window,
+  // and there is not going to be one. The file is named because the message is all anyone gets.
+  dialog.showErrorBox(
+    'Dashboard cannot read its worktree record',
+    `${worktreesFile}\n\n${String(error)}\n\nNothing has been changed. Open Dashboard again once that file can be read.`,
+  );
+  // exit, not quit: quit runs the ordinary shutdown over a main process that is half built, and there
+  // is nothing to shut down yet.
+  app.exit(1);
+}
 // The cards whose ship is running right now. Two ships of one card both get past the already-shipped
 // check before either has recorded anything, and the second record replaces the first: two branches
 // and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
