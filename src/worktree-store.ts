@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, renameSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { replaceFile } from './board-store';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
@@ -55,11 +56,11 @@ export function parseWorktrees(stored: unknown): WorktreeEntry[] {
   return (Array.isArray(entries) ? entries : []).flatMap((entry) => toEntry(entry) ?? []);
 }
 
-// No file at all is the ordinary "nothing shipped yet" case, and text that is not JSON is the same
-// answer for a different reason: those bytes name no folder anyone can get back, and `git worktree
-// list` is what rebuilds from there. readBoard moves a damaged board.json aside instead, and that is
-// the difference between the two files rather than an oversight here: a board is the only copy of
-// somebody's cards, while this one is a list git can be asked for again.
+// No file at all is the ordinary "nothing shipped yet" case. Text that is not JSON is moved aside
+// instead of read as empty, the same way readBoard moves a damaged board.json aside: git can be asked
+// for the folders these bytes name, but not which card is in each one, and that is the field a re-ship
+// needs. Once moved, the next read takes the ordinary no-file path, so this only ever fires once per
+// damaged file.
 //
 // Every other reason the read can fail is a failure and is thrown. Answer an EMFILE or an EIO with an
 // empty list and launch writes that emptiness straight back over the file: three worktrees still
@@ -76,13 +77,16 @@ export function readWorktrees(file: string): WorktreeEntry[] {
   try {
     return parseWorktrees(JSON.parse(text));
   } catch {
+    // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
+    // the comment above is about and goes out the same door.
+    renameSync(file, join(dirname(file), 'worktrees.json.broken'));
     return [];
   }
 }
 
-// Written the way every other file the dashboard keeps is: to a temporary file beside it, then renamed
-// over it. Straight into place, the app is the one thing most likely to produce the unreadable file
-// the read above has to answer for — a crash or a full disk halfway through leaves half a record.
+// Written the way the board and the notes are: to a temporary file beside it, then renamed over it.
+// Straight into place, the app is the one thing most likely to produce the unreadable file the read
+// above has to answer for — a crash or a full disk halfway through leaves half a record.
 //
 // A write that fails is still swallowed, unlike a read: it happens at the end of a ship whose branch,
 // folder and agent are all already there, and throwing would fail the ship over the one part of it

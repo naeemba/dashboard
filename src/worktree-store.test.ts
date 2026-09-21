@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -49,9 +49,28 @@ describe('readWorktrees', () => {
 
   // Half a record names no folder anyone can get back, and `git worktree list` is what rebuilds from
   // there. Throwing instead would leave the app unable to open until someone deleted the file by hand.
+  // The bytes are not lost, though: they are moved aside rather than read as empty.
   it('reads nothing out of text that is not JSON', () => {
     const file = worktreesFile();
     writeFileSync(file, '{"entries": [');
+    expect(readWorktrees(file)).toEqual([]);
+  });
+
+  it('moves a damaged file aside instead of overwriting it with an empty list', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    readWorktrees(file);
+    const brokenFile = `${file}.broken`;
+    expect(existsSync(file)).toBe(false);
+    expect(readFileSync(brokenFile, 'utf8')).toBe('{"entries": [');
+  });
+
+  // Once the damaged file is moved aside, the next read takes the ordinary no-file path rather than
+  // salvaging again.
+  it('takes the plain no-file path on the read after a salvage', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    readWorktrees(file);
     expect(readWorktrees(file)).toEqual([]);
   });
 
@@ -61,6 +80,14 @@ describe('readWorktrees', () => {
     const file = worktreesFile();
     mkdirSync(file);
     expect(() => readWorktrees(file)).toThrow(/EISDIR/);
+  });
+
+  // A folder where the .broken file has to go: the only way to make the salvage rename fail on demand.
+  it('throws when a damaged file cannot be moved aside', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{"entries": [');
+    mkdirSync(`${file}.broken`);
+    expect(() => readWorktrees(file)).toThrow();
   });
 });
 
