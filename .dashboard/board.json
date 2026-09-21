@@ -120,6 +120,10 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "02b53b13-3974-4669-bab2-9b414848b6b1",
@@ -127,13 +131,11 @@
           "notes": "readWorktrees in src/worktree-store.ts catches every reason the read can fail into [], and main.ts:88-89 reads it and writes the result straight back at launch:\n\n  let worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));\n  writeWorktrees(worktreesFile, worktrees);\n\nSo one EMFILE or EIO at launch empties the file, unconditionally, with nobody pressing a key. Three worktrees in flight disappear from the worktree list, and shipping one of those cards again makes a second branch and a second folder -- the orphan the record exists to prevent.\n\nThe same shape PR #46 gave readBoard fixes it: only ENOENT is \"nothing recorded yet\", everything else throws.\n\nreadSession and readSettings should stay swallowing: both fall back to a default that is genuinely right when the file cannot be read, and neither writes that fallback back over the file. readWorktrees is the one that does.\n\nIssue: https://github.com/naeemba/dashboard/issues/47\nReview: https://github.com/naeemba/dashboard/pull/46#discussion_r4024618634",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-21T10:03:39.834Z"
+          "updatedAt": "2026-09-21T10:13:59.971Z",
+          "branch": "a-failed-readworktrees-truncates-worktrees",
+          "pullRequest": 60
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
