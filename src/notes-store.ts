@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_DIRECTORY, replaceFile } from './board-store';
+import { dashboardFolder } from './dashboard-folder';
 
 // A page of free text per project, beside the board in the project's own .dashboard folder, so it
 // commits or is ignored with everything else the dashboard keeps about a project. Markdown by
@@ -8,8 +9,11 @@ import { BOARD_DIRECTORY, replaceFile } from './board-store';
 // the file worth opening in an editor or reading on a forge rather than only in this app.
 export const NOTES_FILE = 'notes.md';
 
+// Which folder this lands in is not this file's to decide: the manager has a page of notes and no
+// project folder to keep it in, and dashboard-folder.ts is where that is answered for every file the
+// dashboard keeps about a page.
 export function notesPath(projectPath: string): string {
-  return join(projectPath, BOARD_DIRECTORY, NOTES_FILE);
+  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, NOTES_FILE);
 }
 
 // A project that has never had notes has no file, which is not a failure — it is an empty page, and

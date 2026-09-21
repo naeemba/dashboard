@@ -270,6 +270,14 @@ export function runBoardCommandOnLatest(
 // bug printed as one sentence leaves an agent `Cannot read properties of undefined (reading 'title')`
 // and no file to open, so those keep their stack. A throw that is not an Error at all has neither, and
 // falls back to whatever it prints as.
+// What board-cli-entry prints when isManagerHomeDirectory says the command was run from $HOME
+// itself. Home is the manager's own folder, not a project — see projectRoot's comment in
+// board-store.ts — so the message says why the command wrote nothing instead of seeding a board
+// there.
+export function homeDirectoryRefusal(): string {
+  return 'the home directory is the manager\'s own folder — cd into a project first';
+}
+
 export function failureLine(error: unknown): string {
   const failure = error as NodeJS.ErrnoException | null;
   return (failure?.code ? failure.message : failure?.stack) ?? String(error);

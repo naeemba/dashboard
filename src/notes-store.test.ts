@@ -1,8 +1,9 @@
 import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { notesPath, readNotes, writeNotes } from './notes-store';
+import { BOARD_DIRECTORY } from './board-store';
+import { NOTES_FILE, notesPath, readNotes, writeNotes } from './notes-store';
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), 'dashboard-notes-'));
@@ -19,6 +20,13 @@ describe('the notes file', () => {
     expect(readNotes(projectPath)).toBe('buy milk\n');
     writeNotes(projectPath, '');
     expect(readNotes(projectPath)).toBe('');
+  });
+
+  // Which folder is dashboard-folder.ts's answer and is tested there. This asks only that notesPath
+  // goes through it, so a page with no project folder still gets a notes.md rather than one written
+  // beside whatever directory the app was launched from.
+  it('follows dashboardFolder for a page with no project folder behind it', () => {
+    expect(notesPath('')).toBe(join(homedir(), BOARD_DIRECTORY, NOTES_FILE));
   });
 
   it('makes .dashboard on the way, so the first thing you type is what creates it', () => {

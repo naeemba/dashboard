@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { failureLine, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
+import { failureLine, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from './board';
 
@@ -348,6 +348,13 @@ describe('runBoardCommandOnLatest', () => {
       message: 'no card with id nope',
     });
     expect(readAgain).not.toHaveBeenCalled();
+  });
+});
+
+describe('homeDirectoryRefusal', () => {
+  it('says the home directory is the manager\'s own folder', () => {
+    expect(homeDirectoryRefusal()).toMatch(/home directory/);
+    expect(homeDirectoryRefusal()).toMatch(/cd into a project/);
   });
 });
 

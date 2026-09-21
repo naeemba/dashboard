@@ -124,10 +124,13 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Every pane also carries DASHBOARD_BOARD, the path to a command that lists cards and moves them '
     + 'from a shell: run `node "$DASHBOARD_BOARD"` in a project to see what it takes. It is how an '
     + 'agent working a card moves its own, and .dashboard/CLAUDE.md in each project spells it out.',
-  notes: 'One page of free text for this project, kept in .dashboard/notes.md beside the board, so it '
-    + 'commits or is ignored with everything else the dashboard keeps about a project. It is for what '
-    + 'is not a card: the command you can never remember, what the staging password is, where you had '
-    + 'got to on Friday. '
+  notes: 'One page of free text, kept in .dashboard/notes.md. On a project that folder is the '
+    + 'project\'s own, beside the board, so the page commits or is ignored with everything else the '
+    + 'dashboard keeps about that project. The manager has a page too, and it is about no project, so '
+    + 'it goes in a .dashboard folder in your home directory instead — out of every repository, where '
+    + 'a note about none of them cannot be committed to one of them by accident. '
+    + 'Either way it is for what is not a card: the command you can never remember, what the staging '
+    + 'password is, where you had got to on Friday. '
     + 'There is no save key. What you type is written a moment after you stop typing, wherever you '
     + 'are by then — nothing runs when you leave, the wait simply finishes on its own. Arriving '
     + 'writes anything still waiting before it reads, so switching away and straight back shows what '
@@ -135,7 +138,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'A write that did not land leaves the box holding a sentence the file never took, and arriving '
     + 'keeps it rather than reading the older page over it, however long ago that write went out. '
     + 'Arriving is also the only time the file is read. An edit made in a pane — or by an agent '
-    + 'working in this project — shows up when you next come here; while you are sitting on this '
+    + 'working in the project — shows up when you next come here; while you are sitting on this '
     + 'screen the box you are typing in is what gets written, and it wins. '
     + 'If that read fails the status bar says so, and nothing is written from then on: a box you '
     + 'were never shown the file in must not be saved over it. Type into it anyway and no later '
@@ -149,9 +152,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'character in the box. Tab is the one thing it stops: the box is the whole screen, so Tab would '
     + 'take the keyboard somewhere you cannot see, and it does nothing here instead.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
-    + 'terminal, nvim and notes keys do nothing here. It is where the window lands when nothing was open last '
-    + 'time. Three sections are named along the top — general, board, command — and the board key still '
-    + 'comes straight here to the board. '
+    + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open '
+    + 'last time. Four sections are named along the top — general, board, command, notes — and the '
+    + 'board and notes keys still come straight here to those two. '
     + 'This one lists every open project and what its panes want from you — one asking a question, one that '
     + 'has died and needs starting again. Enter on a project shows all of its panes by name. The ones '
     + 'asking and the ones that have died carry the last few lines they printed, so the question or '
@@ -200,12 +203,14 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'moderate — would need a parser per tool, and every tool words it differently. '
     + 'The command you typed lasts while the app is running and is gone on restart, and so are the '
     + 'results: a run answers a question you are asking now, and is not a record of anything.',
-  sections: 'The manager is three screens with one strip of names above them. These two keys walk it, '
-    + 'from any of the three. The arrows are deliberately not these keys: on the board they move '
-    + 'between cards.',
+  sections: 'The manager is four screens with one strip of names above them. These two keys walk it, '
+    + 'from any of the four. The arrows are deliberately not these keys: on the board they move '
+    + 'between cards, and in the notes they move the caret.',
   modes: 'A project is shown four ways and remembers which one you left it on, so jumping to it '
-    + 'lands you back in the same view. The manager has three of its own, named along the top: its '
-    + 'list of what the panes want, every project\'s board, and one command run across projects.',
+    + 'lands you back in the same view. The manager has four sections of its own, named along the '
+    + 'top: its list of what the panes want, every project\'s board, one command run across '
+    + 'projects, and a page of notes about none of them. Two of the four mode keys land on a section '
+    + 'rather than doing nothing there — the board key and the notes key.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
     + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
     + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '
@@ -278,9 +283,10 @@ function groupShortcuts(
 
 // The group named after the screen, then whatever that screen takes without a binding. nvim and notes
 // have no group at all, so their lists are only the second half.
-// The manager's three screens get one more, and only there: `onManagerPage` is the same question
+// The manager's four screens get one more, and only there: `onManagerPage` is the same question
 // `hears` asks before firing a manager-page action, asked here so the dialog never lists a key that
-// question would refuse. A project's own board is `isSection(mode)` too, and must not get these rows.
+// question would refuse. A project's own board and its own notes are `isSection(mode)` too, and must
+// not get these rows.
 function screenShortcuts(
   mode: Mode, onManagerPage: boolean, keys: Settings['keys'], isMac: boolean,
 ): Shortcut[] {

@@ -51,7 +51,7 @@ export type Action =
 // board's bare `D` never reaches a terminal.
 //
 // `manager-page` is the one that is not a mode: it means any section of the manager, whichever of its
-// three views is showing. The strip keys need it, because they have to work on all three and an action
+// four views is showing. The strip keys need it, because they have to work on all four and an action
 // may name only one scope — two rows sharing a binding is what this app already treats as a
 // hand-edited settings file. It cannot be answered from the mode alone, because `board` is a mode the
 // manager shares with every project, so `hears` is told which page you are on.
@@ -64,7 +64,7 @@ export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'comman
 // to another one — or warns about a clash that cannot happen.
 //
 // Scopes are not a flat list of equals: `global` is heard everywhere, and `manager-page` covers the
-// three modes the manager shows.
+// four modes the manager shows.
 export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
   if (one === 'global' || other === 'global' || one === other) return true;
   // Asked of SECTIONS rather than through isSection, which takes a Mode: a scope is not a mode, and a
@@ -382,17 +382,18 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'manager', scope: 'manager', action: { kind: 'manager-open' }, mac: 'Enter', other: 'Enter',
   },
   // The strip along the top of the manager page. manager-page scope, because they have to work on all
-  // three sections and one of those is board mode, which every project also has — a project's board
-  // must not hear these.
+  // four sections and two of those — board and notes — are modes every project also has, and a
+  // project's own board or notes must not hear these.
   //
   // Alt+H and Alt+L are the vim directions, the same two letters terminal-move already uses for left
   // and right. That is not a clash: those are terminals scope and the manager has no terminals.
-  // The arrows are deliberately not bound here. On the board they move between cards, and a pair of
-  // keys that works on two sections out of three is worse to learn than one pair that always works.
+  // The arrows are deliberately not bound here. On the board they move between cards and in the notes
+  // they move the caret, and a pair of keys that works on half the sections is worse to learn than one
+  // pair that always works.
   // Their own group, not the manager's: the help dialog prints a screen's keys from the group named
   // after that screen, so in the manager group these two would be listed on the general list and
-  // nowhere else — invisible on the board and the command screen, which are the two places you most
-  // need to know how to get out. helpSections prints this group on all three sections instead.
+  // nowhere else — invisible on the board, the command screen and the notes, which are the places you
+  // most need to know how to get out. helpSections prints this group on all four sections instead.
   {
     name: 'section-previous', description: 'The section to the left, along the top',
     group: 'sections', scope: 'manager-page',

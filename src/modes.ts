@@ -11,7 +11,8 @@ export const PROJECT_MODES = ['terminals', 'nvim', 'board', 'notes'] as const;
 export type ProjectMode = typeof PROJECT_MODES[number];
 
 // A page shows one of these at a time. A project opens as terminals and moves between the first four;
-// the manager page has only its own three and never leaves them.
+// the manager page has four of its own — board and notes, which it shares with every project, plus
+// manager and command, which no project has — and never leaves those four.
 //
 // Built from the list above rather than spelled out again: a project view left out of PROJECT_MODES
 // but written in here works until you restart, and then the app comes back on terminals with nothing
