@@ -299,9 +299,9 @@ function toggleZoom(page: Page): void {
 
 function setMode(mode: Mode): void {
   const page = pages[activeIndex];
-  // A page only switches to a view it has. A dead project has none, and the manager has only its own,
-  // so on both the mode keys do nothing rather than leaving the status bar naming a view that is not
-  // on screen.
+  // A page only switches to a view it has. A dead project has none, and the manager has only the four
+  // sections it was built with, so the keys for a view that was never built do nothing rather than
+  // leaving the status bar naming a view that is not on screen.
   if (!page.views[mode]) return;
   showMode(page, mode);
   focusMode(page, true);
@@ -344,7 +344,7 @@ function focusMode(page: Page, entering: boolean): void {
   }
   if (page.mode === 'notes' && page.notes) {
     // Re-read on arrival, like the board: the file may have been edited in a pane, or by the agent
-    // working in this project's worktree, since you were last here. open() takes the keyboard itself.
+    // working in a project's worktree, since you were last here. open() takes the keyboard itself.
     if (entering) void page.notes.open();
     else page.notes.element.focus();
   }

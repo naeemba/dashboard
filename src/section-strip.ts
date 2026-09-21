@@ -4,7 +4,7 @@ import type { Mode } from './modes';
 export type SectionStrip = { element: HTMLElement; render(mode: Mode): void };
 
 // The names along the top of the manager page. It sits above the views rather than inside one, because
-// it has to be on screen whichever of the three is showing — a strip that vanished with its own
+// it has to be on screen whichever of the four is showing — a strip that vanished with its own
 // section would be a strip you could only see from one place.
 //
 // It holds no state. Which section is current is the page's mode, which the renderer already keeps, so

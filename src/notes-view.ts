@@ -14,6 +14,11 @@ import {
 export type NotesOptions = {
   bridge: DashboardBridge;
   projectPath: string;
+  // What an empty box says, which is the one thing that differs between the two pages that have one:
+  // a project's notes sit in that project's folder, the manager's sit in the home directory. Handed
+  // in rather than worked out from the path here, because the path only says which folder in
+  // notes-store's answer, and a second reading of it here is a second sentence to keep true.
+  placeholder: string;
   // The status bar's error span. A write or a read that lands clears whatever it replaces, the way the
   // board's does — nothing else knows the message has gone stale.
   onError(message: string): void;
@@ -39,7 +44,9 @@ export type NotesView = {
 // goes, which is far longer than this.
 const SAVE_DELAY_MS = 400;
 
-// One page of free text per project, kept in .dashboard/notes.md. A textarea and nothing else — it is
+// One page of free text per page that has one: a project's, kept in .dashboard/notes.md inside the
+// project, and the manager's, kept under that same name in the home directory.
+// A textarea and nothing else — it is
 // the view's whole element, the way nvim is the whole of its own screen — so there is no key of its
 // own here and every keystroke that is not somebody's shortcut is a character. The window's one lookup
 // still answers Ctrl+B and the rest, because the box is not a dialog and OVERLAY_SELECTOR does not
@@ -47,7 +54,7 @@ const SAVE_DELAY_MS = 400;
 export function createNotesView(options: NotesOptions): NotesView {
   const element = document.createElement('textarea');
   element.className = 'notes-text';
-  element.placeholder = 'Notes for this project. Saved to .dashboard/notes.md as you type.';
+  element.placeholder = options.placeholder;
   element.spellcheck = false;
   // Every box you type into carries this. Without it a Persian note runs away from the caret, ending
   // punctuation lands on the wrong side, and Home and End go to the opposite ends of what you see.

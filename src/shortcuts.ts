@@ -55,9 +55,9 @@ export function isBareCharacter(input: KeyInput): boolean {
 
 // `global` is heard on every screen, including while a shell has the keyboard. A scope named after a
 // mode is heard only on that screen, which is what lets the board keep a bare D that a terminal never
-// sees. `manager-page` is the exception that needs more than the mode: the manager shows three views
-// and one of them is board mode, which every project also has, so the page has to say whether it is
-// the manager. The renderer knows — the manager is the page holding MANAGER_SLOT.
+// sees. `manager-page` is the exception that needs more than the mode: the manager shows four views
+// and two of them — board and notes — are modes every project also has, so the page has to say
+// whether it is the manager. The renderer knows — the manager is the page holding MANAGER_SLOT.
 export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): boolean {
   if (scope === 'global') return true;
   if (scope === 'manager-page') return onManagerPage && isSection(mode);

@@ -6,18 +6,20 @@ import type { SendPlan } from './free-pane';
 import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
 import { createManagerView } from './manager-view';
 import type { Mode } from './modes';
+import { createNotesView } from './notes-view';
 import { showMode, type Page } from './page';
 import { createSectionStrip } from './section-strip';
 import type { WorktreeEntry } from './worktree-store';
 
-// The one page with no folder behind it, so none of what page.ts's builder makes: no shells, no
-// editor and no page of notes. It has three views — the list of what every project's panes want,
-// every project's board, and the command screen — and the mode keys for the three it does not have
-// do nothing here.
+// The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
+// editor. It has four views — the list of what every project's panes want, every project's board, the
+// command screen, and a page of notes — and the mode keys for the two it does not have do nothing
+// here.
 //
 // Its board is a board like any other as far as the renderer is concerned: same field, same mode,
 // same four functions. What is behind it is one real board per open project rather than one for a
-// folder.
+// folder. Its notes are the same trick again: the same view a project has, over the one path that
+// names no project, which notes-store reads as the home directory.
 //
 // Out of renderer.ts beside page.ts and for the same reason: that file reached its 600-line ceiling
 // again, and a page builder is the seam it had already been split along once. What is left there is
@@ -84,14 +86,34 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     binding: options.binding,
     onChanged: options.onChanged,
   });
-  // Above the three views rather than inside one, so it is on screen whichever section is showing.
+  const notes = createNotesView({
+    bridge: options.bridge,
+    // The manager page's own path, which is empty because the page has no folder. notes-store is
+    // where that is read as the home directory, and handing it the page's path rather than an empty
+    // string written out here is what keeps this file from holding a second copy of that rule.
+    projectPath: MANAGER_PROJECT.path,
+    placeholder: 'Notes about no project in particular. Saved to .dashboard/notes.md in your home '
+      + 'folder as you type.',
+    // A slot of its own, like every project's, so the manager's notes never clear a project's failure
+    // or have one cleared by it. MANAGER_SLOT is a number no project is ever given.
+    onError: (message) => options.onError(`notes:${MANAGER_SLOT}`, message),
+  });
+  // The notes view is the box and nothing else, so the wrapper a project's page builds in page.ts is
+  // built here too: `.view` is what the stylesheet positions and hides, and `.page-manager .view` is
+  // what pushes it down below the strip.
+  const notesView = document.createElement('div');
+  notesView.className = 'view view-notes';
+  notesView.append(notes.element);
+  // Above the four views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);
-  element.append(strip.element, manager.element, cards.element, command.element);
+  element.append(strip.element, manager.element, cards.element, command.element, notesView);
   const page: Page = {
     project: MANAGER_PROJECT, element,
-    views: { manager: manager.element, board: cards.element, command: command.element },
+    views: {
+      manager: manager.element, board: cards.element, command: command.element, notes: notesView,
+    },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes: null, manager, command, strip,
+    board: cards, notes, manager, command, strip,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.

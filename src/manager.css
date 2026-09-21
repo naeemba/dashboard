@@ -32,7 +32,7 @@
   flex: 1 0 auto;
 }
 
-/* Nothing but the three names, so there is no name at the left to push them across. */
+/* Nothing but the section names, so there is no name at the left to push them across. */
 .manager-head {
   justify-content: flex-end;
 }

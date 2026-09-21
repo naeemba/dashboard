@@ -75,8 +75,9 @@ const BELL_SETTLE_MS = 1000;
 export type Page = {
   project: Project;
   element: HTMLElement;
-  // Only the views this page actually has. A project has four; the manager has three; a dead project
-  // has none, and that is what stops the mode keys switching it to a view that was never built.
+  // Only the views this page actually has. A project has four and so does the manager, though not the
+  // same four; a dead project has none, and that is what stops the mode keys switching it to a view
+  // that was never built.
   views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
   panes: Pane[];
@@ -85,8 +86,8 @@ export type Page = {
   editor: Pane | null;
   editorStarted: boolean;
   board: BoardView | null;
-  // A project's page of notes. Null on the manager page and on a dead project, for the same reason
-  // their boards are: there is no folder to keep a notes.md in.
+  // The page's notes. Null only on a dead project, for the same reason its board is: there is no
+  // folder to keep a notes.md in. The manager has one — its file sits in the home directory instead.
   notes: NotesView | null;
   // Only the manager page has one, the way only a project page has a board.
   manager: ManagerView | null;
@@ -318,6 +319,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     page.notes = createNotesView({
       bridge: options.bridge,
       projectPath: project.path,
+      placeholder: 'Notes for this project. Saved to .dashboard/notes.md as you type.',
       // A slot each, like the board's, so one project's notes never clear another one's failure.
       onError: (message) => options.onError(`notes:${slot}`, message),
     });

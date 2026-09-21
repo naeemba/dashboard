@@ -380,7 +380,7 @@ body *:not(.pane, .pane *) {
   color: var(--red);
 }
 
-/* The names above the manager's three screens. Sits above them rather than inside one — see
+/* The names above the manager's four screens. Sits above them rather than inside one — see
    section-strip.ts for why — so its own rule stands apart from any one view's too.
 
    .page is itself `position: absolute`, which makes it the containing block its children position
