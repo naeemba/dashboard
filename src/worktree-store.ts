@@ -57,7 +57,9 @@ export function parseWorktrees(stored: unknown): WorktreeEntry[] {
 
 // No file at all is the ordinary "nothing shipped yet" case, and text that is not JSON is the same
 // answer for a different reason: those bytes name no folder anyone can get back, and `git worktree
-// list` is what rebuilds from there.
+// list` is what rebuilds from there. readBoard moves a damaged board.json aside instead, and that is
+// the difference between the two files rather than an oversight here: a board is the only copy of
+// somebody's cards, while this one is a list git can be asked for again.
 //
 // Every other reason the read can fail is a failure and is thrown. Answer an EMFILE or an EIO with an
 // empty list and launch writes that emptiness straight back over the file: three worktrees still

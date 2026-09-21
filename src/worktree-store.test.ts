@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -55,12 +55,8 @@ describe('readWorktrees', () => {
     expect(readWorktrees(file)).toEqual([]);
   });
 
-  // The whole point of the card this test belongs to. A folder stands in for every errno that is not
-  // ENOENT — EMFILE, EIO, EACCES — because it is the only one a test can make on demand.
-  //
-  // Answered with an empty list, launch writes that emptiness straight back: worktrees still sitting on
-  // disk drop off the list, and shipping one of those cards again makes a second branch and a second
-  // folder beside the first.
+  // A folder stands in for every errno that is not ENOENT — EMFILE, EIO, EACCES — because it is the
+  // only one a test can make on demand. What an empty list costs the launch is readWorktrees' to say.
   it('throws rather than reading nothing when the file cannot be read', () => {
     const file = worktreesFile();
     mkdirSync(file);
@@ -69,12 +65,13 @@ describe('readWorktrees', () => {
 });
 
 describe('writeWorktrees', () => {
-  // Straight into place, a crash or a full disk halfway through leaves half a record — and the app
-  // would be the main producer of the unreadable file readWorktrees has to answer for.
-  it('leaves no temporary file behind', () => {
+  // The shape on disk, not the round trip above: parse and write would agree with each other just as
+  // well after both had moved off `entries`, and every file an older build wrote would stop being
+  // read. That the write leaves no .tmp behind is replaceFile's own promise, pinned in
+  // board-store.test.ts.
+  it('writes the entries under the key the file has always used', () => {
     const file = worktreesFile();
     writeWorktrees(file, [entry]);
-    expect(existsSync(`${file}.tmp`)).toBe(false);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ entries: [entry] });
   });
 

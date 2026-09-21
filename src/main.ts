@@ -101,26 +101,25 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
 //
-// A read that fails stops the launch, because this line is the only thing that ever fills the list and
-// every write below replaces the file whole. Carry on with an empty list and the app spends the run
-// writing that emptiness over worktrees that are still on disk: they drop off Ctrl+W, and the next
-// ship of one of those cards makes a second branch and a second folder beside the first. A box and no
-// window costs one relaunch and leaves the file exactly as it was.
+// The read throws rather than answering an unreadable file with an empty list, and readWorktrees says
+// why. Nothing below could carry on without the list, so the launch stops here: a box naming the file,
+// then exit. showErrorBox is the only dialog there is before the app is ready — every other one wants
+// a window, and there is not going to be one — and the message is all anyone gets, so it names the
+// file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
+// half built and has nothing to shut down yet.
 let worktrees: WorktreeEntry[] = [];
 try {
   worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
-  writeWorktrees(worktreesFile, worktrees);
 } catch (error: unknown) {
-  // showErrorBox is the only dialog there is before the app is ready. Every other one wants a window,
-  // and there is not going to be one. The file is named because the message is all anyone gets.
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
     `${worktreesFile}\n\n${String(error)}\n\nNothing has been changed. Open Dashboard again once that file can be read.`,
   );
-  // exit, not quit: quit runs the ordinary shutdown over a main process that is half built, and there
-  // is nothing to shut down yet.
   app.exit(1);
 }
+// Outside the try: a failed write is worktree-store's to swallow, and inside it would read as a write
+// that can stop the launch.
+writeWorktrees(worktreesFile, worktrees);
 // The cards whose ship is running right now. Two ships of one card both get past the already-shipped
 // check before either has recorded anything, and the second record replaces the first: two branches
 // and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
