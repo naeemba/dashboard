@@ -150,11 +150,14 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 // The nearest board above you wins, and a project that has no board yet falls back to the repository,
 // which is the same root the app itself opens a project at. Neither found, the directory you are in is
 // the answer, so a folder that is not a repository still gets a board where you asked for one.
-// Stops before the home directory itself, never checking it, so the manager's own .dashboard
-// (dashboard-folder.ts puts its notes and, one day, its board there) cannot be mistaken for a
-// project. Without this, a `board` command run anywhere under $HOME that is neither a repository
-// nor has a board of its own climbs all the way up, finds the manager's .dashboard, and writes a
-// stray card into it — the exact failure this function otherwise exists to prevent.
+// The climb stops at the home directory and never looks inside it, so a `board` command run
+// somewhere under $HOME that is neither a repository nor has a board of its own cannot climb past
+// $HOME into the manager's own .dashboard (dashboard-folder.ts puts its notes and, one day, its
+// board there) and write a stray card into it.
+// That protection is the climb, not this function: called directly on the home directory, this
+// still answers with it — `start` is `home`, the loop body never runs. isManagerHomeDirectory below
+// is the check that catches that case, and board-cli-entry asks it before opening anything. Call
+// this on a directory that might be $HOME without that check first and the stray card is back.
 export function projectRoot(directory: string): string {
   const start = resolve(directory);
   const home = homedir();
@@ -164,10 +167,10 @@ export function projectRoot(directory: string): string {
   return start;
 }
 
-// Whether a directory is the home directory itself — the one place projectRoot's climb refuses to
-// answer with, because it is the manager's own folder rather than a project. board-cli-entry checks
-// this before opening a board at all, so running the command from $HOME refuses instead of seeding
-// the manager's .dashboard with a stray project.
+// Whether a directory is the home directory itself. projectRoot's climb never looks inside $HOME,
+// but called directly on $HOME it still answers with it, so board-cli-entry checks this before
+// opening a board at all — running the command from $HOME refuses instead of seeding the manager's
+// .dashboard with a stray project.
 export function isManagerHomeDirectory(directory: string): boolean {
   return resolve(directory) === homedir();
 }
