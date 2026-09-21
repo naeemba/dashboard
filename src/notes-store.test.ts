@@ -2,7 +2,6 @@ import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MANAGER_PROJECT } from './manager';
 import { BOARD_DIRECTORY } from './board-store';
 import { NOTES_FILE, notesPath, readNotes, writeNotes } from './notes-store';
 
@@ -23,12 +22,11 @@ describe('the notes file', () => {
     expect(readNotes(projectPath)).toBe('');
   });
 
-  // The manager page carries no folder, and MANAGER_PROJECT is where that empty path comes from.
-  // Asked through that constant rather than a bare '' so the two cannot come apart: give the manager
-  // a path one day and this test says so, instead of the app quietly writing a .dashboard folder into
-  // whatever directory it happens to have been launched from.
-  it("puts the manager's page, which is about no project, in the home directory", () => {
-    expect(notesPath(MANAGER_PROJECT.path)).toBe(join(homedir(), BOARD_DIRECTORY, NOTES_FILE));
+  // Which folder is dashboard-folder.ts's answer and is tested there. This asks only that notesPath
+  // goes through it, so a page with no project folder still gets a notes.md rather than one written
+  // beside whatever directory the app was launched from.
+  it('follows dashboardFolder for a page with no project folder behind it', () => {
+    expect(notesPath('')).toBe(join(homedir(), BOARD_DIRECTORY, NOTES_FILE));
   });
 
   it('makes .dashboard on the way, so the first thing you type is what creates it', () => {

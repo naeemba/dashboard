@@ -19,7 +19,7 @@ import type { WorktreeEntry } from './worktree-store';
 // Its board is a board like any other as far as the renderer is concerned: same field, same mode,
 // same four functions. What is behind it is one real board per open project rather than one for a
 // folder. Its notes are the same trick again: the same view a project has, over the one path that
-// names no project, which notes-store reads as the home directory.
+// names no project, which dashboard-folder.ts reads as the home directory.
 //
 // Out of renderer.ts beside page.ts and for the same reason: that file reached its 600-line ceiling
 // again, and a page builder is the seam it had already been split along once. What is left there is
@@ -88,9 +88,9 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   });
   const notes = createNotesView({
     bridge: options.bridge,
-    // The manager page's own path, which is empty because the page has no folder. notes-store is
-    // where that is read as the home directory, and handing it the page's path rather than an empty
-    // string written out here is what keeps this file from holding a second copy of that rule.
+    // The manager page's own path, which is empty because the page has no folder. dashboard-folder.ts
+    // is where that is read as the home directory, and handing over the page's path rather than an
+    // empty string written out here is what keeps this file from holding a second copy of that rule.
     projectPath: MANAGER_PROJECT.path,
     placeholder: 'Notes about no project in particular. Saved to .dashboard/notes.md in your home '
       + 'folder as you type.',

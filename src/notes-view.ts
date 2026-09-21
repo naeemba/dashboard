@@ -16,8 +16,8 @@ export type NotesOptions = {
   projectPath: string;
   // What an empty box says, which is the one thing that differs between the two pages that have one:
   // a project's notes sit in that project's folder, the manager's sit in the home directory. Handed
-  // in rather than worked out from the path here, because the path only says which folder in
-  // notes-store's answer, and a second reading of it here is a second sentence to keep true.
+  // in rather than worked out from the path here, because which folder a path means is
+  // dashboard-folder.ts's answer, and a second reading of it here is a second sentence to keep true.
   placeholder: string;
   // The status bar's error span. A write or a read that lands clears whatever it replaces, the way the
   // board's does — nothing else knows the message has gone stale.

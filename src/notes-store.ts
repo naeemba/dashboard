@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { BOARD_DIRECTORY, replaceFile } from './board-store';
+import { dashboardFolder } from './dashboard-folder';
 
 // A page of free text per project, beside the board in the project's own .dashboard folder, so it
 // commits or is ignored with everything else the dashboard keeps about a project. Markdown by
@@ -9,21 +9,11 @@ import { BOARD_DIRECTORY, replaceFile } from './board-store';
 // the file worth opening in an editor or reading on a forge rather than only in this app.
 export const NOTES_FILE = 'notes.md';
 
-// The manager has a page of notes too, and it is the one page that is about no project. Its page
-// carries no folder — an empty path, which is what MANAGER_PROJECT hands out and what session.ts
-// already reads as "this page has nowhere on disk" — so there is no project .dashboard to put it in.
-// It goes in one in the home directory instead, which keeps it out of every repository: a page about
-// none of them must not be committed to one of them by accident.
-//
-// The empty path is the whole of how this is spelled, here and nowhere else. The renderer hands over
-// the manager page's own project path rather than an empty string of its own, so there is one fact to
-// keep in step instead of two literals that agree until somebody changes one.
-function notesFolder(projectPath: string): string {
-  return projectPath === '' ? homedir() : projectPath;
-}
-
+// Which folder this lands in is not this file's to decide: the manager has a page of notes and no
+// project folder to keep it in, and dashboard-folder.ts is where that is answered for every file the
+// dashboard keeps about a page.
 export function notesPath(projectPath: string): string {
-  return join(notesFolder(projectPath), BOARD_DIRECTORY, NOTES_FILE);
+  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, NOTES_FILE);
 }
 
 // A project that has never had notes has no file, which is not a failure — it is an empty page, and
