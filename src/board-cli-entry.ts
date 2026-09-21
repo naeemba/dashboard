@@ -1,5 +1,5 @@
-import { openBoard, projectRoot, readBoard, writeBoard } from './board-store';
-import { failureLine, runBoardCommandOnLatest } from './board-cli';
+import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
+import { failureLine, homeDirectoryRefusal, runBoardCommandOnLatest } from './board-cli';
 
 // The whole of the `board` program outside board-cli.ts: the current directory in, a file and a line
 // of output out. Every decision it could make is made there instead, where a test can reach it.
@@ -8,6 +8,11 @@ import { failureLine, runBoardCommandOnLatest } from './board-cli';
 // `cd` is how you point this at a different project. projectRoot is what makes any depth inside the
 // project work, so an agent that has stepped into src/ still edits the project's one board.
 function run(): void {
+  if (isManagerHomeDirectory(process.cwd())) {
+    process.stderr.write(`${homeDirectoryRefusal()}\n`);
+    process.exit(1);
+  }
+
   const project = projectRoot(process.cwd());
   const read = openBoard(project);
   if (read.brokenFile !== null) {

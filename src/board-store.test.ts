@@ -16,6 +16,7 @@ import {
   BROKEN_BOARD_FILE,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
+  isManagerHomeDirectory,
   parseBoard,
   projectRoot,
   readBoard,
@@ -75,6 +76,19 @@ describe('projectRoot', () => {
     homedirOverride = home;
     try {
       expect(projectRoot(deep)).toBe(deep);
+    } finally {
+      homedirOverride = undefined;
+    }
+  });
+});
+
+describe('isManagerHomeDirectory', () => {
+  it('is true for the home directory itself, resolved the same way projectRoot resolves it', () => {
+    const home = project();
+    homedirOverride = home;
+    try {
+      expect(isManagerHomeDirectory(home)).toBe(true);
+      expect(isManagerHomeDirectory(join(home, 'Downloads'))).toBe(false);
     } finally {
       homedirOverride = undefined;
     }

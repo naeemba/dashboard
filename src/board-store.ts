@@ -164,6 +164,14 @@ export function projectRoot(directory: string): string {
   return start;
 }
 
+// Whether a directory is the home directory itself — the one place projectRoot's climb refuses to
+// answer with, because it is the manager's own folder rather than a project. board-cli-entry checks
+// this before opening a board at all, so running the command from $HOME refuses instead of seeding
+// the manager's .dashboard with a stray project.
+export function isManagerHomeDirectory(directory: string): boolean {
+  return resolve(directory) === homedir();
+}
+
 function boardPath(projectPath: string): string {
   return join(projectPath, BOARD_DIRECTORY, BOARD_FILE);
 }
