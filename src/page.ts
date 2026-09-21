@@ -96,6 +96,17 @@ export type Page = {
   strip: SectionStrip | null;
 };
 
+// Switching mode is per page, so each project keeps the view you left it on. A dead project has no
+// views to switch between and ignores the keys.
+// The mode and which view is on screen are one fact, so they only ever move together. Restoring a page
+// sets them without arriving at it, and a page is built that way too, which is why this is not simply
+// the top of the renderer's setMode.
+export function showMode(page: Page, mode: Mode): void {
+  page.mode = mode;
+  for (const [name, view] of Object.entries(page.views)) if (view) view.hidden = name !== mode;
+  page.strip?.render(mode);
+}
+
 function fontFamily(settings: Settings): string {
   return `"${settings.font.name}", Menlo, Monaco, monospace`;
 }

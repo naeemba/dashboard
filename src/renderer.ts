@@ -26,19 +26,15 @@ import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
 import { anyWaiting, waitingNames } from './waiting';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, isProjectPage, landingPosition, managerRows, positionAfterClose,
-  projectPosition,
+  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition,
 } from './manager';
-import { createManagerView } from './manager-view';
-import { createCardsView } from './cards-view';
-import { createCommandView } from './command-view';
+import { createManagerPage } from './manager-page';
 import { closeRefusal, closingPanes } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, type Page,
+  createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, showMode, type Page,
 } from './page';
-import { createSectionStrip } from './section-strip';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
@@ -301,16 +297,6 @@ function toggleZoom(page: Page): void {
   fitPanes(page);
 }
 
-// Switching mode is per page, so each project keeps the view you left it on. A dead project has no
-// views to switch between and ignores the keys.
-// The mode and which view is on screen are one fact, so they only ever move together. Restoring a page
-// sets them without arriving at it, which is why this is not simply the top of setMode.
-function showMode(page: Page, mode: Mode): void {
-  page.mode = mode;
-  for (const [name, view] of Object.entries(page.views)) if (view) view.hidden = name !== mode;
-  page.strip?.render(mode);
-}
-
 function setMode(mode: Mode): void {
   const page = pages[activeIndex];
   // A page only switches to a view it has. A dead project has none, and the manager has only its own,
@@ -405,55 +391,6 @@ function landOn(index: number): void {
   });
   focusMode(pages[activeIndex], true);
   refreshWhichKey();
-}
-
-// The one page with no folder behind it, so none of what buildPage makes: no shells, no editor and no
-// page of notes. It has two views — the list of what every project's panes want, and every project's
-// board — and the mode keys for the three it does not have do nothing here.
-// Its board is a board like any other as far as this file is concerned: same field, same mode, same
-// four functions. What is behind it is one real board per open project rather than one for a folder.
-function buildManagerPage(): Page {
-  const element = document.createElement('section');
-  // The modifier is what index.css uses to push this page's views down below the section strip —
-  // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
-  element.className = 'page page-manager';
-  const manager = createManagerView({
-    onJump: goToPane, onAnswer: answerPane, onClose: closeProject, onChanged: renderStatus,
-  });
-  const cards = createCardsView({
-    bridge,
-    // Read on every arrival rather than handed over once, so a project opened since you were last here
-    // has a board.
-    projects: projectPages,
-    onChanged: renderStatus,
-    // A slot each, and a different owner from the same project's own board, so the two screens reading
-    // one file never clear each other's message.
-    onError: (slot, message) => showError(`cards:${slot}`, message),
-    worktrees: () => worktrees,
-  });
-  const command = createCommandView({
-    projects: () => projectPages().map((entry) => ({
-      name: entry.project.name, path: entry.project.path,
-    })),
-    runTask: (text, paths) => bridge.runTask(text, paths),
-    runInPanes: (text, paths) => sendToPanes(text, paths),
-    cancelTasks: () => bridge.cancelTasks(),
-    binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
-    onChanged: renderStatus,
-  });
-  // Above the three views rather than inside one, so it is on screen whichever section is showing.
-  const strip = createSectionStrip((mode) => setMode(mode));
-  element.append(strip.element, manager.element, cards.element, command.element);
-  const page: Page = {
-    project: MANAGER_PROJECT, element,
-    views: { manager: manager.element, board: cards.element, command: command.element },
-    mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes: null, manager, command, strip,
-  };
-  // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
-  // set together — including here, where the page has not been arrived at yet.
-  showMode(page, 'manager');
-  return page;
 }
 
 // The one page builder, handed the few things a pane needs from this file. Every one that can change
@@ -1010,7 +947,21 @@ async function restore(session: Session): Promise<void> {
 async function start(): Promise<void> {
   // First, and before anything draws: the tab strip is `pages` in order, so this is what puts the
   // manager at the front of it, and renderStatus below has a page to draw.
-  const manager = buildManagerPage();
+  const manager = createManagerPage({
+    bridge,
+    projects: projectPages,
+    worktrees: () => worktrees,
+    binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
+    onChanged: renderStatus,
+    onError: showError,
+    onJump: goToPane,
+    onAnswer: answerPane,
+    onClose: closeProject,
+    onSection: setMode,
+    runTask: (text, paths) => bridge.runTask(text, paths),
+    runInPanes: (text, paths) => sendToPanes(text, paths),
+    cancelTasks: () => bridge.cancelTasks(),
+  });
   pagesElement.append(manager.element);
   pages.push(manager);
   renderStatus();
