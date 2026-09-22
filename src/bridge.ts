@@ -124,6 +124,9 @@ export type DashboardBridge = {
   // worktree records are: the numbers move on their own while nothing on screen does.
   readUsage(): Promise<UsageSnapshot>;
   onUsageChange(listener: (usage: UsageSnapshot) => void): void;
+  // One line about something that broke on main's side of the wire. What reaches here and why the app
+  // is still up to hear it are failure.ts's.
+  onFailure(listener: (message: string) => void): void;
 };
 
 declare global {

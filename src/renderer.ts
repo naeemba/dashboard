@@ -7,6 +7,7 @@ import './usage.css';
 import './manager.css';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
+import { failureNotice } from './failure';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
@@ -93,6 +94,28 @@ function showError(owner: string, message: string): void {
   errorOwner = message === '' ? '' : owner;
   statusError.textContent = message;
 }
+
+// Failures nobody caught, from either side of the wire, under one owner so they never clear a board's
+// message or have one cleared by them.
+//
+// Main's arrive over the channel, and this is registered at module load rather than in start(), because
+// the launch's own failures are sent the moment the page finishes loading — later than a listener set
+// up here, earlier than anything start() awaits.
+//
+// This side's are the window's, and they cost no shell: a pty lives in main, and a throw inside a
+// listener here is caught by the browser, which logs it and carries on. What it costs is that nobody
+// knows. The board simply does not redraw, or a key does nothing, and the console is the only place it
+// is written down. Now the bar says it.
+bridge.onFailure((message) => showError('failure', message));
+// `error` when the thrown value is there, `message` when it is not — a cross-origin script gives the
+// browser nothing to hand over and only the sentence "Script error." to say.
+window.addEventListener('error', (event) => {
+  showError('failure', failureNotice(event.error ?? event.message));
+});
+window.addEventListener('unhandledrejection', (event) => {
+  showError('failure', failureNotice(event.reason));
+});
+
 const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
@@ -998,4 +1021,9 @@ async function start(): Promise<void> {
 
 start().catch((error: unknown) => {
   showError('start', `Failed to start: ${String(error)}`);
+  // A launch that stopped before restore() ran left this set for the rest of the run, and saveSession
+  // answers to it: open five projects by hand afterwards, quit, and the app comes back on the layout
+  // from the day before with all five gone, because nothing had been written since. Half a layout on
+  // screen and saving is better than a whole one that never reaches disk.
+  restoring = false;
 });

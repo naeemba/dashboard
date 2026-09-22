@@ -42,6 +42,8 @@ const bridge: DashboardBridge = {
   readUsage: () => ipcRenderer.invoke('usage:read'),
   onUsageChange: (listener) =>
     ipcRenderer.on('usage:change', (_event, usage) => listener(usage)),
+  onFailure: (listener) =>
+    ipcRenderer.on('failure:show', (_event, message) => listener(message)),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

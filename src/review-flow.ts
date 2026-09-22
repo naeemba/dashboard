@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
+import { failureText } from './failure';
 import { allCards, cardById, type Board } from './board';
 import type { ShipResult, WorktreeRemoval } from './bridge';
 import type { WorktreeEntry } from './worktree-store';
@@ -238,7 +239,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const swap = await ports
       .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
       .catch((error: unknown) => ({
-        message: `review failed: ${error instanceof Error ? error.message : String(error)}`,
+        message: `review failed: ${failureText(error)}`,
         again: false,
       }));
     // The mark comes back off for a card that was only early. Everything else keeps it: a locked

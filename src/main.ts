@@ -1,7 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { execFile } from 'node:child_process';
-import { existsSync, readFileSync, watch, type FSWatcher } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
@@ -22,9 +21,10 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
 } from './terminals';
-import { BOARD_DIRECTORY, BOARD_FILE, BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
 import { readNotes, writeNotes } from './notes-store';
-import { isBoardChange, isBoardFile } from './board-watch';
+import { boardWatchers } from './board-watch';
+import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
 import { readSession, writeSession, type Session } from './session';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
@@ -37,7 +37,6 @@ import {
   uncommittedCount,
   workPrompt,
   worktreePathFor,
-  worktreesRoot,
 } from './ship';
 import {
   busyPanes,
@@ -48,9 +47,7 @@ import {
   type PaneReading,
   type PaneUse,
 } from './pane-reading';
-import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
-import { liveSessions, sweepUsage } from './usage-store';
-import { parentProcesses, sessionsByPane } from './pane-sessions';
+import { usageSweep } from './usage-sweep';
 import {
   claimsPane,
   entryForCard,
@@ -77,7 +74,42 @@ if (started) app.quit();
 const environmentFile = app.isPackaged
   ? path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'dashboard', '.env')
   : path.join(app.getAppPath(), '.env');
-if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
+// Everything a failure costs, and whether the app survives one, is failure.ts's. What is wired here is
+// the bar, the box and the exit, and the two handlers that make it the process's last resort.
+//
+// First in the file, because the .env read below is the first thing that carries on past a failure. It
+// reads mainWindow, declared much further down, and that is safe: nothing asks it to say anything until
+// a window has opened, by which time every line of this file has run.
+const failures = failureReporter({
+  say: (message) => {
+    // The window, plus the one question only this sender asks: a message sent to a page that has not
+    // run its listeners yet lands nowhere at all, so it waits for did-finish-load instead.
+    const window = liveWindow();
+    if (!window || window.webContents.isLoading()) return false;
+    window.webContents.send('failure:show', message);
+    return true;
+  },
+  // exit rather than quit, for the reason the worktree read below gives: quit runs the ordinary
+  // shutdown over a main process that is half built and has nothing to shut down yet.
+  stop: (title, detail) => { dialog.showErrorBox(title, detail); app.exit(1); },
+});
+process.on('uncaughtException', (error: unknown) => failures.report(error));
+process.on('unhandledRejection', (error: unknown) => failures.report(error));
+
+// The app opens without it. What is in this file is a shell command and a list of project folders, so a
+// launch that cannot read it opens on the shipped defaults with nothing you set applied — worth a line
+// on the status bar, not worth the window.
+//
+// It has to be a try, not a check: existsSync says yes for a directory and for a file whose permissions
+// have gone, and loadEnvFile throws on both. Before this, a .env that was a folder meant double-clicking
+// Dashboard and having nothing happen at all — no window, no message, the icon bouncing once.
+if (existsSync(environmentFile)) {
+  try {
+    process.loadEnvFile(environmentFile);
+  } catch (error: unknown) {
+    failures.hold(`${environmentFile} was not read: ${failureText(error)}`);
+  }
+}
 
 // Empty at launch: every project comes from the picker, and the recents list remembers them across runs.
 // One per slot, and a slot is what every pane of that project is named by — so a project that is
@@ -113,7 +145,7 @@ try {
 } catch (error: unknown) {
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
-    `${worktreesFile}\n\n${String(error)}\n\nNothing has been changed. Open Dashboard again once that file can be read.`,
+    `${worktreesFile}\n\n${failureText(error)}\n\nNothing has been changed. Open Dashboard again once that file can be read.`,
   );
   app.exit(1);
 }
@@ -168,10 +200,9 @@ const boardCommand = path
 // Built once. Every pane gets the same one, and cloning the whole environment per pane is six clones
 // per project opened for a value that never changes.
 const paneEnvironment = { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>;
-// One watcher per open project, on its .dashboard folder, and the bytes the app itself last wrote
-// there. Both keyed by project path: a slot can change hands, a path is the file.
-const boardWatchers = new Map<string, FSWatcher>();
-const boardTexts = new Map<string, string>();
+// One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
+// what main adds is the one thing only it can do, which is tell the renderer.
+const boards = boardWatchers((projectPath) => sendToRenderer('board:change', projectPath));
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
@@ -185,8 +216,14 @@ let mainWindow: BrowserWindow;
 // stacks a question per keypress and you answer the same one five times.
 let askingToQuit = false;
 
+// The one place that answers whether there is a window a message can reach. Both senders ask it, so
+// there is never a second copy of that question to drift from this one.
+function liveWindow(): BrowserWindow | undefined {
+  return mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+}
+
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...payload);
+  liveWindow()?.webContents.send(channel, ...payload);
 }
 
 // What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty can
@@ -339,7 +376,20 @@ function dropDeadWorktrees(): void {
 // The same tick asks every in-flight worktree whether its agent has finished. Not awaited and nothing
 // waits on it: one tick's review is still running when the next arrives — git takes seconds — and the
 // sweep guards against starting the same card twice.
-setInterval(() => { dropDeadWorktrees(); void reviews.run(); }, WORKING_REPORT_MS).unref();
+//
+// Two sweeps on one tick and neither needs anything from the other, so they are caught apart. Written
+// as one statement, the worktree half throwing meant the review half never ran — and the same throw
+// lands on every tick, so no review would start again for the rest of the run: a card whose agent has
+// opened its pull request sits on `shipped · fix-login · terminal 3` forever, with nothing on any
+// screen saying why.
+setInterval(() => {
+  try {
+    dropDeadWorktrees();
+  } catch (error: unknown) {
+    failures.report(error);
+  }
+  void reviews.run().catch((error: unknown) => failures.report(error));
+}, WORKING_REPORT_MS).unref();
 
 // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
 // decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
@@ -393,47 +443,6 @@ function spawnTerminal(id: string): void {
     sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, terminalProcess);
-}
-
-// Watch a project's .dashboard folder and tell the renderer when the board in it becomes something
-// the app did not write — the command line moving a card, or a hand edit. Idempotent, and called
-// from the board read, which is the only way a board reaches the screen and the thing that creates
-// the folder on a project that has never had one.
-//
-// Never a failure anyone sees. A platform that refuses the watch, a file that cannot be read: each
-// costs the live redraw and nothing else, and the board is still re-read every time you enter it.
-function watchBoard(projectPath: string): void {
-  if (boardWatchers.has(projectPath)) return;
-  const directory = path.join(projectPath, BOARD_DIRECTORY);
-  let watcher: FSWatcher;
-  try {
-    watcher = watch(directory, (_event, fileName) => {
-      // Before the read, not after: one save fires an event for board.json.tmp and another for the
-      // rename, and reading the whole board for the first of them is work on the thread every pane's
-      // bytes flow through.
-      if (!isBoardFile(fileName)) return;
-      let onDisk: string | null;
-      try {
-        onDisk = readFileSync(path.join(directory, BOARD_FILE), 'utf8');
-      } catch {
-        onDisk = null;
-      }
-      if (!isBoardChange(boardTexts.get(projectPath), onDisk)) return;
-      // Remembered as if the app had written it, so the several events one save fires announce the
-      // change once.
-      boardTexts.set(projectPath, onDisk);
-      sendToRenderer('board:change', projectPath);
-    });
-  } catch {
-    return;
-  }
-  boardWatchers.set(projectPath, watcher);
-}
-
-function unwatchBoard(projectPath: string): void {
-  boardWatchers.get(projectPath)?.close();
-  boardWatchers.delete(projectPath);
-  boardTexts.delete(projectPath);
 }
 
 // The five shells start with the project. The editor is registered but not started: opening nine
@@ -527,7 +536,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
-  unwatchBoard(closing.path);
+  boards.forget(closing.path);
   for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
     // spawnTerminal, so no pty:exit goes out for a pane the renderer has already taken off the screen.
@@ -542,64 +551,19 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
   setWorktrees(withoutPanes(worktrees, closing.path));
 });
-// Claude Code's own session logs, read for what each project and each pane has cost. Read-only and
-// offline: nothing is asked of any server and nothing under ~/.claude is written. What the numbers
-// mean is usage.ts's, the reading is usage-store.ts's, and which pane a session belongs to is
-// pane-sessions.ts's — what is here is when the sweep runs.
-const claudeLogs = path.join(homedir(), '.claude', 'projects');
-const claudeSessions = path.join(homedir(), '.claude', 'sessions');
-// Kept across sweeps, which is what makes every sweep after the first one nearly free: a log whose
-// size has not moved is not opened at all.
-const usageFiles = new Map<string, FileUsage>();
-let usage: UsageSnapshot = NO_USAGE;
-
-async function sweepTokenUsage(): Promise<void> {
-  const now = Date.now();
-  // Three reads that need nothing from each other: the logs, the process tree, and the sessions
-  // Claude Code has running. The tree is the only thing that says which pane a session is in, and a
-  // machine with no `ps` answers with none — the project figures still stand and the pane ones are
-  // simply absent, which is the smaller half rather than the screen.
-  const [, tree, sessions] = await Promise.all([
-    sweepUsage(claudeLogs, usageFiles, now),
-    runCommand('ps', ['-eo', 'pid=,ppid=']).then(({ stdout }) => stdout, () => ''),
-    liveSessions(claudeSessions),
-  ]);
-  const panePids = new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id]));
-  const open = projects.flatMap((project) => (project === undefined
-    ? []
-    : [{ path: project.path, worktrees: worktreesRoot(project.path) }]));
-  const next = snapshotOf(
-    usageFiles.values(),
-    open,
-    sessionsByPane(parentProcesses(tree), panePids, sessions),
-    now,
-  );
-  // Nothing crosses for a sweep that found the same figures. Whether that is worth a message is
-  // usageDiffers's to say.
-  const changed = usageDiffers(usage, next);
-  usage = next;
-  if (changed) sendToRenderer('usage:change', usage);
-}
-
-// Chained rather than on an interval, so a sweep that takes longer than the gap — a first read of
-// half a gigabyte on a slow disk — cannot have the next one start on top of it.
-function sweepUsageLater(delay: number): void {
-  // The catch is not optional: `finally` re-throws what it was handed, and an unhandled rejection in
-  // the main process is an uncaught exception that takes every pane's shell with it. A sweep that
-  // finishes into a window that has just closed is the way there.
-  setTimeout(() => {
-    void sweepTokenUsage().catch(() => undefined).finally(() => sweepUsageLater(USAGE_SWEEP_MS));
-  }, delay).unref();
-}
-
-// Every half minute, which is the rate the manager's rows already redraw themselves at. The first one
-// waits: it is the only sweep that reads every log there has ever been, and a launch has five shells
-// and a window to get on screen first.
-const USAGE_SWEEP_MS = 30_000;
-sweepUsageLater(3_000);
+// Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
+// when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
+const tokenUsage = usageSweep({
+  panePids: () => new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id])),
+  openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
+  processTree: () => runCommand('ps', ['-eo', 'pid=,ppid=']).then(({ stdout }) => stdout, () => ''),
+  publish: (snapshot) => sendToRenderer('usage:change', snapshot),
+  report: (error: unknown) => failures.report(error),
+});
+tokenUsage.start();
 
 // The renderer's first read. Everything after it arrives unasked on usage:change.
-ipcMain.handle('usage:read', () => usage);
+ipcMain.handle('usage:read', () => tokenUsage.latest());
 
 // Read once at startup and written back whenever the layout changes, so a crash loses at most the
 // change you were making rather than every project you had open.
@@ -665,14 +629,14 @@ ipcMain.handle('board:read', (_event, projectPath: string) => {
     // After the read, which is what creates .dashboard on a project that has never had a board — and
     // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
     // that board never notices the command line again for as long as you stay on the screen.
-    watchBoard(projectPath);
+    boards.watch(projectPath);
   }
 });
 // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
 // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
 // the renderer: it already has the board it just sent.
 ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
-  boardTexts.set(projectPath, writeBoard(projectPath, board));
+  boards.wrote(projectPath, writeBoard(projectPath, board));
 });
 
 // The project's page of notes. No watcher and no seeding: the notes are one box one person types
@@ -877,7 +841,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
       return attachPane({ ...existing, reviewing: false }, slot, workPrompt(cardId));
     });
   } catch (error: unknown) {
-    return { ok: false, message: `ship failed: ${error instanceof Error ? error.message : String(error)}` };
+    return { ok: false, message: `ship failed: ${failureText(error)}` };
   } finally {
     // In a finally, so a step that throws cannot leave the card locked for the rest of the run with
     // nothing on screen able to clear it.
@@ -956,7 +920,7 @@ async function removeWorktree(worktreePath: string, force: boolean): Promise<Wor
   } catch (error: unknown) {
     return {
       ok: false,
-      message: `not removed: ${error instanceof Error ? error.message : String(error)}`,
+      message: `not removed: ${failureText(error)}`,
       dirty: [],
     };
   } finally {
@@ -1037,11 +1001,17 @@ function createWindow(): void {
       askingToQuit = false;
     });
   });
+  // What went wrong before there was a bar to say it on. After the load, not before: a message sent to
+  // a page that has not run its listeners yet lands nowhere.
+  mainWindow.webContents.on('did-finish-load', () => failures.drain());
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
+  // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
+  // that was never finished.
+  failures.windowOpened();
 }
 
 app.on('ready', createWindow);
