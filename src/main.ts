@@ -74,12 +74,14 @@ if (started) app.quit();
 const environmentFile = app.isPackaged
   ? path.join(process.env.XDG_CONFIG_HOME || path.join(app.getPath('home'), '.config'), 'dashboard', '.env')
   : path.join(app.getAppPath(), '.env');
+// Declared here, ahead of the reporter below, because failures.say reads it and the .env read a few
+// lines down can hold a message before a window exists — hold now reaches for the bar straight away
+// rather than waiting for a later drain, so this read has to have already run.
+let mainWindow: BrowserWindow;
 // Everything a failure costs, and whether the app survives one, is failure.ts's. What is wired here is
 // the bar, the box and the exit, and the two handlers that make it the process's last resort.
 //
-// First in the file, because the .env read below is the first thing that carries on past a failure. It
-// reads mainWindow, declared much further down, and that is safe: nothing asks it to say anything until
-// a window has opened, by which time every line of this file has run.
+// First in the file, because the .env read below is the first thing that carries on past a failure.
 const failures = failureReporter({
   say: (message) => {
     // The window, plus the one question only this sender asks: a message sent to a page that has not
@@ -211,7 +213,6 @@ const boards = boardWatchers((projectPath) => sendToRenderer('board:change', pro
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
-let mainWindow: BrowserWindow;
 // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q
 // stacks a question per keypress and you answer the same one five times.
 let askingToQuit = false;
@@ -565,7 +566,7 @@ const tokenUsage = usageSweep({
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
   // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
   // for a failure somebody did catch.
-  report: (error: unknown) => failures.hold(`Token figures not updated: ${failureText(error)}`),
+  sweepFailed: (error: unknown) => failures.hold(`Token figures not updated: ${failureText(error)}`),
 });
 tokenUsage.start();
 

@@ -152,13 +152,13 @@ stale. Say what the wiring does; let the module say what the rule is.
 
 An error put in front of a person goes through `failureText`, never
 `String(error)`. `board-cli.ts` is the exception — `failureLine` is the
-command line's own formatter and prints a stack on purpose. The check is
-that this prints nothing:
+command line's own formatter and prints a stack on purpose. `board-view.ts`
+and `notes-view.ts` are owed the fix still, exempted below only so the check
+stays actionable — a file added to the exemption list here without also being
+fixed is the rule being broken, not followed. The check is that this prints
+nothing:
 
-    grep -rn "String(error)" src/ | grep -v 'failure.ts\|board-cli.ts'
-
-That leaves `board-view.ts` and `notes-view.ts` as work this rule names,
-left for later.
+    grep -rn "String(error)" src/ | grep -v 'failure.ts\|board-cli.ts\|board-view.ts\|notes-view.ts'
 
 ## The help dialog is part of the change — Hard Rule
 

@@ -34,11 +34,11 @@ export type UsageSweepPorts = {
   processTree(): Promise<string>;
   // Tell the renderer. Called only for a sweep that found different figures.
   publish(usage: UsageSnapshot): void;
-  // A sweep that threw. Said out loud rather than swallowed: the numbers simply stop moving otherwise,
-  // and the manager's row goes on showing what a project had spent half an hour ago as if that were
-  // current. Wired to failure.ts's `hold`, which says it now if there is a bar and holds it until there
-  // is one, and dedups so a sweep failing every half minute does not repaint the bar every tick.
-  report(error: unknown): void;
+  // A sweep that threw. Wired to failure.ts's `hold`, which says it now if there is a bar and holds
+  // it until there is one, and dedups so a sweep failing every half minute does not repaint the bar
+  // every tick. Named for what it is rather than failure.ts's `report`: this cannot box and exit the
+  // launch, it only holds.
+  sweepFailed(error: unknown): void;
 };
 
 const claudeLogs = path.join(homedir(), '.claude', 'projects');
@@ -93,10 +93,10 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
   function sweepLater(delay: number): void {
     // The catch is not optional: without it a sweep that threw would be an unhandled rejection rather
     // than a caught one, which is a crash in the main process, not a frozen figure for half a minute.
-    // What it buys beyond safety is that the error reaches ports.report and gets a name on the bar,
+    // What it buys beyond safety is that the error reaches ports.sweepFailed and gets a name on the bar,
     // instead of the bare "Something broke" the process-wide handler would print.
     setTimeout(() => {
-      void run().catch(ports.report).finally(() => sweepLater(USAGE_SWEEP_MS));
+      void run().catch(ports.sweepFailed).finally(() => sweepLater(USAGE_SWEEP_MS));
     }, delay).unref();
   }
 
