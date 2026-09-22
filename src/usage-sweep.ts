@@ -91,9 +91,10 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
   // Chained rather than on an interval, so a sweep that takes longer than the gap — a first read of
   // half a gigabyte on a slow disk — cannot have the next one start on top of it.
   function sweepLater(delay: number): void {
-    // The catch is not optional: `finally` re-throws what it was handed, and one sweep that threw would
-    // otherwise end the chain, so the figures would freeze for the rest of the run rather than for one
-    // half minute.
+    // The catch is not optional: without it a sweep that threw would be an unhandled rejection rather
+    // than a caught one, which is a crash in the main process, not a frozen figure for half a minute.
+    // What it buys beyond safety is that the error reaches ports.report and gets a name on the bar,
+    // instead of the bare "Something broke" the process-wide handler would print.
     setTimeout(() => {
       void run().catch(ports.report).finally(() => sweepLater(USAGE_SWEEP_MS));
     }, delay).unref();

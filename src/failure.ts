@@ -40,6 +40,10 @@ export function failureNotice(error: unknown): string {
   return `Something broke: ${failureText(error)} — the app is still running, part of it may not be.`;
 }
 
+// How long the same message stays deduplicated on the bar before it is allowed to say itself again,
+// even with nothing else having taken the bar in between.
+const DEDUP_WINDOW_MS = 60_000;
+
 export type FailureResponse =
   // Said on the status bar, and every shell keeps running.
   | { keepRunning: true; message: string }
@@ -85,6 +89,7 @@ export function failureReporter(ports: FailureReporterPorts): FailureReporter {
   // showing the last.
   let waiting: string | undefined;
   let lastSaid: string | undefined;
+  let lastSaidAt = 0;
   let windowHasOpened = false;
 
   // The same sentence twice running is said once. Some of what reports here is on a timer, and a thing
@@ -92,12 +97,18 @@ export function failureReporter(ports: FailureReporterPorts): FailureReporter {
   // five seconds, so `Board not saved: EACCES` — the line telling you your card is not on disk — is
   // wiped out before you have read it and never comes back.
   //
-  // Only while it is the last thing said. Another failure takes the bar, and this one may say itself
-  // again.
+  // Only while it is both the last thing said AND recent. The bar is owner-scoped in the renderer, so
+  // another owner can clear or overwrite it without this module hearing about it — a fixed permission
+  // clears `Board not saved` on the next good save, but a still-broken sweep would otherwise never say
+  // itself again because the message still equals lastSaid. Expiring the memory after a minute bounds
+  // how long a repeating failure can stay silent, without giving back the five-second repaint the dedup
+  // exists to stop.
   function say(message: string): boolean {
-    if (message === lastSaid) return true;
+    const now = Date.now();
+    if (message === lastSaid && now - lastSaidAt < DEDUP_WINDOW_MS) return true;
     if (!ports.say(message)) return false;
     lastSaid = message;
+    lastSaidAt = now;
     return true;
   }
 

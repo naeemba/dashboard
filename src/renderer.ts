@@ -7,7 +7,7 @@ import './usage.css';
 import './manager.css';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
-import { failureNotice } from './failure';
+import { failureNotice, failureText } from './failure';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
@@ -587,7 +587,7 @@ function openScrollback(page: Page): void {
   setMode('nvim');
   sending.then(
     (answer) => showError('scrollback', answer.ok ? '' : answer.message),
-    (error: unknown) => showError('scrollback', `Could not open the scrollback: ${String(error)}`),
+    (error: unknown) => showError('scrollback', `Could not open the scrollback: ${failureText(error)}`),
   );
 }
 
@@ -623,7 +623,7 @@ function report(task: Promise<void>): void {
     // Clears its own message and no one else's: a project that opens says nothing about a board that
     // could not be written.
     () => showError('project', ''),
-    (error: unknown) => showError('project', `Failed to open project: ${String(error)}`),
+    (error: unknown) => showError('project', `Failed to open project: ${failureText(error)}`),
   );
 }
 
@@ -937,7 +937,7 @@ async function restore(session: Session): Promise<void> {
         // Said out loud, because the save below rewrites session.json without this project: grant the
         // folder back next week and it is not in the layout any more. Last failure wins the span, which
         // is the difference between "it is gone" and "it is gone and I have no idea why".
-        showError('start', `Failed to open ${entry.path}: ${String(error)}`);
+        showError('start', `Failed to open ${entry.path}: ${failureText(error)}`);
       }
     }
     for (const entry of session.pages) {
@@ -1020,7 +1020,7 @@ async function start(): Promise<void> {
 }
 
 start().catch((error: unknown) => {
-  showError('start', `Failed to start: ${String(error)}`);
+  showError('start', `Failed to start: ${failureText(error)}`);
   // A launch that stopped before restore() ran left this set for the rest of the run, and saveSession
   // answers to it: open five projects by hand afterwards, quit, and the app comes back on the layout
   // from the day before with all five gone, because nothing had been written since. Half a layout on

@@ -383,12 +383,15 @@ function dropDeadWorktrees(): void {
 // opened its pull request sits on `shipped · fix-login · terminal 3` forever, with nothing on any
 // screen saying why.
 setInterval(() => {
+  // Held, not reported, for the same reason the token sweep above is: this tick starts ticking at
+  // module scope, before a window has necessarily opened, and a failure here has a known, nameable
+  // cost — a worktree list or a review run gone stale — not the unknown one report() is for.
   try {
     dropDeadWorktrees();
   } catch (error: unknown) {
-    failures.report(error);
+    failures.hold(`Worktree list not updated: ${failureText(error)}`);
   }
-  void reviews.run().catch((error: unknown) => failures.report(error));
+  void reviews.run().catch((error: unknown) => failures.hold(`Review check failed: ${failureText(error)}`));
 }, WORKING_REPORT_MS).unref();
 
 // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
@@ -558,7 +561,11 @@ const tokenUsage = usageSweep({
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
   processTree: () => runCommand('ps', ['-eo', 'pid=,ppid=']).then(({ stdout }) => stdout, () => ''),
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
-  report: (error: unknown) => failures.report(error),
+  // Held, not reported: a sweep that fails before a window has opened must not box and exit the
+  // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
+  // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
+  // for a failure somebody did catch.
+  report: (error: unknown) => failures.hold(`Token figures not updated: ${failureText(error)}`),
 });
 tokenUsage.start();
 

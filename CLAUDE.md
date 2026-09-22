@@ -150,6 +150,11 @@ The prose counts too. A comment that restates a rule living in another file is a
 second copy no test can catch — the code stays right while the sentence goes
 stale. Say what the wiring does; let the module say what the rule is.
 
+An error put in front of a person goes through `failureText`, never
+`String(error)`. The check is that these two agree:
+
+    grep -rn "String(error)" src/ | grep -v failure.ts | wc -l
+
 ## The help dialog is part of the change — Hard Rule
 
 **Every task that adds, removes or changes a key, a mode, or what a screen does
