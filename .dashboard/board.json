@@ -111,6 +111,10 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "71fd6f1f-4a5e-4af3-a94e-41cc285ec47e",
@@ -119,13 +123,11 @@
           "priority": "medium",
           "parent": null,
           "createdAt": "2026-09-20T10:51:49.751Z",
-          "updatedAt": "2026-09-22T14:24:33.697Z"
+          "updatedAt": "2026-09-22T14:49:44.815Z",
+          "branch": "contain-failures-so-one-broken-part-cannot",
+          "pullRequest": 61
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
