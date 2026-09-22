@@ -7,6 +7,7 @@ import './usage.css';
 import './manager.css';
 import { openHelp } from './help';
 import { mapShortcut, type Action } from './shortcuts';
+import { failureNotice, failureText } from './failure';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
@@ -93,6 +94,28 @@ function showError(owner: string, message: string): void {
   errorOwner = message === '' ? '' : owner;
   statusError.textContent = message;
 }
+
+// Failures nobody caught, from either side of the wire, under one owner so they never clear a board's
+// message or have one cleared by them.
+//
+// Main's arrive over the channel, and this is registered at module load rather than in start(), because
+// the launch's own failures are sent the moment the page finishes loading — later than a listener set
+// up here, earlier than anything start() awaits.
+//
+// This side's are the window's, and they cost no shell: a pty lives in main, and a throw inside a
+// listener here is caught by the browser, which logs it and carries on. What it costs is that nobody
+// knows. The board simply does not redraw, or a key does nothing, and the console is the only place it
+// is written down. Now the bar says it.
+bridge.onFailure((message) => showError('failure', message));
+// `error` when the thrown value is there, `message` when it is not — a cross-origin script gives the
+// browser nothing to hand over and only the sentence "Script error." to say.
+window.addEventListener('error', (event) => {
+  showError('failure', failureNotice(event.error ?? event.message));
+});
+window.addEventListener('unhandledrejection', (event) => {
+  showError('failure', failureNotice(event.reason));
+});
+
 const titleElement = document.getElementById('title') as HTMLElement;
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
@@ -564,7 +587,7 @@ function openScrollback(page: Page): void {
   setMode('nvim');
   sending.then(
     (answer) => showError('scrollback', answer.ok ? '' : answer.message),
-    (error: unknown) => showError('scrollback', `Could not open the scrollback: ${String(error)}`),
+    (error: unknown) => showError('scrollback', `Could not open the scrollback: ${failureText(error)}`),
   );
 }
 
@@ -600,7 +623,7 @@ function report(task: Promise<void>): void {
     // Clears its own message and no one else's: a project that opens says nothing about a board that
     // could not be written.
     () => showError('project', ''),
-    (error: unknown) => showError('project', `Failed to open project: ${String(error)}`),
+    (error: unknown) => showError('project', `Failed to open project: ${failureText(error)}`),
   );
 }
 
@@ -914,7 +937,7 @@ async function restore(session: Session): Promise<void> {
         // Said out loud, because the save below rewrites session.json without this project: grant the
         // folder back next week and it is not in the layout any more. Last failure wins the span, which
         // is the difference between "it is gone" and "it is gone and I have no idea why".
-        showError('start', `Failed to open ${entry.path}: ${String(error)}`);
+        showError('start', `Failed to open ${entry.path}: ${failureText(error)}`);
       }
     }
     for (const entry of session.pages) {
@@ -997,5 +1020,10 @@ async function start(): Promise<void> {
 }
 
 start().catch((error: unknown) => {
-  showError('start', `Failed to start: ${String(error)}`);
+  showError('start', `Failed to start: ${failureText(error)}`);
+  // A launch that stopped before restore() ran left this set for the rest of the run, and saveSession
+  // answers to it: open five projects by hand afterwards, quit, and the app comes back on the layout
+  // from the day before with all five gone, because nothing had been written since. Half a layout on
+  // screen and saving is better than a whole one that never reaches disk.
+  restoring = false;
 });

@@ -102,15 +102,6 @@
           "notes": "Three things answer 'is this pane busy' and they answer differently. paneIsBusy in ship.ts reads the pty's real foreground process, so the ship refuses a pane running 'npm run dev'. looksBusy in waiting.ts scrapes the screen for an agent's spinner or its 'esc to interrupt' line, so the same pane reads free to the command screen's Cmd+Enter and to the close-project refusal — a command gets typed on top of your dev server. workingPanes in working-panes.ts is the third, and that one is not redundant: only the screen can tell an agent still working from an agent waiting on you, which the process table cannot see. So the fix is not one predicate replacing the other two — it is main sending each pane's foreground process to the renderer over the channel that already carries reports the other way, and paneIsFree in free-pane.ts reading both. The divergence predates the typedPanes change; that change made the ship's half accurate and left the other half alone.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "71fd6f1f-4a5e-4af3-a94e-41cc285ec47e",
-          "title": "Contain failures so one broken part cannot stop the app launching",
-          "notes": "Add error handling across the app so something broken does not break the whole app. The app should still launch, with some parts degraded, instead of failing outright.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-09-20T10:51:49.751Z",
-          "updatedAt": "2026-09-20T10:51:49.751Z"
         }
       ]
     },
@@ -653,6 +644,17 @@
           "updatedAt": "2026-09-21T10:23:52.214Z",
           "branch": "a-failed-readworktrees-truncates-worktrees",
           "pullRequest": 60
+        },
+        {
+          "id": "71fd6f1f-4a5e-4af3-a94e-41cc285ec47e",
+          "title": "Contain failures so one broken part cannot stop the app launching",
+          "notes": "Add error handling across the app so something broken does not break the whole app. The app should still launch, with some parts degraded, instead of failing outright.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-20T10:51:49.751Z",
+          "updatedAt": "2026-09-22T15:22:40.583Z",
+          "branch": "contain-failures-so-one-broken-part-cannot",
+          "pullRequest": 61
         }
       ]
     }

@@ -108,3 +108,30 @@ This is not how the board answers the same failure, and that is on purpose.
 `readBoard` throws into an IPC handler with a window already up, so the message
 reaches the status bar and the rest of the app keeps working. There is no status
 bar at launch.
+
+## A failure nothing caught keeps the app running
+
+An uncaught exception or a rejected promise nobody handled reaches the main
+process. The message goes on the status bar and every shell keeps running.
+
+Node's own answer is to end the process, and for most programs that is right:
+nobody knows what state is left, so stop. Here it is the worst outcome there is.
+Every pane is a shell that exists only inside this window — an `npm test`
+halfway through, a deploy, an agent mid-card — and none of it comes back.
+Closing the window on purpose asks first, and CLAUDE.md calls Force Quit the one
+exit that takes the shells without asking. A rejected promise from a five-second
+timer must not be a second one.
+
+That is the opposite of what the same failure costs at launch, and on purpose.
+Before a window has ever opened there is no shell to lose and nowhere to print,
+so an uncaught failure there gets a box and an exit — the same answer the
+worktree record above gets, for the same reason.
+
+A failure somebody *did* catch is a third thing again. It is caught where the
+cost is known, so the launch can go on without that one part: a `.env` that will
+not load costs the settings in it and nothing else, and the app opens with a
+line on the bar saying which file. A failure that reaches the last resort says
+nothing about what still works, which is why it does not get that choice.
+
+Watch for: the bar holds one line. A thing that fails on every tick writes over
+whatever was there, every tick.
