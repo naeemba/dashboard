@@ -36,8 +36,8 @@ export type UsageSweepPorts = {
   publish(usage: UsageSnapshot): void;
   // A sweep that threw. Said out loud rather than swallowed: the numbers simply stop moving otherwise,
   // and the manager's row goes on showing what a project had spent half an hour ago as if that were
-  // current. failure.ts says the same sentence only once, so a sweep failing every half minute does not
-  // hold the bar.
+  // current. Wired to failure.ts's `hold`, which says it now if there is a bar and holds it until there
+  // is one, and dedups so a sweep failing every half minute does not repaint the bar every tick.
   report(error: unknown): void;
 };
 

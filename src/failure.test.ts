@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { failureNotice, failureReporter, failureText, respondToFailure } from './failure';
 
 describe('failureText', () => {
@@ -151,5 +151,33 @@ describe('a job that fails on every tick', () => {
     net.report(new Error('the other thing'));
     net.report(new Error('EACCES'));
     expect(said).toHaveLength(3);
+  });
+
+  // Bounds how long a still-broken sweep can stay silent: the dedup that stops the five-second repaint
+  // must not turn into "never says it again".
+  it('says a repeating failure again once the memory has expired', () => {
+    vi.useFakeTimers();
+    const said: string[] = [];
+    const net = failureReporter({ say: (message) => { said.push(message); return true; }, stop: () => {} });
+    net.windowOpened();
+    net.report(new Error('EACCES'));
+    vi.advanceTimersByTime(61_000);
+    net.report(new Error('EACCES'));
+    expect(said).toHaveLength(2);
+    vi.useRealTimers();
+  });
+});
+
+describe('hold reaching a bar that already exists', () => {
+  // `hold` used to only stash the message and wait for `drain`, which fires once, at the end of the
+  // launch. A background sweep that starts holding after the window is up would then fail in silence
+  // for the rest of the run, with nothing ever calling `drain` again to send it.
+  it('says a held message straight away when there is a bar to say it on', () => {
+    const said: string[] = [];
+    const net = failureReporter({ say: (message) => { said.push(message); return true; }, stop: () => {} });
+    net.windowOpened();
+    net.drain();
+    net.hold('Token figures not updated: EMFILE');
+    expect(said).toEqual(['Token figures not updated: EMFILE']);
   });
 });

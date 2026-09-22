@@ -75,7 +75,9 @@ export type FailureReporterPorts = {
 export type FailureReporter = {
   // A failure from anywhere in the main process, caught or not.
   report(error: unknown): void;
-  // Something the launch carried on past, held until there is a bar to say it on.
+  // Something caught, with a known cost, said now if there is a bar to say it on and held until there
+  // is one otherwise. Not only the launch any more — a background sweep on a timer for the life of the
+  // app calls this on every failing tick, so this has to reach the bar the same way `report` does.
   hold(message: string): void;
   // A window has finished loading. What is held goes out now.
   drain(): void;
@@ -123,7 +125,7 @@ export function failureReporter(ports: FailureReporterPorts): FailureReporter {
 
   return {
     report,
-    hold: (message) => { waiting = message; },
+    hold: (message) => { if (!say(message)) waiting = message; },
     drain: () => {
       if (waiting !== undefined) say(waiting);
       waiting = undefined;
