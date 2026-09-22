@@ -115,19 +115,7 @@
     },
     {
       "name": "Review",
-      "cards": [
-        {
-          "id": "71fd6f1f-4a5e-4af3-a94e-41cc285ec47e",
-          "title": "Contain failures so one broken part cannot stop the app launching",
-          "notes": "Add error handling across the app so something broken does not break the whole app. The app should still launch, with some parts degraded, instead of failing outright.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-09-20T10:51:49.751Z",
-          "updatedAt": "2026-09-22T14:49:44.815Z",
-          "branch": "contain-failures-so-one-broken-part-cannot",
-          "pullRequest": 61
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -656,6 +644,17 @@
           "updatedAt": "2026-09-21T10:23:52.214Z",
           "branch": "a-failed-readworktrees-truncates-worktrees",
           "pullRequest": 60
+        },
+        {
+          "id": "71fd6f1f-4a5e-4af3-a94e-41cc285ec47e",
+          "title": "Contain failures so one broken part cannot stop the app launching",
+          "notes": "Add error handling across the app so something broken does not break the whole app. The app should still launch, with some parts degraded, instead of failing outright.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-20T10:51:49.751Z",
+          "updatedAt": "2026-09-22T15:22:40.583Z",
+          "branch": "contain-failures-so-one-broken-part-cannot",
+          "pullRequest": 61
         }
       ]
     }
