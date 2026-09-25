@@ -1,5 +1,4 @@
 import { readFileSync, renameSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { replaceFile } from './board-store';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
@@ -56,6 +55,10 @@ export function parseWorktrees(stored: unknown): WorktreeEntry[] {
   return (Array.isArray(entries) ? entries : []).flatMap((entry) => toEntry(entry) ?? []);
 }
 
+// What readWorktrees hands back. brokenFile is where a damaged file was moved, or null when nothing
+// was: the same shape as readBoard's answer, so the launch can say where the bytes went.
+export type WorktreesRead = { entries: WorktreeEntry[]; brokenFile: string | null };
+
 // No file at all is the ordinary "nothing shipped yet" case. Text that is not JSON is moved aside
 // instead of read as empty, the same way readBoard moves a damaged board.json aside: git can be asked
 // for the folders these bytes name, but not which card is in each one, and that is the field a re-ship
@@ -66,21 +69,22 @@ export function parseWorktrees(stored: unknown): WorktreeEntry[] {
 // empty list and launch writes that emptiness straight back over the file: three worktrees still
 // sitting on disk drop off the worktree list, and shipping one of those cards again makes a second
 // branch and a second folder beside the first — the orphan this file exists to prevent.
-export function readWorktrees(file: string): WorktreeEntry[] {
+export function readWorktrees(file: string): WorktreesRead {
   let text: string;
   try {
     text = readFileSync(file, 'utf8');
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return [];
+    return { entries: [], brokenFile: null };
   }
   try {
-    return parseWorktrees(JSON.parse(text));
+    return { entries: parseWorktrees(JSON.parse(text)), brokenFile: null };
   } catch {
+    const brokenFile = `${file}.broken`;
     // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
     // the comment above is about and goes out the same door.
-    renameSync(file, join(dirname(file), 'worktrees.json.broken'));
-    return [];
+    renameSync(file, brokenFile);
+    return { entries: [], brokenFile };
   }
 }
 

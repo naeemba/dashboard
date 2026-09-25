@@ -38,40 +38,23 @@ describe('readWorktrees', () => {
   it('reads back what was written', () => {
     const file = worktreesFile();
     writeWorktrees(file, [entry]);
-    expect(readWorktrees(file)).toEqual([entry]);
+    expect(readWorktrees(file)).toEqual({ entries: [entry], brokenFile: null });
   });
 
   // The first run on a machine, and every run before a card has been shipped. Nothing is recorded and
   // nothing is wrong.
   it('reads nothing when the file has never been written', () => {
-    expect(readWorktrees(worktreesFile())).toEqual([]);
+    expect(readWorktrees(worktreesFile())).toEqual({ entries: [], brokenFile: null });
   });
 
-  // Half a record names no folder anyone can get back, and `git worktree list` is what rebuilds from
-  // there. Throwing instead would leave the app unable to open until someone deleted the file by hand.
-  // The bytes are not lost, though: they are moved aside rather than read as empty.
-  it('reads nothing out of text that is not JSON', () => {
+  it('moves a damaged file aside, reads nothing, and says where it went', () => {
     const file = worktreesFile();
     writeFileSync(file, '{"entries": [');
-    expect(readWorktrees(file)).toEqual([]);
-  });
-
-  it('moves a damaged file aside instead of overwriting it with an empty list', () => {
-    const file = worktreesFile();
-    writeFileSync(file, '{"entries": [');
-    readWorktrees(file);
-    const brokenFile = `${file}.broken`;
+    const read = readWorktrees(file);
+    expect(read.entries).toEqual([]);
     expect(existsSync(file)).toBe(false);
-    expect(readFileSync(brokenFile, 'utf8')).toBe('{"entries": [');
-  });
-
-  // Once the damaged file is moved aside, the next read takes the ordinary no-file path rather than
-  // salvaging again.
-  it('takes the plain no-file path on the read after a salvage', () => {
-    const file = worktreesFile();
-    writeFileSync(file, '{"entries": [');
-    readWorktrees(file);
-    expect(readWorktrees(file)).toEqual([]);
+    expect(read.brokenFile).not.toBeNull();
+    expect(readFileSync(read.brokenFile ?? '', 'utf8')).toBe('{"entries": [');
   });
 
   // A folder stands in for every errno that is not ENOENT — EMFILE, EIO, EACCES — because it is the

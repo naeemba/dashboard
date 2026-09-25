@@ -105,11 +105,22 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // why. Nothing below could carry on without the list, so the launch stops here: a box naming the file,
 // then exit. showErrorBox is the only dialog there is before the app is ready — every other one wants
 // a window, and there is not going to be one — and the message is all anyone gets, so it names the
-// file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
-// half built and has nothing to shut down yet.
+// file. exit, not quit: exit ends the process right here, so the write below never puts an empty
+// list over the file. quit would return and let that write run.
+//
+// A damaged file is moved aside rather than thrown, and the same box says where it went. Otherwise
+// Ctrl+W says nothing is shipped, a card is shipped again, and a second branch and folder land beside
+// the first while the bytes that would have warned you sit unannounced in the app's folder.
 let worktrees: WorktreeEntry[] = [];
 try {
-  worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
+  const read = readWorktrees(worktreesFile);
+  worktrees = withoutPanes(livingEntries(read.entries, existsSync));
+  if (read.brokenFile !== null) {
+    dialog.showErrorBox(
+      'Dashboard found its worktree record damaged',
+      `It has been kept as ${read.brokenFile}\n\nThe worktree list starts empty. Worktrees already on disk are still there; check it before shipping a card again.`,
+    );
+  }
 } catch (error: unknown) {
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
