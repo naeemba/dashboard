@@ -20,6 +20,7 @@ import {
   isManagerHomeDirectory,
   openBoard,
   parseBoard,
+  peekBoard,
   projectRoot,
   readBoard,
   seedBoardDirectory,
@@ -295,6 +296,31 @@ describe('parseBoard', () => {
       () => 'generated',
     );
     expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, null, '1']);
+  });
+});
+
+describe('peekBoard', () => {
+  it('reads a board without making anything beside it', () => {
+    const root = project();
+    expect(peekBoard(root)).toBeNull();
+    expect(existsSync(join(root, BOARD_DIRECTORY))).toBe(false);
+  });
+
+  // readBoard moves a damaged file aside so the board screen can say so. A background look doing it
+  // first would leave that screen opening empty with nothing said.
+  it('leaves a damaged file where it is', () => {
+    const root = project();
+    mkdirSync(join(root, BOARD_DIRECTORY));
+    writeFileSync(boardPath(root), '{ not json');
+    expect(peekBoard(root)).toBeNull();
+    expect(readFileSync(boardPath(root), 'utf8')).toBe('{ not json');
+    expect(existsSync(join(root, BOARD_DIRECTORY, BROKEN_BOARD_FILE))).toBe(false);
+  });
+
+  it('answers with the same board readBoard would', () => {
+    const root = project();
+    writeBoard(root, { columns: [{ name: 'Todo', cards: [] }] });
+    expect(peekBoard(root)).toEqual(readBoard(root).board);
   });
 });
 

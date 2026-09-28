@@ -1,5 +1,4 @@
 import type { Board } from './board';
-import type { BoardRead } from './board-store';
 
 // What the manager's list reads for itself, on top of the rows the renderer hands it: every open
 // project's board, for the counts and the activity, and which worktrees have uncommitted changes.
@@ -22,7 +21,8 @@ export function isStale(readAt: number | undefined, now: number, maxAge: number)
 }
 
 export type ManagerReadsPorts = {
-  readBoard(projectPath: string): Promise<BoardRead>;
+  // Null when there is nothing to count; board-store.ts's peekBoard says when.
+  peekBoard(projectPath: string): Promise<Board | null>;
   dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
   // An answer landed; the list should be drawn again.
   onRead(): void;
@@ -30,6 +30,9 @@ export type ManagerReadsPorts = {
 };
 
 export type Dirtiness = { checked: boolean; dirty: ReadonlySet<string>; unreadable: ReadonlySet<string> };
+
+// Before the first check has come back, and after one that failed.
+const UNKNOWN: Dirtiness = { checked: false, dirty: new Set(), unreadable: new Set() };
 
 export type ManagerReads = {
   // The last board read for this project, or undefined before the first read has landed.
@@ -51,7 +54,7 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
   // A change reported while a read of the same board was already running. That read may have got the
   // file from before the change, so one more is started when it lands.
   const readAgain = new Set<string>();
-  let dirtiness: Dirtiness = { checked: false, dirty: new Set(), unreadable: new Set() };
+  let dirtiness = UNKNOWN;
   let dirtyAt: number | undefined;
   // Which worktrees the last check was about. A new one appearing makes the answer old at once: it
   // would otherwise read `…` for up to fifteen seconds.
@@ -64,20 +67,23 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
       return;
     }
     reading.add(projectPath);
-    ports.readBoard(projectPath)
-      .then((read) => {
-        // A file that would not parse comes back as an empty board. Counting that would say the
-        // project has nothing in flight, so the last good read is kept instead. The board screen
-        // is where the broken file is reported.
-        if (read.brokenFile === null) boards.set(projectPath, read.board);
+    // Whether the answer is worth a redraw. Most reads find the board as it was, and a redraw for
+    // each of those would rebuild the whole list once per project every few seconds.
+    let changed = false;
+    ports.peekBoard(projectPath)
+      .then((board) => {
+        // Nothing to count keeps the last good answer rather than drawing the project as empty. The
+        // board screen is where a broken or unreadable file is reported.
+        if (board === null) return;
+        changed = JSON.stringify(board) !== JSON.stringify(boards.get(projectPath));
+        boards.set(projectPath, board);
       })
-      // A read that failed keeps the last answer. The board screen says why when you go there.
       .catch(() => {})
       .finally(() => {
         reading.delete(projectPath);
         readAt.set(projectPath, ports.now());
         if (readAgain.delete(projectPath)) readBoard(projectPath);
-        ports.onRead();
+        if (changed) ports.onRead();
       });
   }
 
@@ -91,7 +97,7 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
       // A check that failed says nothing is known, rather than keeping an answer about worktrees that
       // may since have changed. Each row then reads `…` until the next check.
       .catch(() => {
-        dirtiness = { checked: false, dirty: new Set(), unreadable: new Set() };
+        dirtiness = UNKNOWN;
       })
       .finally(() => {
         checking = false;

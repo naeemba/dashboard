@@ -68,7 +68,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   // Every open project's board and the worktrees' dirtiness, read for the list's counts, its
   // activity and its worktree rows. An answer landing redraws the page like anything else does.
   const reads = createManagerReads({
-    readBoard: (projectPath) => options.bridge.readBoard(projectPath),
+    peekBoard: (projectPath) => options.bridge.peekBoard(projectPath),
     dirtyWorktrees: () => options.bridge.dirtyWorktrees(),
     onRead: options.onChanged,
     now: () => Date.now(),

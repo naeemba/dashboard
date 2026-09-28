@@ -71,6 +71,9 @@ export type DashboardBridge = {
   getSession(): Promise<Session>;
   saveSession(session: Session): void;
   readBoard(projectPath: string): Promise<BoardRead>;
+  // A read that changes nothing on disk, for the manager's counts: null when there is nothing to
+  // count. board-store.ts says why the manager may not use readBoard.
+  peekBoard(projectPath: string): Promise<Board | null>;
   writeBoard(projectPath: string, board: Board): Promise<void>;
   // The project whose board.json has become something the app did not write — the `board` command
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,

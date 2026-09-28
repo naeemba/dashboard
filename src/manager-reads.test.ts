@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { emptyBoard, type Board } from './board';
-import type { BoardRead } from './board-store';
+import type { Board } from './board';
 import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, isStale } from './manager-reads';
 
 // A read that settles only when the test says so, so the order things land in is the test's to pick.
@@ -20,12 +19,12 @@ const named = (name: string): Board => ({ columns: [{ name, cards: [] }] });
 
 function harness() {
   let now = 1_000;
-  const boardReads: { path: string; answer: ReturnType<typeof deferred<BoardRead>> }[] = [];
+  const boardReads: { path: string; answer: ReturnType<typeof deferred<Board | null>> }[] = [];
   const dirtyChecks: ReturnType<typeof deferred<{ dirty: string[]; unreadable: string[] }>>[] = [];
   const onRead = vi.fn();
   const reads = createManagerReads({
-    readBoard(path) {
-      const answer = deferred<BoardRead>();
+    peekBoard(path) {
+      const answer = deferred<Board | null>();
       boardReads.push({ path, answer });
       return answer.promise;
     },
@@ -54,7 +53,7 @@ describe('createManagerReads', () => {
     reads.refresh(['/api'], []);
     reads.refresh(['/api'], []);
     expect(boardReads).toHaveLength(1);
-    boardReads[0].answer.resolve({ board: named('Todo'), brokenFile: null });
+    boardReads[0].answer.resolve(named('Todo'));
     await settle();
     reads.refresh(['/api'], []);
     expect(boardReads).toHaveLength(1);
@@ -63,24 +62,29 @@ describe('createManagerReads', () => {
     expect(boardReads).toHaveLength(2);
   });
 
-  it('draws again when an answer lands', async () => {
-    const { reads, boardReads, onRead } = harness();
+  it('draws again when an answer lands, and not when the board read back the same', async () => {
+    const { reads, boardReads, onRead, advance } = harness();
     reads.refresh(['/api'], []);
-    boardReads[0].answer.resolve({ board: named('Todo'), brokenFile: null });
+    boardReads[0].answer.resolve(named('Todo'));
     await settle();
-    expect(onRead).toHaveBeenCalled();
+    expect(onRead).toHaveBeenCalledTimes(1);
     expect(reads.boardOf('/api')).toEqual(named('Todo'));
+    advance(BOARD_STALE_MS);
+    reads.refresh(['/api'], []);
+    boardReads[1].answer.resolve(named('Todo'));
+    await settle();
+    expect(onRead).toHaveBeenCalledTimes(1);
   });
 
-  // A broken file reads back as an empty board. Counting that would say the project has nothing on it.
-  it('keeps the last good board when the file will not parse', async () => {
+  // Nothing to count would otherwise draw the project as having nothing on it.
+  it('keeps the last good board when there is nothing to count', async () => {
     const { reads, boardReads, advance } = harness();
     reads.refresh(['/api'], []);
-    boardReads[0].answer.resolve({ board: named('Todo'), brokenFile: null });
+    boardReads[0].answer.resolve(named('Todo'));
     await settle();
     advance(BOARD_STALE_MS);
     reads.refresh(['/api'], []);
-    boardReads[1].answer.resolve({ board: emptyBoard(), brokenFile: '/api/.dashboard/board.json.broken' });
+    boardReads[1].answer.resolve(null);
     await settle();
     expect(reads.boardOf('/api')).toEqual(named('Todo'));
   });
@@ -91,10 +95,10 @@ describe('createManagerReads', () => {
     reads.refresh(['/api'], []);
     reads.boardChanged('/api');
     expect(boardReads).toHaveLength(1);
-    boardReads[0].answer.resolve({ board: named('Old'), brokenFile: null });
+    boardReads[0].answer.resolve(named('Old'));
     await settle();
     expect(boardReads).toHaveLength(2);
-    boardReads[1].answer.resolve({ board: named('New'), brokenFile: null });
+    boardReads[1].answer.resolve(named('New'));
     await settle();
     expect(reads.boardOf('/api')).toEqual(named('New'));
   });
@@ -108,7 +112,7 @@ describe('createManagerReads', () => {
   it('drops the board of a project that closed', async () => {
     const { reads, boardReads } = harness();
     reads.refresh(['/api'], []);
-    boardReads[0].answer.resolve({ board: named('Todo'), brokenFile: null });
+    boardReads[0].answer.resolve(named('Todo'));
     await settle();
     reads.refresh([], []);
     expect(reads.boardOf('/api')).toBeUndefined();
