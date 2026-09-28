@@ -29,7 +29,7 @@ import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import { dropRow } from './board-drag';
 import { putEditBack, takeEdit } from './carried-edit';
-import { shipsAway } from './ships-away';
+import { bringHome, shipsAway } from './ships-away';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -88,6 +88,8 @@ export type BoardView = {
   // Draw again from what has not changed here: the record of what is in flight lives in the renderer,
   // and a card's badge comes from it.
   redraw(): void;
+  // The project closed and this view is being dropped: it stops hearing other views of the project.
+  close(): void;
 };
 
 // Read off the action rather than spelled out again: a field the table can ask for and this file has
@@ -134,6 +136,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   // not get it back either.
   let latestRead = 0;
   let landedRead = 0;
+  // The newest read's answer, which an overtaken one hands on; see readAgain.
+  let newestRead: Promise<boolean> = Promise.resolve(false);
   // This project's rows of the record, by card, rebuilt once per render. The badge comes from here
   // rather than from the board, because a card's column on main says what has been merged and says
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
@@ -171,7 +175,16 @@ export function createBoardView(options: BoardOptions): BoardView {
   // fresh board. A control the keyboard can't reach is unfinished.
   //
   // True when the read worked and is the one now on screen, which is what a ship coming home waits on.
-  async function readAgain(fresh: boolean): Promise<boolean> {
+  // A read that a newer one overtook did not fail — the file read fine, by another call — so it answers
+  // with the newer one's answer rather than false. Otherwise a ship finishing just as you arrive on the
+  // manager, whose arrival reads every stacked board, stops short and leaves its card in Ship for good
+  // with nothing on screen saying why.
+  function readAgain(fresh: boolean): Promise<boolean> {
+    newestRead = readOnce(fresh);
+    return newestRead;
+  }
+
+  async function readOnce(fresh: boolean): Promise<boolean> {
     const token = ++latestRead;
     let message = '';
     let next = state;
@@ -187,7 +200,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       message = `Board not opened: ${String(error)}`;
     }
     // A read another one has overtaken says nothing: the newer one is the board you asked for.
-    if (token !== latestRead) return false;
+    if (token !== latestRead) return newestRead;
     landedRead = token;
     // An arrival closes any open box: you asked to come here, and this is a different board. A file
     // that changed under you does not close it — what you have half typed is yours, and reloadBoard
@@ -669,9 +682,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   // A ship that fails changes nothing. The card stays in Ship where you put it and the message says
   // why; the app never silently undoes a move you made.
   //
-  // No staleness guard on the result, unlike open(): a board read in flight would replace the whole
-  // board, and this only moves one card that it finds again first. Landing after you have left this
-  // view is fine too — the write is to this board's own file either way.
+  // bringHome says why the file is read before the card goes home. A read in flight when the ship
+  // finishes is waited for rather than raced, because readAgain hands an overtaken read the newer
+  // one's answer. Landing after you have left this view is fine too — the write is to this board's
+  // own file either way.
+  //
   // The move-back itself. A change carries the selection with it, and normally that is right — the
   // highlight follows the card home. Not while a box is open: the selection is then the card you are
   // typing into, and taking the moved card's would commit what you typed onto the card that just
@@ -697,17 +712,18 @@ export function createBoardView(options: BoardOptions): BoardView {
         forgetHome();
         if (!result.ok) return options.onError(result.message);
         options.onError('');
-        // The file first, not the board this view holds. The manager's stack and a project's own page
-        // are two views of one file, and the one a ship finishes in can be hidden and hours stale: put
-        // the card home on its own copy and it writes that copy over whatever the other view shipped
-        // since. A read that fails leaves the card in Ship and says why, rather than guess.
-        if (!(await readAgain(false))) return;
-        // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
-        // anything you did to the board while it ran has moved the card off the row it landed on.
-        const moved = movedBack(before, landed, home);
-        if (!moved) return;
-        await apply(applyAutomaticChange(state, moved));
-        shipsAway.cameHome(options.projectPath, element);
+        await bringHome({
+          read: () => readAgain(false),
+          // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
+          // anything you did to the board while it ran has moved the card off the row it landed on.
+          putHome: async () => {
+            const moved = movedBack(before, landed, home);
+            if (!moved) return false;
+            await apply(applyAutomaticChange(state, moved));
+            return true;
+          },
+          announce: () => shipsAway.cameHome(options.projectPath, element),
+        });
       },
       (error: unknown) => {
         forgetHome();
@@ -769,12 +785,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
-  // Another view of this project put a ship home and wrote the file; see ShipsAway.cameHome. A view
-  // that is off the page belongs to a project since closed, and reads nothing.
-  shipsAway.listen((projectPath, writer) => {
-    if (writer === element || projectPath !== options.projectPath || !element.isConnected) return;
-    void readAgain(false);
-  });
+  // Another view of this project put a ship home and wrote the file; see ShipsAway.cameHome.
+  const stopListening = shipsAway.listen(options.projectPath, element, () => void readAgain(false));
 
   return {
     element,
@@ -791,6 +803,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     },
     // Somebody else wrote the file — the command line, or a hand edit — and main said so. The
     // keyboard is not touched: you did not ask to come here, you are already here.
+    close: stopListening,
     reload(projectPath: string): void {
       if (projectPath !== options.projectPath) return;
       // Read even with a box open. Refusing here dropped the write for good and then let the next

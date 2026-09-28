@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { returnFromShip, selectionOf, shipHome, SHIP_COLUMN, type Board, type Card } from './board';
-import { createShipsAway, type ShipsAway } from './ships-away';
+import { bringHome, createShipsAway, type ShipsAway } from './ships-away';
 
 function card(id: string): Card {
   return { id, title: id, notes: '', priority: 'medium', parent: null };
@@ -24,37 +24,81 @@ function shipOut(board: Board, id: string, homes: ShipsAway, projectPath: string
   return { board: next, home, landed, forget: homes.leave(projectPath, home) };
 }
 
+function ids(board: Board): string[][] {
+  return board.columns.map((entry) => entry.cards.map((each) => each.id));
+}
+
 describe('shipsAway', () => {
-  // Two views of one project, each holding its own copy of the board, and one file between them.
-  // Each ship comes home on what the file says when it finishes, not on the copy of the view it
-  // finished in — the manager's stack is hidden by then and still thinks `c` is in Todo.
-  it('brings ships home on the file, not on a stale view, when two views of one project ship', () => {
+  // Two views of one project, each holding its own copy of the board, and one file between them. Each
+  // view listens the way board-view.ts does, reading the file again when the other one puts a ship home.
+  it('brings ships home on the file, not on a stale view, when two views of one project ship', async () => {
     const homes = createShipsAway();
     let disk = column;
+    const stack = { board: column };
+    const page = { board: column };
+    for (const view of [stack, page]) homes.listen('/web', view, () => { view.board = disk; });
+    const writeFrom = (view: { board: Board }, next: Board) => { view.board = next; disk = next; };
+    const home = (view: { board: Board }, out: ReturnType<typeof shipOut>) => bringHome({
+      read: async () => { view.board = disk; return true; },
+      putHome: async () => {
+        const moved = returnFromShip(view.board, card(out.landed.id), out.landed, out.home);
+        out.forget();
+        if (!moved) return false;
+        writeFrom(view, moved.board);
+        return true;
+      },
+      announce: () => homes.cameHome('/web', view),
+    });
     // 1. `b` from the manager's stack.
-    const stack = shipOut(disk, 'b', homes, '/web');
-    disk = stack.board;
+    const fromStack = shipOut(stack.board, 'b', homes, '/web');
+    writeFrom(stack, fromStack.board);
     // 2. The project's own board reads the file on the way in, and ships `c`.
-    const page = shipOut(disk, 'c', homes, '/web');
-    disk = page.board;
-    // 3. `b` finishes first, in the stack, which still holds the board from step 1.
-    expect(stack.board).not.toEqual(disk);
-    disk = returnFromShip(disk, card('b'), stack.landed, stack.home)!.board;
-    stack.forget();
-    // 4. `c` finishes on the page, whose copy never heard about step 3.
-    disk = returnFromShip(disk, card('c'), page.landed, page.home)!.board;
-    page.forget();
-    expect(disk.columns.map((entry) => entry.cards.map((each) => each.id))).toEqual([['a', 'b', 'c'], []]);
+    page.board = disk;
+    const fromPage = shipOut(page.board, 'c', homes, '/web');
+    writeFrom(page, fromPage.board);
+    // 3. `b` finishes first, in the stack, which still holds the board from step 1. Put home on that
+    // copy, `c` would drop out of Ship while its ship is still running.
+    await home(stack, fromStack);
+    expect(ids(disk)).toEqual([['a', 'b'], ['c']]);
+    // The page heard and read the file, so its next keystroke cannot write `b` back into Ship.
+    expect(page.board).toBe(disk);
+    // 4. `c` finishes on the page.
+    await home(page, fromPage);
+    expect(ids(disk)).toEqual([['a', 'b', 'c'], []]);
   });
 
-  it('tells every view which view put a ship home, and for which project', () => {
+  it('leaves the card in Ship, writes nothing and tells nobody when the read fails', async () => {
+    const steps: string[] = [];
+    await bringHome({
+      read: async () => { steps.push('read'); return false; },
+      putHome: async () => { steps.push('put home'); return true; },
+      announce: () => steps.push('announce'),
+    });
+    expect(steps).toEqual(['read']);
+  });
+
+  it('tells nobody when there was nothing to put home', async () => {
+    const steps: string[] = [];
+    await bringHome({
+      read: async () => true,
+      putHome: async () => { steps.push('put home'); return false; },
+      announce: () => steps.push('announce'),
+    });
+    expect(steps).toEqual(['put home']);
+  });
+
+  it('tells only the other views of the same project, and stops once a view is dropped', () => {
     const homes = createShipsAway();
-    const heard: [string, unknown][] = [];
-    homes.listen((projectPath, writer) => heard.push([projectPath, writer]));
-    homes.listen((projectPath, writer) => heard.push([projectPath, writer]));
-    const view = {};
-    homes.cameHome('/web', view);
-    expect(heard).toEqual([['/web', view], ['/web', view]]);
+    const heard: string[] = [];
+    const writer = {};
+    homes.listen('/web', writer, () => heard.push('writer'));
+    const stop = homes.listen('/web', {}, () => heard.push('other view'));
+    homes.listen('/api', {}, () => heard.push('other project'));
+    homes.cameHome('/web', writer);
+    expect(heard).toEqual(['other view']);
+    stop();
+    homes.cameHome('/web', writer);
+    expect(heard).toEqual(['other view']);
   });
 
   it('shares ships still out between views of one project, so they come back in their own order', () => {

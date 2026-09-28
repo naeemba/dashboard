@@ -124,7 +124,11 @@ export function createCardsView(options: CardsOptions): BoardView {
       paths = pages.map((page) => page.project.path);
       // A project that has been closed takes its board with it, or the file would go on being read and
       // drawn under a heading for a project that is no longer open.
-      for (const path of [...boards.keys()]) if (!paths.includes(path)) boards.delete(path);
+      for (const [path, board] of boards) {
+        if (paths.includes(path)) continue;
+        board.view.close();
+        boards.delete(path);
+      }
       const projectBoards = pages.map(boardFor);
       if (projectBoards.length === 0) {
         empty.textContent = `There are no cards to show: ${cardsEmptyReason(openProjects)}.`;
@@ -144,6 +148,9 @@ export function createCardsView(options: CardsOptions): BoardView {
     },
     // Straight through to the one board whose file changed. It refuses a path that is not its own, so
     // handing it to every stacked board would do the same thing and read the file once per project.
+    close(): void {
+      for (const board of boards.values()) board.view.close();
+    },
     reload(projectPath: string): void {
       boards.get(projectPath)?.view.reload(projectPath);
     },
