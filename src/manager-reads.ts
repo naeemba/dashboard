@@ -5,10 +5,8 @@ import type { Board } from './board';
 // Both are read in the background and the list redraws when an answer lands, so opening the manager
 // never waits on a disk or on git.
 //
-// Kept fresh by asking again once an answer is old, rather than by listening for every way it could
-// change. Both of the list's draws ask — the full one and the timer's in-place one — so an answer goes
-// old at most one timer tick past its age while the page is only being watched. The app's own board
-// writes are reported to boardChanged as they land, so a card moved on screen is not left to the age.
+// Kept fresh two ways: refresh asks again for whatever answer has gone old, and boardChanged reads a
+// board at once when told it was written.
 
 // A board read this long ago is read again the next time the list is drawn. Short, because a card you
 // moved on the board screen should have moved here by the time you arrive.
@@ -51,9 +49,8 @@ export type ManagerReads = {
   // The last board read for this project, or undefined before the first read has landed.
   boardOf(projectPath: string): Board | undefined;
   dirtiness(): Dirtiness;
-  // Asks again for whatever is missing or old. Called on every draw, and from the timer's in-place
-  // redraw, so it has to be cheap when
-  // nothing is due. A project not in `projectPaths` has closed, and its board is dropped.
+  // Asks again for whatever is missing or old, and does nothing when nothing is due, so it is cheap
+  // to call often. A project not in `projectPaths` has closed, and its board is dropped.
   refresh(projectPaths: readonly string[], worktreePaths: readonly string[]): void;
   // Something wrote this project's board — the app or anything outside it: read it now, however
   // fresh the last read.
