@@ -72,6 +72,10 @@
     },
     {
       "name": "Ship",
+      "cards": []
+    },
+    {
+      "name": "Doing",
       "cards": [
         {
           "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
@@ -79,13 +83,9 @@
           "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-28T11:51:16.058Z"
+          "updatedAt": "2026-09-28T11:51:34.394Z"
         }
       ]
-    },
-    {
-      "name": "Doing",
-      "cards": []
     },
     {
       "name": "Review",
