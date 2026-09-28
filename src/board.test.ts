@@ -28,15 +28,19 @@ import {
   moveSelection,
   pullRequestFrom,
   renameCard,
+  returnFromShip,
   reviewColumnIndex,
   selectionOf,
   setNotes,
+  shipHome,
   shipColumnIndex,
   sortColumn,
   withReviewColumn,
   withShipColumn,
   type Board,
+  type Card,
   type Priority,
+  type ShipHome,
 } from './board';
 
 function board(...columns: string[][]): Board {
@@ -180,6 +184,99 @@ describe('moveCardToColumn', () => {
     expect(moveCardToColumn(board, { column: 0, card: 0 }, 9).board).toBe(board);
     expect(moveCardToColumn(board, { column: 1, card: 0 }, 2).board).toBe(board);
   });
+});
+
+// A ship that worked, on main's board. The file there is what the next `git pull` merges into, so the
+// round trip into Ship and back has to leave it exactly as it was — or every ship leaves board.json
+// dirty and the pull after it conflicts.
+describe('returnFromShip', () => {
+  const card = (id: string) => ({ id, title: id, notes: '', priority: 'medium' as const, parent: null });
+  const before: Board = {
+    columns: [
+      { name: 'Todo', cards: [card('a'), card('b'), card('c')] },
+      { name: SHIP_COLUMN, cards: [] },
+    ],
+  };
+  const shipped = moveCardToColumn(before, { column: 0, card: 1 }, 1).board;
+  const landed = shipped.columns[1].cards[0];
+  const home = shipHome(before, { column: 0, card: 1 });
+
+  it('puts the card back in its row, as it was, so the file comes out byte for byte the same', () => {
+    const back = returnFromShip(shipped, card('b'), landed, home);
+    expect(JSON.stringify(back?.board)).toBe(JSON.stringify(before));
+    expect(back?.selection).toEqual({ column: 0, card: 1 });
+  });
+
+  it('keeps an edit made while the ship ran, and still takes the card home', () => {
+    const renamed = renameCard(shipped, { column: 1, card: 0 }, 'renamed').board;
+    const back = returnFromShip(renamed, card('b'), landed, home);
+    expect(back?.board.columns[0].cards[1].title).toBe('renamed');
+    expect(back?.board.columns[1].cards).toEqual([]);
+  });
+
+  it('lands last when the column has shrunk under the row it came from', () => {
+    const shrunk = deleteCard(deleteCard(shipped, { column: 0, card: 1 }).board, { column: 0, card: 0 }).board;
+    const back = returnFromShip(shrunk, card('b'), landed, home);
+    expect(back?.board.columns[0].cards.map((entry) => entry.id)).toEqual(['b']);
+  });
+
+  it('leaves a card you already moved home yourself where you put it', () => {
+    const moved = moveCardToColumn(shipped, { column: 1, card: 0 }, 0).board;
+    expect(returnFromShip(moved, card('b'), landed, home)).toBeNull();
+  });
+
+  it('answers null for a card that is no longer on the board', () => {
+    const gone = deleteCard(shipped, { column: 1, card: 0 }).board;
+    expect(returnFromShip(gone, card('b'), landed, home)).toBeNull();
+  });
+
+  // Ship one card, then another from the same column while the first is still out, and let them come
+  // back in either order. Rows alone put [a, b, c] back as [b, a, c]; the cards below alone as
+  // [a, c, b]. Every pair and every finish order has to leave the file as it was.
+  const ids = ['a', 'b', 'c', 'd'];
+  const column: Board = {
+    columns: [
+      { name: 'Todo', cards: ids.map(card) },
+      { name: SHIP_COLUMN, cards: [] },
+    ],
+  };
+  type Away = { id: string; landed: Card; home: ShipHome };
+
+  function shipAll(order: string[]): { board: Board; away: Away[] } {
+    let board = column;
+    const away: Away[] = [];
+    for (const id of order) {
+      const from = selectionOf(board, id)!;
+      const home = shipHome(board, from, away.map((entry) => entry.home));
+      board = moveCardToColumn(board, from, 1).board;
+      away.push({ id, landed: board.columns[1].cards.at(-1)!, home });
+    }
+    return { board, away };
+  }
+
+  function permutations(items: string[]): string[][] {
+    if (items.length <= 1) return [items];
+    return items.flatMap((item, index) =>
+      permutations([...items.slice(0, index), ...items.slice(index + 1)]).map((rest) => [item, ...rest]));
+  }
+
+  const pairs = ids.flatMap((first) => ids.filter((second) => second !== first).map((second) => [first, second]));
+  const triples = permutations(ids).map((order) => order.slice(0, 3));
+
+  it.each([...pairs, ...triples].map((shipped) => ({ label: shipped.join(' then '), shipped })))(
+    'puts ships $label from one column back as they were, whichever finishes first',
+    ({ shipped }) => {
+      const { board, away } = shipAll(shipped);
+      for (const finish of permutations(away.map((entry) => entry.id))) {
+        let back = board;
+        for (const id of finish) {
+          const entry = away.find((candidate) => candidate.id === id)!;
+          back = returnFromShip(back, card(id), entry.landed, entry.home)!.board;
+        }
+        expect(JSON.stringify(back), `finished ${finish.join(', ')}`).toBe(JSON.stringify(column));
+      }
+    },
+  );
 });
 
 // The condition that decides whether a keystroke starts an agent. It was composed inline in the view,

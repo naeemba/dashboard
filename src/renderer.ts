@@ -524,6 +524,7 @@ async function closeProject(slot: number): Promise<void> {
     if (closingPosition === -1) return;
     bridge.closeProject(slot);
     discardPanes(slot);
+    closingPage.board?.close();
     closingPage.element.remove();
     pages.splice(closingPosition, 1);
     // The page that went can be the one you were standing on, since the key closes the project you are

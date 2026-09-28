@@ -12,21 +12,24 @@ import {
   hasSubtasks,
   landsInShip,
   moveCard,
-  moveCardToColumn,
   flightParts,
   moveSelection,
   pullRequestFrom,
+  returnFromShip,
   selectionOf,
+  shipHome,
   sortColumn,
   type Card,
   type Change,
   type MoveGesture,
   type Selection,
+  type ShipHome,
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import { dropRow } from './board-drag';
 import { putEditBack, takeEdit } from './carried-edit';
+import { bringHome, shipsAway } from './ships-away';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -47,6 +50,7 @@ import {
 import type { DashboardBridge } from './bridge';
 import { cardRows } from './card-search';
 import { confirmOverlay, searchOverlay } from './overlay';
+import { createNewestRead } from './newest-read';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
@@ -85,6 +89,8 @@ export type BoardView = {
   // Draw again from what has not changed here: the record of what is in flight lives in the renderer,
   // and a card's badge comes from it.
   redraw(): void;
+  // The project closed and this view is being dropped: it stops hearing other views of the project.
+  close(): void;
 };
 
 // Read off the action rather than spelled out again: a field the table can ask for and this file has
@@ -111,6 +117,9 @@ const MULTILINE: readonly EditableField[] = ['notes', 'comment'];
 // behind there, where nothing would fail and the selection would simply stop being scrolled to.
 export const SELECTED_CARD = '.board-card.selected';
 
+// What one read of the file came to, held until it is known whether that read is still the newest.
+type ReadOutcome = { fresh: boolean; next: BoardState; message: string; readWorked: boolean };
+
 export function createBoardView(options: BoardOptions): BoardView {
   const element = document.createElement('div');
   element.className = 'board';
@@ -125,12 +134,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   // different keys: a title has no newline to make, a description does.
   let editing: EditableField | null = null;
   // One number per read, because Ctrl+B Ctrl+T Ctrl+B can leave two reads running at once. The keys are
-  // dead until the newest read lands (`landedRead !== latestRead`), and a read that is no longer the
+  // dead until the newest read lands (`reads.pending()`), and a read that is no longer the
   // newest throws its result away. A single flag let the first read clear it, the keys go live, and the
   // second, older result then put back a card deleted in between — with `previous` nulled, so undo could
   // not get it back either.
-  let latestRead = 0;
-  let landedRead = 0;
+  const reads = createNewestRead<ReadOutcome, boolean>();
   // This project's rows of the record, by card, rebuilt once per render. The badge comes from here
   // rather than from the board, because a card's column on main says what has been merged and says
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
@@ -166,22 +174,36 @@ export function createBoardView(options: BoardOptions): BoardView {
   // A failed read still has to leave the board on screen usable from the keyboard: render() runs
   // either way, on whatever board is already in memory, with the error in the status bar instead of a
   // fresh board. A control the keyboard can't reach is unfinished.
-  async function readAgain(fresh: boolean): Promise<void> {
-    const token = ++latestRead;
+  //
+  // True when the read worked and is the one now on screen, which is what a ship coming home waits on.
+  // A read that a newer one overtook did not fail — the file read fine, by another call — so it answers
+  // with the newer one's answer rather than false. Otherwise a ship finishing just as you arrive on the
+  // manager, whose arrival reads every stacked board, stops short and leaves its card in Ship for good
+  // with nothing on screen saying why.
+  function readAgain(fresh: boolean): Promise<boolean> {
+    return reads.run(() => readOnce(fresh), landRead);
+  }
+
+  async function readOnce(fresh: boolean): Promise<ReadOutcome> {
     let message = '';
     let next = state;
+    let readWorked = false;
     const boardRead = options.bridge.readBoard(options.projectPath);
     try {
       const read = await boardRead;
       next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
       // The old file is still on disk under this name, so the cards are not gone — just not shown.
       if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
+      readWorked = true;
     } catch (error: unknown) {
       message = `Board not opened: ${String(error)}`;
     }
-    // A read another one has overtaken says nothing: the newer one is the board you asked for.
-    if (token !== latestRead) return;
-    landedRead = token;
+    return { fresh, next, message, readWorked };
+  }
+
+  // Runs only for the newest read; one another read overtook says nothing, since the newer one is the
+  // board you asked for.
+  function landRead({ fresh, next, message, readWorked }: ReadOutcome): boolean {
     // An arrival closes any open box: you asked to come here, and this is a different board. A file
     // that changed under you does not close it — what you have half typed is yours, and reloadBoard
     // has already followed your card to wherever the write put it. The redraw throws the box away and
@@ -205,10 +227,11 @@ export function createBoardView(options: BoardOptions): BoardView {
     // The open card dialog reads this board on every key, so it has to be drawn from it too. It closes
     // itself if the write took its card away, and carries a half-typed subtask across if it did not.
     detail?.redraw();
+    return readWorked;
   }
 
-  function save(): void {
-    options.bridge.writeBoard(options.projectPath, state.board).then(
+  function save(): Promise<void> {
+    return options.bridge.writeBoard(options.projectPath, state.board).then(
       // A write that lands clears the failure it replaces; nothing else knows the message is stale.
       () => options.onError(''),
       (error: unknown) => options.onError(`Board not saved: ${String(error)}`),
@@ -217,12 +240,15 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   // Redraws either way — a keystroke that changed nothing still has to put the screen back, such as
   // Escape out of an edit — but only writes the file when the board actually moved.
-  function apply(next: BoardState): void {
+  // Settles once the write has, so a caller that has to tell someone the file changed can wait for it.
+  function apply(next: BoardState): Promise<void> {
+    let written = Promise.resolve();
     if (next !== state) {
       state = next;
-      save();
+      written = save();
     }
     render();
+    return written;
   }
 
   function change(next: Change): void {
@@ -247,7 +273,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // it here rather than writing the condition out a fourth time. What counts as busy is board-state's
   // to say, and board-state.test.ts is what pins it.
   function busy(): boolean {
-    return boardIsBusy(state, editing !== null, landedRead !== latestRead);
+    return boardIsBusy(state, editing !== null, reads.pending());
   }
 
   // A key that bounced has to say so when the bounce outlasts the keystroke. A box being open and a
@@ -257,7 +283,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // and stays that way for the session — so without a word here you press `n`, then `d`, then an
   // arrow, and nothing happens or ever will.
   function sayIfUnread(): void {
-    if (isUnreadForGood(state, landedRead !== latestRead)) {
+    if (isUnreadForGood(state, reads.pending())) {
       options.onError('This board was not read, so nothing may be saved over it. Leave this screen and come back to read it again.');
     }
   }
@@ -543,8 +569,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // on a card the keyboard is not on.
   function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
     const moving = cardAt(state.board, from);
+    const home = shipHome(state.board, from, shipsAway.away(options.projectPath));
     change(next);
-    if (moving && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, from.column);
+    const landed = cardAt(state.board, state.selection);
+    if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
   }
 
   // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
@@ -645,49 +673,64 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
-  // A card that has landed in Ship, and `from` is the column it was in a keystroke ago.
+  // A card that has landed in Ship: `before` is the card as it was a keystroke ago, `landed` the card
+  // the move made, and `home` where it came from.
   //
   // A ship that works puts the card back there, carrying its badge: this board is main's, and a
-  // column on main says what has been merged. That move writes board.json like any other, and goes
-  // through applyAutomaticChange rather than change() because it is the app's move and not yours —
-  // board-state.ts holds the reason.
+  // column on main says what has been merged. returnFromShip says why it goes back to its own row as it
+  // was. That move goes through applyAutomaticChange rather than change() because it is the app's move
+  // and not yours — board-state.ts holds the reason.
   //
   // A ship that fails changes nothing. The card stays in Ship where you put it and the message says
   // why; the app never silently undoes a move you made.
   //
-  // No staleness guard on the result, unlike open(): a board read in flight would replace the whole
-  // board, and this only moves one card that it finds again first. Landing after you have left this
-  // view is fine too — the write is to this board's own file either way.
+  // bringHome says why the file is read before the card goes home. A read in flight when the ship
+  // finishes is waited for rather than raced, because readAgain hands an overtaken read the newer
+  // one's answer. Landing after you have left this view is fine too — the write is to this board's
+  // own file either way.
+  //
   // The move-back itself. A change carries the selection with it, and normally that is right — the
   // highlight follows the card home. Not while a box is open: the selection is then the card you are
   // typing into, and taking the moved card's would commit what you typed onto the card that just
   // shipped and leave the one you were naming blank. Found by id rather than kept as a number, because
   // the move it is riding on has just shifted the rows below it.
-  function movedBack(landed: Selection, from: number): Change {
-    const moved = moveCardToColumn(state.board, landed, from);
+  function movedBack(before: Card, landed: Card, home: ShipHome): Change | null {
+    const moved = returnFromShip(state.board, before, landed, home);
     const editingId = editingCardId();
-    if (editingId === undefined) return moved;
+    if (moved === null || editingId === undefined) return moved;
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
 
-  function ship(card: Card, from: number): void {
-    options.onError(`shipping "${card.title}"…`);
+  function ship(before: Card, landed: Card, home: ShipHome): void {
+    options.onError(`shipping "${before.title}"…`);
+    const forgetHome = shipsAway.leave(options.projectPath, home);
     options.bridge.shipCard({
       projectPath: options.projectPath,
-      cardId: card.id,
-      title: card.title,
+      cardId: before.id,
+      title: before.title,
       slot: options.slot,
     }).then(
-      (result) => {
+      async (result) => {
+        forgetHome();
         if (!result.ok) return options.onError(result.message);
         options.onError('');
-        // Found again rather than remembered: a ship takes as long as git does, and anything you did
-        // to the board while it ran has moved the card off the row it was shipped from.
-        const landed = selectionOf(state.board, card.id);
-        if (landed) apply(applyAutomaticChange(state, movedBack(landed, from)));
-        else render();
+        await bringHome({
+          read: () => readAgain(false),
+          // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
+          // anything you did to the board while it ran has moved the card off the row it landed on.
+          putHome: async () => {
+            const moved = movedBack(before, landed, home);
+            if (!moved) return false;
+            await apply(applyAutomaticChange(state, moved));
+            return true;
+          },
+          announce: () => shipsAway.cameHome(options.projectPath, element),
+        });
       },
-      (error: unknown) => options.onError(`ship failed: ${String(error)}`),
+      (error: unknown) => {
+        forgetHome();
+        options.onError(`ship failed: ${String(error)}`);
+      },
     );
   }
 
@@ -744,6 +787,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
+  // Another view of this project put a ship home and wrote the file; see ShipsAway.cameHome.
+  const stopListening = shipsAway.listen(options.projectPath, element, () => void readAgain(false));
+
   return {
     element,
     redraw: render,
@@ -767,6 +813,8 @@ export function createBoardView(options: BoardOptions): BoardView {
       // readAgain carries the box across instead.
       void readAgain(false);
     },
+    // The project closed: stop hearing ships from the other view.
+    close: stopListening,
     statusLabel(): string {
       const column = state.board.columns[state.selection.column];
       if (!column) return '';
@@ -807,7 +855,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         case 'board-delete': return confirmDelete();
         case 'board-open': return openDetail();
         case 'board-search': return openSearch();
-        case 'board-undo': return apply(undoChange(state));
+        case 'board-undo': return void apply(undoChange(state));
         // Everything else belongs to the renderer and never gets here.
         default: return;
       }
