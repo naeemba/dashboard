@@ -4,12 +4,15 @@ import { createCommandView } from './command-view';
 import type { DashboardBridge } from './bridge';
 import type { SendPlan } from './free-pane';
 import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
+import { createManagerReads } from './manager-reads';
 import { createManagerView } from './manager-view';
 import type { Mode } from './modes';
 import { createNotesView } from './notes-view';
 import { showMode, type Page } from './page';
 import { createSectionStrip } from './section-strip';
+import { removeWorktreeAsking } from './worktree-removal';
 import type { WorktreeEntry } from './worktree-store';
+import type { JumpToWorktree } from './worktree-view';
 
 // The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
 // editor. It has four views — the list of what every project's panes want, a board of its own above
@@ -45,9 +48,12 @@ export type ManagerPageOptions = {
   // another section of this page. Their shapes are the views' own — this file passes them straight
   // through rather than putting a second spelling of each in front of the ones over in manager-view.
   onJump(slot: number, index: number): void;
+  onJumpWorktree: JumpToWorktree;
   onAnswer(slot: number, index: number, key: string): void;
   onClose(slot: number): void;
   onSection(mode: Mode): void;
+  // The app's own board writes, which main does not report back as a change.
+  onBoardWrite(listener: (projectPath: string) => void): void;
   // One typed command across the marked projects: as its own process, or typed into a free pane. The
   // second answers with what it did to each — which panes took the line and which had none free — and
   // the command screen is what says so.
@@ -61,11 +67,37 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   // The modifier is what index.css uses to push this page's views down below the section strip —
   // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
   element.className = 'page page-manager';
+  // Every open project's board and the worktrees' dirtiness, read for the list's counts, its
+  // activity and its worktree rows. An answer landing redraws the page like anything else does.
+  const reads = createManagerReads({
+    peekBoard: (projectPath) => options.bridge.peekBoard(projectPath),
+    dirtyWorktrees: () => options.bridge.dirtyWorktrees(),
+    onRead: options.onChanged,
+    now: () => Date.now(),
+  });
+  // Its own listener rather than the renderer's: that one only tells the page in front while it
+  // shows a board, and the list's counts go stale just the same while it shows the list.
+  options.bridge.onBoardChange(reads.boardChanged);
+  options.onBoardWrite(reads.boardChanged);
   const manager = createManagerView({
     onJump: options.onJump,
+    onJumpWorktree: options.onJumpWorktree,
     onAnswer: options.onAnswer,
     onClose: options.onClose,
     onChanged: options.onChanged,
+    onError: (message) => options.onError('manager', message),
+    binding: options.binding,
+    reads,
+    // The removal gives the keyboard back to the list after each question, and asks for the records
+    // again after it: the sweep that drops the removed one comes back through the renderer's copy,
+    // and the dirty check is thrown away so the next draw asks git again.
+    onRemoveWorktree: (entry) => {
+      void removeWorktreeAsking(options.bridge, entry, () => manager.element.focus()).then(async () => {
+        reads.forgetDirtiness();
+        await options.bridge.listWorktrees();
+        options.onChanged();
+      });
+    },
   });
   const cards = createCardsView({
     bridge: options.bridge,

@@ -22,6 +22,7 @@ const bridge: DashboardBridge = {
   getSession: () => ipcRenderer.invoke('session:read'),
   saveSession: (session) => ipcRenderer.send('session:write', session),
   readBoard: (projectPath) => ipcRenderer.invoke('board:read', projectPath),
+  peekBoard: (projectPath) => ipcRenderer.invoke('board:peek', projectPath),
   writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),
   onBoardChange: (listener) =>
     ipcRenderer.on('board:change', (_event, projectPath) => listener(projectPath)),

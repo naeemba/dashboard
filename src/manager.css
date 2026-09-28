@@ -1,59 +1,356 @@
-/* The manager page's own layout: the column the list sits in, the names along its top and the total
-   along its foot. Its own file for the reason usage.css is, which says it there.
-   What these three share with a row — the width cap, the flex and the padding that make them end on
-   one right edge — stays in index.css beside the rows themselves, because sharing it is the point; a
-   copy here is a copy nothing keeps honest. */
+/* The manager page's own look: figures along the top, the projects and the recent activity in two
+   panels under them, and the version at the foot. Its own file for the reason usage.css is, which says
+   it there. What a row shares with the command list — its flex, its padding, the highlight — stays in
+   index.css beside the command list, because sharing it is the point.
 
-/* The manager's list is a handful of rows on a tall screen, and everything under it used to be blank
-   to the bottom of the window. A flex column is what lets the lines below the list sit on the foot of
-   the page, so the list has a bottom as well as a top.
-   Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be
-   squeezed into the page rather than scrolling inside it, and its rows would spill over the total. */
+   The page is read, not typed into, so it drops the terminal's monospace for the system's own face.
+   Figures keep tabular digits so the columns still line up. What a pane printed stays monospace,
+   below, because that is a terminal's screen and was laid out in one. */
 .view-manager {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  --manager-surface: rgb(255 255 255 / 4%);
+  --manager-line: rgb(255 255 255 / 8%);
 }
 
+/* Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be
+   squeezed into the page rather than scrolling inside it. */
 .view-manager > * {
   flex: 0 0 auto;
 }
 
-/* What puts the foot on the foot: the list swallows whatever the window has spare, so everything
-   after it — the total, and the version under that — is pushed to the bottom. The spare space is
-   given to the list rather than taken as an auto top margin on one of those lines, because an auto
-   margin only ever moves the line carrying it. Put it on the total and the version rides down behind
-   it, but hide the total on a window with no project open and the push goes with it, stranding the
-   version halfway up the page. Put it on the version instead and the total is left at the top of the
-   page with a gap underneath it and its rule floating in the middle of nothing.
-   Grow but never shrink, so the promise above holds: a list taller than the window keeps its height
-   and scrolls rather than being squeezed. Written after the rule above, which it overrides at the
-   same specificity by coming later. */
-.manager-list {
-  flex: 1 0 auto;
+/* The figures along the top. Four tiles that wrap onto two lines on a narrow window rather than being
+   squeezed until their numbers overflow. */
+.manager-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
-/* Nothing but the section names, so there is no name at the left to push them across. */
+/* The overview and the body are grids, and a grid beats the browser's own `[hidden]`. Without this,
+   close every project and the tiles and both panels stay on screen over nothing. */
+.manager-overview[hidden],
+.manager-body[hidden] {
+  display: none;
+}
+
+.manager-tile {
+  padding: 14px 16px;
+  border: 1px solid var(--manager-line);
+  border-radius: 10px;
+  background: var(--manager-surface);
+}
+
+.manager-tile-label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.manager-tile-value {
+  margin-top: 6px;
+  color: var(--brightWhite);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.manager-tile-detail {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* Worktrees holding uncommitted work are the one tile asking for something, so it takes the colour
+   the list's waiting panes take. */
+.manager-tile.attention .manager-tile-value {
+  color: var(--yellow);
+}
+
+.manager-tile.attention .manager-tile-detail {
+  color: var(--yellow);
+  opacity: 1;
+}
+
+/* The list beside the activity on a wide window, the activity under the list on a narrow one. The
+   list takes whatever is left, and min-width: 0 is what lets it shrink below its longest line rather
+   than pushing the activity off the side. */
+.manager-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .manager-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.manager-panel {
+  padding: 12px;
+  border: 1px solid var(--manager-line);
+  border-radius: 10px;
+  background: var(--manager-surface);
+}
+
+.manager-panel h2 {
+  margin: 0 0 8px;
+  padding: 0 8px;
+  color: var(--brightWhite);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Nothing but the column names, so there is no name at the left to push them across. */
 .manager-head {
   justify-content: flex-end;
+  font-size: 11px;
+  opacity: 0.6;
 }
 
-.manager-total {
-  border-top: 1px solid var(--brightBlack);
+/* Over the row's trend, and the trend's width, so it sits above the bars it names. */
+.manager-trend-name {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 68px;
+  padding-left: 12px;
+  text-align: center;
+  white-space: nowrap;
 }
 
-/* Takes the space between the label and the figures, the way a row's summary does with its auto
-   margin. How quiet it is comes off the list below with the rest of the page's quiet text. */
-.manager-total .manager-name {
+.manager-list li {
+  align-items: center;
+}
+
+.manager-list li:hover {
+  background: rgb(255 255 255 / 5%);
+}
+
+.manager-list li.highlighted {
+  background: rgb(129 162 190 / 18%);
+  box-shadow: inset 2px 0 0 var(--blue);
+}
+
+/* A project row is a heading for the lines under it, so it gets space above everything but the first. */
+.manager-project:not(:first-child) {
+  margin-top: 6px;
+}
+
+.manager-project .manager-name {
+  font-weight: 600;
+}
+
+/* What a pane printed was laid out on a terminal, so it is shown in the terminal's face. */
+.view-manager .manager-tail,
+.view-manager .manager-last-printed {
+  font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
+}
+
+/* A project's board, a pill per column. */
+.manager-chips {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 12px;
+  overflow: hidden;
+}
+
+.manager-chip {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 7%);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.manager-chip b {
+  color: var(--brightWhite);
+  font-weight: 600;
+}
+
+/* The columns that mean something at a glance: work in hand, and work waiting on someone to look. */
+.manager-chip[data-column="doing"] {
+  background: rgb(129 162 190 / 22%);
+}
+
+.manager-chip[data-column="review"] {
+  background: rgb(240 198 116 / 20%);
+}
+
+.manager-chip[data-column="ship"] {
+  background: rgb(178 148 187 / 22%);
+}
+
+.manager-summary.attention {
+  color: var(--yellow);
+  opacity: 1;
+}
+
+/* A week as seven bars standing on one baseline. Each bar's height is set from the script as a share
+   of the busiest day, so the stylesheet only says how tall the box is. */
+.manager-trend {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.manager-bar {
+  flex: 1 1 0;
+  height: var(--height);
+  min-height: 1px;
+  border-radius: 1px;
+  background: var(--blue);
+  opacity: 0.55;
+}
+
+.manager-bar.today {
+  opacity: 1;
+}
+
+/* The days still to come this week: a faint baseline, so the gap reads as not yet rather than as
+   nothing done. */
+.manager-bar.later {
+  background: var(--brightBlack);
+  opacity: 0.4;
+}
+
+.manager-trend-small {
+  width: 56px;
+  height: 18px;
+  margin-left: 12px;
+}
+
+.manager-trend-large {
+  gap: 4px;
+  width: 100%;
+  height: 32px;
+  margin-top: 6px;
+}
+
+/* A worktree sits under its project, indented past the marker like a pane. */
+.manager-list li.manager-worktree {
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.manager-glyph {
+  opacity: 0.6;
+}
+
+.manager-worktree .manager-name {
+  flex: 0 0 auto;
+  color: var(--cyan);
+}
+
+.manager-worktree-title {
   flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.6;
 }
 
-/* With nothing open there are no columns to name and nothing to add up, so manager-view.ts hides both
-   with the `hidden` attribute — and the row shape it shares with the list gives it a `display`, which
-   beats the browser's own `[hidden] { display: none }`. That is the same trap `.view[hidden]` names in
-   index.css, read the other way round. Without this, close every project and the manager says "No
-   project is open, so there is nothing to watch yet." with `5h week all` sitting over an empty list
-   and a rule across the foot of the window holding three blank cells. */
-.manager-head[hidden],
-.manager-total[hidden] {
-  display: none;
+.manager-dirty {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(181 189 104 / 15%);
+  color: var(--green);
+  font-size: 11px;
+}
+
+.manager-dirty.is-dirty {
+  background: rgb(240 198 116 / 20%);
+  color: var(--yellow);
+}
+
+.manager-dirty.unreadable {
+  background: rgb(204 102 102 / 20%);
+  color: var(--red);
+}
+
+.manager-worktree-pane {
+  flex: 0 0 auto;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* Quiet until the row is under the pointer or the keyboard, so a list of worktrees is not a column of
+   red buttons. Always there, so it never moves the row when it appears. */
+.manager-remove {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border: 1px solid var(--manager-line);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.35;
+}
+
+.manager-worktree:hover .manager-remove,
+.manager-worktree.highlighted .manager-remove {
+  opacity: 1;
+}
+
+.manager-remove:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* The activity: what changed on every open board, newest first. */
+.manager-activity-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manager-activity-list li {
+  padding: 8px;
+  border-top: 1px solid var(--manager-line);
+}
+
+.manager-activity-list li:first-child {
+  border-top: 0;
+}
+
+.manager-activity-title {
+  overflow: hidden;
+  color: var(--brightWhite);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-activity-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.manager-muted {
+  opacity: 0.6;
+}
+
+.manager-activity > p {
+  padding: 0 8px;
+}
+
+/* The version, at the foot of the page. The margin pushes it there on a tall window. */
+.manager-version {
+  margin-top: auto;
+  font-size: 11px;
 }

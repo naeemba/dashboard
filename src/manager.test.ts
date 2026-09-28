@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
-  managerLines, managerRows, paneAge, positionAfterClose, projectPosition, slotOfLine, tailLines,
+  managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
   takesAnswer,
   type PaneSummary,
 } from './manager';
-import { NO_TOTALS } from './usage';
+import { NO_DAYS, NO_TOTALS } from './usage';
+import type { WorktreeEntry } from './worktree-store';
 import type { Bell } from './waiting';
 
 // The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
@@ -22,6 +23,10 @@ const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary 
   tokens: 0,
   tail: () => tail,
   lastPrinted: () => tail.at(-1) ?? '',
+});
+
+const worktree = (projectPath: string, worktreePath: string, startedAt: string): WorktreeEntry => ({
+  cardId: 'card', title: 'Fix it', projectPath, branch: 'fix-it', worktreePath, pane: 2, startedAt, reviewing: false,
 });
 
 describe('isProjectPage', () => {
@@ -116,6 +121,7 @@ describe('managerRows', () => {
   it('puts the project’s three figures on its row and each agent’s on its pane', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])], {
       projects: { '/work/api': { fiveHours: 10, week: 20, allTime: 30 } },
+      days: {},
       panes: { '3:1': 4_000 },
     });
     expect(rows[0].tokens).toEqual({ fiveHours: 10, week: 20, allTime: 30 });
@@ -170,8 +176,25 @@ describe('managerRows', () => {
 
   it('keeps a project with no panes at all, so a dead project still has a row', () => {
     expect(managerRows([page('gone', 2, [])])).toEqual([
-      { slot: 2, name: 'gone', panes: [], tokens: NO_TOTALS },
+      { slot: 2, name: 'gone', path: '/work/gone', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] },
     ]);
+  });
+
+  it("gives each project its own worktrees and not another project's, newest first", () => {
+    const worktrees = [
+      worktree('/work/api', '/work/api.worktrees/old', '2026-09-01T00:00:00Z'),
+      worktree('/work/web', '/work/web.worktrees/x', '2026-09-02T00:00:00Z'),
+      worktree('/work/api', '/work/api.worktrees/new', '2026-09-03T00:00:00Z'),
+    ];
+    const rows = managerRows([page('api', 0, [])], undefined, worktrees);
+    expect(rows[0].worktrees.map((entry) => entry.worktreePath))
+      .toEqual(['/work/api.worktrees/new', '/work/api.worktrees/old']);
+  });
+
+  it("carries the project's week of spend for its trend", () => {
+    const days = [1, 2, 3, 0, 0, 0, 0];
+    const rows = managerRows([page('api', 0, [])], { projects: {}, days: { '/work/api': days }, panes: {} });
+    expect(rows[0].days).toEqual(days);
   });
 });
 
@@ -211,8 +234,8 @@ describe('alertSummary', () => {
 });
 
 describe('managerLines', () => {
-  const row = (slot: number, name: string, panes: PaneSummary[] = []) => (
-    { slot, name, panes, tokens: NO_TOTALS }
+  const row = (slot: number, name: string, panes: PaneSummary[] = [], worktrees: WorktreeEntry[] = []) => (
+    { slot, name, path: `/work/${name}`, panes, tokens: NO_TOTALS, days: NO_DAYS, worktrees }
   );
   const pane = { ...summary('waiting'), index: 1, name: 'terminal 2' };
 
@@ -237,19 +260,32 @@ describe('managerLines', () => {
     const lines = managerLines([row(1, 'web')], new Set([1]));
     expect(lines).toEqual([{ kind: 'project', row: row(1, 'web'), open: false }]);
   });
+
+  // A worktree is a folder on disk. Hidden behind Enter, it is the one you forget to clean up.
+  it("draws a project's worktrees under it whether the row is open or shut, after its panes", () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+    const api = row(0, 'api', [pane], [entry]);
+    expect(managerLines([api], new Set()).map((line) => line.kind)).toEqual(['project', 'worktree']);
+    expect(managerLines([api], new Set([0])).map((line) => line.kind)).toEqual(['project', 'pane', 'worktree']);
+  });
 });
 
 describe('lineKey', () => {
-  const row = { slot: 2, name: 'api', panes: [], tokens: NO_TOTALS };
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
 
   it('tells a project from the panes under it', () => {
     expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
     expect(lineKey({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe('2:0');
   });
+
+  it('names a worktree by its folder, so a redraw finds it again wherever it moved', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+    expect(lineKey({ kind: 'worktree', slot: 2, entry })).toBe('worktree:/work/api.worktrees/fix');
+  });
 });
 
 describe('slotOfLine', () => {
-  const row = { slot: 2, name: 'api', panes: [], tokens: NO_TOTALS };
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
 
   it('gives a pane row the project it sits under, which is what the close key is aimed at', () => {
     expect(slotOfLine({ kind: 'project', row, open: false })).toBe(2);
@@ -257,11 +293,23 @@ describe('slotOfLine', () => {
   });
 });
 
+describe('removableWorktree', () => {
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+
+  // The key removes a folder, so a row that does not name one gives it nothing to act on.
+  it('gives the removal key a worktree row\'s worktree, and nothing on a project or a pane', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix-it', '2026-01-01T00:00:00Z');
+    expect(removableWorktree({ kind: 'worktree', slot: 2, entry })).toBe(entry);
+    expect(removableWorktree({ kind: 'project', row, open: false })).toBeNull();
+    expect(removableWorktree({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBeNull();
+  });
+});
+
 describe('canOpen', () => {
   it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
-    const tokens = NO_TOTALS;
-    expect(canOpen({ slot: 0, name: 'api', panes: [], tokens })).toBe(false);
-    expect(canOpen({ slot: 0, name: 'api', panes: [summary('quiet')], tokens })).toBe(true);
+    const base = { slot: 0, name: 'api', path: '/work/api', tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+    expect(canOpen({ ...base, panes: [] })).toBe(false);
+    expect(canOpen({ ...base, panes: [summary('quiet')] })).toBe(true);
   });
 });
 

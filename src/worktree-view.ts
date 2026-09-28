@@ -2,10 +2,10 @@ import { relativeAge } from './age';
 import { baseName } from './base-name';
 import { clampIndex } from './clamp-index';
 import type { DashboardBridge } from './bridge';
-import { confirmOverlay, openOverlay } from './overlay';
+import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
-import { paneLabel } from './terminals';
-import { dirtyLabel, orderedWorktrees } from './worktree-rows';
+import { notify, removeWorktreeAsking } from './worktree-removal';
+import { dirtyLabel, orderedWorktrees, worktreePaneText } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 
 // Lands on the worktree's pane, or hands back the sentence saying why it could not. The empty string
@@ -98,7 +98,7 @@ export function openWorktrees(
 
         const pane = document.createElement('span');
         pane.className = 'worktrees-pane';
-        pane.textContent = entry.pane === null ? 'no pane' : paneLabel(entry.pane);
+        pane.textContent = worktreePaneText(entry);
 
         item.append(project, branch, age, dirtyCell, pane);
         // A click moves the selection to the row and then does what Enter does there, so the pointer
@@ -138,13 +138,7 @@ export function openWorktrees(
       void refreshDirtiness();
     }
 
-    // A notice with nothing to answer, built on the same sheet as the two confirmations below it so
-    // a refusal never has to be read off the status bar behind the overlay — that is the answer to a
-    // question this dialog asked, not the page under it.
-    async function notify(message: string): Promise<void> {
-      await confirmOverlay(message, 'Enter or Escape closes.');
-      dialog.focus();
-    }
+    const refocus = (): void => dialog.focus();
 
     // Enter, and a click, on a row. The dialog closes only when the landing actually happened: a row
     // whose worktree has no pane, and one whose project has been closed since it shipped, both have
@@ -154,44 +148,14 @@ export function openWorktrees(
       if (!entry) return;
       const refusal = jump(entry);
       if (refusal === '') return finish();
-      await notify(refusal);
+      await notify(refusal, refocus);
     }
 
-    // What the second question says: the files when main refused on uncommitted changes, main's own
-    // words for every other refusal. main decides what counts as dirty and hands the list back, so
-    // the question on screen cannot name one thing while the removal refuses on another.
-    function forcedQuestion(entry: WorktreeEntry, attempt: { message: string; dirty: string[] }): string {
-      if (attempt.dirty.length === 0) return `${entry.branch} was not removed: ${attempt.message}`;
-      const files = attempt.dirty.slice(0, 3).join(', ');
-      const more = attempt.dirty.length > 3 ? ` and ${attempt.dirty.length - 3} more` : '';
-      return `${entry.branch} has uncommitted changes: ${files}${more}.`;
-    }
-
-    // Asked twice, and the forced removal is offered whatever the first one failed on — not only on
-    // uncommitted changes. git counts files this app's dirty check exempts, everything gitignored
-    // among them, so a worktree this list calls clean is refused with `use --force to delete it`;
-    // without the offer here that worktree could never be removed from inside the app at all, and
-    // neither could one whose removal failed for any other reason.
+    // The questions are worktree-removal.ts's, shared with the manager's list.
     async function removeHighlighted(): Promise<void> {
       const entry = orderedWorktrees(worktrees())[highlighted];
       if (!entry) return;
-      const first = await confirmOverlay(`Remove the worktree for "${entry.title}"?`,
-        'Enter removes it. Escape keeps it. The folder and everything in it goes; the branch stays.');
-      dialog.focus();
-      if (!first) return;
-      // The row is read before the question and acted on after it, and five seconds is long enough for
-      // an agent to remove its own worktree while the sheet is up. Nothing is re-checked here: a path
-      // with no record is a removal that has already happened, and main answers it that way.
-      const attempt = await bridge.removeWorktree(entry.worktreePath, false);
-      if (!attempt.ok) {
-        const forced = await confirmOverlay(forcedQuestion(entry, attempt),
-          'Enter removes it anyway and loses what is in it. Escape keeps it.');
-        dialog.focus();
-        if (forced) {
-          const attemptForced = await bridge.removeWorktree(entry.worktreePath, true);
-          if (!attemptForced.ok) await notify(attemptForced.message);
-        }
-      }
+      await removeWorktreeAsking(bridge, entry, refocus);
       await refresh();
     }
 

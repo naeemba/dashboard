@@ -86,9 +86,10 @@ export const SHIP_COLUMN = 'Ship';
 // existing. Named rather than positioned, for the reason SHIP_COLUMN is.
 export const REVIEW_COLUMN = 'Review';
 
-// Named only because withReviewColumn puts Review in front of it. Nothing else in the app treats
-// Done as special: a board is whatever columns its file holds.
-const DONE_COLUMN = 'Done';
+// Named because withReviewColumn puts Review in front of it, and because the manager's counts leave
+// it out — it only ever grows. Nothing else in the app treats Done as special: a board is whatever
+// columns its file holds.
+export const DONE_COLUMN = 'Done';
 
 const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 

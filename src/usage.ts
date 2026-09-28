@@ -44,10 +44,16 @@ export const FIVE_HOURS = 5 * 60 * 60 * 1000;
 export function weekStart(now: number): number {
   const date = new Date(now);
   date.setHours(0, 0, 0, 0);
-  // getDay counts from Sunday. Monday has to be day nought, or every Sunday counts as the start of
-  // the week that is just about to end.
-  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  date.setDate(date.getDate() - weekdayIndex(now));
   return date.getTime();
+}
+
+// Which day of the week `at` falls on, Monday being nought. getDay counts from Sunday, and Monday has
+// to be day nought, or every Sunday counts as the start of the week that is just about to end. The one
+// spelling of that: the week's start, the day a sample is filed under and the bar marked today all
+// ask this, so none of them can come to count from a different day.
+export function weekdayIndex(at: number): number {
+  return (new Date(at).getDay() + 6) % 7;
 }
 
 // The oldest sample still worth keeping. The earlier of the two boundaries, never just the week's:
@@ -77,6 +83,38 @@ export type FileUsage = {
 
 function sum(samples: readonly Sample[], from: number): number {
   return samples.reduce((total, sample) => (sample.at >= from ? total + sample.tokens : total), 0);
+}
+
+// This week's spend day by day, Monday first, always seven long: the days still to come read nought.
+// Only this week, because the samples are only kept that far back — retainFrom says why — so a trend
+// reaching into last week would draw its first days as empty whatever was spent on them.
+// The day is the sample's own local calendar day, asked of a Date rather than worked out by dividing
+// milliseconds: the week the clocks change has a day of twenty-three hours, and division would put
+// the last hour of Sunday into a Monday that does not exist.
+export function dailyTotals(files: Iterable<FileUsage>, now: number): number[] {
+  const week = weekStart(now);
+  const days = WEEK_DAYS.map(() => 0);
+  for (const file of files) {
+    for (const sample of file.samples) {
+      if (sample.at < week || sample.at > now) continue;
+      days[weekdayIndex(sample.at)] += sample.tokens;
+    }
+  }
+  return days;
+}
+
+// The seven days a trend is drawn over, named the way the bars under them are labelled.
+export const WEEK_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+// A week nothing has been spent in, which every project is until the first sweep has run.
+export const NO_DAYS: readonly number[] = WEEK_DAYS.map(() => 0);
+
+// How tall each day's bar is, as a share of the busiest day's. The busiest day fills the box and a day
+// with nothing on it draws nothing, rather than every bar being scaled against some fixed ceiling that
+// a quiet project would never come near and a busy one would burst.
+export function barHeights(days: readonly number[]): number[] {
+  const busiest = Math.max(0, ...days);
+  return days.map((day) => (busiest === 0 ? 0 : day / busiest));
 }
 
 export function totalsOf(files: Iterable<FileUsage>, now: number): Totals {
@@ -121,13 +159,17 @@ export function formatTokens(total: number): string {
   return `${total}`;
 }
 
-// What crosses to the renderer: the three figures for each open project, and one figure for each pane
-// running an agent right now.
+// What crosses to the renderer: the three figures for each open project, this week's spend day by day
+// for each, and one figure for each pane running an agent right now.
 //
 // A pane gets its session's whole cost rather than the three windows. The question a pane row answers
 // is "what has this agent cost me", and an agent that has been going for six hours would read as
 // nought against a five-hour window it started before.
-export type UsageSnapshot = { projects: Record<string, Totals>; panes: Record<string, number> };
+export type UsageSnapshot = {
+  projects: Record<string, Totals>;
+  days: Record<string, number[]>;
+  panes: Record<string, number>;
+};
 
 export function snapshotOf(
   files: Iterable<FileUsage>,
@@ -138,16 +180,20 @@ export function snapshotOf(
   const all = [...files];
   const bySession = new Map<string, number>();
   for (const file of all) bySession.set(file.session, (bySession.get(file.session) ?? 0) + file.allTime);
+  // Each project's files picked out once and used for both answers: the filter runs over every log on
+  // the machine, every half minute.
+  const ran = projects.map((project) => ({
+    path: project.path,
+    files: all.filter((file) => ranInProject(file.directory, project.path, project.worktrees)),
+  }));
   return {
-    projects: Object.fromEntries(projects.map((project) => [
-      project.path,
-      totalsOf(all.filter((file) => ranInProject(file.directory, project.path, project.worktrees)), now),
-    ])),
+    projects: Object.fromEntries(ran.map(({ path, files }) => [path, totalsOf(files, now)])),
+    days: Object.fromEntries(ran.map(({ path, files }) => [path, dailyTotals(files, now)])),
     panes: Object.fromEntries([...paneSessions].map(([pane, session]) => [pane, bySession.get(session) ?? 0])),
   };
 }
 
-export const NO_USAGE: UsageSnapshot = { projects: {}, panes: {} };
+export const NO_USAGE: UsageSnapshot = { projects: {}, days: {}, panes: {} };
 
 // Whether a sweep found anything worth telling the screen about. Almost every sweep reads the same
 // numbers back — nobody is working in most of the open projects — and a message for those is a redraw
@@ -179,8 +225,13 @@ export function projectTokens(totals: Totals): string[] {
   return [totals.fiveHours, totals.week, totals.allTime].map(formatTokens);
 }
 
-// Every open project's figures added together, which is what the line at the foot of the list prints.
-// The same three windows, so a column means the same thing at the bottom as it does up the list.
+// Every open project's week added together, day by day, which is what the overview's trend draws.
+export function sumDays(weeks: readonly (readonly number[])[]): number[] {
+  return NO_DAYS.map((_nothing, day) => weeks.reduce((total, week) => total + (week[day] ?? 0), 0));
+}
+
+// Every open project's figures added together, which is what the overview along the top prints. The
+// same three windows, so a tile means the same thing as the column it adds up.
 export function sumTotals(totals: readonly Totals[]): Totals {
   return totals.reduce((all, one) => ({
     fiveHours: all.fiveHours + one.fiveHours,

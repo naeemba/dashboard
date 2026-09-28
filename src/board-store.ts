@@ -330,6 +330,19 @@ export function readBoard(projectPath: string): BoardRead {
   return { ...read, board: withManagerColumns(projectPath, read.board) };
 }
 
+// A look at a board without taking charge of it, for the manager's counts and activity. Nothing is
+// written: no folder is made, no explanation files are seeded, and a damaged file stays exactly where
+// it is. readBoard moves a damaged file aside and the board screen says so — let a background look do
+// it first and nobody is told, and the board screen then opens empty with no message.
+// Null when there is nothing to count: no file, a file that will not parse, or one that cannot be read.
+export function peekBoard(projectPath: string): Board | null {
+  try {
+    return withManagerColumns(projectPath, parseBoard(readFileSync(boardPath(projectPath), 'utf8')));
+  } catch {
+    return null;
+  }
+}
+
 function readStoredBoard(projectPath: string): BoardRead {
   const filePath = boardPath(projectPath);
   let text: string;

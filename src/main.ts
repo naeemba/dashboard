@@ -21,7 +21,7 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
 } from './terminals';
-import { BOARD_FILE_PATH, openBoard, readBoard, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, openBoard, peekBoard, readBoard, writeBoard } from './board-store';
 import { readNotes, writeNotes } from './notes-store';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
@@ -631,6 +631,7 @@ ipcMain.on('pty:restart', (_event, id: string) => {
 // Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
 // is a convenience — writing the two explanation files — so a read-only project folder must not cost
 // the user a board.json that is sitting right there and perfectly readable.
+ipcMain.handle('board:peek', (_event, projectPath: string) => peekBoard(projectPath));
 ipcMain.handle('board:read', (_event, projectPath: string) => {
   try {
     return openBoard(projectPath);

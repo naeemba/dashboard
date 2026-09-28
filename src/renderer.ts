@@ -40,6 +40,7 @@ import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
+import { reportBoardWrites } from './board-writes';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the
@@ -47,7 +48,9 @@ import { actionByName } from './actions';
 // splits again, and the seam then is the group at the bottom that answers for panes somewhere else —
 // goToPane, jumpToWorktree, sendToPanes and answerPane.
 
-const bridge = window.dashboard;
+// board-writes.ts says why the app's own board writes are reported.
+const boardWrites = reportBoardWrites(window.dashboard);
+const bridge = boardWrites.bridge;
 const isMac = bridge.platform === 'darwin';
 // Replaced by the real file in start(), before any pane is built. Held here rather than passed down
 // because a settings change has to reach every pane on every page at once.
@@ -225,7 +228,7 @@ function renderStatus(rowsOnly = false): void {
         tail: () => paneTail(pane.terminal),
         lastPrinted: () => paneLastLine(pane.terminal),
       })),
-    })), usage);
+    })), usage, worktrees);
     if (rowsOnly) page.manager?.refreshRows(rows);
     else page.manager?.render(rows);
   }
@@ -979,9 +982,11 @@ async function start(): Promise<void> {
     onChanged: renderStatus,
     onError: showError,
     onJump: goToPane,
+    onJumpWorktree: jumpToWorktree,
     onAnswer: answerPane,
     onClose: closeProject,
     onSection: setMode,
+    onBoardWrite: boardWrites.onWrite,
     runTask: (text, paths) => bridge.runTask(text, paths),
     runInPanes: (text, paths) => sendToPanes(text, paths),
     cancelTasks: () => bridge.cancelTasks(),

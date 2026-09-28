@@ -2,8 +2,10 @@ import { relativeAge } from './age';
 import { clampIndex } from './clamp-index';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
-import { NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
+import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
 import { isRinging, type Bell } from './waiting';
+import { orderedWorktrees } from './worktree-rows';
+import type { WorktreeEntry } from './worktree-store';
 
 // Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
 // takes a number no project can be given rather than a real one.
@@ -141,7 +143,12 @@ export function takesAnswer(pane: PaneSummary): boolean {
   return pane.state === 'waiting';
 }
 
-export type ManagerRow = { slot: number; name: string; panes: PaneSummary[]; tokens: Totals };
+// `days` is this week's spend day by day, which the row draws as a small trend. `worktrees` are the
+// ones the app made for this project's cards, newest first, the order the worktree dialog lists them in.
+export type ManagerRow = {
+  slot: number; name: string; path: string; panes: PaneSummary[]; tokens: Totals;
+  days: readonly number[]; worktrees: WorktreeEntry[];
+};
 
 // The shape the page needs from a project. Structural rather than the renderer's Page, so this file
 // stays testable without building a terminal.
@@ -170,11 +177,15 @@ function paneState(pane: { bell: Bell; exited: boolean }): PaneState {
 export function managerRows(
   pages: readonly ManagerPage[],
   usage: UsageSnapshot = NO_USAGE,
+  worktrees: readonly WorktreeEntry[] = [],
 ): ManagerRow[] {
   return pages.map((page) => ({
     slot: page.slot,
     name: page.project.name,
+    path: page.project.path,
     tokens: usage.projects[page.project.path] ?? NO_TOTALS,
+    days: usage.days[page.project.path] ?? NO_DAYS,
+    worktrees: orderedWorktrees(worktrees.filter((entry) => entry.projectPath === page.project.path)),
     panes: page.panes.map((pane, index) => ({
       index,
       name: pane.name,
@@ -199,10 +210,11 @@ export function alertSummary(panes: readonly PaneSummary[]): string {
   return parts.length === 0 ? 'quiet' : parts.join(' · ');
 }
 
-// A line on the page: a project, or one of its panes underneath it.
+// A line on the page: a project, one of its panes underneath it, or one of its worktrees.
 export type ManagerLine =
   | { kind: 'project'; row: ManagerRow; open: boolean }
-  | { kind: 'pane'; slot: number; pane: PaneSummary };
+  | { kind: 'pane'; slot: number; pane: PaneSummary }
+  | { kind: 'worktree'; slot: number; entry: WorktreeEntry };
 
 // Whether a project has anything to show under it. The one place the answer lives: the arrow beside
 // the name, the key that opens the row and the lines the page draws all ask this, so a row can never
@@ -218,13 +230,18 @@ export function canOpen(row: ManagerRow): boolean {
 // to put under it — but it is still in the set, so a project whose shells come back draws itself open
 // again: a project reopened over a folder that had gone away is rebuilt into the slot it had, and the
 // set is keyed by slot. That is the point: a row you asked to see stays asked for.
+// A project's worktrees are always drawn, open or shut. There are a few of them at most, and each one
+// is a card in flight with a folder on disk — hidden behind Enter they would be the thing you forgot
+// to clean up. The panes are the long list, so they are the half the row opens and shuts.
 export function managerLines(rows: readonly ManagerRow[], open: ReadonlySet<number>): ManagerLine[] {
   return rows.flatMap((row): ManagerLine[] => {
     const isOpen = open.has(row.slot) && canOpen(row);
-    if (!isOpen) return [{ kind: 'project', row, open: false }];
+    const worktrees = row.worktrees.map((entry): ManagerLine => ({ kind: 'worktree', slot: row.slot, entry }));
+    if (!isOpen) return [{ kind: 'project', row, open: false }, ...worktrees];
     return [
       { kind: 'project', row, open: true },
       ...row.panes.map((pane): ManagerLine => ({ kind: 'pane', slot: row.slot, pane })),
+      ...worktrees,
     ];
   });
 }
@@ -236,9 +253,18 @@ export function slotOfLine(line: ManagerLine): number {
   return line.kind === 'project' ? line.row.slot : line.slot;
 }
 
+// What the removal key acts on from this line: the worktree on a worktree row, and nothing on a
+// project or a pane row. The key removes a folder, so it only fires where the row names that folder.
+export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
+  return line.kind === 'worktree' ? line.entry : null;
+}
+
 // What the selection is on, as one string. A project is its slot; a pane is the same slot-and-index
 // pair every pane in the app is already named by, so there is no second spelling of a pane's id.
+// A worktree is its folder, which is what every other screen names one by, and the prefix keeps it
+// from ever matching a slot's number.
 export function lineKey(line: ManagerLine): string {
+  if (line.kind === 'worktree') return `worktree:${line.entry.worktreePath}`;
   return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }
 
