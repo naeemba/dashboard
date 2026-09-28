@@ -49,6 +49,7 @@ import {
 } from './board-state';
 import type { DashboardBridge } from './bridge';
 import { cardRows } from './card-search';
+import { isManagerPath } from './dashboard-folder';
 import { confirmOverlay, searchOverlay } from './overlay';
 import { createNewestRead } from './newest-read';
 import { isModified } from './shortcuts';
@@ -572,6 +573,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     const home = shipHome(state.board, from, shipsAway.away(options.projectPath));
     change(next);
     const landed = cardAt(state.board, state.selection);
+    // The manager's board reads without a Ship column, but one written into its file by hand is kept
+    // with its cards. A card moved into it stays there as it would in any column: there is no
+    // repository behind the manager to make a worktree in.
+    if (isManagerPath(options.projectPath)) return;
     if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
   }
 
