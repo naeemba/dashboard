@@ -29,6 +29,7 @@ import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import { dropRow } from './board-drag';
 import { putEditBack, takeEdit } from './carried-edit';
+import { shipsAway } from './ships-away';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -138,9 +139,6 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
-  // Where each ship not yet back came from. A second ship from the same column needs the first one's
-  // home to know where it stood — shipHome says why.
-  let shipsAway: ShipHome[] = [];
   // The card carrying the line that says where a dragged card would land, and the frame that will draw
   // it. Held rather than searched for: a dragover fires on every mouse movement, and looking the marked
   // card up by its own class each time walks every node on the board — on the manager that is every
@@ -548,7 +546,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // on a card the keyboard is not on.
   function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
     const moving = cardAt(state.board, from);
-    const home = shipHome(state.board, from, shipsAway);
+    const home = shipHome(state.board, from, shipsAway.away(options.projectPath));
     change(next);
     const landed = cardAt(state.board, state.selection);
     if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
@@ -680,8 +678,7 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   function ship(before: Card, landed: Card, home: ShipHome): void {
     options.onError(`shipping "${before.title}"…`);
-    shipsAway = [...shipsAway, home];
-    const forgetHome = (): void => { shipsAway = shipsAway.filter((entry) => entry !== home); };
+    const forgetHome = shipsAway.leave(options.projectPath, home);
     options.bridge.shipCard({
       projectPath: options.projectPath,
       cardId: before.id,
