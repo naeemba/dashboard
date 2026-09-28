@@ -76,16 +76,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
-          "title": "A board of the manager's own, kept in the home directory",
-          "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-28T11:51:34.394Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -696,6 +687,16 @@
               "body": "Nothing left to build: both halves of this card are already on main.\n\n1. readBoard: PR #46 added the ENOENT-only line. Any other read failure now throws. Test: \"throws rather than reading an empty board when board.json is a folder\" in board-store.test.ts.\n2. The board view: a16bb5e (\"a board nobody read refuses the keys\") and 9b4e8bb. A board whose read failed is never marked as coming from the file, so n, d, moves and drags all bounce, and the status bar says \"This board was not read, so nothing may be saved over it.\" Tests: boardIsBusy and isUnreadForGood in board-state.test.ts.\n\nWhat that looks like now: a board.json the app cannot read (EMFILE, EIO, permissions) draws as \"Board not opened: <error>\". Press n and nothing is added, and nothing is written over the file.\n\nEvery other caller that reads a board either reports the failure (board command: one line on stderr, exit 1; ship: \"ship failed\") or skips the write (review sweep).\n\nNo pull request: there is no change to make. Left in Doing for you to close or delete. This card looks like a copy of \"readBoard turns a failed read into an empty board\", which was closed the same way in 7bc1dea."
             }
           ]
+        },
+        {
+          "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
+          "title": "A board of the manager's own, kept in the home directory",
+          "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-28T12:00:10.819Z",
+          "branch": "a-board-of-the-manager-s-own-kept-in-the-ho",
+          "pullRequest": 63
         }
       ]
     }
