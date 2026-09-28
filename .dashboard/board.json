@@ -680,6 +680,20 @@
               "body": "Stopped: already fixed on main by 625225c (19 Sep, \"command screen and close: pick a pane by what is running in it\"). The command screen's Cmd+Enter and the close now ask main over panes:read and use the ship's own paneIsBusy, which reads the pane's foreground process. Run npm run dev in terminal 1, send a line to every project: terminal 1 is skipped. Close the project: refused with \"terminal 1 npm\". looksBusy is now only used for the bell and the working report the review sweep reads. The card's plan of reading the screen too would add nothing: an agent pane already counts as busy, either from its recorded command or from its foreground process. Nothing left to build. Suggest moving the card to Done or deleting it."
             }
           ]
+        },
+        {
+          "id": "970c2598-be07-4322-9c8d-fee81c95764b",
+          "title": "readBoard turns a failed read into an empty board",
+          "notes": "src/board-store.ts line 293 catches every reason readFileSync can throw and returns an empty board. A missing file is 'no board yet' and that is right; EMFILE with five ptys and an editor open per project, an EIO off a network folder, or a permission that changed under you are not, and they come back the same way with brokenFile null, so nothing reaches the status bar.\n\nThe cost: you open a project whose board holds forty cards, the read fails, the board draws empty with no message. You assume you are on the wrong project, press n and type a card title. apply sees the board move, save() runs, writeBoard replaces board.json with one card, and the forty are gone.\n\nPR #43 fixed exactly this in readNotes (e734d56): rethrow anything that is not ENOENT. readAgain already has the catch that reports it (Board not opened: ...) with render() still running on the board in memory, so a failed read leaves the cards on screen. Its own piece of work because throwing changes a contract every caller on the startup path relies on — renderer.ts and session.ts have to be read with it.\n\nIssue: https://github.com/naeemba/dashboard/issues/45\nReview comment: https://github.com/naeemba/dashboard/pull/43#discussion_r4024308832",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-28T09:59:38.926Z",
+          "comments": [
+            {
+              "at": "2026-09-28T09:59:38.926Z",
+              "body": "Already shipped in PR #46 (closes #45) and PR #48. Nothing new to build."
+            }
+          ]
         }
       ]
     }
