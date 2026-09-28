@@ -169,21 +169,25 @@ export function createBoardView(options: BoardOptions): BoardView {
   // A failed read still has to leave the board on screen usable from the keyboard: render() runs
   // either way, on whatever board is already in memory, with the error in the status bar instead of a
   // fresh board. A control the keyboard can't reach is unfinished.
-  async function readAgain(fresh: boolean): Promise<void> {
+  //
+  // True when the read worked and is the one now on screen, which is what a ship coming home waits on.
+  async function readAgain(fresh: boolean): Promise<boolean> {
     const token = ++latestRead;
     let message = '';
     let next = state;
+    let readWorked = false;
     const boardRead = options.bridge.readBoard(options.projectPath);
     try {
       const read = await boardRead;
       next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
       // The old file is still on disk under this name, so the cards are not gone — just not shown.
       if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
+      readWorked = true;
     } catch (error: unknown) {
       message = `Board not opened: ${String(error)}`;
     }
     // A read another one has overtaken says nothing: the newer one is the board you asked for.
-    if (token !== latestRead) return;
+    if (token !== latestRead) return false;
     landedRead = token;
     // An arrival closes any open box: you asked to come here, and this is a different board. A file
     // that changed under you does not close it — what you have half typed is yours, and reloadBoard
@@ -208,10 +212,11 @@ export function createBoardView(options: BoardOptions): BoardView {
     // The open card dialog reads this board on every key, so it has to be drawn from it too. It closes
     // itself if the write took its card away, and carries a half-typed subtask across if it did not.
     detail?.redraw();
+    return readWorked;
   }
 
-  function save(): void {
-    options.bridge.writeBoard(options.projectPath, state.board).then(
+  function save(): Promise<void> {
+    return options.bridge.writeBoard(options.projectPath, state.board).then(
       // A write that lands clears the failure it replaces; nothing else knows the message is stale.
       () => options.onError(''),
       (error: unknown) => options.onError(`Board not saved: ${String(error)}`),
@@ -220,12 +225,15 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   // Redraws either way — a keystroke that changed nothing still has to put the screen back, such as
   // Escape out of an edit — but only writes the file when the board actually moved.
-  function apply(next: BoardState): void {
+  // Settles once the write has, so a caller that has to tell someone the file changed can wait for it.
+  function apply(next: BoardState): Promise<void> {
+    let written = Promise.resolve();
     if (next !== state) {
       state = next;
-      save();
+      written = save();
     }
     render();
+    return written;
   }
 
   function change(next: Change): void {
@@ -685,15 +693,21 @@ export function createBoardView(options: BoardOptions): BoardView {
       title: before.title,
       slot: options.slot,
     }).then(
-      (result) => {
+      async (result) => {
         forgetHome();
         if (!result.ok) return options.onError(result.message);
         options.onError('');
+        // The file first, not the board this view holds. The manager's stack and a project's own page
+        // are two views of one file, and the one a ship finishes in can be hidden and hours stale: put
+        // the card home on its own copy and it writes that copy over whatever the other view shipped
+        // since. A read that fails leaves the card in Ship and says why, rather than guess.
+        if (!(await readAgain(false))) return;
         // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
         // anything you did to the board while it ran has moved the card off the row it landed on.
         const moved = movedBack(before, landed, home);
-        if (moved) apply(applyAutomaticChange(state, moved));
-        else render();
+        if (!moved) return;
+        await apply(applyAutomaticChange(state, moved));
+        shipsAway.cameHome(options.projectPath, element);
       },
       (error: unknown) => {
         forgetHome();
@@ -754,6 +768,13 @@ export function createBoardView(options: BoardOptions): BoardView {
       render();
     });
   }
+
+  // Another view of this project put a ship home and wrote the file; see ShipsAway.cameHome. A view
+  // that is off the page belongs to a project since closed, and reads nothing.
+  shipsAway.listen((projectPath, writer) => {
+    if (writer === element || projectPath !== options.projectPath || !element.isConnected) return;
+    void readAgain(false);
+  });
 
   return {
     element,
@@ -818,7 +839,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         case 'board-delete': return confirmDelete();
         case 'board-open': return openDetail();
         case 'board-search': return openSearch();
-        case 'board-undo': return apply(undoChange(state));
+        case 'board-undo': return void apply(undoChange(state));
         // Everything else belongs to the renderer and never gets here.
         default: return;
       }
