@@ -345,17 +345,17 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'board-undo', description: 'Undo the last board change',
     group: 'board', scope: 'board', action: { kind: 'board-undo' }, mac: 'U', other: 'U',
   },
-  // The manager's board is every open project's board stacked, and these say which of them the rest of
+  // The manager's board is its own board and every open project's stacked, and these say which of them the rest of
   // the keys reach. Board scope, because that screen is a board and hears what a board hears — so a
   // project's own board hears them too and has nowhere to go, the way a mode key does nothing on a
   // page with no such view.
   {
-    name: 'cards-project-previous', description: "The previous project's board, on the manager",
+    name: 'cards-project-previous', description: 'The board above, on the manager',
     group: 'board', scope: 'board', action: { kind: 'cards-project', direction: 'previous' },
     mac: 'Cmd+Up', other: 'Ctrl+Up',
   },
   {
-    name: 'cards-project-next', description: "The next project's board, on the manager",
+    name: 'cards-project-next', description: 'The board below, on the manager',
     group: 'board', scope: 'board', action: { kind: 'cards-project', direction: 'next' },
     mac: 'Cmd+Down', other: 'Ctrl+Down',
   },

@@ -10,7 +10,7 @@ import { isRinging, type Bell } from './waiting';
 export const MANAGER_SLOT = -1;
 
 // It sits in the tab strip where a project sits, and has none of what a project has: no folder, no
-// five shells, no editor, no board. Which page is the manager is answered by its mode, not by this;
+// five shells, no editor, no repository. Which page is the manager is answered by its mode, not by this;
 // the empty path is the second lock on the same door, because session.ts throws away a stored page
 // whose path is empty, so the manager cannot reach a saved layout even if something else lets it.
 export const MANAGER_PROJECT: Project = { name: 'manager', path: '', missing: false };

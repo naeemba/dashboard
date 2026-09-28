@@ -1,22 +1,19 @@
+import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
 import type { Project } from './projects';
 
 // A page as the manager's board needs it, which is what the renderer already holds one as.
 export type CardsPage = { project: Project; slot: number };
 
-// Which of the open projects get a board on the manager, and so which boards are kept: any board not
-// in this list is one whose project has gone and is dropped.
-//
-// A project whose folder has gone has no board.json to read and no page behind it either, so a
-// heading for it would be a section you cannot do anything with.
-export function cardsProjects(pages: readonly CardsPage[]): CardsPage[] {
-  return pages.filter((page) => !page.project.missing);
-}
+// The manager's own board, for the tasks that belong to no one project. Its path is the manager page's
+// own, which dashboard-folder.ts reads as the home directory.
+const MANAGER_CARDS: CardsPage = { project: MANAGER_PROJECT, slot: MANAGER_SLOT };
 
-// Why there is nothing to show, said as a fragment both the empty page and the status bar build on.
-// Two ways to get here and they are not the same answer: a project whose folder has gone keeps its
-// tab, so "no project is open" would be denied by that project's own name in the strip above.
-export function cardsEmptyReason(pages: readonly CardsPage[]): string {
-  return pages.length > 0 && pages.every((page) => page.project.missing)
-    ? 'every open project has lost its folder'
-    : 'no project is open';
+// Which boards the manager's board screen stacks, and so which are kept: any board not in this list is
+// one whose project has gone and is dropped.
+//
+// The manager's own comes first and is always there, so the screen is never empty — with no project
+// open it is the one board left. A project whose folder has gone has no board.json to read and no page
+// behind it either, so a heading for it would be a section you cannot do anything with.
+export function cardsProjects(pages: readonly CardsPage[]): CardsPage[] {
+  return [MANAGER_CARDS, ...pages.filter((page) => !page.project.missing)];
 }

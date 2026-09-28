@@ -12,14 +12,14 @@ import { createSectionStrip } from './section-strip';
 import type { WorktreeEntry } from './worktree-store';
 
 // The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
-// editor. It has four views — the list of what every project's panes want, every project's board, the
-// command screen, and a page of notes — and the mode keys for the two it does not have do nothing
-// here.
+// editor. It has four views — the list of what every project's panes want, a board of its own above
+// every project's board, the command screen, and a page of notes — and the mode keys for the two it
+// does not have do nothing here.
 //
 // Its board is a board like any other as far as the renderer is concerned: same field, same mode,
-// same four functions. What is behind it is one real board per open project rather than one for a
-// folder. Its notes are the same trick again: the same view a project has, over the one path that
-// names no project, which dashboard-folder.ts reads as the home directory.
+// same four functions. What is behind it is one real board per open project, and one more over the
+// one path that names no project, which dashboard-folder.ts reads as the home directory. Its notes
+// are the same trick again: the same view a project has, over that same path.
 //
 // Out of renderer.ts beside page.ts and for the same reason: that file reached its 600-line ceiling
 // again, and a page builder is the seam it had already been split along once. What is left there is
