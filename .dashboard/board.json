@@ -76,6 +76,10 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "539342c2-4317-4969-ae4e-f6ffd0c39fcb",
@@ -83,13 +87,11 @@
           "notes": "The manager page looks like a bare terminal page and is mostly empty. Improve its UI so it reads like an app, not a terminal. Add: (1) board counts on each project row (doing / review / todo). (4) Recent activity: latest card moves and merges across all projects, newest first. (5) Token trend: small per-day bars for the week beside the 5h/week/all columns. Also show each project's worktrees with dirty state, and let a worktree be deleted from there. Not wanted for now: a 'needs you' column or an 'in flight' list.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-09-28T12:46:23.948Z"
+          "updatedAt": "2026-09-28T13:05:04.368Z",
+          "branch": "manager-page-redesign",
+          "pullRequest": 64
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
