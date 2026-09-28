@@ -263,10 +263,10 @@ describe('returnFromShip', () => {
   const pairs = ids.flatMap((first) => ids.filter((second) => second !== first).map((second) => [first, second]));
   const triples = permutations(ids).map((order) => order.slice(0, 3));
 
-  it.each([...pairs, ...triples].map((shipped) => [shipped.join(' then ')]))(
-    'puts ships %s from one column back as they were, whichever finishes first',
-    (label) => {
-      const { board, away } = shipAll(label.split(' then '));
+  it.each([...pairs, ...triples].map((shipped) => ({ label: shipped.join(' then '), shipped })))(
+    'puts ships $label from one column back as they were, whichever finishes first',
+    ({ shipped }) => {
+      const { board, away } = shipAll(shipped);
       for (const finish of permutations(away.map((entry) => entry.id))) {
         let back = board;
         for (const id of finish) {
