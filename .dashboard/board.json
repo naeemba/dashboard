@@ -94,19 +94,7 @@
     },
     {
       "name": "Review",
-      "cards": [
-        {
-          "id": "644f5b24-4554-4f97-a450-c45dacd6e408",
-          "title": "A ship leaves main's board.json the way it found it",
-          "notes": "A ship moves the card into Ship on main's board and, when it works, moves it back to the bottom of its old column with a new updatedAt. Both are saved, so every ship left board.json dirty in the project checkout and the next git pull conflicted. The card now goes back to the row it came from, as it was, so a ship that works leaves the file byte for byte unchanged.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-09-28T10:21:13.606Z",
-          "updatedAt": "2026-09-28T10:21:40.063Z",
-          "branch": "readboard-turns-a-failed-read-into-an-empty",
-          "pullRequest": 62
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -680,6 +668,23 @@
             {
               "at": "2026-09-28T09:59:38.926Z",
               "body": "Already shipped in PR #46 (closes #45) and PR #48. Nothing new to build."
+            }
+          ]
+        },
+        {
+          "id": "644f5b24-4554-4f97-a450-c45dacd6e408",
+          "title": "A ship leaves main's board.json the way it found it",
+          "notes": "A ship moves the card into Ship on main's board and, when it works, moves it back to the bottom of its old column with a new updatedAt. Both are saved, so every ship left board.json dirty in the project checkout and the next git pull conflicted. The card now goes back to the row it came from, as it was, so a ship that works leaves the file byte for byte unchanged.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-09-28T10:21:13.606Z",
+          "updatedAt": "2026-09-28T11:36:24.232Z",
+          "branch": "readboard-turns-a-failed-read-into-an-empty",
+          "pullRequest": 62,
+          "comments": [
+            {
+              "at": "2026-09-28T11:36:24.232Z",
+              "body": "Shipped in PR #62: a ship that works puts the card back in its old row unchanged, so board.json stays clean. Ships from both views share one list per project, and a card goes home only after the file is read again."
             }
           ]
         }
