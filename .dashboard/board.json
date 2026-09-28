@@ -104,7 +104,13 @@
           "notes": "readNotes now rethrows anything that is not ENOENT, and readBoard one file over still does not: every failure comes back as { board: emptyBoard(), brokenFile: null }. A missing file is \"no board yet\" and that is right; EMFILE with five ptys and an editor open per project, an EIO off a network folder, or a permission that changed underneath is not.\n\nWhat it looks like: you open a project whose board holds forty cards. The read fails. The board draws empty with no message, because brokenFile is null and readAgain cannot tell that from a project nobody has made a card in. You assume you are on the wrong project, press n, and type a card title. apply sees the board move and calls save(), and writeBoard replaces board.json with one card. The forty are gone and nothing on screen said a word.\n\nThe shape is readNotes's — if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; — and readAgain already has the catch that reports it, with render() still running on the board in memory, so a failed read leaves the cards you had on screen rather than an empty column.\n\nIts own card rather than part of the notes pull request because the fix changes a contract every caller on the startup path relies on: renderer.ts and session.ts have to be read along with it. Raised on https://github.com/naeemba/dashboard/pull/43#discussion_r4024308832.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-09-28T09:09:50.406Z"
+          "updatedAt": "2026-09-28T09:11:01.387Z",
+          "comments": [
+            {
+              "at": "2026-09-28T09:11:01.387Z",
+              "body": "Already fixed on main by ede7f5f (\"board: a read that fails is a failure, not an empty board\", closes #45), before this card was shipped. readBoard rethrows everything but ENOENT, and a damaged file that cannot be moved aside throws too. Every caller handles the throw: board-view's readAgain prints \"Board not opened: ...\" and keeps the cards already on screen; the board command writes one line to stderr and exits 1; a ship fails with \"ship failed: ...\"; review-flow's projectBoard and editProjectBoard treat it as \"cannot tell\" and leave the card alone. renderer.ts and session.ts never call readBoard. board-store.test.ts pins both throws and they pass. Nothing to change, so no pull request. One gap left: board-view.ts has no test file, so nothing pins that a failed re-read keeps the forty cards on screen instead of drawing an empty board. That is its own card. Left in Doing for you to close."
+            }
+          ]
         }
       ]
     },
