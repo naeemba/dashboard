@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
+import { dashboardFolder, isManagerPath } from './dashboard-folder';
 import {
   DEFAULT_PRIORITY,
   emptyBoard,
@@ -13,6 +14,7 @@ import {
   isTitle,
   withReviewColumn,
   withShipColumn,
+  withoutEmptyShipColumn,
   type Board,
   type Card,
   type CardComment,
@@ -152,8 +154,8 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 // the answer, so a folder that is not a repository still gets a board where you asked for one.
 // The climb stops at the home directory and never looks inside it, so a `board` command run
 // somewhere under $HOME that is neither a repository nor has a board of its own cannot climb past
-// $HOME into the manager's own .dashboard (dashboard-folder.ts puts its notes and, one day, its
-// board there) and write a stray card into it.
+// $HOME into the manager's own .dashboard (dashboard-folder.ts puts its notes and its board there) and
+// write a stray card into it.
 // That protection is the climb, not this function: called directly on the home directory, this
 // still answers with it — `start` is `home`, the loop body never runs. isManagerHomeDirectory below
 // is the check that catches that case, and board-cli-entry asks it before opening anything. Call
@@ -175,12 +177,20 @@ export function isManagerHomeDirectory(directory: string): boolean {
   return resolve(directory) === homedir();
 }
 
-function boardPath(projectPath: string): string {
-  return join(projectPath, BOARD_DIRECTORY, BOARD_FILE);
+// Which folder is dashboard-folder.ts's to decide, the same as the notes: the manager's board has no
+// project to sit in and goes in the home directory.
+export function boardPath(projectPath: string): string {
+  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BOARD_FILE);
 }
 
 function brokenBoardPath(projectPath: string): string {
-  return join(projectPath, BOARD_DIRECTORY, BROKEN_BOARD_FILE);
+  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BROKEN_BOARD_FILE);
+}
+
+// The columns a board is read with. A project's are whatever parseBoard left; the manager's lose the
+// empty Ship column, since there is no repository behind that page to make a worktree in.
+function withManagerColumns(projectPath: string, board: Board): Board {
+  return isManagerPath(projectPath) ? withoutEmptyShipColumn(board) : board;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -315,6 +325,11 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
 // empty board and the board draws with no cards and nothing in the status bar; the next card you add
 // is saved over the forty that are still sitting on disk.
 export function readBoard(projectPath: string): BoardRead {
+  const read = readStoredBoard(projectPath);
+  return { ...read, board: withManagerColumns(projectPath, read.board) };
+}
+
+function readStoredBoard(projectPath: string): BoardRead {
   const filePath = boardPath(projectPath);
   let text: string;
   try {
@@ -376,9 +391,15 @@ export function writeBoard(projectPath: string, board: Board): string {
 // exactly this, and seeding is a convenience: writing the two explanation files must never cost
 // someone a board.json that is sitting right there and perfectly readable, so a read-only folder
 // loses the docs and keeps the cards.
+//
+// The manager's board gets the folder and not the files. Both files describe a project's board and the
+// `board` command that moves its cards, and that command refuses to run in the home directory — an
+// agent reading them there would be told how to do something it cannot. The folder is still made, so
+// the watch main starts after this read has something to watch.
 export function openBoard(projectPath: string): BoardRead {
   try {
-    seedBoardDirectory(projectPath);
+    if (isManagerPath(projectPath)) mkdirSync(dirname(boardPath(projectPath)), { recursive: true });
+    else seedBoardDirectory(projectPath);
   } catch {
     // No explanation files this time.
   }

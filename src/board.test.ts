@@ -37,6 +37,7 @@ import {
   sortColumn,
   withReviewColumn,
   withShipColumn,
+  withoutEmptyShipColumn,
   type Board,
   type Card,
   type Priority,
@@ -100,6 +101,25 @@ describe('the Ship column', () => {
   it('hands back the same board when Ship is already there', () => {
     const board = emptyBoard();
     expect(withShipColumn(board)).toBe(board);
+  });
+});
+
+describe('withoutEmptyShipColumn', () => {
+  it('takes an empty Ship out, leaving the other columns in their order', () => {
+    expect(withoutEmptyShipColumn(emptyBoard()).columns.map((column) => column.name))
+      .toEqual(['Todo', 'Doing', REVIEW_COLUMN, 'Done']);
+  });
+
+  // Taking the column would take the cards in it, and those are somebody's cards.
+  it('keeps a Ship column that has cards in it', () => {
+    const handWritten = { columns: [{ name: 'Todo', cards: [] }, board(['written by hand']).columns[0]] };
+    handWritten.columns[1].name = SHIP_COLUMN;
+    expect(withoutEmptyShipColumn(handWritten)).toBe(handWritten);
+  });
+
+  it('hands back the same board when there is no Ship to take', () => {
+    const board = { columns: [{ name: 'Todo', cards: [] }] };
+    expect(withoutEmptyShipColumn(board)).toBe(board);
   });
 });
 

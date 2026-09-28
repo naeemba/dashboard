@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { dashboardFolder } from './dashboard-folder';
+import { dashboardFolder, isManagerPath } from './dashboard-folder';
 import { MANAGER_PROJECT } from './manager';
 
 describe('dashboardFolder', () => {
@@ -13,5 +13,12 @@ describe('dashboardFolder', () => {
   // into whatever directory it happened to be launched from.
   it('is the home directory for the manager, whose page has no folder', () => {
     expect(dashboardFolder(MANAGER_PROJECT.path)).toBe(homedir());
+  });
+});
+
+describe('isManagerPath', () => {
+  it('is true for the manager page\'s path and for no project\'s', () => {
+    expect(isManagerPath(MANAGER_PROJECT.path)).toBe(true);
+    expect(isManagerPath('/work/api')).toBe(false);
   });
 });

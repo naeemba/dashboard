@@ -8,15 +8,20 @@ import { homedir } from 'node:os';
 // in. It goes in the home directory instead, which keeps it out of every repository: a page about none
 // of them must not be committed to one of them by accident.
 //
-// Its own module because two stores will ask it and only one asks it today. notes-store calls it now;
-// the manager has no board yet, and the card that gives it one is where boardPath joins this rule. Had
-// the branch stayed inside notesPath, that card's obvious move would have been to copy the same line
-// into board-store — and then a manager whose notes and board disagree about where they live, with
-// nothing failing to say so.
+// Its own module because two stores ask it: notes-store for the manager's notes and board-store for
+// its board. Had the branch lived inside either one, the other would have held a copy of it — and a
+// manager whose notes and board disagree about where they live, with nothing failing to say so.
 //
 // The empty path is read here and nowhere else. The renderer hands over the manager page's own project
 // path rather than an empty string of its own, so there is one fact to keep in step instead of two
 // literals that agree until somebody changes one.
 export function dashboardFolder(projectPath: string): string {
-  return projectPath === '' ? homedir() : projectPath;
+  return isManagerPath(projectPath) ? homedir() : projectPath;
+}
+
+// Whether this path is the manager's page, which has no repository behind it. The board asks it
+// because what a board can do there is less than what it can do in a project: nothing to ship a card
+// from, and no `board` command that reaches it.
+export function isManagerPath(projectPath: string): boolean {
+  return projectPath === '';
 }

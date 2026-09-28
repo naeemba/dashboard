@@ -169,6 +169,15 @@ export function withShipColumn(board: Board): Board {
   return withColumn(board, SHIP_COLUMN, 1);
 }
 
+// The manager's board has nothing to ship from, so it has no Ship column to move a card into. Only an
+// empty one goes: a Ship column somebody wrote into the file by hand with cards in it stays, because
+// taking the column would take the cards with it.
+export function withoutEmptyShipColumn(board: Board): Board {
+  const ship = shipColumnIndex(board);
+  if (ship === -1 || board.columns[ship].cards.length > 0) return board;
+  return withColumns(board, board.columns.filter((_column, index) => index !== ship));
+}
+
 // The same repair for Review. Placed by the column it comes before rather than by a number, because
 // the number is different on every board: it is fourth on the shipped four, and second on a board
 // somebody wrote with two columns. Review is the last stop before a card is finished, so it goes just

@@ -1,6 +1,6 @@
 import { readFileSync, watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
-import { BOARD_DIRECTORY, BOARD_FILE } from './board-store';
+import { BOARD_FILE, boardPath } from './board-store';
 
 // Whether something that happened inside a project's .dashboard folder is a board change the screen
 // has to be told about. Two questions, in the order that costs least: the name first, so an event
@@ -51,7 +51,8 @@ export function boardWatchers(announce: (projectPath: string) => void): BoardWat
   return {
     watch: (projectPath) => {
       if (watchers.has(projectPath)) return;
-      const directory = path.join(projectPath, BOARD_DIRECTORY);
+      // The folder boardPath puts the board in, so the manager's is watched in the home directory.
+      const directory = path.dirname(boardPath(projectPath));
       let watcher: FSWatcher;
       try {
         watcher = watch(directory, (_event, fileName) => {
