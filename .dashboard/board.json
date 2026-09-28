@@ -83,22 +83,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "76710e0f-2058-4cb9-a9c5-3cdfbcede709",
-          "title": "readBoard treats any failed read as an empty board, and the next card overwrites the file",
-          "notes": "src/board-store.ts:293 catches every read failure and answers with an empty board. EMFILE with five ptys and an editor per project, an EIO off a network folder, a permission that changed under you — all of them draw a board with empty columns and nothing saying why (brokenFile is null, so not even the salvage message appears). Press n, type a card, and save() replaces board.json with a board holding one card. Todo, Doing and Done are gone, and the old bytes were never moved aside because they never parsed badly.\n\nThe fix is the line PR #43 wrote one file over in readNotes: if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; — plus the board view doing what the notes view now does with a failed read, which is say so and refuse to write the screen back over the file. Rethrowing changes a contract the startup path and board-cli.ts both rely on, which is why it was out of scope for #43.\n\nIssue: https://github.com/naeemba/dashboard/issues/44\nReview: https://github.com/naeemba/dashboard/pull/43",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-28T11:45:52.547Z",
-          "comments": [
-            {
-              "at": "2026-09-28T11:45:52.547Z",
-              "body": "Nothing left to build: both halves of this card are already on main.\n\n1. readBoard: PR #46 added the ENOENT-only line. Any other read failure now throws. Test: \"throws rather than reading an empty board when board.json is a folder\" in board-store.test.ts.\n2. The board view: a16bb5e (\"a board nobody read refuses the keys\") and 9b4e8bb. A board whose read failed is never marked as coming from the file, so n, d, moves and drags all bounce, and the status bar says \"This board was not read, so nothing may be saved over it.\" Tests: boardIsBusy and isUnreadForGood in board-state.test.ts.\n\nWhat that looks like now: a board.json the app cannot read (EMFILE, EIO, permissions) draws as \"Board not opened: <error>\". Press n and nothing is added, and nothing is written over the file.\n\nEvery other caller that reads a board either reports the failure (board command: one line on stderr, exit 1; ship: \"ship failed\") or skips the write (review sweep).\n\nNo pull request: there is no change to make. Left in Doing for you to close or delete. This card looks like a copy of \"readBoard turns a failed read into an empty board\", which was closed the same way in 7bc1dea."
-            }
-          ]
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -693,6 +678,20 @@
             {
               "at": "2026-09-28T11:36:24.232Z",
               "body": "Shipped in PR #62: a ship that works puts the card back in its old row unchanged, so board.json stays clean. Ships from both views share one list per project, and a card goes home only after the file is read again."
+            }
+          ]
+        },
+        {
+          "id": "76710e0f-2058-4cb9-a9c5-3cdfbcede709",
+          "title": "readBoard treats any failed read as an empty board, and the next card overwrites the file",
+          "notes": "src/board-store.ts:293 catches every read failure and answers with an empty board. EMFILE with five ptys and an editor per project, an EIO off a network folder, a permission that changed under you — all of them draw a board with empty columns and nothing saying why (brokenFile is null, so not even the salvage message appears). Press n, type a card, and save() replaces board.json with a board holding one card. Todo, Doing and Done are gone, and the old bytes were never moved aside because they never parsed badly.\n\nThe fix is the line PR #43 wrote one file over in readNotes: if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; — plus the board view doing what the notes view now does with a failed read, which is say so and refuse to write the screen back over the file. Rethrowing changes a contract the startup path and board-cli.ts both rely on, which is why it was out of scope for #43.\n\nIssue: https://github.com/naeemba/dashboard/issues/44\nReview: https://github.com/naeemba/dashboard/pull/43",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-28T11:47:55.899Z",
+          "comments": [
+            {
+              "at": "2026-09-28T11:45:52.547Z",
+              "body": "Nothing left to build: both halves of this card are already on main.\n\n1. readBoard: PR #46 added the ENOENT-only line. Any other read failure now throws. Test: \"throws rather than reading an empty board when board.json is a folder\" in board-store.test.ts.\n2. The board view: a16bb5e (\"a board nobody read refuses the keys\") and 9b4e8bb. A board whose read failed is never marked as coming from the file, so n, d, moves and drags all bounce, and the status bar says \"This board was not read, so nothing may be saved over it.\" Tests: boardIsBusy and isUnreadForGood in board-state.test.ts.\n\nWhat that looks like now: a board.json the app cannot read (EMFILE, EIO, permissions) draws as \"Board not opened: <error>\". Press n and nothing is added, and nothing is written over the file.\n\nEvery other caller that reads a board either reports the failure (board command: one line on stderr, exit 1; ship: \"ship failed\") or skips the write (review sweep).\n\nNo pull request: there is no change to make. Left in Doing for you to close or delete. This card looks like a copy of \"readBoard turns a failed read into an empty board\", which was closed the same way in 7bc1dea."
             }
           ]
         }
