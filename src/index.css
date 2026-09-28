@@ -622,10 +622,6 @@ textarea.board-edit {
   outline: none;
 }
 
-.cards .board-empty {
-  margin: 8px;
-}
-
 /* Each project's board is the real board view, so all that is said to it here is to stop being a screen
    of its own: it grows to its cards, and only a board with more than a screenful in it is capped — at
    which point its columns go back to scrolling inside themselves, as they do on a project's own tab.
