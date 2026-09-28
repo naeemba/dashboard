@@ -32,6 +32,7 @@ import {
   reviewColumnIndex,
   selectionOf,
   setNotes,
+  shipHome,
   shipColumnIndex,
   sortColumn,
   withReviewColumn,
@@ -196,34 +197,55 @@ describe('returnFromShip', () => {
   };
   const shipped = moveCardToColumn(before, { column: 0, card: 1 }, 1).board;
   const landed = shipped.columns[1].cards[0];
+  const home = shipHome(before, { column: 0, card: 1 });
 
   it('puts the card back in its row, as it was, so the file comes out byte for byte the same', () => {
-    const back = returnFromShip(shipped, card('b'), landed, { column: 0, card: 1 });
+    const back = returnFromShip(shipped, card('b'), landed, home);
     expect(JSON.stringify(back?.board)).toBe(JSON.stringify(before));
     expect(back?.selection).toEqual({ column: 0, card: 1 });
   });
 
   it('keeps an edit made while the ship ran, and still takes the card home', () => {
     const renamed = renameCard(shipped, { column: 1, card: 0 }, 'renamed').board;
-    const back = returnFromShip(renamed, card('b'), landed, { column: 0, card: 1 });
+    const back = returnFromShip(renamed, card('b'), landed, home);
     expect(back?.board.columns[0].cards[1].title).toBe('renamed');
     expect(back?.board.columns[1].cards).toEqual([]);
   });
 
   it('lands last when the column has shrunk under the row it came from', () => {
     const shrunk = deleteCard(deleteCard(shipped, { column: 0, card: 1 }).board, { column: 0, card: 0 }).board;
-    const back = returnFromShip(shrunk, card('b'), landed, { column: 0, card: 1 });
+    const back = returnFromShip(shrunk, card('b'), landed, home);
     expect(back?.board.columns[0].cards.map((entry) => entry.id)).toEqual(['b']);
   });
 
   it('leaves a card you already moved home yourself where you put it', () => {
     const moved = moveCardToColumn(shipped, { column: 1, card: 0 }, 0).board;
-    expect(returnFromShip(moved, card('b'), landed, { column: 0, card: 1 })).toBeNull();
+    expect(returnFromShip(moved, card('b'), landed, home)).toBeNull();
   });
 
   it('answers null for a card that is no longer on the board', () => {
     const gone = deleteCard(shipped, { column: 1, card: 0 }).board;
-    expect(returnFromShip(gone, card('b'), landed, { column: 0, card: 1 })).toBeNull();
+    expect(returnFromShip(gone, card('b'), landed, home)).toBeNull();
+  });
+
+  // Ship a, then b, from [a, b, c]. Both were taken from row 0. If a's ship finishes first and rows were
+  // all there was to go on, a lands at row 0 of [c] and then b at row 0 of [a, c]: the column comes
+  // back as [b, a, c] and the file is not what it was.
+  it('puts two ships from one column back in their own order, whichever finishes first', () => {
+    const homeOfA = shipHome(before, { column: 0, card: 0 });
+    const afterA = moveCardToColumn(before, { column: 0, card: 0 }, 1).board;
+    const landedA = afterA.columns[1].cards[0];
+    const homeOfB = shipHome(afterA, { column: 0, card: 0 });
+    const afterB = moveCardToColumn(afterA, { column: 0, card: 0 }, 1).board;
+    const landedB = afterB.columns[1].cards[1];
+
+    const bBack = returnFromShip(afterB, card('b'), landedB, homeOfB)!.board;
+    const bothBack = returnFromShip(bBack, card('a'), landedA, homeOfA)!.board;
+    expect(JSON.stringify(bothBack)).toBe(JSON.stringify(before));
+
+    const aBack = returnFromShip(afterB, card('a'), landedA, homeOfA)!.board;
+    const bothBackOtherWay = returnFromShip(aBack, card('b'), landedB, homeOfB)!.board;
+    expect(JSON.stringify(bothBackOtherWay)).toBe(JSON.stringify(before));
   });
 });
 

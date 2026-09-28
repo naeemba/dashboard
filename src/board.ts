@@ -507,9 +507,24 @@ export function moveCardToColumn(board: Board, selection: Selection, target: num
   return relocateCard(board, selection, card, target, board.columns[target].cards.length);
 }
 
-// A ship that worked, undone on main's board: the card goes back to the row it was shipped from. The
+// Where a shipped card came from: its column and row, and the ids of the cards that sat below it
+// there. The row alone is not enough. A second ship from the same column while the first is still
+// running shifts every row under it, and the first card would come back one row too high.
+export type ShipHome = Selection & { cardsBelow: string[] };
+
+// Taken at the moment of the move, before the card leaves its column.
+export function shipHome(board: Board, selection: Selection): ShipHome {
+  const cards = board.columns[selection.column]?.cards ?? [];
+  return { ...selection, cardsBelow: cards.slice(selection.card + 1).map((entry) => entry.id) };
+}
+
+// A ship that worked, undone on main's board: the card goes back to where it was shipped from. The
 // worktree's board is where the ship is recorded, and main's is what the next `git pull` merges into —
 // leave the round trip in it and every ship ends with board.json dirty and that pull in conflict.
+//
+// It goes in front of the first card that was below it and is still in that column, so two ships
+// from one column come back in their own order whichever finishes first. Only when none of those is
+// left does it fall back to the row number, clamped to the column as it is now.
 //
 // `before` is the card as it was, `landed` the card the move into Ship made. Nothing touched since
 // the move puts `before` back, stamp and all, so the file comes out exactly as it went in. A card
@@ -517,12 +532,15 @@ export function moveCardToColumn(board: Board, selection: Selection, target: num
 //
 // Null when there is nothing to do: the card has gone, or is already back in its column because you
 // put it there yourself while git ran.
-export function returnFromShip(board: Board, before: Card, landed: Card, home: Selection): Change | null {
+export function returnFromShip(board: Board, before: Card, landed: Card, home: ShipHome): Change | null {
   const at = selectionOf(board, landed.id);
   if (!at || at.column === home.column || !board.columns[home.column]) return null;
   const current = board.columns[at.column].cards[at.card];
   const untouched = JSON.stringify(current) === JSON.stringify(landed);
-  const row = clampIndex(home.card, board.columns[home.column].cards.length);
+  const cards = board.columns[home.column].cards;
+  const below = new Set(home.cardsBelow);
+  const follower = cards.findIndex((entry) => below.has(entry.id));
+  const row = follower === -1 ? clampIndex(home.card, cards.length) : follower;
   return placeCard(board, at, untouched ? before : current, home.column, row);
 }
 

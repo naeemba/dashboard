@@ -17,11 +17,13 @@ import {
   pullRequestFrom,
   returnFromShip,
   selectionOf,
+  shipHome,
   sortColumn,
   type Card,
   type Change,
   type MoveGesture,
   type Selection,
+  type ShipHome,
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
@@ -543,9 +545,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // on a card the keyboard is not on.
   function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
     const moving = cardAt(state.board, from);
+    const home = shipHome(state.board, from);
     change(next);
     const landed = cardAt(state.board, state.selection);
-    if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, from);
+    if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
   }
 
   // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
@@ -647,7 +650,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   // A card that has landed in Ship: `before` is the card as it was a keystroke ago, `landed` the card
-  // the move made, and `home` the row it came from.
+  // the move made, and `home` where it came from.
   //
   // A ship that works puts the card back there, carrying its badge: this board is main's, and a
   // column on main says what has been merged. returnFromShip says why it goes back to its own row as it
@@ -665,14 +668,14 @@ export function createBoardView(options: BoardOptions): BoardView {
   // typing into, and taking the moved card's would commit what you typed onto the card that just
   // shipped and leave the one you were naming blank. Found by id rather than kept as a number, because
   // the move it is riding on has just shifted the rows below it.
-  function movedBack(before: Card, landed: Card, home: Selection): Change | null {
+  function movedBack(before: Card, landed: Card, home: ShipHome): Change | null {
     const moved = returnFromShip(state.board, before, landed, home);
     const editingId = editingCardId();
     if (moved === null || editingId === undefined) return moved;
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
 
-  function ship(before: Card, landed: Card, home: Selection): void {
+  function ship(before: Card, landed: Card, home: ShipHome): void {
     options.onError(`shipping "${before.title}"…`);
     options.bridge.shipCard({
       projectPath: options.projectPath,
