@@ -39,6 +39,7 @@ export type Action =
   | { kind: 'cards-project'; direction: 'previous' | 'next' }
   | { kind: 'manager-select'; direction: 'up' | 'down' }
   | { kind: 'manager-open' }
+  | { kind: 'manager-remove' }
   | { kind: 'project-close' }
   | { kind: 'section-move'; direction: 'previous' | 'next' }
   | { kind: 'command-select'; direction: 'up' | 'down' }
@@ -378,8 +379,16 @@ export const ACTIONS: readonly ActionEntry[] = [
     mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],
   })),
   {
-    name: 'manager-open', description: "Show a project's panes, or go to the pane",
+    name: 'manager-open', description: "Show a project's panes, or go to the pane or worktree",
     group: 'manager', scope: 'manager', action: { kind: 'manager-open' }, mac: 'Enter', other: 'Enter',
+  },
+  // Backspace rather than a letter: a bare letter here is a key the manager can no longer send to a
+  // waiting pane, and Backspace is not a character anyone answers a question with. It asks before
+  // removing anything — worktree-removal.ts says what.
+  {
+    name: 'manager-remove', description: 'Remove the selected worktree',
+    group: 'manager', scope: 'manager', action: { kind: 'manager-remove' },
+    mac: 'Backspace', other: 'Backspace',
   },
   // The strip along the top of the manager page. manager-page scope, because they have to work on all
   // four sections and two of those — board and notes — are modes every project also has, and a

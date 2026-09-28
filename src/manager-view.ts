@@ -1,12 +1,20 @@
 import type { Action } from './actions';
+import { relativeAge } from './age';
+import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
   alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, slotOfLine, takesAnswer,
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
+import { countChips, createActivity, createOverview, todayIndex, trendBars } from './manager-panels';
+import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
-import { paneTokens, projectTokens, sumTotals, TOKEN_COLUMNS } from './usage';
+import { paneLabel } from './terminals';
+import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
 import { APP_VERSION } from './version';
+import { dirtyLabel } from './worktree-rows';
+import type { WorktreeEntry } from './worktree-store';
+import type { JumpToWorktree } from './worktree-view';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.
@@ -19,6 +27,18 @@ export type ManagerOptions = {
   // Redraws the page. The rows are the renderer's, so the view asks for them back rather than keeping
   // its own copy; the status bar, which names what the selection is on, is redrawn by the same call.
   onChanged(): void;
+  // Enter on a worktree row: lands on its pane, or hands back the sentence saying why it could not —
+  // the same answer the worktree dialog gets.
+  onJumpWorktree: JumpToWorktree;
+  // The removal key on a worktree row, and its button. What is asked, and what is forced, is
+  // worktree-removal.ts's.
+  onRemoveWorktree(entry: WorktreeEntry): void;
+  // A sentence for the status bar, or '' to take back the one this view put there.
+  onError(message: string): void;
+  // What a key is bound to now, so the status bar names the removal key in force.
+  binding(actionName: string): string;
+  // Every open project's board and which worktrees are dirty, read in the background.
+  reads: ManagerReads;
 };
 
 export type ManagerView = {
@@ -56,7 +76,7 @@ function tailBlock(pane: PaneSummary): string[] {
 }
 
 // One figure in one column. The width and the alignment belong to the class, so the names above the
-// list, a project's three, a pane's one and the total at the foot are the same columns and end on one
+// list, a project's three and a pane's one are the same columns and end on one
 // right edge — which is the whole of what makes them readable as columns at all.
 function tokenCell(text: string): HTMLElement {
   const cell = document.createElement('span');
@@ -66,7 +86,7 @@ function tokenCell(text: string): HTMLElement {
 }
 
 // Figures written into a row that already has its cells. Strings rather than a project's Totals, so
-// a project's three, a pane's one and the total at the foot are all written by this — teach a fourth
+// a project's three and a pane's one are both written by this — teach a fourth
 // window to the rows and the pane row is not the one path that quietly kept its old writer.
 // Only a figure that has moved is written: the sweep runs over every row every half minute and almost
 // none of them have changed, and setting textContent replaces the text node either way.
@@ -84,40 +104,66 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // Focusable, so arriving here takes the keyboard off whatever pane had it. Without it you would be
   // looking at this page while your typing still went into the shell you came from.
   element.tabIndex = -1;
-  const heading = document.createElement('h1');
-  heading.textContent = 'Manager';
   const empty = document.createElement('p');
+  empty.className = 'manager-empty';
   empty.textContent = 'No project is open, so there is nothing to watch yet.';
   const list = document.createElement('ul');
   list.className = 'manager-list';
-  // The three columns named once, above the list. Without this a row ends in `40.9M  774M  3.1B` and
+  // The columns named once, above the list. Without this a row ends in `40.9M  774M  3.1B` and
   // nothing on the page says which window each is, so the numbers are only readable by someone who
   // already knows. Above the list rather than on every row: three labels thirty times is the row you
   // came to read pushed off the screen.
   const head = document.createElement('div');
   head.className = 'manager-head';
-  head.append(...TOKEN_COLUMNS.map(tokenCell));
-  // The foot of the page: every open project's three figures added up, in the same three columns.
-  // The list is a handful of rows on a tall screen and everything under it was blank; this gives the
-  // page a bottom, and says the one thing the rows cannot — what the whole machine has cost.
-  const total = document.createElement('div');
-  total.className = 'manager-total';
-  const totalName = document.createElement('span');
-  totalName.className = 'manager-name';
-  totalName.textContent = 'all projects';
-  total.append(totalName, ...TOKEN_COLUMNS.map(() => tokenCell('')));
+  const trendName = document.createElement('span');
+  trendName.className = 'manager-trend-name';
+  trendName.textContent = 'Mon–Sun';
+  head.append(trendName, ...TOKEN_COLUMNS.map(tokenCell));
+  // The figures along the top: every open project added up, and the worktrees out.
+  const overview = createOverview();
+  const projects = document.createElement('section');
+  projects.className = 'manager-panel manager-projects';
+  const projectsHeading = document.createElement('h2');
+  projectsHeading.textContent = 'Projects';
+  projects.append(projectsHeading, head, list);
+  const activity = createActivity();
+  const body = document.createElement('div');
+  body.className = 'manager-body';
+  body.append(projects, activity.element);
   // The last line on the page: which build of the app you are looking at. Never hidden, unlike the
-  // two above it — it is a fact about the app rather than about the projects, so it is still the
-  // answer on a window with nothing open. version.ts says where the number comes from.
+  // rest — it is a fact about the app rather than about the projects, so it is still the answer on a
+  // window with nothing open. version.ts says where the number comes from.
   const buildVersion = document.createElement('div');
   buildVersion.className = 'manager-version';
   buildVersion.textContent = `v${APP_VERSION}`;
-  element.append(heading, empty, head, list, total, buildVersion);
+  element.append(overview.element, empty, body, buildVersion);
 
-  // The foot, from one place: both draws want it and it is the line most likely to be changed in
-  // only one of them.
-  function drawTotal(rows: readonly ManagerRow[]): void {
-    writeTokens(total, projectTokens(sumTotals(rows.map((row) => row.tokens))));
+  // How many of the worktrees on the list the last check found uncommitted work in.
+  function dirtyCount(rows: readonly ManagerRow[]): number {
+    const { dirty } = options.reads.dirtiness();
+    return rows.reduce((total, row) => total + row.worktrees.filter((entry) => dirty.has(entry.worktreePath)).length, 0);
+  }
+
+  // Everything on the page that is not the list, from one place: both draws want it.
+  function drawPanels(rows: readonly ManagerRow[]): void {
+    overview.draw(rows, dirtyCount(rows));
+    activity.draw(recentActivity(rows.flatMap((row) => {
+      const board = options.reads.boardOf(row.path);
+      return board ? [{ project: row.name, board }] : [];
+    })));
+  }
+
+  function dirtyText(entry: WorktreeEntry): string {
+    const { checked, dirty, unreadable } = options.reads.dirtiness();
+    return dirtyLabel(entry.worktreePath, checked, dirty, unreadable);
+  }
+
+  function writeDirty(cell: Element | null | undefined, entry: WorktreeEntry): void {
+    if (!cell) return;
+    const { dirty, unreadable } = options.reads.dirtiness();
+    cell.textContent = dirtyText(entry);
+    cell.classList.toggle('is-dirty', dirty.has(entry.worktreePath));
+    cell.classList.toggle('unreadable', unreadable.has(entry.worktreePath));
   }
 
   let lines: ManagerLine[] = [];
@@ -183,9 +229,54 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const summary = document.createElement('span');
     summary.className = 'manager-summary';
     summary.textContent = alertSummary(line.row.panes);
-    // The five-hour figure, the week's and all time, one cell each under the names above the list.
-    // usage.ts says what the three are and what a project nothing has been spent on prints.
-    item.append(marker, name, summary, ...projectTokens(line.row.tokens).map(tokenCell));
+    summary.classList.toggle('attention', line.row.panes.some(isAlerting));
+    // What is on the project's board, column by column, once its board has been read. board-summary.ts
+    // says which cards are counted and why Done is not.
+    const board = options.reads.boardOf(line.row.path);
+    const chips = countChips(board ? columnCounts(board) : []);
+    // The five-hour figure, the week's and all time, one cell each under the names above the list,
+    // with the week drawn day by day in front of them. usage.ts says what the three are and what a
+    // project nothing has been spent on prints.
+    item.append(
+      marker, name, chips, summary, trendBars(line.row.days, 'manager-trend-small', todayIndex()),
+      ...projectTokens(line.row.tokens).map(tokenCell),
+    );
+    return item;
+  }
+
+  // A worktree the app made for one of this project's cards. The button is the mouse's way to the same
+  // removal the key does; render() wires it, because only it knows which line the row is.
+  function worktreeLine(line: Extract<ManagerLine, { kind: 'worktree' }>): HTMLElement {
+    const { entry } = line;
+    const item = document.createElement('li');
+    item.className = 'manager-worktree';
+    const glyph = document.createElement('span');
+    glyph.className = 'manager-glyph';
+    glyph.textContent = '⎇';
+    const branch = document.createElement('span');
+    branch.className = 'manager-name';
+    branch.textContent = entry.branch;
+    const title = document.createElement('span');
+    title.className = 'manager-worktree-title';
+    title.textContent = entry.reviewing ? `review · ${entry.title}` : entry.title;
+    const dirty = document.createElement('span');
+    dirty.className = 'manager-dirty';
+    writeDirty(dirty, entry);
+    const age = document.createElement('span');
+    age.className = 'manager-age';
+    // A timestamp the clock cannot read says nothing rather than "Invalid Date" — see age.ts.
+    age.textContent = relativeAge(entry.startedAt) ?? '';
+    const pane = document.createElement('span');
+    pane.className = 'manager-worktree-pane';
+    pane.textContent = entry.pane === null ? 'no pane' : paneLabel(entry.pane);
+    const remove = document.createElement('button');
+    remove.className = 'manager-remove';
+    remove.type = 'button';
+    remove.textContent = 'Remove';
+    // Out of the Tab order: the list is walked with the arrows, and a button Tab can land on is a
+    // second place the keyboard can be that the highlight does not show.
+    remove.tabIndex = -1;
+    item.append(glyph, branch, title, dirty, age, pane, remove);
     return item;
   }
 
@@ -230,6 +321,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const line = lines[selected];
     if (!line) return;
     if (line.kind === 'pane') return options.onJump(line.slot, line.pane.index);
+    // A worktree with no pane, or in a project closed since, says so rather than looking like a key
+    // that did nothing. A landing that worked takes back whatever the last one said.
+    if (line.kind === 'worktree') return options.onError(options.onJumpWorktree(line.entry));
     toggle(line.row);
     options.onChanged();
   }
@@ -251,21 +345,37 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   return {
     element,
     render(rows: readonly ManagerRow[]): void {
+      // Asked on every draw, and cheap when nothing is due: manager-reads.ts decides what is old.
+      options.reads.refresh(
+        rows.map((row) => row.path),
+        rows.flatMap((row) => row.worktrees.map((entry) => entry.worktreePath)),
+      );
       relayout(rows);
       const anyOpen = rows.length > 0;
       empty.hidden = anyOpen;
-      // Nothing is open, so there are no columns to name and nothing to add up. Both go with the
-      // list, leaving the sentence saying how to open a project on a page of its own.
-      head.hidden = !anyOpen;
-      total.hidden = !anyOpen;
-      drawTotal(rows);
+      // Nothing is open, so there is nothing to list, add up or report. All of it goes, leaving the
+      // sentence saying how to open a project on a page of its own.
+      overview.element.hidden = !anyOpen;
+      body.hidden = !anyOpen;
+      drawPanels(rows);
       list.replaceChildren(...lines.map((line, index) => {
-        const item = line.kind === 'pane' ? paneLine(line) : projectLine(line);
+        const item = line.kind === 'pane' ? paneLine(line)
+          : line.kind === 'worktree' ? worktreeLine(line) : projectLine(line);
         // A click moves the selection to the row first and then does what Enter does there.
         item.addEventListener('click', () => {
           setSelection(index);
           open();
         });
+        // The same for the button: the row is selected first, so the highlight is on the worktree
+        // the question names, and then it does what the removal key does there.
+        if (line.kind === 'worktree') {
+          item.querySelector('.manager-remove')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+            setSelection(index);
+            options.onChanged();
+            options.onRemoveWorktree(line.entry);
+          });
+        }
         if (index === selected) item.classList.add('highlighted');
         return item;
       }));
@@ -288,7 +398,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Ahead of the check below, because the foot of the page is not one of the rows: it adds up
       // every open project whatever the list underneath it is doing, so a sweep that lands while a
       // row is opening still moves it.
-      drawTotal(rows);
+      drawPanels(rows);
       const fresh = managerLines(rows, opened);
       const sameRows = fresh.length === lines.length
         && fresh.every((line, index) => lineKey(line) === lineKey(lines[index]));
@@ -303,6 +413,14 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         // being torn down and rebuilt under someone reading it.
         if (line.kind === 'project') {
           writeTokens(row, projectTokens(line.row.tokens));
+          row?.querySelector('.manager-trend')
+            ?.replaceWith(trendBars(line.row.days, 'manager-trend-small', todayIndex()));
+          return;
+        }
+        if (line.kind === 'worktree') {
+          writeDirty(row?.querySelector('.manager-dirty'), line.entry);
+          const age = row?.querySelector('.manager-age');
+          if (age) age.textContent = relativeAge(line.entry.startedAt) ?? '';
           return;
         }
         const lastPrinted = row?.querySelector('.manager-last-printed');
@@ -321,6 +439,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     statusLabel(): string {
       const line = lines[selected];
       if (!line) return '';
+      if (line.kind === 'worktree') {
+        return `${line.entry.branch} · ${dirtyText(line.entry)} · `
+          + `${options.binding('manager-remove')} removes it`;
+      }
       if (line.kind === 'pane') {
         const answer = takesAnswer(line.pane) ? ' · type a character to answer it' : '';
         const age = paneAge(line.pane.lastPrintedAt);
@@ -331,6 +453,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);
       if (action.kind === 'manager-open') return open();
+      // Only a worktree row has anything to remove. On a project or a pane the key does nothing.
+      if (action.kind === 'manager-remove') {
+        const line = lines[selected];
+        if (line?.kind === 'worktree') options.onRemoveWorktree(line.entry);
+        return;
+      }
       // A pane row closes its project, rather than doing nothing: the close key is aimed at a project
       // and the panes on screen are that project's, so the key means the same thing wherever the
       // highlight is inside the block. Which project a line belongs to is manager.ts's to answer.

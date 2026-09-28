@@ -225,7 +225,7 @@ function renderStatus(rowsOnly = false): void {
         tail: () => paneTail(pane.terminal),
         lastPrinted: () => paneLastLine(pane.terminal),
       })),
-    })), usage);
+    })), usage, worktrees);
     if (rowsOnly) page.manager?.refreshRows(rows);
     else page.manager?.render(rows);
   }
@@ -979,6 +979,7 @@ async function start(): Promise<void> {
     onChanged: renderStatus,
     onError: showError,
     onJump: goToPane,
+    onJumpWorktree: jumpToWorktree,
     onAnswer: answerPane,
     onClose: closeProject,
     onSection: setMode,

@@ -211,12 +211,6 @@ body *:not(.pane, .pane *) {
   outline: none;
 }
 
-.view-manager h1 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
 .view-manager p {
   margin: 0;
   max-width: 70ch;
@@ -238,32 +232,14 @@ body *:not(.pane, .pane *) {
   max-width: 70ch;
 }
 
-/* Wider than the prose above it and than the command list, because a pane row is a table and not a
-   sentence: a name, the line the pane last printed, a state and an age. At 70ch the fixed parts eat
-   about half the row and the line you came to read is cut at `Running 12 of 47 tests in src/bo…`.
-   The whole list rather than the pane rows alone — every row's far end is one column, and a project
-   row stopping short of it would highlight to a different width than the panes under it. Still
-   capped rather than let loose: on a wide screen an uncapped row puts the state an arm's length from
-   the name it belongs to. */
-.manager-list,
-.manager-head,
-.manager-total,
-.manager-version {
-  max-width: 120ch;
-}
-
 /* A row's shape: how it lays its parts out and the space inside it. The names along the top of the
-   manager's list and the total along its foot are not rows — the keyboard reaches neither — but
-   they have to end on the same right edge as the rows do, or `all` stops sitting over the all-time
-   figure the moment somebody widens the list. The version line joins them for the padding alone: it
-   holds one string and no cells, so widening the list moves its box without moving anything on it.
-   All three take the cap above and the padding here rather than a copy of both that nothing keeps
-   honest. border-box so the padding comes out of the cap instead of being added to it, which is what
-   a stretched `li` inside the list already does for nothing. */
+   manager's list are not a row — the keyboard never reaches them — but they have to end on the same
+   right edge as the rows do, or `all` stops sitting over the all-time figure. The version line joins
+   them for the padding alone. border-box so the padding comes out of the width instead of being added
+   to it, which is what a stretched `li` inside the list already does for nothing. */
 .manager-list li,
 .command-list li,
 .manager-head,
-.manager-total,
 .manager-version {
   display: flex;
   box-sizing: border-box;
@@ -365,7 +341,6 @@ body *:not(.pane, .pane *) {
 .manager-last-printed,
 .manager-age,
 .manager-quiet,
-.manager-total .manager-name,
 .manager-version,
 .command-summary,
 .command-keys {
