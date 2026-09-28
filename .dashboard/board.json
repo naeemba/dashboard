@@ -79,6 +79,10 @@
     },
     {
       "name": "Ship",
+      "cards": []
+    },
+    {
+      "name": "Doing",
       "cards": [
         {
           "id": "76710e0f-2058-4cb9-a9c5-3cdfbcede709",
@@ -86,13 +90,9 @@
           "notes": "src/board-store.ts:293 catches every read failure and answers with an empty board. EMFILE with five ptys and an editor per project, an EIO off a network folder, a permission that changed under you — all of them draw a board with empty columns and nothing saying why (brokenFile is null, so not even the salvage message appears). Press n, type a card, and save() replaces board.json with a board holding one card. Todo, Doing and Done are gone, and the old bytes were never moved aside because they never parsed badly.\n\nThe fix is the line PR #43 wrote one file over in readNotes: if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; — plus the board view doing what the notes view now does with a failed read, which is say so and refuse to write the screen back over the file. Rethrowing changes a contract the startup path and board-cli.ts both rely on, which is why it was out of scope for #43.\n\nIssue: https://github.com/naeemba/dashboard/issues/44\nReview: https://github.com/naeemba/dashboard/pull/43",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-09-28T11:44:00.967Z"
+          "updatedAt": "2026-09-28T11:44:25.391Z"
         }
       ]
-    },
-    {
-      "name": "Doing",
-      "cards": []
     },
     {
       "name": "Review",
