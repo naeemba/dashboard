@@ -92,13 +92,13 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "6104e4f0-f4a1-4efe-9a4f-7bb0ae69c6c6",
+          "id": "644f5b24-4554-4f97-a450-c45dacd6e408",
           "title": "A ship leaves main's board.json the way it found it",
-          "notes": "A ship moves the card into Ship on main's board and, when it works, moves it back to the bottom of its old column with a new updatedAt. Both are saved, so every ship leaves board.json dirty in the project checkout and the next git pull conflicts. Put the card back in the row it came from, as it was, so a ship that works leaves the file byte-for-byte unchanged.",
+          "notes": "A ship moves the card into Ship on main's board and, when it works, moves it back to the bottom of its old column with a new updatedAt. Both are saved, so every ship left board.json dirty in the project checkout and the next git pull conflicted. The card now goes back to the row it came from, as it was, so a ship that works leaves the file byte for byte unchanged.",
           "priority": "medium",
           "parent": null,
-          "createdAt": "2026-09-28T10:13:11.900Z",
-          "updatedAt": "2026-09-28T10:13:11.900Z"
+          "createdAt": "2026-09-28T10:21:13.606Z",
+          "updatedAt": "2026-09-28T10:21:13.606Z"
         }
       ]
     },
@@ -668,7 +668,7 @@
           ]
         },
         {
-          "id": "2da55093-e3f9-4a4d-babc-30e5d5d99d18",
+          "id": "970c2598-be07-4322-9c8d-fee81c95764b",
           "title": "readBoard turns a failed read into an empty board",
           "notes": "src/board-store.ts line 293 catches every reason readFileSync can throw and returns an empty board. A missing file is 'no board yet' and that is right; EMFILE with five ptys and an editor open per project, an EIO off a network folder, or a permission that changed under you are not, and they come back the same way with brokenFile null, so nothing reaches the status bar.\n\nThe cost: you open a project whose board holds forty cards, the read fails, the board draws empty with no message. You assume you are on the wrong project, press n and type a card title. apply sees the board move, save() runs, writeBoard replaces board.json with one card, and the forty are gone.\n\nPR #43 fixed exactly this in readNotes (e734d56): rethrow anything that is not ENOENT. readAgain already has the catch that reports it (Board not opened: ...) with render() still running on the board in memory, so a failed read leaves the cards on screen. Its own piece of work because throwing changes a contract every caller on the startup path relies on — renderer.ts and session.ts have to be read with it.\n\nIssue: https://github.com/naeemba/dashboard/issues/45\nReview comment: https://github.com/naeemba/dashboard/pull/43#discussion_r4024308832",
           "priority": "medium",
@@ -678,20 +678,6 @@
             {
               "at": "2026-09-28T09:59:38.926Z",
               "body": "Already shipped in PR #46 (closes #45) and PR #48. Nothing new to build."
-            }
-          ]
-        },
-        {
-          "id": "970c2598-be07-4322-9c8d-fee81c95764b",
-          "title": "readBoard turns a failed read into an empty board",
-          "notes": "src/board-store.ts line 293 catches every reason readFileSync can throw and returns an empty board. A missing file is 'no board yet' and that is right; EMFILE with five ptys and an editor open per project, an EIO off a network folder, or a permission that changed under you are not, and they come back the same way with brokenFile null, so nothing reaches the status bar.\n\nThe cost: you open a project whose board holds forty cards, the read fails, the board draws empty with no message. You assume you are on the wrong project, press n and type a card title. apply sees the board move, save() runs, writeBoard replaces board.json with one card, and the forty are gone.\n\nPR #43 fixed exactly this in readNotes (e734d56): rethrow anything that is not ENOENT. readAgain already has the catch that reports it (Board not opened: ...) with render() still running on the board in memory, so a failed read leaves the cards on screen. Its own piece of work because throwing changes a contract every caller on the startup path relies on — renderer.ts and session.ts have to be read with it.\n\nIssue: https://github.com/naeemba/dashboard/issues/45\nReview comment: https://github.com/naeemba/dashboard/pull/43#discussion_r4024308832",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-09-28T10:20:47.133Z",
-          "comments": [
-            {
-              "at": "2026-09-28T09:57:06.500Z",
-              "body": "Nothing left to do: this already shipped. PR #46 (ede7f5f, merged 2026-09-16, closes #45) makes readBoard rethrow anything that is not ENOENT, with the test 'throws rather than reading an empty board when board.json is a folder'. PR #48 closed the gap it left: a board whose read failed now refuses n, so the first save cannot write one card over forty. Both are on main. No code changed on this branch and no PR opened. Close this card by hand and remove the worktree."
             }
           ]
         }
