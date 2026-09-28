@@ -672,12 +672,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
 
-  function ship(card: Card, landed: Card, home: Selection): void {
-    options.onError(`shipping "${card.title}"…`);
+  function ship(before: Card, landed: Card, home: Selection): void {
+    options.onError(`shipping "${before.title}"…`);
     options.bridge.shipCard({
       projectPath: options.projectPath,
-      cardId: card.id,
-      title: card.title,
+      cardId: before.id,
+      title: before.title,
       slot: options.slot,
     }).then(
       (result) => {
@@ -685,7 +685,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         options.onError('');
         // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
         // anything you did to the board while it ran has moved the card off the row it landed on.
-        const moved = movedBack(card, landed, home);
+        const moved = movedBack(before, landed, home);
         if (moved) apply(applyAutomaticChange(state, moved));
         else render();
       },

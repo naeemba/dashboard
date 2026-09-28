@@ -431,16 +431,11 @@ export function deleteCardAndDescendants(board: Board, selection: Selection): Ch
   };
 }
 
-// Pulls a card out of its column, stamps it, and drops it into the target column at the given row —
-// the part moveCard's sideways step and moveCardToColumn both do, the only difference between them
-// being which row it lands on.
-//
-// A column is not a field of the card, but Todo to Doing is the change people most want a date for
-// — "when did this start" and "when did it ship" are both this move. So it ages the card. Moving a
-// card up and down within its column does not: that is reordering a list, not touching the work.
-function relocateCard(board: Board, selection: Selection, card: Card, target: number, row: number): Change {
+// Pulls a card out of its column and drops it into the target column at the given row, exactly as
+// given. relocateCard is this with the card aged; returnFromShip is the one move that must not age it.
+function placeCard(board: Board, selection: Selection, card: Card, target: number, row: number): Change {
   const arriving = [...board.columns[target].cards];
-  arriving.splice(row, 0, { ...card, updatedAt: stamp() });
+  arriving.splice(row, 0, card);
   const leaving = board.columns[selection.column].cards.filter((_entry, at) => at !== selection.card);
   const columns = board.columns.map((column, at) => {
     if (at === selection.column) return { ...column, cards: leaving };
@@ -448,6 +443,16 @@ function relocateCard(board: Board, selection: Selection, card: Card, target: nu
     return column;
   });
   return { board: withColumns(board, columns), selection: { column: target, card: row } };
+}
+
+// The part moveCard's sideways step and moveCardToColumn both do, the only difference between them
+// being which row it lands on.
+//
+// A column is not a field of the card, but Todo to Doing is the change people most want a date for
+// — "when did this start" and "when did it ship" are both this move. So it ages the card. Moving a
+// card up and down within its column does not: that is reordering a list, not touching the work.
+function relocateCard(board: Board, selection: Selection, card: Card, target: number, row: number): Change {
+  return placeCard(board, selection, { ...card, updatedAt: stamp() }, target, row);
 }
 
 export function moveCard(board: Board, selection: Selection, direction: Direction): Change {
@@ -517,16 +522,8 @@ export function returnFromShip(board: Board, before: Card, landed: Card, home: S
   if (!at || at.column === home.column || !board.columns[home.column]) return null;
   const current = board.columns[at.column].cards[at.card];
   const untouched = JSON.stringify(current) === JSON.stringify(landed);
-  const leaving = board.columns[at.column].cards.filter((_entry, row) => row !== at.card);
-  const arriving = [...board.columns[home.column].cards];
-  const row = clampIndex(home.card, arriving.length);
-  arriving.splice(row, 0, untouched ? before : current);
-  const columns = board.columns.map((column, index) => {
-    if (index === at.column) return { ...column, cards: leaving };
-    if (index === home.column) return { ...column, cards: arriving };
-    return column;
-  });
-  return { board: withColumns(board, columns), selection: { column: home.column, card: row } };
+  const row = clampIndex(home.card, board.columns[home.column].cards.length);
+  return placeCard(board, at, untouched ? before : current, home.column, row);
 }
 
 // Where a pointer puts a card: a column, and a row in that column. A keystroke never needs to say the
