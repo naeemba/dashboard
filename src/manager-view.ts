@@ -6,13 +6,12 @@ import {
   alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, slotOfLine, takesAnswer,
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
-import { countChips, createActivity, createOverview, todayIndex, trendBars } from './manager-panels';
+import { countChips, createActivity, createOverview, trendBars } from './manager-panels';
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
-import { paneLabel } from './terminals';
-import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
+import { paneTokens, projectTokens, TOKEN_COLUMNS, weekdayIndex } from './usage';
 import { APP_VERSION } from './version';
-import { dirtyLabel } from './worktree-rows';
+import { dirtyLabel, worktreePaneText } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 import type { JumpToWorktree } from './worktree-view';
 
@@ -105,7 +104,6 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // looking at this page while your typing still went into the shell you came from.
   element.tabIndex = -1;
   const empty = document.createElement('p');
-  empty.className = 'manager-empty';
   empty.textContent = 'No project is open, so there is nothing to watch yet.';
   const list = document.createElement('ul');
   list.className = 'manager-list';
@@ -160,10 +158,18 @@ export function createManagerView(options: ManagerOptions): ManagerView {
 
   function writeDirty(cell: Element | null | undefined, entry: WorktreeEntry): void {
     if (!cell) return;
-    const { dirty, unreadable } = options.reads.dirtiness();
-    cell.textContent = dirtyText(entry);
+    const { checked, dirty, unreadable } = options.reads.dirtiness();
+    cell.textContent = dirtyLabel(entry.worktreePath, checked, dirty, unreadable);
     cell.classList.toggle('is-dirty', dirty.has(entry.worktreePath));
     cell.classList.toggle('unreadable', unreadable.has(entry.worktreePath));
+  }
+
+  // A project's week as bars, stamped with the figures it was drawn from so the timer's redraw can
+  // leave it alone when nothing moved — which is nearly every time.
+  function projectTrend(days: readonly number[]): HTMLElement {
+    const trend = trendBars(days, 'manager-trend-small', weekdayIndex(Date.now()));
+    trend.dataset.days = days.join(',');
+    return trend;
   }
 
   let lines: ManagerLine[] = [];
@@ -238,15 +244,16 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // with the week drawn day by day in front of them. usage.ts says what the three are and what a
     // project nothing has been spent on prints.
     item.append(
-      marker, name, chips, summary, trendBars(line.row.days, 'manager-trend-small', todayIndex()),
+      marker, name, chips, summary, projectTrend(line.row.days),
       ...projectTokens(line.row.tokens).map(tokenCell),
     );
     return item;
   }
 
   // A worktree the app made for one of this project's cards. The button is the mouse's way to the same
-  // removal the key does; render() wires it, because only it knows which line the row is.
-  function worktreeLine(line: Extract<ManagerLine, { kind: 'worktree' }>): HTMLElement {
+  // removal the key does, so it selects the row first: the highlight is then on the worktree the
+  // question names.
+  function worktreeLine(line: Extract<ManagerLine, { kind: 'worktree' }>, index: number): HTMLElement {
     const { entry } = line;
     const item = document.createElement('li');
     item.className = 'manager-worktree';
@@ -268,7 +275,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     age.textContent = relativeAge(entry.startedAt) ?? '';
     const pane = document.createElement('span');
     pane.className = 'manager-worktree-pane';
-    pane.textContent = entry.pane === null ? 'no pane' : paneLabel(entry.pane);
+    pane.textContent = worktreePaneText(entry);
     const remove = document.createElement('button');
     remove.className = 'manager-remove';
     remove.type = 'button';
@@ -276,6 +283,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // Out of the Tab order: the list is walked with the arrows, and a button Tab can land on is a
     // second place the keyboard can be that the highlight does not show.
     remove.tabIndex = -1;
+    remove.addEventListener('click', (event) => {
+      // Kept off the row, whose own click would go to the worktree's pane.
+      event.stopPropagation();
+      setSelection(index);
+      options.onChanged();
+      options.onRemoveWorktree(entry);
+    });
     item.append(glyph, branch, title, dirty, age, pane, remove);
     return item;
   }
@@ -360,22 +374,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       drawPanels(rows);
       list.replaceChildren(...lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line)
-          : line.kind === 'worktree' ? worktreeLine(line) : projectLine(line);
+          : line.kind === 'worktree' ? worktreeLine(line, index) : projectLine(line);
         // A click moves the selection to the row first and then does what Enter does there.
         item.addEventListener('click', () => {
           setSelection(index);
           open();
         });
-        // The same for the button: the row is selected first, so the highlight is on the worktree
-        // the question names, and then it does what the removal key does there.
-        if (line.kind === 'worktree') {
-          item.querySelector('.manager-remove')?.addEventListener('click', (event) => {
-            event.stopPropagation();
-            setSelection(index);
-            options.onChanged();
-            options.onRemoveWorktree(line.entry);
-          });
-        }
         if (index === selected) item.classList.add('highlighted');
         return item;
       }));
@@ -395,9 +399,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // render is what draws it; writing into `list.children` on a shape that moved would put one
       // pane's line on its neighbour. The lines themselves are taken, stale panes and all, because
       // the timestamps they hold are copies made when the row was last drawn.
-      // Ahead of the check below, because the foot of the page is not one of the rows: it adds up
-      // every open project whatever the list underneath it is doing, so a sweep that lands while a
-      // row is opening still moves it.
+      // Ahead of the check below, because the overview and the activity are not rows: they add up
+      // every open project whatever the list underneath is doing, so a sweep that lands while a
+      // row is opening still moves them.
       drawPanels(rows);
       const fresh = managerLines(rows, opened);
       const sameRows = fresh.length === lines.length
@@ -413,8 +417,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         // being torn down and rebuilt under someone reading it.
         if (line.kind === 'project') {
           writeTokens(row, projectTokens(line.row.tokens));
-          row?.querySelector('.manager-trend')
-            ?.replaceWith(trendBars(line.row.days, 'manager-trend-small', todayIndex()));
+          const trend = row?.querySelector<HTMLElement>('.manager-trend');
+          if (trend && trend.dataset.days !== line.row.days.join(',')) trend.replaceWith(projectTrend(line.row.days));
           return;
         }
         if (line.kind === 'worktree') {

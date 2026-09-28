@@ -1,7 +1,7 @@
 import { relativeAge } from './age';
 import type { ActivityEntry, ColumnCount } from './board-summary';
 import type { ManagerRow } from './manager';
-import { barHeights, formatTokens, sumDays, sumTotals, WEEK_DAYS } from './usage';
+import { barHeights, formatTokens, sumDays, sumTotals, WEEK_DAYS, weekdayIndex } from './usage';
 
 // The parts of the manager's general screen that are not the list: the figures along the top and the
 // recent activity beside the list. Neither takes the keyboard — there is nothing on them to press —
@@ -28,11 +28,6 @@ export function trendBars(days: readonly number[], className: string, today: num
     return bar;
   }));
   return trend;
-}
-
-// Which bar is today, Monday being nought, the same count dailyTotals files a sample under.
-export function todayIndex(now: number = Date.now()): number {
-  return (new Date(now).getDay() + 6) % 7;
 }
 
 // A column's name as a small pill, with its count in front when there is one. The name goes on the
@@ -99,7 +94,7 @@ export function createOverview(): Overview {
       fiveHours.value.textContent = formatTokens(totals.fiveHours);
       week.value.textContent = formatTokens(totals.week);
       allTime.value.textContent = formatTokens(totals.allTime);
-      week.detail.replaceChildren(trendBars(sumDays(rows.map((row) => row.days)), 'manager-trend-large', todayIndex()));
+      week.detail.replaceChildren(trendBars(sumDays(rows.map((row) => row.days)), 'manager-trend-large', weekdayIndex(Date.now())));
       const count = rows.reduce((total, row) => total + row.worktrees.length, 0);
       worktrees.value.textContent = `${count}`;
       worktrees.detail.textContent = dirtyCount === 0 ? 'nothing uncommitted' : `${dirtyCount} with uncommitted changes`;

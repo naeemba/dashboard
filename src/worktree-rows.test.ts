@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dirtyLabel, orderedWorktrees } from './worktree-rows';
+import { dirtyLabel, orderedWorktrees, worktreePaneText } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 
 function entry(cardId: string, startedAt: string): WorktreeEntry {
@@ -51,5 +51,12 @@ describe('dirtyLabel', () => {
   // read is the dialog claiming something it does not know.
   it('never calls a worktree it could not read clean', () => {
     expect(dirtyLabel(path, true, none, new Set([path]))).toBe('unknown');
+  });
+});
+
+describe('worktreePaneText', () => {
+  it('names the pane the agent runs in, or says there is none', () => {
+    expect(worktreePaneText(entry('a', '2026-09-01T00:00:00Z'))).toBe('no pane');
+    expect(worktreePaneText({ ...entry('a', '2026-09-01T00:00:00Z'), pane: 2 })).toBe('terminal 3');
   });
 });

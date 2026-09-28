@@ -1,4 +1,4 @@
-import { DONE_COLUMN, type Board } from './board';
+import { columnNamed, DONE_COLUMN, type Board } from './board';
 
 // What the manager says about a project's board without opening it: how much is in each column, and
 // which cards were touched last across every open project. Read off the same Board the board view
@@ -12,8 +12,9 @@ export type ColumnCount = { name: string; count: number };
 // Only cards with no parent are counted. A card split into six subtasks is one piece of work, and
 // counting the subtasks would make it look like seven.
 export function columnCounts(board: Board): ColumnCount[] {
+  const done = columnNamed(board, DONE_COLUMN);
   return board.columns
-    .filter((column) => column.name.toLowerCase() !== DONE_COLUMN.toLowerCase())
+    .filter((_column, index) => index !== done)
     .map((column) => ({
       name: column.name,
       count: column.cards.filter((card) => card.parent === null).length,
@@ -42,12 +43,16 @@ export function recentActivity(
   boards: readonly { project: string; board: Board }[],
   limit: number = ACTIVITY_LIMIT,
 ): ActivityEntry[] {
+  // Each stamp parsed once, rather than again on every comparison the sort makes.
   const entries = boards.flatMap(({ project, board }) => board.columns.flatMap((column) => (
-    column.cards.flatMap((card) => (card.updatedAt === undefined || Number.isNaN(Date.parse(card.updatedAt))
-      ? []
-      : [{ project, title: card.title, column: column.name, at: card.updatedAt, id: card.id }]))
+    column.cards.flatMap((card) => {
+      const time = card.updatedAt === undefined ? NaN : Date.parse(card.updatedAt);
+      if (Number.isNaN(time)) return [];
+      return [{ time, entry: { project, title: card.title, column: column.name, at: card.updatedAt!, id: card.id } }];
+    })
   )));
   return entries
-    .sort((first, second) => Date.parse(second.at) - Date.parse(first.at))
-    .slice(0, limit);
+    .sort((first, second) => second.time - first.time)
+    .slice(0, limit)
+    .map(({ entry }) => entry);
 }

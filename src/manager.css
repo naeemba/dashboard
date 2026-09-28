@@ -126,8 +126,6 @@
 
 .manager-list li {
   align-items: center;
-  padding: 6px 8px;
-  border-radius: 6px;
 }
 
 .manager-list li:hover {
@@ -343,8 +341,7 @@
   font-size: 11px;
 }
 
-.manager-muted,
-.manager-activity .manager-muted {
+.manager-muted {
   opacity: 0.6;
 }
 

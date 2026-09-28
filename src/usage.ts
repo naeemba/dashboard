@@ -44,10 +44,16 @@ export const FIVE_HOURS = 5 * 60 * 60 * 1000;
 export function weekStart(now: number): number {
   const date = new Date(now);
   date.setHours(0, 0, 0, 0);
-  // getDay counts from Sunday. Monday has to be day nought, or every Sunday counts as the start of
-  // the week that is just about to end.
-  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  date.setDate(date.getDate() - weekdayIndex(now));
   return date.getTime();
+}
+
+// Which day of the week `at` falls on, Monday being nought. getDay counts from Sunday, and Monday has
+// to be day nought, or every Sunday counts as the start of the week that is just about to end. The one
+// spelling of that: the week's start, the day a sample is filed under and the bar marked today all
+// ask this, so none of them can come to count from a different day.
+export function weekdayIndex(at: number): number {
+  return (new Date(at).getDay() + 6) % 7;
 }
 
 // The oldest sample still worth keeping. The earlier of the two boundaries, never just the week's:
@@ -91,7 +97,7 @@ export function dailyTotals(files: Iterable<FileUsage>, now: number): number[] {
   for (const file of files) {
     for (const sample of file.samples) {
       if (sample.at < week || sample.at > now) continue;
-      days[(new Date(sample.at).getDay() + 6) % 7] += sample.tokens;
+      days[weekdayIndex(sample.at)] += sample.tokens;
     }
   }
   return days;
@@ -174,12 +180,15 @@ export function snapshotOf(
   const all = [...files];
   const bySession = new Map<string, number>();
   for (const file of all) bySession.set(file.session, (bySession.get(file.session) ?? 0) + file.allTime);
-  const filesOf = (project: { path: string; worktrees: string }) => all.filter(
-    (file) => ranInProject(file.directory, project.path, project.worktrees),
-  );
+  // Each project's files picked out once and used for both answers: the filter runs over every log on
+  // the machine, every half minute.
+  const ran = projects.map((project) => ({
+    path: project.path,
+    files: all.filter((file) => ranInProject(file.directory, project.path, project.worktrees)),
+  }));
   return {
-    projects: Object.fromEntries(projects.map((project) => [project.path, totalsOf(filesOf(project), now)])),
-    days: Object.fromEntries(projects.map((project) => [project.path, dailyTotals(filesOf(project), now)])),
+    projects: Object.fromEntries(ran.map(({ path, files }) => [path, totalsOf(files, now)])),
+    days: Object.fromEntries(ran.map(({ path, files }) => [path, dailyTotals(files, now)])),
     panes: Object.fromEntries([...paneSessions].map(([pane, session]) => [pane, bySession.get(session) ?? 0])),
   };
 }
@@ -221,8 +230,8 @@ export function sumDays(weeks: readonly (readonly number[])[]): number[] {
   return NO_DAYS.map((_nothing, day) => weeks.reduce((total, week) => total + (week[day] ?? 0), 0));
 }
 
-// Every open project's figures added together, which is what the line at the foot of the list prints.
-// The same three windows, so a column means the same thing at the bottom as it does up the list.
+// Every open project's figures added together, which is what the overview along the top prints. The
+// same three windows, so a tile means the same thing as the column it adds up.
 export function sumTotals(totals: readonly Totals[]): Totals {
   return totals.reduce((all, one) => ({
     fiveHours: all.fiveHours + one.fiveHours,

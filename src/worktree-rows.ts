@@ -1,3 +1,4 @@
+import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
 
 // The two rulings the worktree dialog makes about a row before it draws one: what order the rows go
@@ -27,4 +28,10 @@ export function dirtyLabel(
   if (!checked) return '…';
   if (unreadable.has(worktreePath)) return 'unknown';
   return dirty.has(worktreePath) ? 'DIRTY' : 'clean';
+}
+
+// Which pane the worktree's agent runs in. Both lists of worktrees print it — the dialog and the
+// manager — so the wording for a worktree that has none lives here once.
+export function worktreePaneText(entry: WorktreeEntry): string {
+  return entry.pane === null ? 'no pane' : paneLabel(entry.pane);
 }

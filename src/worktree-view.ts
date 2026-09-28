@@ -4,9 +4,8 @@ import { clampIndex } from './clamp-index';
 import type { DashboardBridge } from './bridge';
 import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
-import { paneLabel } from './terminals';
 import { notify, removeWorktreeAsking } from './worktree-removal';
-import { dirtyLabel, orderedWorktrees } from './worktree-rows';
+import { dirtyLabel, orderedWorktrees, worktreePaneText } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 
 // Lands on the worktree's pane, or hands back the sentence saying why it could not. The empty string
@@ -99,7 +98,7 @@ export function openWorktrees(
 
         const pane = document.createElement('span');
         pane.className = 'worktrees-pane';
-        pane.textContent = entry.pane === null ? 'no pane' : paneLabel(entry.pane);
+        pane.textContent = worktreePaneText(entry);
 
         item.append(project, branch, age, dirtyCell, pane);
         // A click moves the selection to the row and then does what Enter does there, so the pointer
