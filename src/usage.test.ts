@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  FIVE_HOURS, formatTokens, paneTokens, projectTokens, ranInProject, retainFrom, snapshotOf,
+  barHeights, dailyTotals, FIVE_HOURS, formatTokens, NO_USAGE, sumDays, paneTokens, projectTokens, ranInProject, retainFrom, snapshotOf,
   sumTotals, TOKEN_COLUMNS, tokensOf,
   totalsOf, usageDiffers, weekStart, type FileUsage,
 } from './usage';
@@ -172,21 +172,81 @@ describe('snapshotOf', () => {
   });
 });
 
+describe('dailyTotals', () => {
+  const at = (day: number, hour: number) => new Date(2026, 8, 14 + day, hour).getTime();
+  const THURSDAY_NOON = at(3, 12);
+
+  it('puts each sample on its own day, Monday first, with the days to come left at nought', () => {
+    const files = [fileWith([
+      { at: at(0, 9), tokens: 5 }, { at: at(0, 23), tokens: 1 }, { at: at(2, 0), tokens: 7 },
+    ])];
+    expect(dailyTotals(files, THURSDAY_NOON)).toEqual([6, 0, 7, 0, 0, 0, 0]);
+  });
+
+  // Sunday night is last week, and the samples are kept only this far back. Drawing it would put
+  // last week's Sunday on the far end of this week's bars.
+  it('leaves out anything from before this Monday', () => {
+    const files = [fileWith([{ at: at(-1, 22), tokens: 50 }, { at: at(1, 8), tokens: 2 }])];
+    expect(dailyTotals(files, THURSDAY_NOON)).toEqual([0, 2, 0, 0, 0, 0, 0]);
+  });
+
+  it('adds every file up', () => {
+    const files = [fileWith([{ at: at(1, 8), tokens: 2 }]), fileWith([{ at: at(1, 9), tokens: 3 }])];
+    expect(dailyTotals(files, THURSDAY_NOON)[1]).toBe(5);
+  });
+});
+
+describe('snapshotOf days', () => {
+  it("draws each project's week from its own sessions", () => {
+    const project = '/work/api';
+    const file: FileUsage = {
+      size: 0, directory: project, session: 'a', allTime: 4, samples: [{ at: MONDAY_MORNING, tokens: 4 }],
+    };
+    const snapshot = snapshotOf([file], [{ path: project, worktrees: '/work/api.worktrees' }], new Map(), MONDAY_MORNING);
+    expect(snapshot.days[project]).toEqual([4, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe('barHeights', () => {
+  it('fills the box with the busiest day and scales the rest against it', () => {
+    expect(barHeights([2, 0, 4, 1])).toEqual([0.5, 0, 1, 0.25]);
+  });
+
+  // Not a division by nought: a quiet week is seven empty bars, not seven NaN heights.
+  it('draws nothing at all for a week nothing was spent in', () => {
+    expect(barHeights([0, 0, 0])).toEqual([0, 0, 0]);
+  });
+});
+
+describe('sumDays', () => {
+  it('adds every project up day by day', () => {
+    expect(sumDays([[1, 2, 0, 0, 0, 0, 0], [3, 0, 0, 0, 0, 0, 1]])).toEqual([4, 2, 0, 0, 0, 0, 1]);
+  });
+
+  it('is a quiet week when nothing is open', () => {
+    expect(sumDays([])).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
 describe('usageDiffers', () => {
   const totals = { fiveHours: 1, week: 2, allTime: 3 };
 
   it('says no to a sweep that read the same figures back', () => {
     expect(usageDiffers(
-      { projects: { '/p': totals }, panes: { '0-1': 5 } },
-      { projects: { '/p': { ...totals } }, panes: { '0-1': 5 } },
+      { projects: { '/p': totals }, days: {}, panes: { '0-1': 5 } },
+      { projects: { '/p': { ...totals } }, days: {}, panes: { '0-1': 5 } },
     )).toBe(false);
   });
 
   it('says yes to a figure that moved, and to a pane that came or went', () => {
     expect(usageDiffers(
-      { projects: { '/p': totals }, panes: {} },
-      { projects: { '/p': { ...totals, fiveHours: 2 } }, panes: {} },
+      { projects: { '/p': totals }, days: {}, panes: {} },
+      { projects: { '/p': { ...totals, fiveHours: 2 } }, days: {}, panes: {} },
     )).toBe(true);
-    expect(usageDiffers({ projects: {}, panes: {} }, { projects: {}, panes: { '0-1': 0 } })).toBe(true);
+    expect(usageDiffers(NO_USAGE, { ...NO_USAGE, panes: { '0-1': 0 } })).toBe(true);
+  });
+
+  it('says yes to a day of the trend that moved while the three figures did not', () => {
+    expect(usageDiffers({ ...NO_USAGE, days: { '/p': [1] } }, { ...NO_USAGE, days: { '/p': [2] } })).toBe(true);
   });
 });
