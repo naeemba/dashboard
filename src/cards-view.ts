@@ -148,11 +148,13 @@ export function createCardsView(options: CardsOptions): BoardView {
     },
     // Straight through to the one board whose file changed. It refuses a path that is not its own, so
     // handing it to every stacked board would do the same thing and read the file once per project.
-    close(): void {
-      for (const board of boards.values()) board.view.close();
-    },
     reload(projectPath: string): void {
       boards.get(projectPath)?.view.reload(projectPath);
+    },
+    // Nothing calls this today: the manager page is never closed, and open() closes the boards of
+    // projects that went away one at a time. It is here because the view type asks for it.
+    close(): void {
+      for (const board of boards.values()) board.view.close();
     },
     statusLabel(): string {
       const board = boards.get(activePath);

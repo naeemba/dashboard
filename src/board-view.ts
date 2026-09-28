@@ -50,6 +50,7 @@ import {
 import type { DashboardBridge } from './bridge';
 import { cardRows } from './card-search';
 import { confirmOverlay, searchOverlay } from './overlay';
+import { createNewestRead } from './newest-read';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
@@ -116,6 +117,9 @@ const MULTILINE: readonly EditableField[] = ['notes', 'comment'];
 // behind there, where nothing would fail and the selection would simply stop being scrolled to.
 export const SELECTED_CARD = '.board-card.selected';
 
+// What one read of the file came to, held until it is known whether that read is still the newest.
+type ReadOutcome = { fresh: boolean; next: BoardState; message: string; readWorked: boolean };
+
 export function createBoardView(options: BoardOptions): BoardView {
   const element = document.createElement('div');
   element.className = 'board';
@@ -130,14 +134,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   // different keys: a title has no newline to make, a description does.
   let editing: EditableField | null = null;
   // One number per read, because Ctrl+B Ctrl+T Ctrl+B can leave two reads running at once. The keys are
-  // dead until the newest read lands (`landedRead !== latestRead`), and a read that is no longer the
+  // dead until the newest read lands (`reads.pending()`), and a read that is no longer the
   // newest throws its result away. A single flag let the first read clear it, the keys go live, and the
   // second, older result then put back a card deleted in between — with `previous` nulled, so undo could
   // not get it back either.
-  let latestRead = 0;
-  let landedRead = 0;
-  // The newest read's answer, which an overtaken one hands on; see readAgain.
-  let newestRead: Promise<boolean> = Promise.resolve(false);
+  const reads = createNewestRead<ReadOutcome, boolean>();
   // This project's rows of the record, by card, rebuilt once per render. The badge comes from here
   // rather than from the board, because a card's column on main says what has been merged and says
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
@@ -180,12 +181,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   // manager, whose arrival reads every stacked board, stops short and leaves its card in Ship for good
   // with nothing on screen saying why.
   function readAgain(fresh: boolean): Promise<boolean> {
-    newestRead = readOnce(fresh);
-    return newestRead;
+    return reads.run(() => readOnce(fresh), landRead);
   }
 
-  async function readOnce(fresh: boolean): Promise<boolean> {
-    const token = ++latestRead;
+  async function readOnce(fresh: boolean): Promise<ReadOutcome> {
     let message = '';
     let next = state;
     let readWorked = false;
@@ -199,9 +198,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     } catch (error: unknown) {
       message = `Board not opened: ${String(error)}`;
     }
-    // A read another one has overtaken says nothing: the newer one is the board you asked for.
-    if (token !== latestRead) return newestRead;
-    landedRead = token;
+    return { fresh, next, message, readWorked };
+  }
+
+  // Runs only for the newest read; one another read overtook says nothing, since the newer one is the
+  // board you asked for.
+  function landRead({ fresh, next, message, readWorked }: ReadOutcome): boolean {
     // An arrival closes any open box: you asked to come here, and this is a different board. A file
     // that changed under you does not close it — what you have half typed is yours, and reloadBoard
     // has already followed your card to wherever the write put it. The redraw throws the box away and
@@ -271,7 +273,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // it here rather than writing the condition out a fourth time. What counts as busy is board-state's
   // to say, and board-state.test.ts is what pins it.
   function busy(): boolean {
-    return boardIsBusy(state, editing !== null, landedRead !== latestRead);
+    return boardIsBusy(state, editing !== null, reads.pending());
   }
 
   // A key that bounced has to say so when the bounce outlasts the keystroke. A box being open and a
@@ -281,7 +283,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // and stays that way for the session — so without a word here you press `n`, then `d`, then an
   // arrow, and nothing happens or ever will.
   function sayIfUnread(): void {
-    if (isUnreadForGood(state, landedRead !== latestRead)) {
+    if (isUnreadForGood(state, reads.pending())) {
       options.onError('This board was not read, so nothing may be saved over it. Leave this screen and come back to read it again.');
     }
   }
@@ -803,7 +805,6 @@ export function createBoardView(options: BoardOptions): BoardView {
     },
     // Somebody else wrote the file — the command line, or a hand edit — and main said so. The
     // keyboard is not touched: you did not ask to come here, you are already here.
-    close: stopListening,
     reload(projectPath: string): void {
       if (projectPath !== options.projectPath) return;
       // Read even with a box open. Refusing here dropped the write for good and then let the next
@@ -812,6 +813,8 @@ export function createBoardView(options: BoardOptions): BoardView {
       // readAgain carries the box across instead.
       void readAgain(false);
     },
+    // The project closed: stop hearing ships from the other view.
+    close: stopListening,
     statusLabel(): string {
       const column = state.board.columns[state.selection.column];
       if (!column) return '';
