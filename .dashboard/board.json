@@ -67,19 +67,21 @@
           "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
-          "title": "A board of the manager's own, kept in the home directory",
-          "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
-          "priority": "medium",
-          "parent": null
         }
       ]
     },
     {
       "name": "Ship",
-      "cards": []
+      "cards": [
+        {
+          "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
+          "title": "A board of the manager's own, kept in the home directory",
+          "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-09-28T11:51:16.058Z"
+        }
+      ]
     },
     {
       "name": "Doing",
