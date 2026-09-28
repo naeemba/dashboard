@@ -1,4 +1,5 @@
 import { clampIndex } from './clamp-index';
+import { isManagerPath } from './manager';
 import type { Direction } from './terminals';
 
 // Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
@@ -149,6 +150,16 @@ export type MoveGesture = Direction | 'drop';
 export function landsInShip(board: Board, from: number, moved: Selection, gesture: MoveGesture): boolean {
   const aimed = gesture === 'right' || gesture === 'drop';
   return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
+}
+
+// Whether a move starts a ship: it lands in Ship, and the board is one a card can be shipped from.
+// The manager's board is not. It reads without a Ship column, but one written into its file by hand is
+// kept with its cards, and a card moved into it stays there as it would in any column: there is no
+// repository behind the manager to make a worktree in.
+export function startsShip(
+  projectPath: string, board: Board, from: number, moved: Selection, gesture: MoveGesture,
+): boolean {
+  return !isManagerPath(projectPath) && landsInShip(board, from, moved, gesture);
 }
 
 // One column the board is missing, put in at `at`. The same board back when it already has one, so

@@ -22,6 +22,7 @@ import {
   isCommentBody,
   isDescendantOf,
   landsInShip,
+  startsShip,
   moveCard,
   moveCardById,
   moveCardToColumn,
@@ -43,6 +44,7 @@ import {
   type Priority,
   type ShipHome,
 } from './board';
+import { MANAGER_PROJECT } from './manager';
 
 function board(...columns: string[][]): Board {
   return {
@@ -352,6 +354,26 @@ describe('landsInShip', () => {
     expect(landsInShip(board, 0, { column: 0, card: 0 }, 'right')).toBe(false);
     const noShip = { columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }] };
     expect(landsInShip(noShip, 0, { column: 1, card: 0 }, 'right')).toBe(false);
+  });
+});
+
+// The one thing between a card on the manager's board and a worktree made with no project to make it
+// in. The manager's board has a Ship column only when somebody wrote one into its file by hand.
+describe('startsShip', () => {
+  const board = { columns: [{ name: 'Todo', cards: [] }, { name: SHIP_COLUMN, cards: [] }] };
+
+  it('starts one for a project whose card lands in Ship', () => {
+    expect(startsShip('/work/api', board, 0, { column: 1, card: 0 }, 'right')).toBe(true);
+    expect(startsShip('/work/api', board, 0, { column: 1, card: 0 }, 'drop')).toBe(true);
+  });
+
+  it('never starts one on the manager\'s board, even into a Ship column written by hand', () => {
+    expect(startsShip(MANAGER_PROJECT.path, board, 0, { column: 1, card: 0 }, 'right')).toBe(false);
+    expect(startsShip(MANAGER_PROJECT.path, board, 0, { column: 1, card: 0 }, 'drop')).toBe(false);
+  });
+
+  it('starts none for a project whose card does not land in Ship', () => {
+    expect(startsShip('/work/api', board, 1, { column: 0, card: 0 }, 'left')).toBe(false);
   });
 });
 
