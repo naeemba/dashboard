@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MANAGER_SLOT, alertSummary, canOpen, isAlerting, isProjectPage, landingPosition, lineKey,
+  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
   managerLines, managerRows, paneAge, positionAfterClose, projectPosition, slotOfLine, tailLines,
   takesAnswer,
   type PaneSummary,
@@ -309,5 +309,12 @@ describe('takesAnswer', () => {
   // middle of whatever it is running, from a page that was not showing you what it is running.
   it('refuses a pane that is not asking anything', () => {
     expect(takesAnswer(pane('quiet'))).toBe(false);
+  });
+});
+
+describe('isManagerPath', () => {
+  it('is true for the manager page\'s path and for no project\'s', () => {
+    expect(isManagerPath(MANAGER_PROJECT.path)).toBe(true);
+    expect(isManagerPath('/work/api')).toBe(false);
   });
 });

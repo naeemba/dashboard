@@ -15,6 +15,18 @@ export const MANAGER_SLOT = -1;
 // whose path is empty, so the manager cannot reach a saved layout even if something else lets it.
 export const MANAGER_PROJECT: Project = { name: 'manager', path: '', missing: false };
 
+// Whether this path is the manager's page, which has no repository behind it. The board asks it
+// because what a board can do there is less than what it can do in a project: nothing to ship a card
+// from, and no `board` command that reaches it. dashboard-folder asks it to put the manager's
+// .dashboard in the home directory.
+//
+// Here rather than beside dashboardFolder because the renderer asks it too, and dashboard-folder
+// imports node:os, which the renderer has no way to load. Written as MANAGER_PROJECT's own path, so
+// the empty path is read in one place: give the manager a real path one day and this follows.
+export function isManagerPath(projectPath: string): boolean {
+  return projectPath === MANAGER_PROJECT.path;
+}
+
 // The manager holds the first tab, so the earliest position a project can take is the one behind it.
 const FIRST_PROJECT_POSITION = 1;
 

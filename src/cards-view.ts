@@ -4,6 +4,7 @@ import { SELECTED_CARD, createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import { cardsProjects, type CardsPage } from './cards';
 import { clampIndex, heldIndex } from './clamp-index';
+import { MANAGER_PROJECT } from './manager';
 
 export type CardsOptions = {
   bridge: DashboardBridge;
@@ -48,8 +49,8 @@ export function createCardsView(options: CardsOptions): BoardView {
   let activeIndex = 0;
   // Which board the keys reach, held as its path rather than its position: a project opening in front
   // would otherwise slide them onto somebody else's board between you reading the screen and pressing
-  // a key. It starts on the manager's own, whose path is the empty one and which is always stacked first.
-  let activePath = '';
+  // a key. It starts on the manager's own, which is always stacked first.
+  let activePath = MANAGER_PROJECT.path;
 
   function boardFor(page: CardsPage): ProjectBoard {
     const existing = boards.get(page.project.path);
@@ -98,7 +99,7 @@ export function createCardsView(options: CardsOptions): BoardView {
 
   function setActive(index: number): void {
     activeIndex = index;
-    activePath = paths[index] ?? '';
+    activePath = paths[index] ?? MANAGER_PROJECT.path;
     markActive();
   }
 
