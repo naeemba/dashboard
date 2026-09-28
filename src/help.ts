@@ -121,8 +121,12 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'where the one you are holding would land. A click on a card moves the selection onto it and '
     + 'opens its title, which is what Enter does there. '
     + 'The manager has one of these too, and it is every open project\'s board at once, one under the '
-    + 'other. The same keys and the same writes — each project keeps its own undo — with two more that '
-    + 'say which project the rest of them are aimed at, and Escape to go back to the manager\'s list. '
+    + 'other, below a board of the manager\'s own. That first one is for tasks that belong to no one '
+    + 'project, and like the manager\'s notes it is kept in a .dashboard folder in your home directory, '
+    + 'out of every repository. It has no Ship column, since there is no repository behind it to make a '
+    + 'worktree in. The same keys and the same writes — each board keeps its own undo — with two more '
+    + 'that say which board the rest of them are aimed at, and Escape to go back to the manager\'s '
+    + 'list. '
     + 'Every pane also carries DASHBOARD_BOARD, the path to a command that lists cards and moves them '
     + 'from a shell: run `node "$DASHBOARD_BOARD"` in a project to see what it takes. It is how an '
     + 'agent working a card moves its own, and .dashboard/CLAUDE.md in each project spells it out.',
@@ -210,7 +214,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'between cards, and in the notes they move the caret.',
   modes: 'A project is shown four ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The manager has four sections of its own, named along the '
-    + 'top: its list of what the panes want, every project\'s board, one command run across '
+    + 'top: its list of what the panes want, a board of its own above every project\'s, one command run across '
     + 'projects, and a page of notes about none of them. Two of the four mode keys land on a section '
     + 'rather than doing nothing there — the board key and the notes key.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '

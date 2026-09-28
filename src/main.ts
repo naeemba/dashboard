@@ -67,6 +67,7 @@ import type { Settings } from './settings';
 import { moveCardById, shipColumnIndex, type Board } from './board';
 import { reviewSweep } from './review-flow';
 import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
+import { isManagerPath } from './manager';
 
 if (started) app.quit();
 
@@ -814,6 +815,9 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
 
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
   const { projectPath, cardId, title, slot } = request;
+  // The board already declines to ship from the manager's page. This is the second lock, for a caller
+  // that gets past it: with no project behind it, git would run in whatever folder the app started in.
+  if (isManagerPath(projectPath)) return { ok: false, message: `"${title}" is on the manager's board, which has no repository to ship from` };
   dropDeadWorktrees();
   // A card being shipped is a card whose last review, if it had one, is over. Left marked, the pull
   // request this ship goes on to open would never be reviewed for the rest of the run, with nothing

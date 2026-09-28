@@ -16,13 +16,28 @@ import {
   BROKEN_BOARD_FILE,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
+  boardPath,
   isManagerHomeDirectory,
+  openBoard,
   parseBoard,
   projectRoot,
   readBoard,
   seedBoardDirectory,
   writeBoard,
 } from './board-store';
+import { MANAGER_PROJECT } from './manager';
+
+// Runs a test with a fake home directory standing in for the real one, so nothing it writes lands in
+// the .dashboard of whoever runs the tests.
+function inFakeHome(test: (home: string) => void): void {
+  const home = project();
+  homedirOverride = home;
+  try {
+    test(home);
+  } finally {
+    homedirOverride = undefined;
+  }
+}
 
 // realpath, because on macOS the temporary folder is reached through a symlink and projectRoot
 // resolves it — a raw mkdtemp path would not compare equal to the answer.
@@ -69,29 +84,21 @@ describe('projectRoot', () => {
   // this boundary, a folder under $HOME that is neither a repository nor has a board of its own would
   // climb all the way there and be handed the manager's folder as if it were its project.
   it('never climbs into the home directory itself', () => {
-    const home = project();
-    mkdirSync(join(home, BOARD_DIRECTORY));
-    const deep = join(home, 'Downloads', 'stray');
-    mkdirSync(deep, { recursive: true });
-    homedirOverride = home;
-    try {
+    inFakeHome((home) => {
+      mkdirSync(join(home, BOARD_DIRECTORY));
+      const deep = join(home, 'Downloads', 'stray');
+      mkdirSync(deep, { recursive: true });
       expect(projectRoot(deep)).toBe(deep);
-    } finally {
-      homedirOverride = undefined;
-    }
+    });
   });
 });
 
 describe('isManagerHomeDirectory', () => {
   it('is true for the home directory itself, resolved the same way projectRoot resolves it', () => {
-    const home = project();
-    homedirOverride = home;
-    try {
+    inFakeHome((home) => {
       expect(isManagerHomeDirectory(home)).toBe(true);
       expect(isManagerHomeDirectory(join(home, 'Downloads'))).toBe(false);
-    } finally {
-      homedirOverride = undefined;
-    }
+    });
   });
 });
 
@@ -415,6 +422,45 @@ describe('seedBoardDirectory', () => {
     writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'mine');
     seedBoardDirectory(path);
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe('mine');
+  });
+});
+
+// The manager page's path is the empty one, and dashboard-folder.ts reads it as the home directory. A
+// fake home stands in for the real one, so no test writes a card into the .dashboard of whoever runs it.
+describe('the manager\'s own board', () => {
+  const manager = MANAGER_PROJECT.path;
+
+  it('is kept in the home directory\'s .dashboard, beside the manager\'s notes', () => {
+    inFakeHome((home) => expect(boardPath(manager)).toBe(join(home, BOARD_FILE_PATH)));
+  });
+
+  it('reads back what was written there', () => {
+    inFakeHome(() => {
+      const { board } = readBoard(manager);
+      board.columns[0].cards.push({ id: '1', title: 'renew the domain', notes: '', priority: 'high', parent: null });
+      writeBoard(manager, board);
+      expect(readBoard(manager).board.columns[0].cards.map((card) => card.title)).toEqual(['renew the domain']);
+    });
+  });
+
+  // No repository behind the manager, so nothing a card could be shipped into.
+  it('has no Ship column, new or read from the file', () => {
+    inFakeHome(() => {
+      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Todo', 'Doing', 'Review', 'Done']);
+      writeBoard(manager, readBoard(manager).board);
+      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Todo', 'Doing', 'Review', 'Done']);
+    });
+  });
+
+  // The explanation files describe a project's board and the `board` command, which refuses to run in
+  // the home directory.
+  it('is opened without seeding the explanation files, but with a folder to watch', () => {
+    inFakeHome((home) => {
+      openBoard(manager);
+      expect(existsSync(join(home, BOARD_DIRECTORY))).toBe(true);
+      expect(existsSync(join(home, BOARD_DIRECTORY, 'CLAUDE.md'))).toBe(false);
+      expect(existsSync(join(home, BOARD_DIRECTORY, 'README.md'))).toBe(false);
+    });
   });
 });
 

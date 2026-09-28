@@ -10,7 +10,7 @@ import {
   detachCard,
   dropCard,
   hasSubtasks,
-  landsInShip,
+  startsShip,
   moveCard,
   flightParts,
   moveSelection,
@@ -572,7 +572,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     const home = shipHome(state.board, from, shipsAway.away(options.projectPath));
     change(next);
     const landed = cardAt(state.board, state.selection);
-    if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
+    if (!moving || !landed) return;
+    if (startsShip(options.projectPath, state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
   }
 
   // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an

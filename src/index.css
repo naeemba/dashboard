@@ -613,17 +613,13 @@ textarea.board-edit {
   color: var(--brightBlack);
 }
 
-/* The manager's board: every open project's board, one under the other, in a single scroller. The rule
+/* The manager's board: its own and every open project's, one under the other, in a single scroller. The rule
    that dims an inactive project's selection lives with .board-card.selected, not here. */
 .cards {
   overflow-y: auto;
   padding: 2px;
   box-sizing: border-box;
   outline: none;
-}
-
-.cards .board-empty {
-  margin: 8px;
 }
 
 /* Each project's board is the real board view, so all that is said to it here is to stop being a screen

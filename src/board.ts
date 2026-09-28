@@ -1,4 +1,5 @@
 import { clampIndex } from './clamp-index';
+import { isManagerPath } from './manager';
 import type { Direction } from './terminals';
 
 // Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
@@ -151,6 +152,16 @@ export function landsInShip(board: Board, from: number, moved: Selection, gestur
   return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
 }
 
+// Whether a move starts a ship: it lands in Ship, and the board is one a card can be shipped from.
+// The manager's board is not. It reads without a Ship column, but one written into its file by hand is
+// kept with its cards, and a card moved into it stays there as it would in any column: there is no
+// repository behind the manager to make a worktree in.
+export function startsShip(
+  projectPath: string, board: Board, from: number, moved: Selection, gesture: MoveGesture,
+): boolean {
+  return !isManagerPath(projectPath) && landsInShip(board, from, moved, gesture);
+}
+
 // One column the board is missing, put in at `at`. The same board back when it already has one, so
 // reading a board is not a change to it. Both repairs below go through here rather than each spelling
 // the guard and the splice out: they differ only in where the column belongs, and a rule written twice
@@ -167,6 +178,15 @@ function withColumn(board: Board, name: string, at: number): Board {
 // card pays nothing for it.
 export function withShipColumn(board: Board): Board {
   return withColumn(board, SHIP_COLUMN, 1);
+}
+
+// The manager's board has nothing to ship from, so it has no Ship column to move a card into. Only an
+// empty one goes: a Ship column somebody wrote into the file by hand with cards in it stays, because
+// taking the column would take the cards with it.
+export function withoutEmptyShipColumn(board: Board): Board {
+  const ship = shipColumnIndex(board);
+  if (ship === -1 || board.columns[ship].cards.length > 0) return board;
+  return withColumns(board, board.columns.filter((_column, index) => index !== ship));
 }
 
 // The same repair for Review. Placed by the column it comes before rather than by a number, because

@@ -5,7 +5,7 @@ turn. Read this before re-litigating one of them.
 
 ## The three board-scope keys that do nothing on a project's board
 
-Board scope is wider than the manager's board. Two keys pick a project and one
+Board scope is wider than the manager's board. Two keys pick a board and one
 Escape goes back to the manager's list. All three are board scope, because the
 manager's board *is* a board. A project's own board therefore hears them too,
 where the first two have nowhere to go and Escape is swallowed by a
@@ -14,9 +14,9 @@ and they do nothing.
 
 Moving them was considered and rejected:
 
-- The two that pick a project do not move. `manager-page` is every section,
+- The two that pick a board do not move. `manager-page` is every section,
   so Cmd+Up on the general list, the command screen or the notes would swap
-  which project's board waits behind them, with nothing on screen saying so.
+  which board waits behind them, with nothing on screen saying so.
 - Escape does not move. `mode-manager` on `manager-page` puts it on the command
   screen, where `command-cancel` already holds it, and `actions.test.ts` fails
   on the clash.

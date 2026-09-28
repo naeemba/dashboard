@@ -22,6 +22,7 @@ import {
   isCommentBody,
   isDescendantOf,
   landsInShip,
+  startsShip,
   moveCard,
   moveCardById,
   moveCardToColumn,
@@ -37,11 +38,13 @@ import {
   sortColumn,
   withReviewColumn,
   withShipColumn,
+  withoutEmptyShipColumn,
   type Board,
   type Card,
   type Priority,
   type ShipHome,
 } from './board';
+import { MANAGER_PROJECT } from './manager';
 
 function board(...columns: string[][]): Board {
   return {
@@ -100,6 +103,25 @@ describe('the Ship column', () => {
   it('hands back the same board when Ship is already there', () => {
     const board = emptyBoard();
     expect(withShipColumn(board)).toBe(board);
+  });
+});
+
+describe('withoutEmptyShipColumn', () => {
+  it('takes an empty Ship out, leaving the other columns in their order', () => {
+    expect(withoutEmptyShipColumn(emptyBoard()).columns.map((column) => column.name))
+      .toEqual(['Todo', 'Doing', REVIEW_COLUMN, 'Done']);
+  });
+
+  // Taking the column would take the cards in it, and those are somebody's cards.
+  it('keeps a Ship column that has cards in it', () => {
+    const handWritten = { columns: [{ name: 'Todo', cards: [] }, board(['written by hand']).columns[0]] };
+    handWritten.columns[1].name = SHIP_COLUMN;
+    expect(withoutEmptyShipColumn(handWritten)).toBe(handWritten);
+  });
+
+  it('hands back the same board when there is no Ship to take', () => {
+    const board = { columns: [{ name: 'Todo', cards: [] }] };
+    expect(withoutEmptyShipColumn(board)).toBe(board);
   });
 });
 
@@ -332,6 +354,26 @@ describe('landsInShip', () => {
     expect(landsInShip(board, 0, { column: 0, card: 0 }, 'right')).toBe(false);
     const noShip = { columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }] };
     expect(landsInShip(noShip, 0, { column: 1, card: 0 }, 'right')).toBe(false);
+  });
+});
+
+// The one thing between a card on the manager's board and a worktree made with no project to make it
+// in. The manager's board has a Ship column only when somebody wrote one into its file by hand.
+describe('startsShip', () => {
+  const board = { columns: [{ name: 'Todo', cards: [] }, { name: SHIP_COLUMN, cards: [] }] };
+
+  it('starts one for a project whose card lands in Ship', () => {
+    expect(startsShip('/work/api', board, 0, { column: 1, card: 0 }, 'right')).toBe(true);
+    expect(startsShip('/work/api', board, 0, { column: 1, card: 0 }, 'drop')).toBe(true);
+  });
+
+  it('never starts one on the manager\'s board, even into a Ship column written by hand', () => {
+    expect(startsShip(MANAGER_PROJECT.path, board, 0, { column: 1, card: 0 }, 'right')).toBe(false);
+    expect(startsShip(MANAGER_PROJECT.path, board, 0, { column: 1, card: 0 }, 'drop')).toBe(false);
+  });
+
+  it('starts none for a project whose card does not land in Ship', () => {
+    expect(startsShip('/work/api', board, 1, { column: 0, card: 0 }, 'left')).toBe(false);
   });
 });
 
