@@ -90,6 +90,10 @@
     },
     {
       "name": "Doing",
+      "cards": []
+    },
+    {
+      "name": "Review",
       "cards": [
         {
           "id": "644f5b24-4554-4f97-a450-c45dacd6e408",
@@ -98,13 +102,11 @@
           "priority": "medium",
           "parent": null,
           "createdAt": "2026-09-28T10:21:13.606Z",
-          "updatedAt": "2026-09-28T10:21:13.606Z"
+          "updatedAt": "2026-09-28T10:21:40.063Z",
+          "branch": "readboard-turns-a-failed-read-into-an-empty",
+          "pullRequest": 62
         }
       ]
-    },
-    {
-      "name": "Review",
-      "cards": []
     },
     {
       "name": "Done",
