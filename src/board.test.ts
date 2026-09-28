@@ -38,7 +38,9 @@ import {
   withReviewColumn,
   withShipColumn,
   type Board,
+  type Card,
   type Priority,
+  type ShipHome,
 } from './board';
 
 function board(...columns: string[][]): Board {
@@ -228,25 +230,53 @@ describe('returnFromShip', () => {
     expect(returnFromShip(gone, card('b'), landed, home)).toBeNull();
   });
 
-  // Ship a, then b, from [a, b, c]. Both were taken from row 0. If a's ship finishes first and rows were
-  // all there was to go on, a lands at row 0 of [c] and then b at row 0 of [a, c]: the column comes
-  // back as [b, a, c] and the file is not what it was.
-  it('puts two ships from one column back in their own order, whichever finishes first', () => {
-    const homeOfA = shipHome(before, { column: 0, card: 0 });
-    const afterA = moveCardToColumn(before, { column: 0, card: 0 }, 1).board;
-    const landedA = afterA.columns[1].cards[0];
-    const homeOfB = shipHome(afterA, { column: 0, card: 0 });
-    const afterB = moveCardToColumn(afterA, { column: 0, card: 0 }, 1).board;
-    const landedB = afterB.columns[1].cards[1];
+  // Ship one card, then another from the same column while the first is still out, and let them come
+  // back in either order. Rows alone put [a, b, c] back as [b, a, c]; the cards below alone as
+  // [a, c, b]. Every pair and every finish order has to leave the file as it was.
+  const ids = ['a', 'b', 'c', 'd'];
+  const column: Board = {
+    columns: [
+      { name: 'Todo', cards: ids.map(card) },
+      { name: SHIP_COLUMN, cards: [] },
+    ],
+  };
+  type Away = { id: string; landed: Card; home: ShipHome };
 
-    const bBack = returnFromShip(afterB, card('b'), landedB, homeOfB)!.board;
-    const bothBack = returnFromShip(bBack, card('a'), landedA, homeOfA)!.board;
-    expect(JSON.stringify(bothBack)).toBe(JSON.stringify(before));
+  function shipAll(order: string[]): { board: Board; away: Away[] } {
+    let board = column;
+    const away: Away[] = [];
+    for (const id of order) {
+      const from = selectionOf(board, id)!;
+      const home = shipHome(board, from, away.map((entry) => entry.home));
+      board = moveCardToColumn(board, from, 1).board;
+      away.push({ id, landed: board.columns[1].cards.at(-1)!, home });
+    }
+    return { board, away };
+  }
 
-    const aBack = returnFromShip(afterB, card('a'), landedA, homeOfA)!.board;
-    const bothBackOtherWay = returnFromShip(aBack, card('b'), landedB, homeOfB)!.board;
-    expect(JSON.stringify(bothBackOtherWay)).toBe(JSON.stringify(before));
-  });
+  function permutations(items: string[]): string[][] {
+    if (items.length <= 1) return [items];
+    return items.flatMap((item, index) =>
+      permutations([...items.slice(0, index), ...items.slice(index + 1)]).map((rest) => [item, ...rest]));
+  }
+
+  const pairs = ids.flatMap((first) => ids.filter((second) => second !== first).map((second) => [first, second]));
+  const triples = permutations(ids).map((order) => order.slice(0, 3));
+
+  it.each([...pairs, ...triples].map((shipped) => [shipped.join(' then ')]))(
+    'puts ships %s from one column back as they were, whichever finishes first',
+    (label) => {
+      const { board, away } = shipAll(label.split(' then '));
+      for (const finish of permutations(away.map((entry) => entry.id))) {
+        let back = board;
+        for (const id of finish) {
+          const entry = away.find((candidate) => candidate.id === id)!;
+          back = returnFromShip(back, card(id), entry.landed, entry.home)!.board;
+        }
+        expect(JSON.stringify(back), `finished ${finish.join(', ')}`).toBe(JSON.stringify(column));
+      }
+    },
+  );
 });
 
 // The condition that decides whether a keystroke starts an agent. It was composed inline in the view,

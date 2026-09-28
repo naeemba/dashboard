@@ -138,6 +138,9 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
+  // Where each ship not yet back came from. A second ship from the same column needs the first one's
+  // home to know where it stood — shipHome says why.
+  let shipsAway: ShipHome[] = [];
   // The card carrying the line that says where a dragged card would land, and the frame that will draw
   // it. Held rather than searched for: a dragover fires on every mouse movement, and looking the marked
   // card up by its own class each time walks every node on the board — on the manager that is every
@@ -545,7 +548,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // on a card the keyboard is not on.
   function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
     const moving = cardAt(state.board, from);
-    const home = shipHome(state.board, from);
+    const home = shipHome(state.board, from, shipsAway);
     change(next);
     const landed = cardAt(state.board, state.selection);
     if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
@@ -677,6 +680,8 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   function ship(before: Card, landed: Card, home: ShipHome): void {
     options.onError(`shipping "${before.title}"…`);
+    shipsAway = [...shipsAway, home];
+    const forgetHome = (): void => { shipsAway = shipsAway.filter((entry) => entry !== home); };
     options.bridge.shipCard({
       projectPath: options.projectPath,
       cardId: before.id,
@@ -684,6 +689,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       slot: options.slot,
     }).then(
       (result) => {
+        forgetHome();
         if (!result.ok) return options.onError(result.message);
         options.onError('');
         // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
@@ -692,7 +698,10 @@ export function createBoardView(options: BoardOptions): BoardView {
         if (moved) apply(applyAutomaticChange(state, moved));
         else render();
       },
-      (error: unknown) => options.onError(`ship failed: ${String(error)}`),
+      (error: unknown) => {
+        forgetHome();
+        options.onError(`ship failed: ${String(error)}`);
+      },
     );
   }
 
