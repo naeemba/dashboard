@@ -12,10 +12,10 @@ import {
   hasSubtasks,
   landsInShip,
   moveCard,
-  moveCardToColumn,
   flightParts,
   moveSelection,
   pullRequestFrom,
+  returnFromShip,
   selectionOf,
   sortColumn,
   type Card,
@@ -544,7 +544,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
     const moving = cardAt(state.board, from);
     change(next);
-    if (moving && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, from.column);
+    const landed = cardAt(state.board, state.selection);
+    if (moving && landed && landsInShip(state.board, from.column, state.selection, gesture)) ship(moving, landed, from);
   }
 
   // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
@@ -645,12 +646,13 @@ export function createBoardView(options: BoardOptions): BoardView {
     });
   }
 
-  // A card that has landed in Ship, and `from` is the column it was in a keystroke ago.
+  // A card that has landed in Ship: `before` is the card as it was a keystroke ago, `landed` the card
+  // the move made, and `home` the row it came from.
   //
   // A ship that works puts the card back there, carrying its badge: this board is main's, and a
-  // column on main says what has been merged. That move writes board.json like any other, and goes
-  // through applyAutomaticChange rather than change() because it is the app's move and not yours —
-  // board-state.ts holds the reason.
+  // column on main says what has been merged. returnFromShip says why it goes back to its own row as it
+  // was. That move goes through applyAutomaticChange rather than change() because it is the app's move
+  // and not yours — board-state.ts holds the reason.
   //
   // A ship that fails changes nothing. The card stays in Ship where you put it and the message says
   // why; the app never silently undoes a move you made.
@@ -663,14 +665,14 @@ export function createBoardView(options: BoardOptions): BoardView {
   // typing into, and taking the moved card's would commit what you typed onto the card that just
   // shipped and leave the one you were naming blank. Found by id rather than kept as a number, because
   // the move it is riding on has just shifted the rows below it.
-  function movedBack(landed: Selection, from: number): Change {
-    const moved = moveCardToColumn(state.board, landed, from);
+  function movedBack(before: Card, landed: Card, home: Selection): Change | null {
+    const moved = returnFromShip(state.board, before, landed, home);
     const editingId = editingCardId();
-    if (editingId === undefined) return moved;
+    if (moved === null || editingId === undefined) return moved;
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
 
-  function ship(card: Card, from: number): void {
+  function ship(card: Card, landed: Card, home: Selection): void {
     options.onError(`shipping "${card.title}"…`);
     options.bridge.shipCard({
       projectPath: options.projectPath,
@@ -681,10 +683,10 @@ export function createBoardView(options: BoardOptions): BoardView {
       (result) => {
         if (!result.ok) return options.onError(result.message);
         options.onError('');
-        // Found again rather than remembered: a ship takes as long as git does, and anything you did
-        // to the board while it ran has moved the card off the row it was shipped from.
-        const landed = selectionOf(state.board, card.id);
-        if (landed) apply(applyAutomaticChange(state, movedBack(landed, from)));
+        // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
+        // anything you did to the board while it ran has moved the card off the row it landed on.
+        const moved = movedBack(card, landed, home);
+        if (moved) apply(applyAutomaticChange(state, moved));
         else render();
       },
       (error: unknown) => options.onError(`ship failed: ${String(error)}`),

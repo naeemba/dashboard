@@ -502,6 +502,33 @@ export function moveCardToColumn(board: Board, selection: Selection, target: num
   return relocateCard(board, selection, card, target, board.columns[target].cards.length);
 }
 
+// A ship that worked, undone on main's board: the card goes back to the row it was shipped from. The
+// worktree's board is where the ship is recorded, and main's is what the next `git pull` merges into —
+// leave the round trip in it and every ship ends with board.json dirty and that pull in conflict.
+//
+// `before` is the card as it was, `landed` the card the move into Ship made. Nothing touched since
+// the move puts `before` back, stamp and all, so the file comes out exactly as it went in. A card
+// edited while the ship ran keeps the edit and still goes home.
+//
+// Null when there is nothing to do: the card has gone, or is already back in its column because you
+// put it there yourself while git ran.
+export function returnFromShip(board: Board, before: Card, landed: Card, home: Selection): Change | null {
+  const at = selectionOf(board, landed.id);
+  if (!at || at.column === home.column || !board.columns[home.column]) return null;
+  const current = board.columns[at.column].cards[at.card];
+  const untouched = JSON.stringify(current) === JSON.stringify(landed);
+  const leaving = board.columns[at.column].cards.filter((_entry, row) => row !== at.card);
+  const arriving = [...board.columns[home.column].cards];
+  const row = clampIndex(home.card, arriving.length);
+  arriving.splice(row, 0, untouched ? before : current);
+  const columns = board.columns.map((column, index) => {
+    if (index === at.column) return { ...column, cards: leaving };
+    if (index === home.column) return { ...column, cards: arriving };
+    return column;
+  });
+  return { board: withColumns(board, columns), selection: { column: home.column, card: row } };
+}
+
 // Where a pointer puts a card: a column, and a row in that column. A keystroke never needs to say the
 // row — Shift+Arrow walks one step and the step is the answer — so this is the one move that takes it.
 //

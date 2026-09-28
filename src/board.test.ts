@@ -28,6 +28,7 @@ import {
   moveSelection,
   pullRequestFrom,
   renameCard,
+  returnFromShip,
   reviewColumnIndex,
   selectionOf,
   setNotes,
@@ -179,6 +180,50 @@ describe('moveCardToColumn', () => {
     expect(moveCardToColumn(board, { column: 0, card: 0 }, 0).board).toBe(board);
     expect(moveCardToColumn(board, { column: 0, card: 0 }, 9).board).toBe(board);
     expect(moveCardToColumn(board, { column: 1, card: 0 }, 2).board).toBe(board);
+  });
+});
+
+// A ship that worked, on main's board. The file there is what the next `git pull` merges into, so the
+// round trip into Ship and back has to leave it exactly as it was — or every ship leaves board.json
+// dirty and the pull after it conflicts.
+describe('returnFromShip', () => {
+  const card = (id: string) => ({ id, title: id, notes: '', priority: 'medium' as const, parent: null });
+  const before: Board = {
+    columns: [
+      { name: 'Todo', cards: [card('a'), card('b'), card('c')] },
+      { name: SHIP_COLUMN, cards: [] },
+    ],
+  };
+  const shipped = moveCardToColumn(before, { column: 0, card: 1 }, 1).board;
+  const landed = shipped.columns[1].cards[0];
+
+  it('puts the card back in its row, as it was, so the file comes out byte for byte the same', () => {
+    const back = returnFromShip(shipped, card('b'), landed, { column: 0, card: 1 });
+    expect(JSON.stringify(back?.board)).toBe(JSON.stringify(before));
+    expect(back?.selection).toEqual({ column: 0, card: 1 });
+  });
+
+  it('keeps an edit made while the ship ran, and still takes the card home', () => {
+    const renamed = renameCard(shipped, { column: 1, card: 0 }, 'renamed').board;
+    const back = returnFromShip(renamed, card('b'), landed, { column: 0, card: 1 });
+    expect(back?.board.columns[0].cards[1].title).toBe('renamed');
+    expect(back?.board.columns[1].cards).toEqual([]);
+  });
+
+  it('lands last when the column has shrunk under the row it came from', () => {
+    const shrunk = deleteCard(deleteCard(shipped, { column: 0, card: 1 }).board, { column: 0, card: 0 }).board;
+    const back = returnFromShip(shrunk, card('b'), landed, { column: 0, card: 1 });
+    expect(back?.board.columns[0].cards.map((entry) => entry.id)).toEqual(['b']);
+  });
+
+  it('leaves a card you already moved home yourself where you put it', () => {
+    const moved = moveCardToColumn(shipped, { column: 1, card: 0 }, 0).board;
+    expect(returnFromShip(moved, card('b'), landed, { column: 0, card: 1 })).toBeNull();
+  });
+
+  it('answers null for a card that is no longer on the board', () => {
+    const gone = deleteCard(shipped, { column: 1, card: 0 }).board;
+    expect(returnFromShip(gone, card('b'), landed, { column: 0, card: 1 })).toBeNull();
   });
 });
 
