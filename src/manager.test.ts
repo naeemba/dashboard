@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
-  managerLines, managerRows, paneAge, positionAfterClose, projectPosition, slotOfLine, tailLines,
+  managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
   takesAnswer,
   type PaneSummary,
 } from './manager';
@@ -290,6 +290,18 @@ describe('slotOfLine', () => {
   it('gives a pane row the project it sits under, which is what the close key is aimed at', () => {
     expect(slotOfLine({ kind: 'project', row, open: false })).toBe(2);
     expect(slotOfLine({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe(2);
+  });
+});
+
+describe('removableWorktree', () => {
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+
+  // The key removes a folder, so a row that does not name one gives it nothing to act on.
+  it('gives the removal key a worktree row\'s worktree, and nothing on a project or a pane', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix-it', '2026-01-01T00:00:00Z');
+    expect(removableWorktree({ kind: 'worktree', slot: 2, entry })).toBe(entry);
+    expect(removableWorktree({ kind: 'project', row, open: false })).toBeNull();
+    expect(removableWorktree({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBeNull();
   });
 });
 

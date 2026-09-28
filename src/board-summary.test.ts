@@ -26,6 +26,12 @@ describe('columnCounts', () => {
     const counted = columnCounts(board({ Todo: [card('a'), card('b', { parent: 'a' }), card('c', { parent: 'a' })] }));
     expect(counted).toEqual([{ name: 'Todo', count: 1 }]);
   });
+
+  // Otherwise the piece in hand shows no Doing at all while its parent waits in Todo.
+  it('counts a subtask that has moved to a column its parent is not in', () => {
+    const counted = columnCounts(board({ Todo: [card('a'), card('b', { parent: 'a' })], Doing: [card('c', { parent: 'a' })] }));
+    expect(counted).toEqual([{ name: 'Todo', count: 1 }, { name: 'Doing', count: 1 }]);
+  });
 });
 
 describe('recentActivity', () => {

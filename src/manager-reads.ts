@@ -6,8 +6,9 @@ import type { Board } from './board';
 // never waits on a disk or on git.
 //
 // Kept fresh by asking again once an answer is old, rather than by listening for every way it could
-// change. A board edited on the board screen is written by the app itself, which main does not report
-// back, so an answer this old is the only thing that would ever notice it.
+// change. Both of the list's draws ask — the full one and the timer's in-place one — so an answer goes
+// old at most one timer tick past its age while the page is only being watched. The app's own board
+// writes are reported to boardChanged as they land, so a card moved on screen is not left to the age.
 
 // A board read this long ago is read again the next time the list is drawn. Short, because a card you
 // moved on the board screen should have moved here by the time you arrive.
@@ -34,14 +35,28 @@ export type Dirtiness = { checked: boolean; dirty: ReadonlySet<string>; unreadab
 // Before the first check has come back, and after one that failed.
 const UNKNOWN: Dirtiness = { checked: false, dirty: new Set(), unreadable: new Set() };
 
+function sameSet(first: ReadonlySet<string>, second: ReadonlySet<string>): boolean {
+  return first.size === second.size && [...first].every((path) => second.has(path));
+}
+
+// Whether two answers would draw the same list. A check that turns a known answer into unknown is a
+// change: every row goes back to `…`.
+export function sameDirtiness(first: Dirtiness, second: Dirtiness): boolean {
+  return first.checked === second.checked
+    && sameSet(first.dirty, second.dirty)
+    && sameSet(first.unreadable, second.unreadable);
+}
+
 export type ManagerReads = {
   // The last board read for this project, or undefined before the first read has landed.
   boardOf(projectPath: string): Board | undefined;
   dirtiness(): Dirtiness;
-  // Asks again for whatever is missing or old. Called on every draw, so it has to be cheap when
+  // Asks again for whatever is missing or old. Called on every draw, and from the timer's in-place
+  // redraw, so it has to be cheap when
   // nothing is due. A project not in `projectPaths` has closed, and its board is dropped.
   refresh(projectPaths: readonly string[], worktreePaths: readonly string[]): void;
-  // Something outside the app wrote this project's board: read it now, however fresh the last read.
+  // Something wrote this project's board — the app or anything outside it: read it now, however
+  // fresh the last read.
   boardChanged(projectPath: string): void;
   // A worktree was removed from here: check the rest again on the next draw.
   forgetDirtiness(): void;
@@ -90,6 +105,7 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
   function checkDirtiness(worktreePaths: readonly string[]): void {
     checking = true;
     const about = worktreePaths.join('\n');
+    const before = dirtiness;
     ports.dirtyWorktrees()
       .then((result) => {
         dirtiness = { checked: true, dirty: new Set(result.dirty), unreadable: new Set(result.unreadable) };
@@ -103,7 +119,8 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
         checking = false;
         dirtyAt = ports.now();
         dirtyAbout = about;
-        ports.onRead();
+        // The same answer again redraws nothing, as a board read that finds nothing new does not.
+        if (!sameDirtiness(before, dirtiness)) ports.onRead();
       });
   }
 

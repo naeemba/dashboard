@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Board } from './board';
-import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, isStale } from './manager-reads';
+import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, isStale, sameDirtiness } from './manager-reads';
 
 // A read that settles only when the test says so, so the order things land in is the test's to pick.
 function deferred<Value>() {
@@ -44,6 +44,19 @@ describe('isStale', () => {
     expect(isStale(undefined, 10, 5)).toBe(true);
     expect(isStale(0, 5, 5)).toBe(true);
     expect(isStale(1, 5, 5)).toBe(false);
+  });
+});
+
+describe('sameDirtiness', () => {
+  const answer = (dirty: string[], unreadable: string[] = [], checked = true) => (
+    { checked, dirty: new Set(dirty), unreadable: new Set(unreadable) }
+  );
+
+  it('matches answers that would draw the same list, and nothing else', () => {
+    expect(sameDirtiness(answer(['/a', '/b']), answer(['/b', '/a']))).toBe(true);
+    expect(sameDirtiness(answer(['/a']), answer(['/b']))).toBe(false);
+    expect(sameDirtiness(answer([], ['/a']), answer([]))).toBe(false);
+    expect(sameDirtiness(answer([]), answer([], [], false))).toBe(false);
   });
 });
 
@@ -156,5 +169,24 @@ describe('createManagerReads', () => {
     dirtyChecks[1].reject(new Error('git gone'));
     await settle();
     expect(reads.dirtiness().checked).toBe(false);
+  });
+
+  // Otherwise every check rebuilds the whole list under you to show the same thing.
+  it('draws again only when a check answers differently from the last one', async () => {
+    const { reads, dirtyChecks, onRead, advance } = harness();
+    reads.refresh([], ['/w']);
+    dirtyChecks[0].resolve({ dirty: ['/w'], unreadable: [] });
+    await settle();
+    expect(onRead).toHaveBeenCalledTimes(1);
+    advance(DIRTY_STALE_MS);
+    reads.refresh([], ['/w']);
+    dirtyChecks[1].resolve({ dirty: ['/w'], unreadable: [] });
+    await settle();
+    expect(onRead).toHaveBeenCalledTimes(1);
+    advance(DIRTY_STALE_MS);
+    reads.refresh([], ['/w']);
+    dirtyChecks[2].reject(new Error('git gone'));
+    await settle();
+    expect(onRead).toHaveBeenCalledTimes(2);
   });
 });

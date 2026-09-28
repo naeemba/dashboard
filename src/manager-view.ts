@@ -3,7 +3,7 @@ import { relativeAge } from './age';
 import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, slotOfLine, takesAnswer,
+  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, removableWorktree, slotOfLine, takesAnswer,
   type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { countChips, createActivity, createOverview, trendBars } from './manager-panels';
@@ -136,15 +136,18 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   buildVersion.textContent = `v${APP_VERSION}`;
   element.append(overview.element, empty, body, buildVersion);
 
-  // How many of the worktrees on the list the last check found uncommitted work in.
-  function dirtyCount(rows: readonly ManagerRow[]): number {
-    const { dirty } = options.reads.dirtiness();
-    return rows.reduce((total, row) => total + row.worktrees.filter((entry) => dirty.has(entry.worktreePath)).length, 0);
+  // Asked by both draws, and cheap when nothing is due: manager-reads.ts decides what is old. The
+  // timer's draw asking too is what keeps the counts moving while the page is only watched.
+  function askReads(rows: readonly ManagerRow[]): void {
+    options.reads.refresh(
+      rows.map((row) => row.path),
+      rows.flatMap((row) => row.worktrees.map((entry) => entry.worktreePath)),
+    );
   }
 
   // Everything on the page that is not the list, from one place: both draws want it.
   function drawPanels(rows: readonly ManagerRow[]): void {
-    overview.draw(rows, dirtyCount(rows));
+    overview.draw(rows, options.reads.dirtiness());
     activity.draw(recentActivity(rows.flatMap((row) => {
       const board = options.reads.boardOf(row.path);
       return board ? [{ project: row.name, board }] : [];
@@ -158,8 +161,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
 
   function writeDirty(cell: Element | null | undefined, entry: WorktreeEntry): void {
     if (!cell) return;
-    const { checked, dirty, unreadable } = options.reads.dirtiness();
-    cell.textContent = dirtyLabel(entry.worktreePath, checked, dirty, unreadable);
+    const { dirty, unreadable } = options.reads.dirtiness();
+    cell.textContent = dirtyText(entry);
     cell.classList.toggle('is-dirty', dirty.has(entry.worktreePath));
     cell.classList.toggle('unreadable', unreadable.has(entry.worktreePath));
   }
@@ -265,7 +268,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     branch.textContent = entry.branch;
     const title = document.createElement('span');
     title.className = 'manager-worktree-title';
-    title.textContent = entry.reviewing ? `review · ${entry.title}` : entry.title;
+    title.textContent = entry.reviewing ? `reviewing · ${entry.title}` : entry.title;
     const dirty = document.createElement('span');
     dirty.className = 'manager-dirty';
     writeDirty(dirty, entry);
@@ -337,8 +340,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     if (line.kind === 'pane') return options.onJump(line.slot, line.pane.index);
     // A worktree with no pane, or in a project closed since, says so rather than looking like a key
     // that did nothing. A landing that worked takes back whatever the last one said.
-    if (line.kind === 'worktree') return options.onError(options.onJumpWorktree(line.entry));
-    toggle(line.row);
+    // Redrawn either way, so a click on a worktree that cannot be landed on still moves the highlight
+    // to it; a landing that worked has left this page already.
+    if (line.kind === 'worktree') options.onError(options.onJumpWorktree(line.entry));
+    else toggle(line.row);
     options.onChanged();
   }
 
@@ -359,11 +364,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   return {
     element,
     render(rows: readonly ManagerRow[]): void {
-      // Asked on every draw, and cheap when nothing is due: manager-reads.ts decides what is old.
-      options.reads.refresh(
-        rows.map((row) => row.path),
-        rows.flatMap((row) => row.worktrees.map((entry) => entry.worktreePath)),
-      );
+      askReads(rows);
       relayout(rows);
       const anyOpen = rows.length > 0;
       empty.hidden = anyOpen;
@@ -402,6 +403,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Ahead of the check below, because the overview and the activity are not rows: they add up
       // every open project whatever the list underneath is doing, so a sweep that lands while a
       // row is opening still moves them.
+      askReads(rows);
       drawPanels(rows);
       const fresh = managerLines(rows, opened);
       const sameRows = fresh.length === lines.length
@@ -457,10 +459,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);
       if (action.kind === 'manager-open') return open();
-      // Only a worktree row has anything to remove. On a project or a pane the key does nothing.
+      // manager.ts says which lines the removal key acts on.
       if (action.kind === 'manager-remove') {
-        const line = lines[selected];
-        if (line?.kind === 'worktree') options.onRemoveWorktree(line.entry);
+        const entry = lines[selected] ? removableWorktree(lines[selected]) : null;
+        if (entry) options.onRemoveWorktree(entry);
         return;
       }
       // A pane row closes its project, rather than doing nothing: the close key is aimed at a project

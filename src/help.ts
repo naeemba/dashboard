@@ -172,7 +172,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Claude Code agent carries what that agent has cost, under the last of the three. They are read '
     + 'out of Claude Code\'s own logs on this machine and refresh every half minute. The four figures '
     + 'along the top add every open project up — the three windows, the week as bars, and how many '
-    + 'worktrees are out and how many of those hold uncommitted work. '
+    + 'worktrees are out, how many of those hold uncommitted work, and how many git could not answer for. '
     + 'Beside each project\'s name is what its board holds, one pill per column, leaving Done out. '
     + 'Under it are the worktrees made for its cards, open or shut: the branch, the card, whether it '
     + 'is clean or dirty, and the pane it runs in. Enter on one goes to that pane; the remove key '

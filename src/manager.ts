@@ -253,6 +253,12 @@ export function slotOfLine(line: ManagerLine): number {
   return line.kind === 'project' ? line.row.slot : line.slot;
 }
 
+// What the removal key acts on from this line: the worktree on a worktree row, and nothing on a
+// project or a pane row. The key removes a folder, so it only fires where the row names that folder.
+export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
+  return line.kind === 'worktree' ? line.entry : null;
+}
+
 // What the selection is on, as one string. A project is its slot; a pane is the same slot-and-index
 // pair every pane in the app is already named by, so there is no second spelling of a pane's id.
 // A worktree is its folder, which is what every other screen names one by, and the prefix keeps it

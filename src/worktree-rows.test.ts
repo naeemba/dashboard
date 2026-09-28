@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dirtyLabel, orderedWorktrees, worktreePaneText } from './worktree-rows';
+import { dirtyLabel, dirtySummary, orderedWorktrees, worktreePaneText } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
 
 function entry(cardId: string, startedAt: string): WorktreeEntry {
@@ -58,5 +58,29 @@ describe('worktreePaneText', () => {
   it('names the pane the agent runs in, or says there is none', () => {
     expect(worktreePaneText(entry('a', '2026-09-01T00:00:00Z'))).toBe('no pane');
     expect(worktreePaneText({ ...entry('a', '2026-09-01T00:00:00Z'), pane: 2 })).toBe('terminal 3');
+  });
+});
+
+describe('dirtySummary', () => {
+  const paths = ['/w/one', '/w/two', '/w/three'];
+  const none = new Set<string>();
+
+  it('claims nothing before the first answer has come back', () => {
+    expect(dirtySummary(paths, false, new Set(['/w/one']), none)).toEqual({ text: 'checking…', attention: false });
+  });
+
+  it('says nothing is uncommitted only when every worktree was answered for clean', () => {
+    expect(dirtySummary(paths, true, none, none)).toEqual({ text: 'nothing uncommitted', attention: false });
+  });
+
+  // A worktree git could not read is not a clean one.
+  it('counts the dirty and the unknown apart, and asks to be looked at for either', () => {
+    expect(dirtySummary(paths, true, new Set(['/w/one']), new Set(['/w/two'])))
+      .toEqual({ text: '1 with uncommitted changes · 1 unknown', attention: true });
+    expect(dirtySummary(paths, true, none, new Set(['/w/two']))).toEqual({ text: '1 unknown', attention: true });
+  });
+
+  it('leaves out an answer about a worktree that is not on the list', () => {
+    expect(dirtySummary(['/w/one'], true, new Set(['/gone']), none).text).toBe('nothing uncommitted');
   });
 });

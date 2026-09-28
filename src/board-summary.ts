@@ -9,16 +9,20 @@ export type ColumnCount = { name: string; count: number };
 // One figure per column that has anything in it, in the board's own order, so `2 Doing · 1 Review`
 // reads left to right the way the board does. Done is left out: it only ever grows, and a `214 Done`
 // on every row would be the widest thing on it while saying nothing about today.
-// Only cards with no parent are counted. A card split into six subtasks is one piece of work, and
-// counting the subtasks would make it look like seven.
+// A subtask sitting in its parent's column is not counted: a card split into six subtasks is one
+// piece of work, and counting them would make it look like seven. A subtask moved on to a column of
+// its own is counted there, or a card in Todo with a piece in Review would show no Review at all.
 export function columnCounts(board: Board): ColumnCount[] {
   const done = columnNamed(board, DONE_COLUMN);
   return board.columns
     .filter((_column, index) => index !== done)
-    .map((column) => ({
-      name: column.name,
-      count: column.cards.filter((card) => card.parent === null).length,
-    }))
+    .map((column) => {
+      const here = new Set(column.cards.map((card) => card.id));
+      return {
+        name: column.name,
+        count: column.cards.filter((card) => card.parent === null || !here.has(card.parent)).length,
+      };
+    })
     .filter((column) => column.count > 0);
 }
 

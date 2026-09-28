@@ -52,6 +52,8 @@ export type ManagerPageOptions = {
   onAnswer(slot: number, index: number, key: string): void;
   onClose(slot: number): void;
   onSection(mode: Mode): void;
+  // The app's own board writes, which main does not report back as a change.
+  onBoardWrite(listener: (projectPath: string) => void): void;
   // One typed command across the marked projects: as its own process, or typed into a free pane. The
   // second answers with what it did to each — which panes took the line and which had none free — and
   // the command screen is what says so.
@@ -76,6 +78,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   // Its own listener rather than the renderer's: that one only tells the page in front while it
   // shows a board, and the list's counts go stale just the same while it shows the list.
   options.bridge.onBoardChange(reads.boardChanged);
+  options.onBoardWrite(reads.boardChanged);
   const manager = createManagerView({
     onJump: options.onJump,
     onJumpWorktree: options.onJumpWorktree,

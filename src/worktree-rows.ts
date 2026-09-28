@@ -30,6 +30,28 @@ export function dirtyLabel(
   return dirty.has(worktreePath) ? 'DIRTY' : 'clean';
 }
 
+// What the manager's Worktrees figure says under it about a set of worktrees, and whether it asks to
+// be looked at. The same three states dirtyLabel reads, added up: a worktree git could not answer for
+// is counted as unknown rather than folded into `nothing uncommitted`, and before the first answer
+// there is nothing to add up.
+export function dirtySummary(
+  worktreePaths: readonly string[],
+  checked: boolean,
+  dirty: ReadonlySet<string>,
+  unreadable: ReadonlySet<string>,
+): { text: string; attention: boolean } {
+  if (!checked) return { text: 'checking…', attention: false };
+  const dirtyCount = worktreePaths.filter((path) => dirty.has(path)).length;
+  const unknownCount = worktreePaths.filter((path) => unreadable.has(path)).length;
+  const parts = [
+    ...dirtyCount > 0 ? [`${dirtyCount} with uncommitted changes`] : [],
+    ...unknownCount > 0 ? [`${unknownCount} unknown`] : [],
+  ];
+  return parts.length === 0
+    ? { text: 'nothing uncommitted', attention: false }
+    : { text: parts.join(' · '), attention: true };
+}
+
 // Which pane the worktree's agent runs in. Both lists of worktrees print it — the dialog and the
 // manager — so the wording for a worktree that has none lives here once.
 export function worktreePaneText(entry: WorktreeEntry): string {

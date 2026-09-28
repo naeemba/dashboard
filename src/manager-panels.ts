@@ -1,7 +1,9 @@
 import { relativeAge } from './age';
 import type { ActivityEntry, ColumnCount } from './board-summary';
 import type { ManagerRow } from './manager';
+import type { Dirtiness } from './manager-reads';
 import { barHeights, formatTokens, sumDays, sumTotals, WEEK_DAYS, weekdayIndex } from './usage';
+import { dirtySummary } from './worktree-rows';
 
 // The parts of the manager's general screen that are not the list: the figures along the top and the
 // recent activity beside the list. Neither takes the keyboard — there is nothing on them to press —
@@ -70,7 +72,7 @@ function tile(label: string): { element: HTMLElement; value: HTMLElement; detail
 
 export type Overview = {
   element: HTMLElement;
-  draw(rows: readonly ManagerRow[], dirtyCount: number): void;
+  draw(rows: readonly ManagerRow[], dirtiness: Dirtiness): void;
 };
 
 // Four figures across the top: the three token windows added up over every open project, the week
@@ -89,16 +91,17 @@ export function createOverview(): Overview {
 
   return {
     element,
-    draw(rows, dirtyCount) {
+    draw(rows, { checked, dirty, unreadable }) {
       const totals = sumTotals(rows.map((row) => row.tokens));
       fiveHours.value.textContent = formatTokens(totals.fiveHours);
       week.value.textContent = formatTokens(totals.week);
       allTime.value.textContent = formatTokens(totals.allTime);
       week.detail.replaceChildren(trendBars(sumDays(rows.map((row) => row.days)), 'manager-trend-large', weekdayIndex(Date.now())));
-      const count = rows.reduce((total, row) => total + row.worktrees.length, 0);
-      worktrees.value.textContent = `${count}`;
-      worktrees.detail.textContent = dirtyCount === 0 ? 'nothing uncommitted' : `${dirtyCount} with uncommitted changes`;
-      worktrees.element.classList.toggle('attention', dirtyCount > 0);
+      const paths = rows.flatMap((row) => row.worktrees.map((entry) => entry.worktreePath));
+      worktrees.value.textContent = `${paths.length}`;
+      const summary = dirtySummary(paths, checked, dirty, unreadable);
+      worktrees.detail.textContent = summary.text;
+      worktrees.element.classList.toggle('attention', summary.attention);
     },
   };
 }
