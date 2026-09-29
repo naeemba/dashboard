@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
+  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
   managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
   takesAnswer,
   type PaneSummary,
@@ -215,12 +215,12 @@ describe('alertSummary', () => {
   const pane = summary;
 
   it('says so when nothing on the project wants anything', () => {
-    expect(alertSummary([])).toBe('quiet');
+    expect(alertSummary([])).toBe('nothing waiting');
   });
 
   // The five shells are five whatever they are doing, so counting them says nothing.
-  it('says quiet for a project whose panes are all getting on with it', () => {
-    expect(alertSummary([pane('quiet'), pane('quiet')])).toBe('quiet');
+  it('says nothing is waiting for a project whose panes are all getting on with it', () => {
+    expect(alertSummary([pane('quiet'), pane('quiet')])).toBe('nothing waiting');
   });
 
   it('counts each kind, asking first', () => {
@@ -230,6 +230,31 @@ describe('alertSummary', () => {
 
   it('leaves out the kind that has none', () => {
     expect(alertSummary([pane('exited')])).toBe('1 exited');
+  });
+});
+
+describe('stateLabel', () => {
+  // A busy agent is `quiet` too, so printing the word would call it idle.
+  it('prints nothing for a pane that wants nothing', () => {
+    expect(stateLabel('quiet')).toBe('');
+  });
+
+  it('names the states that want something', () => {
+    expect(stateLabel('waiting')).toBe('waiting');
+    expect(stateLabel('exited')).toBe('exited');
+  });
+});
+
+describe('isPrinted', () => {
+  it('keeps a line with words on it', () => {
+    expect(isPrinted('  1. Yes')).toBe(true);
+    expect(isPrinted('ساخت')).toBe(true);
+  });
+
+  // A prompt drawn in box characters says nothing, and beside a pane's name it looks broken.
+  it('skips a line of nothing but spaces and symbols', () => {
+    expect(isPrinted('   ')).toBe(false);
+    expect(isPrinted('└> ┘')).toBe(false);
   });
 });
 
@@ -337,7 +362,7 @@ describe('tailLines', () => {
   });
 
   it('gives back what there is when the pane has printed less than that', () => {
-    expect(tailLines(['$ ', ''])).toEqual(['$ ']);
+    expect(tailLines(['$ ls', '', '└> ┘'])).toEqual(['$ ls']);
     expect(tailLines([])).toEqual([]);
   });
 });

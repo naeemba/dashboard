@@ -13,9 +13,9 @@ import { dirtySummary } from './worktree-rows';
 // This week as seven bars, Monday first. Each bar carries its day and its figure as a tooltip, since a
 // bar with no number is a shape and nothing more. Today's bar is marked, so the gap after it reads as
 // days that have not happened yet rather than days nothing was done on.
-export function trendBars(days: readonly number[], className: string, today: number): HTMLElement {
+function trendBars(days: readonly number[], today: number): HTMLElement {
   const trend = document.createElement('div');
-  trend.className = `manager-trend ${className}`;
+  trend.className = 'manager-trend';
   const heights = barHeights(days);
   trend.append(...WEEK_DAYS.map((name, day) => {
     const bar = document.createElement('span');
@@ -88,6 +88,16 @@ export function createOverview(): Overview {
   element.append(fiveHours.element, week.element, allTime.element, worktrees.element);
   fiveHours.detail.textContent = 'tokens, every open project';
   allTime.detail.textContent = 'tokens, every open project';
+  // A letter under each bar, so the seven bars read as Monday to Sunday rather than as a shape. The
+  // day's figure is on the bar's tooltip.
+  const dayNames = document.createElement('div');
+  dayNames.className = 'manager-day-names';
+  dayNames.append(...WEEK_DAYS.map((name) => {
+    const letter = document.createElement('span');
+    letter.textContent = name.charAt(0);
+    letter.title = name;
+    return letter;
+  }));
 
   return {
     element,
@@ -96,7 +106,10 @@ export function createOverview(): Overview {
       fiveHours.value.textContent = formatTokens(totals.fiveHours);
       week.value.textContent = formatTokens(totals.week);
       allTime.value.textContent = formatTokens(totals.allTime);
-      week.detail.replaceChildren(trendBars(sumDays(rows.map((row) => row.days)), 'manager-trend-large', weekdayIndex(Date.now())));
+      week.detail.replaceChildren(
+        trendBars(sumDays(rows.map((row) => row.days)), weekdayIndex(Date.now())),
+        dayNames,
+      );
       const paths = rows.flatMap((row) => row.worktrees.map((entry) => entry.worktreePath));
       worktrees.value.textContent = `${paths.length}`;
       const summary = dirtySummary(paths, checked, dirty, unreadable);

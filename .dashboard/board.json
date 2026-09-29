@@ -76,7 +76,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "ebbea8cf-ec60-4615-9204-811db47add3f",
+          "title": "Make the manager page readable: label every row and column",
+          "notes": "Worktree rows, terminal rows and the token columns have no headings; the week bars have no days; 'quiet' is unexplained; the confirm dialog stretches to full height.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-09-29T23:31:54.877Z",
+          "updatedAt": "2026-09-29T23:31:54.877Z"
+        }
+      ]
     },
     {
       "name": "Review",

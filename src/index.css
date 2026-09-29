@@ -232,22 +232,20 @@ body *:not(.pane, .pane *) {
   max-width: 70ch;
 }
 
-/* A row's shape: how it lays its parts out and the space inside it. The names along the top of the
-   manager's list are not a row — the keyboard never reaches them — but they have to end on the same
-   right edge as the rows do, or `all` stops sitting over the all-time figure. The version line joins
-   them for the padding alone. border-box so the padding comes out of the width instead of being added
-   to it, which is what a stretched `li` inside the list already does for nothing. */
+/* A row's shape: how it lays its parts out and the space inside it. The version line joins the rows
+   for the padding alone. border-box so the padding comes out of the width instead of being added to
+   it, which is what a stretched `li` inside the list already does for nothing. */
 .manager-list li,
 .command-list li,
-.manager-head,
 .manager-version {
   display: flex;
   box-sizing: border-box;
   padding: 4px 8px;
 }
 
-/* Only the rows: the head and the foot are not something a click or the highlight can land on. */
-.manager-list li,
+/* Only the rows: the foot and the column names are not something a click or the highlight can land
+   on. */
+.manager-list li:not(.manager-group),
 .command-list li {
   border-radius: 4px;
   cursor: pointer;
@@ -275,24 +273,12 @@ body *:not(.pane, .pane *) {
   font-weight: 700;
 }
 
-/* Indented under the project it belongs to, and the marker's width again so the names line up. */
-.manager-pane .manager-name {
-  padding-left: 2ch;
-}
-
-/* The pane's last few lines, kept for the panes that want something: a pane getting on with its work
-   says what it last printed on the row itself. Indented past its name and as quiet as the summary
-   beside it: the name and the state are what you are reading, the tail is what the pane is saying.
-   It takes a whole line of its own by wrapping onto one — the row is still the flex line every other
-   row is, so the state keeps its place at the far end instead of being pushed off by a block of
-   output. Wrapped rather than clipped, because the end of the line is where the question mark is.
-   The command list's own rows carry the same tail under the same reasoning. */
-.manager-pane,
+/* The command list's rows carry the last few lines a pane printed under it, wrapped rather than
+   clipped, because the end of the line is where the question mark is. */
 .command-project {
   flex-wrap: wrap;
 }
 
-.manager-tail,
 .command-tail {
   flex-basis: 100%;
   margin: 2px 0 0;
@@ -303,44 +289,19 @@ body *:not(.pane, .pane *) {
   overflow-wrap: anywhere;
 }
 
-/* The last line a quiet pane printed, on the row beside its name. It takes the space between the name
-   and the state and gives it all back: clipped to one line with an ellipsis rather than wrapped, so
-   thirty panes are thirty rows however much a build printed. min-width: 0 is what lets a flex item
-   shrink below its text at all — without it a long line pushes the state and the age off the row. */
-.manager-last-printed {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding-left: 2ch;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* Pushed to the far end of the row by its own margin, with padding of its own so a long project name
    growing towards it never touches it. */
 .manager-summary,
-.manager-state,
 .command-summary {
   flex: 0 0 auto;
   margin-left: auto;
   padding-left: 12px;
 }
 
-/* How long since the pane printed, after the state and quieter than it: the state is one word you
-   recognise by its colour, the age is the part you read. Its own margin is not auto — the state ahead
-   of it has already pushed the pair to the end, and a second auto would split them apart. */
-.manager-age {
-  flex: 0 0 auto;
-  padding-left: 8px;
-}
-
-/* Everything on a row that is not the name or the state you are looking for. `quiet` is in here
-   because it is the state of most panes most of the time: the two colours below are the rows worth
-   spotting, and a column of plain white `quiet` would shout them down. */
+/* Everything on a row that is not the name or the state you are looking for. */
 .manager-summary,
 .manager-last-printed,
 .manager-age,
-.manager-quiet,
 .manager-version,
 .command-summary,
 .command-keys {
@@ -689,11 +650,16 @@ textarea.board-edit {
 
 /* One box in the middle of the sheet asking one thing, whether that is a question to answer or a
    line to type. Two names rather than one because the dialogs are two, but they are meant to look
-   the same and this is what keeps them that way. */
+   the same and this is what keeps them that way.
+   The sheet is a flex row, so without align-self the box stretches down to its max-height and a
+   two-line question sits in a box most of the window tall. The outline is the browser's focus ring:
+   the box holds focus so Enter and Escape reach it, and every other dialog turns the ring off too. */
 .confirm-dialog,
 .prompt-dialog {
+  align-self: flex-start;
   max-width: 420px;
   padding: 20px 24px;
+  outline: none;
 }
 
 .confirm-question {
