@@ -12,11 +12,11 @@ import { posixQuoted } from './shell';
 //
 // A card *past* Review is not one of those. This moves to a column by number, so a card sitting in Done
 // is dragged back into Review with a pull request that merged last week. Nothing does that today only
-// because reviewOne asks awaitsReview first and returns on false — the refusal is one line up the call,
+// because sweepOne asks awaitsReview first and returns on false — the refusal is one line up the call,
 // not here, and a second caller has to ask too.
 //
 // A card the board does not mention answers null, but the sweep cannot reach here with one:
-// awaitsReview says null for it and reviewOne returns on that before the move is asked for. The only
+// awaitsReview says null for it and sweepOne returns on that before the move is asked for. The only
 // way this sees a missing card is the board changing between those two reads in the same tick.
 export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
@@ -24,8 +24,8 @@ export function intoReview(board: Board, cardId: string): Board | null {
 
 // Whether this card still wants reviewing, asked of the project's board. Its column is the only record
 // of a review that finished: the review's whole job is to move the card past Review, and the worktree
-// it ran in stays on disk afterwards — the prompt says not to remove it — so the record outlives the
-// review and says nothing about how it ended.
+// it ran in outlives it — the app removes it on a later tick, and not at all while the project is
+// closed or git refuses — so the record says nothing about how the review ended.
 //
 // What asking the record instead costs. `reviewing` on it is a sentence about a pane, so it is cleared
 // when the pane goes and a restart wipes it off every card. Without this, the first tick after that
@@ -59,9 +59,18 @@ export function awaitsReview(board: Board, cardId: string): boolean | null {
 // changes in ship-it" a tick. It matches the whole sentence, which is why that line carries no file
 // count: a number in it changes as the agent saves, and every new number is a line this lets through.
 export function reviewRefused(board: Board, cardId: string, reason: string): Board | null {
+  return commentOnce(board, cardId, `No review worktree: ${reason}`);
+}
+
+// The project's board with a line on the card saying why its worktree is still on disk after the card
+// reached Done. The same card-only reason as above, and the same once-only guard.
+export function worktreeKept(board: Board, cardId: string, reason: string): Board | null {
+  return commentOnce(board, cardId, `Worktree kept: ${reason}`);
+}
+
+function commentOnce(board: Board, cardId: string, line: string): Board | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;
-  const line = `No review worktree: ${reason}`;
   if (cardAt(board, at)?.comments?.at(-1)?.body === line) return null;
   return addComment(board, at, line).board;
 }
@@ -133,6 +142,7 @@ export function reviewPrompt(
     '   a claim about that branch and comes true only if it merges. Say what happened on the card:',
     `   \`${board} comment ${cardId} "<what happened>"\`.`,
     '',
-    'Do not remove this worktree, and do not quit, kill or rebuild any running app.',
+    'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
+    "in Done on the project's board and you have stopped. Do not quit, kill or rebuild any running app.",
   ].join('\n');
 }
