@@ -97,3 +97,7 @@ out/
 
 # Vite build output
 dist/
+
+# Editor and agent tool caches, which land in every worktree
+.serena/
+.claude/.headroom_wrap_*
