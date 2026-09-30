@@ -12,8 +12,9 @@ import path from 'node:path';
 // shell never moves at all; only the dev server is there. Asked only the opened-in folder, the sweep
 // would take the worktree away under the dev server and the unsaved buffer.
 //
-// `current` is empty when nothing could be asked — the shell exited between the two questions, or the
-// platform has no way to say — and then the opened-in folder is the only answer there is.
+// `current` is empty when the shell exited between the two questions, or the platform has no way to
+// say, and then the opened-in folder is the only answer there is. A question that was asked and got
+// no answer is a different thing — anyShellStandsIn below.
 //
 // What no folder can catch: `nvim ../fix-login/src/x.ts` run from the project. nvim's folder is the
 // project and it does not hold the file open, so nothing here says it is there. The help says so.
@@ -25,6 +26,37 @@ export function shellStandsIn(
   // symlink followed, and the record holds whatever path the ship was given.
   return current.some((directory) =>
     isInside(directory, worktreePath) || isInside(directory, realWorktreePath));
+}
+
+// Where each shell, and everything it started, is standing, by the shell's pid. `null` when the
+// question could not be answered: `ps` or `lsof` would not run, or was killed for taking too long.
+export type ShellDirectories = Map<number, string[]> | null;
+
+// Whether any of these shells stands in the worktree. A question that got no answer keeps the
+// worktree: `lsof` stuck on a sleeping network mount says nothing about the shell that `cd`'d into
+// the worktree and left a dev server running there, and taking "no answer" for "nobody there" would
+// delete the folder under it. The worktree goes on the first tick that gets an answer.
+export function anyShellStandsIn(
+  shells: readonly { opened: string; pid: number }[], directories: ShellDirectories,
+  worktreePath: string, realWorktreePath: string,
+): boolean {
+  if (shells.length === 0) return false;
+  if (directories === null) return true;
+  return shells.some(({ opened, pid }) =>
+    shellStandsIn(opened, directories.get(pid) ?? [], worktreePath, realWorktreePath));
+}
+
+// One question out at a time: every call made while one is out gets that one's answer, and the next
+// call after it settles asks again. The review sweep walks its cards all at once, so twenty shells
+// and three cards waiting cost one `ps` and one `lsof` a tick, not three of each.
+export function oneQuestionAtATime<Asked, Answer>(
+  ask: (asked: Asked) => Promise<Answer>,
+): (asked: Asked) => Promise<Answer> {
+  let asking: Promise<Answer> | null = null;
+  return (asked) => {
+    asking ??= ask(asked).finally(() => { asking = null; });
+    return asking;
+  };
 }
 
 // A folder anywhere below the worktree counts, not only its top: `cd src` is still standing in it.
@@ -68,4 +100,12 @@ export function lsofDirectories(output: string): Map<number, string> {
     else if (line.startsWith('n') && pid !== null && Number.isInteger(pid)) directories.set(pid, line.slice(1));
   }
   return directories;
+}
+
+// What a command that failed still printed, when that is an answer. `lsof` exits 1 when any pid in
+// its list has already gone, and still prints every one that has not: that is an answer. A command
+// killed for taking too long, or one that never ran, printed part of an answer or none — `null`.
+export function answerDespiteFailure(error: unknown): string | null {
+  const { stdout, killed, code } = (error ?? {}) as { stdout?: unknown; killed?: unknown; code?: unknown };
+  return typeof stdout === 'string' && killed !== true && typeof code === 'number' ? stdout : null;
 }

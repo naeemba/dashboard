@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { familiesOf, lsofDirectories, shellStandsIn } from './shell-directory';
+import {
+  answerDespiteFailure, anyShellStandsIn, familiesOf, lsofDirectories, oneQuestionAtATime, shellStandsIn,
+} from './shell-directory';
 
 const WORKTREE = '/work/dashboard.worktrees/fix-login';
 const REAL = '/private/work/dashboard.worktrees/fix-login';
@@ -79,5 +81,78 @@ describe('lsofDirectories', () => {
   // lsof prints nothing for a pid that has already gone, so it is missing rather than wrong.
   it('answers nothing for processes that were already gone', () => {
     expect(lsofDirectories('')).toEqual(new Map());
+  });
+});
+
+describe('anyShellStandsIn', () => {
+  const inProject = { opened: '/work/dashboard', pid: 10 };
+
+  it('asks where each shell is now', () => {
+    expect(anyShellStandsIn([inProject], new Map([[10, [WORKTREE]]]), WORKTREE, REAL)).toBe(true);
+    expect(anyShellStandsIn([inProject], new Map([[10, ['/work/dashboard']]]), WORKTREE, REAL)).toBe(false);
+  });
+
+  // `lsof` stuck on a sleeping network mount and killed: the shell that cd'd in and left a dev server
+  // running is still there, and the worktree waits for a tick that gets an answer.
+  it('keeps the worktree when the question got no answer', () => {
+    expect(anyShellStandsIn([inProject], null, WORKTREE, REAL)).toBe(true);
+  });
+
+  it('removes it when there is no shell at all, answer or not', () => {
+    expect(anyShellStandsIn([], null, WORKTREE, REAL)).toBe(false);
+  });
+
+  it('counts a shell opened in the worktree without needing an answer', () => {
+    expect(anyShellStandsIn([{ opened: WORKTREE, pid: 10 }], new Map(), WORKTREE, REAL)).toBe(true);
+  });
+});
+
+describe('oneQuestionAtATime', () => {
+  function counted() {
+    let asked = 0;
+    let answer: (value: number) => void = () => undefined;
+    const ask = oneQuestionAtATime(() => {
+      asked += 1;
+      return new Promise<number>((resolve) => { answer = resolve; });
+    });
+    return { ask, asked: () => asked, answer: (value: number) => answer(value) };
+  }
+
+  // Three cards waiting on one tick: one `ps` and one `lsof`, not three of each.
+  it('gives every call made while one is out that one answer', async () => {
+    const question = counted();
+    const first = question.ask([10]);
+    const second = question.ask([10]);
+    question.answer(7);
+    expect(await first).toBe(7);
+    expect(await second).toBe(7);
+    expect(question.asked()).toBe(1);
+  });
+
+  it('asks again once the last answer is in', async () => {
+    const question = counted();
+    const first = question.ask([10]);
+    question.answer(1);
+    await first;
+    const second = question.ask([10]);
+    question.answer(2);
+    expect(await second).toBe(2);
+    expect(question.asked()).toBe(2);
+  });
+});
+
+describe('answerDespiteFailure', () => {
+  // lsof exits 1 when a pid in its list has gone, and still prints the rest.
+  it('keeps what a command printed when it only exited with an error', () => {
+    expect(answerDespiteFailure({ code: 1, killed: false, stdout: 'p10\n' })).toBe('p10\n');
+  });
+
+  it('gives no answer for a command killed for taking too long', () => {
+    expect(answerDespiteFailure({ code: null, killed: true, signal: 'SIGTERM', stdout: 'p10\n' })).toBeNull();
+  });
+
+  it('gives no answer for a command that never ran', () => {
+    expect(answerDespiteFailure({ code: 'ENOENT', stdout: '' })).toBeNull();
+    expect(answerDespiteFailure(undefined)).toBeNull();
   });
 });
