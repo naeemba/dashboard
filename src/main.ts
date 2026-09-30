@@ -318,13 +318,12 @@ function releaseWorktreePanes(entry: WorktreeEntry): void {
   }
 }
 
-// Whether a pane has a live shell in this folder. The review sweep asks before removing a finished
-// card's worktree, because the removal kills every one of them.
-function shellLivesIn(worktreePath: string): boolean {
-  for (const [id, command] of terminalCommands) {
-    if (command.directory === worktreePath && shells.has(id)) return true;
-  }
-  return false;
+// The panes with a live shell in this folder. A removal kills every one of them, which is why the
+// review sweep asks first and leaves a finished card's worktree alone while any is left.
+function shellsIn(worktreePath: string): string[] {
+  return Array.from(terminalCommands)
+    .filter(([id, command]) => command.directory === worktreePath && shells.has(id))
+    .map(([id]) => id);
 }
 
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
@@ -778,7 +777,7 @@ const reviews = reviewSweep({
   slotOf: slotOfProject,
   agentWorksIn,
   freePaneIn,
-  shellLivesIn,
+  shellLivesIn: (worktreePath) => shellsIn(worktreePath).length > 0,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
@@ -934,9 +933,7 @@ async function removeWorktree(worktreePath: string, force: boolean): Promise<Wor
     await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
     // The agent goes with the folder it was working in: leaving it running leaves it writing into a
     // directory git has just deleted. Only here, where the folder was deleted on purpose.
-    for (const [id, command] of terminalCommands) {
-      if (command.directory === worktreePath) shells.get(id)?.kill();
-    }
+    for (const id of shellsIn(worktreePath)) shells.get(id)?.kill();
     releaseWorktreePanes(entry);
     setWorktrees(withoutWorktree(worktrees, worktreePath));
     return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
