@@ -1,8 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
-import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import {
@@ -15,6 +13,8 @@ import {
 import { baseName } from './base-name';
 import { git } from './git';
 import { isOpenableLink } from './links';
+import { anyShellStandsIn } from './shell-directory';
+import { commandOutput, shellDirectories } from './shell-directory-lookup';
 import { agentArguments, editorArguments, pickShell } from './shell';
 import { taskRunner } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -166,7 +166,11 @@ const shippingCards = new Set<string>();
 // worktree and leaves the agent running in a folder git has just deleted, writing errors into a pane
 // the app counts as free. Held for the length of the one removal, the way shippingCards is.
 const removingWorktrees = new Set<string>();
-const runCommand = promisify(execFile);
+// The process tree, as `ps -eo pid=,ppid=` prints it, or null when `ps` gave no answer. One spelling
+// for both sweeps that read it, so the token figures and the worktree sweep see the same tree.
+function processTree(): Promise<string | null> {
+  return commandOutput('ps', ['-eo', 'pid=,ppid=']);
+}
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
@@ -316,6 +320,29 @@ function releaseWorktreePanes(entry: WorktreeEntry): void {
     if (command.directory !== entry.worktreePath) continue;
     terminalCommands.set(id, { args: [], directory: entry.projectPath });
   }
+}
+
+// The panes with a live shell opened in this folder: the ones a removal kills.
+function shellsIn(worktreePath: string): string[] {
+  return Array.from(terminalCommands)
+    .filter(([id, command]) => command.directory === worktreePath && shells.has(id))
+    .map(([id]) => id);
+}
+
+// Whether any pane's shell stands in this folder, which is what the review sweep waits on before it
+// removes a finished card's worktree. shell-directory.ts says which folders count and what an
+// unanswered question means; this asks each live shell, and what it started, where it is now, since a
+// `cd` typed into a pane never reaches terminalCommands.
+const askShellDirectories = shellDirectories(processTree);
+async function shellLivesIn(worktreePath: string): Promise<boolean> {
+  // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
+  if (shellsIn(worktreePath).length > 0) return true;
+  const realWorktreePath = existsSync(worktreePath) ? realpathSync(worktreePath) : worktreePath;
+  const live = Array.from(shells, ([id, terminalProcess]) => ({
+    opened: terminalCommands.get(id)?.directory ?? '', pid: terminalProcess.pid,
+  }));
+  const directories = await askShellDirectories(live.map(({ pid }) => pid));
+  return anyShellStandsIn(live, directories, worktreePath, realWorktreePath);
 }
 
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
@@ -561,7 +588,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
 const tokenUsage = usageSweep({
   panePids: () => new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id])),
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
-  processTree: () => runCommand('ps', ['-eo', 'pid=,ppid=']).then(({ stdout }) => stdout, () => ''),
+  processTree: async () => (await processTree()) ?? '',
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
   // Held, not reported: a sweep that fails before a window has opened must not box and exit the
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
@@ -769,6 +796,7 @@ const reviews = reviewSweep({
   slotOf: slotOfProject,
   agentWorksIn,
   freePaneIn,
+  shellLivesIn,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
@@ -924,9 +952,7 @@ async function removeWorktree(worktreePath: string, force: boolean): Promise<Wor
     await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
     // The agent goes with the folder it was working in: leaving it running leaves it writing into a
     // directory git has just deleted. Only here, where the folder was deleted on purpose.
-    for (const [id, command] of terminalCommands) {
-      if (command.directory === worktreePath) shells.get(id)?.kill();
-    }
+    for (const id of shellsIn(worktreePath)) shells.get(id)?.kill();
     releaseWorktreePanes(entry);
     setWorktrees(withoutWorktree(worktrees, worktreePath));
     return { ok: true, message: `removed ${entry.branch}`, dirty: [] };

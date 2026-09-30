@@ -3,13 +3,13 @@ import { relativeAge } from './age';
 import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, removableWorktree, slotOfLine, takesAnswer,
-  type ManagerLine, type ManagerRow, type PaneSummary,
+  alertSummary, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, removableWorktree, slotOfLine, stateLabel,
+  takesAnswer, type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
-import { countChips, createActivity, createOverview, trendBars } from './manager-panels';
+import { countChips, createActivity, createOverview } from './manager-panels';
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
-import { paneTokens, projectTokens, TOKEN_COLUMNS, weekdayIndex } from './usage';
+import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
 import { APP_VERSION } from './version';
 import { dirtyLabel, worktreePaneText } from './worktree-rows';
 import type { WorktreeEntry } from './worktree-store';
@@ -74,14 +74,47 @@ function tailBlock(pane: PaneSummary): string[] {
   return isAlerting(pane) ? pane.tail() : [];
 }
 
-// One figure in one column. The width and the alignment belong to the class, so the names above the
-// list, a project's three and a pane's one are the same columns and end on one
-// right edge — which is the whole of what makes them readable as columns at all.
+// One token figure. A project's three and a pane's one are all this class, so writeTokens finds them
+// the same way on either row.
 function tokenCell(text: string): HTMLElement {
   const cell = document.createElement('span');
   cell.className = 'manager-tokens';
   cell.textContent = text;
   return cell;
+}
+
+// A project's figure with its window named in front of it: `this week 142.9M`. Named on the row
+// rather than once above the list, because a heading over the far right of a wide panel is a heading
+// nobody connects to a number sixty characters away. A project nothing was spent on has empty figures,
+// and the stylesheet hides the name with them.
+function labelledTokens(label: string, text: string): HTMLElement {
+  const figure = document.createElement('span');
+  figure.className = 'manager-figure';
+  const name = document.createElement('span');
+  name.className = 'manager-figure-name';
+  name.textContent = label;
+  figure.append(name, tokenCell(text));
+  return figure;
+}
+
+// The names of the columns under a project, as a row of their own above its first terminal and above
+// its first worktree. It shares the grid of the rows under it, so each name sits over its column.
+// Not a line the keyboard can land on: it is not in `lines`, and it takes no click.
+const GROUP_COLUMNS = {
+  pane: ['Terminal', 'Last line on screen', 'Status', 'Last output', 'Tokens'],
+  worktree: ['Worktree', 'Changes', 'Started', 'Terminal', ''],
+} as const;
+
+function groupHead(kind: keyof typeof GROUP_COLUMNS): HTMLElement {
+  const item = document.createElement('li');
+  item.className = `manager-group manager-group-${kind}`;
+  item.setAttribute('role', 'presentation');
+  item.append(...GROUP_COLUMNS[kind].map((text) => {
+    const cell = document.createElement('span');
+    cell.textContent = text;
+    return cell;
+  }));
+  return item;
 }
 
 // Figures written into a row that already has its cells. Strings rather than a project's Totals, so
@@ -107,23 +140,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   empty.textContent = 'No project is open, so there is nothing to watch yet.';
   const list = document.createElement('ul');
   list.className = 'manager-list';
-  // The columns named once, above the list. Without this a row ends in `40.9M  774M  3.1B` and
-  // nothing on the page says which window each is, so the numbers are only readable by someone who
-  // already knows. Above the list rather than on every row: three labels thirty times is the row you
-  // came to read pushed off the screen.
-  const head = document.createElement('div');
-  head.className = 'manager-head';
-  const trendName = document.createElement('span');
-  trendName.className = 'manager-trend-name';
-  trendName.textContent = 'Mon–Sun';
-  head.append(trendName, ...TOKEN_COLUMNS.map(tokenCell));
   // The figures along the top: every open project added up, and the worktrees out.
   const overview = createOverview();
   const projects = document.createElement('section');
   projects.className = 'manager-panel manager-projects';
   const projectsHeading = document.createElement('h2');
   projectsHeading.textContent = 'Projects';
-  projects.append(projectsHeading, head, list);
+  projects.append(projectsHeading, list);
   const activity = createActivity();
   const body = document.createElement('div');
   body.className = 'manager-body';
@@ -167,15 +190,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     cell.classList.toggle('unreadable', unreadable.has(entry.worktreePath));
   }
 
-  // A project's week as bars, stamped with the figures it was drawn from so the timer's redraw can
-  // leave it alone when nothing moved — which is nearly every time.
-  function projectTrend(days: readonly number[]): HTMLElement {
-    const trend = trendBars(days, 'manager-trend-small', weekdayIndex(Date.now()));
-    trend.dataset.days = days.join(',');
-    return trend;
-  }
-
   let lines: ManagerLine[] = [];
+  // The element drawn for each line, by the line's index. Not `list.children`: the column names above
+  // each group are children too, and counting them would write one row's figures into its neighbour.
+  let rowElements: HTMLElement[] = [];
   // Which projects are showing their panes, kept by slot rather than by position: a project dragged
   // along the tab strip is the same project and stays open.
   const opened = new Set<number>();
@@ -200,7 +218,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
 
     const state = document.createElement('span');
     state.className = `manager-state manager-${line.pane.state}`;
-    state.textContent = line.pane.state;
+    state.textContent = stateLabel(line.pane);
     // How long it has been since the pane printed anything, which is the half of the row worth
     // reading: the text beside it can be a spinner redrawing the same line, but forty minutes is
     // forty minutes. A pane that has printed nothing yet has no age and is given none.
@@ -243,13 +261,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // says which cards are counted and why Done is not.
     const board = options.reads.boardOf(line.row.path);
     const chips = countChips(board ? columnCounts(board) : []);
-    // The five-hour figure, the week's and all time, one cell each under the names above the list,
-    // with the week drawn day by day in front of them. usage.ts says what the three are and what a
-    // project nothing has been spent on prints.
-    item.append(
-      marker, name, chips, summary, projectTrend(line.row.days),
-      ...projectTokens(line.row.tokens).map(tokenCell),
-    );
+    // The five-hour figure, the week's and all time, each with its name. usage.ts says what the three
+    // are and what a project nothing has been spent on prints.
+    const figures = document.createElement('span');
+    figures.className = 'manager-figures';
+    figures.append(...projectTokens(line.row.tokens).map((text, column) => labelledTokens(TOKEN_COLUMNS[column], text)));
+    item.append(marker, name, chips, summary, figures);
     return item;
   }
 
@@ -260,15 +277,18 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const { entry } = line;
     const item = document.createElement('li');
     item.className = 'manager-worktree';
-    const glyph = document.createElement('span');
-    glyph.className = 'manager-glyph';
-    glyph.textContent = '⎇';
-    const branch = document.createElement('span');
-    branch.className = 'manager-name';
-    branch.textContent = entry.branch;
+    // The card's title first, in words, and the branch after it, quieter: the branch is the title cut
+    // down to a slug, so leading with it put the same sentence on the row twice, the unreadable copy
+    // first.
+    const names = document.createElement('span');
+    names.className = 'manager-worktree-names';
     const title = document.createElement('span');
     title.className = 'manager-worktree-title';
     title.textContent = entry.reviewing ? `reviewing · ${entry.title}` : entry.title;
+    const branch = document.createElement('span');
+    branch.className = 'manager-worktree-branch';
+    branch.textContent = entry.branch;
+    names.append(title, branch);
     const dirty = document.createElement('span');
     dirty.className = 'manager-dirty';
     writeDirty(dirty, entry);
@@ -293,7 +313,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       options.onChanged();
       options.onRemoveWorktree(entry);
     });
-    item.append(glyph, branch, title, dirty, age, pane, remove);
+    item.append(names, dirty, age, pane, remove);
     return item;
   }
 
@@ -373,7 +393,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       overview.element.hidden = !anyOpen;
       body.hidden = !anyOpen;
       drawPanels(rows);
-      list.replaceChildren(...lines.map((line, index) => {
+      const children: HTMLElement[] = [];
+      const openings = groupOpenings(lines);
+      rowElements = lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line)
           : line.kind === 'worktree' ? worktreeLine(line, index) : projectLine(line);
         // A click moves the selection to the row first and then does what Enter does there.
@@ -382,9 +404,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
           open();
         });
         if (index === selected) item.classList.add('highlighted');
+        if (line.kind !== 'project' && openings.has(index)) children.push(groupHead(line.kind));
+        children.push(item);
         return item;
-      }));
-      list.children[selected]?.scrollIntoView({ block: 'nearest' });
+      });
+      list.replaceChildren(...children);
+      rowElements[selected]?.scrollIntoView({ block: 'nearest' });
     },
     // Every thirty seconds, so neither the ages nor the lines beside them freeze where they stand. A
     // pane printing calls nothing — the bytes go into the terminal and that is all — so without this
@@ -397,7 +422,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     refreshRows(rows: readonly ManagerRow[]): void {
       // Written into the rows that are on screen, so this writes only while the fresh rows are those
       // rows. A project opened or a pane appeared means a full render is what caused it and a full
-      // render is what draws it; writing into `list.children` on a shape that moved would put one
+      // render is what draws it; writing into `rowElements` on a shape that moved would put one
       // pane's line on its neighbour. The lines themselves are taken, stale panes and all, because
       // the timestamps they hold are copies made when the row was last drawn.
       // Ahead of the check below, because the overview and the activity are not rows: they add up
@@ -412,15 +437,13 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Kept, so the status bar reads the selected pane's age off the same numbers the row shows.
       lines = fresh;
       lines.forEach((line, index) => {
-        const row = list.children[index];
+        const row = rowElements[index];
         // Rewritten with the rest: an agent spends while its state stays `quiet`, so a figure left out
         // of this redraw sits at what it was when the row was built. The project's three go the same
         // way as a pane's one — writing them here is what lets a sweep move a figure without the list
         // being torn down and rebuilt under someone reading it.
         if (line.kind === 'project') {
           writeTokens(row, projectTokens(line.row.tokens));
-          const trend = row?.querySelector<HTMLElement>('.manager-trend');
-          if (trend && trend.dataset.days !== line.row.days.join(',')) trend.replaceWith(projectTrend(line.row.days));
           return;
         }
         if (line.kind === 'worktree') {

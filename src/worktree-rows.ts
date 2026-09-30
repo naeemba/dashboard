@@ -27,7 +27,7 @@ export function dirtyLabel(
 ): string {
   if (!checked) return '…';
   if (unreadable.has(worktreePath)) return 'unknown';
-  return dirty.has(worktreePath) ? 'DIRTY' : 'clean';
+  return dirty.has(worktreePath) ? 'dirty' : 'clean';
 }
 
 // What the manager's Worktrees figure says under it about a set of worktrees, and whether it asks to

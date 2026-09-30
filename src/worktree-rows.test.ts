@@ -43,7 +43,7 @@ describe('dirtyLabel', () => {
   });
 
   it('names the two answers git can give', () => {
-    expect(dirtyLabel(path, true, new Set([path]), none)).toBe('DIRTY');
+    expect(dirtyLabel(path, true, new Set([path]), none)).toBe('dirty');
     expect(dirtyLabel(path, true, none, none)).toBe('clean');
   });
 

@@ -207,10 +207,10 @@ export function usageDiffers(previous: UsageSnapshot, next: UsageSnapshot): bool
   return JSON.stringify(previous) !== JSON.stringify(next);
 }
 
-// What each of the three figures is, named once above the list rather than on every row. Beside the
-// function that prints them, so a fourth window added below is a column with a name on it rather than
-// a fourth unlabelled number — the test beside this file fails if the two lists stop matching.
-export const TOKEN_COLUMNS = ['5h', 'week', 'all'] as const;
+// The name printed in front of each of a project's three figures. Beside the function that prints
+// them, so a fourth window added below is a figure with a name on it rather than a fourth unlabelled
+// number — the test beside this file fails if the two lists stop matching.
+export const TOKEN_COLUMNS = ['5 hours', 'this week', 'all time'] as const;
 
 // The three figures a project row prints: the five-hour window, the week and all time, soonest to
 // widest, so the number that moves while you watch is nearest the rest of the row.

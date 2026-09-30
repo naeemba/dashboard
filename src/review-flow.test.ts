@@ -59,6 +59,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       slotOf: () => 0,
       agentWorksIn: () => false,
       freePaneIn: () => 0,
+      shellLivesIn: async () => false,
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
         return { ok: true, message: '', dirty: [] };
@@ -130,18 +131,99 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
   });
 
-  // A review that ended the way it was meant to leaves its worktree on disk — the prompt says not to
-  // remove it — and the pull request number stays written on the branch's board. Restart the app and
-  // the mark on the record is gone with the pane, so the card's own column is the only thing left
-  // saying the review already happened.
-  it('leaves a card the review already moved past Review alone', async () => {
+  // A review that ended the way it was meant to: the pull request merged and the card in Done. The
+  // pull request number stays written on the branch's board, so the card's own column is the only
+  // thing saying the review already happened — and once it has, the worktree has nothing left to do.
+  it('removes the worktree of a card the review moved past Review, without reviewing it again', async () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
-    const { ports: made, log } = ports(entry);
+    const { ports: made, log } = ports({ ...entry, reviewing: true });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+    expect(log.started).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
+  // The review agent moves the project's card to Done and then writes its summary. Taking the folder
+  // then kills the shell mid-sentence.
+  it('waits for the review agent to stop before removing a finished worktree', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    let working = true;
+    const { ports: made, log } = ports({ ...entry, reviewing: true }, { agentWorksIn: () => working });
     const sweep = reviewSweep(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
-    expect(columnOfCard(projectPath)).toBe('Done');
+    working = false;
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
+  // The review is done and quiet, but its pane is still open: you may be typing a follow-up into it, or
+  // have an editor open in the folder. Removing the worktree would kill that shell, so it waits until
+  // the last one is closed, and then goes.
+  it('keeps a finished worktree while a shell still stands in it', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    let open = true;
+    const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: async () => open });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    await sweep.run();
+    expect(log.removed).toEqual([]);
+    open = false;
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
+  // `lsof` stuck longer than the five-second tick. The next run must not reach the same card and remove
+  // the worktree a second time: git would refuse the second, and the card would say the worktree was
+  // kept when it is already gone.
+  it('removes a finished worktree once when a run starts before the last one has asked', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    let answer: (lives: boolean) => void = () => undefined;
+    const asked = new Promise<boolean>((resolve) => { answer = resolve; });
+    const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => asked });
+    const sweep = reviewSweep(made);
+    const first = sweep.run();
+    const second = sweep.run();
+    answer(false);
+    await Promise.all([first, second]);
+    expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
+  // A card dragged to Done by hand before any pull request was opened. Nothing says the work landed,
+  // so the folder is not the sweep's to throw away.
+  it('keeps the worktree of a card in Done with no pull request', async () => {
+    const { entry, projectPath } = flight(null);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    const { ports: made, log } = ports(entry);
+    await reviewSweep(made).run();
+    expect(log.removed).toEqual([]);
+  });
+
+  // git refuses a worktree with anything uncommitted in it. The card says so once, and the sweep does
+  // not ask git again every five seconds for an answer that will not change by itself.
+  it('says once on the card why a finished worktree was kept', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async (worktreePath) => {
+        log.removed.push(worktreePath);
+        return { ok: false, message: '', dirty: ['draft.md'] };
+      },
+    });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+    const card = readBoard(projectPath).board.columns[4].cards[0];
+    expect(card.comments?.map((comment) => comment.body)).toEqual([
+      'Worktree kept: uncommitted changes in ship-it, remove it from the worktree list',
+    ]);
   });
 
   // The card is still in Review, so nothing reviewed it to the end: the shell died with the app. That

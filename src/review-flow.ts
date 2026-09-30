@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
-import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
+import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from './failure';
 import { allCards, cardById, type Board } from './board';
 import type { ShipResult, WorktreeRemoval } from './bridge';
@@ -33,6 +33,12 @@ export type ReviewPorts = {
   // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
   // before anything is destroyed is the answer the pane is given after.
   freePaneIn: (slot: number, freeing: number | null) => number | null;
+  // Whether any pane still has a shell standing in this folder — opened there, moved there with `cd`,
+  // or running a program there that it started from somewhere else.
+  // A finished card's worktree waits until this is false: the review pane you are typing a follow-up
+  // into, a dev server you started there, or an nvim with unsaved edits, never has its folder taken
+  // away underneath it.
+  shellLivesIn: (worktreePath: string) => Promise<boolean>;
   removeWorktree: (worktreePath: string, force: boolean) => Promise<WorktreeRemoval>;
   // Check the branch out again at the same path. No new branch and no base: the branch is already
   // there with the pull request on it, and everything the agent pushed is on it already.
@@ -105,6 +111,12 @@ function editProjectBoard(projectPath: string, edit: (board: Board) => Board | n
 // every other refusal: it is not a review that failed, it is a review that is early.
 type Swap = { message: string; again: boolean };
 
+// What a refused removal says on the card: the branch when git refused on uncommitted files, git's own
+// words otherwise. `then` is what happens next, which is all that differs between the two callers.
+function refusal(entry: WorktreeEntry, removed: WorktreeRemoval, then: string): string {
+  return removed.dirty.length > 0 ? `uncommitted changes in ${entry.branch}, ${then}` : removed.message;
+}
+
 async function swapWorktree(
   ports: ReviewPorts,
   entry: WorktreeEntry,
@@ -125,7 +137,7 @@ async function swapWorktree(
     // both in one shell command to keep that window short, which narrows it and cannot close it.
     //
     // A worktree that stays dirty — an agent that really did walk away mid-change — is the price, and
-    // this paragraph is the only thing that names it. Unmarked, the card runs the whole of reviewOne
+    // this paragraph is the only thing that names it. Unmarked, the card runs the whole of sweepOne
     // again every five seconds for as long as the app is open: the branch's board read and parsed,
     // the project's read and parsed three times over, and one `git status`. The two board writes and
     // the removal are never reached — the card is already in Review and already carries this line, so
@@ -140,7 +152,7 @@ async function swapWorktree(
     // only recognises a repeat by matching the whole sentence — so a count would make `2 uncommitted
     // files` and `3 uncommitted files` two different lines and stack both on the card as the agent
     // saves. The branch is named; the files are a `git status` away.
-    return { message: `uncommitted changes in ${entry.branch}, waiting for the commit`, again: true };
+    return { message: refusal(entry, removed, 'waiting for the commit'), again: true };
   }
   await ports.addWorktree(entry);
   const started = ports.startReview(
@@ -151,8 +163,20 @@ async function swapWorktree(
   return { message: started.ok ? '' : started.message, again: false };
 }
 
+// The worktree of a card whose pull request merged, removed and the branch kept. Not forced: anything
+// uncommitted in it exists nowhere else. When git refuses, the card says so, once.
+async function clearWorktree(ports: ReviewPorts, entry: WorktreeEntry): Promise<void> {
+  const removed = await ports
+    .queue(entry.projectPath, () => ports.removeWorktree(entry.worktreePath, false))
+    .catch((error: unknown) => ({ ok: false, message: failureText(error), dirty: [] as string[] }));
+  if (removed.ok) return;
+  const reason = refusal(entry, removed, 'remove it from the worktree list');
+  editProjectBoard(entry.projectPath, (board) => worktreeKept(board, entry.cardId, reason));
+}
+
 export type ReviewSweep = {
-  // Every worktree the app made, asked whether the agent in it has opened a pull request yet. One
+  // Every worktree the app made, asked whether the agent in it has opened a pull request yet, and
+  // whether a card past Review still has a worktree to clear. One
   // small file read and parsed per in-flight worktree per call — there is no watcher, because the
   // folder to watch is one nothing on screen is looking at and it comes and goes with the card.
   run: () => Promise<void>;
@@ -171,11 +195,11 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // still finishing rather than a review that failed, and swapWorktree says why it is the exception.
   const reviewed = new Set<string>();
 
-  // One card, start to finish. Every guard in it is synchronous and runs before the first await —
-  // including the mark — so the whole list can be walked at once without two of them starting the
-  // same card.
-  async function reviewOne(entry: WorktreeEntry): Promise<void> {
-    if (entry.reviewing || reviewed.has(entry.cardId)) return;
+  // One card, start to finish. Every guard in it runs before the first await, and so does the mark,
+  // so the whole list can be walked at once, and a run can start while the last one is still out,
+  // without two of them starting the same card.
+  async function sweepOne(entry: WorktreeEntry): Promise<void> {
+    if (reviewed.has(entry.cardId)) return;
     // Panes belong to an open project. A project closed right now is not a refusal: nothing is marked,
     // and the sweep finds the card again the moment it is opened.
     const slot = ports.slotOf(entry.projectPath);
@@ -190,14 +214,24 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (pullRequest === null) return;
     // A card that has already been through this. The number on the branch's board is written once and
     // stays written, so it goes on saying "finished" long after the review that read it merged the
-    // pull request — and the record outlives the review too, since the review worktree is removed by
-    // hand. The project's board is what tells the two apart; review.ts holds why it is the only thing
-    // that can. Marked rather than just skipped, so a card whose worktree is left lying around does
-    // not cost a board read every five seconds for the rest of the run.
+    // pull request. The project's board is what tells the two apart; review.ts holds why it is the
+    // only thing that can. A card past Review is finished with its worktree too, so that is removed
+    // here, once: the review pane cannot remove the folder it is standing in, and without this every
+    // shipped card leaves one beside the project for good.
     const board = projectBoard(entry.projectPath);
     const awaits = board === null ? null : awaitsReview(board, entry.cardId);
     if (awaits === false) {
+      // Marked before asking, because asking waits on `ps` and `lsof`, and a tick that starts while
+      // they are still out must not reach this card too and remove the worktree a second time. Not
+      // while a shell still stands in it: the mark comes off again, so the worktree goes on the first
+      // tick after the last one is closed. What waiting costs is the two board reads above and one
+      // `ps` and one `lsof` every five seconds, shared by every card waiting on that tick.
       reviewed.add(entry.cardId);
+      if (await ports.shellLivesIn(entry.worktreePath)) {
+        reviewed.delete(entry.cardId);
+        return;
+      }
+      await clearWorktree(ports, entry);
       return;
     }
     // Neither answer: no board to read, or a board with no row for this card — the card was deleted after
@@ -206,7 +240,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // about a card it cannot find is written on that card.
     //
     // Whether it is marked is the difference between those two. A deleted card is never coming back with
-    // that id and its worktree stays on disk — the review prompt says not to remove it — so leaving it
+    // that id and its worktree stays on disk — only a card seen past Review has it removed — so leaving it
     // unmarked costs two board reads every five seconds for the rest of the run, which is the cost the
     // branch above marks to avoid. A board that was moved aside is the opposite: restore it from git and
     // every card is back, and a sweep that marked them all in between would start no review again until
@@ -231,6 +265,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // become. If there is still nothing going, nothing is marked and nothing is touched: free a pane
     // and the next tick starts the review, rather than the worktree being destroyed first and the card
     // left carrying a line about a pane that came free a second later.
+    // A review already running for it. Asked here rather than first, so the card reaching Done is
+    // still seen above and its worktree cleared.
+    if (entry.reviewing) return;
     if (ports.freePaneIn(slot, entry.pane) === null) return;
     reviewed.add(entry.cardId);
     // Before the swap, and whether or not the swap works: the card is finished and nothing has checked
@@ -258,7 +295,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // however long the first one's git takes, with nothing on screen saying why. Two in the *same*
   // project still go one at a time: that is what the queue is for.
   async function run(): Promise<void> {
-    await Promise.all(ports.worktrees().map((entry) => reviewOne(entry)));
+    await Promise.all(ports.worktrees().map((entry) => sweepOne(entry)));
   }
 
   return { run, forget: (cardId) => reviewed.delete(cardId) };

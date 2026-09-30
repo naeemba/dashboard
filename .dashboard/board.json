@@ -90,6 +90,27 @@
           "updatedAt": "2026-09-28T13:05:04.368Z",
           "branch": "manager-page-redesign",
           "pullRequest": 64
+        },
+        {
+          "id": "ebbea8cf-ec60-4615-9204-811db47add3f",
+          "title": "Make the manager page readable: label every row and column",
+          "notes": "Worktree rows, terminal rows and the token columns have no headings; the week bars have no days; 'quiet' is unexplained; the confirm dialog stretches to full height.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-09-29T23:31:54.877Z",
+          "updatedAt": "2026-09-30T00:02:30.903Z",
+          "branch": "manager-page-legible",
+          "pullRequest": 65,
+          "comments": [
+            {
+              "at": "2026-09-29T23:44:34.684Z",
+              "body": "Shipped in PR #65: column names over terminals and worktrees, named token figures, weekday letters, blank status for quiet panes, 'nothing waiting', box-drawing prompts skipped, title-first worktree rows, confirm dialog height and focus ring fixed. v1.6.0."
+            },
+            {
+              "at": "2026-09-30T00:02:30.903Z",
+              "body": "Also in PR #65: once a card's review has landed it in Done, the app removes its worktree (branch kept, never forced) as soon as no pane has a shell left in it. If git refuses over uncommitted files, the card says so and the worktree stays on the worktree list."
+            }
+          ]
         }
       ]
     },
