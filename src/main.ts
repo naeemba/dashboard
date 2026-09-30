@@ -318,6 +318,15 @@ function releaseWorktreePanes(entry: WorktreeEntry): void {
   }
 }
 
+// Whether a pane has a live shell in this folder. The review sweep asks before removing a finished
+// card's worktree, because the removal kills every one of them.
+function shellLivesIn(worktreePath: string): boolean {
+  for (const [id, command] of terminalCommands) {
+    if (command.directory === worktreePath && shells.has(id)) return true;
+  }
+  return false;
+}
+
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
 // is where the two of them being one answer is explained.
 //
@@ -769,6 +778,7 @@ const reviews = reviewSweep({
   slotOf: slotOfProject,
   agentWorksIn,
   freePaneIn,
+  shellLivesIn,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),

@@ -24,8 +24,8 @@ export function intoReview(board: Board, cardId: string): Board | null {
 
 // Whether this card still wants reviewing, asked of the project's board. Its column is the only record
 // of a review that finished: the review's whole job is to move the card past Review, and the worktree
-// it ran in outlives it — the app removes it on a later tick, and not at all while the project is
-// closed or git refuses — so the record says nothing about how the review ended.
+// it ran in outlives it — the app removes it on a later tick once no shell stands in it, and not at
+// all while the project is closed or git refuses — so the record says nothing about how the review ended.
 //
 // What asking the record instead costs. `reviewing` on it is a sentence about a pane, so it is cleared
 // when the pane goes and a restart wipes it off every card. Without this, the first tick after that
@@ -143,6 +143,7 @@ export function reviewPrompt(
     `   \`${board} comment ${cardId} "<what happened>"\`.`,
     '',
     'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
-    "in Done on the project's board and you have stopped. Do not quit, kill or rebuild any running app.",
+    "in Done on the project's board and this pane has been closed. Do not quit, kill or rebuild any",
+    'running app.',
   ].join('\n');
 }

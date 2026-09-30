@@ -59,6 +59,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       slotOf: () => 0,
       agentWorksIn: () => false,
       freePaneIn: () => 0,
+      shellLivesIn: () => false,
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
         return { ok: true, message: '', dirty: [] };
@@ -160,6 +161,23 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
   });
 
+  // The review is done and quiet, but its pane is still open: you may be typing a follow-up into it, or
+  // have an editor open in the folder. Removing the worktree would kill that shell, so it waits until
+  // the last one is closed, and then goes.
+  it('keeps a finished worktree while a shell still stands in it', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    let open = true;
+    const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => open });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    await sweep.run();
+    expect(log.removed).toEqual([]);
+    open = false;
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
   // A card dragged to Done by hand before any pull request was opened. Nothing says the work landed,
   // so the folder is not the sweep's to throw away.
   it('keeps the worktree of a card in Done with no pull request', async () => {
@@ -178,7 +196,7 @@ describe('reviewSweep', () => {
     const { ports: made, log } = ports(entry, {
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
-        return { ok: false, message: '', dirty: ['.serena/'] };
+        return { ok: false, message: '', dirty: ['draft.md'] };
       },
     });
     const sweep = reviewSweep(made);
