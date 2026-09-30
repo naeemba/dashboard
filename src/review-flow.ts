@@ -33,7 +33,8 @@ export type ReviewPorts = {
   // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
   // before anything is destroyed is the answer the pane is given after.
   freePaneIn: (slot: number, freeing: number | null) => number | null;
-  // Whether any pane still has a shell standing in this folder — opened there, or moved there with `cd`.
+  // Whether any pane still has a shell standing in this folder — opened there, moved there with `cd`,
+  // or running a program there that it started from somewhere else.
   // A finished card's worktree waits until this is false: the review pane you are typing a follow-up
   // into, a dev server you started there, or an nvim with unsaved edits, never has its folder taken
   // away underneath it.
@@ -194,9 +195,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // still finishing rather than a review that failed, and swapWorktree says why it is the exception.
   const reviewed = new Set<string>();
 
-  // One card, start to finish. Every guard in it is synchronous and runs before the first await —
-  // including the mark — so the whole list can be walked at once without two of them starting the
-  // same card.
+  // One card, start to finish. Every guard in it runs before the first await, and so does the mark,
+  // so the whole list can be walked at once, and a run can start while the last one is still out,
+  // without two of them starting the same card.
   async function sweepOne(entry: WorktreeEntry): Promise<void> {
     if (reviewed.has(entry.cardId)) return;
     // Panes belong to an open project. A project closed right now is not a refusal: nothing is marked,
@@ -220,11 +221,16 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const board = projectBoard(entry.projectPath);
     const awaits = board === null ? null : awaitsReview(board, entry.cardId);
     if (awaits === false) {
-      // Not while a shell still stands in it, and not marked either, so the worktree goes on the first
-      // tick after the last one is closed. What waiting costs is the two board reads above every five
-      // seconds while the review pane sits open.
-      if (await ports.shellLivesIn(entry.worktreePath)) return;
+      // Marked before asking, because asking waits on `ps` and `lsof`, and a tick that starts while
+      // they are still out must not reach this card too and remove the worktree a second time. Not
+      // while a shell still stands in it: the mark comes off again, so the worktree goes on the first
+      // tick after the last one is closed. What waiting costs is the two board reads above and one
+      // `ps` and one `lsof` every five seconds, shared by every card waiting on that tick.
       reviewed.add(entry.cardId);
+      if (await ports.shellLivesIn(entry.worktreePath)) {
+        reviewed.delete(entry.cardId);
+        return;
+      }
       await clearWorktree(ports, entry);
       return;
     }

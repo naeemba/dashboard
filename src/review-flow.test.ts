@@ -178,6 +178,23 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
   });
 
+  // `lsof` stuck longer than the five-second tick. The next run must not reach the same card and remove
+  // the worktree a second time: git would refuse the second, and the card would say the worktree was
+  // kept when it is already gone.
+  it('removes a finished worktree once when a run starts before the last one has asked', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    let answer: (lives: boolean) => void = () => undefined;
+    const asked = new Promise<boolean>((resolve) => { answer = resolve; });
+    const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => asked });
+    const sweep = reviewSweep(made);
+    const first = sweep.run();
+    const second = sweep.run();
+    answer(false);
+    await Promise.all([first, second]);
+    expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
   // A card dragged to Done by hand before any pull request was opened. Nothing says the work landed,
   // so the folder is not the sweep's to throw away.
   it('keeps the worktree of a card in Done with no pull request', async () => {

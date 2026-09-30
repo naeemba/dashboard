@@ -1,7 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { execFile } from 'node:child_process';
 import { existsSync, realpathSync } from 'node:fs';
-import { readlink } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
@@ -16,7 +15,8 @@ import {
 import { baseName } from './base-name';
 import { git } from './git';
 import { isOpenableLink } from './links';
-import { lsofDirectory, shellStandsIn } from './shell-directory';
+import { shellStandsIn } from './shell-directory';
+import { shellDirectories } from './shell-directories';
 import { agentArguments, editorArguments, pickShell } from './shell';
 import { taskRunner } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -329,29 +329,17 @@ function shellsIn(worktreePath: string): string[] {
 
 // Whether any pane's shell stands in this folder, which is what the review sweep waits on before it
 // removes a finished card's worktree. shell-directory.ts says which folders count; this asks each live
-// shell where it is now, since a `cd` typed into a pane never reaches terminalCommands.
+// shell, and what it started, where it is now, since a `cd` typed into a pane never reaches terminalCommands.
+const askShellDirectories = shellDirectories();
 async function shellLivesIn(worktreePath: string): Promise<boolean> {
   // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
   if (shellsIn(worktreePath).length > 0) return true;
   const realWorktreePath = existsSync(worktreePath) ? realpathSync(worktreePath) : worktreePath;
-  const answers = await Promise.all(Array.from(shells, async ([id, terminalProcess]) => {
-    const opened = terminalCommands.get(id)?.directory ?? '';
-    const current = await currentDirectory(terminalProcess.pid);
-    return shellStandsIn(opened, current, worktreePath, realWorktreePath);
-  }));
-  return answers.includes(true);
-}
-
-// The folder a process is in now, or null when it cannot be asked: gone already, or no way to ask.
-async function currentDirectory(pid: number): Promise<string | null> {
-  try {
-    if (process.platform === 'linux') return await readlink(`/proc/${pid}/cwd`);
-    if (process.platform === 'win32') return null;
-    const { stdout } = await runCommand('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
-    return lsofDirectory(stdout);
-  } catch {
-    return null;
-  }
+  const directories = await askShellDirectories(Array.from(shells.values(), (terminal) => terminal.pid));
+  return Array.from(shells).some(([id, terminalProcess]) => shellStandsIn(
+    terminalCommands.get(id)?.directory ?? '', directories.get(terminalProcess.pid) ?? [],
+    worktreePath, realWorktreePath,
+  ));
 }
 
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
