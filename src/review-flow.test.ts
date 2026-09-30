@@ -59,7 +59,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       slotOf: () => 0,
       agentWorksIn: () => false,
       freePaneIn: () => 0,
-      shellLivesIn: () => false,
+      shellLivesIn: async () => false,
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
         return { ok: true, message: '', dirty: [] };
@@ -168,7 +168,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
     let open = true;
-    const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => open });
+    const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: async () => open });
     const sweep = reviewSweep(made);
     await sweep.run();
     await sweep.run();

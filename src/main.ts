@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
+import { readlink } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import * as pty from 'node-pty';
@@ -15,6 +16,7 @@ import {
 import { baseName } from './base-name';
 import { git } from './git';
 import { isOpenableLink } from './links';
+import { lsofDirectory, shellStandsIn } from './shell-directory';
 import { agentArguments, editorArguments, pickShell } from './shell';
 import { taskRunner } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -318,12 +320,38 @@ function releaseWorktreePanes(entry: WorktreeEntry): void {
   }
 }
 
-// The panes with a live shell in this folder. A removal kills every one of them, which is why the
-// review sweep asks first and leaves a finished card's worktree alone while any is left.
+// The panes with a live shell opened in this folder: the ones a removal kills.
 function shellsIn(worktreePath: string): string[] {
   return Array.from(terminalCommands)
     .filter(([id, command]) => command.directory === worktreePath && shells.has(id))
     .map(([id]) => id);
+}
+
+// Whether any pane's shell stands in this folder, which is what the review sweep waits on before it
+// removes a finished card's worktree. shell-directory.ts says which folders count; this asks each live
+// shell where it is now, since a `cd` typed into a pane never reaches terminalCommands.
+async function shellLivesIn(worktreePath: string): Promise<boolean> {
+  // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
+  if (shellsIn(worktreePath).length > 0) return true;
+  const realWorktreePath = existsSync(worktreePath) ? realpathSync(worktreePath) : worktreePath;
+  const answers = await Promise.all(Array.from(shells, async ([id, terminalProcess]) => {
+    const opened = terminalCommands.get(id)?.directory ?? '';
+    const current = await currentDirectory(terminalProcess.pid);
+    return shellStandsIn(opened, current, worktreePath, realWorktreePath);
+  }));
+  return answers.includes(true);
+}
+
+// The folder a process is in now, or null when it cannot be asked: gone already, or no way to ask.
+async function currentDirectory(pid: number): Promise<string | null> {
+  try {
+    if (process.platform === 'linux') return await readlink(`/proc/${pid}/cwd`);
+    if (process.platform === 'win32') return null;
+    const { stdout } = await runCommand('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
+    return lsofDirectory(stdout);
+  } catch {
+    return null;
+  }
 }
 
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
@@ -777,7 +805,7 @@ const reviews = reviewSweep({
   slotOf: slotOfProject,
   agentWorksIn,
   freePaneIn,
-  shellLivesIn: (worktreePath) => shellsIn(worktreePath).length > 0,
+  shellLivesIn,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),

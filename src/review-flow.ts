@@ -33,10 +33,11 @@ export type ReviewPorts = {
   // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
   // before anything is destroyed is the answer the pane is given after.
   freePaneIn: (slot: number, freeing: number | null) => number | null;
-  // Whether any pane still has a shell running in this folder. Removing a worktree kills every shell
-  // standing in it, so a finished card's worktree waits until this is false: the review pane you are
-  // typing a follow-up into, or an nvim with unsaved edits, is never killed out from under you.
-  shellLivesIn: (worktreePath: string) => boolean;
+  // Whether any pane still has a shell standing in this folder — opened there, or moved there with `cd`.
+  // A finished card's worktree waits until this is false: the review pane you are typing a follow-up
+  // into, a dev server you started there, or an nvim with unsaved edits, never has its folder taken
+  // away underneath it.
+  shellLivesIn: (worktreePath: string) => Promise<boolean>;
   removeWorktree: (worktreePath: string, force: boolean) => Promise<WorktreeRemoval>;
   // Check the branch out again at the same path. No new branch and no base: the branch is already
   // there with the pull request on it, and everything the agent pushed is on it already.
@@ -222,7 +223,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       // Not while a shell still stands in it, and not marked either, so the worktree goes on the first
       // tick after the last one is closed. What waiting costs is the two board reads above every five
       // seconds while the review pane sits open.
-      if (ports.shellLivesIn(entry.worktreePath)) return;
+      if (await ports.shellLivesIn(entry.worktreePath)) return;
       reviewed.add(entry.cardId);
       await clearWorktree(ports, entry);
       return;
