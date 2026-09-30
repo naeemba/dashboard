@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
+  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, groupOpenings, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
   managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
   takesAnswer,
   type PaneSummary,
@@ -236,12 +236,12 @@ describe('alertSummary', () => {
 describe('stateLabel', () => {
   // A busy agent is `quiet` too, so printing the word would call it idle.
   it('prints nothing for a pane that wants nothing', () => {
-    expect(stateLabel('quiet')).toBe('');
+    expect(stateLabel(summary('quiet'))).toBe('');
   });
 
   it('names the states that want something', () => {
-    expect(stateLabel('waiting')).toBe('waiting');
-    expect(stateLabel('exited')).toBe('exited');
+    expect(stateLabel(summary('waiting'))).toBe('waiting');
+    expect(stateLabel(summary('exited'))).toBe('exited');
   });
 });
 
@@ -292,6 +292,45 @@ describe('managerLines', () => {
     const api = row(0, 'api', [pane], [entry]);
     expect(managerLines([api], new Set()).map((line) => line.kind)).toEqual(['project', 'worktree']);
     expect(managerLines([api], new Set([0])).map((line) => line.kind)).toEqual(['project', 'pane', 'worktree']);
+  });
+});
+
+describe('groupOpenings', () => {
+  const row = (slot: number, name: string, panes: PaneSummary[] = [], worktrees: WorktreeEntry[] = []) => (
+    { slot, name, path: `/work/${name}`, panes, tokens: NO_TOTALS, days: NO_DAYS, worktrees }
+  );
+  const first = { ...summary('quiet'), index: 0, name: 'terminal 1' };
+  const second = { ...summary('quiet'), index: 1, name: 'terminal 2' };
+  const fix = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+  const docs = worktree('/work/api', '/work/api.worktrees/docs', '2026-09-02T00:00:00Z');
+
+  it('names the terminals once, above the first of them', () => {
+    const lines = managerLines([row(0, 'api', [first, second])], new Set([0]));
+    expect([...groupOpenings(lines)]).toEqual([1]);
+  });
+
+  it('names the worktrees once, above the first of them, when there are no terminals', () => {
+    const lines = managerLines([row(0, 'api', [], [fix, docs])], new Set());
+    expect([...groupOpenings(lines)]).toEqual([1]);
+  });
+
+  it('names the terminals and the worktrees each above their own group', () => {
+    const lines = managerLines([row(0, 'api', [first, second], [fix, docs])], new Set([0]));
+    expect(lines.map((line) => line.kind)).toEqual(['project', 'pane', 'pane', 'worktree', 'worktree']);
+    expect([...groupOpenings(lines)]).toEqual([1, 3]);
+  });
+
+  // The project row between them starts the names over, so the second project gets its own.
+  it('names each project’s groups again, however they follow one another', () => {
+    const lines = managerLines(
+      [row(0, 'api', [first], [fix]), row(1, 'web', [first], [docs])],
+      new Set([0, 1]),
+    );
+    expect([...groupOpenings(lines)]).toEqual([1, 2, 4, 5]);
+  });
+
+  it('names nothing over a list of shut projects with nothing under them', () => {
+    expect(groupOpenings(managerLines([row(0, 'api', [first]), row(1, 'web')], new Set())).size).toBe(0);
   });
 });
 

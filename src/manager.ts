@@ -219,8 +219,8 @@ const NOTHING_WAITING = 'nothing waiting';
 // What a pane row's status cell says. Blank for a pane getting on with its work, which is most of
 // them: a column of `quiet` down the list buries the two words worth spotting, and `quiet` beside an
 // agent that is busy is simply wrong. The age beside it is what tells you how long it has been.
-export function stateLabel(state: PaneState): string {
-  return ALERT_STATES.some((alert) => alert === state) ? state : '';
+export function stateLabel(pane: PaneSummary): string {
+  return isAlerting(pane) ? pane.state : '';
 }
 
 // A line on the page: a project, one of its panes underneath it, or one of its worktrees.
@@ -257,6 +257,17 @@ export function managerLines(rows: readonly ManagerRow[], open: ReadonlySet<numb
       ...worktrees,
     ];
   });
+}
+
+// The lines that get their columns' names drawn above them: the first terminal and the first worktree
+// under each project. Read off the kind of the line before, so it holds however managerLines comes to
+// order a project's lines — two runs of one kind under one project would each get their own names.
+export function groupOpenings(lines: readonly ManagerLine[]): ReadonlySet<number> {
+  const openings = new Set<number>();
+  lines.forEach((line, index) => {
+    if (line.kind !== 'project' && lines[index - 1]?.kind !== line.kind) openings.add(index);
+  });
+  return openings;
 }
 
 // Which project a line belongs to: the row's own slot, or the slot of the project a pane row sits

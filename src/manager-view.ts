@@ -3,7 +3,7 @@ import { relativeAge } from './age';
 import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, isAlerting, lineKey, managerLines, paneAge, removableWorktree, slotOfLine, stateLabel,
+  alertSummary, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, removableWorktree, slotOfLine, stateLabel,
   takesAnswer, type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
@@ -117,12 +117,6 @@ function groupHead(kind: keyof typeof GROUP_COLUMNS): HTMLElement {
   return item;
 }
 
-// Whether a line opens a new group under its project, and so wants the column names above it: the
-// first terminal, and the first worktree, of each project.
-function opensGroup(line: ManagerLine, previous: ManagerLine | undefined): line is Exclude<ManagerLine, { kind: 'project' }> {
-  return line.kind !== 'project' && previous?.kind !== line.kind;
-}
-
 // Figures written into a row that already has its cells. Strings rather than a project's Totals, so
 // a project's three and a pane's one are both written by this — teach a fourth
 // window to the rows and the pane row is not the one path that quietly kept its old writer.
@@ -224,7 +218,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
 
     const state = document.createElement('span');
     state.className = `manager-state manager-${line.pane.state}`;
-    state.textContent = stateLabel(line.pane.state);
+    state.textContent = stateLabel(line.pane);
     // How long it has been since the pane printed anything, which is the half of the row worth
     // reading: the text beside it can be a spinner redrawing the same line, but forty minutes is
     // forty minutes. A pane that has printed nothing yet has no age and is given none.
@@ -400,6 +394,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       body.hidden = !anyOpen;
       drawPanels(rows);
       const children: HTMLElement[] = [];
+      const openings = groupOpenings(lines);
       rowElements = lines.map((line, index) => {
         const item = line.kind === 'pane' ? paneLine(line)
           : line.kind === 'worktree' ? worktreeLine(line, index) : projectLine(line);
@@ -409,7 +404,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
           open();
         });
         if (index === selected) item.classList.add('highlighted');
-        if (opensGroup(line, lines[index - 1])) children.push(groupHead(line.kind));
+        if (line.kind !== 'project' && openings.has(index)) children.push(groupHead(line.kind));
         children.push(item);
         return item;
       });
