@@ -129,6 +129,16 @@ describe('oneQuestionAtATime', () => {
     expect(question.asked()).toBe(1);
   });
 
+  // Pinned so that a caller asking about its own shells finds out here, not by losing a worktree.
+  it('gives a call made while one is out the earlier answer, whatever it asked', async () => {
+    const question = counted();
+    const first = question.ask([10, 11]);
+    const second = question.ask([20, 21]);
+    question.answer(7);
+    expect(await second).toBe(await first);
+    expect(question.asked()).toBe(1);
+  });
+
   it('asks again once the last answer is in', async () => {
     const question = counted();
     const first = question.ask([10]);

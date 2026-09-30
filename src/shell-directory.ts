@@ -49,6 +49,11 @@ export function anyShellStandsIn(
 // One question out at a time: every call made while one is out gets that one's answer, and the next
 // call after it settles asks again. The review sweep walks its cards all at once, so twenty shells
 // and three cards waiting cost one `ps` and one `lsof` a tick, not three of each.
+//
+// A call made while a question is out gets that answer even if it asked about something else: its
+// own argument is never looked at. That is right only while every caller asks the same thing, as
+// every card on a tick asks about every live shell. A caller that asks about its own subset would get
+// a map missing its pids and fall back to the folder each shell was opened in.
 export function oneQuestionAtATime<Asked, Answer>(
   ask: (asked: Asked) => Promise<Answer>,
 ): (asked: Asked) => Promise<Answer> {
@@ -68,8 +73,9 @@ function isInside(directory: string, root: string): boolean {
 }
 
 // Each shell with every process under it, children and their children, the shell first. `parents` is
-// pane-sessions.ts's reading of `ps -eo pid=,ppid=`. An empty tree — no `ps`, or it failed — leaves
-// each shell on its own, which is the answer the sweep had before it asked about children at all.
+// pane-sessions.ts's reading of `ps -eo pid=,ppid=`. An empty tree leaves each shell on its own. A
+// `ps` that gave no answer never reaches here: the lookup returns `null`, and anyShellStandsIn keeps
+// the worktree.
 export function familiesOf(
   parents: ReadonlyMap<number, number>, shellPids: readonly number[],
 ): Map<number, number[]> {

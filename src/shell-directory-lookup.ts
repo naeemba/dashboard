@@ -11,8 +11,8 @@ import {
 // and it is tested there, including how one question is shared between the cards asking it.
 //
 // Out of main.ts because main had reached the 600-line ceiling. No test file, under the exemption
-// CLAUDE.md gives spawning: this runs `ps` and `lsof` and hands the text on, and a test of that is a
-// test of mocks.
+// CLAUDE.md gives spawning: this runs `lsof`, reads `ps` through the `processTree` main hands it,
+// and hands the text on, and a test of that is a test of mocks.
 //
 // One `ps` and one `lsof` per tick, whatever the number of shells and cards. `lsof` takes a list of
 // pids and answers for all of them in about the time it takes for one, so twenty shells cost what
