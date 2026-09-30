@@ -190,7 +190,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'question from the same pane is answered without picking it again. '
     + 'Only a pane that is asking takes a key that way: a pane that has died wants Enter in the '
     + 'pane itself, and one getting on with its work is left alone. A project with nothing to report '
-    + 'says quiet beside its name, and still opens to show what its panes are up to. '
+    + 'says nothing waiting beside its name, and still opens to show what its panes are up to. '
     + 'The close key works from here too, and this is the one screen where it needs a highlight: there '
     + 'is no project behind this page, so what it takes is the project the selection is on. What it '
     + 'takes and what stops it are the same everywhere, and the Projects section below says both.',
