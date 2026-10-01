@@ -2,14 +2,15 @@ import { timeOf } from './age';
 import {
   DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
 } from './board';
-import { isAlerting, type ManagerRow, type PaneSummary } from './manager';
+import { isAlerting, takesAnswer, type ManagerRow, type PaneSummary } from './manager';
 import type { WorktreeEntry } from './worktree-store';
 
 // Everything across the open projects that is waiting on you, as one list. The manager's rows say what
 // every project is doing; this says what to do next, so it is the first thing on the page and the
 // thing the next-item key walks.
 
-// An agent's pane that has printed nothing for this long is taken to have stopped. Long enough that a slow test run is not flagged, short enough to be caught before lunch is over.
+// An agent's pane that has printed nothing for this long is taken to have stopped. Long enough that
+// a slow test run is not flagged, short enough to be caught before lunch is over.
 export const STALL_MS = 30 * 60_000;
 
 export type NeedKind = 'asking' | 'exited' | 'stalled' | 'review' | 'leftover';
@@ -53,14 +54,15 @@ type Base = Pick<Need, 'slot' | 'project' | 'projectPath'>;
 function paneNeeds(row: ManagerRow, base: Base): Need[] {
   return row.panes.filter(isAlerting).map((pane) => ({
     ...base,
-    kind: pane.state === 'waiting' ? 'asking' : 'exited',
+    kind: takesAnswer(pane) ? 'asking' : 'exited',
     subject: pane.name,
     since: pane.lastPrintedAt,
     target: { kind: 'pane', index: pane.index },
   }));
 }
 
-// A quiet pane an agent is working a card in. An alerting pane is already on the list as asking or died, and a pane that has printed nothing yet has no age to judge.
+// A quiet pane an agent is working a card in. An alerting pane is already on the list as asking or
+// died, and a pane that has printed nothing yet has no age to judge.
 function isStalled(pane: PaneSummary | undefined, now: number): pane is PaneSummary {
   return pane !== undefined && !isAlerting(pane) && pane.lastPrintedAt > 0
     && now - pane.lastPrintedAt >= STALL_MS;
@@ -134,4 +136,22 @@ export function needKey(need: Need): string {
 export function needsInTurn(needs: readonly Need[], lastKey: string | null): Need[] {
   const after = needs.findIndex((need) => needKey(need) === lastKey) + 1;
   return [...needs.slice(after), ...needs.slice(0, after)];
+}
+
+// Where one press of the next-thing key lands. `jump` tries an item and answers '' when it landed, or
+// why it could not. An item it cannot land on is passed over, so one stuck item does not hold the key
+// on itself, and is not remembered, so the next press does not start after it. When none can be
+// landed on, the first one's reason is the one said.
+export function nextLanding(
+  needs: readonly Need[], lastKey: string | null, jump: (need: Need) => string,
+): { landedOn: string | null; reason: string } {
+  const turn = needsInTurn(needs, lastKey);
+  if (turn.length === 0) return { landedOn: null, reason: 'Nothing needs you' };
+  let firstReason = '';
+  for (const need of turn) {
+    const reason = jump(need);
+    if (reason === '') return { landedOn: needKey(need), reason: '' };
+    firstReason ||= reason;
+  }
+  return { landedOn: null, reason: firstReason };
 }

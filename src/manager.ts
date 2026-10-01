@@ -299,7 +299,6 @@ export function lineKey(line: ManagerLine): string {
   return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }
 
-
 // The pane a typed character on this line goes to, or null when the line is not a question. A queue
 // item asking a question is the same pane as its row under the project, so it answers the same way.
 export function answerTarget(line: ManagerLine): { slot: number; index: number } | null {

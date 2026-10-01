@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import type { ManagerRow, PaneSummary } from './manager';
-import { STALL_MS, needKey, needsInTurn, needsYou } from './needs-you';
+import { STALL_MS, needKey, needsInTurn, needsYou, nextLanding } from './needs-you';
 import { NO_DAYS, NO_TOTALS } from './usage';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -121,5 +121,38 @@ describe('needsInTurn', () => {
 
   it('starts at the oldest again once the last one it landed on has left the queue', () => {
     expect(order('need:asking:0:9')).toEqual(['terminal 1', 'terminal 2', 'terminal 3']);
+  });
+});
+
+describe('nextLanding', () => {
+  const needs = needsYou(
+    [row([pane(0, 'waiting', minutesAgo(30)), pane(1, 'waiting', minutesAgo(20)), pane(2, 'waiting', minutesAgo(10))])],
+    () => undefined, new Set(), NOW,
+  );
+  const landAll = () => '';
+
+  it('reaches the second item on the second press', () => {
+    const first = nextLanding(needs, null, landAll);
+    expect(first).toEqual({ landedOn: needKey(needs[0]), reason: '' });
+    expect(nextLanding(needs, first.landedOn, landAll)).toEqual({ landedOn: needKey(needs[1]), reason: '' });
+  });
+
+  it('skips an item it cannot land on and does not remember it', () => {
+    const tried: string[] = [];
+    const result = nextLanding(needs, null, (need) => {
+      tried.push(need.subject);
+      return need === needs[0] ? 'Gone' : '';
+    });
+    expect(tried).toEqual(['terminal 1', 'terminal 2']);
+    expect(result).toEqual({ landedOn: needKey(needs[1]), reason: '' });
+  });
+
+  it('says the first reason, and lands nowhere, when no item can be landed on', () => {
+    const result = nextLanding(needs, null, (need) => `No ${need.subject}`);
+    expect(result).toEqual({ landedOn: null, reason: 'No terminal 1' });
+  });
+
+  it('says nothing needs you when the queue is empty', () => {
+    expect(nextLanding([], null, landAll)).toEqual({ landedOn: null, reason: 'Nothing needs you' });
   });
 });

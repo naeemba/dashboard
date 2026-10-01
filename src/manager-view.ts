@@ -7,7 +7,7 @@ import {
   removableWorktree, slotOfLine, stateLabel, withQueue, type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
-import { NEED_LABELS, needKey, needsInTurn, needsYou, type Need } from './needs-you';
+import { NEED_LABELS, nextLanding, needsYou, type Need } from './needs-you';
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
@@ -58,7 +58,8 @@ export type ManagerView = {
   // board has, and for the same reason: one place decides what every key on every screen does.
   runAction(action: Action): void;
   // The key that works from anywhere: does what Enter does on the next item in the queue, oldest
-  // first and on past the one it last landed on, and hands back a sentence for the status bar — why it could not land, that nothing is waiting, or ''.
+  // first and on past the one it last landed on, and hands back a sentence for the status bar: why
+  // it could not land, that nothing is waiting, or ''.
   goToNextNeed(rows: readonly ManagerRow[]): string;
 };
 
@@ -567,20 +568,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Asked here too, since the key works from pages where the list is never drawn: the boards and
       // the dirty check it needs are read now, and a press before they land sees the panes alone.
       askReads(rows);
-      const turn = needsInTurn(currentNeeds(rows), lastNeedKey);
-      if (turn.length === 0) return 'Nothing needs you';
-      // An item it cannot land on is passed over, so one stuck item does not hold the key on itself.
-      // When none can be landed on, the first one's reason is the one said.
-      let firstReason = '';
-      for (const need of turn) {
-        const reason = options.onJumpNeed(need);
-        if (reason === '') {
-          lastNeedKey = needKey(need);
-          return '';
-        }
-        firstReason ||= reason;
-      }
-      return firstReason;
+      const { landedOn, reason } = nextLanding(currentNeeds(rows), lastNeedKey, options.onJumpNeed);
+      if (landedOn !== null) lastNeedKey = landedOn;
+      return reason;
     },
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);
