@@ -111,23 +111,6 @@
               "body": "Also in PR #65: once a card's review has landed it in Done, the app removes its worktree (branch kept, never forced) as soon as no pane has a shell left in it. If git refuses over uncommitted files, the card says so and the worktree stays on the worktree list."
             }
           ]
-        },
-        {
-          "id": "fa954f29-1b2e-4ca3-b2f0-2662107bd62f",
-          "title": "Manager: a queue of what needs you, and a key to the next one",
-          "notes": "Across every open project, oldest first: a pane asking, a card in Review with a PR, an agent quiet 30+ min on a Doing card, a dead pane, a Done card's worktree kept for uncommitted work. Drawn at the top of the manager's general screen. One key from anywhere jumps to the oldest item.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-10-01T09:45:21.647Z",
-          "updatedAt": "2026-10-01T09:58:01.925Z",
-          "branch": "manager-needs-you-queue",
-          "pullRequest": 66,
-          "comments": [
-            {
-              "at": "2026-10-01T09:58:01.925Z",
-              "body": "Shipped in PR #66: Needs you queue at the top of the manager (asking, died, quiet 30+ min on Doing, Review with no review running, Done with uncommitted worktree), Ctrl+Shift+J to the oldest, jumps split into jumps.ts. v1.7.0."
-            }
-          ]
         }
       ]
     },
@@ -758,6 +741,27 @@
           "updatedAt": "2026-09-28T12:00:10.819Z",
           "branch": "a-board-of-the-manager-s-own-kept-in-the-ho",
           "pullRequest": 63
+        },
+        {
+          "id": "fa954f29-1b2e-4ca3-b2f0-2662107bd62f",
+          "title": "Manager: a queue of what needs you, and a key to the next one",
+          "notes": "Across every open project, oldest first: a pane asking, a card in Review with a PR, an agent quiet 30+ min on a Doing card, a dead pane, a Done card's worktree kept for uncommitted work. Drawn at the top of the manager's general screen. One key from anywhere jumps to the oldest item.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-01T09:45:21.647Z",
+          "updatedAt": "2026-10-01T10:29:24.452Z",
+          "branch": "manager-needs-you-queue",
+          "pullRequest": 66,
+          "comments": [
+            {
+              "at": "2026-10-01T09:58:01.925Z",
+              "body": "Shipped in PR #66: Needs you queue at the top of the manager (asking, died, quiet 30+ min on Doing, Review with no review running, Done with uncommitted worktree), Ctrl+Shift+J to the oldest, jumps split into jumps.ts. v1.7.0."
+            },
+            {
+              "at": "2026-10-01T10:29:24.452Z",
+              "body": "Shipped in PR #66: the needs-you queue on the manager page and Ctrl+Shift+J to the next item. Two review rounds, all threads fixed."
+            }
+          ]
         }
       ]
     }
