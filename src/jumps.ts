@@ -61,7 +61,6 @@ export function createJumps(ports: JumpPorts): Jumps {
   function jumpToNeed(need: Need): string {
     const { target } = need;
     if (target.kind === 'card') return jumpToCard(need.projectPath, target.cardId);
-    if (target.kind === 'worktree') return jumpToWorktree(target.entry);
     goToPane(need.slot, target.index);
     return '';
   }

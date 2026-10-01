@@ -285,7 +285,7 @@ export function slotOfLine(line: ManagerLine): number {
 // project or a pane row. The key removes a folder, so it only fires where the row names that folder —
 // a queue item does when it is a worktree left behind.
 export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
-  if (line.kind === 'need') return line.need.target.kind === 'worktree' ? line.need.target.entry : null;
+  if (line.kind === 'need') return line.need.worktree ?? null;
   return line.kind === 'worktree' ? line.entry : null;
 }
 
@@ -299,3 +299,39 @@ export function lineKey(line: ManagerLine): string {
   return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }
 
+
+// The pane a typed character on this line goes to, or null when the line is not a question. A queue
+// item asking a question is the same pane as its row under the project, so it answers the same way.
+export function answerTarget(line: ManagerLine): { slot: number; index: number } | null {
+  if (line.kind === 'pane') return takesAnswer(line.pane) ? { slot: line.slot, index: line.pane.index } : null;
+  if (line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane') {
+    return { slot: line.need.slot, index: line.need.target.index };
+  }
+  return null;
+}
+
+// How many lines at the front are the queue's. They always come first, so a count is enough.
+export function queueLength(lines: readonly ManagerLine[]): number {
+  const first = lines.findIndex((line) => line.kind !== 'need');
+  return first === -1 ? lines.length : first;
+}
+
+function sameKeys(first: readonly ManagerLine[], second: readonly ManagerLine[]): boolean {
+  return first.length === second.length && first.every((line, index) => lineKey(line) === lineKey(second[index]));
+}
+
+// What the half-minute refresh may do with the rows on screen. `render`: the list under the queue
+// changed shape, and only a full render draws that. `queue`: only the queue's items changed, so the
+// queue is rebuilt and the list under it, which someone may be reading, is kept. `rows`: nothing
+// moved, and the figures are written into the rows as they stand.
+export function queueRefresh(onScreen: readonly ManagerLine[], fresh: readonly ManagerLine[]): 'render' | 'queue' | 'rows' {
+  const oldQueue = queueLength(onScreen);
+  const freshQueue = queueLength(fresh);
+  if (!sameKeys(fresh.slice(freshQueue), onScreen.slice(oldQueue))) return 'render';
+  return sameKeys(fresh.slice(0, freshQueue), onScreen.slice(0, oldQueue)) ? 'rows' : 'queue';
+}
+
+// The row elements with the queue's swapped for fresh ones and every row under it kept, in place.
+export function withQueue<T>(elements: readonly T[], oldQueue: number, queued: readonly T[]): T[] {
+  return [...queued, ...elements.slice(oldQueue)];
+}

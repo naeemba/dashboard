@@ -243,13 +243,6 @@
   border-top: 0;
 }
 
-.manager-need > * {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* What it wants, coloured the way the same state is everywhere else on the page. */
 .manager-need-what {
   color: var(--yellow);
@@ -277,7 +270,8 @@
 
 /* One line per cell, cut short with an ellipsis rather than pushing the next column over. */
 .manager-pane > *,
-.manager-worktree > * {
+.manager-worktree > *,
+.manager-need > * {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

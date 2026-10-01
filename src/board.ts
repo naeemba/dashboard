@@ -91,10 +91,7 @@ export const REVIEW_COLUMN = 'Review';
 // columns its file holds.
 export const DONE_COLUMN = 'Done';
 
-// Named because the manager's queue asks which worktrees belong to a card still being worked on.
-export const DOING_COLUMN = 'Doing';
-
-const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, DOING_COLUMN, REVIEW_COLUMN, DONE_COLUMN];
+const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };

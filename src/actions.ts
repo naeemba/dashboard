@@ -199,10 +199,10 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'app', scope: 'global',
     action: { kind: 'worktrees' }, mac: 'Ctrl+Shift+W', other: 'Ctrl+Shift+W',
   },
-  // Shift for the reason worktrees above gives. J for jump: the oldest thing waiting on you, in any
+  // Shift for the reason worktrees above gives. J for jump: the next thing waiting on you, in any
   // open project, from wherever you are.
   {
-    name: 'needs-you-next', description: 'Go to the oldest thing waiting on you',
+    name: 'needs-you-next', description: 'Go to the next thing waiting on you',
     group: 'app', scope: 'global',
     action: { kind: 'needs-you-next' }, mac: 'Ctrl+Shift+J', other: 'Ctrl+Shift+J',
   },

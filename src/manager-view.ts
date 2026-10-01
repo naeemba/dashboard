@@ -3,11 +3,11 @@ import { relativeAge } from './age';
 import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
 import {
-  alertSummary, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, removableWorktree, slotOfLine, stateLabel,
-  takesAnswer, type ManagerLine, type ManagerRow, type PaneSummary,
+  alertSummary, answerTarget, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, queueLength, queueRefresh,
+  removableWorktree, slotOfLine, stateLabel, withQueue, type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
-import { NEED_LABELS, needsYou, type Need } from './needs-you';
+import { NEED_LABELS, needKey, needsInTurn, needsYou, type Need } from './needs-you';
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
@@ -57,9 +57,9 @@ export type ManagerView = {
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
   // board has, and for the same reason: one place decides what every key on every screen does.
   runAction(action: Action): void;
-  // The key that works from anywhere: does what Enter does on the oldest item in the queue, and hands
-  // back a sentence for the status bar — why it could not land, that nothing is waiting, or ''.
-  goToFirstNeed(rows: readonly ManagerRow[]): string;
+  // The key that works from anywhere: does what Enter does on the next item in the queue, oldest
+  // first and on past the one it last landed on, and hands back a sentence for the status bar — why it could not land, that nothing is waiting, or ''.
+  goToNextNeed(rows: readonly ManagerRow[]): string;
 };
 
 // What the row says instead of a pane list when the project has nothing to show.
@@ -130,16 +130,6 @@ function groupHead(kind: keyof typeof GROUP_COLUMNS): HTMLElement {
 // window to the rows and the pane row is not the one path that quietly kept its old writer.
 // Only a figure that has moved is written: the sweep runs over every row every half minute and almost
 // none of them have changed, and setting textContent replaces the text node either way.
-// How many lines at the front are the queue's. They always come first, so a count is enough.
-function queueLength(lines: readonly ManagerLine[]): number {
-  const first = lines.findIndex((line) => line.kind !== 'need');
-  return first === -1 ? lines.length : first;
-}
-
-function sameKeys(first: readonly ManagerLine[], second: readonly ManagerLine[]): boolean {
-  return first.length === second.length && first.every((line, index) => lineKey(line) === lineKey(second[index]));
-}
-
 function writeTokens(row: Element | undefined, figures: readonly string[]): void {
   const cells = row?.querySelectorAll('.manager-tokens');
   figures.forEach((text, column) => {
@@ -230,6 +220,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // index alone would slide the highlight onto a different pane between you reading it and pressing
   // Enter — so the next redraw finds the same line again wherever it has moved to.
   let selectedKey = '';
+  // The queue item the next-thing key last landed on, so the next press goes on to the one after it.
+  let lastNeedKey: string | null = null;
   function paneLine(line: Extract<ManagerLine, { kind: 'pane' }>): HTMLElement {
     const item = document.createElement('li');
     item.className = 'manager-pane';
@@ -452,12 +444,12 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // keystrokes count as typed and why the rest are kept out.
   element.addEventListener('keydown', (event) => {
     if (!isBareCharacter(event)) return;
-    const line = lines[selected];
-    if (!line || line.kind !== 'pane' || !takesAnswer(line.pane)) return;
+    const pane = lines[selected] ? answerTarget(lines[selected]) : null;
+    if (!pane) return;
     event.preventDefault();
     // The highlight stays on the pane that was answered: the bell comes off it, but the row does not
     // go anywhere, so a second question from the same pane is answered without picking it again.
-    options.onAnswer(line.slot, line.pane.index, event.key);
+    options.onAnswer(pane.slot, pane.index, event.key);
   });
 
   return {
@@ -507,18 +499,16 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       askReads(rows);
       drawPanels(rows);
       const fresh = [...needLines(rows), ...managerLines(rows, opened)];
-      const freshQueue = queueLength(fresh);
-      const oldQueue = queueLength(lines);
-      if (!sameKeys(fresh.slice(freshQueue), lines.slice(oldQueue))) return;
+      const refresh = queueRefresh(lines, fresh);
+      if (refresh === 'render') return;
       // An agent going quiet puts an item on the queue with nothing else happening, so no other redraw
-      // would ever draw it. Only the queue is rebuilt: the list under it, which someone may be reading
-      // or copying from, stays exactly where it is.
-      const queueMoved = !sameKeys(fresh.slice(0, freshQueue), lines.slice(0, oldQueue));
+      // would ever draw it. manager.ts says when only the queue is rebuilt.
+      const oldQueue = queueLength(lines);
       // Kept, so the status bar reads the selected pane's age off the same numbers the row shows.
       lines = fresh;
-      if (queueMoved) {
-        const queued = lines.slice(0, freshQueue).map(lineElement);
-        rowElements = [...queued, ...rowElements.slice(oldQueue)];
+      if (refresh === 'queue') {
+        const queued = lines.slice(0, queueLength(lines)).map(lineElement);
+        rowElements = withQueue(rowElements, oldQueue, queued);
         drawQueue(queued);
         setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
         rowElements.forEach((item, index) => item.classList.toggle('highlighted', index === selected));
@@ -561,24 +551,36 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       const line = lines[selected];
       if (!line) return '';
       const removeHint = ` · ${options.binding('manager-remove')} removes it`;
+      const answer = answerTarget(line) ? ' · type a character to answer it' : '';
       if (line.kind === 'need') {
         const remove = removableWorktree(line) ? removeHint : '';
-        return `${line.need.project} · ${line.need.subject} · ${NEED_LABELS[line.need.kind]}${remove}`;
+        return `${line.need.project} · ${line.need.subject} · ${NEED_LABELS[line.need.kind]}${remove}${answer}`;
       }
       if (line.kind === 'worktree') return `${line.entry.branch} · ${dirtyText(line.entry)}${removeHint}`;
       if (line.kind === 'pane') {
-        const answer = takesAnswer(line.pane) ? ' · type a character to answer it' : '';
         const age = paneAge(line.pane.lastPrintedAt);
         return `${line.pane.name} · ${line.pane.state}${age === '' ? '' : ` · ${age}`}${answer}`;
       }
       return `${line.row.name} · ${alertSummary(line.row.panes)}`;
     },
-    goToFirstNeed(rows: readonly ManagerRow[]): string {
+    goToNextNeed(rows: readonly ManagerRow[]): string {
       // Asked here too, since the key works from pages where the list is never drawn: the boards and
       // the dirty check it needs are read now, and a press before they land sees the panes alone.
       askReads(rows);
-      const [first] = currentNeeds(rows);
-      return first ? options.onJumpNeed(first) : 'Nothing needs you';
+      const turn = needsInTurn(currentNeeds(rows), lastNeedKey);
+      if (turn.length === 0) return 'Nothing needs you';
+      // An item it cannot land on is passed over, so one stuck item does not hold the key on itself.
+      // When none can be landed on, the first one's reason is the one said.
+      let firstReason = '';
+      for (const need of turn) {
+        const reason = options.onJumpNeed(need);
+        if (reason === '') {
+          lastNeedKey = needKey(need);
+          return '';
+        }
+        firstReason ||= reason;
+      }
+      return firstReason;
     },
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);

@@ -210,7 +210,7 @@ function namedPanes(page: Page): (Pane & { name: string })[] {
 }
 
 // Every open project as the manager lists it. Asked by its redraws and by the key that goes to the
-// oldest thing waiting, which works from any page.
+// next thing waiting, which works from any page.
 function currentManagerRows(): ManagerRow[] {
   return managerRows(projectPages().map((entry) => ({
     project: entry.project,
@@ -664,7 +664,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'needs-you-next') return showError('manager', pages[0].manager?.goToFirstNeed(currentManagerRows()) ?? '');
+  if (action.kind === 'needs-you-next') return showError('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {
     worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);
     return void worktreeDialog.closed.then(() => {

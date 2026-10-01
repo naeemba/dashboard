@@ -28,6 +28,7 @@ import {
 import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import { dropRow } from './board-drag';
+import { createCardAim } from './card-aim';
 import { putEditBack, takeEdit } from './carried-edit';
 import { bringHome, shipsAway } from './ships-away';
 import {
@@ -162,7 +163,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // on would be two different lists.
   let detail: CardDetail | null = null;
   // The card the next arrival lands on, set by aimAt and spent by open().
-  let aimedAt: string | null = null;
+  const aim = createCardAim();
 
   // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
   // step is gone, which is what entering a board means. Without it the file simply changed under you
@@ -808,16 +809,13 @@ export function createBoardView(options: BoardOptions): BoardView {
       // page and has nothing to be scrolled into view, so it costs that screen nothing.
       element.focus({ preventScroll: true });
       await readAgain(true);
-      const found = aimedAt === null ? null : selectionOf(state.board, aimedAt);
-      aimedAt = null;
+      const found = aim.spend(state.board);
       if (found) {
         state = { ...state, selection: found };
         render();
       }
     },
-    aimAt(cardId: string): void {
-      aimedAt = cardId;
-    },
+    aimAt: aim.aimAt,
     // Somebody else wrote the file — the command line, or a hand edit — and main said so. The
     // keyboard is not touched: you did not ask to come here, you are already here.
     reload(projectPath: string): void {

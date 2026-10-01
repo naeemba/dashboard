@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, groupOpenings, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
   managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
-  takesAnswer,
-  type PaneSummary,
+  takesAnswer, answerTarget, queueRefresh, withQueue,
+  type ManagerLine, type PaneSummary,
 } from './manager';
+import type { Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS } from './usage';
 import type { WorktreeEntry } from './worktree-store';
 import type { Bell } from './waiting';
@@ -366,6 +367,60 @@ describe('removableWorktree', () => {
     expect(removableWorktree({ kind: 'worktree', slot: 2, entry })).toBe(entry);
     expect(removableWorktree({ kind: 'project', row, open: false })).toBeNull();
     expect(removableWorktree({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBeNull();
+  });
+
+  it('gives it the worktree a leftover queue item is about, though Enter on it goes to the card', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix-it', '2026-01-01T00:00:00Z');
+    const leftover: ManagerLine = {
+      kind: 'need',
+      need: { kind: 'leftover', slot: 2, project: 'api', projectPath: '/work/api', subject: 'x', since: 0, target: { kind: 'card', cardId: 'card' }, worktree: entry },
+    };
+    expect(removableWorktree(leftover)).toBe(entry);
+    expect(removableWorktree(queued('review', { kind: 'card', cardId: 'a' }))).toBeNull();
+  });
+});
+
+const queued = (kind: Need['kind'], target: Need['target']): ManagerLine => ({
+  kind: 'need', need: { kind, slot: 2, project: 'api', projectPath: '/work/api', subject: 'x', since: 0, target },
+});
+
+describe('answerTarget', () => {
+  it('sends a typed character from an asking queue item to its pane, as from the pane\'s own row', () => {
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 3 }))).toEqual({ slot: 2, index: 3 });
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 3 } })).toEqual({ slot: 2, index: 3 });
+  });
+
+  it('takes nothing on a line that is not a question', () => {
+    expect(answerTarget(queued('stalled', { kind: 'pane', index: 3 }))).toBeNull();
+    expect(answerTarget(queued('review', { kind: 'card', cardId: 'a' }))).toBeNull();
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: summary('quiet') })).toBeNull();
+  });
+});
+
+describe('queueRefresh', () => {
+  const pane = (index: number): ManagerLine => ({ kind: 'pane', slot: 2, pane: { ...summary('quiet'), index } });
+  const asking = queued('asking', { kind: 'pane', index: 0 });
+  const review = queued('review', { kind: 'card', cardId: 'a' });
+
+  it('writes into the rows as they stand when nothing moved', () => {
+    expect(queueRefresh([asking, pane(0)], [asking, pane(0)])).toBe('rows');
+  });
+
+  it('rebuilds only the queue when only its items changed', () => {
+    expect(queueRefresh([asking, pane(0)], [review, asking, pane(0)])).toBe('queue');
+    expect(queueRefresh([asking, pane(0)], [pane(0)])).toBe('queue');
+  });
+
+  it('leaves it to a full render when the list under the queue changed', () => {
+    expect(queueRefresh([asking, pane(0)], [asking, pane(0), pane(1)])).toBe('render');
+  });
+});
+
+describe('withQueue', () => {
+  it('keeps every row under the queue in its place, so a row\'s figures stay on that row', () => {
+    expect(withQueue(['old need', 'pane 0', 'pane 1'], 1, ['new need', 'second need'])).toEqual(
+      ['new need', 'second need', 'pane 0', 'pane 1'],
+    );
   });
 });
 

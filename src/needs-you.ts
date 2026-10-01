@@ -1,6 +1,6 @@
 import { timeOf } from './age';
 import {
-  DOING_COLUMN, DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
+  DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
 } from './board';
 import { isAlerting, type ManagerRow, type PaneSummary } from './manager';
 import type { WorktreeEntry } from './worktree-store';
@@ -9,18 +9,15 @@ import type { WorktreeEntry } from './worktree-store';
 // every project is doing; this says what to do next, so it is the first thing on the page and the
 // thing the next-item key walks.
 
-// A pane on a card in Doing that has printed nothing for this long is taken to have stopped. Long
-// enough that a slow test run is not flagged, short enough to be caught before lunch is over.
+// An agent's pane that has printed nothing for this long is taken to have stopped. Long enough that a slow test run is not flagged, short enough to be caught before lunch is over.
 export const STALL_MS = 30 * 60_000;
 
 export type NeedKind = 'asking' | 'exited' | 'stalled' | 'review' | 'leftover';
 
-// Where Enter on the item takes you: a pane, a card on its project's board, or a worktree, which lands
-// on its pane when it has one and says why not when it does not.
+// Where Enter on the item takes you: a pane, or a card on its project's board.
 export type NeedTarget =
   | { kind: 'pane'; index: number }
-  | { kind: 'card'; cardId: string }
-  | { kind: 'worktree'; entry: WorktreeEntry };
+  | { kind: 'card'; cardId: string };
 
 export type Need = {
   kind: NeedKind;
@@ -32,13 +29,16 @@ export type Need = {
   // When it started waiting on you, in milliseconds. The list is oldest first, so this is its order.
   since: number;
   target: NeedTarget;
+  // The worktree a `leftover` item is about, which the remove key acts on. Enter goes to its card
+  // instead: the worktree has usually lost its pane, and the card says why it was kept.
+  worktree?: WorktreeEntry;
 };
 
 // What each kind says it wants, in words.
 export const NEED_LABELS: Record<NeedKind, string> = {
   asking: 'asking',
   exited: 'died',
-  stalled: 'quiet on a Doing card',
+  stalled: 'agent gone quiet',
   review: 'in Review, no review running',
   leftover: 'Done, uncommitted work left',
 };
@@ -60,8 +60,7 @@ function paneNeeds(row: ManagerRow, base: Base): Need[] {
   }));
 }
 
-// A pane whose state is `quiet` but whose card says the work is not finished. An alerting pane is
-// already on the list as asking or died, and a pane that has printed nothing yet has no age to judge.
+// A quiet pane an agent is working a card in. An alerting pane is already on the list as asking or died, and a pane that has printed nothing yet has no age to judge.
 function isStalled(pane: PaneSummary | undefined, now: number): pane is PaneSummary {
   return pane !== undefined && !isAlerting(pane) && pane.lastPrintedAt > 0
     && now - pane.lastPrintedAt >= STALL_MS;
@@ -70,11 +69,15 @@ function isStalled(pane: PaneSummary | undefined, now: number): pane is PaneSumm
 function worktreeNeeds(
   row: ManagerRow, base: Base, board: Board | undefined, dirty: ReadonlySet<string>, now: number,
 ): Need[] {
-  const doing = new Set(columnCards(board, DOING_COLUMN).map((card) => card.id));
+  // Asked of the worktree record, not the card's column: the agent moves its card on the worktree's
+  // own board, and the project's board still has it wherever the ship put it back. A Review card is
+  // listed as one already, and a Done card's pane is finished, not stalled.
+  const review = new Set(columnCards(board, REVIEW_COLUMN).map((card) => card.id));
   const done = new Map(columnCards(board, DONE_COLUMN).map((card) => [card.id, card]));
   return row.worktrees.flatMap((entry): Need[] => {
     const pane = entry.pane === null ? undefined : row.panes[entry.pane];
-    if (doing.has(entry.cardId) && isStalled(pane, now)) {
+    const working = !entry.reviewing && !review.has(entry.cardId) && !done.has(entry.cardId);
+    if (working && isStalled(pane, now)) {
       return [{ ...base, subject: entry.title, kind: 'stalled', since: pane.lastPrintedAt, target: { kind: 'pane', index: pane.index } }];
     }
     // The app removes a Done card's worktree on its own once no shell stands in it. One still here and
@@ -82,14 +85,16 @@ function worktreeNeeds(
     const card = done.get(entry.cardId);
     if (card && dirty.has(entry.worktreePath)) {
       const since = timeOf(card.updatedAt) ?? timeOf(entry.startedAt) ?? 0;
-      return [{ ...base, subject: entry.title, kind: 'leftover', since, target: { kind: 'worktree', entry } }];
+      return [{
+        ...base, subject: entry.title, kind: 'leftover', since, target: { kind: 'card', cardId: card.id }, worktree: entry,
+      }];
     }
     return [];
   });
 }
 
-// A card sits in Review while an agent reviews its pull request and merges it. One with no review
-// running is one the app could not start a review for, and nothing will move it but you.
+// A card sits in Review while an agent reviews its pull request and merges it. This lists the ones in
+// Review that no pane on this machine is reviewing.
 function reviewNeeds(row: ManagerRow, base: Base, board: Board | undefined): Need[] {
   const reviewing = new Set(row.worktrees.filter((entry) => entry.reviewing).map((entry) => entry.cardId));
   return columnCards(board, REVIEW_COLUMN).filter((card) => !reviewing.has(card.id)).map((card) => ({
@@ -120,7 +125,13 @@ export function needsYou(
 // the list around it moves.
 export function needKey(need: Need): string {
   const { target } = need;
-  const id = target.kind === 'pane' ? `${target.index}`
-    : target.kind === 'card' ? target.cardId : target.entry.worktreePath;
+  const id = target.kind === 'pane' ? `${target.index}` : target.cardId;
   return `need:${need.kind}:${need.slot}:${id}`;
+}
+
+// The order the next-thing key tries the items in: oldest first, starting after the one it last landed
+// on, so pressing it again reaches the second item rather than the first one again.
+export function needsInTurn(needs: readonly Need[], lastKey: string | null): Need[] {
+  const after = needs.findIndex((need) => needKey(need) === lastKey) + 1;
+  return [...needs.slice(after), ...needs.slice(0, after)];
 }
