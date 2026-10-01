@@ -1,3 +1,4 @@
+import { timeOf } from './age';
 import { columnNamed, DONE_COLUMN, type Board } from './board';
 
 // What the manager says about a project's board without opening it: how much is in each column, and
@@ -50,8 +51,8 @@ export function recentActivity(
   // Each stamp parsed once, rather than again on every comparison the sort makes.
   const entries = boards.flatMap(({ project, board }) => board.columns.flatMap((column) => (
     column.cards.flatMap((card) => {
-      const time = card.updatedAt === undefined ? NaN : Date.parse(card.updatedAt);
-      if (Number.isNaN(time)) return [];
+      const time = timeOf(card.updatedAt);
+      if (time === undefined) return [];
       return [{ time, entry: { project, title: card.title, column: column.name, at: card.updatedAt!, id: card.id } }];
     })
   )));

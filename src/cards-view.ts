@@ -117,6 +117,8 @@ export function createCardsView(options: CardsOptions): BoardView {
 
   return {
     element,
+    // The queue only lands on a project's own board, never on this stack of them.
+    aimAt(): void {},
     async open(): Promise<void> {
       const pages = cardsProjects(options.projects());
       paths = pages.map((page) => page.project.path);

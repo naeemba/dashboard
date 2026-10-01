@@ -2,6 +2,7 @@ import { relativeAge } from './age';
 import { clampIndex } from './clamp-index';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
+import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
 import { isRinging, type Bell } from './waiting';
 import { orderedWorktrees } from './worktree-rows';
@@ -223,8 +224,10 @@ export function stateLabel(pane: PaneSummary): string {
   return isAlerting(pane) ? pane.state : '';
 }
 
-// A line on the page: a project, one of its panes underneath it, or one of its worktrees.
+// A line on the page: a project, one of its panes underneath it, one of its worktrees, or an item on
+// the queue above them all.
 export type ManagerLine =
+  | { kind: 'need'; need: Need }
   | { kind: 'project'; row: ManagerRow; open: boolean }
   | { kind: 'pane'; slot: number; pane: PaneSummary }
   | { kind: 'worktree'; slot: number; entry: WorktreeEntry };
@@ -274,12 +277,15 @@ export function groupOpenings(lines: readonly ManagerLine[]): ReadonlySet<number
 // under. One place, because the key that closes a project and the key that names one both ask, and a
 // third line kind added later must not have one of them still answering for two.
 export function slotOfLine(line: ManagerLine): number {
+  if (line.kind === 'need') return line.need.slot;
   return line.kind === 'project' ? line.row.slot : line.slot;
 }
 
 // What the removal key acts on from this line: the worktree on a worktree row, and nothing on a
-// project or a pane row. The key removes a folder, so it only fires where the row names that folder.
+// project or a pane row. The key removes a folder, so it only fires where the row names that folder —
+// a queue item does when it is a worktree left behind.
 export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
+  if (line.kind === 'need') return line.need.target.kind === 'worktree' ? line.need.target.entry : null;
   return line.kind === 'worktree' ? line.entry : null;
 }
 
@@ -288,6 +294,7 @@ export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
 // A worktree is its folder, which is what every other screen names one by, and the prefix keeps it
 // from ever matching a slot's number.
 export function lineKey(line: ManagerLine): string {
+  if (line.kind === 'need') return needKey(line.need);
   if (line.kind === 'worktree') return `worktree:${line.entry.worktreePath}`;
   return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }

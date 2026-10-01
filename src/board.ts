@@ -91,7 +91,10 @@ export const REVIEW_COLUMN = 'Review';
 // columns its file holds.
 export const DONE_COLUMN = 'Done';
 
-const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
+// Named because the manager's queue asks which worktrees belong to a card still being worked on.
+export const DOING_COLUMN = 'Doing';
+
+const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, DOING_COLUMN, REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -338,8 +341,13 @@ export function isPullRequestNumber(value: unknown): value is number {
 export function flightParts(card: Card): string[] {
   const parts: string[] = [];
   if (card.branch !== undefined) parts.push(card.branch);
-  if (card.pullRequest !== undefined) parts.push(`#${card.pullRequest}`);
+  if (card.pullRequest !== undefined) parts.push(pullRequestLabel(card.pullRequest));
   return parts;
+}
+
+// The pull request half of the above on its own, for the manager's queue, which names a card by it.
+export function pullRequestLabel(number: number): string {
+  return `#${number}`;
 }
 
 // The number a typed pull request means, or null when what was typed is not one. Written with or

@@ -7,6 +7,7 @@ import {
   takesAnswer, type ManagerLine, type ManagerRow, type PaneSummary,
 } from './manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
+import { NEED_LABELS, needsYou, type Need } from './needs-you';
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
@@ -29,6 +30,9 @@ export type ManagerOptions = {
   // Enter on a worktree row: lands on its pane, or hands back the sentence saying why it could not —
   // the same answer the worktree dialog gets.
   onJumpWorktree: JumpToWorktree;
+  // Enter on a queue item: wherever it points. The same answer as onJumpWorktree — a sentence when it
+  // could not land, '' when it did.
+  onJumpNeed(need: Need): string;
   // The removal key on a worktree row, and its button. What is asked, and what is forced, is
   // worktree-removal.ts's.
   onRemoveWorktree(entry: WorktreeEntry): void;
@@ -53,6 +57,9 @@ export type ManagerView = {
   // The manager's own keys, found by the window's one lookup and handed here. Same arrangement the
   // board has, and for the same reason: one place decides what every key on every screen does.
   runAction(action: Action): void;
+  // The key that works from anywhere: does what Enter does on the oldest item in the queue, and hands
+  // back a sentence for the status bar — why it could not land, that nothing is waiting, or ''.
+  goToFirstNeed(rows: readonly ManagerRow[]): string;
 };
 
 // What the row says instead of a pane list when the project has nothing to show.
@@ -101,6 +108,7 @@ function labelledTokens(label: string, text: string): HTMLElement {
 // its first worktree. It shares the grid of the rows under it, so each name sits over its column.
 // Not a line the keyboard can land on: it is not in `lines`, and it takes no click.
 const GROUP_COLUMNS = {
+  need: ['Needs you', 'Project', 'What', 'Waiting'],
   pane: ['Terminal', 'Last line on screen', 'Status', 'Last output', 'Tokens'],
   worktree: ['Worktree', 'Changes', 'Started', 'Terminal', ''],
 } as const;
@@ -122,6 +130,16 @@ function groupHead(kind: keyof typeof GROUP_COLUMNS): HTMLElement {
 // window to the rows and the pane row is not the one path that quietly kept its old writer.
 // Only a figure that has moved is written: the sweep runs over every row every half minute and almost
 // none of them have changed, and setting textContent replaces the text node either way.
+// How many lines at the front are the queue's. They always come first, so a count is enough.
+function queueLength(lines: readonly ManagerLine[]): number {
+  const first = lines.findIndex((line) => line.kind !== 'need');
+  return first === -1 ? lines.length : first;
+}
+
+function sameKeys(first: readonly ManagerLine[], second: readonly ManagerLine[]): boolean {
+  return first.length === second.length && first.every((line, index) => lineKey(line) === lineKey(second[index]));
+}
+
 function writeTokens(row: Element | undefined, figures: readonly string[]): void {
   const cells = row?.querySelectorAll('.manager-tokens');
   figures.forEach((text, column) => {
@@ -147,6 +165,16 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   const projectsHeading = document.createElement('h2');
   projectsHeading.textContent = 'Projects';
   projects.append(projectsHeading, list);
+  // What is waiting on you, oldest first, above everything else on the page. Its rows are in the same
+  // list the arrows walk; only where they are drawn differs.
+  const needs = document.createElement('section');
+  needs.className = 'manager-panel manager-needs';
+  const needsList = document.createElement('ul');
+  needsList.className = 'manager-list';
+  const needsNone = document.createElement('p');
+  needsNone.className = 'manager-needs-none';
+  needsNone.textContent = 'Nothing needs you.';
+  needs.append(needsList, needsNone);
   const activity = createActivity();
   const body = document.createElement('div');
   body.className = 'manager-body';
@@ -157,7 +185,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   const buildVersion = document.createElement('div');
   buildVersion.className = 'manager-version';
   buildVersion.textContent = `v${APP_VERSION}`;
-  element.append(overview.element, empty, body, buildVersion);
+  element.append(overview.element, empty, needs, body, buildVersion);
 
   // Asked by both draws, and cheap when nothing is due: manager-reads.ts decides what is old. The
   // timer's draw asking too is what keeps the counts moving while the page is only watched.
@@ -240,6 +268,53 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     return item;
   }
 
+  // One item on the queue: what it is about, which project, what it wants and how long it has waited.
+  function needLine(line: Extract<ManagerLine, { kind: 'need' }>): HTMLElement {
+    const item = document.createElement('li');
+    item.className = `manager-need manager-need-${line.need.kind}`;
+    const cells: [string, string][] = [
+      ['manager-need-subject', line.need.subject],
+      ['manager-need-project', line.need.project],
+      ['manager-need-what', NEED_LABELS[line.need.kind]],
+      ['manager-age', paneAge(line.need.since)],
+    ];
+    item.append(...cells.map(([className, text]) => {
+      const cell = document.createElement('span');
+      cell.className = className;
+      cell.textContent = text;
+      return cell;
+    }));
+    return item;
+  }
+
+  // The queue's own list, with its column names over it when there is anything to name.
+  function drawQueue(items: readonly HTMLElement[]): void {
+    needsList.replaceChildren(...(items.length > 0 ? [groupHead('need'), ...items] : []));
+    needsNone.hidden = items.length > 0;
+  }
+
+  // Any line's element. Its click finds the line's place when it fires rather than when it was built:
+  // the queue redraws on its own, and a row built before an item joined it sits one place further down.
+  function lineElement(line: ManagerLine): HTMLElement {
+    const item = line.kind === 'need' ? needLine(line)
+      : line.kind === 'pane' ? paneLine(line)
+      : line.kind === 'worktree' ? worktreeLine(line) : projectLine(line);
+    // A click moves the selection to the row first and then does what Enter does there.
+    item.addEventListener('click', () => {
+      setSelection(rowElements.indexOf(item));
+      open();
+    });
+    return item;
+  }
+
+  function currentNeeds(rows: readonly ManagerRow[]): Need[] {
+    return needsYou(rows, options.reads.boardOf, options.reads.dirtiness().dirty);
+  }
+
+  function needLines(rows: readonly ManagerRow[]): ManagerLine[] {
+    return currentNeeds(rows).map((need) => ({ kind: 'need', need }));
+  }
+
   function projectLine(line: Extract<ManagerLine, { kind: 'project' }>): HTMLElement {
     const item = document.createElement('li');
     item.className = 'manager-project';
@@ -273,7 +348,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // A worktree the app made for one of this project's cards. The button is the mouse's way to the same
   // removal the key does, so it selects the row first: the highlight is then on the worktree the
   // question names.
-  function worktreeLine(line: Extract<ManagerLine, { kind: 'worktree' }>, index: number): HTMLElement {
+  function worktreeLine(line: Extract<ManagerLine, { kind: 'worktree' }>): HTMLElement {
     const { entry } = line;
     const item = document.createElement('li');
     item.className = 'manager-worktree';
@@ -309,7 +384,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     remove.addEventListener('click', (event) => {
       // Kept off the row, whose own click would go to the worktree's pane.
       event.stopPropagation();
-      setSelection(index);
+      setSelection(rowElements.indexOf(item));
       options.onChanged();
       options.onRemoveWorktree(entry);
     });
@@ -337,7 +412,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // wherever a project opening its panes has pushed it to. Both redraws start here, so neither can
   // leave the selection naming one row while it sits on another.
   function relayout(rows: readonly ManagerRow[]): void {
-    lines = managerLines(rows, opened);
+    lines = [...needLines(rows), ...managerLines(rows, opened)];
     setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
   }
 
@@ -358,6 +433,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     const line = lines[selected];
     if (!line) return;
     if (line.kind === 'pane') return options.onJump(line.slot, line.pane.index);
+    if (line.kind === 'need') {
+      options.onError(options.onJumpNeed(line.need));
+      return options.onChanged();
+    }
     // A worktree with no pane, or in a project closed since, says so rather than looking like a key
     // that did nothing. A landing that worked takes back whatever the last one said.
     // Redrawn either way, so a click on a worktree that cannot be landed on still moves the highlight
@@ -391,24 +470,21 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // Nothing is open, so there is nothing to list, add up or report. All of it goes, leaving the
       // sentence saying how to open a project on a page of its own.
       overview.element.hidden = !anyOpen;
+      needs.hidden = !anyOpen;
       body.hidden = !anyOpen;
       drawPanels(rows);
       const children: HTMLElement[] = [];
       const openings = groupOpenings(lines);
       rowElements = lines.map((line, index) => {
-        const item = line.kind === 'pane' ? paneLine(line)
-          : line.kind === 'worktree' ? worktreeLine(line, index) : projectLine(line);
-        // A click moves the selection to the row first and then does what Enter does there.
-        item.addEventListener('click', () => {
-          setSelection(index);
-          open();
-        });
+        const item = lineElement(line);
         if (index === selected) item.classList.add('highlighted');
+        if (line.kind === 'need') return item;
         if (line.kind !== 'project' && openings.has(index)) children.push(groupHead(line.kind));
         children.push(item);
         return item;
       });
       list.replaceChildren(...children);
+      drawQueue(rowElements.slice(0, queueLength(lines)));
       rowElements[selected]?.scrollIntoView({ block: 'nearest' });
     },
     // Every thirty seconds, so neither the ages nor the lines beside them freeze where they stand. A
@@ -430,12 +506,23 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // row is opening still moves them.
       askReads(rows);
       drawPanels(rows);
-      const fresh = managerLines(rows, opened);
-      const sameRows = fresh.length === lines.length
-        && fresh.every((line, index) => lineKey(line) === lineKey(lines[index]));
-      if (!sameRows) return;
+      const fresh = [...needLines(rows), ...managerLines(rows, opened)];
+      const freshQueue = queueLength(fresh);
+      const oldQueue = queueLength(lines);
+      if (!sameKeys(fresh.slice(freshQueue), lines.slice(oldQueue))) return;
+      // An agent going quiet puts an item on the queue with nothing else happening, so no other redraw
+      // would ever draw it. Only the queue is rebuilt: the list under it, which someone may be reading
+      // or copying from, stays exactly where it is.
+      const queueMoved = !sameKeys(fresh.slice(0, freshQueue), lines.slice(0, oldQueue));
       // Kept, so the status bar reads the selected pane's age off the same numbers the row shows.
       lines = fresh;
+      if (queueMoved) {
+        const queued = lines.slice(0, freshQueue).map(lineElement);
+        rowElements = [...queued, ...rowElements.slice(oldQueue)];
+        drawQueue(queued);
+        setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
+        rowElements.forEach((item, index) => item.classList.toggle('highlighted', index === selected));
+      }
       lines.forEach((line, index) => {
         const row = rowElements[index];
         // Rewritten with the rest: an agent spends while its state stays `quiet`, so a figure left out
@@ -444,6 +531,11 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         // being torn down and rebuilt under someone reading it.
         if (line.kind === 'project') {
           writeTokens(row, projectTokens(line.row.tokens));
+          return;
+        }
+        if (line.kind === 'need') {
+          const age = row?.querySelector('.manager-age');
+          if (age) age.textContent = paneAge(line.need.since);
           return;
         }
         if (line.kind === 'worktree') {
@@ -468,16 +560,25 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     statusLabel(): string {
       const line = lines[selected];
       if (!line) return '';
-      if (line.kind === 'worktree') {
-        return `${line.entry.branch} · ${dirtyText(line.entry)} · `
-          + `${options.binding('manager-remove')} removes it`;
+      const removeHint = ` · ${options.binding('manager-remove')} removes it`;
+      if (line.kind === 'need') {
+        const remove = removableWorktree(line) ? removeHint : '';
+        return `${line.need.project} · ${line.need.subject} · ${NEED_LABELS[line.need.kind]}${remove}`;
       }
+      if (line.kind === 'worktree') return `${line.entry.branch} · ${dirtyText(line.entry)}${removeHint}`;
       if (line.kind === 'pane') {
         const answer = takesAnswer(line.pane) ? ' · type a character to answer it' : '';
         const age = paneAge(line.pane.lastPrintedAt);
         return `${line.pane.name} · ${line.pane.state}${age === '' ? '' : ` · ${age}`}${answer}`;
       }
       return `${line.row.name} · ${alertSummary(line.row.panes)}`;
+    },
+    goToFirstNeed(rows: readonly ManagerRow[]): string {
+      // Asked here too, since the key works from pages where the list is never drawn: the boards and
+      // the dirty check it needs are read now, and a press before they land sees the panes alone.
+      askReads(rows);
+      const [first] = currentNeeds(rows);
+      return first ? options.onJumpNeed(first) : 'Nothing needs you';
     },
     runAction(action: Action): void {
       if (action.kind === 'manager-select') return move(action.direction);

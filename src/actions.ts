@@ -15,6 +15,7 @@ export type Action =
   | { kind: 'help' }
   | { kind: 'settings' }
   | { kind: 'worktrees' }
+| { kind: 'needs-you-next' }
   | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
   | { kind: 'terminal-next' }
@@ -197,6 +198,13 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'worktrees', description: 'List the worktrees cards were shipped into',
     group: 'app', scope: 'global',
     action: { kind: 'worktrees' }, mac: 'Ctrl+Shift+W', other: 'Ctrl+Shift+W',
+  },
+  // Shift for the reason worktrees above gives. J for jump: the oldest thing waiting on you, in any
+  // open project, from wherever you are.
+  {
+    name: 'needs-you-next', description: 'Go to the oldest thing waiting on you',
+    group: 'app', scope: 'global',
+    action: { kind: 'needs-you-next' }, mac: 'Ctrl+Shift+J', other: 'Ctrl+Shift+J',
   },
   {
     name: 'mode-terminals', description: 'Terminals mode', group: 'modes', scope: 'global',
