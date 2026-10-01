@@ -21,9 +21,16 @@ const UNITS: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
 // with it, and the board redraws every card on every keystroke.
 const FORMAT = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
+// A stored timestamp in milliseconds, or undefined when it is missing or not a date. The one reading of
+// a card's ISO strings, so an age on screen and an order by age cannot disagree about what is a date.
+export function timeOf(text: string | undefined): number | undefined {
+  const time = text === undefined ? NaN : Date.parse(text);
+  return Number.isNaN(time) ? undefined : time;
+}
+
 export function relativeAge(when: string | number, now: number = Date.now()): string | null {
-  const then = typeof when === 'number' ? when : Date.parse(when);
-  if (Number.isNaN(then)) return null;
+  const then = typeof when === 'number' ? when : timeOf(when);
+  if (then === undefined) return null;
   const elapsed = now - then;
   for (const [unit, size] of UNITS) {
     // Truncated, not rounded: at 1.9 days the card was edited yesterday, and rounding would say two

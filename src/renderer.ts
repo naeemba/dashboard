@@ -13,7 +13,7 @@ import { openPicker } from './picker';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
-  EDITOR_INDEX, TERMINAL_COUNT, modeOfPane, neighbor, paneFromId, paneLabel, paneName, startsEditor, terminalId,
+  EDITOR_INDEX, TERMINAL_COUNT, neighbor, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
@@ -27,7 +27,7 @@ import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
 import { anyWaiting, waitingNames } from './waiting';
 import {
-  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition,
+  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerRow,
 } from './manager';
 import { createManagerPage } from './manager-page';
 import { closeRefusal, closingPanes } from './close-project';
@@ -41,6 +41,7 @@ import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 import { reportBoardWrites } from './board-writes';
+import { createJumps } from './jumps';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the
@@ -208,6 +209,20 @@ function namedPanes(page: Page): (Pane & { name: string })[] {
   return allPanes(page).map((pane, index) => ({ ...pane, name: paneLabel(index, undefined, paneName(pane)) }));
 }
 
+// Every open project as the manager lists it. Asked by its redraws and by the key that goes to the
+// next thing waiting, which works from any page.
+function currentManagerRows(): ManagerRow[] {
+  return managerRows(projectPages().map((entry) => ({
+    project: entry.project,
+    slot: entry.slot,
+    panes: namedPanes(entry).map((pane) => ({
+      ...pane,
+      tail: () => paneTail(pane.terminal),
+      lastPrinted: () => paneLastLine(pane.terminal),
+    })),
+  })), usage, worktrees);
+}
+
 // The manager page is pushed before the first call, so there is always a page to draw.
 // `rowsOnly` is the redraw asked for by the timer below and by a token sweep, which has nothing to
 // change on the manager but the handful of fields refreshRows writes. Everything else here runs either
@@ -220,15 +235,7 @@ function renderStatus(rowsOnly = false): void {
   // and only while you are looking at it, since arriving redraws too and typing a card title on a
   // board should not rebuild a list nobody can see.
   if (page.mode === 'manager') {
-    const rows = managerRows(projectPages().map((entry) => ({
-      project: entry.project,
-      slot: entry.slot,
-      panes: namedPanes(entry).map((pane) => ({
-        ...pane,
-        tail: () => paneTail(pane.terminal),
-        lastPrinted: () => paneLastLine(pane.terminal),
-      })),
-    })), usage, worktrees);
+    const rows = currentManagerRows();
     if (rowsOnly) page.manager?.refreshRows(rows);
     else page.manager?.render(rows);
   }
@@ -657,6 +664,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
+  if (action.kind === 'needs-you-next') return showError('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {
     worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);
     return void worktreeDialog.closed.then(() => {
@@ -787,31 +795,8 @@ bridge.onBoardChange((projectPath) => {
   page.board?.reload(projectPath);
 });
 
-// The three ways to be sent to a pane you are not on: clicking its notification, pressing Enter on its
-// row in the manager, and pressing Enter on its row in the worktree list. One function, so none of
-// them lands somewhere another would not — including on the right view, which modeOfPane decides.
-function goToPane(slot: number, index: number): void {
-  const position = positionOfSlot(slot);
-  if (position === -1) return;
-  const page = pages[position];
-  const mode = modeOfPane(index);
-  showMode(page, mode);
-  // The editor is not one of the grid's five, so it has no place in `focused`: nvim is the whole view.
-  if (mode === 'terminals') page.focused = index;
-  showPage(position, true);
-}
-
-// Enter on a row of the worktree list. Two rows have nowhere to send you, and both say so rather than
-// looking like a key that did nothing: a worktree with no pane is one whose ship found every pane in
-// use, or one the app has restarted since, and a project closed since its card shipped has no page to
-// land on. Neither opens anything on your behalf — Enter here is "take me there", not "start it".
-function jumpToWorktree(entry: WorktreeEntry): string {
-  if (entry.pane === null) return `${entry.branch} has no pane — nothing of it is running`;
-  const page = pages.find((candidate) => candidate.project.path === entry.projectPath);
-  if (!page) return `${entry.branch} is in a project that is not open`;
-  goToPane(page.slot, entry.pane);
-  return '';
-}
+// jumps.ts says where each of these lands.
+const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
 
 // Typing the command screen's command into the shells themselves. That screen marks projects, so which
 // pane in each of them takes the line, and which projects can take it at all, is free-pane.ts's to
@@ -983,6 +968,7 @@ async function start(): Promise<void> {
     onError: showError,
     onJump: goToPane,
     onJumpWorktree: jumpToWorktree,
+    onJumpNeed: jumpToNeed,
     onAnswer: answerPane,
     onClose: closeProject,
     onSection: setMode,

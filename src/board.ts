@@ -338,8 +338,13 @@ export function isPullRequestNumber(value: unknown): value is number {
 export function flightParts(card: Card): string[] {
   const parts: string[] = [];
   if (card.branch !== undefined) parts.push(card.branch);
-  if (card.pullRequest !== undefined) parts.push(`#${card.pullRequest}`);
+  if (card.pullRequest !== undefined) parts.push(pullRequestLabel(card.pullRequest));
   return parts;
+}
+
+// The pull request half of the above on its own, for the manager's queue, which names a card by it.
+export function pullRequestLabel(number: number): string {
+  return `#${number}`;
 }
 
 // The number a typed pull request means, or null when what was typed is not one. Written with or

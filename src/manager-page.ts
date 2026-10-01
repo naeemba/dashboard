@@ -7,6 +7,7 @@ import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
 import { createManagerReads } from './manager-reads';
 import { createManagerView } from './manager-view';
 import type { Mode } from './modes';
+import type { Need } from './needs-you';
 import { createNotesView } from './notes-view';
 import { showMode, type Page } from './page';
 import { createSectionStrip } from './section-strip';
@@ -49,6 +50,7 @@ export type ManagerPageOptions = {
   // through rather than putting a second spelling of each in front of the ones over in manager-view.
   onJump(slot: number, index: number): void;
   onJumpWorktree: JumpToWorktree;
+  onJumpNeed(need: Need): string;
   onAnswer(slot: number, index: number, key: string): void;
   onClose(slot: number): void;
   onSection(mode: Mode): void;
@@ -82,6 +84,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   const manager = createManagerView({
     onJump: options.onJump,
     onJumpWorktree: options.onJumpWorktree,
+    onJumpNeed: options.onJumpNeed,
     onAnswer: options.onAnswer,
     onClose: options.onClose,
     onChanged: options.onChanged,

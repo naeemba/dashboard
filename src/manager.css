@@ -219,10 +219,43 @@
    one edge. Indented past the project's marker so a group reads as belonging to the row above it. */
 .manager-list li.manager-pane,
 .manager-list li.manager-worktree,
+.manager-list li.manager-need,
 .manager-list li.manager-group {
   display: grid;
   column-gap: 16px;
   padding-left: 28px;
+}
+
+/* The queue sits at the top of the page with no project above it, so its rows are not indented. */
+.manager-list li.manager-need,
+.manager-list li.manager-group-need {
+  padding-left: 8px;
+}
+
+.manager-need,
+.manager-group-need {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 2fr) 13ch;
+}
+
+/* The first queue row's column names sit at the top of the panel, with nothing above to rule off. */
+.manager-list li.manager-group-need {
+  margin-top: 0;
+  border-top: 0;
+}
+
+/* What it wants, coloured the way the same state is everywhere else on the page. */
+.manager-need-what {
+  color: var(--yellow);
+}
+
+.manager-need-exited .manager-need-what {
+  color: var(--red);
+}
+
+.manager-needs-none {
+  margin: 0;
+  padding: 0 8px;
+  opacity: 0.6;
 }
 
 .manager-pane,
@@ -237,7 +270,8 @@
 
 /* One line per cell, cut short with an ellipsis rather than pushing the next column over. */
 .manager-pane > *,
-.manager-worktree > * {
+.manager-worktree > *,
+.manager-need > * {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
