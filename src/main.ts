@@ -1015,7 +1015,7 @@ function createWindow(): void {
       trafficLightPosition: { x: 13, y: (TITLE_BAR_HEIGHT - 16) / 2 },
     }),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       // Chromium throttles a hidden page's timers, and after five minutes behind another window that
       // is once a minute. Everything this app does on a beat is a renderer timer: the pane refresh, the
       // bell, and the report saying which panes still have an agent working in them. Main's review
