@@ -71,9 +71,10 @@ const config: ForgeConfig = {
           config: 'vite.preload.config.ts',
           target: 'preload',
         },
-        // The `board` command. Built beside main, through main's own config, because it is the same
-        // kind of thing — a Node program, not a page — and shipped in the bundle so an agent in any
-        // project can run it.
+        // The `board` command. Built beside main because it is the same kind of thing — a Node
+        // program, not a page — and shipped in the bundle so an agent in any project can run it.
+        // `vite.board-cli.config.ts` extends main's config and owns the entry and the file name, so
+        // `entry` here is only the label Forge prints while building; move the file there, not here.
         {
           entry: 'src/board-cli-entry.ts',
           config: 'vite.board-cli.config.ts',
