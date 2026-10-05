@@ -76,17 +76,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "70316b8e-0016-4694-973a-a7513da13fb7",
-          "title": "Manager cards: date and weather, BTC, USDT to toman, gold",
-          "notes": "A row of four read-only cards at the top of the manager page: Persian and Gregorian date with today's weather, then BTC/USD, USDT/toman and gold/USD with day, week, month and year change.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-10-05T12:40:35.238Z",
-          "updatedAt": "2026-10-05T12:40:35.238Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -119,6 +109,23 @@
             {
               "at": "2026-09-30T00:02:30.903Z",
               "body": "Also in PR #65: once a card's review has landed it in Done, the app removes its worktree (branch kept, never forced) as soon as no pane has a shell left in it. If git refuses over uncommitted files, the card says so and the worktree stays on the worktree list."
+            }
+          ]
+        },
+        {
+          "id": "70316b8e-0016-4694-973a-a7513da13fb7",
+          "title": "Manager cards: date and weather, BTC, USDT to toman, gold",
+          "notes": "A row of four read-only cards at the top of the manager page: Persian and Gregorian date with today's weather, then BTC/USD, USDT/toman and gold/USD with day, week, month and year change.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-05T12:40:35.238Z",
+          "updatedAt": "2026-10-05T12:54:39.740Z",
+          "branch": "manager-market-cards",
+          "pullRequest": 68,
+          "comments": [
+            {
+              "at": "2026-10-05T12:54:39.740Z",
+              "body": "Shipped in PR #68: four read-only cards on top of the manager page (date + Open-Meteo weather for the settings place, BTC and PAXG gold via CoinGecko, USDT/toman via Wallex), read every 30 minutes. Not yet seen on screen."
             }
           ]
         }
