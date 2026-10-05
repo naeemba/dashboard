@@ -41,6 +41,7 @@ const bridge: DashboardBridge = {
   onTaskUpdate: (listener) =>
     ipcRenderer.on('task:update', (_event, result) => listener(result)),
   readUsage: () => ipcRenderer.invoke('usage:read'),
+  readMarkets: () => ipcRenderer.invoke('markets:read'),
   onUsageChange: (listener) =>
     ipcRenderer.on('usage:change', (_event, usage) => listener(usage)),
   onFailure: (listener) =>
