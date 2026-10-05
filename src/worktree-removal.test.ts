@@ -41,7 +41,7 @@ describe('removeWorktreeAsking', () => {
     const { bridge: port, removeWorktree } = bridge();
     answers.push(true);
     await removeWorktreeAsking(port, entry, () => {});
-    expect(removeWorktree.mock.calls).toEqual([[entry.worktreePath, false]]);
+    expect(removeWorktree.mock.calls).toEqual([[entry.worktreePath, false, entry.projectPath]]);
     expect(asked).toHaveLength(1);
   });
 
@@ -52,7 +52,7 @@ describe('removeWorktreeAsking', () => {
     answers.push(true, true);
     await removeWorktreeAsking(port, entry, () => {});
     expect(asked[1]).toBe('fix-login has uncommitted changes: a.ts, b.ts, c.ts and 1 more.');
-    expect(removeWorktree.mock.calls).toEqual([[entry.worktreePath, false], [entry.worktreePath, true]]);
+    expect(removeWorktree.mock.calls).toEqual([[entry.worktreePath, false, entry.projectPath], [entry.worktreePath, true, entry.projectPath]]);
   });
 
   // git refuses files the dirty check exempts. Without the offer that worktree could never be removed.

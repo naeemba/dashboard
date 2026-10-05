@@ -72,7 +72,8 @@ function tile(label: string): { element: HTMLElement; value: HTMLElement; detail
 
 export type Overview = {
   element: HTMLElement;
-  draw(rows: readonly ManagerRow[], dirtiness: Dirtiness): void;
+  // `worktreePaths` is every worktree under the open projects, recorded or found through git.
+  draw(rows: readonly ManagerRow[], dirtiness: Dirtiness, worktreePaths: readonly string[]): void;
 };
 
 // Four figures across the top: the three token windows added up over every open project, the week
@@ -101,7 +102,7 @@ export function createOverview(): Overview {
 
   return {
     element,
-    draw(rows, { checked, dirty, unreadable }) {
+    draw(rows, { checked, dirty, unreadable }, paths) {
       const totals = sumTotals(rows.map((row) => row.tokens));
       fiveHours.value.textContent = formatTokens(totals.fiveHours);
       week.value.textContent = formatTokens(totals.week);
@@ -110,7 +111,6 @@ export function createOverview(): Overview {
         trendBars(sumDays(rows.map((row) => row.days)), weekdayIndex(Date.now())),
         dayNames,
       );
-      const paths = rows.flatMap((row) => row.worktrees.map((entry) => entry.worktreePath));
       worktrees.value.textContent = `${paths.length}`;
       const summary = dirtySummary(paths, checked, dirty, unreadable);
       worktrees.detail.textContent = summary.text;

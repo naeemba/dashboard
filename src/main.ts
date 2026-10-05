@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
-import { existsSync, realpathSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
@@ -12,6 +12,7 @@ import {
 } from './projects';
 import { baseName } from './base-name';
 import { git } from './git';
+import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { isOpenableLink } from './links';
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
@@ -337,7 +338,7 @@ const askShellDirectories = shellDirectories(processTree);
 async function shellLivesIn(worktreePath: string): Promise<boolean> {
   // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
   if (shellsIn(worktreePath).length > 0) return true;
-  const realWorktreePath = existsSync(worktreePath) ? realpathSync(worktreePath) : worktreePath;
+  const realWorktreePath = realPath(worktreePath);
   const live = Array.from(shells, ([id, terminalProcess]) => ({
     opened: terminalCommands.get(id)?.directory ?? '', pid: terminalProcess.pid,
   }));
@@ -901,39 +902,41 @@ ipcMain.handle('worktree:list', () => {
 // renderer at launch and after every ship, removal and project close. A `git status` per worktree
 // behind all of those would be that many process spawns for an answer only the worktree dialog shows.
 //
-// changedFiles is the same predicate worktree:remove asks, so the two can never disagree about what
-// counts as dirty — and it is git's own answer rather than the ship's narrower one, because git is
-// what refuses the removal this row's `d` is about to ask for. Run concurrently — this is main, and
-// every pane's bytes flow through it — and a worktree git cannot read (moved, deleted by hand) comes
-// back unreadable rather than clean, since silence is not the same thing as no changes.
+// worktreeState is git's own answer rather than the ship's narrower one, because git is what refuses
+// the removal this row's `d` is about to ask for. Run concurrently — this is main, and every pane's
+// bytes flow through it.
 ipcMain.handle('worktree:check', async () => {
-  const results = await Promise.all(worktrees.map(async (entry) => {
-    try {
-      const changed = changedFiles(await git(['status', '--porcelain'], entry.worktreePath));
-      return { worktreePath: entry.worktreePath, dirty: changed.length > 0, unreadable: false };
-    } catch {
-      return { worktreePath: entry.worktreePath, dirty: false, unreadable: true };
-    }
-  }));
+  const results = await Promise.all(worktrees.map(async (entry) => (
+    { worktreePath: entry.worktreePath, ...await worktreeState(entry.worktreePath) }
+  )));
   return {
     dirty: results.filter((result) => result.dirty).map((result) => result.worktreePath),
     unreadable: results.filter((result) => result.unreadable).map((result) => result.worktreePath),
   };
 });
 
+// Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
+ipcMain.handle('worktree:scan', (_event, projectPaths: string[]) => (
+  scanWorktrees(projectPaths, worktrees)
+));
+
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
 // question is worth asking, and refusing forever would mean the only way out is the command line.
 //
 // A function rather than only a handler, because the review takes the same step: a card whose agent
 // has finished has its worktree thrown away before a fresh one is made on the branch.
-async function removeWorktree(worktreePath: string, force: boolean): Promise<WorktreeRemoval> {
+//
+// `projectPath` is for a worktree the app has no record of — one the manager found through git — and
+// is the project to ask git from. A recorded worktree is asked from the project its record names.
+async function removeWorktree(worktreePath: string, force: boolean, projectPath?: string): Promise<WorktreeRemoval> {
   const entry = entryForPath(worktrees, worktreePath);
-  // A path with no record is the removal having already happened — the sweep dropped it while the
-  // dialog's question was on screen, or a second `d` landed on a row that had gone. There is nothing to
-  // remove and no project to ask git from, and the goal state already holds, so this answers yes rather
-  // than refusing. Refusing sends the dialog down its failure path and offers to force-delete a folder
-  // that is not there.
-  if (!entry) return { ok: true, message: '', dirty: [] };
+  const project = entry?.projectPath ?? projectPath;
+  // A path with no record and no project is the removal having already happened — the sweep dropped it
+  // while the dialog's question was on screen, or a second `d` landed on a row that had gone. There is
+  // nothing to remove and no project to ask git from, and the goal state already holds, so this
+  // answers yes rather than refusing. Refusing sends the dialog down its failure path and offers to
+  // force-delete a folder that is not there.
+  if (!project) return { ok: true, message: '', dirty: [] };
   removingWorktrees.add(worktreePath);
   try {
     // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is
@@ -949,7 +952,11 @@ async function removeWorktree(worktreePath: string, force: boolean): Promise<Wor
       ? changedFiles(await git(['status', '--porcelain'], worktreePath))
       : [];
     if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
-    await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], entry.projectPath);
+    await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], project);
+    forgetSize(worktreePath);
+    // A worktree with no record has no agent of the app's in it, so a shell of yours standing there is
+    // left alone.
+    if (!entry) return { ok: true, message: `removed ${baseName(worktreePath)}`, dirty: [] };
     // The agent goes with the folder it was working in: leaving it running leaves it writing into a
     // directory git has just deleted. Only here, where the folder was deleted on purpose.
     for (const id of shellsIn(worktreePath)) shells.get(id)?.kill();
@@ -969,8 +976,8 @@ async function removeWorktree(worktreePath: string, force: boolean): Promise<Wor
   }
 }
 
-ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean) => (
-  removeWorktree(worktreePath, force)
+ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean, projectPath: string) => (
+  removeWorktree(worktreePath, force, projectPath)
 ));
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed

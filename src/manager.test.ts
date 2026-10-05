@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, groupOpenings, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
   managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
-  takesAnswer, answerTarget, queueRefresh, withQueue,
+  takesAnswer, answerTarget, projectWorktrees, queueRefresh, withQueue,
   type ManagerLine, type PaneSummary,
 } from './manager';
 import type { Need } from './needs-you';
@@ -266,7 +266,7 @@ describe('managerLines', () => {
   const pane = { ...summary('waiting'), index: 1, name: 'terminal 2' };
 
   it('lists the projects and nothing else while every row is shut', () => {
-    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set());
+    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set(), () => []);
     expect(lines).toEqual([
       { kind: 'project', row: row(0, 'api', [pane]), open: false },
       { kind: 'project', row: row(1, 'web'), open: false },
@@ -274,7 +274,7 @@ describe('managerLines', () => {
   });
 
   it('puts an open project’s panes under it', () => {
-    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set([0]));
+    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set([0]), () => []);
     expect(lines).toEqual([
       { kind: 'project', row: row(0, 'api', [pane]), open: true },
       { kind: 'pane', slot: 0, pane },
@@ -283,7 +283,7 @@ describe('managerLines', () => {
   });
 
   it('shows a project with no panes as shut however it was left, since it has nothing to show', () => {
-    const lines = managerLines([row(1, 'web')], new Set([1]));
+    const lines = managerLines([row(1, 'web')], new Set([1]), () => []);
     expect(lines).toEqual([{ kind: 'project', row: row(1, 'web'), open: false }]);
   });
 
@@ -291,8 +291,37 @@ describe('managerLines', () => {
   it("draws a project's worktrees under it whether the row is open or shut, after its panes", () => {
     const entry = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
     const api = row(0, 'api', [pane], [entry]);
-    expect(managerLines([api], new Set()).map((line) => line.kind)).toEqual(['project', 'worktree']);
-    expect(managerLines([api], new Set([0])).map((line) => line.kind)).toEqual(['project', 'pane', 'worktree']);
+    expect(managerLines([api], new Set(), () => []).map((line) => line.kind)).toEqual(['project', 'worktree']);
+    expect(managerLines([api], new Set([0]), () => []).map((line) => line.kind)).toEqual(['project', 'pane', 'worktree']);
+  });
+});
+
+describe('projectWorktrees', () => {
+  const recorded = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+  const api = { slot: 0, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [recorded] };
+
+  // An agent session's worktree, or one made by hand, is a folder on disk like any card's.
+  it('lists the worktrees git found beside the recorded ones, each once', () => {
+    const found = [
+      { projectPath: '/work/api', worktreePath: '/work/api.worktrees/fix', branch: 'fix-it', dirty: false, unreadable: false, bytes: 2048 },
+      { projectPath: '/work/api', worktreePath: '/work/api/.claude/worktrees/agent', branch: 'agent/x', dirty: true, unreadable: false, bytes: null },
+    ];
+    expect(projectWorktrees(api, found)).toEqual([
+      { title: recorded.title, projectPath: '/work/api', worktreePath: '/work/api.worktrees/fix', branch: 'fix-it', entry: recorded, bytes: 2048 },
+      { title: 'agent', projectPath: '/work/api', worktreePath: '/work/api/.claude/worktrees/agent', branch: 'agent/x', entry: null, bytes: null },
+    ]);
+  });
+
+  it('draws the recorded ones before git has been asked', () => {
+    expect(projectWorktrees(api, []).map((found) => found.entry)).toEqual([recorded]);
+  });
+
+  // Removing one with no card asks about it by its folder's name, and asks git from its project.
+  it('gives the removal key a found worktree, named by its folder', () => {
+    const found = { projectPath: '/work/api', worktreePath: '/work/api/.claude/worktrees/agent', branch: 'agent/x', dirty: false, unreadable: false, bytes: null };
+    const [, agent] = projectWorktrees(api, [found]);
+    expect(removableWorktree({ kind: 'worktree', slot: 0, worktree: agent }))
+      .toMatchObject({ title: 'agent', branch: 'agent/x', worktreePath: found.worktreePath, projectPath: '/work/api' });
   });
 });
 
@@ -306,17 +335,17 @@ describe('groupOpenings', () => {
   const docs = worktree('/work/api', '/work/api.worktrees/docs', '2026-09-02T00:00:00Z');
 
   it('names the terminals once, above the first of them', () => {
-    const lines = managerLines([row(0, 'api', [first, second])], new Set([0]));
+    const lines = managerLines([row(0, 'api', [first, second])], new Set([0]), () => []);
     expect([...groupOpenings(lines)]).toEqual([1]);
   });
 
   it('names the worktrees once, above the first of them, when there are no terminals', () => {
-    const lines = managerLines([row(0, 'api', [], [fix, docs])], new Set());
+    const lines = managerLines([row(0, 'api', [], [fix, docs])], new Set(), () => []);
     expect([...groupOpenings(lines)]).toEqual([1]);
   });
 
   it('names the terminals and the worktrees each above their own group', () => {
-    const lines = managerLines([row(0, 'api', [first, second], [fix, docs])], new Set([0]));
+    const lines = managerLines([row(0, 'api', [first, second], [fix, docs])], new Set([0]), () => []);
     expect(lines.map((line) => line.kind)).toEqual(['project', 'pane', 'pane', 'worktree', 'worktree']);
     expect([...groupOpenings(lines)]).toEqual([1, 3]);
   });
@@ -326,12 +355,13 @@ describe('groupOpenings', () => {
     const lines = managerLines(
       [row(0, 'api', [first], [fix]), row(1, 'web', [first], [docs])],
       new Set([0, 1]),
+      () => [],
     );
     expect([...groupOpenings(lines)]).toEqual([1, 2, 4, 5]);
   });
 
   it('names nothing over a list of shut projects with nothing under them', () => {
-    expect(groupOpenings(managerLines([row(0, 'api', [first]), row(1, 'web')], new Set())).size).toBe(0);
+    expect(groupOpenings(managerLines([row(0, 'api', [first]), row(1, 'web')], new Set(), () => [])).size).toBe(0);
   });
 });
 
@@ -345,7 +375,7 @@ describe('lineKey', () => {
 
   it('names a worktree by its folder, so a redraw finds it again wherever it moved', () => {
     const entry = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
-    expect(lineKey({ kind: 'worktree', slot: 2, entry })).toBe('worktree:/work/api.worktrees/fix');
+    expect(lineKey({ kind: 'worktree', slot: 2, worktree: { ...entry, entry, bytes: null } })).toBe('worktree:/work/api.worktrees/fix');
   });
 });
 
@@ -364,7 +394,8 @@ describe('removableWorktree', () => {
   // The key removes a folder, so a row that does not name one gives it nothing to act on.
   it('gives the removal key a worktree row\'s worktree, and nothing on a project or a pane', () => {
     const entry = worktree('/work/api', '/work/api.worktrees/fix-it', '2026-01-01T00:00:00Z');
-    expect(removableWorktree({ kind: 'worktree', slot: 2, entry })).toBe(entry);
+    const line = { ...entry, entry, bytes: null };
+    expect(removableWorktree({ kind: 'worktree', slot: 2, worktree: line })).toBe(line);
     expect(removableWorktree({ kind: 'project', row, open: false })).toBeNull();
     expect(removableWorktree({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBeNull();
   });
