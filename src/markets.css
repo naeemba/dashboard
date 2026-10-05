@@ -1,0 +1,55 @@
+/* The row of four cards across the top of the manager page, from markets-view.ts. The section strip and
+   the views below it move down by the row's height; index.css places them as though it were not there. */
+.page-manager {
+  --markets-height: 104px;
+}
+
+.markets {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--markets-height);
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 0;
+  box-sizing: border-box;
+}
+
+.markets-card {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--brightBlack);
+  overflow: hidden;
+}
+
+.markets-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.markets-title {
+  color: var(--brightWhite);
+}
+
+.markets-change + .markets-change {
+  margin-inline-start: 12px;
+}
+
+.markets-up {
+  color: var(--green);
+}
+
+.markets-down,
+.markets-note {
+  color: var(--red);
+}
+
+/* Two classes, so these beat index.css's own rules whichever stylesheet the build puts last. */
+.page.page-manager .section-strip {
+  top: var(--markets-height);
+}
+
+.page.page-manager .view {
+  top: calc(var(--markets-height) + var(--section-strip-height));
+}
