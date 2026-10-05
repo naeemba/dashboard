@@ -194,7 +194,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Under it, open or shut, is every worktree git knows of for that project — the ones made for '
     + 'its cards first, then any made elsewhere, by an agent session or by hand: the card or the '
     + 'folder, its branch, whether it is clean or dirty, its size on disk (measured every few '
-    + 'minutes), and for a card\'s worktree when it was started and the pane it runs in. Enter on a '
+    + 'minutes; … while measuring, ? when it could not be), and for a card\'s worktree when it was started and the pane it runs in. Enter on a '
     + 'card\'s worktree goes to that pane; the remove key '
     + 'or its Remove button asks before removing it, and asks again if it holds work. Beside the '
     + 'list, Recent activity is the cards changed last on every open board, newest first. '

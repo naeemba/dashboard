@@ -8,24 +8,46 @@ export const SIZE_STALE_MS = 300_000;
 
 export type GitWorktree ={ projectPath: string; worktreePath: string; branch: string };
 
-// What the manager's scan answers per worktree. `bytes` is null until the folder has been measured —
-// a size is a walk of every file in it, so it arrives later than the rest.
-export type ScannedWorktree = GitWorktree & { dirty: boolean; unreadable: boolean; bytes: number | null };
+// A folder's size: null until it has been measured — a size is a walk of every file in it, so it
+// arrives later than the rest — and `unmeasurable` when the walk gave no number, most often because
+// the folder is gone. The two print differently, so a row that will never resolve does not read as
+// one still being measured.
+export type WorktreeSize = number | 'unmeasurable' | null;
 
-// `git worktree list --porcelain`: one block per worktree, blank-line separated, the project's own
-// checkout first. That first block is the project itself, not a worktree of it, so it is skipped. A
+// What the manager's scan answers per worktree.
+export type ScannedWorktree = GitWorktree & { dirty: boolean; unreadable: boolean; bytes: WorktreeSize };
+
+// `git worktree list --porcelain`: one block per worktree, blank-line separated, the repository's
+// main checkout first. That first block is skipped, and so is the project's own folder: the project
+// may itself be a linked worktree, and then git lists it among the others. `ownPath` is the project's
+// folder as git spells it — git prints real paths, so a symlinked project path would never match. A
 // detached worktree has no branch line, and is named by the start of the commit it sits on.
-export function parseWorktreeList(porcelain: string, projectPath: string): GitWorktree[] {
+export function parseWorktreeList(porcelain: string, projectPath: string, ownPath = projectPath): GitWorktree[] {
   return porcelain.split(/\n\n+/).slice(1).flatMap((block): GitWorktree[] => {
     const fields = new Map(block.split('\n').map((line) => {
       const space = line.indexOf(' ');
       return space === -1 ? [line, ''] : [line.slice(0, space), line.slice(space + 1)];
     }));
     const worktreePath = fields.get('worktree');
-    if (!worktreePath || fields.has('bare')) return [];
+    if (!worktreePath || worktreePath === ownPath || fields.has('bare')) return [];
     const branch = fields.get('branch')?.replace(/^refs\/heads\//, '')
       ?? `detached ${(fields.get('HEAD') ?? '').slice(0, 7)}`;
     return [{ projectPath, worktreePath, branch }];
+  });
+}
+
+// The worktrees of every open project, each once, under the path the app's own record spells it with.
+// git prints real paths and a record holds the path built from the project path as the app was given
+// it, so `spelling` maps git's spelling back to the record's, and the renderer matches on one string.
+// Two open projects sharing a repository list the same worktrees; the first project to list one keeps
+// it, so no two rows share a path.
+export function distinctWorktrees(listed: readonly GitWorktree[], spelling: ReadonlyMap<string, string>): GitWorktree[] {
+  const seen = new Set<string>();
+  return listed.flatMap((worktree) => {
+    const worktreePath = spelling.get(worktree.worktreePath) ?? worktree.worktreePath;
+    if (seen.has(worktreePath)) return [];
+    seen.add(worktreePath);
+    return [{ ...worktree, worktreePath }];
   });
 }
 
@@ -39,9 +61,10 @@ export function diskUsageBytes(output: string): number | null {
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
 
 // One decimal under ten and none above it, so the column stays short: `840 MB`, `2.3 GB`. `…` is a
-// folder still being measured.
-export function formatSize(bytes: number | null): string {
+// folder still being measured, `?` one that could not be.
+export function formatSize(bytes: WorktreeSize): string {
   if (bytes === null) return '…';
+  if (bytes === 'unmeasurable') return '?';
   let value = bytes;
   let unit = 0;
   while (value >= 1024 && unit < UNITS.length - 1) {

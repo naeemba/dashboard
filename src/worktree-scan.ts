@@ -1,13 +1,15 @@
 import { execFile } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { git } from './git';
-import { diskUsageBytes, parseWorktreeList, SIZE_STALE_MS, type ScannedWorktree } from './git-worktrees';
+import { diskUsageBytes, distinctWorktrees, parseWorktreeList, type ScannedWorktree } from './git-worktrees';
 import { changedFiles } from './ship';
-import { isStale } from './stale';
+import { createWorktreeSizes } from './worktree-sizes';
 
 // The manager's scan: every worktree git knows of in each project, the ones a ship made and every other
 // one, with whether each is dirty and its size. Main-process spawning, so it sits outside main.ts but
-// carries no decision of its own — parsing and staleness are git-worktrees.ts's and stale.ts's.
+// carries no decision of its own — parsing and matching are git-worktrees.ts's, when to measure a size
+// is worktree-sizes.ts's.
 
 // Not commandOutput: that gives up after two seconds, and a folder with node_modules in it takes longer.
 const runFile = promisify(execFile);
@@ -23,43 +25,43 @@ export async function worktreeState(worktreePath: string): Promise<{ dirty: bool
   }
 }
 
-// The last size measured for each folder. A size is a walk of every file in it, node_modules and all,
-// so a folder is measured at most once every SIZE_STALE_MS in the background, and a scan answers with
-// whatever was measured last — null for the first few seconds, then the number.
-const sizes = new Map<string, { bytes: number | null; measuredAt: number }>();
-const measuring = new Set<string>();
-// One measure at a time: twenty multi-gigabyte walks at once is the whole disk for a few seconds.
-let measured: Promise<unknown> = Promise.resolve();
+// du exits non-zero over a single unreadable file but still prints the total, so the output is read
+// off the failure as well. When to measure and which answer to keep is worktree-sizes.ts's.
+const sizes = createWorktreeSizes({
+  now: Date.now,
+  measure: (worktreePath) => runFile('du', ['-sk', worktreePath])
+    .then(({ stdout }) => stdout, (error: { stdout?: string }) => error.stdout ?? '')
+    .then(diskUsageBytes),
+});
 
-function sizeOf(worktreePath: string): number | null {
-  const known = sizes.get(worktreePath);
-  if (!measuring.has(worktreePath) && isStale(known?.measuredAt, Date.now(), SIZE_STALE_MS)) {
-    measuring.add(worktreePath);
-    // du exits non-zero over a single unreadable file but still prints the total, so the output is
-    // read off the failure as well.
-    measured = measured.then(() => runFile('du', ['-sk', worktreePath]))
-      .then(({ stdout }) => stdout, (error: { stdout?: string }) => error.stdout ?? '')
-      .then((output) => sizes.set(worktreePath, { bytes: diskUsageBytes(output), measuredAt: Date.now() }))
-      .finally(() => measuring.delete(worktreePath));
+export const forgetSize = sizes.forget;
+
+// git prints real paths, so a path is compared in that spelling. One that cannot be resolved — a
+// folder gone — is compared as given.
+function realPath(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
   }
-  return known?.bytes ?? null;
 }
 
-// A removed folder's size is not kept for a worktree made later at the same path.
-export function forgetSize(worktreePath: string): void {
-  sizes.delete(worktreePath);
-}
-
-// A project git cannot list answers with nothing rather than failing the whole scan.
-export async function scanWorktrees(projectPaths: readonly string[]): Promise<ScannedWorktree[]> {
+// A project git cannot list answers with nothing rather than failing the whole scan. `recordedPaths`
+// are the app's own records, so a worktree git lists is answered under the path its record spells.
+export async function scanWorktrees(
+  projectPaths: readonly string[], recordedPaths: readonly string[],
+): Promise<ScannedWorktree[]> {
   const listed = await Promise.all(projectPaths.map(async (projectPath) => {
     try {
-      return parseWorktreeList(await git(['worktree', 'list', '--porcelain'], projectPath), projectPath);
+      return parseWorktreeList(
+        await git(['worktree', 'list', '--porcelain'], projectPath), projectPath, realPath(projectPath),
+      );
     } catch {
       return [];
     }
   }));
-  return Promise.all(listed.flat().map(async (worktree) => (
-    { ...worktree, ...await worktreeState(worktree.worktreePath), bytes: sizeOf(worktree.worktreePath) }
+  const spelling = new Map(recordedPaths.map((path) => [realPath(path), path]));
+  return Promise.all(distinctWorktrees(listed.flat(), spelling).map(async (worktree) => (
+    { ...worktree, ...await worktreeState(worktree.worktreePath), bytes: sizes.sizeOf(worktree.worktreePath) }
   )));
 }

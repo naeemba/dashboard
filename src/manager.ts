@@ -1,7 +1,7 @@
 import { relativeAge } from './age';
 import { baseName } from './base-name';
 import { clampIndex } from './clamp-index';
-import type { GitWorktree, ScannedWorktree } from './git-worktrees';
+import type { GitWorktree, ScannedWorktree, WorktreeSize } from './git-worktrees';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
 import { needKey, type Need } from './needs-you';
@@ -230,8 +230,8 @@ export function stateLabel(pane: PaneSummary): string {
 // A worktree row: one git lists for the project, with the record of the card it was shipped for when
 // the app made it. `entry` is null for one made anywhere else — an agent session, by hand — which has
 // no card, no pane and no start time to show, and is called by its folder's name. `bytes` is its size,
-// null until measured. Everything a removal needs, so the row itself is what the removal key acts on.
-export type ManagerWorktree = WorktreeTarget & { entry: WorktreeEntry | null; bytes: number | null };
+// null until measured, `unmeasurable` if it could not be. Everything a removal needs, so the row itself is what the removal key acts on.
+export type ManagerWorktree = WorktreeTarget & { entry: WorktreeEntry | null; bytes: WorktreeSize };
 
 // The project's records first, newest first, then every other worktree git found, in git's order. A
 // record is drawn whether or not git has been asked yet, so the card in flight is on the first paint

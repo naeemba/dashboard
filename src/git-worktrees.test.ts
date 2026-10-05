@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diskUsageBytes, formatSize, parseWorktreeList } from './git-worktrees';
+import { diskUsageBytes, distinctWorktrees, formatSize, parseWorktreeList } from './git-worktrees';
 
 const LIST = [
   'worktree /code/crm',
@@ -29,8 +29,30 @@ describe('parseWorktreeList', () => {
     ]);
   });
 
+  // git lists the main checkout first even when asked from a linked worktree, so the project's own
+  // folder comes back among the others and would be offered for removal from under its own shells.
+  it('leaves out the project itself when the project is a linked worktree', () => {
+    const listed = parseWorktreeList(LIST, '/link/crm.worktrees/feature', '/code/crm.worktrees/feature');
+    expect(listed.map((worktree) => worktree.worktreePath)).toEqual(['/code/crm/.worktrees/pr 7', '/code/gone']);
+  });
+
   it('finds nothing in a project with no worktrees', () => {
     expect(parseWorktreeList('worktree /code/crm\nHEAD 1\nbranch refs/heads/main', '/code/crm')).toEqual([]);
+  });
+});
+
+describe('distinctWorktrees', () => {
+  const worktree = (projectPath: string, worktreePath: string) => ({ projectPath, worktreePath, branch: 'b' });
+
+  it('answers under the record\'s spelling of a path git prints resolved', () => {
+    const spelling = new Map([['/real/crm.worktrees/a', '/link/crm.worktrees/a']]);
+    expect(distinctWorktrees([worktree('/link/crm', '/real/crm.worktrees/a')], spelling))
+      .toEqual([worktree('/link/crm', '/link/crm.worktrees/a')]);
+  });
+
+  it('lists a worktree two open projects share once, under the first', () => {
+    expect(distinctWorktrees([worktree('/crm', '/w'), worktree('/crm.worktrees/x', '/w')], new Map()))
+      .toEqual([worktree('/crm', '/w')]);
   });
 });
 
@@ -47,6 +69,10 @@ describe('diskUsageBytes', () => {
 describe('formatSize', () => {
   it('says a folder not yet measured is being measured', () => {
     expect(formatSize(null)).toBe('…');
+  });
+
+  it('says a folder that could not be measured gave up', () => {
+    expect(formatSize('unmeasurable')).toBe('?');
   });
 
   it('keeps one decimal only under ten', () => {

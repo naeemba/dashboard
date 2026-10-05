@@ -916,7 +916,9 @@ ipcMain.handle('worktree:check', async () => {
 });
 
 // Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
-ipcMain.handle('worktree:scan', (_event, projectPaths: string[]) => scanWorktrees(projectPaths));
+ipcMain.handle('worktree:scan', (_event, projectPaths: string[]) => (
+  scanWorktrees(projectPaths, worktrees.map((entry) => entry.worktreePath))
+));
 
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
 // question is worth asking, and refusing forever would mean the only way out is the command line.
@@ -935,12 +937,6 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
   // answers yes rather than refusing. Refusing sends the dialog down its failure path and offers to
   // force-delete a folder that is not there.
   if (!project) return { ok: true, message: '', dirty: [] };
-  // The same goal state reached from the manager, which always names a project: the folder is gone, so
-  // all that can be left is git's note of it, and a prune clears exactly that and nothing else.
-  if (!entry && !existsSync(worktreePath)) {
-    await git(['worktree', 'prune'], project).catch(() => '');
-    return { ok: true, message: '', dirty: [] };
-  }
   removingWorktrees.add(worktreePath);
   try {
     // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is

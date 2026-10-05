@@ -19,7 +19,8 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const named = (name: string): Board => ({ columns: [{ name, cards: [] }] });
 
-// A scan's answer: these worktrees of /api, the first list dirty and the second unreadable.
+// A scan's answer: these worktrees of /api, the first list dirty, the second clean and the third
+// unreadable.
 const scan = (dirty: string[], clean: string[] = [], unreadable: string[] = []): ScannedWorktree[] => [
   ...dirty.map((path) => ({ path, dirty: true, unreadable: false })),
   ...clean.map((path) => ({ path, dirty: false, unreadable: false })),
