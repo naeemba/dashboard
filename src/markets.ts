@@ -23,7 +23,7 @@ const DAY_MS = 86_400_000;
 
 // Each change compares the latest price with the price exactly that many days earlier, read along the
 // line between the two points either side of it. CoinGecko's points sit at midnight with the latest at
-// the current time, so taking the point before instead would make "1d" at noon a day and a half. A
+// the current time, so taking the point before instead would make "24h" at noon a day and a half. A
 // series that starts less than a day short of the span still answers from its oldest point: CoinGecko's
 // year starts at midnight 364 days back, and a year card that never showed a year would be no use.
 export function quoteOf(series: Series): Quote {
@@ -60,7 +60,7 @@ export function coinGeckoSeries(answer: unknown): Series {
 
 // Wallex's `/udf/history`: { s: 'ok', t: [seconds, ...], c: ['close', ...] } — closes are strings.
 // Each time is when the day's candle opened, and its close is the price when that day ended, so a close
-// is stamped at its candle's end — and today's, still open, at now. Stamped at the open, "1d" would
+// is stamped at its candle's end — and today's, still open, at now. Stamped at the open, "24h" would
 // only reach back to midnight UTC.
 export function wallexSeries(answer: unknown, nowMs: number): Series {
   const times = isRecord(answer) ? answer.t : undefined;

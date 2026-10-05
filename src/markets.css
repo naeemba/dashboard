@@ -4,7 +4,7 @@
    These are the one place in the app drawn as a page rather than a terminal: a proportional face, round
    corners, icons. The figures keep tabular digits so a price does not shuffle sideways as it moves. */
 .page-manager {
-  --page-top-inset: 140px;
+  --page-top-inset: 162px;
 }
 
 .markets {
@@ -20,7 +20,6 @@
 }
 
 .markets-card {
-  --accent: var(--blue);
   flex: 1;
   min-width: 0;
   display: flex;
@@ -58,7 +57,7 @@
 
 .markets-title,
 .markets-subtitle,
-.markets-chip,
+.markets-chip-text,
 .markets-stat-value,
 .markets-note {
   white-space: nowrap;
@@ -138,13 +137,18 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: none;
-  max-width: 100%;
+  /* The place name gives way so the rain chance beside it stays whole. */
+  flex: 0 1 auto;
+  min-width: 0;
   padding: 2px 6px;
   border-radius: 999px;
   color: var(--white);
   background: color-mix(in srgb, var(--white) 7%, transparent);
   font-size: 11px;
+}
+
+.markets-rain {
+  flex: none;
 }
 
 .markets-chip .icon svg {
@@ -189,6 +193,8 @@
 }
 
 .markets-note {
+  /* Never squeezed out: a failing source must still say why under its last numbers. */
+  flex: none;
   color: var(--red);
   font-size: 11px;
 }

@@ -3,6 +3,7 @@ import '@fontsource/vazirmatn/arabic-500.css';
 import './markets.css';
 import type { DashboardBridge } from './bridge';
 import { icon, type IconName } from './icons';
+import type { THEME } from './theme';
 import { formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord } from './markets';
 
 // The row of four cards across the top of the manager page. Read-only: nothing here takes a key or a
@@ -60,8 +61,8 @@ function forecastParts(forecast: Forecast | null): HTMLElement[] {
   if (forecast === null) return [];
   const sky = part('markets-sky', icon(WEATHER_ICONS[forecast.condition]));
   const figure = part('markets-figure', sky, `${Math.round(forecast.low)}° – ${Math.round(forecast.high)}°C`);
-  const facts = part('markets-chips', part('markets-chip', `${forecast.condition} in ${forecast.place}`));
-  if (forecast.rain !== null) facts.append(part('markets-chip', icon('droplet'), `${forecast.rain}%`));
+  const facts = part('markets-chips', part('markets-chip', part('markets-chip-text', `${forecast.condition} in ${forecast.place}`)));
+  if (forecast.rain !== null) facts.append(part('markets-chip markets-rain', icon('droplet'), `${forecast.rain}%`));
   return [figure, facts];
 }
 
@@ -71,7 +72,7 @@ export function createMarketsView(bridge: DashboardBridge): HTMLElement {
 
   // The accent names a theme colour, so a card's badge follows whatever palette settings hold.
   // aside: drawn at the far end of the head, the date card's Persian half.
-  function card<T>(glyph: IconName, accent: string, title: string, subtitle: string, aside?: HTMLElement): Card<T> {
+  function card<T>(glyph: IconName, accent: keyof typeof THEME, title: string, subtitle: string, aside?: HTMLElement): Card<T> {
     const badge = part('markets-badge', icon(glyph));
     const parts = {
       title: part('markets-title', title), subtitle: part('markets-subtitle', subtitle),
