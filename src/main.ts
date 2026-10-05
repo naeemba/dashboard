@@ -204,7 +204,7 @@ const paneShells = new Map<string, string>();
 // app getAppPath() ends in app.asar and forge puts this one file in app.asar.unpacked beside it; in
 // development there is no asar in the path and the replace does nothing.
 const boardCommand = path
-  .join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.js')
+  .join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.cjs')
   .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 // Built once. Every pane gets the same one, and cloning the whole environment per pane is six clones
 // per project opened for a value that never changes.
@@ -1015,7 +1015,7 @@ function createWindow(): void {
       trafficLightPosition: { x: 13, y: (TITLE_BAR_HEIGHT - 16) / 2 },
     }),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       // Chromium throttles a hidden page's timers, and after five minutes behind another window that
       // is once a minute. Everything this app does on a beat is a renderer timer: the pane refresh, the
       // bell, and the report saying which panes still have an agent working in them. Main's review
