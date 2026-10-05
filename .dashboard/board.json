@@ -80,39 +80,7 @@
     },
     {
       "name": "Review",
-      "cards": [
-        {
-          "id": "539342c2-4317-4969-ae4e-f6ffd0c39fcb",
-          "title": "Redesign the manager page: board counts, worktrees, recent activity, token trend",
-          "notes": "The manager page looks like a bare terminal page and is mostly empty. Improve its UI so it reads like an app, not a terminal. Add: (1) board counts on each project row (doing / review / todo). (4) Recent activity: latest card moves and merges across all projects, newest first. (5) Token trend: small per-day bars for the week beside the 5h/week/all columns. Also show each project's worktrees with dirty state, and let a worktree be deleted from there. Not wanted for now: a 'needs you' column or an 'in flight' list.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-09-28T13:05:04.368Z",
-          "branch": "manager-page-redesign",
-          "pullRequest": 64
-        },
-        {
-          "id": "ebbea8cf-ec60-4615-9204-811db47add3f",
-          "title": "Make the manager page readable: label every row and column",
-          "notes": "Worktree rows, terminal rows and the token columns have no headings; the week bars have no days; 'quiet' is unexplained; the confirm dialog stretches to full height.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-09-29T23:31:54.877Z",
-          "updatedAt": "2026-09-30T00:02:30.903Z",
-          "branch": "manager-page-legible",
-          "pullRequest": 65,
-          "comments": [
-            {
-              "at": "2026-09-29T23:44:34.684Z",
-              "body": "Shipped in PR #65: column names over terminals and worktrees, named token figures, weekday letters, blank status for quiet panes, 'nothing waiting', box-drawing prompts skipped, title-first worktree rows, confirm dialog height and focus ring fixed. v1.6.0."
-            },
-            {
-              "at": "2026-09-30T00:02:30.903Z",
-              "body": "Also in PR #65: once a card's review has landed it in Done, the app removes its worktree (branch kept, never forced) as soon as no pane has a shell left in it. If git refuses over uncommitted files, the card says so and the worktree stays on the worktree list."
-            }
-          ]
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Done",
@@ -798,6 +766,37 @@
             {
               "at": "2026-10-05T13:14:49.564Z",
               "body": "Merged in PR #68 as 1.9.0 after two review rounds; one low history thread (commit bf35dbb builds only with c868c2f) left open by choice."
+            }
+          ]
+        },
+        {
+          "id": "539342c2-4317-4969-ae4e-f6ffd0c39fcb",
+          "title": "Redesign the manager page: board counts, worktrees, recent activity, token trend",
+          "notes": "The manager page looks like a bare terminal page and is mostly empty. Improve its UI so it reads like an app, not a terminal. Add: (1) board counts on each project row (doing / review / todo). (4) Recent activity: latest card moves and merges across all projects, newest first. (5) Token trend: small per-day bars for the week beside the 5h/week/all columns. Also show each project's worktrees with dirty state, and let a worktree be deleted from there. Not wanted for now: a 'needs you' column or an 'in flight' list.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-05T13:37:23.770Z",
+          "branch": "manager-page-redesign",
+          "pullRequest": 64
+        },
+        {
+          "id": "ebbea8cf-ec60-4615-9204-811db47add3f",
+          "title": "Make the manager page readable: label every row and column",
+          "notes": "Worktree rows, terminal rows and the token columns have no headings; the week bars have no days; 'quiet' is unexplained; the confirm dialog stretches to full height.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-09-29T23:31:54.877Z",
+          "updatedAt": "2026-10-05T13:37:23.798Z",
+          "branch": "manager-page-legible",
+          "pullRequest": 65,
+          "comments": [
+            {
+              "at": "2026-09-29T23:44:34.684Z",
+              "body": "Shipped in PR #65: column names over terminals and worktrees, named token figures, weekday letters, blank status for quiet panes, 'nothing waiting', box-drawing prompts skipped, title-first worktree rows, confirm dialog height and focus ring fixed. v1.6.0."
+            },
+            {
+              "at": "2026-09-30T00:02:30.903Z",
+              "body": "Also in PR #65: once a card's review has landed it in Done, the app removes its worktree (branch kept, never forced) as soon as no pane has a shell left in it. If git refuses over uncommitted files, the card says so and the worktree stays on the worktree list."
             }
           ]
         }
