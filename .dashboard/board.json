@@ -764,6 +764,23 @@
           ]
         },
         {
+          "id": "1201f517-f09e-4076-a1e2-b4cedf8747fb",
+          "title": "Manager lists every git worktree of each open project: size, dirty, remove",
+          "notes": "The manager's worktree rows came only from worktrees.json, so worktrees made outside a ship (agent sessions, hand-made, .claude/worktrees) never showed. List every linked worktree git knows for each open project, with its size on disk, dirty or clean, and a remove key.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-05T12:01:49.475Z",
+          "updatedAt": "2026-10-05T12:48:59.390Z",
+          "branch": "manager-all-worktrees",
+          "pullRequest": 67,
+          "comments": [
+            {
+              "at": "2026-10-05T12:20:36.451Z",
+              "body": "Shipped in #67: manager scans git for every worktree of each open project, with dirty state, size (du, one at a time, every 5 min) and removal of unrecorded ones. Tests 1021 pass; real scan on new-crm finds all 19."
+            }
+          ]
+        },
+        {
           "id": "70316b8e-0016-4694-973a-a7513da13fb7",
           "title": "Manager cards: date and weather, BTC, USDT to toman, gold",
           "notes": "A row of four read-only cards at the top of the manager page: Persian and Gregorian date with today's weather, then BTC/USD, USDT/toman and gold/USD with day, week, month and year change.",

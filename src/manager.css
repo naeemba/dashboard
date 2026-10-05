@@ -265,7 +265,7 @@
 
 .manager-worktree,
 .manager-group-worktree {
-  grid-template-columns: minmax(0, 1fr) 9ch 12ch 12ch 8ch;
+  grid-template-columns: minmax(0, 1fr) 9ch 8ch 12ch 12ch 8ch;
 }
 
 /* One line per cell, cut short with an ellipsis rather than pushing the next column over. */
@@ -357,6 +357,7 @@
 }
 
 .manager-worktree .manager-age,
+.manager-worktree .manager-size,
 .manager-worktree-pane {
   opacity: 0.6;
 }

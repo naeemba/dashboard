@@ -2,9 +2,11 @@ import type { Action } from './actions';
 import { relativeAge } from './age';
 import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
+import { formatSize } from './git-worktrees';
 import {
   alertSummary, answerTarget, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, queueLength, queueRefresh,
-  removableWorktree, slotOfLine, stateLabel, withQueue, type ManagerLine, type ManagerRow, type PaneSummary,
+  noPaneText, removableWorktree, slotOfLine, stateLabel, withQueue, type ManagerLine, type ManagerRow,
+  type ManagerWorktree, type PaneSummary,
 } from './manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
 import { NEED_LABELS, nextLanding, needsYou, type Need } from './needs-you';
@@ -12,8 +14,8 @@ import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from './shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
 import { APP_VERSION } from './version';
+import type { WorktreeTarget } from './worktree-removal';
 import { dirtyLabel, worktreePaneText } from './worktree-rows';
-import type { WorktreeEntry } from './worktree-store';
 import type { JumpToWorktree } from './worktree-view';
 
 export type ManagerOptions = {
@@ -35,12 +37,12 @@ export type ManagerOptions = {
   onJumpNeed(need: Need): string;
   // The removal key on a worktree row, and its button. What is asked, and what is forced, is
   // worktree-removal.ts's.
-  onRemoveWorktree(entry: WorktreeEntry): void;
+  onRemoveWorktree(target: WorktreeTarget): void;
   // A sentence for the status bar, or '' to take back the one this view put there.
   onError(message: string): void;
   // What a key is bound to now, so the status bar names the removal key in force.
   binding(actionName: string): string;
-  // Every open project's board and which worktrees are dirty, read in the background.
+  // Every open project's board and every worktree git knows of in it, read in the background.
   reads: ManagerReads;
 };
 
@@ -111,7 +113,7 @@ function labelledTokens(label: string, text: string): HTMLElement {
 const GROUP_COLUMNS = {
   need: ['Needs you', 'Project', 'What', 'Waiting'],
   pane: ['Terminal', 'Last line on screen', 'Status', 'Last output', 'Tokens'],
-  worktree: ['Worktree', 'Changes', 'Started', 'Terminal', ''],
+  worktree: ['Worktree', 'Changes', 'Size', 'Started', 'Terminal', ''],
 } as const;
 
 function groupHead(kind: keyof typeof GROUP_COLUMNS): HTMLElement {
@@ -187,26 +189,34 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     );
   }
 
-  // Everything on the page that is not the list, from one place: both draws want it.
-  function drawPanels(rows: readonly ManagerRow[]): void {
-    overview.draw(rows, options.reads.dirtiness());
+  // Everything on the page that is not the list, from one place: both draws want it. A project's
+  // worktrees are among its lines whether it is open or shut, so the lines are where they are counted.
+  function drawPanels(rows: readonly ManagerRow[], drawn: readonly ManagerLine[]): void {
+    const worktreePaths = drawn.flatMap((line) => (line.kind === 'worktree' ? [line.worktree.worktreePath] : []));
+    overview.draw(rows, options.reads.dirtiness(), worktreePaths);
     activity.draw(recentActivity(rows.flatMap((row) => {
       const board = options.reads.boardOf(row.path);
       return board ? [{ project: row.name, board }] : [];
     })));
   }
 
-  function dirtyText(entry: WorktreeEntry): string {
+  function dirtyText(worktreePath: string): string {
     const { checked, dirty, unreadable } = options.reads.dirtiness();
-    return dirtyLabel(entry.worktreePath, checked, dirty, unreadable);
+    return dirtyLabel(worktreePath, checked, dirty, unreadable);
   }
 
-  function writeDirty(cell: Element | null | undefined, entry: WorktreeEntry): void {
+  function writeDirty(cell: Element | null | undefined, worktreePath: string): void {
     if (!cell) return;
     const { dirty, unreadable } = options.reads.dirtiness();
-    cell.textContent = dirtyText(entry);
-    cell.classList.toggle('is-dirty', dirty.has(entry.worktreePath));
-    cell.classList.toggle('unreadable', unreadable.has(entry.worktreePath));
+    cell.textContent = dirtyText(worktreePath);
+    cell.classList.toggle('is-dirty', dirty.has(worktreePath));
+    cell.classList.toggle('unreadable', unreadable.has(worktreePath));
+  }
+
+  // A worktree no card was shipped into has no start time and no pane, so both cells are empty.
+  function ageText({ entry }: ManagerWorktree): string {
+    // A timestamp the clock cannot read says nothing rather than "Invalid Date" — see age.ts.
+    return entry ? relativeAge(entry.startedAt) ?? '' : '';
   }
 
   let lines: ManagerLine[] = [];
@@ -338,35 +348,38 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     return item;
   }
 
-  // A worktree the app made for one of this project's cards. The button is the mouse's way to the same
-  // removal the key does, so it selects the row first: the highlight is then on the worktree the
-  // question names.
+  // A worktree of this project: one the app made for a card, or one git lists that was made anywhere
+  // else. The button is the mouse's way to the same removal the key does, so it selects the row first:
+  // the highlight is then on the worktree the question names.
   function worktreeLine(line: Extract<ManagerLine, { kind: 'worktree' }>): HTMLElement {
-    const { entry } = line;
+    const { worktree } = line;
+    const { entry } = worktree;
     const item = document.createElement('li');
     item.className = 'manager-worktree';
     // The card's title first, in words, and the branch after it, quieter: the branch is the title cut
     // down to a slug, so leading with it put the same sentence on the row twice, the unreadable copy
-    // first.
+    // first. With no card, the folder's name stands where the title would.
     const names = document.createElement('span');
     names.className = 'manager-worktree-names';
     const title = document.createElement('span');
     title.className = 'manager-worktree-title';
-    title.textContent = entry.reviewing ? `reviewing · ${entry.title}` : entry.title;
+    title.textContent = entry?.reviewing ? `reviewing · ${worktree.title}` : worktree.title;
     const branch = document.createElement('span');
     branch.className = 'manager-worktree-branch';
-    branch.textContent = entry.branch;
+    branch.textContent = worktree.branch;
     names.append(title, branch);
     const dirty = document.createElement('span');
     dirty.className = 'manager-dirty';
-    writeDirty(dirty, entry);
+    writeDirty(dirty, worktree.worktreePath);
+    const size = document.createElement('span');
+    size.className = 'manager-size';
+    size.textContent = formatSize(worktree.bytes);
     const age = document.createElement('span');
     age.className = 'manager-age';
-    // A timestamp the clock cannot read says nothing rather than "Invalid Date" — see age.ts.
-    age.textContent = relativeAge(entry.startedAt) ?? '';
+    age.textContent = ageText(worktree);
     const pane = document.createElement('span');
     pane.className = 'manager-worktree-pane';
-    pane.textContent = worktreePaneText(entry);
+    pane.textContent = entry ? worktreePaneText(entry) : '';
     const remove = document.createElement('button');
     remove.className = 'manager-remove';
     remove.type = 'button';
@@ -379,9 +392,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       event.stopPropagation();
       setSelection(rowElements.indexOf(item));
       options.onChanged();
-      options.onRemoveWorktree(entry);
+      options.onRemoveWorktree(worktree);
     });
-    item.append(names, dirty, age, pane, remove);
+    item.append(names, dirty, size, age, pane, remove);
     return item;
   }
 
@@ -405,7 +418,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // wherever a project opening its panes has pushed it to. Both redraws start here, so neither can
   // leave the selection naming one row while it sits on another.
   function relayout(rows: readonly ManagerRow[]): void {
-    lines = [...needLines(rows), ...managerLines(rows, opened)];
+    lines = [...needLines(rows), ...managerLines(rows, opened, options.reads.worktreesOf)];
     setSelection(heldIndex(lines.map(lineKey), selectedKey, selected));
   }
 
@@ -434,7 +447,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // that did nothing. A landing that worked takes back whatever the last one said.
     // Redrawn either way, so a click on a worktree that cannot be landed on still moves the highlight
     // to it; a landing that worked has left this page already.
-    if (line.kind === 'worktree') options.onError(options.onJumpWorktree(line.entry));
+    if (line.kind === 'worktree') {
+      const { worktree } = line;
+      options.onError(worktree.entry ? options.onJumpWorktree(worktree.entry) : noPaneText(worktree));
+    }
     else toggle(line.row);
     options.onChanged();
   }
@@ -465,7 +481,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       overview.element.hidden = !anyOpen;
       needs.hidden = !anyOpen;
       body.hidden = !anyOpen;
-      drawPanels(rows);
+      drawPanels(rows, lines);
       const children: HTMLElement[] = [];
       const openings = groupOpenings(lines);
       rowElements = lines.map((line, index) => {
@@ -498,8 +514,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       // every open project whatever the list underneath is doing, so a sweep that lands while a
       // row is opening still moves them.
       askReads(rows);
-      drawPanels(rows);
-      const fresh = [...needLines(rows), ...managerLines(rows, opened)];
+      const fresh = [...needLines(rows), ...managerLines(rows, opened, options.reads.worktreesOf)];
+      drawPanels(rows, fresh);
       const refresh = queueRefresh(lines, fresh);
       if (refresh === 'render') return;
       // An agent going quiet puts an item on the queue with nothing else happening, so no other redraw
@@ -530,9 +546,11 @@ export function createManagerView(options: ManagerOptions): ManagerView {
           return;
         }
         if (line.kind === 'worktree') {
-          writeDirty(row?.querySelector('.manager-dirty'), line.entry);
+          writeDirty(row?.querySelector('.manager-dirty'), line.worktree.worktreePath);
+          const size = row?.querySelector('.manager-size');
+          if (size) size.textContent = formatSize(line.worktree.bytes);
           const age = row?.querySelector('.manager-age');
-          if (age) age.textContent = relativeAge(line.entry.startedAt) ?? '';
+          if (age) age.textContent = ageText(line.worktree);
           return;
         }
         const lastPrinted = row?.querySelector('.manager-last-printed');
@@ -557,7 +575,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         const remove = removableWorktree(line) ? removeHint : '';
         return `${line.need.project} · ${line.need.subject} · ${NEED_LABELS[line.need.kind]}${remove}${answer}`;
       }
-      if (line.kind === 'worktree') return `${line.entry.branch} · ${dirtyText(line.entry)}${removeHint}`;
+      if (line.kind === 'worktree') {
+        const { worktree } = line;
+        return `${worktree.branch} · ${dirtyText(worktree.worktreePath)} · ${formatSize(worktree.bytes)}${removeHint}`;
+      }
       if (line.kind === 'pane') {
         const age = paneAge(line.pane.lastPrintedAt);
         return `${line.pane.name} · ${line.pane.state}${age === '' ? '' : ` · ${age}`}${answer}`;

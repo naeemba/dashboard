@@ -1,7 +1,10 @@
 import type { Board } from './board';
+import type { ScannedWorktree } from './git-worktrees';
+import { isStale } from './stale';
 
 // What the manager's list reads for itself, on top of the rows the renderer hands it: every open
-// project's board, for the counts and the activity, and which worktrees have uncommitted changes.
+// project's board, for the counts and the activity, and every worktree git knows of in those projects —
+// which have uncommitted changes, and how big each is.
 // Both are read in the background and the list redraws when an answer lands, so opening the manager
 // never waits on a disk or on git.
 //
@@ -11,18 +14,15 @@ import type { Board } from './board';
 // A board read this long ago is read again the next time the list is drawn. Short, because a card you
 // moved on the board screen should have moved here by the time you arrive.
 export const BOARD_STALE_MS = 5_000;
-// Longer, because this one is a `git status` per worktree rather than a file read.
+// Longer, because this one is a `git worktree list` per project and a `git status` per worktree rather
+// than a file read.
 export const DIRTY_STALE_MS = 15_000;
 
-// Whether an answer is due to be asked for again. Never read counts as due.
-export function isStale(readAt: number | undefined, now: number, maxAge: number): boolean {
-  return readAt === undefined || now - readAt >= maxAge;
-}
 
 export type ManagerReadsPorts = {
   // Null when there is nothing to count; board-store.ts's peekBoard says when.
   peekBoard(projectPath: string): Promise<Board | null>;
-  dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
+  scanWorktrees(projectPaths: string[]): Promise<ScannedWorktree[]>;
   // An answer landed; the list should be drawn again.
   onRead(): void;
   now(): number;
@@ -49,8 +49,12 @@ export type ManagerReads = {
   // The last board read for this project, or undefined before the first read has landed.
   boardOf(projectPath: string): Board | undefined;
   dirtiness(): Dirtiness;
+  // Every worktree the last scan found in this project, recorded or not; empty before the first.
+  worktreesOf(projectPath: string): readonly ScannedWorktree[];
   // Asks again for whatever is missing or old, and does nothing when nothing is due, so it is cheap
   // to call often. A project not in `projectPaths` has closed, and its board is dropped.
+  // `worktreePaths` are the recorded ones: a new one makes the scan old at once, and one the scan did
+  // not find is one git could not answer for.
   refresh(projectPaths: readonly string[], worktreePaths: readonly string[]): void;
   // Something wrote this project's board — the app or anything outside it: read it now, however
   // fresh the last read.
@@ -67,6 +71,7 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
   // file from before the change, so one more is started when it lands.
   const readAgain = new Set<string>();
   let dirtiness = UNKNOWN;
+  let scanned: ScannedWorktree[] = [];
   let dirtyAt: number | undefined;
   // Which worktrees the last check was about. A new one appearing makes the answer old at once: it
   // would otherwise read `…` for up to fifteen seconds.
@@ -99,17 +104,27 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
       });
   }
 
-  function checkDirtiness(worktreePaths: readonly string[]): void {
+  function checkDirtiness(projectPaths: readonly string[], worktreePaths: readonly string[], about: string): void {
     checking = true;
-    const about = worktreePaths.join('\n');
     const before = dirtiness;
-    ports.dirtyWorktrees()
+    const beforeScan = JSON.stringify(scanned);
+    ports.scanWorktrees([...projectPaths])
       .then((result) => {
-        dirtiness = { checked: true, dirty: new Set(result.dirty), unreadable: new Set(result.unreadable) };
+        scanned = result;
+        const found = new Set(result.map((worktree) => worktree.worktreePath));
+        dirtiness = {
+          checked: true,
+          dirty: new Set(result.filter((worktree) => worktree.dirty).map((worktree) => worktree.worktreePath)),
+          unreadable: new Set([
+            ...result.filter((worktree) => worktree.unreadable).map((worktree) => worktree.worktreePath),
+            ...worktreePaths.filter((path) => !found.has(path)),
+          ]),
+        };
       })
       // A check that failed says nothing is known, rather than keeping an answer about worktrees that
       // may since have changed. Each row then reads `…` until the next check.
       .catch(() => {
+        scanned = [];
         dirtiness = UNKNOWN;
       })
       .finally(() => {
@@ -117,13 +132,14 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
         dirtyAt = ports.now();
         dirtyAbout = about;
         // The same answer again redraws nothing, as a board read that finds nothing new does not.
-        if (!sameDirtiness(before, dirtiness)) ports.onRead();
+        if (!sameDirtiness(before, dirtiness) || JSON.stringify(scanned) !== beforeScan) ports.onRead();
       });
   }
 
   return {
     boardOf: (projectPath) => boards.get(projectPath),
     dirtiness: () => dirtiness,
+    worktreesOf: (projectPath) => scanned.filter((worktree) => worktree.projectPath === projectPath),
     refresh(projectPaths, worktreePaths) {
       for (const path of [...boards.keys()]) {
         if (projectPaths.includes(path)) continue;
@@ -136,7 +152,8 @@ export function createManagerReads(ports: ManagerReadsPorts): ManagerReads {
       }
       if (checking) return;
       const sorted = [...worktreePaths].sort();
-      if (sorted.join('\n') !== dirtyAbout || isStale(dirtyAt, now, DIRTY_STALE_MS)) checkDirtiness(sorted);
+      const about = [...projectPaths, ...sorted].join('\n');
+      if (about !== dirtyAbout || isStale(dirtyAt, now, DIRTY_STALE_MS)) checkDirtiness(projectPaths, sorted, about);
     },
     // Only a project already being read: a change to the board of one that is not open, or of the
     // manager's own, has no row here to draw.
