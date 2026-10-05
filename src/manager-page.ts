@@ -6,6 +6,7 @@ import type { SendPlan } from './free-pane';
 import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
 import { createManagerReads } from './manager-reads';
 import { createManagerView } from './manager-view';
+import { createMarketsView } from './markets-view';
 import type { Mode } from './modes';
 import type { Need } from './needs-you';
 import { createNotesView } from './notes-view';
@@ -141,7 +142,8 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   notesView.append(notes.element);
   // Above the four views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);
-  element.append(strip.element, manager.element, cards.element, command.element, notesView);
+  // Above the strip, and on screen whichever section is showing for the same reason the strip is.
+  element.append(createMarketsView(options.bridge), strip.element, manager.element, cards.element, command.element, notesView);
   const page: Page = {
     project: MANAGER_PROJECT, element,
     views: {

@@ -1,0 +1,46 @@
+/* The row of four cards across the top of the manager page, from markets-view.ts. index.css starts the
+   section strip and the views below --page-top-inset, so setting it here is all it takes to make room. */
+.page-manager {
+  --page-top-inset: 104px;
+}
+
+.markets {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--page-top-inset);
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px 0;
+  box-sizing: border-box;
+}
+
+.markets-card {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--brightBlack);
+  overflow: hidden;
+}
+
+.markets-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.markets-title {
+  color: var(--brightWhite);
+}
+
+.markets-change + .markets-change {
+  margin-inline-start: 12px;
+}
+
+.markets-up {
+  color: var(--green);
+}
+
+.markets-down,
+.markets-note {
+  color: var(--red);
+}

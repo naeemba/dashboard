@@ -1,5 +1,6 @@
 import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from './actions';
 import { formatBinding, parseBinding } from './binding';
+import { isRecord } from './is-record';
 import { THEME } from './theme';
 
 // Everything the settings file holds. `keys` always has an entry for every action after parsing, so
@@ -12,6 +13,9 @@ export type Settings = {
   font: { name: string; size: number };
   theme: Record<string, string>;
   keys: Record<string, string | null>;
+  // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
+  // geocoder whenever it changes, so it is never blank.
+  weatherPlace: string;
 };
 
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
@@ -19,6 +23,8 @@ export type Settings = {
 type Binding = { binding: string | null; written: boolean };
 
 export const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
+
+export const DEFAULT_WEATHER_PLACE = 'Tehran';
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -44,6 +50,7 @@ export function defaultSettings(isMac: boolean): Settings {
     font: { ...DEFAULT_FONT },
     theme: Object.fromEntries(THEME_COLORS.map((name) => [name, String(THEME[name as keyof typeof THEME])])),
     keys: Object.fromEntries(ACTIONS.map((entry) => [entry.name, defaultBinding(entry, isMac)])),
+    weatherPlace: DEFAULT_WEATHER_PLACE,
   };
 }
 
@@ -60,12 +67,6 @@ function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): Binding
   const parsed = typeof stored === 'string' ? parseBinding(stored) : null;
   if (parsed === null) return { binding: defaultBinding(entry, isMac), written: false };
   return { binding: formatBinding(parsed), written: true };
-}
-
-// A plain object, and nothing else. A list has string keys too, so Array.isArray has to be asked
-// separately or `[1, 2]` reads as `{ "0": 1, "1": 2 }`.
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // Anything that is not a plain object reads as one with nothing in it. Every check that follows a call
@@ -125,6 +126,8 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       name, isHexColor(storedTheme[name]) ? storedTheme[name] : defaults.theme[name],
     ])),
     keys: Object.fromEntries(bindings.map(({ entry, binding }) => [entry.name, binding])),
+    weatherPlace: typeof raw.weatherPlace === 'string' && raw.weatherPlace.trim() !== ''
+      ? raw.weatherPlace.trim() : defaults.weatherPlace,
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 

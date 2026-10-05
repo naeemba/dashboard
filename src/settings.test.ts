@@ -58,6 +58,13 @@ describe('parseSettings', () => {
     expect(settings.shellCommand).toBe('');
   });
 
+  it('reads the weather place, and falls back to Tehran for a blank or missing one', () => {
+    expect(parseSettings({}, true).weatherPlace).toBe('Tehran');
+    expect(parseSettings({ weatherPlace: '  ' }, true).weatherPlace).toBe('Tehran');
+    expect(parseSettings({ weatherPlace: 4 }, true).weatherPlace).toBe('Tehran');
+    expect(parseSettings({ weatherPlace: 'Shiraz' }, true).weatherPlace).toBe('Shiraz');
+  });
+
   it('ignores a colour the theme does not have and a key no action answers to', () => {
     const settings = parseSettings({ theme: { chartreuse: '#7fff00' }, keys: { 'no-such-action': 'Ctrl+Z' } }, true);
     expect(settings.theme).not.toHaveProperty('chartreuse');

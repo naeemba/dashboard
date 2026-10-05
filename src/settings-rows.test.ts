@@ -17,12 +17,13 @@ describe('settingsRows', () => {
     expect(keyRows.find((row) => row.name === 'help')?.binding).toBeNull();
   });
 
-  it('lists every colour, the font, the shell and the two resets', () => {
+  it('lists every colour, the font, the shell, the weather place and the two resets', () => {
     const kinds = rows.map((row) => row.kind);
     expect(rows.filter((row) => row.kind === 'color')).toHaveLength(Object.keys(settings.theme).length);
     expect(kinds).toContain('font-name');
     expect(kinds).toContain('font-size');
     expect(kinds).toContain('shell');
+    expect(kinds).toContain('weather-place');
     expect(kinds).toContain('reset-keys');
     expect(kinds).toContain('reset-all');
   });

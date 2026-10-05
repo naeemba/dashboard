@@ -24,6 +24,7 @@ import {
 } from './terminals';
 import { BOARD_FILE_PATH, openBoard, peekBoard, readBoard, writeBoard } from './board-store';
 import { readNotes, writeNotes } from './notes-store';
+import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
@@ -598,6 +599,10 @@ const tokenUsage = usageSweep({
   sweepFailed: (error: unknown) => failures.hold(`Token figures not updated: ${failureText(error)}`),
 });
 tokenUsage.start();
+
+// The manager's four cards. The place is read from the settings main holds, so a change made on the
+// settings screen reaches the weather on the next read.
+ipcMain.handle('markets:read', () => readMarkets(settings.weatherPlace));
 
 // The renderer's first read. Everything after it arrives unasked on usage:change.
 ipcMain.handle('usage:read', () => tokenUsage.latest());

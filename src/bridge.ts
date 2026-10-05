@@ -1,6 +1,7 @@
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 import type { Board } from './board';
+import type { MarketsSnapshot } from './markets';
 import type { PaneUse } from './pane-reading';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
@@ -131,6 +132,9 @@ export type DashboardBridge = {
   // Code's own session logs. Read once on the way up and then pushed every half minute, the way the
   // worktree records are: the numbers move on their own while nothing on screen does.
   readUsage(): Promise<UsageSnapshot>;
+  // The manager's four cards, fetched by main. Never rejects: a source that failed is a failed reading
+  // inside the snapshot, so the other cards still draw.
+  readMarkets(): Promise<MarketsSnapshot>;
   onUsageChange(listener: (usage: UsageSnapshot) => void): void;
   // One line about something that broke on main's side of the wire. What reaches here and why the app
   // is still up to hear it are failure.ts's.

@@ -779,6 +779,27 @@
               "body": "Shipped in #67: manager scans git for every worktree of each open project, with dirty state, size (du, one at a time, every 5 min) and removal of unrecorded ones. Tests 1021 pass; real scan on new-crm finds all 19."
             }
           ]
+        },
+        {
+          "id": "70316b8e-0016-4694-973a-a7513da13fb7",
+          "title": "Manager cards: date and weather, BTC, USDT to toman, gold",
+          "notes": "A row of four read-only cards at the top of the manager page: Persian and Gregorian date with today's weather, then BTC/USD, USDT/toman and gold/USD with day, week, month and year change.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-05T12:40:35.238Z",
+          "updatedAt": "2026-10-05T13:14:49.564Z",
+          "branch": "manager-market-cards",
+          "pullRequest": 68,
+          "comments": [
+            {
+              "at": "2026-10-05T12:54:39.740Z",
+              "body": "Shipped in PR #68: four read-only cards on top of the manager page (date + Open-Meteo weather for the settings place, BTC and PAXG gold via CoinGecko, USDT/toman via Wallex), read every 30 minutes. Not yet seen on screen."
+            },
+            {
+              "at": "2026-10-05T13:14:49.564Z",
+              "body": "Merged in PR #68 as 1.9.0 after two review rounds; one low history thread (commit bf35dbb builds only with c868c2f) left open by choice."
+            }
+          ]
         }
       ]
     }
