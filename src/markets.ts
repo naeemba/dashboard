@@ -11,7 +11,7 @@ export type Quote = {
   price: number; day: number | null; week: number | null; month: number | null; year: number | null;
 };
 export type Place = { name: string; latitude: number; longitude: number };
-export type Forecast = { place: string; condition: string; low: number; high: number; rain: number | null };
+export type Forecast = { place: string; condition: WeatherWord; low: number; high: number; rain: number | null };
 // One card's answer. A failure carries the sentence to print, so one source being down costs that card
 // alone.
 export type Reading<T> = { ok: true; value: T } | { ok: false; message: string };
@@ -23,7 +23,7 @@ const DAY_MS = 86_400_000;
 
 // Each change compares the latest price with the price exactly that many days earlier, read along the
 // line between the two points either side of it. CoinGecko's points sit at midnight with the latest at
-// the current time, so taking the point before instead would make "1d" at noon a day and a half. A
+// the current time, so taking the point before instead would make "24h" at noon a day and a half. A
 // series that starts less than a day short of the span still answers from its oldest point: CoinGecko's
 // year starts at midnight 364 days back, and a year card that never showed a year would be no use.
 export function quoteOf(series: Series): Quote {
@@ -60,7 +60,7 @@ export function coinGeckoSeries(answer: unknown): Series {
 
 // Wallex's `/udf/history`: { s: 'ok', t: [seconds, ...], c: ['close', ...] } — closes are strings.
 // Each time is when the day's candle opened, and its close is the price when that day ended, so a close
-// is stamped at its candle's end — and today's, still open, at now. Stamped at the open, "1d" would
+// is stamped at its candle's end — and today's, still open, at now. Stamped at the open, "24h" would
 // only reach back to midnight UTC.
 export function wallexSeries(answer: unknown, nowMs: number): Series {
   const times = isRecord(answer) ? answer.t : undefined;
@@ -98,14 +98,17 @@ export function forecastOf(place: string, answer: unknown): Forecast {
 
 // The WMO weather codes Open-Meteo uses, by family. The intensities inside a family are left out: the
 // card has room for one word.
-const WEATHER_WORDS: readonly [readonly number[], string][] = [
+const WEATHER_WORDS = [
   [[0], 'Clear'], [[1], 'Mostly clear'], [[2], 'Partly cloudy'], [[3], 'Overcast'], [[45, 48], 'Fog'],
   [[51, 53, 55, 56, 57], 'Drizzle'], [[61, 63, 65, 66, 67], 'Rain'], [[71, 73, 75, 77], 'Snow'],
   [[80, 81, 82], 'Showers'], [[85, 86], 'Snow showers'], [[95, 96, 99], 'Thunderstorm'],
-];
+] as const satisfies readonly (readonly [readonly number[], string])[];
 
-export function weatherWord(code: number): string {
-  return WEATHER_WORDS.find(([codes]) => codes.includes(code))?.[1] ?? 'Unknown';
+// Every word a forecast can carry, so a table keyed by them is checked against this one.
+export type WeatherWord = (typeof WEATHER_WORDS)[number][1] | 'Unknown';
+
+export function weatherWord(code: number): WeatherWord {
+  return WEATHER_WORDS.find(([codes]) => (codes as readonly number[]).includes(code))?.[1] ?? 'Unknown';
 }
 
 // A failed read keeps the numbers from the last good one on screen, with the reason underneath: half an

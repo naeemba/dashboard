@@ -71,7 +71,7 @@ describe('wallexSeries', () => {
     expect(wallexSeries(answer, MIDNIGHT + 13 * 3_600_000)).toEqual([[MIDNIGHT, 100], [MIDNIGHT + 13 * 3_600_000, 101.5]]);
   });
 
-  it('reads a mid-day "1d" from 24 hours back, not from midnight', () => {
+  it('reads a mid-day "24h" from 24 hours back, not from midnight', () => {
     const open = MIDNIGHT / 1000;
     const answer = { s: 'ok', t: [open - 2 * 86_400, open - 86_400, open], c: ['100', '200', '300'] };
     // Noon: a day back is noon yesterday, halfway between yesterday's start (100) and its end (200).
