@@ -19,7 +19,9 @@ export type MarketsSnapshot = {
 
 const DAY_MS = 86_400_000;
 
-// Each change compares the latest price with the last one at or before that many days earlier. A
+// Each change compares the latest price with the price exactly that many days earlier, read along the
+// line between the two points either side of it. CoinGecko's points sit at midnight with the latest at
+// the current time, so taking the point before instead would make "1d" at noon a day and a half. A
 // series that starts less than a day short of the span still answers from its oldest point: CoinGecko's
 // year starts at midnight 364 days back, and a year card that never showed a year would be no use.
 export function quoteOf(series: Series): Quote {
@@ -27,10 +29,12 @@ export function quoteOf(series: Series): Quote {
   const [latestAt, price] = series[series.length - 1];
   const change = (days: number): number | null => {
     const target = latestAt - days * DAY_MS;
+    const after = series.findIndex(([at]) => at > target);
     let then: number | undefined;
-    for (const [at, value] of series) {
-      if (at > target) break;
-      then = value;
+    if (after > 0) {
+      const [beforeAt, beforeValue] = series[after - 1];
+      const [afterAt, afterValue] = series[after];
+      then = beforeValue + (afterValue - beforeValue) * (target - beforeAt) / (afterAt - beforeAt);
     }
     if (then === undefined && series[0][0] - target < DAY_MS) then = series[0][1];
     return then === undefined || then === 0 ? null : (price / then - 1) * 100;

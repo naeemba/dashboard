@@ -5,14 +5,12 @@ import {
 } from './markets';
 
 const DAY = 86_400_000;
-const NOW = Date.UTC(2026, 9, 5, 12);
+const MIDNIGHT = Date.UTC(2026, 9, 5);
 
-// One point a day at midnight for `days` days, then one at noon today: the shape CoinGecko answers in.
+// One point a day at midnight, from `days` days back to today: the shape Wallex answers in.
 function daily(days: number, price: (daysAgo: number) => number): Series {
-  const midnight = Date.UTC(2026, 9, 5);
   const points: [number, number][] = [];
-  for (let ago = days; ago >= 1; ago -= 1) points.push([midnight - ago * DAY, price(ago)]);
-  points.push([NOW, price(0)]);
+  for (let ago = days; ago >= 0; ago -= 1) points.push([MIDNIGHT - ago * DAY, price(ago)]);
   return points;
 }
 
@@ -26,9 +24,16 @@ describe('quoteOf', () => {
     expect(quote.year).toBeCloseTo(-50);
   });
 
+  it('measures a day as 24 hours when the latest point falls between two daily ones', () => {
+    // CoinGecko's shape: midnights, then the current price at noon. Yesterday noon sits halfway between
+    // yesterday's midnight (100) and today's (300), so it reads 200.
+    const series: Series = [...daily(3, (ago) => (ago === 1 ? 100 : 300)), [MIDNIGHT + DAY / 2, 220]];
+    expect(quoteOf(series).day).toBeCloseTo(10);
+  });
+
   it('reads a year from the oldest point when the series is less than a day short of one', () => {
-    // CoinGecko's "365 days" starts at midnight 364 days back, so nothing is as old as a year to the hour.
-    const series = daily(364, (ago) => (ago === 364 ? 50 : 100));
+    // CoinGecko's "365 days" starts at midnight 364 days back, so nothing is as old as a year.
+    const series: Series = [...daily(364, (ago) => (ago === 364 ? 50 : 100)), [MIDNIGHT + DAY / 2, 100]];
     expect(quoteOf(series).year).toBeCloseTo(100);
   });
 

@@ -37,8 +37,10 @@ toman, so nothing is divided by ten.
 - **`src/markets.ts`** — pure, beside `markets.test.ts`. Turns each source's
   answer into a series of `[time, price]`, and a series into
   `{ price, day, week, month, year }`. Each change compares the latest price
-  with the last point at or before that many days earlier, and is `null` when
-  the series does not reach back that far. Also maps an Open-Meteo weather
+  with the price exactly that many days earlier, read along the line between
+  the points either side, so CoinGecko's midnight points plus a "now" point
+  still give a 24-hour day. It is `null` when the series does not reach back
+  that far. Also maps an Open-Meteo weather
   code to a word.
 - **`src/markets-fetch.ts`** — main side, wiring only. Fetches all four in
   parallel, each with a 15-second timeout, and answers one snapshot in which
