@@ -1,6 +1,9 @@
+import '@fontsource/vazirmatn/arabic-400.css';
+import '@fontsource/vazirmatn/arabic-500.css';
 import './markets.css';
 import type { DashboardBridge } from './bridge';
-import { formatChange, settle, type Forecast, type Quote, type Reading } from './markets';
+import { icon, type IconName } from './icons';
+import { formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord } from './markets';
 
 // The row of four cards across the top of the manager page. Read-only: nothing here takes a key or a
 // click, so there is nothing for the keyboard to reach. What the numbers mean is markets.ts's.
@@ -8,83 +11,113 @@ import { formatChange, settle, type Forecast, type Quote, type Reading } from '.
 // Often enough for a price you glance at, rare enough to stay far inside every source's free limit.
 const REFRESH_MS = 30 * 60_000;
 
-const DATE_PARTS: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-const PERSIAN_DATE = new Intl.DateTimeFormat('fa-IR-u-ca-persian', DATE_PARTS);
-const GREGORIAN_DATE = new Intl.DateTimeFormat('en-GB', DATE_PARTS);
+const PERSIAN_DATE = new Intl.DateTimeFormat('fa-IR-u-ca-persian', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const GREGORIAN_WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long' });
+const GREGORIAN_DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 const PRICE = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
+// markets.ts's weather words, each with the icon drawn beside the temperature. Keyed by WeatherWord, so
+// a word added there and not here fails to compile.
+const WEATHER_ICONS: Record<WeatherWord, IconName> = {
+  Clear: 'sun', 'Mostly clear': 'sun', 'Partly cloudy': 'cloudSun', Overcast: 'cloud', Fog: 'fog',
+  Drizzle: 'drizzle', Rain: 'rain', Showers: 'rain', Snow: 'snow', 'Snow showers': 'snow', Thunderstorm: 'storm', Unknown: 'cloud',
+};
+
+// The Persian date the way it is written in Persian: the weekday, then day, month, year — "سه‌شنبه
+// ۱۴ مهر ۱۴۰۵". ICU's fa-IR pattern runs the other way round, year first and the weekday last behind
+// a comma, so the parts are put back in order here.
+function persianDate(now: Date): { weekday: string; date: string } {
+  const parts = Object.fromEntries(PERSIAN_DATE.formatToParts(now).map((piece) => [piece.type, piece.value]));
+  return { weekday: parts.weekday, date: `${parts.day} ${parts.month} ${parts.year}` };
+}
+
 // One card's elements, and its last good answer, kept on screen through a failed read.
-type Card<T> = { title: HTMLElement; body: HTMLElement; note: HTMLElement; last: T | null };
+type Card<T> = { title: HTMLElement; subtitle: HTMLElement; body: HTMLElement; note: HTMLElement; last: T | null };
 
-function line(...parts: (string | HTMLElement)[]): HTMLElement {
+function part(className: string, ...children: (string | HTMLElement)[]): HTMLElement {
   const element = document.createElement('div');
-  element.className = 'markets-line';
-  element.append(...parts);
+  element.className = className;
+  element.append(...children);
   return element;
 }
 
-function change(label: string, value: number | null): HTMLElement {
-  const element = document.createElement('span');
-  element.className = 'markets-change';
-  if (value !== null && value !== 0) element.classList.add(value > 0 ? 'markets-up' : 'markets-down');
-  element.textContent = `${label} ${formatChange(value)}`;
-  return element;
+// One change: its span over it, coloured by which way it went.
+function stat(label: string, value: number | null): HTMLElement {
+  const figure = part('markets-stat-value', formatChange(value));
+  if (value !== null && value !== 0) figure.classList.add(value > 0 ? 'markets-up' : 'markets-down');
+  return part('markets-stat', part('markets-stat-label', label), figure);
 }
 
-function quoteLines(quote: Quote): HTMLElement[] {
+function quoteParts(unit: string, quote: Quote | null): HTMLElement[] {
+  if (quote === null) return [part('markets-figure', '—')];
   return [
-    line(PRICE.format(quote.price)),
-    line(change('1d', quote.day), change('1w', quote.week)),
-    line(change('1m', quote.month), change('1y', quote.year)),
+    part('markets-figure', PRICE.format(quote.price), part('markets-unit', unit)),
+    part('markets-stats', stat('24h', quote.day), stat('1w', quote.week), stat('1m', quote.month), stat('1y', quote.year)),
   ];
 }
 
-function forecastLines(forecast: Forecast): HTMLElement[] {
-  const rain = forecast.rain === null ? '' : `, rain ${forecast.rain}%`;
-  return [
-    line(`${forecast.condition} in ${forecast.place}`),
-    line(`${Math.round(forecast.low)}° to ${Math.round(forecast.high)}°C${rain}`),
-  ];
+function forecastParts(forecast: Forecast | null): HTMLElement[] {
+  if (forecast === null) return [];
+  const sky = part('markets-sky', icon(WEATHER_ICONS[forecast.condition]));
+  const figure = part('markets-figure', sky, `${Math.round(forecast.low)}° – ${Math.round(forecast.high)}°C`);
+  const facts = part('markets-chips', part('markets-chip', `${forecast.condition} in ${forecast.place}`));
+  if (forecast.rain !== null) facts.append(part('markets-chip', icon('droplet'), `${forecast.rain}%`));
+  return [figure, facts];
 }
 
 export function createMarketsView(bridge: DashboardBridge): HTMLElement {
   const element = document.createElement('div');
   element.className = 'markets';
 
-  function card<T>(title: string): Card<T> {
-    const box = document.createElement('div');
-    box.className = 'markets-card';
-    const parts = { title: line(title), body: document.createElement('div'), note: line(), last: null };
-    parts.title.classList.add('markets-title');
-    parts.note.classList.add('markets-note');
-    box.append(parts.title, parts.body, parts.note);
+  // The accent names a theme colour, so a card's badge follows whatever palette settings hold.
+  // aside: drawn at the far end of the head, the date card's Persian half.
+  function card<T>(glyph: IconName, accent: string, title: string, subtitle: string, aside?: HTMLElement): Card<T> {
+    const badge = part('markets-badge', icon(glyph));
+    const parts = {
+      title: part('markets-title', title), subtitle: part('markets-subtitle', subtitle),
+      body: part('markets-body'), note: part('markets-note'), last: null,
+    };
+    const head = part('markets-head', badge, part('markets-heading', parts.title, parts.subtitle));
+    if (aside) head.append(aside);
+    const box = part('markets-card', head, parts.body, parts.note);
+    box.style.setProperty('--accent', `var(--${accent})`);
     element.append(box);
     return parts;
   }
 
-  function draw<T>(target: Card<T>, reading: Reading<T>, lines: (value: T | null) => HTMLElement[]): void {
+  function draw<T>(target: Card<T>, reading: Reading<T>, parts: (value: T | null) => HTMLElement[]): void {
     const { value, message } = settle(target.last, reading);
     target.last = value;
-    target.body.replaceChildren(...lines(value));
+    target.body.replaceChildren(...parts(value));
     target.note.textContent = message;
   }
 
-  const date = card<Forecast>('');
-  const quotes = [card<Quote>('BTC / USD'), card<Quote>('USDT / Toman'), card<Quote>('Gold (PAXG) / USD per oz')];
-  const quoteOrDash = (quote: Quote | null): HTMLElement[] => (quote === null ? [line('—')] : quoteLines(quote));
+  const persianWeekday = part('markets-title');
+  const persianDay = part('markets-subtitle');
+  const persian = part('markets-persian', persianWeekday, persianDay);
+  persian.dir = 'rtl';
+  const date = card<Forecast>('calendar', 'blue', '', '', persian);
+  const quotes = [
+    { card: card<Quote>('bitcoin', 'yellow', 'Bitcoin', 'BTC · USD'), unit: 'USD' },
+    { card: card<Quote>('dollar', 'green', 'Tether', 'USDT · Toman'), unit: 'Toman' },
+    { card: card<Quote>('coins', 'brightYellow', 'Gold', 'PAXG · USD per oz'), unit: 'USD' },
+  ];
 
   function drawDate(reading: Reading<Forecast>): void {
     const now = new Date();
-    date.title.textContent = PERSIAN_DATE.format(now);
-    draw(date, reading, (forecast) => [
-      line(GREGORIAN_DATE.format(now)), ...(forecast === null ? [] : forecastLines(forecast)),
-    ]);
+    const { weekday, date: day } = persianDate(now);
+    date.title.textContent = GREGORIAN_WEEKDAY.format(now);
+    date.subtitle.textContent = GREGORIAN_DATE.format(now);
+    persianWeekday.textContent = weekday;
+    persianDay.textContent = day;
+    draw(date, reading, forecastParts);
   }
 
   function refresh(): void {
     void bridge.readMarkets().then((snapshot) => {
       drawDate(snapshot.weather);
-      [snapshot.btc, snapshot.usdt, snapshot.gold].forEach((reading, index) => draw(quotes[index], reading, quoteOrDash));
+      [snapshot.btc, snapshot.usdt, snapshot.gold].forEach((reading, index) =>
+        draw(quotes[index].card, reading, (quote) => quoteParts(quotes[index].unit, quote)));
     });
   }
 
