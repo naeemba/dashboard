@@ -50,7 +50,7 @@ export function readMarkets(placeName: string): Promise<MarketsSnapshot> {
     reading(async () => quoteOf(coinGeckoSeries(await coinGecko('bitcoin')))),
     // 400 days rather than 365, so the year card has a candle a full year back to compare with.
     reading(async () => quoteOf(wallexSeries(await getJson('https://api.wallex.ir/v1/udf/history?symbol=USDTTMN'
-      + `&resolution=D&from=${now - 400 * DAY_SECONDS}&to=${now}`)))),
+      + `&resolution=D&from=${now - 400 * DAY_SECONDS}&to=${now}`), now * 1000))),
     reading(async () => quoteOf(coinGeckoSeries(await coinGecko('pax-gold')))),
   ]).then(([weather, btc, usdt, gold]) => ({ weather, btc, usdt, gold }));
 }

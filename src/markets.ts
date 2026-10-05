@@ -1,4 +1,4 @@
-import { isRecord } from './settings';
+import { isRecord } from './is-record';
 
 // The four cards across the top of the manager page: what each source answers, turned into what a card
 // draws. Main fetches (markets-fetch.ts) and the renderer draws (markets-view.ts); everything that could
@@ -59,7 +59,10 @@ export function coinGeckoSeries(answer: unknown): Series {
 }
 
 // Wallex's `/udf/history`: { s: 'ok', t: [seconds, ...], c: ['close', ...] } — closes are strings.
-export function wallexSeries(answer: unknown): Series {
+// Each time is when the day's candle opened, and its close is the price when that day ended, so a close
+// is stamped at its candle's end — and today's, still open, at now. Stamped at the open, "1d" would
+// only reach back to midnight UTC.
+export function wallexSeries(answer: unknown, nowMs: number): Series {
   const times = isRecord(answer) ? answer.t : undefined;
   const closes = isRecord(answer) ? answer.c : undefined;
   if (!Array.isArray(times) || !Array.isArray(closes) || times.length !== closes.length) {
@@ -68,7 +71,7 @@ export function wallexSeries(answer: unknown): Series {
   return times.map((time, index) => {
     const close = Number(closes[index]);
     if (!isNumber(time) || !Number.isFinite(close)) throw new Error('Wallex answered with a price that is not a number');
-    return [time * 1000, close] as const;
+    return [Math.min((time + 86_400) * 1000, nowMs), close] as const;
   });
 }
 

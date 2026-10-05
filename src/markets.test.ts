@@ -65,13 +65,22 @@ describe('coinGeckoSeries', () => {
 });
 
 describe('wallexSeries', () => {
-  it('pairs each candle\'s time in seconds with its close', () => {
-    expect(wallexSeries({ s: 'ok', t: [10, 20], c: ['100', '101.5'] })).toEqual([[10_000, 100], [20_000, 101.5]]);
+  it('stamps each close at its candle\'s end, and the open candle\'s at now', () => {
+    const open = MIDNIGHT / 1000;
+    const answer = { s: 'ok', t: [open - 86_400, open], c: ['100', '101.5'] };
+    expect(wallexSeries(answer, MIDNIGHT + 13 * 3_600_000)).toEqual([[MIDNIGHT, 100], [MIDNIGHT + 13 * 3_600_000, 101.5]]);
+  });
+
+  it('reads a mid-day "1d" from 24 hours back, not from midnight', () => {
+    const open = MIDNIGHT / 1000;
+    const answer = { s: 'ok', t: [open - 2 * 86_400, open - 86_400, open], c: ['100', '200', '300'] };
+    // Noon: a day back is noon yesterday, halfway between yesterday's start (100) and its end (200).
+    expect(quoteOf(wallexSeries(answer, MIDNIGHT + DAY / 2)).day).toBeCloseTo(100);
   });
 
   it('refuses an answer with no candles in it', () => {
-    expect(() => wallexSeries({ s: 'no_data' })).toThrow('no prices');
-    expect(() => wallexSeries({ s: 'ok', t: [1], c: ['x'] })).toThrow();
+    expect(() => wallexSeries({ s: 'no_data' }, MIDNIGHT)).toThrow('no prices');
+    expect(() => wallexSeries({ s: 'ok', t: [1], c: ['x'] }, MIDNIGHT)).toThrow();
   });
 });
 
