@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path';
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
 import { dashboardFolder } from './dashboard-folder';
+import { isRecord } from './is-record';
 import {
   DEFAULT_PRIORITY,
   emptyBoard,
@@ -192,10 +193,6 @@ function brokenBoardPath(projectPath: string): string {
 // empty Ship column, since there is no repository behind that page to make a worktree in.
 function withManagerColumns(projectPath: string, board: Board): Board {
   return isManagerPath(projectPath) ? withoutEmptyShipColumn(board) : board;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // undefined rather than a default, for the four fields that mean "nobody knows". A blank string is

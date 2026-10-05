@@ -1,5 +1,6 @@
 import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from './actions';
 import { formatBinding, parseBinding } from './binding';
+import { isRecord } from './is-record';
 import { THEME } from './theme';
 
 // Everything the settings file holds. `keys` always has an entry for every action after parsing, so
@@ -13,7 +14,7 @@ export type Settings = {
   theme: Record<string, string>;
   keys: Record<string, string | null>;
   // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
-  // geocoder on every read, so it is never blank.
+  // geocoder whenever it changes, so it is never blank.
   weatherPlace: string;
 };
 
@@ -66,12 +67,6 @@ function toBinding(stored: unknown, entry: ActionEntry, isMac: boolean): Binding
   const parsed = typeof stored === 'string' ? parseBinding(stored) : null;
   if (parsed === null) return { binding: defaultBinding(entry, isMac), written: false };
   return { binding: formatBinding(parsed), written: true };
-}
-
-// A plain object, and nothing else. A list has string keys too, so Array.isArray has to be asked
-// separately or `[1, 2]` reads as `{ "0": 1, "1": 2 }`.
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // Anything that is not a plain object reads as one with nothing in it. Every check that follows a call
