@@ -76,7 +76,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "70316b8e-0016-4694-973a-a7513da13fb7",
+          "title": "Manager cards: date and weather, BTC, USDT to toman, gold",
+          "notes": "A row of four read-only cards at the top of the manager page: Persian and Gregorian date with today's weather, then BTC/USD, USDT/toman and gold/USD with day, week, month and year change.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-05T12:40:35.238Z",
+          "updatedAt": "2026-10-05T12:40:35.238Z"
+        }
+      ]
     },
     {
       "name": "Review",
