@@ -2,7 +2,8 @@ import { actionByName } from './actions';
 import { formatBinding, keystrokeOf } from './binding';
 import { confirmOverlay, openOverlay } from './overlay';
 import {
-  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, resetKeys, type Settings,
+  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, resetKeys,
+  type Settings,
 } from './settings';
 import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
 import { isModified } from './shortcuts';
@@ -154,6 +155,9 @@ export function openSettings(
           // error and xterm falls back to Menlo. An empty name means the one it shipped with.
           const name = text === '' ? defaultSettings(isMac).font.name : text;
           commit({ ...settings, font: { ...settings.font, name } });
+        } else if (row.kind === 'weather-place') {
+          // Blank is not a place the geocoder can find, so it means the one the app ships with.
+          commit({ ...settings, weatherPlace: text === '' ? DEFAULT_WEATHER_PLACE : text });
         } else {
           // The shell. Empty is the file saying "work it out from the environment", which is a real
           // answer rather than a blank, so there is nothing to refuse.

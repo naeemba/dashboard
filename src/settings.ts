@@ -12,6 +12,9 @@ export type Settings = {
   font: { name: string; size: number };
   theme: Record<string, string>;
   keys: Record<string, string | null>;
+  // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
+  // geocoder on every read, so it is never blank.
+  weatherPlace: string;
 };
 
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
@@ -19,6 +22,8 @@ export type Settings = {
 type Binding = { binding: string | null; written: boolean };
 
 export const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
+
+export const DEFAULT_WEATHER_PLACE = 'Tehran';
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -44,6 +49,7 @@ export function defaultSettings(isMac: boolean): Settings {
     font: { ...DEFAULT_FONT },
     theme: Object.fromEntries(THEME_COLORS.map((name) => [name, String(THEME[name as keyof typeof THEME])])),
     keys: Object.fromEntries(ACTIONS.map((entry) => [entry.name, defaultBinding(entry, isMac)])),
+    weatherPlace: DEFAULT_WEATHER_PLACE,
   };
 }
 
@@ -125,6 +131,8 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       name, isHexColor(storedTheme[name]) ? storedTheme[name] : defaults.theme[name],
     ])),
     keys: Object.fromEntries(bindings.map(({ entry, binding }) => [entry.name, binding])),
+    weatherPlace: typeof raw.weatherPlace === 'string' && raw.weatherPlace.trim() !== ''
+      ? raw.weatherPlace.trim() : defaults.weatherPlace,
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 
