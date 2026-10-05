@@ -326,7 +326,7 @@ body *:not(.pane, .pane *) {
    top and pushing .page-manager's views down by the same height (below) keeps both visible instead. */
 .section-strip {
   position: absolute;
-  inset: 0 0 auto;
+  inset: var(--page-top-inset, 0px) 0 auto;
   height: var(--section-strip-height);
   display: flex;
   gap: 24px;
@@ -337,7 +337,7 @@ body *:not(.pane, .pane *) {
 /* Only the manager page has a strip, so only there do the views start below it. A project's page
    keeps the plain `.page, .view { inset: 0 }` above — one view filling the whole page. */
 .page-manager .view {
-  top: var(--section-strip-height);
+  top: calc(var(--page-top-inset, 0px) + var(--section-strip-height));
 }
 
 .section-name {

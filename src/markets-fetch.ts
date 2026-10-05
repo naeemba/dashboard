@@ -1,6 +1,7 @@
 import { failureText } from './failure';
 import {
-  coinGeckoSeries, forecastOf, placeOf, quoteOf, wallexSeries, type MarketsSnapshot, type Reading,
+  coinGeckoSeries, forecastOf, placeOf, quoteOf, wallexSeries, type MarketsSnapshot, type Place,
+  type Reading,
 } from './markets';
 
 // Main's half of the manager's four cards: the requests, and nothing about what the answers mean, which
@@ -10,6 +11,10 @@ import {
 // the other three back for the whole half hour until the next read.
 const TIMEOUT_MS = 15_000;
 const DAY_SECONDS = 86_400;
+
+// The last place looked up. It only changes on the settings screen, so every other read skips the
+// geocoder's round trip.
+let found: { name: string; place: Place } | null = null;
 
 async function getJson(url: string): Promise<unknown> {
   const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
@@ -34,7 +39,10 @@ export function readMarkets(placeName: string): Promise<MarketsSnapshot> {
   const name = encodeURIComponent(placeName);
   return Promise.all([
     reading(async () => {
-      const place = placeOf(placeName, await getJson(`https://geocoding-api.open-meteo.com/v1/search?name=${name}&count=1`));
+      if (found?.name !== placeName) {
+        found = { name: placeName, place: placeOf(placeName, await getJson(`https://geocoding-api.open-meteo.com/v1/search?name=${name}&count=1`)) };
+      }
+      const { place } = found;
       return forecastOf(place.name, await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}`
         + `&longitude=${place.longitude}&daily=weather_code,temperature_2m_max,temperature_2m_min,`
         + 'precipitation_probability_max&timezone=auto&forecast_days=1'));

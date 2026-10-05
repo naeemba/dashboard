@@ -1,3 +1,5 @@
+import { isRecord } from './settings';
+
 // The four cards across the top of the manager page: what each source answers, turned into what a card
 // draws. Main fetches (markets-fetch.ts) and the renderer draws (markets-view.ts); everything that could
 // be wrong about the numbers is here, where it can be tested without a network.
@@ -40,10 +42,6 @@ export function quoteOf(series: Series): Quote {
     return then === undefined || then === 0 ? null : (price / then - 1) * 100;
   };
   return { price, day: change(1), week: change(7), month: change(30), year: change(365) };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
 }
 
 function isNumber(value: unknown): value is number {

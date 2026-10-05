@@ -13,7 +13,8 @@ const PERSIAN_DATE = new Intl.DateTimeFormat('fa-IR-u-ca-persian', DATE_PARTS);
 const GREGORIAN_DATE = new Intl.DateTimeFormat('en-GB', DATE_PARTS);
 const PRICE = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
-type Card = { title: HTMLElement; body: HTMLElement; note: HTMLElement };
+// One card's elements, and its last good answer, kept on screen through a failed read.
+type Card<T> = { title: HTMLElement; body: HTMLElement; note: HTMLElement; last: T | null };
 
 function line(...parts: (string | HTMLElement)[]): HTMLElement {
   const element = document.createElement('div');
@@ -50,10 +51,10 @@ export function createMarketsView(bridge: DashboardBridge): HTMLElement {
   const element = document.createElement('div');
   element.className = 'markets';
 
-  function card(title: string): Card {
+  function card<T>(title: string): Card<T> {
     const box = document.createElement('div');
     box.className = 'markets-card';
-    const parts = { title: line(title), body: document.createElement('div'), note: line() };
+    const parts = { title: line(title), body: document.createElement('div'), note: line(), last: null };
     parts.title.classList.add('markets-title');
     parts.note.classList.add('markets-note');
     box.append(parts.title, parts.body, parts.note);
@@ -61,41 +62,35 @@ export function createMarketsView(bridge: DashboardBridge): HTMLElement {
     return parts;
   }
 
-  const date = card('');
-  const btc = card('BTC / USD');
-  const usdt = card('USDT / Toman');
-  const gold = card('Gold (PAXG) / USD per oz');
-  // Each card's last good answer, kept through a failed read.
-  let weather: Forecast | null = null;
-  const quotes = new Map<Card, Quote>();
-
-  function drawQuote(target: Card, reading: Reading<Quote>): void {
-    const { value, message } = settle(quotes.get(target) ?? null, reading);
-    if (value !== null) quotes.set(target, value);
-    target.body.replaceChildren(...(value === null ? [line('—')] : quoteLines(value)));
+  function draw<T>(target: Card<T>, reading: Reading<T>, lines: (value: T | null) => HTMLElement[]): void {
+    const { value, message } = settle(target.last, reading);
+    target.last = value;
+    target.body.replaceChildren(...lines(value));
     target.note.textContent = message;
   }
 
-  function drawDate(reading: Reading<Forecast> | null): void {
+  const date = card<Forecast>('');
+  const quotes = [card<Quote>('BTC / USD'), card<Quote>('USDT / Toman'), card<Quote>('Gold (PAXG) / USD per oz')];
+  const quoteOrDash = (quote: Quote | null): HTMLElement[] => (quote === null ? [line('—')] : quoteLines(quote));
+
+  function drawDate(reading: Reading<Forecast>): void {
     const now = new Date();
     date.title.textContent = PERSIAN_DATE.format(now);
-    const settled = reading === null ? { value: weather, message: '' } : settle(weather, reading);
-    weather = settled.value;
-    date.body.replaceChildren(line(GREGORIAN_DATE.format(now)), ...(weather === null ? [] : forecastLines(weather)));
-    date.note.textContent = settled.message;
+    draw(date, reading, (forecast) => [
+      line(GREGORIAN_DATE.format(now)), ...(forecast === null ? [] : forecastLines(forecast)),
+    ]);
   }
 
   function refresh(): void {
     void bridge.readMarkets().then((snapshot) => {
       drawDate(snapshot.weather);
-      drawQuote(btc, snapshot.btc);
-      drawQuote(usdt, snapshot.usdt);
-      drawQuote(gold, snapshot.gold);
+      [snapshot.btc, snapshot.usdt, snapshot.gold].forEach((reading, index) => draw(quotes[index], reading, quoteOrDash));
     });
   }
 
-  // The date is there before the first answer, which can take a few seconds.
-  drawDate(null);
+  // The dates are there before the first answer, which can take a few seconds: a failed reading with
+  // nothing to say draws them alone.
+  drawDate({ ok: false, message: '' });
   refresh();
   setInterval(refresh, REFRESH_MS);
   return element;
