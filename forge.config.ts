@@ -23,9 +23,9 @@ const keep = [
 const config: ForgeConfig = {
   packagerConfig: {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
-    // board-cli-entry.cjs is unpacked for a different reason: it is run by `node`, not by Electron, and
+    // board-cli-entry.js is unpacked for a different reason: it is run by `node`, not by Electron, and
     // node cannot read a file inside an asar. main.ts points agents at the unpacked copy.
-    asar: { unpack: '{**/node_modules/node-pty/**,**/.vite/build/board-cli-entry.cjs}' },
+    asar: { unpack: '{**/node_modules/node-pty/**,**/.vite/build/board-cli-entry.js}' },
     // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,
     // which still calls itself com.github.Electron while Info.plist says com.electron.dashboard.
     // macOS files an app with Notification Center under the *signing* name, so a Dashboard that
@@ -76,7 +76,7 @@ const config: ForgeConfig = {
         // project can run it.
         {
           entry: 'src/board-cli-entry.ts',
-          config: 'vite.main.config.ts',
+          config: 'vite.board-cli.config.ts',
           target: 'main',
         },
       ],
