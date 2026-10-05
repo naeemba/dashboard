@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Board } from './board';
-import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, isStale, sameDirtiness } from './manager-reads';
+import type { ScannedWorktree } from './git-worktrees';
+import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, sameDirtiness } from './manager-reads';
+import { isStale } from './stale';
 
 // A read that settles only when the test says so, so the order things land in is the test's to pick.
 function deferred<Value>() {
@@ -17,10 +19,17 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const named = (name: string): Board => ({ columns: [{ name, cards: [] }] });
 
+// A scan's answer: these worktrees of /api, the first list dirty and the second unreadable.
+const scan = (dirty: string[], clean: string[] = [], unreadable: string[] = []): ScannedWorktree[] => [
+  ...dirty.map((path) => ({ path, dirty: true, unreadable: false })),
+  ...clean.map((path) => ({ path, dirty: false, unreadable: false })),
+  ...unreadable.map((path) => ({ path, dirty: false, unreadable: true })),
+].map(({ path, ...state }) => ({ projectPath: '/api', worktreePath: path, branch: 'b', bytes: null, ...state }));
+
 function harness() {
   let now = 1_000;
   const boardReads: { path: string; answer: ReturnType<typeof deferred<Board | null>> }[] = [];
-  const dirtyChecks: ReturnType<typeof deferred<{ dirty: string[]; unreadable: string[] }>>[] = [];
+  const dirtyChecks: ReturnType<typeof deferred<ScannedWorktree[]>>[] = [];
   const onRead = vi.fn();
   const reads = createManagerReads({
     peekBoard(path) {
@@ -28,8 +37,8 @@ function harness() {
       boardReads.push({ path, answer });
       return answer.promise;
     },
-    dirtyWorktrees() {
-      const answer = deferred<{ dirty: string[]; unreadable: string[] }>();
+    scanWorktrees() {
+      const answer = deferred<ScannedWorktree[]>();
       dirtyChecks.push(answer);
       return answer.promise;
     },
@@ -134,7 +143,7 @@ describe('createManagerReads', () => {
   it('checks the worktrees again when one appears, without waiting for the old answer to age', async () => {
     const { reads, dirtyChecks } = harness();
     reads.refresh([], ['/api.worktrees/a']);
-    dirtyChecks[0].resolve({ dirty: ['/api.worktrees/a'], unreadable: [] });
+    dirtyChecks[0].resolve(scan(['/api.worktrees/a']));
     await settle();
     expect(reads.dirtiness().dirty.has('/api.worktrees/a')).toBe(true);
     reads.refresh([], ['/api.worktrees/a']);
@@ -146,12 +155,12 @@ describe('createManagerReads', () => {
   it('checks again once the answer is old, or once a removal made it so', async () => {
     const { reads, dirtyChecks, advance } = harness();
     reads.refresh([], ['/w']);
-    dirtyChecks[0].resolve({ dirty: [], unreadable: [] });
+    dirtyChecks[0].resolve(scan([], ['/w']));
     await settle();
     advance(DIRTY_STALE_MS);
     reads.refresh([], ['/w']);
     expect(dirtyChecks).toHaveLength(2);
-    dirtyChecks[1].resolve({ dirty: [], unreadable: [] });
+    dirtyChecks[1].resolve(scan([], ['/w']));
     await settle();
     reads.forgetDirtiness();
     reads.refresh([], ['/w']);
@@ -162,7 +171,7 @@ describe('createManagerReads', () => {
   it('says nothing is known after a check that failed', async () => {
     const { reads, dirtyChecks, advance } = harness();
     reads.refresh([], ['/w']);
-    dirtyChecks[0].resolve({ dirty: ['/w'], unreadable: [] });
+    dirtyChecks[0].resolve(scan(['/w']));
     await settle();
     advance(DIRTY_STALE_MS);
     reads.refresh([], ['/w']);
@@ -175,12 +184,12 @@ describe('createManagerReads', () => {
   it('draws again only when a check answers differently from the last one', async () => {
     const { reads, dirtyChecks, onRead, advance } = harness();
     reads.refresh([], ['/w']);
-    dirtyChecks[0].resolve({ dirty: ['/w'], unreadable: [] });
+    dirtyChecks[0].resolve(scan(['/w']));
     await settle();
     expect(onRead).toHaveBeenCalledTimes(1);
     advance(DIRTY_STALE_MS);
     reads.refresh([], ['/w']);
-    dirtyChecks[1].resolve({ dirty: ['/w'], unreadable: [] });
+    dirtyChecks[1].resolve(scan(['/w']));
     await settle();
     expect(onRead).toHaveBeenCalledTimes(1);
     advance(DIRTY_STALE_MS);
@@ -188,5 +197,33 @@ describe('createManagerReads', () => {
     dirtyChecks[2].reject(new Error('git gone'));
     await settle();
     expect(onRead).toHaveBeenCalledTimes(2);
+  });
+
+  it('lists every worktree the scan found, recorded or not, by project', async () => {
+    const { reads, dirtyChecks } = harness();
+    reads.refresh(['/api'], []);
+    dirtyChecks[0].resolve(scan(['/api/.worktrees/agent'], ['/api.worktrees/hand']));
+    await settle();
+    expect(reads.worktreesOf('/api').map((worktree) => worktree.worktreePath))
+      .toEqual(['/api/.worktrees/agent', '/api.worktrees/hand']);
+    expect(reads.worktreesOf('/web')).toEqual([]);
+  });
+
+  // git not listing a recorded worktree is git not answering for it, which is not the same as clean.
+  it('calls a recorded worktree the scan did not find unreadable', async () => {
+    const { reads, dirtyChecks } = harness();
+    reads.refresh(['/api'], ['/api.worktrees/recorded']);
+    dirtyChecks[0].resolve(scan([], [], ['/api.worktrees/locked']));
+    await settle();
+    expect([...reads.dirtiness().unreadable].sort()).toEqual(['/api.worktrees/locked', '/api.worktrees/recorded']);
+  });
+
+  it('scans again when a project opens', async () => {
+    const { reads, dirtyChecks } = harness();
+    reads.refresh(['/api'], []);
+    dirtyChecks[0].resolve(scan([]));
+    await settle();
+    reads.refresh(['/api', '/web'], []);
+    expect(dirtyChecks).toHaveLength(2);
   });
 });

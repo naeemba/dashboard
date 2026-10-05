@@ -1,3 +1,4 @@
+import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 import type { Board } from './board';
 import type { PaneUse } from './pane-reading';
@@ -110,9 +111,13 @@ export type DashboardBridge = {
   // then on every change, so a `git status` per worktree only runs for the one screen that shows the
   // answer. A worktree git cannot read comes back unreadable rather than clean.
   dirtyWorktrees(): Promise<{ dirty: string[]; unreadable: string[] }>;
+  // Every worktree git knows of in these projects, recorded or not, with whether each is dirty and
+  // its size on disk. The manager's list; git-worktrees.ts says what is in each answer.
+  scanWorktrees(projectPaths: string[]): Promise<ScannedWorktree[]>;
   // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
-  // a second time naming them rather than deciding on its own what "dirty enough" means.
-  removeWorktree(worktreePath: string, force: boolean): Promise<WorktreeRemoval>;
+  // a second time naming them rather than deciding on its own what "dirty enough" means. The project
+  // is where git is asked from when the app holds no record of the worktree.
+  removeWorktree(worktreePath: string, force: boolean, projectPath: string): Promise<WorktreeRemoval>;
   // One command, run in each of these projects at once, each in its own process. Not a pty and not a
   // pane: a command that borrows a shell throws away whatever was in it.
   runTask(command: string, projectPaths: string[]): void;

@@ -35,7 +35,9 @@ const bridge: DashboardBridge = {
   onWorktreeChange: (listener) =>
     ipcRenderer.on('worktree:change', (_event, list) => listener(list)),
   dirtyWorktrees: () => ipcRenderer.invoke('worktree:check'),
-  removeWorktree: (worktreePath, force) => ipcRenderer.invoke('worktree:remove', worktreePath, force),
+  scanWorktrees: (projectPaths) => ipcRenderer.invoke('worktree:scan', projectPaths),
+  removeWorktree: (worktreePath, force, projectPath) =>
+    ipcRenderer.invoke('worktree:remove', worktreePath, force, projectPath),
   runTask: (command, projectPaths) => ipcRenderer.send('task:run', command, projectPaths),
   cancelTasks: () => ipcRenderer.send('task:cancel'),
   onTaskUpdate: (listener) =>

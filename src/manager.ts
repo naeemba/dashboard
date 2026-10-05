@@ -1,11 +1,14 @@
 import { relativeAge } from './age';
+import { baseName } from './base-name';
 import { clampIndex } from './clamp-index';
+import type { GitWorktree, ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 import { terminalId } from './terminals';
 import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
 import { isRinging, type Bell } from './waiting';
 import { orderedWorktrees } from './worktree-rows';
+import type { WorktreeTarget } from './worktree-removal';
 import type { WorktreeEntry } from './worktree-store';
 
 // Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
@@ -224,13 +227,42 @@ export function stateLabel(pane: PaneSummary): string {
   return isAlerting(pane) ? pane.state : '';
 }
 
+// A worktree row: one git lists for the project, with the record of the card it was shipped for when
+// the app made it. `entry` is null for one made anywhere else — an agent session, by hand — which has
+// no card, no pane and no start time to show, and is called by its folder's name. `bytes` is its size,
+// null until measured. Everything a removal needs, so the row itself is what the removal key acts on.
+export type ManagerWorktree = WorktreeTarget & { entry: WorktreeEntry | null; bytes: number | null };
+
+// The project's records first, newest first, then every other worktree git found, in git's order. A
+// record is drawn whether or not git has been asked yet, so the card in flight is on the first paint
+// rather than appearing a scan later.
+export function projectWorktrees(row: ManagerRow, found: readonly ScannedWorktree[]): ManagerWorktree[] {
+  const scanned = new Map(found.map((worktree) => [worktree.worktreePath, worktree]));
+  const recorded = new Set(row.worktrees.map((entry) => entry.worktreePath));
+  return [
+    ...row.worktrees.map((entry) => ({
+      title: entry.title, branch: entry.branch, worktreePath: entry.worktreePath, projectPath: entry.projectPath,
+      entry, bytes: scanned.get(entry.worktreePath)?.bytes ?? null,
+    })),
+    ...found.filter((worktree) => !recorded.has(worktree.worktreePath)).map((worktree) => ({
+      title: baseName(worktree.worktreePath), branch: worktree.branch, worktreePath: worktree.worktreePath,
+      projectPath: worktree.projectPath, entry: null, bytes: worktree.bytes,
+    })),
+  ];
+}
+
+// What Enter says on a worktree no card was shipped into: there is no pane of the app's to land on.
+export function noPaneText(worktree: GitWorktree): string {
+  return `${baseName(worktree.worktreePath)} was not made from a card, so it has no terminal to go to`;
+}
+
 // A line on the page: a project, one of its panes underneath it, one of its worktrees, or an item on
 // the queue above them all.
 export type ManagerLine =
   | { kind: 'need'; need: Need }
   | { kind: 'project'; row: ManagerRow; open: boolean }
   | { kind: 'pane'; slot: number; pane: PaneSummary }
-  | { kind: 'worktree'; slot: number; entry: WorktreeEntry };
+  | { kind: 'worktree'; slot: number; worktree: ManagerWorktree };
 
 // Whether a project has anything to show under it. The one place the answer lives: the arrow beside
 // the name, the key that opens the row and the lines the page draws all ask this, so a row can never
@@ -246,13 +278,18 @@ export function canOpen(row: ManagerRow): boolean {
 // to put under it — but it is still in the set, so a project whose shells come back draws itself open
 // again: a project reopened over a folder that had gone away is rebuilt into the slot it had, and the
 // set is keyed by slot. That is the point: a row you asked to see stays asked for.
-// A project's worktrees are always drawn, open or shut. There are a few of them at most, and each one
-// is a card in flight with a folder on disk — hidden behind Enter they would be the thing you forgot
-// to clean up. The panes are the long list, so they are the half the row opens and shuts.
-export function managerLines(rows: readonly ManagerRow[], open: ReadonlySet<number>): ManagerLine[] {
+// A project's worktrees are always drawn, open or shut. Each one is a folder on disk — hidden behind
+// Enter they would be the thing you forgot to clean up. The panes are the long list, so they are the
+// half the row opens and shuts. `found` is every worktree git listed for a project.
+export function managerLines(
+  rows: readonly ManagerRow[],
+  open: ReadonlySet<number>,
+  found: (projectPath: string) => readonly ScannedWorktree[],
+): ManagerLine[] {
   return rows.flatMap((row): ManagerLine[] => {
     const isOpen = open.has(row.slot) && canOpen(row);
-    const worktrees = row.worktrees.map((entry): ManagerLine => ({ kind: 'worktree', slot: row.slot, entry }));
+    const worktrees = projectWorktrees(row, found(row.path))
+      .map((worktree): ManagerLine => ({ kind: 'worktree', slot: row.slot, worktree }));
     if (!isOpen) return [{ kind: 'project', row, open: false }, ...worktrees];
     return [
       { kind: 'project', row, open: true },
@@ -284,9 +321,9 @@ export function slotOfLine(line: ManagerLine): number {
 // What the removal key acts on from this line: the worktree on a worktree row, and nothing on a
 // project or a pane row. The key removes a folder, so it only fires where the row names that folder —
 // a queue item does when it is a worktree left behind.
-export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
+export function removableWorktree(line: ManagerLine): WorktreeTarget | null {
   if (line.kind === 'need') return line.need.worktree ?? null;
-  return line.kind === 'worktree' ? line.entry : null;
+  return line.kind === 'worktree' ? line.worktree : null;
 }
 
 // What the selection is on, as one string. A project is its slot; a pane is the same slot-and-index
@@ -295,7 +332,7 @@ export function removableWorktree(line: ManagerLine): WorktreeEntry | null {
 // from ever matching a slot's number.
 export function lineKey(line: ManagerLine): string {
   if (line.kind === 'need') return needKey(line.need);
-  if (line.kind === 'worktree') return `worktree:${line.entry.worktreePath}`;
+  if (line.kind === 'worktree') return `worktree:${line.worktree.worktreePath}`;
   return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }
 

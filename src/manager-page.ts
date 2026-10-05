@@ -73,7 +73,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   // activity and its worktree rows. An answer landing redraws the page like anything else does.
   const reads = createManagerReads({
     peekBoard: (projectPath) => options.bridge.peekBoard(projectPath),
-    dirtyWorktrees: () => options.bridge.dirtyWorktrees(),
+    scanWorktrees: (projectPaths) => options.bridge.scanWorktrees(projectPaths),
     onRead: options.onChanged,
     now: () => Date.now(),
   });
