@@ -71,7 +71,7 @@ export function wallexSeries(answer: unknown, nowMs: number): Series {
   return times.map((time, index) => {
     const close = Number(closes[index]);
     if (!isNumber(time) || !Number.isFinite(close)) throw new Error('Wallex answered with a price that is not a number');
-    return [Math.min((time + 86_400) * 1000, nowMs), close] as const;
+    return [Math.min(time * 1000 + DAY_MS, nowMs), close] as const;
   });
 }
 
