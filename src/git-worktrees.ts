@@ -18,18 +18,17 @@ export type WorktreeSize = number | 'unmeasurable' | null;
 export type ScannedWorktree = GitWorktree & { dirty: boolean; unreadable: boolean; bytes: WorktreeSize };
 
 // `git worktree list --porcelain`: one block per worktree, blank-line separated, the repository's
-// main checkout first. That first block is skipped, and so is the project's own folder: the project
-// may itself be a linked worktree, and then git lists it among the others. `ownPath` is the project's
-// folder as git spells it — git prints real paths, so a symlinked project path would never match. A
+// main checkout first, and that first block is skipped. A project that is itself a linked worktree
+// comes back among the others; `distinctWorktrees` drops it with the rest of the open folders. A
 // detached worktree has no branch line, and is named by the start of the commit it sits on.
-export function parseWorktreeList(porcelain: string, projectPath: string, ownPath = projectPath): GitWorktree[] {
+export function parseWorktreeList(porcelain: string, projectPath: string): GitWorktree[] {
   return porcelain.split(/\n\n+/).slice(1).flatMap((block): GitWorktree[] => {
     const fields = new Map(block.split('\n').map((line) => {
       const space = line.indexOf(' ');
       return space === -1 ? [line, ''] : [line.slice(0, space), line.slice(space + 1)];
     }));
     const worktreePath = fields.get('worktree');
-    if (!worktreePath || worktreePath === ownPath || fields.has('bare')) return [];
+    if (!worktreePath || fields.has('bare')) return [];
     const branch = fields.get('branch')?.replace(/^refs\/heads\//, '')
       ?? `detached ${(fields.get('HEAD') ?? '').slice(0, 7)}`;
     return [{ projectPath, worktreePath, branch }];
@@ -50,7 +49,7 @@ export type WorktreeRecord = { projectPath: string; worktreePath: string };
 export function distinctWorktrees(
   listed: readonly GitWorktree[],
   records: ReadonlyMap<string, WorktreeRecord>,
-  openFolders: ReadonlySet<string> = new Set(),
+  openFolders: ReadonlySet<string>,
 ): GitWorktree[] {
   const kept = new Map<string, GitWorktree>();
   for (const worktree of listed) {

@@ -55,9 +55,7 @@ export async function scanWorktrees(
 ): Promise<ScannedWorktree[]> {
   const listed = await Promise.all(projectPaths.map(async (projectPath) => {
     try {
-      return parseWorktreeList(
-        await git(['worktree', 'list', '--porcelain'], projectPath), projectPath, realPath(projectPath),
-      );
+      return parseWorktreeList(await git(['worktree', 'list', '--porcelain'], projectPath), projectPath);
     } catch {
       return [];
     }

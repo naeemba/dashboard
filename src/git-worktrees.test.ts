@@ -29,13 +29,6 @@ describe('parseWorktreeList', () => {
     ]);
   });
 
-  // git lists the main checkout first even when asked from a linked worktree, so the project's own
-  // folder comes back among the others and would be offered for removal from under its own shells.
-  it('leaves out the project itself when the project is a linked worktree', () => {
-    const listed = parseWorktreeList(LIST, '/link/crm.worktrees/feature', '/code/crm.worktrees/feature');
-    expect(listed.map((worktree) => worktree.worktreePath)).toEqual(['/code/crm/.worktrees/pr 7', '/code/gone']);
-  });
-
   it('finds nothing in a project with no worktrees', () => {
     expect(parseWorktreeList('worktree /code/crm\nHEAD 1\nbranch refs/heads/main', '/code/crm')).toEqual([]);
   });
@@ -46,12 +39,12 @@ describe('distinctWorktrees', () => {
 
   it('answers under the record\'s spelling of a path git prints resolved', () => {
     const records = new Map([['/real/crm.worktrees/a', { projectPath: '/link/crm', worktreePath: '/link/crm.worktrees/a' }]]);
-    expect(distinctWorktrees([worktree('/link/crm', '/real/crm.worktrees/a')], records))
+    expect(distinctWorktrees([worktree('/link/crm', '/real/crm.worktrees/a')], records, new Set()))
       .toEqual([worktree('/link/crm', '/link/crm.worktrees/a')]);
   });
 
   it('lists an unrecorded worktree two open projects share once, under the first', () => {
-    expect(distinctWorktrees([worktree('/crm', '/w'), worktree('/crm.worktrees/x', '/w')], new Map()))
+    expect(distinctWorktrees([worktree('/crm', '/w'), worktree('/crm.worktrees/x', '/w')], new Map(), new Set()))
       .toEqual([worktree('/crm', '/w')]);
   });
 
@@ -60,7 +53,7 @@ describe('distinctWorktrees', () => {
   it('gives a recorded worktree to the project its record names, whichever lists it first', () => {
     const records = new Map([['/crm.worktrees/card', { projectPath: '/crm', worktreePath: '/crm.worktrees/card' }]]);
     expect(distinctWorktrees(
-      [worktree('/crm.worktrees/x', '/crm.worktrees/card'), worktree('/crm', '/crm.worktrees/card')], records,
+      [worktree('/crm.worktrees/x', '/crm.worktrees/card'), worktree('/crm', '/crm.worktrees/card')], records, new Set(),
     )).toEqual([worktree('/crm', '/crm.worktrees/card')]);
   });
 
@@ -68,6 +61,14 @@ describe('distinctWorktrees', () => {
     expect(distinctWorktrees(
       [worktree('/crm', '/crm.worktrees/x'), worktree('/crm', '/w')], new Map(), new Set(['/crm', '/crm.worktrees/x']),
     )).toEqual([worktree('/crm', '/w')]);
+  });
+
+  // git lists the main checkout first even when asked from a linked worktree, so the project's own
+  // folder comes back among the others and would be offered for removal from under its own shells.
+  it('leaves out the project itself when the project is a linked worktree', () => {
+    const listed = parseWorktreeList(LIST, '/link/crm.worktrees/feature');
+    expect(distinctWorktrees(listed, new Map(), new Set(['/code/crm.worktrees/feature']))
+      .map((worktree) => worktree.worktreePath)).toEqual(['/code/crm/.worktrees/pr 7', '/code/gone']);
   });
 });
 
