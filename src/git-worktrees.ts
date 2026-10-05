@@ -36,19 +36,31 @@ export function parseWorktreeList(porcelain: string, projectPath: string, ownPat
   });
 }
 
+// A worktree the app recorded: where it is, as the record spells it, and the project that made it.
+export type WorktreeRecord = { projectPath: string; worktreePath: string };
+
 // The worktrees of every open project, each once, under the path the app's own record spells it with.
 // git prints real paths and a record holds the path built from the project path as the app was given
-// it, so `spelling` maps git's spelling back to the record's, and the renderer matches on one string.
-// Two open projects sharing a repository list the same worktrees; the first project to list one keeps
-// it, so no two rows share a path.
-export function distinctWorktrees(listed: readonly GitWorktree[], spelling: ReadonlyMap<string, string>): GitWorktree[] {
-  const seen = new Set<string>();
-  return listed.flatMap((worktree) => {
-    const worktreePath = spelling.get(worktree.worktreePath) ?? worktree.worktreePath;
-    if (seen.has(worktreePath)) return [];
-    seen.add(worktreePath);
-    return [{ ...worktree, worktreePath }];
-  });
+// it, so `records` is keyed by git's spelling and the renderer matches on the record's one string.
+// Two open projects sharing a repository list the same worktrees. A recorded one goes to the project
+// its record names, when that project listed it, so a card's row finds its own worktree; any other
+// goes to the first project to list it, so no two rows share a path. `openFolders` are the open
+// projects' own folders as git spells them: one of them is never offered as a worktree to remove,
+// whichever project's listing it turns up in, or its shells would be left standing in nothing.
+export function distinctWorktrees(
+  listed: readonly GitWorktree[],
+  records: ReadonlyMap<string, WorktreeRecord>,
+  openFolders: ReadonlySet<string> = new Set(),
+): GitWorktree[] {
+  const kept = new Map<string, GitWorktree>();
+  for (const worktree of listed) {
+    if (openFolders.has(worktree.worktreePath)) continue;
+    const record = records.get(worktree.worktreePath);
+    const worktreePath = record?.worktreePath ?? worktree.worktreePath;
+    if (kept.has(worktreePath) && record?.projectPath !== worktree.projectPath) continue;
+    kept.set(worktreePath, { ...worktree, worktreePath });
+  }
+  return [...kept.values()];
 }
 
 // `du -sk <path>` prints `<kilobytes>\t<path>`. A folder with something unreadable in it still prints

@@ -2,7 +2,9 @@ import { execFile } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { git } from './git';
-import { diskUsageBytes, distinctWorktrees, parseWorktreeList, type ScannedWorktree } from './git-worktrees';
+import {
+  diskUsageBytes, distinctWorktrees, parseWorktreeList, type ScannedWorktree, type WorktreeRecord,
+} from './git-worktrees';
 import { changedFiles } from './ship';
 import { createWorktreeSizes } from './worktree-sizes';
 
@@ -38,7 +40,7 @@ export const forgetSize = sizes.forget;
 
 // git prints real paths, so a path is compared in that spelling. One that cannot be resolved — a
 // folder gone — is compared as given.
-function realPath(path: string): string {
+export function realPath(path: string): string {
   try {
     return realpathSync(path);
   } catch {
@@ -46,10 +48,10 @@ function realPath(path: string): string {
   }
 }
 
-// A project git cannot list answers with nothing rather than failing the whole scan. `recordedPaths`
-// are the app's own records, so a worktree git lists is answered under the path its record spells.
+// A project git cannot list answers with nothing rather than failing the whole scan. `records` are the
+// app's own, so a worktree git lists is answered under the path and project its record names.
 export async function scanWorktrees(
-  projectPaths: readonly string[], recordedPaths: readonly string[],
+  projectPaths: readonly string[], records: readonly WorktreeRecord[],
 ): Promise<ScannedWorktree[]> {
   const listed = await Promise.all(projectPaths.map(async (projectPath) => {
     try {
@@ -60,8 +62,9 @@ export async function scanWorktrees(
       return [];
     }
   }));
-  const spelling = new Map(recordedPaths.map((path) => [realPath(path), path]));
-  return Promise.all(distinctWorktrees(listed.flat(), spelling).map(async (worktree) => (
+  const byRealPath = new Map(records.map((record) => [realPath(record.worktreePath), record]));
+  const openFolders = new Set(projectPaths.map(realPath));
+  return Promise.all(distinctWorktrees(listed.flat(), byRealPath, openFolders).map(async (worktree) => (
     { ...worktree, ...await worktreeState(worktree.worktreePath), bytes: sizes.sizeOf(worktree.worktreePath) }
   )));
 }

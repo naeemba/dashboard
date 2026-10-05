@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
-import { existsSync, realpathSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
@@ -12,7 +12,7 @@ import {
 } from './projects';
 import { baseName } from './base-name';
 import { git } from './git';
-import { forgetSize, scanWorktrees, worktreeState } from './worktree-scan';
+import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { isOpenableLink } from './links';
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
@@ -338,7 +338,7 @@ const askShellDirectories = shellDirectories(processTree);
 async function shellLivesIn(worktreePath: string): Promise<boolean> {
   // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
   if (shellsIn(worktreePath).length > 0) return true;
-  const realWorktreePath = existsSync(worktreePath) ? realpathSync(worktreePath) : worktreePath;
+  const realWorktreePath = realPath(worktreePath);
   const live = Array.from(shells, ([id, terminalProcess]) => ({
     opened: terminalCommands.get(id)?.directory ?? '', pid: terminalProcess.pid,
   }));
@@ -917,7 +917,7 @@ ipcMain.handle('worktree:check', async () => {
 
 // Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
 ipcMain.handle('worktree:scan', (_event, projectPaths: string[]) => (
-  scanWorktrees(projectPaths, worktrees.map((entry) => entry.worktreePath))
+  scanWorktrees(projectPaths, worktrees)
 ));
 
 // Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the

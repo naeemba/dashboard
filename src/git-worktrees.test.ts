@@ -45,14 +45,29 @@ describe('distinctWorktrees', () => {
   const worktree = (projectPath: string, worktreePath: string) => ({ projectPath, worktreePath, branch: 'b' });
 
   it('answers under the record\'s spelling of a path git prints resolved', () => {
-    const spelling = new Map([['/real/crm.worktrees/a', '/link/crm.worktrees/a']]);
-    expect(distinctWorktrees([worktree('/link/crm', '/real/crm.worktrees/a')], spelling))
+    const records = new Map([['/real/crm.worktrees/a', { projectPath: '/link/crm', worktreePath: '/link/crm.worktrees/a' }]]);
+    expect(distinctWorktrees([worktree('/link/crm', '/real/crm.worktrees/a')], records))
       .toEqual([worktree('/link/crm', '/link/crm.worktrees/a')]);
   });
 
-  it('lists a worktree two open projects share once, under the first', () => {
+  it('lists an unrecorded worktree two open projects share once, under the first', () => {
     expect(distinctWorktrees([worktree('/crm', '/w'), worktree('/crm.worktrees/x', '/w')], new Map()))
       .toEqual([worktree('/crm', '/w')]);
+  });
+
+  // The linked project sits in an earlier slot than its main checkout. Handing the card's worktree to
+  // it would leave the card's own row under /crm with nothing to read a size from.
+  it('gives a recorded worktree to the project its record names, whichever lists it first', () => {
+    const records = new Map([['/crm.worktrees/card', { projectPath: '/crm', worktreePath: '/crm.worktrees/card' }]]);
+    expect(distinctWorktrees(
+      [worktree('/crm.worktrees/x', '/crm.worktrees/card'), worktree('/crm', '/crm.worktrees/card')], records,
+    )).toEqual([worktree('/crm', '/crm.worktrees/card')]);
+  });
+
+  it('never offers another open project\'s folder for removal', () => {
+    expect(distinctWorktrees(
+      [worktree('/crm', '/crm.worktrees/x'), worktree('/crm', '/w')], new Map(), new Set(['/crm', '/crm.worktrees/x']),
+    )).toEqual([worktree('/crm', '/w')]);
   });
 });
 
