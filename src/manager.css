@@ -13,8 +13,8 @@
   padding: 20px 24px;
   font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  --manager-surface: rgb(255 255 255 / 4%);
-  --manager-line: rgb(255 255 255 / 8%);
+  --manager-surface: var(--hover);
+  --manager-line: var(--line);
 }
 
 /* Every child keeps its own height: a flex item shrinks to fit by default, so a long list would be

@@ -1,3 +1,4 @@
+import { icon, type IconName } from './icons';
 import { clampIndex } from './clamp-index';
 import { isModified } from './shortcuts';
 
@@ -149,6 +150,8 @@ export function searchOverlay<Choice>(options: {
   // What the list says when nothing matched. A dialog whose list always has a row in it leaves it
   // out, rather than carrying a sentence nothing can show.
   empty?: string;
+  // The icon each row leads with, by what the row is.
+  glyph: (row: SearchRow<Choice>) => IconName;
 }): Promise<Choice | undefined> {
   let rows: SearchRow<Choice>[] = [];
   let highlighted = 0;
@@ -180,7 +183,7 @@ export function searchOverlay<Choice>(options: {
       const detail = document.createElement('span');
       detail.className = 'search-detail';
       detail.textContent = row.detail;
-      item.append(name, detail);
+      item.append(icon(options.glyph(row)), name, detail);
       item.addEventListener('click', () => finish(row.choice));
       return item;
     }

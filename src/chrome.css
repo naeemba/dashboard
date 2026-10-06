@@ -1,0 +1,160 @@
+/* The bars around the pages: the project tabs in the title row and the status bar at the foot. */
+
+/* The two bars around the pages, the tabs above and the status below, share one colour and refuse to
+   be selected. */
+#title, #status {
+  display: flex;
+  align-items: center;
+  background: var(--black);
+  user-select: none;
+}
+
+/* The app's own header row: it stands in for the system titlebar on macOS, and dragging it moves
+   the window. The tabs in it are buttons, which .project takes out of the drag region. */
+#title {
+  height: var(--title-bar-height);
+  padding-left: 8px;
+  border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag;
+}
+
+/* Only macOS draws traffic lights over this row, so only there does the text step aside for them.
+   80px clears the three lights plus the 13px inset main.ts places them at. */
+.mac #title {
+  padding-left: 80px;
+}
+
+#status {
+  justify-content: space-between;
+  gap: 16px;
+  height: 30px;
+  padding: 0 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  white-space: pre;
+}
+
+.projects {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* A project's tab and a view's name in the switch below are one kind of button, sized apart. */
+.project,
+.mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.project:hover,
+.mode-option:hover {
+  background: var(--hover);
+  color: var(--brightWhite);
+}
+
+.project {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 7px;
+  -webkit-app-region: no-drag;
+}
+
+/* A project's views, along the left of the status bar. inline-flex beats the browser's own [hidden],
+   so the manager's page, which has no such views, needs the rule beside it. */
+.mode-switch {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
+
+.mode-switch[hidden] {
+  display: none;
+}
+
+.mode-option {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+.mode-option .icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mode-option.current {
+  background: var(--tint);
+  color: var(--brightWhite);
+}
+
+/* The open project, marked the way a tab strip marks one. */
+.project.active {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--brightWhite);
+  font-weight: 600;
+}
+
+/* A pane on this project rang its bell and nobody has been to look. Written after .project.active so
+   it also shows on the project you are on, where the bell came from a pane you are not in. */
+.project.waiting {
+  color: var(--yellow);
+  font-weight: 700;
+}
+
+/* Yellow text alone is easy to miss in a row of tabs, so the tab also grows a dot that moves. Motion
+   is what the eye catches from across the room; the colour only tells you which tab once you look. */
+.project.waiting::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: waiting-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes waiting-pulse {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+/* A dot that never stops moving is the kind of thing people turn off at the system level. Asked to
+   stop, it stops and stays visible, which is the half that was doing the work. */
+@media (prefers-reduced-motion: reduce) {
+  .project.waiting::before {
+    animation: none;
+  }
+}
+
+/* Failures land between the mode switch and the pane number, in the one span renderStatus() leaves
+   alone. It shrinks instead of pushing the pane label off the row when the message is a long path. */
+.error {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--red);
+}
+
+/* A pill only while there is something to say: an empty span drawn as a red lozenge would be a
+   failure with no words in it. */
+.error:not(:empty) {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--red) 15%, transparent);
+}
+
+/* The pane number is a detail about the current project, not another project in the list. */
+.terminal {
+  color: var(--muted);
+}

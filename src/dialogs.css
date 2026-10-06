@@ -1,0 +1,404 @@
+/* Every dialog: the shared sheet and box, then each dialog's own rules. */
+
+/* Every dialog openOverlay() builds: a dark sheet over the pages with one centred box in it. The
+   per-dialog rules further down only override what that dialog needs differently. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgb(0 0 0 / 45%);
+  backdrop-filter: blur(3px);
+}
+
+.overlay-dialog {
+  display: flex;
+  /* As tall as what is in it, up to the cap: the sheet is a flex row and would stretch it otherwise. */
+  align-self: flex-start;
+  flex-direction: column;
+  width: min(560px, 90vw);
+  max-height: 60vh;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  /* The box holds focus so its keys reach it; the browser's ring around the whole box says nothing. */
+  outline: none;
+}
+
+/* One box in the middle of the sheet asking one thing, whether that is a question to answer or a
+   line to type. Two names rather than one because the dialogs are two, but they are meant to look
+   the same and this is what keeps them that way.
+   The sheet is a flex row, so without align-self the box stretches down to its max-height and a
+   two-line question sits in a box most of the window tall. The outline is the browser's focus ring:
+   the box holds focus so Enter and Escape reach it, and every other dialog turns the ring off too. */
+.confirm-dialog,
+.prompt-dialog {
+  align-self: flex-start;
+  max-width: 420px;
+  padding: 20px 24px;
+  outline: none;
+}
+
+.confirm-question {
+  margin: 0 0 12px;
+  color: var(--brightWhite);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Shared with .prompt-question and .prompt-keys: the small grey line beside the thing being asked. */
+.confirm-keys,
+.prompt-keys,
+.prompt-question {
+  margin-bottom: 8px;
+}
+
+.prompt-question {
+  margin-bottom: 4px;
+}
+
+/* Under the box rather than over it, where the confirm dialog's keys line sits: the question names the
+   thing, the box is what you are looking at, and the keys are what you read once you wonder how to get
+   out of it. */
+.prompt-keys {
+  margin-top: 10px;
+}
+
+.card-detail-dialog {
+  max-width: 520px;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.card-detail-meta,
+.card-detail-footer,
+.card-detail-empty {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card-detail-notes {
+  margin: 14px 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+/* One comment per line: the time it was written, then what it says. The trail is the card's history
+   and is read top to bottom, so each entry wraps rather than being cut short the way a card's
+   one-line badges are. */
+.card-detail-comment {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--hover);
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.card-detail-comment-when {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.card-detail-comment-body {
+  white-space: pre-wrap;
+}
+
+.card-detail-children {
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card-detail-children li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.card-detail-children li.highlighted {
+  background: var(--tint);
+}
+
+.card-detail-child-where {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+/* Help: sections of key/action rows, scrolling as one if the screen is short. */
+.help-dialog {
+  width: min(680px, 92vw);
+  max-height: 74vh;
+  overflow-y: auto;
+  padding: 16px 0 12px;
+  outline: none;
+}
+
+.help-dialog h2 {
+  margin: 18px 0 4px;
+  padding: 0 20px;
+  color: var(--brightWhite);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Sits between the heading and its keys, so the section says what it is before it says how to work it. */
+.help-blurb {
+  margin: 0 0 8px;
+  padding: 0 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 72ch;
+}
+
+.help-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 10px;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.help-list li:hover {
+  background: var(--hover);
+}
+
+/* Fixed column so the keys line up down the dialog and the eye can scan one side of it. Wide enough for
+   the longest binding a person could produce, "Ctrl+Cmd+Alt+Shift+Backspace", which wraps and breaks the
+   column if it does not fit. */
+.help-keys {
+  flex: none;
+  width: 240px;
+}
+
+.help-action {
+  color: var(--white);
+}
+
+.help-footer {
+  margin: 14px 0 0;
+  padding: 12px 20px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.search-input,
+.card-detail-add,
+.prompt-input {
+  font: inherit;
+  color: var(--brightWhite);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  outline: none;
+}
+
+.search-input:focus,
+.card-detail-add:focus,
+.prompt-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--tint);
+}
+
+/* The picker and the card search lead with a magnifier, drawn into the box's own background since an
+   input has no children to hold an icon. Lucide's search, stroked in a grey that reads on any theme. */
+.search-input {
+  margin: 12px 12px 6px;
+  padding-left: 36px;
+  background: var(--surface-raised) no-repeat 12px center / 16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+}
+
+/* Shared with .prompt-input: both fill the width of the box they sit in. The margin is the card
+   dialog's own, where the box sits between rows. */
+.card-detail-add,
+.prompt-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card-detail-add {
+  margin: 8px 0;
+}
+
+/* Shared with .worktrees-list below: both are an overlay's one scrolling list of rows, walked with
+   the arrows, with the same padding and the same highlight. The first covers every dialog built on
+   searchOverlay — the project picker and the board's card search. What differs between them is what
+   goes inside a row, which stays in each dialog's own rules. */
+.search-list,
+.worktrees-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px 6px 8px;
+  list-style: none;
+}
+
+.search-list li,
+.worktrees-list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.search-list li:hover,
+.worktrees-list li:hover {
+  background: var(--hover);
+}
+
+.search-list li.highlighted,
+.worktrees-list li.highlighted {
+  background: var(--tint);
+}
+
+.search-list .icon {
+  color: var(--muted);
+}
+
+.search-name {
+  color: var(--brightWhite);
+}
+
+.search-detail {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-list li.highlighted .search-detail {
+  color: var(--white);
+}
+
+/* The line a search that matched nothing leaves behind. Not a row: there is nothing to press Enter
+   on, so it takes neither the highlight nor the hand the rows give the pointer. */
+.search-list li.search-empty {
+  color: var(--muted);
+  cursor: default;
+}
+
+/* The last row opens the folder dialog; the rule sets it apart from the projects above it. */
+.search-list li.picker-new {
+  margin-top: 4px;
+  box-shadow: 0 -1px 0 var(--line);
+}
+
+.search-list li.picker-new .search-name {
+  color: var(--blue);
+}
+
+.search-list li.picker-new .icon {
+  color: var(--blue);
+}
+
+/* Settings: one row per thing you can change, walked with the arrows. Taller than the help dialog
+   because the list is every action there is, not only the ones with a key. */
+.settings-dialog {
+  width: min(640px, 92vw);
+  padding: 16px 0 12px;
+  outline: none;
+  max-height: 74vh;
+}
+
+/* The list scrolls, not the dialog, so the footer that prints every refusal stays on screen. The
+   picker does the same thing with its search box, two rules up. */
+.settings-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 10px;
+  list-style: none;
+}
+
+.settings-heading {
+  margin: 16px 0 6px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.settings-row.selected {
+  background: var(--tint);
+}
+
+.settings-label {
+  flex: 1;
+  color: var(--white);
+}
+
+/* Fixed column so every value lines up down the right and the eye can scan one side of it. */
+.settings-value {
+  flex: none;
+  width: 200px;
+  color: var(--brightWhite);
+}
+
+.settings-value.unbound {
+  color: var(--muted);
+}
+
+.settings-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  vertical-align: -1px;
+}
+
+/* The row's own text box, sized to the value column so the list does not jump when one opens. */
+.settings-edit {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 2px 8px;
+  border: 1px solid var(--blue);
+  border-radius: 5px;
+  background: var(--surface-raised);
+  font: inherit;
+  color: var(--brightWhite);
+  outline: none;
+}
+
+.settings-footer {
+  margin: 10px 0 0;
+  padding: 12px 20px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-message {
+  color: var(--yellow);
+}

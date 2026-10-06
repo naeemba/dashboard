@@ -1,3 +1,4 @@
+import { icon } from './icons';
 import { relativeAge } from './age';
 import { baseName } from './base-name';
 import { clampIndex } from './clamp-index';
@@ -60,7 +61,7 @@ export function openWorktrees(
 
     const { dialog, remove } = openOverlay('worktrees', finish);
     const heading = document.createElement('h2');
-    heading.className = 'worktrees-heading';
+    heading.className = 'dialog-title';
     const list = document.createElement('ul');
     list.className = 'worktrees-list';
     const keys = document.createElement('p');
@@ -71,7 +72,7 @@ export function openWorktrees(
 
     function render(): void {
       const entries = worktrees();
-      heading.textContent = `Worktrees (${entries.length})`;
+      heading.replaceChildren(icon('worktrees'), `Worktrees (${entries.length})`);
       highlighted = clampIndex(highlighted, entries.length - 1);
       list.replaceChildren(...orderedWorktrees(entries).map((entry, index) => {
         const item = document.createElement('li');

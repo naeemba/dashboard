@@ -34,5 +34,6 @@ export function openPicker(projects: Project[]): Promise<PickerChoice> {
     name: 'picker',
     placeholder: 'Search projects',
     rows: (query) => pickerRows(projects, query),
+    glyph: (row) => (row.choice === null ? 'folderPlus' : 'folder'),
   });
 }

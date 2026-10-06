@@ -1,6 +1,4 @@
-/* The token figures on the manager's rows: the column one is drawn in. Its own file because
-   index.css is already past the size this project holds a file to, and the rule there is that new
-   rules go somewhere new rather than making it longer. */
+/* The token figures on the manager's rows: the column one is drawn in. */
 
 /* One figure. Right-aligned so a pane's figure ends on its column's edge however long it grows, and
    tabular figures so a row of 1s is not visibly narrower than a row of 8s. */

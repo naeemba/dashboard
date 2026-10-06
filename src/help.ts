@@ -1,4 +1,6 @@
 import { type ActionGroup } from './actions';
+import { labelled } from './icons';
+import { keycaps } from './keycaps';
 import { isSection } from './manager-sections';
 import { type Mode } from './modes';
 import { openOverlay } from './overlay';
@@ -246,12 +248,14 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'from any of the four. The arrows are deliberately not these keys: on the board they move '
     + 'between cards, and in the notes they move the caret.',
   modes: 'A project is shown four ways and remembers which one you left it on, so jumping to it '
-    + 'lands you back in the same view. The manager has four sections of its own, named along the '
+    + 'lands you back in the same view. The four are named along the foot of a project\'s page, the '
+    + 'one you are on lit, and a click on a name goes there the way its key does. The manager has four '
+    + 'sections of its own, named along the '
     + 'top: its list of what the panes want, a board of its own above every project\'s, one command run across '
     + 'projects, and a page of notes about none of them. Two of the four mode keys land on a section '
     + 'rather than doing nothing there — the board key and the notes key.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
-    + 'order you put them in. A project cannot be moved in front of the manager, so the first two move '
+    + 'order you put them in. A click on a tab goes to it, the same as its jump key. A project cannot be moved in front of the manager, so the first two move '
     + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '
     + 'through the manager on the way round. The window opens on the projects the last run was left '
     + 'on, and closing it asks first, because it kills every shell in every project. '
@@ -267,7 +271,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'allows is still not a promise that nothing was running — which is why it asks first, and Enter '
     + 'is what takes the project away.',
   app: 'There is a second way to find a key, for when you know you are reaching for one and not which. '
-    + 'Hold Ctrl, Cmd or Alt without pressing anything else and a strip along the bottom names every '
+    + 'Hold Ctrl, Cmd or Alt without pressing anything else and a panel near the bottom names every '
     + 'key that modifier can still start on the screen you are on, each row saying what is left to '
     + 'press. Add a second modifier and the list narrows to what that one reaches; let it go and the '
     + 'list widens again. Press the key and it does the thing, as though the strip had never been '
@@ -367,6 +371,7 @@ export function openHelp(
     }
 
     const { dialog, remove } = openOverlay('help', close);
+    dialog.append(labelled('dialog-title', 'keyboard', 'Keyboard shortcuts'));
 
     for (const section of helpSections(mode, onManagerPage, keys, isMac)) {
       const heading = document.createElement('h2');
@@ -380,7 +385,7 @@ export function openHelp(
         const row = document.createElement('li');
         const keysSpan = document.createElement('span');
         keysSpan.className = 'help-keys';
-        keysSpan.textContent = shortcut.keys;
+        keysSpan.append(keycaps(shortcut.keys));
         const action = document.createElement('span');
         action.className = 'help-action';
         action.textContent = shortcut.action;
