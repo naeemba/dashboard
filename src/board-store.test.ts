@@ -107,6 +107,7 @@ describe('parseBoard', () => {
   it('reads a well-formed board', () => {
     const board = parseBoard('{"columns":[{"name":"Later","cards":[{"id":"1","title":"a","notes":"n"}]}]}');
     expect(board.columns).toEqual([
+      { name: 'Backlog', cards: [] },
       { name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium', parent: null }] },
       { name: 'Ship', cards: [] },
       { name: 'Review', cards: [] },
@@ -116,13 +117,13 @@ describe('parseBoard', () => {
   it('keeps a parent that names a card on the board', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":['
       + '{"id":"1","title":"a"},{"id":"2","title":"b","parent":"1"}]}]}');
-    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, '1']);
+    expect(board.columns[1].cards.map((card) => card.parent)).toEqual([null, '1']);
   });
 
   it('reads a comment trail, oldest first', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","comments":['
       + '{"at":"2026-01-01T00:00:00.000Z","body":"first"},{"at":"2026-02-01T00:00:00.000Z","body":"second"}]}]}]}');
-    expect(board.columns[0].cards[0].comments).toEqual([
+    expect(board.columns[1].cards[0].comments).toEqual([
       { at: '2026-01-01T00:00:00.000Z', body: 'first' },
       { at: '2026-02-01T00:00:00.000Z', body: 'second' },
     ]);
@@ -132,13 +133,13 @@ describe('parseBoard', () => {
   // the app first opened the board.
   it('keeps a comment written without a date', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","comments":[{"body":"by hand"}]}]}]}');
-    expect(board.columns[0].cards[0].comments).toEqual([{ body: 'by hand' }]);
+    expect(board.columns[1].cards[0].comments).toEqual([{ body: 'by hand' }]);
   });
 
   it('drops a comment with nothing in it and keeps the rest', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","comments":['
       + '{"body":"  "},{"at":"2026-01-01T00:00:00.000Z"},"not a comment",{"body":" kept "}]}]}]}');
-    expect(board.columns[0].cards[0].comments).toEqual([{ body: 'kept' }]);
+    expect(board.columns[1].cards[0].comments).toEqual([{ body: 'kept' }]);
   });
 
   // A card that has never been commented on must be written back without the field, or every board
@@ -146,37 +147,37 @@ describe('parseBoard', () => {
   it('reads a card with no comments, and one whose comments are all rubbish, as having none', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":['
       + '{"id":"1","title":"a"},{"id":"2","title":"b","comments":[]},{"id":"3","title":"c","comments":"soon"}]}]}');
-    expect(board.columns[0].cards.map((card) => card.comments)).toEqual([undefined, undefined, undefined]);
+    expect(board.columns[1].cards.map((card) => card.comments)).toEqual([undefined, undefined, undefined]);
   });
 
   // A board written before subtasks existed. Every card is top-level, which is what it is.
   it('reads a card with no parent field as top-level', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}');
-    expect(board.columns[0].cards[0].parent).toBe(null);
+    expect(board.columns[1].cards[0].parent).toBe(null);
   });
 
   // The parent was deleted by hand, or the id was mistyped. Losing one relationship is the right
   // price; throwing would cost the whole board, which readBoard would then move aside.
   it('drops a parent that names no card', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","parent":"nobody"}]}]}');
-    expect(board.columns[0].cards[0].parent).toBe(null);
+    expect(board.columns[1].cards[0].parent).toBe(null);
   });
 
   it('drops a parent that is not a string', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","parent":7}]}]}');
-    expect(board.columns[0].cards[0].parent).toBe(null);
+    expect(board.columns[1].cards[0].parent).toBe(null);
   });
 
   it('refuses to let a card be its own parent', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","parent":"1"}]}]}');
-    expect(board.columns[0].cards[0].parent).toBe(null);
+    expect(board.columns[1].cards[0].parent).toBe(null);
   });
 
   it('reads the branch, the pull request and the timestamps', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a",'
       + '"createdAt":"2026-01-01T00:00:00.000Z","updatedAt":"2026-03-01T00:00:00.000Z",'
       + '"branch":"fix-the-picker","pullRequest":14}]}]}');
-    expect(board.columns[0].cards[0]).toMatchObject({
+    expect(board.columns[1].cards[0]).toMatchObject({
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-03-01T00:00:00.000Z',
       branch: 'fix-the-picker',
@@ -187,7 +188,7 @@ describe('parseBoard', () => {
   // A board written before these fields existed. Filled in on read, every card would claim to have
   // been created the first time this version opened the file.
   it('leaves a card without them unknown rather than stamping it', () => {
-    const card = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}').columns[0].cards[0];
+    const card = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}').columns[1].cards[0];
     expect(card.createdAt).toBe(undefined);
     expect(card.updatedAt).toBe(undefined);
     expect(card.branch).toBe(undefined);
@@ -197,14 +198,14 @@ describe('parseBoard', () => {
   it('drops a pull request that is not a whole number above zero', () => {
     for (const written of ['"#14"', '0', '-3', '1.5', 'null']) {
       const board = parseBoard(`{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","pullRequest":${written}}]}]}`);
-      expect(board.columns[0].cards[0].pullRequest).toBe(undefined);
+      expect(board.columns[1].cards[0].pullRequest).toBe(undefined);
     }
   });
 
   // An empty branch would otherwise draw an empty line under the card.
   it('reads a blank branch as no branch', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a","branch":"  "}]}]}');
-    expect(board.columns[0].cards[0].branch).toBe(undefined);
+    expect(board.columns[1].cards[0].branch).toBe(undefined);
   });
 
   // Without this, every card on this repo's own board grows four nulls it never had.
@@ -221,7 +222,7 @@ describe('parseBoard', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":['
       + '{"id":"1","title":"a","parent":"2"},{"id":"2","title":"b","parent":"3"},'
       + '{"id":"3","title":"c","parent":"1"}]}]}');
-    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, null, null]);
+    expect(board.columns[1].cards.map((card) => card.parent)).toEqual([null, null, null]);
   });
 
   // readBoard turns each of these into the empty board and moves the file aside; parseBoard's job is
@@ -236,15 +237,20 @@ describe('parseBoard', () => {
   // A blank title counts as no title: kept, it would be a card you cannot see but can still select.
   it('drops a column with no name and a card with no title', () => {
     const board = parseBoard('{"columns":[{"cards":[]},{"name":"Todo","cards":[{"id":"1"},{"id":"2","title":"  "},{"id":"3","title":"a"}]}]}');
-    expect(columnNames(board)).toEqual(['Todo', 'Ship', 'Review']);
-    expect(board.columns[0].cards.map((card) => card.title)).toEqual(['a']);
+    expect(columnNames(board)).toEqual(['Backlog', 'Todo', 'Ship', 'Review']);
+    expect(board.columns[1].cards.map((card) => card.title)).toEqual(['a']);
+  });
+
+  it('gives an old board Backlog in front of Todo and keeps Ship after Todo', () => {
+    const text = JSON.stringify({ columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }, { name: 'Done', cards: [] }] });
+    expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
   it('fills in a missing cards array and missing notes', () => {
     const board = parseBoard('{"columns":[{"name":"Todo"},{"name":"Doing","cards":[{"id":"1","title":"a"}]}]}');
-    expect(board.columns[0].cards).toEqual([]);
-    expect(columnNames(board)).toEqual(['Todo', 'Ship', 'Doing', 'Review']);
-    expect(board.columns[2].cards[0].notes).toBe('');
+    expect(board.columns[1].cards).toEqual([]);
+    expect(columnNames(board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review']);
+    expect(board.columns[3].cards[0].notes).toBe('');
   });
 
   // An agent writing a card by hand will forget the id, and losing the card would be worse than
@@ -256,13 +262,13 @@ describe('parseBoard', () => {
       + '{"id":"1","title":"a","priority":"urgent"},'
       + '{"id":"2","title":"b","priority":"screaming"},'
       + '{"id":"3","title":"c"}]}]}';
-    expect(parseBoard(stored).columns[0].cards.map((card) => card.priority))
+    expect(parseBoard(stored).columns[1].cards.map((card) => card.priority))
       .toEqual(['urgent', 'medium', 'medium']);
   });
 
   it('gives a card without an id one of its own', () => {
     const board = parseBoard('{"columns":[{"name":"Todo","cards":[{"title":"a"}]}]}', () => 'generated');
-    expect(board.columns[0].cards[0])
+    expect(board.columns[1].cards[0])
       .toEqual({ id: 'generated', title: 'a', notes: '', priority: 'medium', parent: null });
   });
 
@@ -285,7 +291,7 @@ describe('parseBoard', () => {
       + '{"id":"fresh-1","title":"c"}]}]}',
       () => `fresh-${++issued}`,
     );
-    expect(board.columns[0].cards.map((card) => card.id)).toEqual(['1', 'fresh-1', 'fresh-2']);
+    expect(board.columns[1].cards.map((card) => card.id)).toEqual(['1', 'fresh-1', 'fresh-2']);
   });
 
   // The first copy keeps the id, so a parent written against it still names a card on the board.
@@ -295,7 +301,7 @@ describe('parseBoard', () => {
       + '{"id":"2","title":"c","parent":"1"}]}]}',
       () => 'generated',
     );
-    expect(board.columns[0].cards.map((card) => card.parent)).toEqual([null, null, '1']);
+    expect(board.columns[1].cards.map((card) => card.parent)).toEqual([null, null, '1']);
   });
 });
 
@@ -326,7 +332,7 @@ describe('peekBoard', () => {
 
 describe('readBoard', () => {
   it('returns an empty board when the project has no .dashboard folder', () => {
-    expect(columnNames(readBoard(project()).board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(readBoard(project()).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
   it('reads back what writeBoard wrote', () => {
@@ -334,13 +340,13 @@ describe('readBoard', () => {
     writeBoard(path, {
       columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium', parent: null }] }],
     });
-    expect(columnNames(readBoard(path).board)).toEqual(['Later', 'Ship', 'Review']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Later', 'Ship', 'Review']);
   });
 
   it('survives a damaged file', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
   // A missing file is not damage: there is nothing to salvage, so no .broken file appears.
@@ -382,7 +388,7 @@ describe('readBoard', () => {
     expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json'))).toBe(false);
     const second = readBoard(path);
     expect(second.brokenFile).toBeNull();
-    expect(columnNames(second.board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(second.board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
   it('gives a three-column board read from disk its Ship and Review columns', () => {
@@ -390,7 +396,7 @@ describe('readBoard', () => {
     writeRaw(path, JSON.stringify({
       columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }, { name: 'Done', cards: [] }],
     }));
-    expect(columnNames(readBoard(path).board)).toEqual(['Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 });
 
@@ -423,7 +429,7 @@ describe('writeBoard', () => {
       { id: '1', title: 'a', notes: '', priority: 'medium', parent: null },
       { id: '2', title: 'b', notes: '', priority: 'medium', parent: '1' },
     ] }] });
-    expect(readBoard(path).board.columns[0].cards[1].parent).toBe('1');
+    expect(readBoard(path).board.columns[1].cards[1].parent).toBe('1');
   });
 });
 
@@ -472,9 +478,9 @@ describe('the manager\'s own board', () => {
   // No repository behind the manager, so nothing a card could be shipped into.
   it('has no Ship column, new or read from the file', () => {
     inFakeHome(() => {
-      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Todo', 'Doing', 'Review', 'Done']);
+      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Doing', 'Review', 'Done']);
       writeBoard(manager, readBoard(manager).board);
-      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Todo', 'Doing', 'Review', 'Done']);
+      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Doing', 'Review', 'Done']);
     });
   });
 

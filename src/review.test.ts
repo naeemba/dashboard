@@ -21,13 +21,13 @@ describe('awaitsReview', () => {
   // A review that died with the app leaves the card here. There is nothing else to go on, so it is
   // reviewed again.
   it('is true for a card sitting in Review', () => {
-    expect(awaitsReview(moveCardById(boardWithCard(), CARD, 3) as Board, CARD)).toBe(true);
+    expect(awaitsReview(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBe(true);
   });
 
   // The review's whole job is this move, so a card past Review has had one — and only this says so
   // once the restart has taken the mark off the record.
   it('is false for a card the review already moved to Done', () => {
-    expect(awaitsReview(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBe(false);
+    expect(awaitsReview(moveCardById(boardWithCard(), CARD, 5) as Board, CARD)).toBe(false);
   });
 
   // Not true — the card is gone from the board, deleted after its review or lost with a board.json that
@@ -49,7 +49,7 @@ describe('intoReview', () => {
   it('moves the card into Review', () => {
     const moved = intoReview(boardWithCard(), CARD);
     expect(moved?.columns.map((column) => column.cards.map((card) => card.id)))
-      .toEqual([[], [], [], [CARD], []]);
+      .toEqual([[], [], [], [], [CARD], []]);
   });
 
   // Null rather than the board unchanged, so the caller writes nothing: the file's bytes and its

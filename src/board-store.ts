@@ -14,6 +14,7 @@ import {
   isPullRequestNumber,
   isTitle,
   withReviewColumn,
+  withBacklogColumn,
   withShipColumn,
   withoutEmptyShipColumn,
   type Board,
@@ -311,7 +312,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) }));
+  return withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) })));
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but

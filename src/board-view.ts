@@ -10,6 +10,7 @@ import {
   detachCard,
   dropCard,
   hasSubtasks,
+  isWaitingColumn,
   startsShip,
   moveCard,
   flightParts,
@@ -422,7 +423,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       bar.className = 'board-progress';
       for (const columnIndex of columns) {
         const segment = document.createElement('span');
-        segment.className = columnIndex === last ? 'done' : columnIndex === 0 ? 'waiting' : 'underway';
+        segment.className = columnIndex === last ? 'done' : isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';
         bar.append(segment);
       }
       const count = document.createElement('span');

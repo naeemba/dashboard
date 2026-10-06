@@ -86,12 +86,16 @@ export const SHIP_COLUMN = 'Ship';
 // existing. Named rather than positioned, for the reason SHIP_COLUMN is.
 export const REVIEW_COLUMN = 'Review';
 
+// Where work waits before anybody has chosen it. Todo is what has been picked; this is everything
+// else, so Todo stays short enough to read. Leftmost, so `board add` with no column lands here.
+export const BACKLOG_COLUMN = 'Backlog';
+
 // Named because withReviewColumn puts Review in front of it, and because the manager's counts leave
 // it out — it only ever grows. Nothing else in the app treats Done as special: a board is whatever
 // columns its file holds.
 export const DONE_COLUMN = 'Done';
 
-const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
+const DEFAULT_COLUMNS = [BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -133,7 +137,7 @@ export type MoveGesture = Direction | 'drop';
 // Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
 // produced, the selection it left behind, and `from`, the column the card was in a keystroke earlier.
 //
-// Rightward only, for a keystroke. Ship sits second from the left, so without the direction a card
+// Rightward only, for a keystroke. Ship sits just right of Todo, so without the direction a card
 // walked leftward out of Doing would silently make a worktree, take a pane and start an agent — from a
 // keystroke that looks like putting something back.
 //
@@ -198,6 +202,18 @@ export function withoutEmptyShipColumn(board: Board): Board {
 export function withReviewColumn(board: Board): Board {
   const done = columnNamed(board, DONE_COLUMN);
   return withColumn(board, REVIEW_COLUMN, done === -1 ? board.columns.length : done);
+}
+
+// The same repair for Backlog: always the first column. Run after the Ship repair, which counts
+// from the left, or Ship would land between Backlog and Todo.
+export function withBacklogColumn(board: Board): Board {
+  return withColumn(board, BACKLOG_COLUMN, 0);
+}
+
+// Whether cards in this column have not been started: Backlog and Todo, and on a board with neither
+// the first column. The subtask bar draws these as waiting rather than under way.
+export function isWaitingColumn(board: Board, index: number): boolean {
+  return index === 0 || index === columnNamed(board, 'Todo');
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {

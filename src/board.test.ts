@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  BACKLOG_COLUMN,
   DEFAULT_PRIORITY,
   REVIEW_COLUMN,
   SHIP_COLUMN,
@@ -18,6 +19,8 @@ import {
   detachCard,
   dropCard,
   emptyBoard,
+  isWaitingColumn,
+  withBacklogColumn,
   hasSubtasks,
   isCommentBody,
   isDescendantOf,
@@ -74,21 +77,21 @@ function parents(result: Board): Record<string, string | null> {
 }
 
 describe('emptyBoard', () => {
-  it('opens with five empty columns', () => {
+  it('opens with six empty columns', () => {
     expect(emptyBoard().columns.map((column) => column.name))
-      .toEqual(['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
     expect(emptyBoard().columns.every((column) => column.cards.length === 0)).toBe(true);
   });
 });
 
 describe('the Ship column', () => {
-  it('is second from the left on a new board', () => {
+  it('sits just right of Todo on a new board', () => {
     expect(emptyBoard().columns.map((column) => column.name))
-      .toEqual(['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
   });
 
   it('finds Ship whatever case it is written in', () => {
-    expect(shipColumnIndex(emptyBoard())).toBe(1);
+    expect(shipColumnIndex(emptyBoard())).toBe(2);
     expect(shipColumnIndex({ columns: [{ name: 'ship', cards: [] }] })).toBe(0);
     expect(shipColumnIndex({ columns: [{ name: 'Todo', cards: [] }] })).toBe(-1);
   });
@@ -109,7 +112,7 @@ describe('the Ship column', () => {
 describe('withoutEmptyShipColumn', () => {
   it('takes an empty Ship out, leaving the other columns in their order', () => {
     expect(withoutEmptyShipColumn(emptyBoard()).columns.map((column) => column.name))
-      .toEqual(['Todo', 'Doing', REVIEW_COLUMN, 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', 'Doing', REVIEW_COLUMN, 'Done']);
   });
 
   // Taking the column would take the cards in it, and those are somebody's cards.
@@ -126,8 +129,8 @@ describe('withoutEmptyShipColumn', () => {
 });
 
 describe('the Review column', () => {
-  it('is fourth from the left on a new board', () => {
-    expect(reviewColumnIndex(emptyBoard())).toBe(3);
+  it('is fifth from the left on a new board', () => {
+    expect(reviewColumnIndex(emptyBoard())).toBe(4);
   });
 
   it('finds Review whatever case it is written in', () => {
@@ -985,5 +988,35 @@ describe('isCommentBody', () => {
     expect(isCommentBody('found it')).toBe(true);
     expect(isCommentBody('two\nlines')).toBe(true);
     for (const value of ['', '   ', '\n', undefined, null, 3, {}]) expect(isCommentBody(value)).toBe(false);
+  });
+});
+
+describe('withBacklogColumn', () => {
+  it('puts Backlog first on a board without one', () => {
+    const board = { columns: [{ name: 'Todo', cards: [] }, { name: 'Done', cards: [] }] };
+    expect(withBacklogColumn(board).columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Done']);
+  });
+
+  it('hands back the same board when Backlog is already there, wherever it sits', () => {
+    const board = { columns: [{ name: 'Todo', cards: [] }, { name: 'backlog', cards: [] }] };
+    expect(withBacklogColumn(board)).toBe(board);
+  });
+
+  it('is part of a new board', () => {
+    expect(emptyBoard().columns.map((column) => column.name))
+      .toEqual([BACKLOG_COLUMN, 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+  });
+});
+
+describe('isWaitingColumn', () => {
+  it('counts Backlog and Todo as waiting, and nothing after', () => {
+    const board = emptyBoard();
+    expect([0, 1, 2, 3].map((index) => isWaitingColumn(board, index))).toEqual([true, true, false, false]);
+  });
+
+  it('counts the first column as waiting on a board with no Todo', () => {
+    const board = { columns: [{ name: 'Ideas', cards: [] }, { name: 'Done', cards: [] }] };
+    expect(isWaitingColumn(board, 0)).toBe(true);
+    expect(isWaitingColumn(board, 1)).toBe(false);
   });
 });

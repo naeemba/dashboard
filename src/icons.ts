@@ -4,15 +4,16 @@
 import {
   Bitcoin, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
-  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, GitBranch, GitPullRequest, Keyboard, LayoutDashboard,
+  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, GitBranch, Inbox, GitPullRequest, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, Rocket, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees,
   type IconNode,
 } from 'lucide';
-import { DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN } from './board';
+import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN } from './board';
 import type { Mode } from './modes';
 
 const ICONS = {
+  backlog: Inbox,
   bitcoin: Bitcoin,
   board: Columns3,
   calendar: Calendar,
@@ -103,7 +104,7 @@ export function iconButton(className: string, glyph: IconName, text: string, onC
 // A board column's glyph, by what the column means rather than where it sits. Column names are free
 // text, so a column this list does not know gets the plain board icon.
 const COLUMN_GLYPHS: Record<string, IconName> = {
-  todo: 'todo', doing: 'doing', [SHIP_COLUMN.toLowerCase()]: 'ship', [REVIEW_COLUMN.toLowerCase()]: 'review',
+  [BACKLOG_COLUMN.toLowerCase()]: 'backlog', todo: 'todo', doing: 'doing', [SHIP_COLUMN.toLowerCase()]: 'ship', [REVIEW_COLUMN.toLowerCase()]: 'review',
   [DONE_COLUMN.toLowerCase()]: 'done',
 };
 
