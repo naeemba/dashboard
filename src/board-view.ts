@@ -585,13 +585,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     moveThenShip(at, dropCard(state.board, at, columnIndex, row), 'drop');
   }
 
-  // The mouse half of `s`: selects the column, then sorts it. On the manager, the stacked board's own
-  // mousedown has already made this board the active one by the time the click lands.
+  // The mouse half of `s`: the selection moves to the column, then `s` runs there. On the manager, the
+  // stacked board's own mousedown has already made this board the active one by the time this lands.
   function sortColumnAt(columnIndex: number): void {
     element.focus({ preventScroll: true });
-    if (busy()) return sayIfUnread();
-    state = { ...state, selection: settleSelection(visible, { column: columnIndex, card: state.selection.card }) };
-    change(sortColumn(state.board, state.selection));
+    if (!busy()) state = { ...state, selection: settleSelection(visible, { column: columnIndex, card: state.selection.card }) };
+    view.runAction({ kind: 'board-sort' });
   }
 
   function resetFilter(): void {
@@ -619,6 +618,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const drawn = rowsToDraw(visibleRows(state.board, filter, Date.now()), state.selection, editing !== null);
     visible = drawn.visible;
     if (drawn.selection !== state.selection) state = { ...state, selection: drawn.selection };
+    const filtered = isFilterActive(filter);
     const columns = document.createElement('div');
     columns.className = 'board-columns';
     columns.append(...state.board.columns.map((column, columnIndex) => {
@@ -627,7 +627,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       const heading = document.createElement('h2');
       const count = document.createElement('span');
       count.className = 'board-count';
-      count.textContent = isFilterActive(filter)
+      count.textContent = filtered
         ? `${visible[columnIndex].length}/${column.cards.length}`
         : String(column.cards.length);
       heading.append(icon(columnIcon(column.name)), column.name, sortButton(() => sortColumnAt(columnIndex)), count);
@@ -675,7 +675,8 @@ export function createBoardView(options: BoardOptions): BoardView {
       section.append(heading, list);
       return section;
     }));
-    element.replaceChildren(filterBar(filter, visible, state.board, resetFilter), columns);
+    const bar = filterBar(filter, visible, state.board, resetFilter);
+    element.replaceChildren(...(bar ? [bar, columns] : [columns]));
     element.querySelector(SELECTED_CARD)?.scrollIntoView({ block: 'nearest' });
     options.onChanged();
   }
@@ -824,7 +825,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // Another view of this project put a ship home and wrote the file; see ShipsAway.cameHome.
   const stopListening = shipsAway.listen(options.projectPath, element, () => void readAgain(false));
 
-  return {
+  const view: BoardView = {
     element,
     redraw: render,
     // Focus is taken before the read, not after: the terminals view is already hidden by the time
@@ -921,4 +922,5 @@ export function createBoardView(options: BoardOptions): BoardView {
       }
     },
   };
+  return view;
 }

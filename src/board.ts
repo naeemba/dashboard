@@ -90,12 +90,15 @@ export const REVIEW_COLUMN = 'Review';
 // else, so Todo stays short enough to read. Leftmost, so `board add` with no column lands here.
 export const BACKLOG_COLUMN = 'Backlog';
 
+// What has been picked to work on next. Named for isWaitingColumn, which finds it by name.
+export const TODO_COLUMN = 'Todo';
+
 // Named because withReviewColumn puts Review in front of it, and because the manager's counts leave
 // it out — it only ever grows. Nothing else in the app treats Done as special: a board is whatever
 // columns its file holds.
 export const DONE_COLUMN = 'Done';
 
-const DEFAULT_COLUMNS = [BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
+const DEFAULT_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -213,7 +216,7 @@ export function withBacklogColumn(board: Board): Board {
 // Whether cards in this column have not been started: Backlog and Todo, and on a board with neither
 // the first column. The subtask bar draws these as waiting rather than under way.
 export function isWaitingColumn(board: Board, index: number): boolean {
-  return index === 0 || index === columnNamed(board, 'Todo');
+  return index === 0 || index === columnNamed(board, TODO_COLUMN);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {

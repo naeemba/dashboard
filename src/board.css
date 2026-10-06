@@ -32,11 +32,6 @@
   font-size: 12px;
 }
 
-/* The bar's own display beats the browser's [hidden], so it says so itself. */
-.board-filter-bar[hidden] {
-  display: none;
-}
-
 .board-filter-summary {
   min-width: 0;
   overflow: hidden;

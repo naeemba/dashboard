@@ -29,8 +29,8 @@ export const FAMILIES: readonly Family[] = ['any', 'top-level', 'subtasks', 'par
 export const AGES: readonly Age[] = ['any', 'today', 'week', 'month', 'older'];
 
 const DAY = 86_400_000;
-// `older` is the far side of the longest window, so a card is in exactly one of `month` and `older`.
-const AGE_DAYS: Record<Exclude<Age, 'any'>, number> = { today: 1, week: 7, month: 30, older: 30 };
+// How far back each window reaches. `older` is the far side of `month`, so a card is in one of the two.
+const WINDOW_DAYS: Record<Exclude<Age, 'any' | 'older'>, number> = { today: 1, week: 7, month: 30 };
 
 export function emptyFilter(): BoardFilter {
   return {
@@ -56,7 +56,7 @@ function aged(age: Age, stamp: string | undefined, now: number): boolean {
   const time = timeOf(stamp);
   if (time === undefined) return false;
   const days = (now - time) / DAY;
-  return age === 'older' ? days > AGE_DAYS.older : days <= AGE_DAYS[age];
+  return age === 'older' ? days > WINDOW_DAYS.month : days <= WINDOW_DAYS[age];
 }
 
 function inFamily(board: Board, card: Card, wanted: Family): boolean {

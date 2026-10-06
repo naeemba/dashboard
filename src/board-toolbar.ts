@@ -5,11 +5,11 @@ import { icon, iconButton } from './icons';
 // The two controls the board draws around its cards: the strip over the columns saying what the
 // filter keeps, and the sort button on each column's heading. DOM only; the view decides what they do.
 
-// Says the board is narrowed and by what, with the way back. Hidden while every card is shown.
-export function filterBar(filter: BoardFilter, visible: number[][], board: Board, onReset: () => void): HTMLElement {
+// Says the board is narrowed and by what, with the way back. Not drawn while every card is shown.
+export function filterBar(filter: BoardFilter, visible: number[][], board: Board, onReset: () => void): HTMLElement | null {
+  if (!isFilterActive(filter)) return null;
   const bar = document.createElement('div');
   bar.className = 'board-filter-bar';
-  bar.hidden = !isFilterActive(filter);
   const shown = visible.reduce((sum, rows) => sum + rows.length, 0);
   const total = board.columns.reduce((sum, column) => sum + column.cards.length, 0);
   const summary = document.createElement('span');

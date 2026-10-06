@@ -107,11 +107,13 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
     keys.textContent = '↑↓ choose · ←→ change · Space toggles · Escape closes';
     dialog.append(list, keys);
 
+    // Redraws either way: a click that changes nothing still moves the highlight.
     function edit(next: BoardFilter): void {
-      if (next === filter) return;
-      filter = next;
-      if (text.value !== filter.text) text.value = filter.text;
-      onChange(filter);
+      if (next !== filter) {
+        filter = next;
+        if (text.value !== filter.text) text.value = filter.text;
+        onChange(filter);
+      }
       draw();
     }
 
@@ -134,10 +136,7 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
       // which has no Enter of its own.
       item.addEventListener('click', () => {
         highlighted = index;
-        if (row.kind === 'text') return draw();
-        const next = applyRowKey(filter, row, row.kind === 'choice' ? 'ArrowRight' : 'Enter');
-        if (next === filter) draw();
-        else edit(next);
+        edit(applyRowKey(filter, row, row.kind === 'choice' ? 'ArrowRight' : 'Enter'));
       });
       return item;
     }
