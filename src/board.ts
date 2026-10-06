@@ -86,12 +86,19 @@ export const SHIP_COLUMN = 'Ship';
 // existing. Named rather than positioned, for the reason SHIP_COLUMN is.
 export const REVIEW_COLUMN = 'Review';
 
+// Where work waits before anybody has chosen it. Todo is what has been picked; this is everything
+// else, so Todo stays short enough to read. Leftmost, so `board add` with no column lands here.
+export const BACKLOG_COLUMN = 'Backlog';
+
+// What has been picked to work on next. Named for isWaitingColumn, which finds it by name.
+export const TODO_COLUMN = 'Todo';
+
 // Named because withReviewColumn puts Review in front of it, and because the manager's counts leave
 // it out — it only ever grows. Nothing else in the app treats Done as special: a board is whatever
 // columns its file holds.
 export const DONE_COLUMN = 'Done';
 
-const DEFAULT_COLUMNS = ['Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
+const DEFAULT_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -133,7 +140,7 @@ export type MoveGesture = Direction | 'drop';
 // Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
 // produced, the selection it left behind, and `from`, the column the card was in a keystroke earlier.
 //
-// Rightward only, for a keystroke. Ship sits second from the left, so without the direction a card
+// Rightward only, for a keystroke. Ship sits just right of Todo, so without the direction a card
 // walked leftward out of Doing would silently make a worktree, take a pane and start an agent — from a
 // keystroke that looks like putting something back.
 //
@@ -175,10 +182,12 @@ function withColumn(board: Board, name: string, at: number): Board {
 }
 
 // Every board written before Ship existed has three columns, and getting the fourth should not mean
-// hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
-// card pays nothing for it.
+// hand-editing a file. Inserted just right of Todo, where it belongs — or second on a board with no
+// Todo — and empty, so a project that never ships a card pays nothing for it. Placed by name, so a
+// board that already has Backlog in front of Todo does not get Ship between the two.
 export function withShipColumn(board: Board): Board {
-  return withColumn(board, SHIP_COLUMN, 1);
+  const todo = columnNamed(board, TODO_COLUMN);
+  return withColumn(board, SHIP_COLUMN, todo === -1 ? 1 : todo + 1);
 }
 
 // The manager's board has nothing to ship from, so it has no Ship column to move a card into. Only an
@@ -198,6 +207,23 @@ export function withoutEmptyShipColumn(board: Board): Board {
 export function withReviewColumn(board: Board): Board {
   const done = columnNamed(board, DONE_COLUMN);
   return withColumn(board, REVIEW_COLUMN, done === -1 ? board.columns.length : done);
+}
+
+// The same repair for Backlog, put in as the first column. One already there stays where it is.
+export function withBacklogColumn(board: Board): Board {
+  return withColumn(board, BACKLOG_COLUMN, 0);
+}
+
+// Where a card nobody has placed belongs: Backlog, wherever it sits, and the first column on a board
+// without one.
+export function backlogColumnIndex(board: Board): number {
+  return Math.max(columnNamed(board, BACKLOG_COLUMN), 0);
+}
+
+// Whether cards in this column have not been started: Backlog and Todo. The subtask bar draws these
+// as waiting rather than under way.
+export function isWaitingColumn(board: Board, index: number): boolean {
+  return index === backlogColumnIndex(board) || index === columnNamed(board, TODO_COLUMN);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {
@@ -373,21 +399,23 @@ export function cyclePriority(board: Board, selection: Selection): Change {
 // selected, nothing above, the card above already being the parent, and an attachment that would
 // make a ring. The ring case is the one that matters — a card that is its own ancestor makes
 // descendantsOf recurse forever.
-export function attachToCardAbove(board: Board, selection: Selection): Change {
+// `aboveRow` is the row of the card to attach to: the one directly above, unless a filter hides it
+// and the card above on screen is further up.
+export function attachToCardAbove(board: Board, selection: Selection, aboveRow = selection.card - 1): Change {
   const card = cardAt(board, selection);
-  const above = board.columns[selection.column]?.cards[selection.card - 1];
+  const above = board.columns[selection.column]?.cards[aboveRow];
   if (!card || !above) return { board, selection };
   if (above.id === card.parent) return { board, selection };
-  if (attachmentRing(board, selection)) return { board, selection };
+  if (attachmentRing(board, selection, aboveRow)) return { board, selection };
   return editCard(board, selection, { parent: above.id });
 }
 
 // The card above, when attaching to it would make a ring, and null when Tab would go through. The
 // view prints a message about this one refusal and attachToCardAbove acts on it, so both ask here
 // rather than each re-deriving the test: a message decided apart from the refusal drifts from it.
-export function attachmentRing(board: Board, selection: Selection): Card | null {
+export function attachmentRing(board: Board, selection: Selection, aboveRow = selection.card - 1): Card | null {
   const card = cardAt(board, selection);
-  const above = board.columns[selection.column]?.cards[selection.card - 1];
+  const above = board.columns[selection.column]?.cards[aboveRow];
   if (!card || !above) return null;
   return isDescendantOf(board, above.id, card.id) ? above : null;
 }

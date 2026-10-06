@@ -32,7 +32,7 @@ describe('list', () => {
   it('names the column, the priority and the id of every card', () => {
     const { board, id } = withCard('Ship it');
     const line = formatList(board);
-    expect(line).toContain('Todo');
+    expect(line).toContain('Backlog');
     expect(line).toContain('medium');
     expect(line).toContain(id);
     expect(line).toContain('Ship it');
@@ -64,7 +64,7 @@ describe('list', () => {
 describe('add', () => {
   it('puts a card in the leftmost column', () => {
     const { board, id } = withCard('Ship it');
-    expect(board.columns[0].name).toBe('Todo');
+    expect(board.columns[0].name).toBe('Backlog');
     expect(board.columns[0].cards.map((card) => card.id)).toContain(id);
   });
 
@@ -102,7 +102,7 @@ describe('add', () => {
   });
 
   it('names the columns it does have when the one asked for is not there', () => {
-    const result = run(emptyBoard(), 'add', 'Ship it', '--column', 'Backlog');
+    const result = run(emptyBoard(), 'add', 'Ship it', '--column', 'Icebox');
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.message).toContain('Todo');
@@ -122,9 +122,9 @@ describe('move', () => {
   // screen for a command that moved nothing.
   it('writes nothing when the card is already there', () => {
     const { board, id } = withCard();
-    const result = run(board, 'move', id, 'Todo');
+    const result = run(board, 'move', id, 'Backlog');
     expect(result.ok && result.board).toBe(null);
-    expect(result.ok && result.output).toContain('already in Todo');
+    expect(result.ok && result.output).toContain('already in Backlog');
   });
 
   it('refuses an id no card has', () => {

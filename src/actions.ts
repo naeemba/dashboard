@@ -36,6 +36,8 @@ export type Action =
   | { kind: 'board-delete' }
   | { kind: 'board-priority' }
   | { kind: 'board-sort' }
+  | { kind: 'board-filter' }
+  | { kind: 'board-filter-reset' }
   | { kind: 'board-undo' }
   | { kind: 'cards-project'; direction: 'previous' | 'next' }
   | { kind: 'manager-select'; direction: 'up' | 'down' }
@@ -349,6 +351,14 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'board-sort', description: 'Sort the column, urgent first',
     group: 'board', scope: 'board', action: { kind: 'board-sort' }, mac: 'S', other: 'S',
+  },
+  {
+    name: 'board-filter', description: 'Filter the cards by any of their fields',
+    group: 'board', scope: 'board', action: { kind: 'board-filter' }, mac: 'F', other: 'F',
+  },
+  {
+    name: 'board-filter-reset', description: 'Clear the filter and show every card',
+    group: 'board', scope: 'board', action: { kind: 'board-filter-reset' }, mac: 'Shift+F', other: 'Shift+F',
   },
   {
     name: 'board-undo', description: 'Undo the last board change',

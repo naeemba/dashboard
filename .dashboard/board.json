@@ -97,6 +97,23 @@
               "body": "PR #72: tabs in the title row, a status bar at the foot with a view switch, board lanes and raised cards, one dialog sheet with keycaps and search, Lucide icons throughout. index.css split into chrome, board, dialogs and which-key stylesheets. Panes and keys unchanged. v1.11.0."
             }
           ]
+        },
+        {
+          "id": "de4da884-2bdf-4cff-a457-35146369907b",
+          "title": "Backlog column, board filter and a sort button",
+          "notes": "Backlog column left of Todo, added to every board on read; a filter over every card field that hides cards, with a reset; a sort-by-priority button on each column heading.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-06T18:31:32.238Z",
+          "updatedAt": "2026-10-06T19:07:20.906Z",
+          "branch": "board-backlog-filter",
+          "pullRequest": 73,
+          "comments": [
+            {
+              "at": "2026-10-06T19:07:20.906Z",
+              "body": "Shipped in #73: Backlog column first on every board (board add defaults there), a filter over every card field (f, Shift+F resets, strip with Reset, hidden cards skipped by arrows/moves/attach/drag), and a sort button on each column heading. 1120 tests pass."
+            }
+          ]
         }
       ]
     },

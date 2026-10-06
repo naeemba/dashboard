@@ -3,6 +3,7 @@ import {
   addCard,
   addComment,
   branchFrom,
+  backlogColumnIndex,
   columnNamed,
   flightParts,
   isCommentBody,
@@ -168,9 +169,7 @@ export function runBoardCommand(
     const read = readFlags(flagArgs, ['column', 'priority', 'notes']);
     if ('message' in read) return { ok: false, message: read.message };
     const columnName = read.flags.get('column');
-    // The leftmost column, which is where a card nobody has placed belongs — Todo on every board the
-    // app writes.
-    const column = columnName === undefined ? 0 : columnNamed(board, columnName);
+    const column = columnName === undefined ? backlogColumnIndex(board) : columnNamed(board, columnName);
     if (columnName !== undefined && column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
     const id = makeId();
     const added = addCard(board, { column, card: 0 }, id, title);
