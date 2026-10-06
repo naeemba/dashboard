@@ -21,7 +21,7 @@
   animation: which-key-wait 1ms 400ms both;
   position: fixed;
   right: 0;
-  bottom: 44px;
+  bottom: calc(var(--status-bar-height) + 14px);
   left: 0;
   z-index: 1;
   width: min(1100px, calc(100% - 48px));

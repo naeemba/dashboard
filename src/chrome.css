@@ -27,7 +27,7 @@
 #status {
   justify-content: space-between;
   gap: 16px;
-  height: 30px;
+  height: var(--status-bar-height);
   padding: 0 8px;
   border-top: 1px solid var(--line);
   font-size: 12px;
@@ -67,6 +67,15 @@
   padding: 0 12px;
   border-radius: 7px;
   -webkit-app-region: no-drag;
+}
+
+/* A full strip shrinks every tab, so the name is what gives way, with an ellipsis, rather than
+   spilling over the next tab or wrapping a hyphenated name onto a second line. */
+.project span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* A project's views, along the left of the status bar. inline-flex beats the browser's own [hidden],

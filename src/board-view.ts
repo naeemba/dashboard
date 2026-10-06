@@ -364,7 +364,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // ordinary card sitting in an ordinary column, and nothing else on it says so.
     const parent = card.parent === null ? undefined : cardById(state.board, card.parent);
     if (parent) {
-      item.append(labelled('board-parent', 'parent', parent.title));
+      item.append(labelled('p', 'board-parent', 'parent', parent.title));
     }
     // What this card has in flight on this machine. Not on the board and not in git: the card's
     // column on main is about what has merged, so without this a card an agent is working on sits in
@@ -376,7 +376,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const flying = inFlight.get(card.id);
     if (flying) {
       const pane = flying.pane === null ? 'no pane' : paneLabel(flying.pane);
-      item.append(labelled('board-shipped', flying.reviewing ? 'review' : 'ship',
+      item.append(labelled('p', 'board-shipped', flying.reviewing ? 'review' : 'ship',
         `${flying.reviewing ? 'reviewing' : 'shipped'} · ${flying.branch} · ${pane}`));
     }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
@@ -396,7 +396,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (selected && editing === 'comment') {
       item.append(renderEditor('comment', ''));
     } else if (card.comments !== undefined) {
-      item.append(labelled('board-comments', 'comments',
+      item.append(labelled('p', 'board-comments', 'comments',
         card.comments.length === 1 ? '1 comment' : `${card.comments.length} comments`));
     }
     // What the card is in flight as: the branch, then the pull request it opened. Both are typed in,
@@ -408,7 +408,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     } else {
       const flight = flightParts(card);
       if (flight.length > 0) {
-        item.append(labelled('board-flight', card.pullRequest === undefined ? 'branch' : 'pullRequest',
+        item.append(labelled('p', 'board-flight', card.pullRequest === undefined ? 'branch' : 'pullRequest',
           flight.join(' · ')));
       }
     }

@@ -1,6 +1,12 @@
 import '@xterm/xterm/css/xterm.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
+// The app's look, a file per area, in the order they cascade: a later file wins a tie.
+import './app.css';
+import './chrome.css';
+import './board.css';
+import './dialogs.css';
+import './which-key.css';
 import './index.css';
 import './worktrees.css';
 import './usage.css';

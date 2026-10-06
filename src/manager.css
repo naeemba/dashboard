@@ -1,9 +1,8 @@
 /* The manager page's own look: figures along the top, the projects and the recent activity in two
-   panels under them, and the version at the foot. Its own file for the reason usage.css is, which says
-   it there. What a row shares with the command list — its flex, its padding, the highlight — stays in
-   index.css beside the command list, because sharing it is the point.
+   panels under them, and the version at the foot. What a row shares with the command list — its flex,
+   its padding, the highlight — stays in index.css beside the command list, because sharing it is the
+   point.
 
-   The page is read, not typed into, so it drops the terminal's monospace for the system's own face.
    Figures keep tabular digits so the columns still line up. What a pane printed stays monospace,
    below, because that is a terminal's screen and was laid out in one. */
 .view-manager {
@@ -11,7 +10,7 @@
   flex-direction: column;
   gap: 16px;
   padding: 20px 24px;
-  font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font: 13px var(--ui-font);
   font-variant-numeric: tabular-nums;
   --manager-surface: var(--hover);
   --manager-line: var(--line);
@@ -139,7 +138,7 @@
 /* What a pane printed was laid out on a terminal, so it is shown in the terminal's face. */
 .view-manager .manager-tail,
 .view-manager .manager-last-printed {
-  font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
+  font: 12px var(--mono-font);
 }
 
 /* A project's board, a pill per column. */
@@ -331,7 +330,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--cyan);
-  font: 11px "JetBrains Mono", Menlo, Monaco, monospace;
+  font: 11px var(--mono-font);
   text-overflow: ellipsis;
   opacity: 0.6;
 }

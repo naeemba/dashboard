@@ -107,8 +107,18 @@
   font-size: 11px;
   font-weight: 400;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The text beside the icon, which is what gives way on a narrow card. It is the span labelled() puts
+   it in, because bare text in a flex row never shrinks and would be cut mid-letter with no ellipsis. */
+.board-parent > span,
+.board-comments > span,
+.board-flight > span,
+.board-shipped > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .board-parent { margin: 0 0 6px; }
@@ -121,7 +131,7 @@
 }
 
 /* A card in flight is live state, not a typed-in field like the branch or PR line beneath it, so it
-   reads brighter than the 0.55 those use. */
+   takes a colour where those are muted. */
 .board-shipped {
   margin: 8px 0 0;
   color: var(--cyan);

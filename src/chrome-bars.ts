@@ -9,6 +9,13 @@ import { PROJECT_MODES, type ProjectMode } from './modes';
 
 export type Tab = { name: string; active: boolean; waiting: boolean; manager: boolean };
 
+// What the buttons are built from. Every click handler is bound to an index, so this has to change
+// whenever a tab's name moves to another index — or a click on the tab that says `web` lands on `api`.
+// The marks are left out: they change on every redraw and move without a rebuild.
+export function tabShape(tabs: Tab[]): string {
+  return JSON.stringify(tabs.map((tab) => [tab.name, tab.manager]));
+}
+
 export function createTabStrip(onPick: (index: number) => void): { element: HTMLElement; render(tabs: Tab[]): void } {
   const element = document.createElement('nav');
   element.className = 'projects';
@@ -19,7 +26,7 @@ export function createTabStrip(onPick: (index: number) => void): { element: HTML
   return {
     element,
     render(tabs) {
-      const shape = JSON.stringify(tabs.map((tab) => [tab.name, tab.manager]));
+      const shape = tabShape(tabs);
       if (shape !== built) {
         built = shape;
         buttons = tabs.map((tab, index) =>

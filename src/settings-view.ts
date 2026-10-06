@@ -118,7 +118,7 @@ export function openSettings(
         : 'Enter changes the row. x unbinds a key. Escape closes, or backs out of a row waiting '
           + 'for a key. Kept in ~/.config/dashboard/settings.json.';
       if (message !== '') footer.classList.add('settings-message');
-      dialog.replaceChildren(labelled('dialog-title', 'settings', 'Settings'), list, footer);
+      dialog.replaceChildren(labelled('h2', 'dialog-title', 'settings', 'Settings'), list, footer);
       list.children[selected]?.scrollIntoView({ block: 'nearest' });
     }
 

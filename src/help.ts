@@ -41,8 +41,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'are numbered. '
     + 'A pane that rings the terminal bell to ask for you puts a pulsing red dot on its project along '
     + 'the top, turns that name '
-    + 'yellow and says which pane on the right, and raises a system notification once if the window '
-    + 'is behind something else. Clicking that notification brings the app forward on that pane. '
+    + 'yellow and the status bar at the foot says which pane, and raises a system notification once '
+    + 'if the window is behind something else. Clicking that notification brings the app forward on '
+    + 'that pane. '
     + 'Going to the pane clears it. A bell is checked a second later against what the pane has on '
     + 'screen, so an agent that rings on its way past something and keeps working is left alone. '
     + 'The scrollback key takes you to the nvim screen with the pane you are looking at open there as a '
@@ -274,7 +275,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Hold Ctrl, Cmd or Alt without pressing anything else and a panel near the bottom names every '
     + 'key that modifier can still start on the screen you are on, each row saying what is left to '
     + 'press. Add a second modifier and the list narrows to what that one reaches; let it go and the '
-    + 'list widens again. Press the key and it does the thing, as though the strip had never been '
+    + 'list widens again. Press the key and it does the thing, as though the panel had never been '
     + 'there. Shift on its own does not open it — Shift is how you write a capital. '
     + 'Every key on this list can be changed, and so can the colours, the font, the shell and the place '
     + 'the manager\'s weather is for. They '
@@ -371,7 +372,7 @@ export function openHelp(
     }
 
     const { dialog, remove } = openOverlay('help', close);
-    dialog.append(labelled('dialog-title', 'keyboard', 'Keyboard shortcuts'));
+    dialog.append(labelled('h2', 'dialog-title', 'keyboard', 'Keyboard shortcuts'));
 
     for (const section of helpSections(mode, onManagerPage, keys, isMac)) {
       const heading = document.createElement('h2');

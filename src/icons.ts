@@ -6,7 +6,7 @@ import {
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, GitBranch, GitPullRequest, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, Rocket, Settings, Square, SquareCheck, SquareTerminal, Sun,
-  TerminalSquare, Trees,
+  Terminal, Trees,
   type IconNode,
 } from 'lucide';
 import { DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN } from './board';
@@ -46,7 +46,7 @@ const ICONS = {
   snow: CloudSnow,
   storm: CloudLightning,
   sun: Sun,
-  terminal: TerminalSquare,
+  terminal: Terminal,
   todo: CircleDashed,
   unchecked: Square,
   worktrees: Trees,
@@ -68,11 +68,17 @@ export function icon(name: IconName): HTMLElement {
   return template.cloneNode(true) as HTMLElement;
 }
 
-// A line of text led by an icon, the shape every badge on a card and every heading with a glyph takes.
-export function labelled(className: string, name: IconName, ...text: (string | Node)[]): HTMLElement {
-  const element = document.createElement('p');
+// A line of text led by an icon, the shape every badge on a card and every dialog title takes. The
+// text sits in a span of its own so a stylesheet can end it in an ellipsis: in a flex row, bare text
+// never shrinks and is cut mid-letter instead.
+export function labelled(
+  tag: 'p' | 'h2', className: string, name: IconName, ...text: (string | Node)[]
+): HTMLElement {
+  const element = document.createElement(tag);
   element.className = className;
-  element.append(icon(name), ...text);
+  const label = document.createElement('span');
+  label.append(...text);
+  element.append(icon(name), label);
   return element;
 }
 
