@@ -2,11 +2,11 @@
 // whole set is one list to read, and so a screen asks for `icon('rocket')` without knowing which
 // library drew it. Each one is stroked in currentColor and takes the colour of the text around it.
 import {
-  Bitcoin, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
+  ArrowDownWideNarrow, Bitcoin, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
-  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, GitBranch, Inbox, GitPullRequest, Keyboard, LayoutDashboard,
+  DollarSign, Droplet, Eye, FilePen, Folder, Funnel, FolderPlus, GitBranch, Inbox, GitPullRequest, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, Rocket, Settings, Square, SquareCheck, SquareTerminal, Sun,
-  Terminal, Trees,
+  Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
 import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN } from './board';
@@ -30,6 +30,7 @@ const ICONS = {
   drizzle: CloudDrizzle,
   droplet: Droplet,
   editor: FilePen,
+  filter: Funnel,
   expand: ChevronRight,
   fog: CloudFog,
   folder: Folder,
@@ -41,10 +42,12 @@ const ICONS = {
   parent: CornerLeftUp,
   pullRequest: GitPullRequest,
   rain: CloudRain,
+  reset: X,
   review: Eye,
   settings: Settings,
   ship: Rocket,
   snow: CloudSnow,
+  sort: ArrowDownWideNarrow,
   storm: CloudLightning,
   sun: Sun,
   terminal: Terminal,

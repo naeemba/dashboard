@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import {
-  cardMatches, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, keepingRow, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -124,6 +124,10 @@ describe('settleSelection', () => {
   it('rests on row 0 in a column with nothing visible', () => {
     expect(settleSelection(visible, { column: 2, card: 5 })).toEqual({ column: 2, card: 0 });
   });
+  it('hands back the same selection when it is already resting there', () => {
+    const selection = { column: 2, card: 0 };
+    expect(settleSelection(visible, selection)).toBe(selection);
+  });
 });
 
 describe('stepSelection', () => {
@@ -171,5 +175,39 @@ describe('realRow', () => {
   });
   it('drops at the end of a column with nothing visible', () => {
     expect(realRow(visible, 2, 0, 7)).toBe(7);
+  });
+});
+
+describe('actsOnHiddenCard', () => {
+  const board = boardOf([card({ id: 'a' }), card({ id: 'b' })], []);
+  const shown = [[1], []];
+
+  it('refuses a card key while the selection sits on a card the filter hides', () => {
+    expect(actsOnHiddenCard(board, shown, { column: 0, card: 0 }, 'board-delete')).toBe(true);
+    expect(actsOnHiddenCard(board, shown, { column: 0, card: 0 }, 'board-edit')).toBe(true);
+    expect(actsOnHiddenCard(board, shown, { column: 0, card: 0 }, 'board-move')).toBe(true);
+  });
+
+  it('lets a card key through on a card you can see', () => {
+    expect(actsOnHiddenCard(board, shown, { column: 0, card: 1 }, 'board-delete')).toBe(false);
+  });
+
+  it('lets through the keys that are not about the selected card', () => {
+    for (const kind of ['board-select', 'board-add', 'board-sort', 'board-search', 'board-undo', 'board-filter'] as const) {
+      expect(actsOnHiddenCard(board, shown, { column: 0, card: 0 }, kind)).toBe(false);
+    }
+  });
+
+  it('has nothing to refuse in an empty column', () => {
+    expect(actsOnHiddenCard(board, shown, { column: 1, card: 0 }, 'board-delete')).toBe(false);
+  });
+});
+
+describe('keepingRow', () => {
+  it('puts the selected card back among the rows, in board order', () => {
+    expect(keepingRow(visible, { column: 0, card: 2 })).toEqual([[1, 2, 3], [0, 2, 4], []]);
+  });
+  it('hands back the same rows when the card is already shown', () => {
+    expect(keepingRow(visible, { column: 0, card: 1 })).toBe(visible);
   });
 });

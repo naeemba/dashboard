@@ -28,6 +28,19 @@ import {
 } from './board';
 import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
+import {
+  actsOnHiddenCard,
+  cardMatches,
+  emptyFilter,
+  isFilterActive,
+  keepingRow,
+  realRow,
+  reorderRow,
+  settleSelection,
+  stepSelection,
+  visibleRows,
+  type BoardFilter,
+} from './board-filter';
 import { dropRow } from './board-drag';
 import { createCardAim } from './card-aim';
 import { putEditBack, takeEdit } from './carried-edit';
@@ -53,6 +66,8 @@ import type { DashboardBridge } from './bridge';
 import { cardRows } from './card-search';
 import { confirmOverlay, searchOverlay } from './overlay';
 import { columnIcon, icon, labelled } from './icons';
+import { filterBar, sortButton } from './board-toolbar';
+import { openFilterDialog } from './filter-dialog';
 import { createNewestRead } from './newest-read';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
@@ -166,6 +181,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   let detail: CardDetail | null = null;
   // The card the next arrival lands on, set by aimAt and spent by open().
   const aim = createCardAim();
+  // What the board is narrowed to. Not kept: arriving on the board starts from every card.
+  let filter: BoardFilter = emptyFilter();
+  // The rows the filter keeps, worked out once per render, which the keys and the drop then read.
+  let visible: number[][] = [];
 
   // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
   // step is gone, which is what entering a board means. Without it the file simply changed under you
@@ -238,19 +257,27 @@ export function createBoardView(options: BoardOptions): BoardView {
     return readWorked;
   }
 
-  function save(): Promise<void> {
+  // True when the write landed, so a caller with something to say after it knows the status bar is
+  // not holding a failure it would be talking over.
+  function save(): Promise<boolean> {
     return options.bridge.writeBoard(options.projectPath, state.board).then(
       // A write that lands clears the failure it replaces; nothing else knows the message is stale.
-      () => options.onError(''),
-      (error: unknown) => options.onError(`Board not saved: ${String(error)}`),
+      () => {
+        options.onError('');
+        return true;
+      },
+      (error: unknown) => {
+        options.onError(`Board not saved: ${String(error)}`);
+        return false;
+      },
     );
   }
 
   // Redraws either way — a keystroke that changed nothing still has to put the screen back, such as
   // Escape out of an edit — but only writes the file when the board actually moved.
   // Settles once the write has, so a caller that has to tell someone the file changed can wait for it.
-  function apply(next: BoardState): Promise<void> {
-    let written = Promise.resolve();
+  function apply(next: BoardState): Promise<boolean> {
+    let written = Promise.resolve(true);
     if (next !== state) {
       state = next;
       written = save();
@@ -325,7 +352,15 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (field === 'pullRequest' && value.trim() !== '' && pullRequestFrom(value) === null) {
       options.onError(`"${value.trim()}" is not a pull request number — write 14 or #14`);
     }
-    apply(COMMITS[field](state, value));
+    // The card you just wrote may no longer match the filter, and the redraw has taken it off screen.
+    // Said once the write lands, since a write that lands clears the status bar.
+    void apply(COMMITS[field](state, value)).then((saved) => {
+      if (!saved) return;
+      const edited = card === undefined ? undefined : cardById(state.board, card.id);
+      if (edited && !cardMatches(state.board, edited, filter, Date.now())) {
+        options.onError(`"${edited.title}" is hidden by the filter — Shift+F shows every card`);
+      }
+    });
     element.focus();
   }
 
@@ -592,24 +627,65 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (id === '') return;
     const at = selectionOf(state.board, id);
     if (!at) return options.onError('That card belongs to another project — a card stays on the board it was made on');
-    moveThenShip(at, dropCard(state.board, at, columnIndex, rowUnder(list, event.clientY)), 'drop');
+    const row = realRow(visible, columnIndex, rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length);
+    moveThenShip(at, dropCard(state.board, at, columnIndex, row), 'drop');
+  }
+
+  // The mouse half of `s`: selects the column, then sorts it. On the manager, the stacked board's own
+  // mousedown has already made this board the active one by the time the click lands.
+  function sortColumnAt(columnIndex: number): void {
+    element.focus({ preventScroll: true });
+    if (busy()) return sayIfUnread();
+    state = { ...state, selection: settleSelection(visible, { column: columnIndex, card: state.selection.card }) };
+    change(sortColumn(state.board, state.selection));
+  }
+
+  function resetFilter(): void {
+    filter = emptyFilter();
+    render();
+    element.focus({ preventScroll: true });
+  }
+
+  // Each edit redraws the board behind the dialog, so you see what a choice keeps as you make it.
+  function openFilter(): void {
+    void openFilterDialog(filter, (next) => {
+      filter = next;
+      render();
+    }).then((next) => {
+      filter = next;
+      element.focus({ preventScroll: true });
+      render();
+    });
   }
 
   function render(): void {
     inFlight = new Map(options.worktrees()
       .filter((entry) => entry.projectPath === options.projectPath)
       .map((entry) => [entry.cardId, entry]));
-    element.replaceChildren(...state.board.columns.map((column, columnIndex) => {
+    visible = visibleRows(state.board, filter, Date.now());
+    // While a box is open the selection is the card being typed into, and it stays on screen; moving
+    // the selection off it would put the box on another card.
+    if (editing === null) {
+      const settled = settleSelection(visible, state.selection);
+      if (settled !== state.selection) state = { ...state, selection: settled };
+    } else {
+      visible = keepingRow(visible, state.selection);
+    }
+    const columns = document.createElement('div');
+    columns.className = 'board-columns';
+    columns.append(...state.board.columns.map((column, columnIndex) => {
       const section = document.createElement('section');
       section.className = 'board-column';
       const heading = document.createElement('h2');
       const count = document.createElement('span');
       count.className = 'board-count';
-      count.textContent = String(column.cards.length);
-      heading.append(icon(columnIcon(column.name)), column.name, count);
+      count.textContent = isFilterActive(filter)
+        ? `${visible[columnIndex].length}/${column.cards.length}`
+        : String(column.cards.length);
+      heading.append(icon(columnIcon(column.name)), column.name, sortButton(() => sortColumnAt(columnIndex)), count);
       const list = document.createElement('ul');
-      list.append(...column.cards.map((card, cardIndex) =>
-        renderCard(card, columnIndex === state.selection.column && cardIndex === state.selection.card)));
+      list.append(...visible[columnIndex].map((cardIndex) =>
+        renderCard(column.cards[cardIndex], columnIndex === state.selection.column && cardIndex === state.selection.card)));
       // On the whole column, not the cards in it: a column you can only drop onto by hitting a card is
       // a column you cannot drop into once it is empty, and the heading and the gap under the last card
       // are both places a hand aims at. preventDefault is what makes the column a place a card can be
@@ -641,16 +717,17 @@ export function createBoardView(options: BoardOptions): BoardView {
       section.addEventListener('dragleave', (event) => {
         if (!(event.relatedTarget instanceof Node) || !section.contains(event.relatedTarget)) clearDrop();
       });
-      if (column.cards.length === 0) {
+      if (visible[columnIndex].length === 0) {
         const empty = document.createElement('p');
         empty.className = 'board-empty';
-        empty.textContent = 'n adds a card';
+        empty.textContent = column.cards.length === 0 ? 'n adds a card' : 'No card matches the filter';
         section.append(heading, list, empty);
         return section;
       }
       section.append(heading, list);
       return section;
     }));
+    element.replaceChildren(filterBar(filter, visible, state.board, resetFilter), columns);
     element.querySelector(SELECTED_CARD)?.scrollIntoView({ block: 'nearest' });
     options.onChanged();
   }
@@ -759,7 +836,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     }).then((id) => {
       element.focus();
       const found = id === undefined ? null : selectionOf(state.board, id);
-      if (found) state = { ...state, selection: found };
+      if (found) {
+        state = { ...state, selection: found };
+        // You asked for that card by name; a filter hiding it would put the selection somewhere else.
+        const card = cardAt(state.board, found);
+        if (card && !cardMatches(state.board, card, filter, Date.now())) filter = emptyFilter();
+      }
       render();
     });
   }
@@ -805,6 +887,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       // them taking the keyboard would drag it to a different project. A project's own board fills its
       // page and has nothing to be scrolled into view, so it costs that screen nothing.
       element.focus({ preventScroll: true });
+      filter = emptyFilter();
       await readAgain(true);
       const found = aim.spend(state.board);
       if (found) {
@@ -835,11 +918,24 @@ export function createBoardView(options: BoardOptions): BoardView {
     // key handling of its own, which is what stops a board key and its help row drifting apart.
     runAction(action: Action): void {
       if (busy()) return sayIfUnread();
+      if (actsOnHiddenCard(state.board, visible, state.selection, action.kind)) {
+        return options.onError('The filter hides every card in this column — Shift+F shows them again');
+      }
       switch (action.kind) {
-        case 'board-select':
-          state = { ...state, selection: moveSelection(state.board, state.selection, action.direction) };
+        case 'board-select': {
+          // Without a filter every row is shown, and the arrows keep the rule they always had.
+          const selection = isFilterActive(filter)
+            ? stepSelection(visible, state.selection, action.direction)
+            : moveSelection(state.board, state.selection, action.direction);
+          state = { ...state, selection };
           return render();
+        }
         case 'board-move':
+          // Up and down trade places with the next card you can see, not one the filter hides.
+          if (isFilterActive(filter) && (action.direction === 'up' || action.direction === 'down')) {
+            const row = reorderRow(visible, state.selection, action.direction);
+            return row === null ? undefined : change(dropCard(state.board, state.selection, state.selection.column, row));
+          }
           // The row the card is leaving, which both halves of a ship need: whether this move is the
           // gesture at all, and where the card goes back to once the ship works.
           return moveThenShip(
@@ -859,6 +955,8 @@ export function createBoardView(options: BoardOptions): BoardView {
         case 'board-edit': return startEditing(action.field);
         case 'board-priority': return change(cyclePriority(state.board, state.selection));
         case 'board-sort': return change(sortColumn(state.board, state.selection));
+        case 'board-filter': return openFilter();
+        case 'board-filter-reset': return resetFilter();
         case 'board-add':
           apply(addBlankCard(state, crypto.randomUUID()));
           return startEditing('title');

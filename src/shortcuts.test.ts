@@ -81,6 +81,12 @@ describe('mapShortcut', () => {
     expect(mapShortcut(key({ code: 'ArrowUp' }), mac, 'terminals')).toBeNull();
   });
 
+  it('opens the filter on F and clears it on Shift+F, on the board only', () => {
+    expect(mapShortcut(key({ code: 'KeyF' }), mac, 'board')).toEqual({ kind: 'board-filter' });
+    expect(mapShortcut(key({ code: 'KeyF', shiftKey: true }), mac, 'board')).toEqual({ kind: 'board-filter-reset' });
+    expect(mapShortcut(key({ code: 'KeyF' }), mac, 'terminals')).toBeNull();
+  });
+
   it('follows a rebinding, and the pass-through rule follows it too', () => {
     const rebound = bindKey(defaultSettings(true), 'mode-nvim', 'Ctrl+J').keys;
     expect(mapShortcut(key({ code: 'KeyN', ctrlKey: true }), rebound, 'board')).toBeNull();

@@ -1,5 +1,6 @@
+import type { Action } from './actions';
 import { timeOf } from './age';
-import { childrenOf, PRIORITIES, type Board, type Card, type Priority, type Selection } from './board';
+import { cardAt, childrenOf, PRIORITIES, type Board, type Card, type Priority, type Selection } from './board';
 import { clampIndex } from './clamp-index';
 import type { Direction } from './terminals';
 
@@ -125,7 +126,19 @@ export function filterSummary(filter: BoardFilter): string {
 export function settleSelection(visible: number[][], selection: Selection): Selection {
   const rows = visible[selection.column] ?? [];
   if (rows.includes(selection.card)) return selection;
-  return { column: selection.column, card: rows[0] ?? 0 };
+  const card = rows[0] ?? 0;
+  // The same object when nothing moves, because render settles on every draw.
+  return card === selection.card ? selection : { column: selection.column, card };
+}
+
+// The rows with the selected card among them, whatever the filter says. A card you are typing into
+// stays on screen until you finish — a blank new card matches no text, and its box would never draw.
+export function keepingRow(visible: number[][], selection: Selection): number[][] {
+  const rows = visible[selection.column];
+  if (rows === undefined || rows.includes(selection.card)) return visible;
+  return visible.map((entry, column) => (column === selection.column
+    ? [...entry, selection.card].sort((first, second) => first - second)
+    : entry));
 }
 
 // The arrows over a filtered board. Up and down walk the rows the filter keeps; left and right keep
@@ -161,4 +174,18 @@ export function realRow(visible: number[][], column: number, visibleRow: number,
   const rows = visible[column] ?? [];
   if (visibleRow < rows.length) return rows[visibleRow];
   return rows.length === 0 ? columnLength : rows[rows.length - 1] + 1;
+}
+
+// The board keys that act on the selected card rather than on the board or the column. Moving,
+// renaming, deleting a card the filter hides would be acting on a card you cannot see.
+const CARD_ACTIONS: readonly Action['kind'][] = [
+  'board-move', 'board-attach', 'board-detach', 'board-edit', 'board-priority', 'board-delete', 'board-open',
+];
+
+// Whether this key would land on a card the filter is hiding. Only happens in a column where the
+// filter keeps nothing, which still selects row 0 — and row 0 is a real card.
+export function actsOnHiddenCard(board: Board, visible: number[][], selection: Selection, kind: Action['kind']): boolean {
+  return CARD_ACTIONS.includes(kind)
+    && cardAt(board, selection) !== undefined
+    && !(visible[selection.column] ?? []).includes(selection.card);
 }
