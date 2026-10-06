@@ -36,14 +36,18 @@ const config: ForgeConfig = {
     // access (Documents, Desktop, ...) against an ad hoc app's exact hash, so every rebuild asked for
     // every folder again. Against a certificate it remembers "this id, signed by this certificate",
     // which survives rebuilds. Delete or recreate the certificate and the prompts return once.
+    // README.md's Install section says how to make it.
     // identityValidation off: the certificate is untrusted, so the signer would refuse to find it.
     // hardenedRuntime off: it turns on library validation, and a self-signed certificate has no team
     // identity, so the app binary is refused its own Electron Framework and the app dies at launch
     // with "different Team IDs". Hardened runtime only buys notarization, which this build cannot
     // have anyway. timestamp none: a real certificate makes the signer ask Apple's timestamp server
-    // for every file, which buys nothing here, takes half a second each, and when the server is
-    // unreachable the packager swallows the failure and ships the unsigned prebuilt binary.
+    // for every file, which buys nothing here and takes half a second each.
+    // continueOnError off: the packager otherwise turns any signing failure (certificate missing,
+    // keychain locked, two certificates with this name) into one warning line and ships the
+    // prebuilt binary's signature, and scripts/rebuild.sh installs it over the working app.
     osxSign: {
+      continueOnError: false,
       identity: 'Dashboard Local',
       identityValidation: false,
       optionsForFile: () => ({ hardenedRuntime: false, timestamp: 'none' }),
