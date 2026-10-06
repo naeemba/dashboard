@@ -76,7 +76,18 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "de4da884-2bdf-4cff-a457-35146369907b",
+          "title": "Backlog column, board filter and a sort button",
+          "notes": "Backlog column left of Todo, added to every board on read; a filter over every card field that hides cards, with a reset; a sort-by-priority button on each column heading.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-06T18:31:32.238Z",
+          "updatedAt": "2026-10-06T18:31:32.364Z",
+          "branch": "board-backlog-filter"
+        }
+      ]
     },
     {
       "name": "Review",
