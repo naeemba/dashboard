@@ -135,6 +135,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'The arrows walk the list and Left and Right change a field, and the board behind narrows as '
     + 'you choose. Cards that do not match are hidden, each heading counts what is shown against what '
     + 'is there, and a strip over the columns says what the filter is with a Reset button beside it. '
+    + 'A card you change so that it no longer matches stays until you move off it, so the next key '
+    + 'still acts on it, and the status bar says it is hidden. '
     + 'The filter is gone when you leave the board. While one is on, the arrows walk only the cards '
     + 'you can see and Shift with Up or Down swaps a card with the next one shown. '
     + 'Each column\'s heading has a sort button that sorts it by priority, urgent first, as s does. '

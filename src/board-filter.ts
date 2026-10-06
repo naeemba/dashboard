@@ -209,9 +209,26 @@ export function rowsToDraw(
   return { visible, selection: settleSelection(visible, selection) };
 }
 
+// The card a change acted on, for keepsSelection to hold on screen: the selected card if the change
+// made or altered it, or if it was already the one selected. A delete leaves the selection on the
+// neighbour that slid into the gap, untouched and not selected before, so that one gets null — or a
+// filter hiding it would keep it drawn and selected after you deleted something else. Unchanged cards
+// keep their object across a change in board.ts, so identity is what says a card was touched.
+export function changedCard(before: Board, beforeSelection: Selection, after: Board, afterSelection: Selection): string | null {
+  const card = cardAt(after, afterSelection);
+  if (!card) return null;
+  const earlier = before.columns.flatMap((column) => column.cards).find((entry) => entry.id === card.id);
+  return earlier !== card || cardAt(before, beforeSelection)?.id === card.id ? card.id : null;
+}
+
 // The selected card when the filter does not match it, which is the one a change left drawn only
-// because you were on it. The board says so, or the card vanishes the moment you step off it.
-export function hiddenSelectedCard(board: Board, selection: Selection, filter: BoardFilter, now: number): Card | undefined {
+// because you were on it. The board says so, or the card vanishes the moment you step off it. Not
+// while you are typing into it: `n` opens a blank card no text filter matches, and the warning that
+// counts is the one after Enter, about the title you wrote.
+export function hiddenSelectedCard(
+  board: Board, selection: Selection, filter: BoardFilter, now: number, typing: boolean,
+): Card | undefined {
+  if (typing) return undefined;
   const card = cardAt(board, selection);
   return card && !cardMatches(board, card, filter, now) ? card : undefined;
 }

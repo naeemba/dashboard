@@ -31,6 +31,7 @@ import { openCardDetail, type CardDetail } from './board-detail';
 import {
   actsOnHiddenCard,
   filterAfterPicking,
+  changedCard,
   hiddenSelectedCard,
   keepsSelection,
   emptyFilter,
@@ -280,11 +281,11 @@ export function createBoardView(options: BoardOptions): BoardView {
   function apply(next: BoardState): Promise<boolean> {
     let written = Promise.resolve(true);
     if (next !== state) {
+      changedCardId = changedCard(state.board, state.selection, next.board, next.selection);
       state = next;
-      changedCardId = cardAt(state.board, state.selection)?.id ?? null;
       // Said once the write lands, since a write that lands clears the status bar.
       written = save().then((saved) => {
-        const hidden = saved ? hiddenSelectedCard(state.board, state.selection, filter, Date.now()) : undefined;
+        const hidden = saved ? hiddenSelectedCard(state.board, state.selection, filter, Date.now(), editing !== null) : undefined;
         if (hidden) options.onError(`"${hidden.title}" is hidden by the filter — Shift+F shows every card`);
         return saved;
       });
