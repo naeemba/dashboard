@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import {
-  actsOnHiddenCard, cardMatches, keepingRow, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, keepingRow, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -209,5 +209,24 @@ describe('keepingRow', () => {
   });
   it('hands back the same rows when the card is already shown', () => {
     expect(keepingRow(visible, { column: 0, card: 1 })).toBe(visible);
+  });
+});
+
+describe('rowsToDraw', () => {
+  it('keeps a hidden selected card on screen while a box is open on it', () => {
+    const selection = { column: 0, card: 2 };
+    const drawn = rowsToDraw(visible, selection, true);
+    expect(drawn.selection).toBe(selection);
+    expect(drawn.visible[0]).toEqual([1, 2, 3]);
+  });
+
+  it('settles a hidden selection when nothing is being typed', () => {
+    expect(rowsToDraw(visible, { column: 0, card: 2 }, false))
+      .toEqual({ visible, selection: { column: 0, card: 1 } });
+  });
+
+  it('keeps the new card a filter would hide, on a column the filter empties', () => {
+    const selection = { column: 2, card: 3 };
+    expect(rowsToDraw(visible, selection, true).visible[2]).toEqual([3]);
   });
 });

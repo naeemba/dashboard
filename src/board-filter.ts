@@ -189,3 +189,13 @@ export function actsOnHiddenCard(board: Board, visible: number[][], selection: S
     && cardAt(board, selection) !== undefined
     && !(visible[selection.column] ?? []).includes(selection.card);
 }
+
+// What the board draws and where the selection rests, once per render. While a box is open — or about
+// to open, as `n` does on a blank card no filter matches — the selection is the card being typed into
+// and it stays drawn; moving the selection off it would put the box on a card you did not open.
+export function rowsToDraw(
+  visible: number[][], selection: Selection, typing: boolean,
+): { visible: number[][]; selection: Selection } {
+  if (typing) return { visible: keepingRow(visible, selection), selection };
+  return { visible, selection: settleSelection(visible, selection) };
+}

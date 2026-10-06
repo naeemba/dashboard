@@ -33,9 +33,9 @@ import {
   cardMatches,
   emptyFilter,
   isFilterActive,
-  keepingRow,
   realRow,
   reorderRow,
+  rowsToDraw,
   settleSelection,
   stepSelection,
   visibleRows,
@@ -320,7 +320,12 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   function startEditing(field: EditableField): void {
-    if (!cardAt(state.board, state.selection)) return;
+    // `n` sets the field before its blank card is drawn; with no card to open, leaving it set would
+    // make the board busy for good.
+    if (!cardAt(state.board, state.selection)) {
+      editing = null;
+      return;
+    }
     editing = field;
     render();
     const input = editorInput();
@@ -610,15 +615,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     inFlight = new Map(options.worktrees()
       .filter((entry) => entry.projectPath === options.projectPath)
       .map((entry) => [entry.cardId, entry]));
-    visible = visibleRows(state.board, filter, Date.now());
-    // While a box is open the selection is the card being typed into, and it stays on screen; moving
-    // the selection off it would put the box on another card.
-    if (editing === null) {
-      const settled = settleSelection(visible, state.selection);
-      if (settled !== state.selection) state = { ...state, selection: settled };
-    } else {
-      visible = keepingRow(visible, state.selection);
-    }
+    const drawn = rowsToDraw(visibleRows(state.board, filter, Date.now()), state.selection, editing !== null);
+    visible = drawn.visible;
+    if (drawn.selection !== state.selection) state = { ...state, selection: drawn.selection };
     const columns = document.createElement('div');
     columns.className = 'board-columns';
     columns.append(...state.board.columns.map((column, columnIndex) => {
@@ -906,6 +905,9 @@ export function createBoardView(options: BoardOptions): BoardView {
         case 'board-filter': return openFilter();
         case 'board-filter-reset': return resetFilter();
         case 'board-add':
+          // Set before the blank card is drawn, so the draw keeps it on screen under a filter it does
+          // not match and the box opens on it rather than on whatever card the selection settled on.
+          editing = 'title';
           apply(addBlankCard(state, crypto.randomUUID()));
           return startEditing('title');
         case 'board-delete': return confirmDelete();
