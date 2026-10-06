@@ -9,7 +9,7 @@ import {
   Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
-import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN } from './board';
+import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from './board';
 import type { Mode } from './modes';
 
 const ICONS = {
@@ -107,7 +107,7 @@ export function iconButton(className: string, glyph: IconName, text: string, onC
 // A board column's glyph, by what the column means rather than where it sits. Column names are free
 // text, so a column this list does not know gets the plain board icon.
 const COLUMN_GLYPHS: Record<string, IconName> = {
-  [BACKLOG_COLUMN.toLowerCase()]: 'backlog', todo: 'todo', doing: 'doing', [SHIP_COLUMN.toLowerCase()]: 'ship', [REVIEW_COLUMN.toLowerCase()]: 'review',
+  [BACKLOG_COLUMN.toLowerCase()]: 'backlog', [TODO_COLUMN.toLowerCase()]: 'todo', doing: 'doing', [SHIP_COLUMN.toLowerCase()]: 'ship', [REVIEW_COLUMN.toLowerCase()]: 'review',
   [DONE_COLUMN.toLowerCase()]: 'done',
 };
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import {
-  actsOnHiddenCard, cardMatches, keepingRow, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -67,8 +67,8 @@ describe('cardMatches', () => {
   });
 
   it('measures created and updated against now', () => {
-    expect(matches(card({ createdAt: daysAgo(0.5) }), { created: 'today' })).toBe(true);
-    expect(matches(card({ createdAt: daysAgo(2) }), { created: 'today' })).toBe(false);
+    expect(matches(card({ createdAt: daysAgo(0.5) }), { created: 'day' })).toBe(true);
+    expect(matches(card({ createdAt: daysAgo(2) }), { created: 'day' })).toBe(false);
     expect(matches(card({ createdAt: daysAgo(6) }), { created: 'week' })).toBe(true);
     expect(matches(card({ createdAt: daysAgo(20) }), { created: 'month' })).toBe(true);
     expect(matches(card({ createdAt: daysAgo(40) }), { created: 'older' })).toBe(true);
@@ -78,7 +78,7 @@ describe('cardMatches', () => {
 
   it('never places a card with no timestamp on an age', () => {
     expect(matches(card({}), { created: 'older' })).toBe(false);
-    expect(matches(card({}), { updated: 'today' })).toBe(false);
+    expect(matches(card({}), { updated: 'day' })).toBe(false);
     expect(matches(card({}), { created: 'any' })).toBe(true);
   });
 
@@ -102,7 +102,7 @@ describe('filterSummary', () => {
     expect(filterSummary(filter({ priorities: ['urgent', 'high'], branch: 'has', text: 'resize' })))
       .toBe('"resize" · urgent, high · has branch');
     expect(filterSummary(filter({ family: 'subtasks', created: 'week', comments: 'none' })))
-      .toBe('subtasks · no comments · created in 7 days');
+      .toBe('subtasks · no comments · created in the last 7 days');
   });
 
   it('lists priorities in rank order whatever order they were picked in', () => {
@@ -228,6 +228,53 @@ describe('rowsToDraw', () => {
   it('keeps the new card a filter would hide, on a column the filter empties', () => {
     const selection = { column: 2, card: 3 };
     expect(rowsToDraw(visible, selection, true).visible[2]).toEqual([3]);
+  });
+});
+
+describe('keepsSelection', () => {
+  const board = boardOf([card({ id: 'a' }), card({ id: 'c' })]);
+
+  it('keeps the card a change just landed on while the selection is on it', () => {
+    expect(keepsSelection(board, { column: 0, card: 1 }, false, 'c')).toBe(true);
+  });
+  it('lets it go once the selection moves off it', () => {
+    expect(keepsSelection(board, { column: 0, card: 0 }, false, 'c')).toBe(false);
+    expect(keepsSelection(board, { column: 0, card: 1 }, false, null)).toBe(false);
+  });
+  it('keeps the card being typed into', () => {
+    expect(keepsSelection(board, { column: 0, card: 0 }, true, null)).toBe(true);
+  });
+
+  it('leaves the selection on a card a change took out of the filter', () => {
+    // Todo shows A and C under `urgent`; `p` on C takes it to high.
+    const changed = boardOf([card({ id: 'a', priority: 'urgent' }), card({ id: 'b' }), card({ id: 'c', priority: 'high' })]);
+    const selection = { column: 0, card: 2 };
+    const rows = visibleRows(changed, filter({ priorities: ['urgent'] }), now);
+    const drawn = rowsToDraw(rows, selection, keepsSelection(changed, selection, false, 'c'));
+    expect(drawn.selection).toBe(selection);
+    expect(drawn.visible[0]).toEqual([0, 2]);
+  });
+});
+
+describe('hiddenSelectedCard', () => {
+  const board = boardOf([card({ id: 'a', priority: 'urgent' }), card({ id: 'b' })]);
+  const urgent = filter({ priorities: ['urgent'] });
+  it('is the selected card when the filter does not match it', () => {
+    expect(hiddenSelectedCard(board, { column: 0, card: 1 }, urgent, now)?.id).toBe('b');
+  });
+  it('is undefined when the filter matches it', () => {
+    expect(hiddenSelectedCard(board, { column: 0, card: 0 }, urgent, now)).toBeUndefined();
+  });
+});
+
+describe('filterAfterPicking', () => {
+  const board = boardOf([card({ id: 'a', priority: 'urgent' }), card({ id: 'b' })]);
+  const urgent = filter({ priorities: ['urgent'] });
+  it('drops a filter that hides the card picked by name', () => {
+    expect(filterAfterPicking(board, board.columns[0].cards[1], urgent, now)).toEqual(emptyFilter());
+  });
+  it('keeps a filter the card matches', () => {
+    expect(filterAfterPicking(board, board.columns[0].cards[0], urgent, now)).toBe(urgent);
   });
 });
 

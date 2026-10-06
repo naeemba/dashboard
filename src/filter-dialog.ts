@@ -1,5 +1,5 @@
 import { PRIORITIES, type Priority } from './board';
-import { AGES, emptyFilter, FAMILIES, PRESENCES, type BoardFilter } from './board-filter';
+import { AGE_WORDS, AGES, emptyFilter, FAMILIES, PRESENCES, type BoardFilter } from './board-filter';
 import { openOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
@@ -75,7 +75,11 @@ function rowValue(filter: BoardFilter, row: FilterRow): string {
     case 'text': return '';
     case 'reset': return 'clear every field';
     case 'priority': return filter.priorities.includes(row.label) ? 'on' : 'off';
-    case 'choice': return filter[row.field];
+    case 'choice': {
+      if (row.field !== 'created' && row.field !== 'updated') return filter[row.field];
+      const age = filter[row.field];
+      return age === 'any' ? age : AGE_WORDS[age];
+    }
   }
 }
 
@@ -117,9 +121,11 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
       draw();
     }
 
+    // Built once and only updated after: moving the text box into a fresh row on every keystroke
+    // would cancel a composition in progress, so Option+E then E would filter on a lone accent.
     function renderRow(row: FilterRow, index: number): HTMLElement {
       const item = document.createElement('li');
-      item.className = `filter-row${index === highlighted ? ' highlighted' : ''}`;
+      item.className = 'filter-row';
       const label = document.createElement('span');
       label.className = 'filter-label';
       label.textContent = row.label;
@@ -129,7 +135,6 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
       } else {
         const value = document.createElement('span');
         value.className = 'filter-value';
-        value.textContent = rowValue(filter, row);
         item.append(value);
       }
       // A click moves the highlight to the row, then does what Enter does there — Right on a choice,
@@ -141,8 +146,15 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
       return item;
     }
 
+    const items = rows.map(renderRow);
+    list.append(...items);
+
     function draw(): void {
-      list.replaceChildren(...rows.map(renderRow));
+      items.forEach((item, index) => {
+        item.classList.toggle('highlighted', index === highlighted);
+        const value = item.querySelector('.filter-value');
+        if (value) value.textContent = rowValue(filter, rows[index]);
+      });
       // The box has the keyboard while its row is highlighted; otherwise the dialog does, or a
       // keystroke meant for a priority would be typed into the box.
       if (rows[highlighted].kind === 'text') text.focus();

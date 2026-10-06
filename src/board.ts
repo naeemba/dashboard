@@ -182,10 +182,12 @@ function withColumn(board: Board, name: string, at: number): Board {
 }
 
 // Every board written before Ship existed has three columns, and getting the fourth should not mean
-// hand-editing a file. Inserted second, where it belongs, and empty, so a project that never ships a
-// card pays nothing for it.
+// hand-editing a file. Inserted just right of Todo, where it belongs — or second on a board with no
+// Todo — and empty, so a project that never ships a card pays nothing for it. Placed by name, so a
+// board that already has Backlog in front of Todo does not get Ship between the two.
 export function withShipColumn(board: Board): Board {
-  return withColumn(board, SHIP_COLUMN, 1);
+  const todo = columnNamed(board, TODO_COLUMN);
+  return withColumn(board, SHIP_COLUMN, todo === -1 ? 1 : todo + 1);
 }
 
 // The manager's board has nothing to ship from, so it has no Ship column to move a card into. Only an
@@ -207,16 +209,21 @@ export function withReviewColumn(board: Board): Board {
   return withColumn(board, REVIEW_COLUMN, done === -1 ? board.columns.length : done);
 }
 
-// The same repair for Backlog: always the first column. Run after the Ship repair, which counts
-// from the left, or Ship would land between Backlog and Todo.
+// The same repair for Backlog, put in as the first column. One already there stays where it is.
 export function withBacklogColumn(board: Board): Board {
   return withColumn(board, BACKLOG_COLUMN, 0);
 }
 
-// Whether cards in this column have not been started: Backlog and Todo, and on a board with neither
-// the first column. The subtask bar draws these as waiting rather than under way.
+// Where a card nobody has placed belongs: Backlog, wherever it sits, and the first column on a board
+// without one.
+export function backlogColumnIndex(board: Board): number {
+  return Math.max(columnNamed(board, BACKLOG_COLUMN), 0);
+}
+
+// Whether cards in this column have not been started: Backlog and Todo. The subtask bar draws these
+// as waiting rather than under way.
 export function isWaitingColumn(board: Board, index: number): boolean {
-  return index === 0 || index === columnNamed(board, TODO_COLUMN);
+  return index === backlogColumnIndex(board) || index === columnNamed(board, TODO_COLUMN);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {

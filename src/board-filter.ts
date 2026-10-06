@@ -8,7 +8,7 @@ import type { Direction } from './terminals';
 // leave, so nothing here is ever written to the file.
 export type Presence = 'any' | 'has' | 'none';
 export type Family = 'any' | 'top-level' | 'subtasks' | 'parents';
-export type Age = 'any' | 'today' | 'week' | 'month' | 'older';
+export type Age = 'any' | 'day' | 'week' | 'month' | 'older';
 export type BoardFilter = {
   // Looked for in the title, the description, the comments and the branch.
   text: string;
@@ -26,11 +26,11 @@ export type BoardFilter = {
 // The order Left and Right walk each choice in.
 export const PRESENCES: readonly Presence[] = ['any', 'has', 'none'];
 export const FAMILIES: readonly Family[] = ['any', 'top-level', 'subtasks', 'parents'];
-export const AGES: readonly Age[] = ['any', 'today', 'week', 'month', 'older'];
+export const AGES: readonly Age[] = ['any', 'day', 'week', 'month', 'older'];
 
 const DAY = 86_400_000;
 // How far back each window reaches. `older` is the far side of `month`, so a card is in one of the two.
-const WINDOW_DAYS: Record<Exclude<Age, 'any' | 'older'>, number> = { today: 1, week: 7, month: 30 };
+const WINDOW_DAYS: Record<Exclude<Age, 'any' | 'older'>, number> = { day: 1, week: 7, month: 30 };
 
 export function emptyFilter(): BoardFilter {
   return {
@@ -93,8 +93,10 @@ export function visibleRows(board: Board, filter: BoardFilter, now: number): num
 }
 
 const PRESENCE_WORDS: Record<Exclude<Presence, 'any'>, string> = { has: 'has', none: 'no' };
-const AGE_WORDS: Record<Exclude<Age, 'any'>, string> = {
-  today: 'today', week: 'in 7 days', month: 'in 30 days', older: 'over 30 days ago',
+// The windows in words, for the strip and the dialog alike. `day` is the last 24 hours, not since
+// midnight, so it is never called today.
+export const AGE_WORDS: Record<Exclude<Age, 'any'>, string> = {
+  day: 'in the last day', week: 'in the last 7 days', month: 'in the last 30 days', older: 'over 30 days ago',
 };
 
 function presenceWords(presence: Presence, noun: string): string {
@@ -190,14 +192,34 @@ export function actsOnHiddenCard(board: Board, visible: number[][], selection: S
     && !(visible[selection.column] ?? []).includes(selection.card);
 }
 
-// What the board draws and where the selection rests, once per render. While a box is open — or about
-// to open, as `n` does on a blank card no filter matches — the selection is the card being typed into
-// and it stays drawn; moving the selection off it would put the box on a card you did not open.
+// Whether the selected card stays drawn whatever the filter says. While a box is open — or about to
+// open, as `n` does on a blank card no filter matches — it is the card being typed into, and moving
+// the selection off it would put the box on a card you did not open. The card you last changed stays
+// too, until the selection leaves it: `p` that takes it out of an `urgent` filter would otherwise hand
+// the selection to another card, and the second `p` would change that one.
+export function keepsSelection(board: Board, selection: Selection, typing: boolean, changedCardId: string | null): boolean {
+  return typing || (changedCardId !== null && cardAt(board, selection)?.id === changedCardId);
+}
+
+// What the board draws and where the selection rests, once per render.
 export function rowsToDraw(
-  visible: number[][], selection: Selection, typing: boolean,
+  visible: number[][], selection: Selection, keep: boolean,
 ): { visible: number[][]; selection: Selection } {
-  if (typing) return { visible: keepingRow(visible, selection), selection };
+  if (keep) return { visible: keepingRow(visible, selection), selection };
   return { visible, selection: settleSelection(visible, selection) };
+}
+
+// The selected card when the filter does not match it, which is the one a change left drawn only
+// because you were on it. The board says so, or the card vanishes the moment you step off it.
+export function hiddenSelectedCard(board: Board, selection: Selection, filter: BoardFilter, now: number): Card | undefined {
+  const card = cardAt(board, selection);
+  return card && !cardMatches(board, card, filter, now) ? card : undefined;
+}
+
+// The filter once you have picked a card by name in the search. A filter hiding it would settle the
+// selection onto some other card, so it is dropped.
+export function filterAfterPicking(board: Board, card: Card, filter: BoardFilter, now: number): BoardFilter {
+  return cardMatches(board, card, filter, now) ? filter : emptyFilter();
 }
 
 // The row of the card above the selection on screen, for Tab to attach to, or -1 when nothing you

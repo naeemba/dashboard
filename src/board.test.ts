@@ -1036,4 +1036,9 @@ describe('isWaitingColumn', () => {
     expect(isWaitingColumn(board, 0)).toBe(true);
     expect(isWaitingColumn(board, 1)).toBe(false);
   });
+
+  it('finds Backlog by name wherever it sits', () => {
+    const board = { columns: ['Todo', 'Doing', 'Backlog', 'Done'].map((name) => ({ name, cards: [] })) };
+    expect([0, 1, 2, 3].map((index) => isWaitingColumn(board, index))).toEqual([true, false, true, false]);
+  });
 });

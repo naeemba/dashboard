@@ -246,6 +246,12 @@ describe('parseBoard', () => {
     expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
+  it('puts Ship after Todo on a board that already has Backlog in front of it', () => {
+    const names = ['Backlog', 'Todo', 'Doing', 'Done'];
+    const text = JSON.stringify({ columns: names.map((name) => ({ name, cards: [] })) });
+    expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+  });
+
   it('fills in a missing cards array and missing notes', () => {
     const board = parseBoard('{"columns":[{"name":"Todo"},{"name":"Doing","cards":[{"id":"1","title":"a"}]}]}');
     expect(board.columns[1].cards).toEqual([]);

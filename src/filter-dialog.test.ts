@@ -23,7 +23,7 @@ describe('filter rows', () => {
   it('cycles a choice both ways and wraps', () => {
     expect(applyRowKey(emptyFilter(), row('Branch'), 'ArrowRight').branch).toBe('has');
     expect(applyRowKey(emptyFilter(), row('Branch'), 'ArrowLeft').branch).toBe('none');
-    expect(applyRowKey(emptyFilter(), row('Created'), 'ArrowRight').created).toBe('today');
+    expect(applyRowKey(emptyFilter(), row('Created'), 'ArrowRight').created).toBe('day');
     expect(applyRowKey(emptyFilter(), row('Subtasks'), 'ArrowLeft').family).toBe('parents');
   });
 

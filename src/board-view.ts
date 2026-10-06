@@ -30,7 +30,9 @@ import type { Action } from './actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import {
   actsOnHiddenCard,
-  cardMatches,
+  filterAfterPicking,
+  hiddenSelectedCard,
+  keepsSelection,
   emptyFilter,
   isFilterActive,
   realRow,
@@ -182,6 +184,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   let filter: BoardFilter = emptyFilter();
   // The rows the filter keeps, worked out once per render, which the keys and the drop then read.
   let visible: number[][] = [];
+  // The card the last change landed on, kept drawn while the selection is on it.
+  let changedCardId: string | null = null;
 
   // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
   // step is gone, which is what entering a board means. Without it the file simply changed under you
@@ -277,7 +281,13 @@ export function createBoardView(options: BoardOptions): BoardView {
     let written = Promise.resolve(true);
     if (next !== state) {
       state = next;
-      written = save();
+      changedCardId = cardAt(state.board, state.selection)?.id ?? null;
+      // Said once the write lands, since a write that lands clears the status bar.
+      written = save().then((saved) => {
+        const hidden = saved ? hiddenSelectedCard(state.board, state.selection, filter, Date.now()) : undefined;
+        if (hidden) options.onError(`"${hidden.title}" is hidden by the filter — Shift+F shows every card`);
+        return saved;
+      });
     }
     render();
     return written;
@@ -354,15 +364,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (field === 'pullRequest' && value.trim() !== '' && pullRequestFrom(value) === null) {
       options.onError(`"${value.trim()}" is not a pull request number — write 14 or #14`);
     }
-    // The card you just wrote may no longer match the filter, and the redraw has taken it off screen.
-    // Said once the write lands, since a write that lands clears the status bar.
-    void apply(COMMITS[field](state, value)).then((saved) => {
-      if (!saved) return;
-      const edited = card === undefined ? undefined : cardById(state.board, card.id);
-      if (edited && !cardMatches(state.board, edited, filter, Date.now())) {
-        options.onError(`"${edited.title}" is hidden by the filter — Shift+F shows every card`);
-      }
-    });
+    void apply(COMMITS[field](state, value));
     element.focus();
   }
 
@@ -595,6 +597,7 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   function resetFilter(): void {
     filter = emptyFilter();
+    changedCardId = null;
     render();
     element.focus({ preventScroll: true });
   }
@@ -603,6 +606,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   function openFilter(): void {
     void openFilterDialog(filter, (next) => {
       filter = next;
+      changedCardId = null;
       render();
     }).then((next) => {
       filter = next;
@@ -615,7 +619,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     inFlight = new Map(options.worktrees()
       .filter((entry) => entry.projectPath === options.projectPath)
       .map((entry) => [entry.cardId, entry]));
-    const drawn = rowsToDraw(visibleRows(state.board, filter, Date.now()), state.selection, editing !== null);
+    const keep = keepsSelection(state.board, state.selection, editing !== null, changedCardId);
+    const drawn = rowsToDraw(visibleRows(state.board, filter, Date.now()), state.selection, keep);
     visible = drawn.visible;
     if (drawn.selection !== state.selection) state = { ...state, selection: drawn.selection };
     const filtered = isFilterActive(filter);
@@ -787,9 +792,8 @@ export function createBoardView(options: BoardOptions): BoardView {
       const found = id === undefined ? null : selectionOf(state.board, id);
       if (found) {
         state = { ...state, selection: found };
-        // You asked for that card by name; a filter hiding it would put the selection somewhere else.
         const card = cardAt(state.board, found);
-        if (card && !cardMatches(state.board, card, filter, Date.now())) filter = emptyFilter();
+        if (card) filter = filterAfterPicking(state.board, card, filter, Date.now());
       }
       render();
     });

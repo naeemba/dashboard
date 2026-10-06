@@ -76,7 +76,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'everything said about the card as the work goes on is appended to the trail instead, so an '
     + 'agent recording what it found cannot take out what you wrote. The card says how many there '
     + 'are, opening it reads them oldest first, and c writes one — from the board or from the card. '
-    + 'Backlog, the first column, is where a card waits until somebody picks it; Todo holds only what '
+    + 'Backlog is where a card waits until somebody picks it; Todo holds only what '
     + 'has been picked. Every board gets Backlog in front of Todo, and the board command puts a card '
     + 'there when it is not told a column. '
     + 'There is a Ship column, just right of Todo. Moving a card into it — rightward only — hands '
