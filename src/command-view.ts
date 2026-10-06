@@ -1,3 +1,4 @@
+import { icon } from './icons';
 import type { Action } from './actions';
 import { clampIndex, heldIndex } from './clamp-index';
 import { isBareCharacter } from './shortcuts';
@@ -53,7 +54,7 @@ export function createCommandView(options: CommandOptions): CommandView {
 
   const label = document.createElement('label');
   label.className = 'command-label';
-  label.textContent = 'Command';
+  label.append(icon('command'), 'Command');
   const input = document.createElement('input');
   input.className = 'command-input';
   input.type = 'text';
@@ -222,7 +223,7 @@ export function createCommandView(options: CommandOptions): CommandView {
     mark.className = 'command-mark';
     // A span of its own, so the name beside it holds a folder's name and nothing else — a marker
     // sharing that span crosses to the far side of a Persian name and stops lining up.
-    mark.textContent = unmarked.has(project.path) ? '▢ ' : '▣ ';
+    mark.append(icon(unmarked.has(project.path) ? 'unchecked' : 'checked'));
     const name = document.createElement('span');
     name.className = 'command-name';
     name.textContent = project.name;

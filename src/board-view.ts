@@ -51,6 +51,7 @@ import {
 import type { DashboardBridge } from './bridge';
 import { cardRows } from './card-search';
 import { confirmOverlay, searchOverlay } from './overlay';
+import { columnIcon, icon, labelled } from './icons';
 import { createNewestRead } from './newest-read';
 import { isModified } from './shortcuts';
 import { paneLabel } from './terminals';
@@ -357,16 +358,13 @@ export function createBoardView(options: BoardOptions): BoardView {
 
   function renderCard(card: Card, selected: boolean): HTMLElement {
     const item = document.createElement('li');
-    // The priority rides on the card as a class so index.css owns which colour each one is.
+    // The priority rides on the card as a class so board.css owns which colour each one is.
     item.className = `board-card priority-${card.priority}${selected ? ' selected' : ''}`;
     // Which piece of work this card belongs to. Invisible from the column otherwise: a subtask is an
     // ordinary card sitting in an ordinary column, and nothing else on it says so.
     const parent = card.parent === null ? undefined : cardById(state.board, card.parent);
     if (parent) {
-      const badge = document.createElement('p');
-      badge.className = 'board-parent';
-      badge.textContent = parent.title;
-      item.append(badge);
+      item.append(labelled('p', 'board-parent', 'parent', parent.title));
     }
     // What this card has in flight on this machine. Not on the board and not in git: the card's
     // column on main is about what has merged, so without this a card an agent is working on sits in
@@ -377,11 +375,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     // pull request is not sitting there waiting for you.
     const flying = inFlight.get(card.id);
     if (flying) {
-      const badge = document.createElement('p');
-      badge.className = 'board-shipped';
       const pane = flying.pane === null ? 'no pane' : paneLabel(flying.pane);
-      badge.textContent = `${flying.reviewing ? 'reviewing' : 'shipped'} · ${flying.branch} · ${pane}`;
-      item.append(badge);
+      item.append(labelled('p', 'board-shipped', flying.reviewing ? 'review' : 'ship',
+        `${flying.reviewing ? 'reviewing' : 'shipped'} · ${flying.branch} · ${pane}`));
     }
     item.append(selected && editing === 'title' ? renderEditor('title', card.title) : card.title);
     // A description shows on the card rather than behind a keystroke: the point of writing one down is
@@ -400,10 +396,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (selected && editing === 'comment') {
       item.append(renderEditor('comment', ''));
     } else if (card.comments !== undefined) {
-      const trail = document.createElement('p');
-      trail.className = 'board-comments';
-      trail.textContent = card.comments.length === 1 ? '1 comment' : `${card.comments.length} comments`;
-      item.append(trail);
+      item.append(labelled('p', 'board-comments', 'comments',
+        card.comments.length === 1 ? '1 comment' : `${card.comments.length} comments`));
     }
     // What the card is in flight as: the branch, then the pull request it opened. Both are typed in,
     // and a card with neither takes no room for them. Without this the board can list a Doing column
@@ -414,10 +408,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     } else {
       const flight = flightParts(card);
       if (flight.length > 0) {
-        const line = document.createElement('p');
-        line.className = 'board-flight';
-        line.textContent = flight.join(' · ');
-        item.append(line);
+        item.append(labelled('p', 'board-flight', card.pullRequest === undefined ? 'branch' : 'pullRequest',
+          flight.join(' · ')));
       }
     }
     // One segment per child, coloured by the column it is in: the last column is finished, the first
@@ -610,7 +602,10 @@ export function createBoardView(options: BoardOptions): BoardView {
       const section = document.createElement('section');
       section.className = 'board-column';
       const heading = document.createElement('h2');
-      heading.textContent = `${column.name} (${column.cards.length})`;
+      const count = document.createElement('span');
+      count.className = 'board-count';
+      count.textContent = String(column.cards.length);
+      heading.append(icon(columnIcon(column.name)), column.name, count);
       const list = document.createElement('ul');
       list.append(...column.cards.map((card, cardIndex) =>
         renderCard(card, columnIndex === state.selection.column && cardIndex === state.selection.card)));
@@ -759,6 +754,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       placeholder: 'Search cards',
       rows: (query) => cardRows(state.board, query),
       empty: 'No card matches.',
+      glyph: () => 'board',
     }).then((id) => {
       element.focus();
       const found = id === undefined ? null : selectionOf(state.board, id);

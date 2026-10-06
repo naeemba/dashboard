@@ -80,7 +80,25 @@
     },
     {
       "name": "Review",
-      "cards": []
+      "cards": [
+        {
+          "id": "28e13eb5-aef6-4ef0-b756-dcda79ed39cc",
+          "title": "Every screen outside the panes looks like an app, not a terminal",
+          "notes": "Restyle and relayout all chrome (tabs in the title row, bottom status bar with a mode switcher, board lanes, dialogs, settings, command, notes, which-key) with lucide icons and a system font. Terminal and nvim panes untouched.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-06T14:14:10.174Z",
+          "updatedAt": "2026-10-06T14:31:55.301Z",
+          "branch": "app-look",
+          "pullRequest": 72,
+          "comments": [
+            {
+              "at": "2026-10-06T14:31:55.301Z",
+              "body": "PR #72: tabs in the title row, a status bar at the foot with a view switch, board lanes and raised cards, one dialog sheet with keycaps and search, Lucide icons throughout. index.css split into chrome, board, dialogs and which-key stylesheets. Panes and keys unchanged. v1.11.0."
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "Done",

@@ -1,11 +1,18 @@
 import '@xterm/xterm/css/xterm.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
+// The app's look, a file per area, in the order they cascade: a later file wins a tie.
+import './app.css';
+import './chrome.css';
+import './board.css';
+import './dialogs.css';
+import './which-key.css';
 import './index.css';
 import './worktrees.css';
 import './usage.css';
 import './manager.css';
 import { openHelp } from './help';
+import { createModeSwitch, createTabStrip } from './chrome-bars';
 import { mapShortcut, type Action } from './shortcuts';
 import { failureNotice, failureText } from './failure';
 import { type Mode } from './modes';
@@ -77,17 +84,18 @@ publishTheme(settings.theme);
 // Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
 document.documentElement.classList.toggle('mac', isMac);
 const statusElement = document.getElementById('status') as HTMLElement;
-// Projects on the left, the focused pane pushed to the right, so the two are never read as one list.
-const statusProjects = document.createElement('span');
-statusProjects.className = 'projects';
+// The open projects are tabs along the title row; the foot bar holds a project's views on the left and
+// the focused pane on the right, so the two are never read as one list.
+const tabStrip = createTabStrip((index) => showPage(index));
+const modeSwitch = createModeSwitch((mode) => setMode(mode));
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-// Its own span, between the two, because renderStatus() rebuilds the tab strip on every keystroke.
+// Its own span, between the two, because renderStatus() rewrites the pane label on every keystroke.
 // A message written into that span is gone by the next arrow key, which is how the salvage notice
 // used to disappear before anyone could read it.
 const statusError = document.createElement('span');
 statusError.className = 'error';
-statusElement.append(statusProjects, statusError, statusTerminal);
+statusElement.append(modeSwitch.element, statusError, statusTerminal);
 
 // Whoever wrote the message on screen owns it, and only that owner may clear it. Without the owner a
 // clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
@@ -120,7 +128,7 @@ window.addEventListener('unhandledrejection', (event) => {
   showError('failure', failureNotice(event.reason));
 });
 
-const titleElement = document.getElementById('title') as HTMLElement;
+document.getElementById('title')?.append(tabStrip.element);
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 let activeIndex = 0;
@@ -239,17 +247,13 @@ function renderStatus(rowsOnly = false): void {
     if (rowsOnly) page.manager?.refreshRows(rows);
     else page.manager?.render(rows);
   }
-  titleElement.textContent = `📁 ${page.project.name}`;
-  // A span each: the open project is marked by a highlight, the way a tab strip marks one, and a
-  // project with a pane ringing its bell is marked again so you can see it from another page.
-  statusProjects.replaceChildren(...pages.map((entry, index) => {
-    const tab = document.createElement('span');
-    tab.className = 'project';
-    tab.classList.toggle('active', index === activeIndex);
-    tab.classList.toggle('waiting', anyWaiting(allPanes(entry)));
-    tab.textContent = entry.project.name;
-    return tab;
-  }));
+  // The open project is marked the way a tab strip marks one, and a project with a pane ringing its
+  // bell is marked again so you can see it from another page.
+  tabStrip.render(pages.map((entry, index) => ({
+    name: entry.project.name, active: index === activeIndex, waiting: anyWaiting(allPanes(entry)),
+    manager: entry.manager !== null,
+  })));
+  modeSwitch.render(page.mode, page.manager === null && !page.project.missing);
   statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames(namedPanes(page)));
   saveSession();
 }

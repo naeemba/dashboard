@@ -1,22 +1,13 @@
-/* The worktree dialog's own rules. Out of index.css because that file is over the size limit and this
-   is the one block in it that belongs to a single screen. The two rules it shares with the picker —
-   the scrolling list and its highlighted row — stay there, next to the picker they also style. */
+/* The worktree dialog's own rules. The two it shares with the picker — the scrolling list and its
+   highlighted row — are in dialogs.css, next to the picker they also style. */
 
 /* Worktrees: the one screen they are removed from. Same shape as the picker — a heading instead of a
    search box, since there is nothing here to type into. Wider than the picker's default: five columns
    of text need more room than a name and a path do. */
 .worktrees-dialog {
-  width: min(680px, 92vw);
-  padding: 10px 0;
+  width: min(720px, 92vw);
+  padding: 16px 0 12px;
   outline: none;
-}
-
-.worktrees-heading {
-  margin: 4px 0 8px;
-  padding: 0 12px;
-  color: var(--blue);
-  font-size: inherit;
-  font-weight: normal;
 }
 
 /* Five fixed-width columns, project through pane, so the eye can scan one down the dialog instead of
@@ -28,7 +19,8 @@
 .worktrees-pane {
   flex: none;
   overflow: hidden;
-  color: var(--brightBlack);
+  color: var(--muted);
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -42,6 +34,8 @@
   flex: 1;
   overflow: hidden;
   color: var(--brightWhite);
+  font-family: var(--mono-font);
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -62,13 +56,14 @@
 
 .worktrees-keys {
   margin: 8px 0 0;
-  padding: 8px 12px 0;
-  border-top: 1px solid var(--brightBlack);
-  color: var(--brightBlack);
+  padding: 12px 20px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .worktrees-empty {
   margin: 0;
-  padding: 4px 12px;
-  color: var(--brightBlack);
+  padding: 8px 20px;
+  color: var(--muted);
 }

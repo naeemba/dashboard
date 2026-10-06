@@ -1,5 +1,7 @@
 import { actionByName } from './actions';
 import { formatBinding, keystrokeOf } from './binding';
+import { labelled } from './icons';
+import { keycaps } from './keycaps';
 import { confirmOverlay, openOverlay } from './overlay';
 import {
   bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, resetKeys,
@@ -98,9 +100,8 @@ export function openSettings(
             swatch.style.background = row.value;
             value.append(swatch, document.createTextNode(row.value));
           } else if (row.kind === 'key') {
-            value.textContent = index === selected && armed !== null
-              ? 'press a key…'
-              : row.binding ?? 'unbound';
+            if (index === selected && armed !== null) value.textContent = 'press a key…';
+            else value.append(row.binding === null ? 'unbound' : keycaps(row.binding));
             if (row.binding === null) value.classList.add('unbound');
           } else if (row.kind === 'reset-keys' || row.kind === 'reset-all') {
             value.textContent = 'Enter';
@@ -117,7 +118,7 @@ export function openSettings(
         : 'Enter changes the row. x unbinds a key. Escape closes, or backs out of a row waiting '
           + 'for a key. Kept in ~/.config/dashboard/settings.json.';
       if (message !== '') footer.classList.add('settings-message');
-      dialog.replaceChildren(list, footer);
+      dialog.replaceChildren(labelled('h2', 'dialog-title', 'settings', 'Settings'), list, footer);
       list.children[selected]?.scrollIntoView({ block: 'nearest' });
     }
 

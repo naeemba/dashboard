@@ -29,5 +29,5 @@ export const THEME: ITheme = {
 };
 
 // Height of the title row. Main needs it to place the traffic lights inside the row; the renderer
-// publishes it as a custom property so index.css sizes the row from the same number.
+// publishes it as a custom property so chrome.css sizes the row from the same number.
 export const TITLE_BAR_HEIGHT = 36;

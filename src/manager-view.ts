@@ -1,5 +1,6 @@
 import type { Action } from './actions';
 import { relativeAge } from './age';
+import { icon } from './icons';
 import { columnCounts, recentActivity } from './board-summary';
 import { clampIndex, heldIndex } from './clamp-index';
 import { formatSize } from './git-worktrees';
@@ -64,10 +65,6 @@ export type ManagerView = {
   // it could not land, that nothing is waiting, or ''.
   goToNextNeed(rows: readonly ManagerRow[]): string;
 };
-
-// What the row says instead of a pane list when the project has nothing to show.
-const SHUT = '▸';
-const OPEN = '▾';
 
 // The line a pane row prints beside its name, which a pane that wants something does not get: its
 // block of five is on screen underneath and ends on this very line, so printing both says it twice.
@@ -327,7 +324,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // to the far side of a Persian name and stops lining up with the row above.
     const marker = document.createElement('span');
     marker.className = 'manager-marker';
-    marker.textContent = `${canOpen(line.row) ? (line.open ? OPEN : SHUT) : ' '} `;
+    if (canOpen(line.row)) marker.append(icon(line.open ? 'collapse' : 'expand'));
     const name = document.createElement('span');
     name.className = 'manager-name';
     name.textContent = line.row.name;

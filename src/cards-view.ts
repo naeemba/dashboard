@@ -90,7 +90,7 @@ export function createCardsView(options: CardsOptions): BoardView {
   }
 
   // The CSS turns off an inactive project's selection outline; see the .cards-project rule in
-  // index.css for why only one of the stacked boards may draw one. This says which is which.
+  // board.css for why only one of the stacked boards may draw one. This says which is which.
   function markActive(): void {
     for (const board of boards.values()) {
       board.section.classList.toggle('active', board.page.project.path === activePath);

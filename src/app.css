@@ -1,0 +1,89 @@
+/* The tokens every screen outside a pane is drawn from, mixed out of the theme's own colours so a
+   theme set in settings.json moves the whole app with it. A pane draws itself from the same theme
+   through xterm and takes none of these. */
+html, body {
+  --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  /* What a terminal printed, a branch name, a path: text laid out for a fixed-width face. */
+  --mono-font: "JetBrains Mono", Menlo, Monaco, monospace;
+  --surface-raised: color-mix(in srgb, var(--white) 6%, var(--background));
+  --surface-overlay: color-mix(in srgb, var(--white) 4%, var(--black));
+  --line: color-mix(in srgb, var(--white) 11%, transparent);
+  --muted: color-mix(in srgb, var(--white) 62%, transparent);
+  --hover: color-mix(in srgb, var(--white) 6%, transparent);
+  --tint: color-mix(in srgb, var(--blue) 22%, transparent);
+  --radius: 8px;
+  --radius-large: 12px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 25%), 0 12px 32px rgb(0 0 0 / 35%);
+}
+
+.icon {
+  display: inline-grid;
+  flex: none;
+}
+
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* A key as a keycap: the help dialog, the which-key panel, anywhere a binding is shown on its own. */
+.keycaps {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-raised);
+  color: var(--brightWhite);
+  font: 500 11px var(--ui-font);
+}
+
+/* The heading a dialog opens with, an icon beside its name, above a hairline. */
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 4px 20px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--brightWhite);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dialog-title .icon {
+  color: var(--blue);
+}
+
+/* Scrollbars that belong to the app rather than to the system's default grey slab. A pane draws its
+   own and is left alone. */
+:not(.pane, .pane *)::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:not(.pane, .pane *)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:not(.pane, .pane *)::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--line) padding-box;
+}
+
+:not(.pane, .pane *)::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted);
+}

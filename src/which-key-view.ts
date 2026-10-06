@@ -1,3 +1,4 @@
+import { keycaps } from './keycaps';
 import type { Shortcut } from './shortcut-rows';
 
 export type WhichKey = { show(rows: Shortcut[]): void; hide(): void };
@@ -34,7 +35,7 @@ export function createWhichKey(): WhichKey {
       row.className = 'which-key-row';
       const keys = document.createElement('span');
       keys.className = 'which-key-key';
-      keys.textContent = shortcut.keys;
+      keys.append(keycaps(shortcut.keys));
       const action = document.createElement('span');
       action.className = 'which-key-action';
       action.textContent = shortcut.action;

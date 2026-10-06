@@ -1,0 +1,78 @@
+/* The wait before the strip appears, and the whole of it: no timer, no clock, nothing in the renderer
+   to keep in step. An animation's delay holds the first keyframe while it runs, and taking `hidden`
+   off puts the element back into `display` — which starts the animation from the beginning. So every
+   fresh appearance waits, and a list that narrows while the strip is already up never leaves `display`
+   and so never restarts: add Shift to a held Ctrl and the answer changes under your hand.
+
+   Long enough that Ctrl+B on the way to the board never flashes it, short enough that stopping to
+   think shows it. */
+@keyframes which-key-wait {
+  from { visibility: hidden; }
+  to { visibility: visible; }
+}
+
+/* which-key: while a modifier is held with no key yet, what that modifier can start on the screen you
+   are on. Along the bottom rather than in the middle, because it appears under your hand while you are
+   looking at something and must not cover what you were looking at.
+
+   Not a dialog: no sheet, no focus, and no pointer events. The key you press next has to reach the
+   window's own lookup, and there is nothing here to click. */
+.which-key {
+  animation: which-key-wait 1ms 400ms both;
+  position: fixed;
+  right: 0;
+  bottom: calc(var(--status-bar-height) + 14px);
+  left: 0;
+  z-index: 1;
+  width: min(1100px, calc(100% - 48px));
+  max-height: 40vh;
+  margin: 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow);
+  columns: 26rem;
+  column-gap: 28px;
+  pointer-events: none;
+}
+
+/* A list that narrows to nothing keeps its place in `display` — leaving it is what restarts the wait
+   above — and paints nothing instead. An empty bar across the bottom of the screen would read as the
+   app having broken rather than as an answer. */
+.which-key:empty {
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+.which-key-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 3px 0;
+  break-inside: avoid;
+}
+
+/* Right-aligned, so the keys make one edge down each column and the eye runs along it. Wide enough for
+   the longest row the shipped keys produce, "Shift+1…Shift+9" — a numbered run prints as a range and is
+   the one row that holds two keys. A minimum rather than a fixed width, so a rebinding that makes a
+   longer one pushes its own row out instead of running over the sentence beside it. */
+.which-key-key {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  min-width: 150px;
+}
+
+/* Cut rather than wrapped: a long sentence that wrapped would push the rows below it out of line with
+   the column beside them. */
+.which-key-action {
+  overflow: hidden;
+  color: var(--white);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

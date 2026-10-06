@@ -4,12 +4,15 @@ html, body {
   margin: 0;
   background: var(--background);
   color: var(--white);
-  font: 12px "JetBrains Mono", Menlo, Monaco, monospace;
+  /* The app's own face. Only what a terminal printed keeps the terminal's: see --mono-font in app.css. */
+  font: 13px var(--ui-font);
   /* Where the keyboard is, on a pane or on a card: one outline, defined once. */
   --focus-outline: 1px solid var(--blue);
   /* The section strip's own height, named once so the strip and the views it sits above agree on it
      rather than each repeating the same number. */
   --section-strip-height: 40px;
+  /* The status bar's height, which the which-key panel above it is placed from. */
+  --status-bar-height: 30px;
 }
 
 body {
@@ -39,98 +42,6 @@ body {
    field does in any browser. */
 body *:not(.pane, .pane *) {
   unicode-bidi: plaintext;
-}
-
-/* The two rows of chrome above the terminals read as one dark bar, so they share its colour and its
-   refusal to be selected. */
-#title, #status {
-  display: flex;
-  background: var(--black);
-  user-select: none;
-}
-
-/* The app's own header row: it stands in for the system titlebar on macOS, and dragging it moves
-   the window. */
-#title {
-  align-items: center;
-  height: var(--title-bar-height);
-  padding-left: 8px;
-  color: var(--brightWhite);
-  font-weight: 700;
-  -webkit-app-region: drag;
-}
-
-/* Only macOS draws traffic lights over this row, so only there does the text step aside for them.
-   80px clears the three lights plus the 13px inset main.ts places them at. */
-.mac #title {
-  padding-left: 80px;
-}
-
-#status {
-  justify-content: space-between;
-  gap: 16px;
-  padding: 4px 8px;
-  white-space: pre;
-}
-
-.projects {
-  display: flex;
-  gap: 4px;
-}
-
-.project {
-  padding: 0 6px;
-}
-
-/* The open project, marked the way a tab strip marks one. */
-.project.active {
-  background: var(--brightBlack);
-  color: var(--brightWhite);
-  font-weight: 700;
-}
-
-/* A pane on this project rang its bell and nobody has been to look. Written after .project.active so
-   it also shows on the project you are on, where the bell came from a pane you are not in. */
-.project.waiting {
-  color: var(--yellow);
-  font-weight: 700;
-}
-
-/* Yellow text alone is easy to miss in a row of tabs, so the tab also grows a dot that moves. Motion
-   is what the eye catches from across the room; the colour only tells you which tab once you look. */
-.project.waiting::before {
-  content: '\25CF';
-  color: var(--red);
-  margin-right: 5px;
-  animation: waiting-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes waiting-pulse {
-  50% {
-    opacity: 0.15;
-  }
-}
-
-/* A dot that never stops moving is the kind of thing people turn off at the system level. Asked to
-   stop, it stops and stays visible, which is the half that was doing the work. */
-@media (prefers-reduced-motion: reduce) {
-  .project.waiting::before {
-    animation: none;
-  }
-}
-
-/* Failures land between the tab strip and the pane number, in the one span renderStatus() leaves
-   alone. It shrinks instead of pushing the tabs off the row when the message is a long path. */
-.error {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--red);
-}
-
-/* The pane number is a detail about the current project, not another project in the list. */
-.terminal {
-  color: var(--brightBlack);
 }
 
 #pages {
@@ -176,13 +87,16 @@ body *:not(.pane, .pane *) {
    of its own — because a page of notes is the text and nothing else. */
 .view-notes {
   display: grid;
-  padding: 16px;
+  justify-items: center;
+  padding: 32px 24px;
   box-sizing: border-box;
   background: var(--background);
 }
 
+/* A column a line of prose can be read across, the way a document is set rather than a terminal. */
 .notes-text {
-  font: inherit;
+  width: min(100%, 78ch);
+  font: 14px/1.65 var(--ui-font);
   color: inherit;
   background: none;
   border: none;
@@ -194,14 +108,14 @@ body *:not(.pane, .pane *) {
 }
 
 .notes-text::placeholder {
-  color: var(--brightBlack);
+  color: var(--muted);
 }
 
 /* The manager: prose and lists, no panes. It takes the keyboard when you arrive, and a focus ring
    around the whole page says nothing useful, so the tab strip is what marks it instead. */
 .view-manager,
 .view-command {
-  padding: 16px;
+  padding: 20px 24px;
   overflow-y: auto;
   background: var(--background);
 }
@@ -247,7 +161,7 @@ body *:not(.pane, .pane *) {
    on. */
 .manager-list li:not(.manager-group),
 .command-list li {
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
@@ -259,18 +173,20 @@ body *:not(.pane, .pane *) {
 .manager-project .manager-name,
 .command-name {
   color: var(--brightWhite);
-  font-weight: 700;
+  font-weight: 600;
 }
 
-/* The marker is a character wide and carries its own trailing space, so a project with nothing to
+/* The marker is a fixed-width icon slot with its own margin, so a project with nothing to
    open lines up with one that has, and both line up with the panes indented underneath. Nothing may
    sit between it and the name — the row has no gap for that reason, and what holds the summary at the
    far end is the summary's own margin. */
 .manager-marker,
 .command-mark {
-  white-space: pre;
-  color: var(--brightWhite);
-  font-weight: 700;
+  display: inline-grid;
+  flex: none;
+  width: 16px;
+  margin-right: 8px;
+  color: var(--muted);
 }
 
 /* The command list's rows carry the last few lines a pane printed under it, wrapped rather than
@@ -282,8 +198,8 @@ body *:not(.pane, .pane *) {
 .command-tail {
   flex-basis: 100%;
   margin: 2px 0 0;
-  padding-left: 4ch;
-  font: inherit;
+  padding-left: 24px;
+  font: 12px var(--mono-font);
   opacity: 0.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -329,9 +245,10 @@ body *:not(.pane, .pane *) {
   inset: var(--page-top-inset, 0px) 0 auto;
   height: var(--section-strip-height);
   display: flex;
-  gap: 24px;
-  padding: 12px 16px 0;
+  gap: 20px;
+  padding: 10px 24px 0;
   box-sizing: border-box;
+  border-bottom: 1px solid var(--line);
 }
 
 /* Only the manager page has a strip, so only there do the views start below it. A project's page
@@ -341,13 +258,22 @@ body *:not(.pane, .pane *) {
 }
 
 .section-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   background: none;
   border: 0;
-  padding: 0 0 6px;
+  padding: 0 2px 8px;
   cursor: pointer;
-  color: var(--brightBlack);
+  color: var(--muted);
   font: inherit;
+  font-weight: 500;
+  text-transform: capitalize;
   border-bottom: 2px solid transparent;
+}
+
+.section-name:hover {
+  color: var(--brightWhite);
 }
 
 .section-name.current {
@@ -358,19 +284,30 @@ body *:not(.pane, .pane *) {
 .command-label {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  max-width: 70ch;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--muted);
 }
 
 .command-label.highlighted {
-  outline: var(--focus-outline);
-  outline-offset: 2px;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--tint);
 }
 
-/* Same text-box look as .search-input and .card-detail-add, below — one definition rather than a
-   third copy of the same declarations. Its own rule only for what those two do not need: growing to
-   fill the label. */
+/* The box sits inside the label, which draws the frame, so the input itself is bare text. */
 .command-input {
   flex: 1;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--brightWhite);
+  font: inherit;
 }
 
 /* Room under the command box before the project rows start; the rows themselves are styled with
@@ -379,204 +316,17 @@ body *:not(.pane, .pane *) {
   margin: 16px 0;
 }
 
-.board {
-  display: flex;
-  gap: 2px;
-  height: 100%;
-  padding: 2px;
-  box-sizing: border-box;
-  overflow: hidden;
-  outline: none;
+/* A project in the command list is a card of its own: the output it opens onto belongs inside it. */
+.command-list li {
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
 }
 
-.board-column {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-  padding: 8px;
-  background: var(--background);
-}
-
-.board-column h2 {
-  margin: 0 0 8px;
-  color: var(--brightWhite);
-  font-size: inherit;
-}
-
-.board-column ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.board-card {
-  padding: 4px 6px;
-  margin-bottom: 4px;
-  background: var(--black);
-  overflow-wrap: anywhere;
-  /* The priority reads as a stripe down the edge, so it is legible at a glance across five columns
-     without spending a word of the card on it. The status bar names the one you are on. */
-  border-left: 3px solid;
-}
-
-.priority-urgent { border-left-color: var(--brightRed); }
-.priority-high { border-left-color: var(--yellow); }
-.priority-medium { border-left-color: var(--blue); }
-.priority-low { border-left-color: var(--brightBlack); }
-
-/* The description sits on the card rather than behind a keystroke, dimmed so a column still scans as a
-   list of titles. Its own newlines are kept: it is written as lines, so it reads as lines. */
-.board-notes {
-  margin: 4px 0 0;
-  opacity: 0.75;
-  white-space: pre-wrap;
-}
-
-/* A long description on an unselected card would push every card below it off the screen, and the
-   column would stop reading as a list. Three lines here, all of it on the card you are actually on. */
-.board-card:not(.selected) .board-notes {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* The parent badge above the title, and the branch and its pull request below it. One line each: a
-   long branch name or a long parent title must not turn a card into three rows and push the column
-   out of shape. */
-.board-parent,
-.board-comments,
-.board-flight,
-.board-shipped {
-  font-size: 11px;
-  opacity: 0.55;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.board-parent { margin: 0 0 4px; }
-.board-flight { margin: 4px 0 0; }
-.board-comments { margin: 4px 0 0; }
-
-/* A card in flight is live state, not a typed-in field like the branch or PR line beneath it, so it
-   reads brighter than the 0.55 those use. */
-.board-shipped {
-  margin: 4px 0 0;
-  opacity: 0.85;
-  color: var(--cyan);
-}
-
-.board-progress {
-  display: flex;
-  gap: 2px;
-  align-items: center;
-  margin: 6px 0 0;
-}
-
-.board-progress span {
-  height: 4px;
-  flex: 1;
-  border-radius: 2px;
-  background: rgb(255 255 255 / 12%);
-}
-
-.board-progress span.underway {
-  background: #d0a215;
-}
-
-.board-progress span.done {
-  background: #3fa45b;
-}
-
-/* A span inside .board-progress, so it inherits the segment rule above and has to out-specify it, not
-   merely follow it — hence the extra .board-progress ancestor in the selector. */
-.board-progress .board-progress-count {
-  flex: 0 0 auto;
-  height: auto;
-  margin-left: 4px;
-  font-size: 11px;
-  opacity: 0.55;
-  background: none;
-}
-
-/* Where the keyboard is. The board has one selection, not one per column, and it is marked by the same
-   blue outline a focused pane gets. The card keeps its own background: lightening it to --brightBlack
-   drew the low-priority stripe in its own colour, so the one card your cursor was on was the one card
-   with no stripe — which reads as "no priority" rather than "low". */
-.board-card.selected {
-  outline: var(--focus-outline);
-  outline-offset: -1px;
-  color: var(--brightWhite);
-}
-
-/* Every board has a selection and every board draws it, so on the manager, where several are stacked,
-   only the one the keys reach may show it — or five projects all look like the one you are on. It sits
-   here rather than with the other .cards rules because it is this rule it turns off: rename .selected
-   above and this has to move with it, and nothing else would say so. */
-.cards-project:not(.active) .board-card.selected {
-  outline: none;
-  color: inherit;
-}
-
-/* Where a dragged card would land. Drawn on the card itself rather than in the gap between two of
-   them: the gap is 4px of background and a line in it is easy to miss, while a line hard against a
-   card's own edge says which side of that card the drop is on. `drop-below` marks the last card
-   only — every other landing is "above the card under the cursor". */
-.board-card.drop-above { box-shadow: inset 0 2px 0 var(--blue); }
-.board-card.drop-below { box-shadow: inset 0 -2px 0 var(--blue); }
-
-.board-edit {
-  width: 100%;
-  font: inherit;
-  color: var(--brightWhite);
-  background: none;
-  border: none;
-  outline: none;
-  /* A textarea is inline by default, which leaves a gap under it. */
-  display: block;
-}
-
-textarea.board-edit {
-  margin-top: 4px;
-  min-height: 4em;
-  /* The grab handle a textarea comes with is a control the keyboard cannot reach. */
-  resize: none;
-}
-
-.board-empty {
-  margin: 0;
-  color: var(--brightBlack);
-}
-
-/* The manager's board: its own and every open project's, one under the other, in a single scroller. The rule
-   that dims an inactive project's selection lives with .board-card.selected, not here. */
-.cards {
-  overflow-y: auto;
-  padding: 2px;
-  box-sizing: border-box;
-  outline: none;
-}
-
-/* Each project's board is the real board view, so all that is said to it here is to stop being a screen
-   of its own: it grows to its cards, and only a board with more than a screenful in it is capped — at
-   which point its columns go back to scrolling inside themselves, as they do on a project's own tab.
-   Without the cap one project with two hundred Done cards is the whole page. */
-.cards .board {
-  height: auto;
-  max-height: 70vh;
-}
-
-/* Dim until the keys are aimed at it. The selected card's outline says where the keyboard is, but on a
-   long page that card can be off screen, and then nothing else would say which project you are on. */
-.cards-project h2 {
-  margin: 8px 4px 4px;
-  color: var(--brightBlack);
-  font-size: inherit;
-}
-
-.cards-project.active h2 {
-  color: var(--brightWhite);
+.command-list li.highlighted {
+  border-color: color-mix(in srgb, var(--blue) 50%, transparent);
+  background: var(--tint);
 }
 
 .page.missing {
@@ -628,415 +378,3 @@ textarea.board-edit {
   display: none;
 }
 
-/* Every dialog openOverlay() builds: a dark sheet over the pages with one centred box in it. The
-   per-dialog rules further down only override what that dialog needs differently. */
-.overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  padding-top: 12vh;
-  background: rgb(0 0 0 / 50%);
-}
-
-.overlay-dialog {
-  display: flex;
-  flex-direction: column;
-  width: min(560px, 90vw);
-  max-height: 60vh;
-  border: 1px solid var(--brightBlack);
-  background: var(--black);
-}
-
-/* One box in the middle of the sheet asking one thing, whether that is a question to answer or a
-   line to type. Two names rather than one because the dialogs are two, but they are meant to look
-   the same and this is what keeps them that way.
-   The sheet is a flex row, so without align-self the box stretches down to its max-height and a
-   two-line question sits in a box most of the window tall. The outline is the browser's focus ring:
-   the box holds focus so Enter and Escape reach it, and every other dialog turns the ring off too. */
-.confirm-dialog,
-.prompt-dialog {
-  align-self: flex-start;
-  max-width: 420px;
-  padding: 20px 24px;
-  outline: none;
-}
-
-.confirm-question {
-  margin: 0 0 12px;
-  font-size: 14px;
-}
-
-/* Shared with .prompt-question and .prompt-keys: the small grey line beside the thing being asked. */
-.confirm-keys,
-.prompt-keys,
-.prompt-question {
-  margin: 0;
-  font-size: 12px;
-  opacity: 0.6;
-}
-
-.prompt-question {
-  margin-bottom: 4px;
-}
-
-/* Under the box rather than over it, where the confirm dialog's keys line sits: the question names the
-   thing, the box is what you are looking at, and the keys are what you read once you wonder how to get
-   out of it. */
-.prompt-keys {
-  margin-top: 8px;
-}
-
-.card-detail-dialog {
-  max-width: 520px;
-  padding: 16px 20px;
-  overflow-y: auto;
-}
-
-.card-detail-meta,
-.card-detail-footer,
-.card-detail-empty {
-  font-size: 12px;
-  opacity: 0.6;
-}
-
-.card-detail-notes {
-  margin: 12px 0;
-  white-space: pre-wrap;
-}
-
-/* One comment per line: the time it was written, then what it says. The trail is the card's history
-   and is read top to bottom, so each entry wraps rather than being cut short the way a card's
-   one-line badges are. */
-.card-detail-comment {
-  margin: 8px 0;
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-}
-
-.card-detail-comment-when {
-  flex: 0 0 auto;
-  font-size: 11px;
-  opacity: 0.55;
-}
-
-.card-detail-comment-body {
-  white-space: pre-wrap;
-}
-
-.card-detail-children {
-  margin: 12px 0;
-  padding: 0;
-  list-style: none;
-}
-
-.card-detail-children li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.card-detail-children li.highlighted {
-  background: rgb(255 255 255 / 10%);
-}
-
-.card-detail-child-where {
-  flex: 0 0 auto;
-  opacity: 0.6;
-}
-
-/* Help: sections of key/action rows, scrolling as one if the screen is short. */
-.help-dialog {
-  overflow-y: auto;
-  padding: 10px 0;
-  outline: none;
-}
-
-.help-dialog h2 {
-  margin: 8px 0 4px;
-  padding: 0 12px;
-  color: var(--blue);
-  font-size: inherit;
-  font-weight: normal;
-}
-
-/* Sits between the heading and its keys, so the section says what it is before it says how to work it. */
-.help-blurb {
-  margin: 0 0 6px;
-  padding: 0 12px;
-  color: var(--brightBlack);
-  max-width: 62ch;
-}
-
-.help-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.help-list li {
-  display: flex;
-  gap: 12px;
-  padding: 2px 12px;
-}
-
-/* Fixed column so the keys line up down the dialog and the eye can scan one side of it. Wide enough for
-   the longest binding a person could produce, "Ctrl+Cmd+Alt+Shift+Backspace", which wraps and breaks the
-   column if it does not fit. */
-.help-keys {
-  flex: none;
-  width: 29ch;
-  color: var(--brightWhite);
-}
-
-.help-action {
-  color: var(--white);
-}
-
-.help-footer {
-  margin: 10px 0 0;
-  padding: 8px 12px 0;
-  border-top: 1px solid var(--brightBlack);
-  color: var(--brightBlack);
-}
-
-.search-input,
-.card-detail-add,
-.command-input,
-.prompt-input {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--brightBlack);
-  padding: 8px 10px;
-  outline: none;
-}
-
-/* Shared with .prompt-input: both fill the width of the box they sit in. The margin is the card
-   dialog's own, where the box sits between rows. */
-.card-detail-add,
-.prompt-input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.card-detail-add {
-  margin: 8px 0;
-}
-
-/* Shared with .worktrees-list below: both are an overlay's one scrolling list of rows, walked with
-   the arrows, with the same padding and the same highlight. The first covers every dialog built on
-   searchOverlay — the project picker and the board's card search. What differs between them is what
-   goes inside a row, which stays in each dialog's own rules. */
-.search-list,
-.worktrees-list {
-  flex: 1;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.search-list li,
-.worktrees-list li {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.search-list li.highlighted,
-.worktrees-list li.highlighted {
-  background: var(--brightBlack);
-}
-
-.search-name {
-  color: var(--brightWhite);
-}
-
-.search-detail {
-  overflow: hidden;
-  color: var(--brightBlack);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.search-list li.highlighted .search-detail {
-  color: var(--white);
-}
-
-/* The line a search that matched nothing leaves behind. Not a row: there is nothing to press Enter
-   on, so it takes neither the highlight nor the hand the rows give the pointer. */
-.search-list li.search-empty {
-  color: var(--brightBlack);
-  cursor: default;
-}
-
-/* The last row opens the folder dialog; the rule sets it apart from the projects above it. */
-.search-list li.picker-new {
-  border-top: 1px solid var(--brightBlack);
-}
-
-.search-list li.picker-new .search-name {
-  color: var(--blue);
-}
-
-/* Settings: one row per thing you can change, walked with the arrows. Taller than the help dialog
-   because the list is every action there is, not only the ones with a key. */
-.settings-dialog {
-  padding: 10px 0;
-  outline: none;
-  max-height: 74vh;
-}
-
-/* The list scrolls, not the dialog, so the footer that prints every refusal stays on screen. The
-   picker does the same thing with its search box, two rules up. */
-.settings-list {
-  flex: 1;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.settings-heading {
-  margin: 8px 0 4px;
-  padding: 0 12px;
-  color: var(--blue);
-}
-
-.settings-row {
-  display: flex;
-  gap: 12px;
-  padding: 2px 12px;
-}
-
-.settings-row.selected {
-  background: var(--brightBlack);
-}
-
-.settings-label {
-  flex: 1;
-  color: var(--white);
-}
-
-/* Fixed column so every value lines up down the right and the eye can scan one side of it. */
-.settings-value {
-  flex: none;
-  width: 24ch;
-  color: var(--brightWhite);
-}
-
-.settings-value.unbound {
-  color: var(--brightBlack);
-}
-
-.settings-swatch {
-  display: inline-block;
-  width: 1ch;
-  height: 1em;
-  margin-right: 1ch;
-  border: 1px solid var(--brightBlack);
-  vertical-align: text-bottom;
-}
-
-/* The row's own text box, sized to the value column so the list does not jump when one opens. */
-.settings-edit {
-  width: 100%;
-  padding: 0;
-  border: none;
-  border-bottom: 1px solid var(--blue);
-  background: transparent;
-  font: inherit;
-  color: var(--brightWhite);
-  outline: none;
-}
-
-.settings-footer {
-  margin: 10px 0 0;
-  padding: 8px 12px 0;
-  border-top: 1px solid var(--brightBlack);
-  color: var(--brightBlack);
-}
-
-.settings-message {
-  color: var(--yellow);
-}
-
-/* The wait before the strip appears, and the whole of it: no timer, no clock, nothing in the renderer
-   to keep in step. An animation's delay holds the first keyframe while it runs, and taking `hidden`
-   off puts the element back into `display` — which starts the animation from the beginning. So every
-   fresh appearance waits, and a list that narrows while the strip is already up never leaves `display`
-   and so never restarts: add Shift to a held Ctrl and the answer changes under your hand.
-
-   Long enough that Ctrl+B on the way to the board never flashes it, short enough that stopping to
-   think shows it. */
-@keyframes which-key-wait {
-  from { visibility: hidden; }
-  to { visibility: visible; }
-}
-
-/* which-key: while a modifier is held with no key yet, what that modifier can start on the screen you
-   are on. Along the bottom rather than in the middle, because it appears under your hand while you are
-   looking at something and must not cover what you were looking at.
-
-   Not a dialog: no sheet, no focus, and no pointer events. The key you press next has to reach the
-   window's own lookup, and there is nothing here to click. */
-.which-key {
-  animation: which-key-wait 1ms 400ms both;
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 1;
-  max-height: 40vh;
-  overflow: hidden;
-  padding: 8px 12px;
-  border-top: 1px solid var(--brightBlack);
-  background: var(--black);
-  columns: 26rem;
-  column-gap: 24px;
-  pointer-events: none;
-}
-
-/* A list that narrows to nothing keeps its place in `display` — leaving it is what restarts the wait
-   above — and paints nothing instead. An empty bar across the bottom of the screen would read as the
-   app having broken rather than as an answer. */
-.which-key:empty {
-  padding: 0;
-  border-top: none;
-  background: none;
-}
-
-.which-key-row {
-  display: flex;
-  gap: 10px;
-  padding: 1px 0;
-  /* A row split down the middle by a column break reads as two half-rows that say nothing. */
-  break-inside: avoid;
-}
-
-/* Right-aligned, so the keys make one edge down each column and the eye runs along it. Wide enough for
-   the longest row the shipped keys produce, "Shift+1…Shift+9" — a numbered run prints as a range and is
-   the one row that holds two keys. A minimum rather than a fixed width, so a rebinding that makes a
-   longer one pushes its own row out instead of running over the sentence beside it. */
-.which-key-key {
-  flex: none;
-  min-width: 16ch;
-  color: var(--blue);
-  text-align: right;
-}
-
-/* Cut rather than wrapped: a long sentence that wrapped would push the rows below it out of line with
-   the column beside them. */
-.which-key-action {
-  overflow: hidden;
-  color: var(--white);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
