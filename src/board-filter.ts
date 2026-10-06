@@ -199,3 +199,11 @@ export function rowsToDraw(
   if (typing) return { visible: keepingRow(visible, selection), selection };
   return { visible, selection: settleSelection(visible, selection) };
 }
+
+// The row of the card above the selection on screen, for Tab to attach to, or -1 when nothing you
+// can see is above it. Under a filter the card directly above in the column may be one it hides.
+export function rowAbove(visible: number[][], selection: Selection): number {
+  const rows = visible[selection.column] ?? [];
+  const position = rows.indexOf(selection.card);
+  return position > 0 ? rows[position - 1] : -1;
+}

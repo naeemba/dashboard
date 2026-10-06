@@ -768,6 +768,17 @@ describe('childColumns', () => {
 });
 
 describe('attachToCardAbove', () => {
+  // Under a filter the card above on screen is not the card above in the column.
+  it('attaches to the row it is given rather than the one directly above', () => {
+    const result = attachToCardAbove(board(['a', 'hidden', 'b']), { column: 0, card: 2 }, 0);
+    expect(parents(result.board).b).toBe('a');
+  });
+
+  it('does nothing when the row it is given holds no card', () => {
+    const start = board(['a', 'b']);
+    expect(attachToCardAbove(start, { column: 0, card: 1 }, -1).board).toBe(start);
+  });
+
   it('makes the selected card a child of the card directly above it', () => {
     const result = attachToCardAbove(board(['a', 'b']), { column: 0, card: 1 });
     expect(parents(result.board).b).toBe('a');
@@ -826,6 +837,12 @@ describe('selectionOf', () => {
 });
 
 describe('attachmentRing', () => {
+  it('asks about the row it is given, the same row the attachment would use', () => {
+    const start = withParents(board(['b', 'hidden', 'a']), { b: 'a' });
+    expect(attachmentRing(start, { column: 0, card: 2 }, 0)?.title).toBe('b');
+    expect(attachmentRing(start, { column: 0, card: 2 })).toBe(null);
+  });
+
   // a is b's parent, and b sits above a: attaching a to b would make each the other's ancestor.
   it('names the card above when attaching would make a ring', () => {
     const start = withParents(board(['b', 'a']), { b: 'a' });

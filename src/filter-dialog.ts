@@ -104,7 +104,7 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
     list.className = 'filter-list';
     const keys = document.createElement('p');
     keys.className = 'filter-keys';
-    keys.textContent = '↑↓ choose · ←→ change · Space toggles · Enter or Escape closes';
+    keys.textContent = '↑↓ choose · ←→ change · Space toggles · Escape closes';
     dialog.append(list, keys);
 
     function edit(next: BoardFilter): void {

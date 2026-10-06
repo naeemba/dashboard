@@ -35,6 +35,7 @@ import {
   isFilterActive,
   realRow,
   reorderRow,
+  rowAbove,
   rowsToDraw,
   settleSelection,
   stepSelection,
@@ -894,9 +895,10 @@ export function createBoardView(options: BoardOptions): BoardView {
           // The one refusal worth explaining. The others — no card above, nothing selected — are
           // obvious from the screen. attachmentRing decides it on the same call, so the message cannot
           // say one thing while the board does another.
-          const ring = attachmentRing(state.board, state.selection);
+          const above = rowAbove(visible, state.selection);
+          const ring = attachmentRing(state.board, state.selection, above);
           if (ring) return options.onError(`"${ring.title}" is already a subtask of this card`);
-          return change(attachToCardAbove(state.board, state.selection));
+          return change(attachToCardAbove(state.board, state.selection, above));
         }
         case 'board-detach': return change(detachCard(state.board, state.selection));
         case 'board-edit': return startEditing(action.field);

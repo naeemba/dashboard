@@ -389,21 +389,23 @@ export function cyclePriority(board: Board, selection: Selection): Change {
 // selected, nothing above, the card above already being the parent, and an attachment that would
 // make a ring. The ring case is the one that matters — a card that is its own ancestor makes
 // descendantsOf recurse forever.
-export function attachToCardAbove(board: Board, selection: Selection): Change {
+// `aboveRow` is the row of the card to attach to: the one directly above, unless a filter hides it
+// and the card above on screen is further up.
+export function attachToCardAbove(board: Board, selection: Selection, aboveRow = selection.card - 1): Change {
   const card = cardAt(board, selection);
-  const above = board.columns[selection.column]?.cards[selection.card - 1];
+  const above = board.columns[selection.column]?.cards[aboveRow];
   if (!card || !above) return { board, selection };
   if (above.id === card.parent) return { board, selection };
-  if (attachmentRing(board, selection)) return { board, selection };
+  if (attachmentRing(board, selection, aboveRow)) return { board, selection };
   return editCard(board, selection, { parent: above.id });
 }
 
 // The card above, when attaching to it would make a ring, and null when Tab would go through. The
 // view prints a message about this one refusal and attachToCardAbove acts on it, so both ask here
 // rather than each re-deriving the test: a message decided apart from the refusal drifts from it.
-export function attachmentRing(board: Board, selection: Selection): Card | null {
+export function attachmentRing(board: Board, selection: Selection, aboveRow = selection.card - 1): Card | null {
   const card = cardAt(board, selection);
-  const above = board.columns[selection.column]?.cards[selection.card - 1];
+  const above = board.columns[selection.column]?.cards[aboveRow];
   if (!card || !above) return null;
   return isDescendantOf(board, above.id, card.id) ? above : null;
 }

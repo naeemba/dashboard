@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import {
-  actsOnHiddenCard, cardMatches, keepingRow, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, keepingRow, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -228,5 +228,17 @@ describe('rowsToDraw', () => {
   it('keeps the new card a filter would hide, on a column the filter empties', () => {
     const selection = { column: 2, card: 3 };
     expect(rowsToDraw(visible, selection, true).visible[2]).toEqual([3]);
+  });
+});
+
+describe('rowAbove', () => {
+  it('is the visible card above, skipping hidden ones', () => {
+    expect(rowAbove(visible, { column: 1, card: 4 })).toBe(2);
+  });
+  it('is -1 on the top visible card', () => {
+    expect(rowAbove(visible, { column: 1, card: 0 })).toBe(-1);
+  });
+  it('is -1 when the selected card is itself hidden', () => {
+    expect(rowAbove(visible, { column: 0, card: 2 })).toBe(-1);
   });
 });
