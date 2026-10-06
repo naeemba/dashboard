@@ -41,7 +41,7 @@ import {
   visibleRows,
   type BoardFilter,
 } from './board-filter';
-import { dropRow } from './board-drag';
+import { createDropMarker } from './drop-marker';
 import { createCardAim } from './card-aim';
 import { putEditBack, takeEdit } from './carried-edit';
 import { bringHome, shipsAway } from './ships-away';
@@ -165,12 +165,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
-  // The card carrying the line that says where a dragged card would land, and the frame that will draw
-  // it. Held rather than searched for: a dragover fires on every mouse movement, and looking the marked
-  // card up by its own class each time walks every node on the board — on the manager that is every
-  // open project's cards at once — to find the one node this file put the class on itself.
-  let marked: Element | null = null;
-  let markFrame = 0;
+  // The line that says where a dragged card would land.
+  const dropMarker = createDropMarker();
   // The id of the card a left press landed on, or null. Held by id rather than by node because the
   // press commits an open box, which replaces every card on the board — the node is gone by the time
   // the button comes up, the id is not.
@@ -542,56 +538,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   // title box — the gesture the pairing above exists to refuse.
   function endDrag(): void {
     pressed = null;
-    clearDrop();
+    dropMarker.clear();
     render();
-  }
-
-  // Takes the line off whatever is carrying it, and calls off a frame that has not drawn yet — without
-  // that, a drag let go of or abandoned a few milliseconds after the last dragover leaves a line on the
-  // board pointing at a gap nothing is being dropped into.
-  function clearDrop(): void {
-    cancelAnimationFrame(markFrame);
-    markFrame = 0;
-    marked?.classList.remove('drop-above', 'drop-below');
-    marked = null;
-  }
-
-  // Where the card would land if you let go now, drawn as a line along the top of the card it would sit
-  // above — or along the bottom of the last one when the answer is the end of the column. Without it a
-  // drag into a column of a dozen cards is a guess: the gap between two cards is four pixels of
-  // background and nothing in it says which gap the cursor is in.
-  //
-  // An empty column gets no line. There is one place the card can go and the column is visibly empty,
-  // so there is nothing for a line to tell apart.
-  //
-  // One frame at a time. A dragover fires on every mouse movement and again every few hundred
-  // milliseconds while the cursor sits still, and reading a column's rows reads the box of every card
-  // in it — a whole layout each time, forced again by the class this then writes. The line can only be
-  // painted once a frame, so measuring more often than that buys a stutter and nothing else.
-  function markDropSoon(list: HTMLElement, pointerY: number): void {
-    if (markFrame) return;
-    markFrame = requestAnimationFrame(() => {
-      markFrame = 0;
-      clearDrop();
-      const cards = list.children;
-      const row = rowUnder(list, pointerY);
-      // The end of the column is the one landing with no card above it to draw on, so the last card
-      // carries the line under itself instead.
-      const above = row < cards.length;
-      marked = (above ? cards[row] : cards[cards.length - 1]) ?? null;
-      marked?.classList.add(above ? 'drop-above' : 'drop-below');
-    });
-  }
-
-  // Which row of this column the pointer is naming. Measured here and decided in board-drag.ts, so the
-  // rule about which gap a pointer is in is somewhere a test can reach — and asked in one place, so the
-  // line you were shown and the row you get cannot be two different answers.
-  function rowUnder(list: HTMLElement, pointerY: number): number {
-    const midpoints = [...list.children].map((item) => {
-      const box = item.getBoundingClientRect();
-      return box.top + box.height / 2;
-    });
-    return dropRow(midpoints, pointerY);
   }
 
   // A move, and the ship it may be. Both gestures that move a card come through here so the second half
@@ -616,7 +564,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   function dropOnColumn(event: DragEvent, columnIndex: number, list: HTMLElement): void {
     event.preventDefault();
     // Before the row is read, so the line is gone whether or not this board has the card.
-    clearDrop();
+    dropMarker.clear();
     if (busy()) return;
     // Found by id rather than taken from this board's selection: the manager stacks every open
     // project's board in one scroller, so the card let go of here may belong to another one of them.
@@ -627,7 +575,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     if (id === '') return;
     const at = selectionOf(state.board, id);
     if (!at) return options.onError('That card belongs to another project — a card stays on the board it was made on');
-    const row = realRow(visible, columnIndex, rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length);
+    const row = realRow(visible, columnIndex, dropMarker.rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length);
     moveThenShip(at, dropCard(state.board, at, columnIndex, row), 'drop');
   }
 
@@ -700,12 +648,12 @@ export function createBoardView(options: BoardOptions): BoardView {
           if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
           // A board can go busy mid-drag — a board:change from the command line starts a read — and the
           // line drawn a moment ago would sit there saying the card lands here while the cursor says no.
-          clearDrop();
+          dropMarker.clear();
           return;
         }
         event.preventDefault();
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-        markDropSoon(list, event.clientY);
+        dropMarker.markSoon(list, event.clientY);
       });
       section.addEventListener('drop', (event) => dropOnColumn(event, columnIndex, list));
       // A board the pointer merely crossed never hears dragend — that fires at the card the drag
@@ -715,7 +663,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       // nothing does. relatedTarget is where the pointer went: still inside this column means it only
       // moved between the cards in it.
       section.addEventListener('dragleave', (event) => {
-        if (!(event.relatedTarget instanceof Node) || !section.contains(event.relatedTarget)) clearDrop();
+        if (!(event.relatedTarget instanceof Node) || !section.contains(event.relatedTarget)) dropMarker.clear();
       });
       if (visible[columnIndex].length === 0) {
         const empty = document.createElement('p');
