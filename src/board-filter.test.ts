@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
-import { cardMatches, emptyFilter, filterSummary, isFilterActive, visibleRows, type BoardFilter } from './board-filter';
+import {
+  cardMatches, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  type BoardFilter,
+} from './board-filter';
 
 const now = Date.parse('2026-10-06T12:00:00Z');
 const daysAgo = (days: number): string => new Date(now - days * 86_400_000).toISOString();
@@ -104,5 +107,69 @@ describe('filterSummary', () => {
 
   it('lists priorities in rank order whatever order they were picked in', () => {
     expect(filterSummary(filter({ priorities: ['low', 'urgent'] }))).toBe('urgent, low');
+  });
+});
+
+// Column 0 shows real rows 1 and 3; column 1 shows 0, 2 and 4; column 2 shows nothing.
+const visible = [[1, 3], [0, 2, 4], []];
+
+describe('settleSelection', () => {
+  it('leaves a visible selection alone', () => {
+    const selection = { column: 0, card: 3 };
+    expect(settleSelection(visible, selection)).toBe(selection);
+  });
+  it('moves a hidden selection to the first visible card of its column', () => {
+    expect(settleSelection(visible, { column: 0, card: 2 })).toEqual({ column: 0, card: 1 });
+  });
+  it('rests on row 0 in a column with nothing visible', () => {
+    expect(settleSelection(visible, { column: 2, card: 5 })).toEqual({ column: 2, card: 0 });
+  });
+});
+
+describe('stepSelection', () => {
+  it('walks up and down over visible rows only, stopping at the ends', () => {
+    expect(stepSelection(visible, { column: 0, card: 1 }, 'down')).toEqual({ column: 0, card: 3 });
+    expect(stepSelection(visible, { column: 0, card: 3 }, 'down')).toEqual({ column: 0, card: 3 });
+    expect(stepSelection(visible, { column: 0, card: 1 }, 'up')).toEqual({ column: 0, card: 1 });
+  });
+  it('keeps its place among visible rows across columns', () => {
+    expect(stepSelection(visible, { column: 0, card: 3 }, 'right')).toEqual({ column: 1, card: 2 });
+    expect(stepSelection(visible, { column: 1, card: 4 }, 'left')).toEqual({ column: 0, card: 3 });
+  });
+  it('lands on row 0 of a column with nothing visible, and walks on out of it', () => {
+    expect(stepSelection(visible, { column: 1, card: 2 }, 'right')).toEqual({ column: 2, card: 0 });
+    expect(stepSelection(visible, { column: 2, card: 0 }, 'left')).toEqual({ column: 1, card: 0 });
+  });
+  it('stays put going up or down in a column with nothing visible', () => {
+    expect(stepSelection(visible, { column: 2, card: 0 }, 'down')).toEqual({ column: 2, card: 0 });
+  });
+  it('stops at the outer columns', () => {
+    expect(stepSelection(visible, { column: 0, card: 1 }, 'left')).toEqual({ column: 0, card: 1 });
+  });
+});
+
+describe('reorderRow', () => {
+  it('swaps past hidden cards with the visible neighbour', () => {
+    expect(reorderRow(visible, { column: 0, card: 3 }, 'up')).toBe(1);
+    expect(reorderRow(visible, { column: 0, card: 1 }, 'down')).toBe(4);
+  });
+  it('has nothing to swap with at the ends', () => {
+    expect(reorderRow(visible, { column: 0, card: 1 }, 'up')).toBeNull();
+    expect(reorderRow(visible, { column: 0, card: 3 }, 'down')).toBeNull();
+  });
+  it('moves nothing when the selected card is itself hidden', () => {
+    expect(reorderRow(visible, { column: 0, card: 2 }, 'down')).toBeNull();
+  });
+});
+
+describe('realRow', () => {
+  it('drops before the visible card at that row', () => {
+    expect(realRow(visible, 1, 1, 6)).toBe(2);
+  });
+  it('drops right after the last visible card when aimed past it', () => {
+    expect(realRow(visible, 1, 3, 6)).toBe(5);
+  });
+  it('drops at the end of a column with nothing visible', () => {
+    expect(realRow(visible, 2, 0, 7)).toBe(7);
   });
 });

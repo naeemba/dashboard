@@ -1,5 +1,7 @@
 import { timeOf } from './age';
-import { childrenOf, PRIORITIES, type Board, type Card, type Priority } from './board';
+import { childrenOf, PRIORITIES, type Board, type Card, type Priority, type Selection } from './board';
+import { clampIndex } from './clamp-index';
+import type { Direction } from './terminals';
 
 // What the board is narrowed to. Held by the view while you are on the board and dropped when you
 // leave, so nothing here is ever written to the file.
@@ -116,4 +118,47 @@ export function filterSummary(filter: BoardFilter): string {
     ageWords(filter.created, 'created'),
     ageWords(filter.updated, 'updated'),
   ].filter((part) => part !== '').join(' · ');
+}
+
+// A selection on a card the filter hides moves to the first card it keeps in that column. A column
+// keeping nothing rests on row 0; the view refuses card keys there, since row 0 may be a hidden card.
+export function settleSelection(visible: number[][], selection: Selection): Selection {
+  const rows = visible[selection.column] ?? [];
+  if (rows.includes(selection.card)) return selection;
+  return { column: selection.column, card: rows[0] ?? 0 };
+}
+
+// The arrows over a filtered board. Up and down walk the rows the filter keeps; left and right keep
+// your place among them in the next column, clamped to how many it shows.
+export function stepSelection(visible: number[][], selection: Selection, direction: Direction): Selection {
+  const here = visible[selection.column] ?? [];
+  const position = Math.max(0, here.indexOf(selection.card));
+  if (direction === 'up' || direction === 'down') {
+    const next = here[clampIndex(position + (direction === 'down' ? 1 : -1), here.length - 1)];
+    return next === undefined ? selection : { column: selection.column, card: next };
+  }
+  const column = clampIndex(selection.column + (direction === 'right' ? 1 : -1), visible.length - 1);
+  if (column === selection.column) return selection;
+  const there = visible[column];
+  return { column, card: there[clampIndex(position, there.length - 1)] ?? 0 };
+}
+
+// Shift+Up and Shift+Down while filtered: the row to hand dropCard so the card trades places with the
+// next card you can see, not with one the filter hides. dropCard reads a row as "before the card now
+// there", so going down is one past the neighbour. Null when there is nothing that way.
+export function reorderRow(visible: number[][], selection: Selection, direction: 'up' | 'down'): number | null {
+  const rows = visible[selection.column] ?? [];
+  const position = rows.indexOf(selection.card);
+  if (position === -1) return null;
+  const neighbour = rows[position + (direction === 'down' ? 1 : -1)];
+  if (neighbour === undefined) return null;
+  return direction === 'down' ? neighbour + 1 : neighbour;
+}
+
+// A drag measures rows among the cards on screen; dropCard wants a row of the whole column. Past the
+// last card shown is just after it, not the end of the column, which may be a run of hidden cards.
+export function realRow(visible: number[][], column: number, visibleRow: number, columnLength: number): number {
+  const rows = visible[column] ?? [];
+  if (visibleRow < rows.length) return rows[visibleRow];
+  return rows.length === 0 ? columnLength : rows[rows.length - 1] + 1;
 }
