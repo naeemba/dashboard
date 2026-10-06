@@ -200,7 +200,8 @@
 
 .search-input,
 .card-detail-add,
-.prompt-input {
+.prompt-input,
+.filter-text {
   font: inherit;
   color: var(--brightWhite);
   background: var(--surface-raised);
@@ -212,7 +213,8 @@
 
 .search-input:focus,
 .card-detail-add:focus,
-.prompt-input:focus {
+.prompt-input:focus,
+.filter-text:focus {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px var(--tint);
 }
@@ -401,4 +403,57 @@
 
 .settings-message {
   color: var(--yellow);
+}
+
+/* The board's filter: one row per field, its name on the left and what it is set to on the right.
+   The text row holds the box instead of a value. Rows look like the search list's so the two dialogs
+   over a board read as one family. */
+.filter-dialog {
+  align-self: flex-start;
+  width: 420px;
+  padding: 16px;
+  outline: none;
+}
+
+.filter-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filter-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.filter-row:hover {
+  background: var(--hover);
+}
+
+.filter-row.highlighted {
+  background: var(--tint);
+}
+
+.filter-label {
+  flex: 0 0 96px;
+  color: var(--muted);
+}
+
+.filter-value {
+  color: var(--brightWhite);
+}
+
+.filter-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-keys {
+  margin: 12px 10px 0;
+  color: var(--muted);
+  font-size: 11px;
 }
