@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import {
-  actsOnHiddenCard, cardMatches, changedCard, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -270,7 +270,7 @@ describe('hiddenSelectedCard', () => {
   });
 });
 
-describe('changedCard', () => {
+describe('changedCardIdAfter', () => {
   const a = card({ id: 'a', priority: 'urgent' });
   const b = card({ id: 'b' });
   const c = card({ id: 'c', priority: 'urgent' });
@@ -278,7 +278,7 @@ describe('changedCard', () => {
 
   it('is null for the neighbour a delete leaves selected, so the filter can settle off it', () => {
     const after = boardOf([a, b]);
-    expect(changedCard(before, { column: 0, card: 1 }, after, { column: 0, card: 1 })).toBeNull();
+    expect(changedCardIdAfter(before, { column: 0, card: 1 }, after, { column: 0, card: 1 })).toBeNull();
     const urgent = filter({ priorities: ['urgent'] });
     const selection = { column: 0, card: 1 };
     const drawn = rowsToDraw(visibleRows(after, urgent, now), selection, keepsSelection(after, selection, false, null));
@@ -286,14 +286,14 @@ describe('changedCard', () => {
   });
   it('is the card a change altered', () => {
     const after = boardOf([a, { ...c, priority: 'high' }, b]);
-    expect(changedCard(before, { column: 0, card: 1 }, after, { column: 0, card: 1 })).toBe('c');
+    expect(changedCardIdAfter(before, { column: 0, card: 0 }, after, { column: 0, card: 1 })).toBe('c');
   });
   it('is the card that was already selected, even untouched', () => {
-    expect(changedCard(before, { column: 0, card: 2 }, before, { column: 0, card: 2 })).toBe('b');
+    expect(changedCardIdAfter(before, { column: 0, card: 2 }, before, { column: 0, card: 2 })).toBe('b');
   });
   it('is a card the change brought back', () => {
     const without = boardOf([a, b]);
-    expect(changedCard(without, { column: 0, card: 1 }, before, { column: 0, card: 1 })).toBe('c');
+    expect(changedCardIdAfter(without, { column: 0, card: 1 }, before, { column: 0, card: 1 })).toBe('c');
   });
 });
 

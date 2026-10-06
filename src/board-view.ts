@@ -31,7 +31,7 @@ import { openCardDetail, type CardDetail } from './board-detail';
 import {
   actsOnHiddenCard,
   filterAfterPicking,
-  changedCard,
+  changedCardIdAfter,
   hiddenSelectedCard,
   keepsSelection,
   emptyFilter,
@@ -281,7 +281,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   function apply(next: BoardState): Promise<boolean> {
     let written = Promise.resolve(true);
     if (next !== state) {
-      changedCardId = changedCard(state.board, state.selection, next.board, next.selection);
+      changedCardId = changedCardIdAfter(state.board, state.selection, next.board, next.selection);
       state = next;
       // Said once the write lands, since a write that lands clears the status bar.
       written = save().then((saved) => {

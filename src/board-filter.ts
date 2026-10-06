@@ -214,7 +214,7 @@ export function rowsToDraw(
 // neighbour that slid into the gap, untouched and not selected before, so that one gets null — or a
 // filter hiding it would keep it drawn and selected after you deleted something else. Unchanged cards
 // keep their object across a change in board.ts, so identity is what says a card was touched.
-export function changedCard(before: Board, beforeSelection: Selection, after: Board, afterSelection: Selection): string | null {
+export function changedCardIdAfter(before: Board, beforeSelection: Selection, after: Board, afterSelection: Selection): string | null {
   const card = cardAt(after, afterSelection);
   if (!card) return null;
   const earlier = before.columns.flatMap((column) => column.cards).find((entry) => entry.id === card.id);
