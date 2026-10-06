@@ -30,16 +30,23 @@ const config: ForgeConfig = {
     // which still calls itself com.github.Electron while Info.plist says com.electron.dashboard.
     // macOS files an app with Notification Center under the *signing* name, so a Dashboard that
     // disagrees with itself never appears in System Settings > Notifications and every banner it
-    // raises is dropped, with no error anywhere to say why. Ad hoc, because there is no Developer ID
-    // on this machine; identityValidation off is what stops the signer looking one up and failing.
-    // hardenedRuntime off: it turns on library validation, and an ad hoc signature has no team
-    // identity, so the ad hoc app binary is refused the ad hoc Electron Framework and the app dies
-    // at launch with "different Team IDs". Hardened runtime only buys notarization, which an ad hoc
-    // build cannot have anyway.
+    // raises is dropped, with no error anywhere to say why.
+    // "Dashboard Local" is a self-signed code-signing certificate in the login keychain, not a
+    // Developer ID. An ad hoc signature would do for Notification Center, but macOS remembers folder
+    // access (Documents, Desktop, ...) against an ad hoc app's exact hash, so every rebuild asked for
+    // every folder again. Against a certificate it remembers "this id, signed by this certificate",
+    // which survives rebuilds. Delete or recreate the certificate and the prompts return once.
+    // identityValidation off: the certificate is untrusted, so the signer would refuse to find it.
+    // hardenedRuntime off: it turns on library validation, and a self-signed certificate has no team
+    // identity, so the app binary is refused its own Electron Framework and the app dies at launch
+    // with "different Team IDs". Hardened runtime only buys notarization, which this build cannot
+    // have anyway. timestamp none: a real certificate makes the signer ask Apple's timestamp server
+    // for every file, which buys nothing here, takes half a second each, and when the server is
+    // unreachable the packager swallows the failure and ships the unsigned prebuilt binary.
     osxSign: {
-      identity: '-',
+      identity: 'Dashboard Local',
       identityValidation: false,
-      optionsForFile: () => ({ hardenedRuntime: false }),
+      optionsForFile: () => ({ hardenedRuntime: false, timestamp: 'none' }),
     },
     // The Vite plugin's default ignore keeps only .vite/. node-pty is external, so copy what it
     // loads at runtime: package.json, lib/, and the native binary (~400 KB of 63 MB).
