@@ -33,25 +33,13 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Board mode | Ctrl+B |
 | Notes mode | Ctrl+Shift+N |
 | Open the project list | Ctrl+S |
-| Back to the last project | Ctrl+O |
+| Settings | Ctrl+, |
 | Jump to project N | Ctrl+1..9 |
-| Move the current project to position N | Ctrl+Shift+1..9 |
-| Next / previous project | Mod+] / Mod+[ |
-| Focus terminal N | Mod+1..5 (terminals mode, macOS only — see below) |
-| Next / previous terminal | Mod+Right / Mod+Left (terminals mode) |
-| Clear the shell's current line | Cmd+Backspace (macOS only — see below) |
-| Move to the pane left / down / up / right | Option+H / J / K / L (Alt elsewhere, terminals mode) |
-| Edit a card's title / description | Enter / `e` (board mode) |
-| Add / delete a card | `n` / `d` (board mode) |
-| Cycle a card's priority | `p` (board mode) |
-| Sort a column by priority | `s` (board mode) |
-| Undo the last board change | `u` (board mode) |
 
-Ctrl+H lists them: the screen in front of you first, then the modes, then the projects. Each section
-opens with a sentence saying what that screen is — five shells that keep running, an nvim that has not
-started yet, a board with no save key — and then names its keys. Escape or Enter closes it. It is the
-one shortcut no mode passes through, so the cost is that Ctrl+H no longer reaches a shell or nvim as a
-backspace.
+Every other key is in Ctrl+H, printed from the one table in `src/actions.ts`, so that dialog is always
+current where this file might not be: the screen in front of you first, then the modes, then the
+projects. Each section opens with a sentence saying what that screen is. Escape or Enter closes it. It
+is the one shortcut no mode passes through, so Ctrl+H no longer reaches a shell or nvim as a backspace.
 
 ## Settings
 
@@ -77,7 +65,7 @@ Nvim starts the first time you press Ctrl+N for that project, not at launch. Qui
 
 The board lives in `.dashboard/board.json` inside the project, alongside a `README.md` and a `CLAUDE.md` describing the format. The folder is created the first time you open the board. Committing it is your call — nothing touches `.gitignore`.
 
-Inside the board: arrows move the selection, Shift with an arrow moves the card itself, and the keys in the table above do the rest. A card carries a title, a description, and one of four priorities — `urgent`, `high`, `medium`, `low` — shown as a coloured stripe down its left edge and named in the status bar. `p` walks through the four, `s` sorts the column you are on with the urgent cards at the top. Every change is written straight to disk; there is no save key.
+The columns are `Todo`, `Ship`, `Doing`, `Review`, `Done`. Inside the board: arrows move the selection, Shift with an arrow moves the card itself, `/` searches; Ctrl+H lists the rest. A card carries a title, a description, and one of four priorities — `urgent`, `high`, `medium`, `low` — shown as a coloured stripe down its left edge and named in the status bar. `p` walks through the four, `s` sorts the column you are on with the urgent cards at the top. Every change is written straight to disk; there is no save key.
 
 The notes are one page of free text per project, kept in `.dashboard/notes.md` beside the board, for what is not a card. There is no save key there either: what you type is written a moment after you stop, wherever you are by then, and arriving writes anything still waiting before it reads. Arriving is also the only time the file is read, so an edit made in a pane shows up the next time you come here — while you are on the screen, your box is what gets written. Nothing renders the markdown — the name is there so the file is worth opening in an editor.
 
@@ -86,11 +74,13 @@ Ctrl+Shift+N rather than Ctrl+N, which is nvim's. xterm makes a control characte
 Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that edits the board of the project you are in. It goes through the same code the app does.
 
     node "$DASHBOARD_BOARD" list
+    node "$DASHBOARD_BOARD" show 0f6a2c5e-...
     node "$DASHBOARD_BOARD" add "Fix the resize race" --priority high --notes "what goes wrong"
-    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Done
+    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Review
     node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
+    node "$DASHBOARD_BOARD" comment 0f6a2c5e-... "what was found"
 
-`list` prints the column, priority and id of every card; the other three take that id. Run it with no arguments for the whole of it. It is how an agent working a card moves its own card to Done when the pull request is open, instead of editing JSON by hand.
+`list` prints the column, priority and id of every card; the others take that id. Run it with no arguments for the whole usage. It is how an agent working a card moves its own card: into `Review` when the pull request is open, into `Done` on the branch before the merge, instead of editing JSON by hand.
 
 While a card is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global shortcut are dead until the edit ends. A title ends on Enter or Escape. A description ends on Escape only — Enter there is a newline, since a description is written as lines.
 
