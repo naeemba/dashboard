@@ -22,6 +22,8 @@ export type Action =
   | { kind: 'terminal-previous' }
   | { kind: 'terminal-move'; direction: Direction }
   | { kind: 'terminal-input'; data: string }
+  | { kind: 'terminal-copy' }
+  | { kind: 'terminal-paste' }
   | { kind: 'terminal-zoom' }
   | { kind: 'terminal-scrollback' }
   | { kind: 'terminal-name' }
@@ -259,6 +261,17 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'terminal-clear-line', description: "Clear the shell's current line",
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-input', data: '\x15' }, mac: 'Cmd+Backspace', other: null,
+  },
+  // Off a mac the page hears Ctrl+C before the Edit menu does, xterm sends it to the shell as ^C, and
+  // the menu's copy never fires — Ctrl+Shift+C arrives as ^C too. So these are the Linux terminal
+  // keys. On a mac Cmd+C and Cmd+V already reach the menu first, and ship unbound here.
+  {
+    name: 'terminal-copy', description: "Copy the pane's selection", group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-copy' }, mac: null, other: 'Ctrl+Shift+C',
+  },
+  {
+    name: 'terminal-paste', description: 'Paste into the pane', group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-paste' }, mac: null, other: 'Ctrl+Shift+V',
   },
   // Alt+F, in the same family as the Alt keys that move between panes: Ctrl+F is the shell's
   // forward-char, so it cannot be taken. The cost is the shell's forward-word, which is the same cost

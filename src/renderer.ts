@@ -707,6 +707,20 @@ function apply(action: Action): void {
     case 'terminal-name': return namePane(page);
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
+    // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
+    case 'terminal-copy': {
+      const selection = page.panes[page.focused]?.terminal.getSelection();
+      if (selection) void navigator.clipboard.writeText(selection);
+      return;
+    }
+    // paste() rather than input(): it wraps the text in bracketed-paste markers when the shell asked
+    // for them, so a pasted line with a newline in it is not run on arrival.
+    // The pane is taken at the keystroke, so a focus move before the clipboard answers cannot send
+    // the paste to another shell.
+    case 'terminal-paste': {
+      const pane = page.panes[page.focused];
+      return void navigator.clipboard.readText().then((text) => pane?.terminal.paste(text));
+    }
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
     case 'command-select':
     case 'command-open':
