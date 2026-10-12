@@ -76,17 +76,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "c20d6e68-6b5b-4cfb-8764-d50cad8f5e7c",
-          "title": "Copy and paste in a pane on Linux: Ctrl+Shift+C and Ctrl+Shift+V",
-          "notes": "On Linux the page sees Ctrl+C before the Edit menu does, and xterm takes it as SIGINT, so copying out of a pane only works from Edit > Copy. Ctrl+Shift+C also arrives as ^C. Bind Ctrl+Shift+C and Ctrl+Shift+V on non-mac as terminal actions.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-10-12T11:15:05.802Z",
-          "updatedAt": "2026-10-12T11:15:05.802Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -105,6 +95,23 @@
             {
               "at": "2026-10-06T14:31:55.301Z",
               "body": "PR #72: tabs in the title row, a status bar at the foot with a view switch, board lanes and raised cards, one dialog sheet with keycaps and search, Lucide icons throughout. index.css split into chrome, board, dialogs and which-key stylesheets. Panes and keys unchanged. v1.11.0."
+            }
+          ]
+        },
+        {
+          "id": "c20d6e68-6b5b-4cfb-8764-d50cad8f5e7c",
+          "title": "Copy and paste in a pane on Linux: Ctrl+Shift+C and Ctrl+Shift+V",
+          "notes": "On Linux the page sees Ctrl+C before the Edit menu does, and xterm takes it as SIGINT, so copying out of a pane only works from Edit > Copy. Ctrl+Shift+C also arrives as ^C. Bind Ctrl+Shift+C and Ctrl+Shift+V on non-mac as terminal actions.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-12T11:15:05.802Z",
+          "updatedAt": "2026-10-12T11:19:09.662Z",
+          "branch": "linux-pane-copy",
+          "pullRequest": 74,
+          "comments": [
+            {
+              "at": "2026-10-12T11:19:09.662Z",
+              "body": "PR #74: Ctrl+Shift+C / Ctrl+Shift+V copy and paste in a pane off a mac, as terminal-copy and terminal-paste rows. Mac unbound, Cmd keys reach the menu. Version 1.12.0. Not run in the app."
             }
           ]
         }
