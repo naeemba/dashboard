@@ -1,4 +1,4 @@
-import type { Board } from './board';
+import { allCards, type Board } from './board';
 import { filterSummary, isFilterActive, type BoardFilter } from './board-filter';
 import { icon, iconButton } from './icons';
 
@@ -10,8 +10,8 @@ export function filterBar(filter: BoardFilter, visible: number[][], board: Board
   if (!isFilterActive(filter)) return null;
   const bar = document.createElement('div');
   bar.className = 'board-filter-bar';
-  const shown = visible.reduce((sum, rows) => sum + rows.length, 0);
-  const total = board.columns.reduce((sum, column) => sum + column.cards.length, 0);
+  const shown = visible.flat().length;
+  const total = allCards(board).length;
   const summary = document.createElement('span');
   summary.className = 'board-filter-summary';
   summary.textContent = filterSummary(filter);
