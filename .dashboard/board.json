@@ -99,6 +99,23 @@
           ]
         },
         {
+          "id": "de4da884-2bdf-4cff-a457-35146369907b",
+          "title": "Backlog column, board filter and a sort button",
+          "notes": "Backlog column left of Todo, added to every board on read; a filter over every card field that hides cards, with a reset; a sort-by-priority button on each column heading.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-06T18:31:32.238Z",
+          "updatedAt": "2026-10-06T19:07:20.906Z",
+          "branch": "board-backlog-filter",
+          "pullRequest": 73,
+          "comments": [
+            {
+              "at": "2026-10-06T19:07:20.906Z",
+              "body": "Shipped in #73: Backlog column first on every board (board add defaults there), a filter over every card field (f, Shift+F resets, strip with Reset, hidden cards skipped by arrows/moves/attach/drag), and a sort button on each column heading. 1120 tests pass."
+            }
+          ]
+        },
+        {
           "id": "c20d6e68-6b5b-4cfb-8764-d50cad8f5e7c",
           "title": "Copy and paste in a pane on Linux: Ctrl+Shift+C and Ctrl+Shift+V",
           "notes": "On Linux the page sees Ctrl+C before the Edit menu does, and xterm takes it as SIGINT, so copying out of a pane only works from Edit > Copy. Ctrl+Shift+C also arrives as ^C. Bind Ctrl+Shift+C and Ctrl+Shift+V on non-mac as terminal actions.",

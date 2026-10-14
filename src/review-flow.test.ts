@@ -13,7 +13,7 @@ function folder(): string {
   return mkdtempSync(join(tmpdir(), 'dashboard-review-'));
 }
 
-// One card in Todo. Another id gives a board that parses and has cards on it, none of them this card:
+// One card in Backlog. Another id gives a board that parses and has cards on it, none of them this card:
 // the deleted card, as against the empty board that has lost every card at once.
 function boardWithCard(pullRequest: number | null, id = CARD): Board {
   const board = emptyBoard();
@@ -103,7 +103,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(null);
     const { ports: made, log } = ports(entry);
     await reviewSweep(made).run();
-    expect(columnOfCard(projectPath)).toBe('Todo');
+    expect(columnOfCard(projectPath)).toBe('Backlog');
     expect(log.removed).toEqual([]);
   });
 
@@ -124,7 +124,7 @@ describe('reviewSweep', () => {
     const sweep = reviewSweep(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
-    expect(columnOfCard(projectPath)).toBe('Todo');
+    expect(columnOfCard(projectPath)).toBe('Backlog');
     // Nothing was marked, so the tick after it goes quiet picks the card up.
     working = false;
     await sweep.run();
@@ -136,7 +136,7 @@ describe('reviewSweep', () => {
   // thing saying the review already happened — and once it has, the worktree has nothing left to do.
   it('removes the worktree of a card the review moved past Review, without reviewing it again', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     const { ports: made, log } = ports({ ...entry, reviewing: true });
     const sweep = reviewSweep(made);
     await sweep.run();
@@ -150,7 +150,7 @@ describe('reviewSweep', () => {
   // then kills the shell mid-sentence.
   it('waits for the review agent to stop before removing a finished worktree', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     let working = true;
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { agentWorksIn: () => working });
     const sweep = reviewSweep(made);
@@ -166,7 +166,7 @@ describe('reviewSweep', () => {
   // the last one is closed, and then goes.
   it('keeps a finished worktree while a shell still stands in it', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     let open = true;
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: async () => open });
     const sweep = reviewSweep(made);
@@ -183,7 +183,7 @@ describe('reviewSweep', () => {
   // kept when it is already gone.
   it('removes a finished worktree once when a run starts before the last one has asked', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     let answer: (lives: boolean) => void = () => undefined;
     const asked = new Promise<boolean>((resolve) => { answer = resolve; });
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => asked });
@@ -199,7 +199,7 @@ describe('reviewSweep', () => {
   // so the folder is not the sweep's to throw away.
   it('keeps the worktree of a card in Done with no pull request', async () => {
     const { entry, projectPath } = flight(null);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     const { ports: made, log } = ports(entry);
     await reviewSweep(made).run();
     expect(log.removed).toEqual([]);
@@ -209,7 +209,7 @@ describe('reviewSweep', () => {
   // not ask git again every five seconds for an answer that will not change by itself.
   it('says once on the card why a finished worktree was kept', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     const { ports: made, log } = ports(entry, {
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
@@ -220,7 +220,7 @@ describe('reviewSweep', () => {
     await sweep.run();
     await sweep.run();
     expect(log.removed).toEqual([entry.worktreePath]);
-    const card = readBoard(projectPath).board.columns[4].cards[0];
+    const card = readBoard(projectPath).board.columns[5].cards[0];
     expect(card.comments?.map((comment) => comment.body)).toEqual([
       'Worktree kept: uncommitted changes in ship-it, remove it from the worktree list',
     ]);
@@ -230,7 +230,7 @@ describe('reviewSweep', () => {
   // one is reviewed again, which is what losing a review means.
   it('reviews a card again when the last review died in Review', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 3) ?? boardWithCard(null));
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
     const { ports: made, log } = ports(entry);
     await reviewSweep(made).run();
     expect(log.removed).toEqual([entry.worktreePath]);
@@ -285,7 +285,7 @@ describe('reviewSweep', () => {
     const sweep = reviewSweep(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
-    expect(columnOfCard(projectPath)).toBe('Todo');
+    expect(columnOfCard(projectPath)).toBe('Backlog');
   });
 
   // The pane question is asked before the worktree is destroyed, counting the card's own pane as the

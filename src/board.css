@@ -2,13 +2,81 @@
 
 .board {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   height: 100%;
   padding: 14px;
   background: var(--background);
   box-sizing: border-box;
   overflow: hidden;
   outline: none;
+}
+
+/* The lanes, side by side under the filter strip. */
+.board-columns {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Says the board is narrowed and by what, with the way back. */
+.board-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.board-filter-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--brightWhite);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-filter-count {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.board-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.board-filter-reset:hover {
+  color: var(--brightWhite);
+  background: var(--hover);
+}
+
+/* The mouse half of `s`, beside the column's name. */
+.board-sort {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.board-sort:hover {
+  color: var(--brightWhite);
+  background: var(--hover);
 }
 
 /* A lane: a soft panel the cards sit on, under a heading that names it and counts what is in it. */

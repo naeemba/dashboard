@@ -14,6 +14,7 @@ import {
   isPullRequestNumber,
   isTitle,
   withReviewColumn,
+  withBacklogColumn,
   withShipColumn,
   withoutEmptyShipColumn,
   type Board,
@@ -74,6 +75,9 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
     }
 
 - \`columns\` is ordered. The first column is the leftmost on screen.
+- Every board has a \`Backlog\` column, first unless someone moved it. A card
+  nobody has chosen to work on waits there; \`Todo\` holds what has been picked.
+  \`board add\` with no \`--column\` puts a card in Backlog.
 - The \`Ship\` column is not an ordinary one. Moving a card into it asks the
   Dashboard app to make a git worktree for that card, check out a branch named
   after it, and start an agent in one of the project's panes. Put a card there
@@ -311,7 +315,7 @@ export function parseBoard(text: string, makeId: () => string = () => crypto.ran
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
-  return withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) }));
+  return withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) })));
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but

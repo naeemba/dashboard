@@ -33,7 +33,7 @@ app.
   to the pane. Every dialog that reads `event.key` checks
   `if (isModified(event)) return;` first (the manager list asks `isBareCharacter`
   because it takes Shift on purpose). Exceptions, each on purpose: Tab in a
-  search box and the notes box; every key in the settings
+  search box, the board's filter dialog and the notes box; every key in the settings
   screen while a row is armed; Shift on the manager list. A new project view is
   a row in `PROJECT_MODES`, a row in `ACTIONS`, a view in `page.ts`, a branch in
   `focusMode` and `modeLabel`, and a name and blurb in `src/help.ts`.

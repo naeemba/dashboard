@@ -8,6 +8,6 @@ describe('columnIcon', () => {
   });
 
   it('gives a column it does not know the plain board icon', () => {
-    expect(columnIcon('Backlog')).toBe('board');
+    expect(columnIcon('Icebox')).toBe('board');
   });
 });
