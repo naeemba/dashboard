@@ -708,6 +708,7 @@ function apply(action: Action): void {
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
+    // Wiring, not a decision: getSelection() returning '' is the whole rule, so it has no module or test.
     case 'terminal-copy': {
       const selection = page.panes[page.focused]?.terminal.getSelection();
       if (selection) void navigator.clipboard.writeText(selection);

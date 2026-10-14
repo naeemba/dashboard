@@ -1,7 +1,7 @@
 #!/bin/sh
 # Rebuild Dashboard and swap the new build into place, without touching the running app. It is not
 # launched and not quit; the next restart picks the change up. On a mac that place is
-# /Applications/Dashboard.app; on Linux it is ~/.local/opt/dashboard, the folder the desktop entry runs.
+# /Applications/Dashboard.app; on Linux it is ~/.local/opt/dashboard, whose Dashboard executable a desktop entry of your own can run.
 # The prepackage hook stops the build if an app is running out of this checkout.
 set -eu
 
