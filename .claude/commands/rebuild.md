@@ -1,5 +1,5 @@
 ---
-description: Rebuild Dashboard and install it to /Applications without launching or quitting anything
+description: Rebuild Dashboard and install it (/Applications on a mac, ~/.local/opt/dashboard on Linux) without launching or quitting anything
 allowed-tools: Bash(./scripts/rebuild.sh)
 model: sonnet
 effort: low
@@ -7,7 +7,8 @@ effort: low
 
 Run `./scripts/rebuild.sh` and report what it printed.
 
-The script builds the app and swaps the new bundle into `/Applications`. It never
+The script builds the app and swaps the new build into place: `/Applications` on a mac,
+`~/.local/opt/dashboard` on Linux. It never
 launches the new version and never quits the running one — the change appears the
 next time I restart the app myself.
 

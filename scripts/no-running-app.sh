@@ -11,6 +11,6 @@ running=$(ps -Ao command= | grep -F "$repo/" | grep -E "/(out|\.vite)/|/node_mod
 [ -n "$running" ] || exit 0
 
 echo "Stopped: an app is running out of this repo, and building would delete the files it is"
-echo "executing. Quit it first, or restart it from /Applications instead."
+echo "executing. Quit it first, or restart it from the installed app instead."
 echo "$running" | cut -c1-160
 exit 1

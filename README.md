@@ -10,8 +10,9 @@ Keyboard-first terminal dashboard. Each project gets a page, shown four ways: fi
 
 ## Install
 
-    npm run package
-    cp -R out/Dashboard-darwin-*/Dashboard.app /Applications/
+    scripts/rebuild.sh
+
+It packages the app and installs it to `/Applications/Dashboard.app` on a mac or `~/.local/opt/dashboard` on Linux, leaving any running copy alone.
 
 Building signs the app with a self-signed certificate named `Dashboard Local` in the login keychain, and fails without it. Create it once in Keychain Access → Certificate Assistant → Create a Certificate…, Identity Type *Self Signed Root*, Certificate Type *Code Signing*. Recreating it makes macOS ask for folder access once more.
 
