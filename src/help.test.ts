@@ -165,10 +165,12 @@ describe('helpSections', () => {
 
   it('has a home for every action in the table', () => {
     // The manager's own screens, checked as the manager page too, or section-previous and
-    // section-next — printed only there — would never turn up.
-    const printed = new Set(
-      SCREENS.flatMap((mode) => rows(mode, isSection(mode)).map((row) => row.action)),
-    );
+    // section-next — printed only there — would never turn up. Both platforms, because a key may ship
+    // on only one of them.
+    const printed = new Set([true, false].flatMap((isMac) => {
+      const keys = defaultSettings(isMac).keys;
+      return SCREENS.flatMap((mode) => rows(mode, isSection(mode), keys, isMac).map((row) => row.action));
+    }));
     for (const entry of ACTIONS) {
       const named = printed.has(entry.description)
         || (entry.familyDescription !== undefined && printed.has(entry.familyDescription));

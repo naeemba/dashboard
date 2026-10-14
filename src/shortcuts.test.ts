@@ -153,22 +153,26 @@ describe('every shipped default reaches its own action', () => {
   // switch, and every screen added since. A default typed as a key name the parser does not know is
   // otherwise green everywhere — unique name, non-empty description, no clash — until you press it.
   it('holds for every key that belongs to one screen', () => {
-    const keys = defaultSettings(true).keys;
-    for (const entry of ACTIONS) {
-      if (entry.scope === 'global') continue;
-      const stroke = parseBinding(keys[entry.name]!)!;
-      const pressed = key({
-        code: stroke.code,
-        ctrlKey: stroke.ctrl,
-        metaKey: stroke.meta,
-        altKey: stroke.alt,
-        shiftKey: stroke.shift,
-      });
-      // manager-page is not a mode: it is every section of the manager. Driven from its first section,
-      // with the flag the renderer passes when the page you are on is the manager.
-      const mode = entry.scope === 'manager-page' ? 'manager' : entry.scope;
-      const onManagerPage = entry.scope === 'manager-page';
-      expect(mapShortcut(pressed, keys, mode, onManagerPage), entry.name).toEqual(entry.action);
+    for (const isMac of [true, false]) {
+      const keys = defaultSettings(isMac).keys;
+      for (const entry of ACTIONS) {
+        const binding = keys[entry.name];
+        // Unbound on this platform, so there is no key to press.
+        if (entry.scope === 'global' || binding === null) continue;
+        const stroke = parseBinding(binding)!;
+        const pressed = key({
+          code: stroke.code,
+          ctrlKey: stroke.ctrl,
+          metaKey: stroke.meta,
+          altKey: stroke.alt,
+          shiftKey: stroke.shift,
+        });
+        // manager-page is not a mode: it is every section of the manager. Driven from its first section,
+        // with the flag the renderer passes when the page you are on is the manager.
+        const mode = entry.scope === 'manager-page' ? 'manager' : entry.scope;
+        const onManagerPage = entry.scope === 'manager-page';
+        expect(mapShortcut(pressed, keys, mode, onManagerPage), entry.name).toEqual(entry.action);
+      }
     }
   });
 });
