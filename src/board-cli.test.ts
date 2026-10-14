@@ -62,10 +62,17 @@ describe('list', () => {
 });
 
 describe('add', () => {
-  it('puts a card in the leftmost column', () => {
+  it('puts a card in Backlog', () => {
     const { board, id } = withCard('Ship it');
     expect(board.columns[0].name).toBe('Backlog');
     expect(board.columns[0].cards.map((card) => card.id)).toContain(id);
+  });
+
+  // Backlog by name, not by place: a Backlog dragged right of Todo still takes the new cards.
+  it('finds Backlog wherever it sits', () => {
+    const [backlog, todo, ...rest] = emptyBoard().columns;
+    const result = run({ columns: [todo, backlog, ...rest] }, 'add', 'Fix the resize race');
+    expect(result.ok && result.board?.columns[1].cards.map((card) => card.title)).toEqual(['Fix the resize race']);
   });
 
   it('takes a column, a priority and notes', () => {
