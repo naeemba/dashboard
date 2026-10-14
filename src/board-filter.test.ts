@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from './board';
 import {
-  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, sideRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -163,6 +163,17 @@ describe('reorderRow', () => {
   });
   it('moves nothing when the selected card is itself hidden', () => {
     expect(reorderRow(visible, { column: 0, card: 2 }, 'down')).toBeNull();
+  });
+});
+
+describe('sideRow', () => {
+  // Todo has eight hidden cards above the one shown; Doing shows its first two of three.
+  const shown = [[8], [0, 1]];
+  it('lands the card at its place on screen, not at its real row', () => {
+    expect(sideRow(shown, { column: 0, card: 8 }, 1, 3)).toBe(0);
+  });
+  it('goes just after the last card shown when the target shows fewer', () => {
+    expect(sideRow([[0, 1, 2], [4]], { column: 0, card: 2 }, 1, 9)).toBe(5);
   });
 });
 

@@ -178,6 +178,14 @@ export function realRow(visible: number[][], column: number, visibleRow: number,
   return rows.length === 0 ? columnLength : rows[rows.length - 1] + 1;
 }
 
+// Shift+Left and Shift+Right while filtered: the row in the next column that keeps the card at its
+// place on screen, the same row a drag to that spot gives. Its real row would land it under cards it
+// sat above, because the rows the filter hides above it count there and not on screen.
+export function sideRow(visible: number[][], selection: Selection, target: number, columnLength: number): number {
+  const position = Math.max(0, (visible[selection.column] ?? []).indexOf(selection.card));
+  return realRow(visible, target, position, columnLength);
+}
+
 // The board keys that act on the selected card rather than on the board or the column. Moving,
 // renaming, deleting a card the filter hides would be acting on a card you cannot see.
 const CARD_ACTIONS: readonly Action['kind'][] = [

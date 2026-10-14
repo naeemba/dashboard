@@ -38,6 +38,7 @@ import {
   isFilterActive,
   realRow,
   reorderRow,
+  sideRow,
   rowAbove,
   rowsToDraw,
   settleSelection,
@@ -889,6 +890,12 @@ export function createBoardView(options: BoardOptions): BoardView {
           if (isFilterActive(filter) && (action.direction === 'up' || action.direction === 'down')) {
             const row = reorderRow(visible, state.selection, action.direction);
             return row === null ? undefined : change(dropCard(state.board, state.selection, state.selection.column, row));
+          }
+          // Left and right keep the card at its place on screen, where a drag to that spot puts it.
+          if (isFilterActive(filter)) {
+            const target = state.selection.column + (action.direction === 'right' ? 1 : -1);
+            const row = sideRow(visible, state.selection, target, state.board.columns[target]?.cards.length ?? 0);
+            return moveThenShip(state.selection, dropCard(state.board, state.selection, target, row), action.direction);
           }
           // The row the card is leaving, which both halves of a ship need: whether this move is the
           // gesture at all, and where the card goes back to once the ship works.
