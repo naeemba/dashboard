@@ -20,7 +20,7 @@ const buffer = (rows: string[]): WrapBuffer => ({
     };
   },
 });
-const paths = (rows: string[], row: number) => linksStartingOn(buffer(rows), row, COLUMNS, fileLinksIn)
+const paths = (rows: string[], row: number, columns = COLUMNS) => linksStartingOn(buffer(rows), row, columns, fileLinksIn)
   .map(({ link, start, end }) => [link.path, start.row, start.column, end.row, end.column]);
 
 describe('linksStartingOn', () => {
@@ -35,7 +35,7 @@ describe('linksStartingOn', () => {
 
   // The second half is not a path of its own, but what follows it on the row is.
   it('leaves the carried half out of the row it lands on', () => {
-    expect(paths(['- a/b/cde/', '  f/g.md x.ts'], 1)).toEqual([['x.ts', 1, 9, 1, 13]]);
+    expect(paths(['- a/b/cde/', '  f/g x.ts'], 1)).toEqual([['x.ts', 1, 6, 1, 10]]);
   });
 
   it('joins a path over three rows', () => {
@@ -47,13 +47,22 @@ describe('linksStartingOn', () => {
     expect(paths(['- a/b/cdef', 'g.md'], 0)).toEqual([['a/b/cdef', 0, 2, 0, 10]]);
   });
 
-  it('keeps a row that stops short of the edge to itself', () => {
-    expect(paths(['- a/b/c', '  d.md'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
+  it('keeps a row narrower than the widest in its block to itself', () => {
+    expect(paths(['- a/b/c', '  d.md', '- wide row'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
   });
 
   // Prose indents every row under its bullet; a word at the edge is not a path cut short.
   it('keeps a prose row ending at the edge off the indented path below it', () => {
     expect(paths(['- edit in', '  src/a.ts'], 1)).toEqual([['src/a.ts', 1, 2, 1, 10]]);
+  });
+
+  // Printed at ten cells, then the pane was zoomed wider: the rows keep the width they were printed at.
+  it('joins a path printed before the pane grew', () => {
+    expect(paths(['- a/b/cde/', '  f/g.md.'], 0, COLUMNS + 4)).toEqual([['a/b/cde/f/g.md', 0, 2, 1, 8]]);
+  });
+
+  it('keeps a path off the row below when a wider row in its block shows it was not cut', () => {
+    expect(paths(['- a/b/c/', '  d.md and', '  more text'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
   });
 
   it('keeps the space a terminal wrap fell after', () => {
@@ -80,9 +89,9 @@ describe('linksTouching', () => {
 
   // Hovering the second half underlines and opens the whole address, from where it starts.
   it('gives the row below the link that ends on it', () => {
-    const links = linksTouching(buffer(['https://ex', '  ample.com/a.']), 1, COLUMNS, webLinksIn);
+    const links = linksTouching(buffer(['https://ex', '  am.co/a.']), 1, COLUMNS, webLinksIn);
     expect(links.map(({ text, start, end }) => [text, start.row, end.row, end.column])).toEqual([
-      ['https://example.com/a', 0, 1, 13],
+      ['https://exam.co/a', 0, 1, 9],
     ]);
   });
 });

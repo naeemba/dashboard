@@ -19,13 +19,37 @@ type PlacedLink<T> = {
   end: { row: number; column: number };
 };
 
+// How wide a row is, in cells.
+function rowWidth(buffer: WrapBuffer, row: number): number {
+  return cellColumn(buffer.getLine(row), bufferLine(buffer, row).length);
+}
+
+// ponytail: how many rows each way the block around a row is read to find how wide it was printed.
+const BLOCK_REACH = 20;
+
+// Whether a row in this one's block — the rows between blank ones — is wider than `width`. The block
+// was printed at one width, so its widest row is that width. Not the pane's width now: a pane zoomed
+// or resized after Claude Code printed keeps the old rows at the old width, and measured against the
+// new one no row of theirs reaches the edge.
+function widerRowAround(buffer: WrapBuffer, row: number, width: number): boolean {
+  for (const step of [-1, 1]) {
+    for (let current = row + step, reach = 1; current >= 0 && reach <= BLOCK_REACH; current += step, reach += 1) {
+      const other = rowWidth(buffer, current);
+      if (other === 0) break;
+      if (other > width) return true;
+    }
+  }
+  return false;
+}
+
 // Where the row below picks this one up, with its indent off, or null when it does not.
-// ponytail: a row the program wrapped is told apart from one that merely ends near the edge by
-// reaching the last column or the one before it, ending in a word with a slash in it (a path or an
+// ponytail: a row the program wrapped is told apart from one that merely ends there by being as wide
+// as its block's widest row, or a cell short of it, ending in a word with a slash in it (a path or an
 // address in progress, never a prose word like `in`), with an indented row under it — so a path that
-// happens to end there takes the first word of an indented next row with it, and a path the program
-// cut before its first slash stays two halves, the tail read as a path of its own. Pass `Infinity` as the
-// columns to read only the terminal's own wraps, for a pane such as nvim that lays out its rows itself.
+// happens to end the widest row takes the first word of an indented next row with it, and a path the
+// program cut before its first slash stays two halves, the tail read as a path of its own. Pass
+// `Infinity` as the columns to read only the terminal's own wraps, for a pane such as nvim that lays
+// out its rows itself.
 function carriedOn(buffer: WrapBuffer, row: number, columns: number): number | null {
   const next = buffer.getLine(row + 1);
   if (!next) return null;
@@ -33,8 +57,8 @@ function carriedOn(buffer: WrapBuffer, row: number, columns: number): number | n
   const indent = next.isWrapped ? 0 : nextText.length - nextText.trimStart().length;
   if (!/\S/.test(nextText.charAt(indent))) return null;
   if (next.isWrapped) return indent;
-  const text = bufferLine(buffer, row);
-  return indent > 0 && /\/\S*$/.test(text) && cellColumn(buffer.getLine(row), text.length) >= columns - 1 ? indent : null;
+  if (columns === Infinity || indent === 0 || !/\/\S*$/.test(bufferLine(buffer, row))) return null;
+  return widerRowAround(buffer, row, rowWidth(buffer, row) + 1) ? null : indent;
 }
 
 // Each row of the line, from where its text begins in the joined string.

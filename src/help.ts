@@ -62,7 +62,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'there stays on this screen and says so in the status bar. A path or web address cut onto a '
     + 'second row, by the terminal or by an agent indenting the rest, is read whole from either row '
     + 'as long as the cut falls after its first slash; '
-    + 'one that only ends at the pane\'s edge can take the first word of an indented row under it.',
+    + 'one that only ends the widest row of its paragraph can take the first word of an indented row under it.',
   nvim: 'One nvim filling the window. It starts the first time you press the nvim key for this '
     + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again, and so does '
     + 'coming back to this screen — the scrollback key needs a running nvim to hand a file to. '
