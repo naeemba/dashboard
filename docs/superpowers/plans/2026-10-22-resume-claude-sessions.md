@@ -530,7 +530,7 @@ In `src/main.ts`, add to the `usageSweep({ ... })` ports, after `publish`, a sta
 Run: `npm test && npx tsc --noEmit && npx eslint .`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add src/usage-store.ts src/usage-store.test.ts src/pane-sessions.ts src/pane-sessions.test.ts src/usage-sweep.ts src/main.ts
