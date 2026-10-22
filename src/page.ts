@@ -167,10 +167,11 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       macOptionIsMeta: true,
     });
     const fit = new FitAddon();
+    const cursorLine = () => terminal.buffer.active.baseY + terminal.buffer.active.cursorY;
     const widths = printWidths({
       cols: () => terminal.cols,
-      cursorLine: () => terminal.buffer.active.baseY + terminal.buffer.active.cursorY,
-      mark: (line) => terminal.registerMarker(line - (terminal.buffer.active.baseY + terminal.buffer.active.cursorY)),
+      cursorLine,
+      mark: (line) => terminal.registerMarker(line - cursorLine()),
       isNormalBuffer: () => terminal.buffer.active.type === 'normal',
     });
     terminal.onResize(() => widths.resized());
@@ -178,8 +179,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     // A program redrawing a live frame erases its rows before writing them again. The handlers run before
     // xterm's own erase, with the cursor on the row being erased, and return false so xterm still erases.
     const erasing = (final: 'K' | 'J') => (params: ReadonlyArray<number | number[]>) => {
-      const { baseY, cursorY } = terminal.buffer.active;
-      widths.rowErased(erasedLine(final, Number(params[0] ?? 0), baseY, baseY + cursorY));
+      widths.rowErased(erasedLine(final, Number(params[0] ?? 0), terminal.buffer.active.baseY, cursorLine()));
       return false;
     };
     terminal.parser.registerCsiHandler({ final: 'K' }, erasing('K'));
