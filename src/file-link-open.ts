@@ -3,6 +3,7 @@ import { failureText } from './failure';
 import { fileLinksIn, type FileLink } from './file-links';
 import type { Page } from './page';
 import { bufferLine, cellColumn } from './pane';
+import type { WidthAt } from './print-widths';
 import { linksStartingOn, linksTouching, type WrapBuffer } from './wrapped-links';
 
 // The two decisions behind both ways of opening a path a pane printed: which paths are on screen and
@@ -19,12 +20,12 @@ export type VisibleLink = { row: number; column: number; link: FileLink };
 // back by hand labels what is in front of you, not the live screen under it. A path wrapped onto the
 // next row is labelled once, where it starts — or, when it starts above the screen, on the top row
 // where its visible part begins, so a path you can click is a path you can label.
-export function visibleLinks(buffer: ScreenBuffer, rows: number, columns: number): VisibleLink[] {
+export function visibleLinks(buffer: ScreenBuffer, rows: number, widthAt: WidthAt): VisibleLink[] {
   return Array.from({ length: rows }, (_value, offset) => rows - 1 - offset).flatMap((row) => {
     const line = buffer.viewportY + row;
     const text = bufferLine(buffer, line);
     const carriedIn = cellColumn(buffer.getLine(line), text.length - text.trimStart().length);
-    const placed = (row === 0 ? linksTouching : linksStartingOn)(buffer, line, columns, fileLinksIn);
+    const placed = (row === 0 ? linksTouching : linksStartingOn)(buffer, line, widthAt, fileLinksIn);
     return placed.map((link) => (
       { row, column: link.start.row === line ? link.start.column : carriedIn, link: link.link }
     ));
