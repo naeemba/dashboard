@@ -76,17 +76,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "7eee4121-9adf-449a-a0e0-da592aa89573",
-          "title": "Resume each pane's Claude session after a restart",
-          "notes": "Restarting the app kills every pane, and every Claude conversation in them has to be found again by hand. claude --continue only finds the latest session in a folder, so two Claude panes on one checkout both come back as the same one.\n\nThe token sweep already places each live session on its pane through ~/.claude/sessions/<pid>.json. Keep that map with the session's cwd, save it per pane in session.json (after any sweep that changed it, and once more on Quit), and on launch start each such pane's shell in that folder with claude --resume <id> typed into it. A folder that is gone gets a plain shell and no resume.\n\nSpec: docs/superpowers/specs/2026-10-22-resume-claude-sessions-design.md",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-10-22T09:46:13.168Z",
-          "updatedAt": "2026-10-22T09:46:13.168Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -155,6 +145,23 @@
             {
               "at": "2026-10-22T09:11:24.511Z",
               "body": "Pull request #75: click a path or press Alt+O to open it in the project's nvim at its line. Resolved from the pane's live folder, then its start folder, then the project."
+            }
+          ]
+        },
+        {
+          "id": "7eee4121-9adf-449a-a0e0-da592aa89573",
+          "title": "Resume each pane's Claude session after a restart",
+          "notes": "Restarting the app kills every pane, and every Claude conversation in them has to be found again by hand. claude --continue only finds the latest session in a folder, so two Claude panes on one checkout both come back as the same one.\n\nThe token sweep already places each live session on its pane through ~/.claude/sessions/<pid>.json. Keep that map with the session's cwd, save it per pane in session.json (after any sweep that changed it, and once more on Quit), and on launch start each such pane's shell in that folder with claude --resume <id> typed into it. A folder that is gone gets a plain shell and no resume.\n\nSpec: docs/superpowers/specs/2026-10-22-resume-claude-sessions-design.md",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-22T09:46:13.168Z",
+          "updatedAt": "2026-10-22T10:10:49.896Z",
+          "branch": "resume-claude-sessions",
+          "pullRequest": 76,
+          "comments": [
+            {
+              "at": "2026-10-22T10:10:49.896Z",
+              "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
         }
