@@ -3,7 +3,8 @@ import { fileLinksIn, webLinksIn } from './file-links';
 import { linksStartingOn, linksTouching, type WrapBuffer } from './wrapped-links';
 
 // A pane ten cells wide. A row starting with `>` is one the terminal wrapped onto from the row above;
-// the `>` itself is not part of the text.
+// the `>` itself is not part of the text. A trailing space in a row is one the program wrote: xterm's
+// trim keeps those and drops only the cells nothing was written to, which here is the padding.
 const COLUMNS = 10;
 const buffer = (rows: string[]): WrapBuffer => ({
   baseY: 0,
@@ -15,7 +16,7 @@ const buffer = (rows: string[]): WrapBuffer => ({
     return {
       isWrapped: raw.startsWith('>'),
       length: COLUMNS,
-      translateToString: (trim) => (trim ? text.trimEnd() : text.padEnd(COLUMNS)),
+      translateToString: (trim) => (trim ? text : text.padEnd(COLUMNS)),
       getCell: (column) => ({ getChars: () => text.charAt(column), getWidth: () => 1 }),
     };
   },
@@ -24,6 +25,15 @@ const paths = (rows: string[], row: number, width = COLUMNS) => linksStartingOn(
   .map(({ link, start, end }) => [link.path, start.row, start.column, end.row, end.column]);
 
 describe('linksStartingOn', () => {
+  // Claude Code's fullscreen view writes spaces out to the edge after the cut.
+  it('joins a path whose row the program filled with spaces after the cut', () => {
+    expect(paths(['- a/b/cd/ ', '  e/f.md  '], 0)).toEqual([['a/b/cd/e/f.md', 0, 2, 1, 8]]);
+  });
+
+  it('keeps a path off the row under it when the spaces after it, not the path, reach the edge', () => {
+    expect(paths(['- a/b/c/  ', '  d.md    '], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
+  });
+
   // How Claude Code prints a path too long for its list item: cut at the edge, the rest indented.
   it('joins a path the program broke at the edge and indented', () => {
     expect(paths(['- a/b/cde/', '  f/g.md.'], 0)).toEqual([['a/b/cde/f/g.md', 0, 2, 1, 8]]);

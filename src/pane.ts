@@ -62,9 +62,12 @@ export function paneScreen(terminal: PaneTerminal): string[] {
 
 // One line by its own number in the buffer, scrollback and screen alike. The trailing spaces come off
 // here and nowhere else: xterm pads every line out to the full width, and a reader that forgets is a
-// row of the manager padded to eighty columns, or a file of whitespace in an editor.
+// row of the manager padded to eighty columns, or a file of whitespace in an editor. xterm's own trim
+// drops only the cells nothing was written to; Claude Code's fullscreen view writes spaces out to the
+// edge of every row, and those stay. Read untrimmed, a path at the end of such a row is followed by a
+// space, and the half of it cut onto the next row is never joined back on.
 export function bufferLine(buffer: PaneBuffer, row: number): string {
-  return buffer.getLine(row)?.translateToString(true) ?? '';
+  return buffer.getLine(row)?.translateToString(true).trimEnd() ?? '';
 }
 
 // One row as cells, which is what xterm places a link and a label by. A string offset into `bufferLine`

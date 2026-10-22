@@ -12,15 +12,20 @@ const terminal = (rows: string[], baseY = 2): PaneTerminal => ({
       length: baseY + rows.length,
       getLine(row: number) {
         const line = row < baseY ? `scrollback ${row}` : rows[row - baseY];
-        // Trimmed on the flag, the way xterm does it: every line comes back padded to the full width
-        // unless the reader asks for it trimmed, and both readers here do.
-        return line === undefined ? undefined : { translateToString: (trim: boolean) => (trim ? line.trimEnd() : line) };
+        // The row as written, whatever the flag: xterm's trim drops only the cells nothing was written
+        // to, so a space a program wrote stays and the reader has to strip it.
+        return line === undefined ? undefined : { translateToString: () => line };
       },
     },
   },
 });
 
 describe('paneScreen', () => {
+  // xterm's trim keeps a space a program wrote, and Claude Code's fullscreen view writes them to the edge.
+  it('drops the spaces a program wrote at the end of a row', () => {
+    expect(paneScreen(terminal(['docs/a/   ']))).toEqual(['docs/a/']);
+  });
+
   it('reads the live screen, never the scrollback above it', () => {
     expect(paneScreen(terminal(['npm test', '3 passing']))).toEqual(['npm test', '3 passing']);
   });
