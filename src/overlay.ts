@@ -243,5 +243,6 @@ export function searchOverlay<Choice>(options: {
 // What "a dialog owns the keyboard" matches, for asking either way round: is this keystroke inside a
 // dialog, and is any dialog up at all. It lives here because this is where a sheet gets its class, so
 // a new dialog opened through openOverlay is covered without a second list to keep in step.
-// .board-edit is spelled out: it is not a sheet, it is an input inside a card (board-view.ts).
-export const OVERLAY_SELECTOR = `.${OVERLAY_CLASS}, .board-edit`;
+// .board-edit is spelled out: it is not a sheet, it is an input inside a card (board-view.ts). So is
+// .file-hints, the hint key's letters laid over a pane (file-hints.ts), which is no sheet either.
+export const OVERLAY_SELECTOR = `.${OVERLAY_CLASS}, .board-edit, .file-hints`;

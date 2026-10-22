@@ -61,7 +61,7 @@ export function paneScreen(terminal: PaneTerminal): string[] {
 // One line by its own number in the buffer, scrollback and screen alike. The trailing spaces come off
 // here and nowhere else: xterm pads every line out to the full width, and a reader that forgets is a
 // row of the manager padded to eighty columns, or a file of whitespace in an editor.
-function bufferLine(buffer: PaneBuffer, row: number): string {
+export function bufferLine(buffer: PaneBuffer, row: number): string {
   return buffer.getLine(row)?.translateToString(true) ?? '';
 }
 

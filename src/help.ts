@@ -51,7 +51,16 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'The scrollback key takes you to the nvim screen with the pane you are looking at open there as a '
     + `file — the last ${PANE_SCROLLBACK} lines it printed, scrollback and screen alike, which is as far `
     + 'back as a pane remembers. The pane keeps running meanwhile, and the file is a copy: editing it '
-    + 'changes nothing in the pane it came from.',
+    + 'changes nothing in the pane it came from. '
+    + 'A file path a pane prints — src/main.ts, or src/main.ts:42 with a line, :42:7 with a column '
+    + 'too — underlines under the pointer, and clicking it opens that file in this project\'s nvim at '
+    + 'that line, in the window you were editing in rather than a new tab. The file key does the same '
+    + 'from the keyboard: it puts a letter over every path on the pane\'s screen, the newest output '
+    + 'getting a first, and typing a letter opens that path; any other key puts the letters away. A '
+    + 'relative path is looked for in the folder the pane\'s shell is in now, then the folder the pane '
+    + 'started in, then the project, and a path that names no file there stays on this screen and says '
+    + 'so in the status bar. A path the terminal wrapped onto a second row is only read as far as the '
+    + 'first row goes.',
   nvim: 'One nvim filling the window. It starts the first time you press the nvim key for this '
     + 'project, not at launch. Quit it and the pane says it exited; Enter starts it again, and so does '
     + 'coming back to this screen — the scrollback key needs a running nvim to hand a file to. '

@@ -27,6 +27,7 @@ export type Action =
   | { kind: 'terminal-zoom' }
   | { kind: 'terminal-scrollback' }
   | { kind: 'terminal-name' }
+  | { kind: 'terminal-file-hints' }
   | { kind: 'board-select'; direction: Direction }
   | { kind: 'board-move'; direction: Direction }
   | { kind: 'board-attach' }
@@ -299,6 +300,13 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'terminal-scrollback', description: "Open this pane's scrollback in nvim",
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-scrollback' }, mac: 'Ctrl+`', other: 'Ctrl+`',
+  },
+  // Alt+O, for open, in the Alt family with the other pane keys. The cost in the pane is whatever the
+  // shell does with Esc O, the same cost Alt+F and Alt+N already pay.
+  {
+    name: 'terminal-file-hints', description: 'Open a file path on the pane in nvim',
+    group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-file-hints' }, mac: 'Alt+O', other: 'Alt+O',
   },
   ...DIRECTIONS.map((direction): ActionEntry => ({
     name: `board-select-${direction}`, description: `Move the selection ${direction}`,

@@ -48,7 +48,8 @@ async function familyDirectories(
 }
 
 // Each process's folder. A process that is gone, or cannot be asked, is missing from the answer.
-async function directoriesOf(pids: readonly number[]): Promise<Map<number, string> | null> {
+// Exported for file-open.ts, which asks it about one pane's shell when a path printed there is opened.
+export async function directoriesOf(pids: readonly number[]): Promise<Map<number, string> | null> {
   if (process.platform === 'linux') {
     const answers = await Promise.all(pids.map(async (pid) =>
       [pid, await readlink(`/proc/${pid}/cwd`).catch(() => null)] as const));

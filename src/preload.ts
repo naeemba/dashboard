@@ -12,6 +12,7 @@ const bridge: DashboardBridge = {
   onNotificationClick: (listener) =>
     ipcRenderer.on('notification:click', (_event, paneId) => listener(paneId)),
   openScrollback: (slot, index, text) => ipcRenderer.invoke('scrollback:open', slot, index, text),
+  openFile: (slot, index, link) => ipcRenderer.invoke('file:open', slot, index, link),
   sendInput: (id, data) => ipcRenderer.send('pty:input', id, data),
   resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
   restart: (id) => ipcRenderer.send('pty:restart', id),
