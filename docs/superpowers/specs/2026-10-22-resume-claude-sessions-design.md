@@ -49,10 +49,11 @@ a session differently.
 
 ### 2. Storing it
 
-Each page in `session.json` gains `claude: (ClaudeSlot | null)[]`, one slot per grid pane like `names`,
-where `ClaudeSlot` is `{ session: string; directory: string }`. `parseSession` keeps a slot only when
-both fields are non-empty strings and drops anything else to `null`; a file written before the field
-existed reads as all `null`.
+Each page in `session.json` gains `claude: (PaneConversation | null)[]`, one entry per grid pane like
+`names`, where `PaneConversation` is `{ session: string; directory: string }`. `parseSession` keeps an
+entry only when the directory is a non-empty string and the session id is a UUID, since the id is
+typed into a shell and anything else in a hand-edited file would be a command run in the pane. Anything
+else drops to `null`; a file written before the field existed reads as all `null`.
 
 Main becomes the only writer of `session.json`. The renderer keeps sending the layout on
 `session:write` exactly as now; main remembers the last layout it was sent and writes it with the
@@ -82,7 +83,10 @@ returns to a prompt and the pane is never dead.
 
 A session whose folder is a card's recorded worktree was that card's agent, and comes back as it: the
 pane is started the way a ship starts one (`exec claude --resume <id>`) and the worktree record names
-the pane again. Without that the status bar would not print the branch, the card could be shipped a
+the pane again. That holds only for a conversation in a pane of the card's own project, matched to the
+worktree by real path, and only for the first such pane: every record loses its pane at launch, so a
+second Claude in the same worktree finds the card taken and comes back typed into a shell. This rule is
+`agentToResume` in `claude-resume.ts`. Without that the status bar would not print the branch, the card could be shipped a
 second time into the same worktree, and the review sweep would start beside the resumed agent.
 
 ### 4. The first half minute after a launch
@@ -92,13 +96,14 @@ launch. Read naively, the layout write that follows the restore, or a first swee
 Claude has written its file, would save every pane as `null`, and a crash in that window would lose all
 of them.
 
-So a pane that was resumed keeps its restored slot as its value until a reading taken at least 30
-seconds after the panes were resumed. Taken, not arrived: the first sweep reads every log on the
+So a pane that was resumed keeps its restored conversation until a reading taken at least 30 seconds
+after that pane itself was resumed. Each pane's grace is its own: a project opened late in the run must
+not put back the launch's panes, whose Claudes may have been exited since. Taken, not arrived: the first sweep reads every log on the
 machine and can finish late, and what it saw is as old as the moment it looked. A reading older than
 the latest one is ignored, so a sweep that looked before Quit cannot overwrite Quit's reading. A
-reading with no process tree (`ps` missing or timed out) is no reading, and nothing is written for it. Before that, a pane's slot is the live reading when there is one and the
-restored slot when there is not; from then on it is the live reading alone, so a Claude you exit after
-the restart is not resumed next time. This rule lives in `claude-resume.ts`, not in main.
+reading with no process tree (`ps` missing or timed out) is no reading, and nothing is written for it. Before that, a pane's conversation is the live reading when there is one
+and the restored one when there is not; from then on it is the live reading alone, so a Claude you exit after
+the restart is not resumed next time. This rule lives in `resume-ledger.ts`, not in main.
 
 ### 5. Out of scope
 
@@ -111,11 +116,13 @@ the restart is not resumed next time. This rule lives in `claude-resume.ts`, not
 
 | File | Kind | What it holds |
 |------|------|---------------|
-| `src/claude-resume.ts` | decision | `ClaudeSlot`; pane map to per-page slots; the launch grace rule; whether a slot resumes (directory exists, given an `exists` function); the line typed into the shell |
+| `src/claude-resume.ts` | decision | `PaneConversation`; pane map to per-page entries; whether to write; whether a conversation resumes (directory exists, given an `exists` function); which resumes come back as a card's agent; the line typed into the shell |
 | `src/claude-resume.test.ts` | test | each rule above |
+| `src/resume-ledger.ts` | decision | the pending conversations, each used up once; the per-pane launch grace; the newest reading wins |
+| `src/resume-ledger.test.ts` | test | each rule above |
 | `src/session.ts` | decision | `claude` on `SessionPage`, parsed and defaulted |
 | `src/session.test.ts` | test | the new field: missing, malformed, valid |
-| `src/session-store.ts` | main wiring | the session file, the last layout, the latest map, pending slots; `session:read` and `session:write`; the three write moments |
+| `src/session-store.ts` | main wiring | the session file and the last layout; `session:read` and `session:write`; the three write moments |
 | `src/project-files-ipc.ts` | main wiring | `board:peek`, `board:read`, `board:write`, `notes:read`, `notes:write`, moved verbatim out of `main.ts` |
 | `src/usage-store.ts`, `src/pane-sessions.ts`, `src/usage-sweep.ts` | existing | `cwd` read, record returned per pane, `placed` port |
 | `src/help.ts` | existing | the blurb that says what a restart brings back |
@@ -126,7 +133,7 @@ first, as their own commit, before anything is added. `renderer.ts` (600) is not
 
 ## Testing
 
-`npm test`, `npx tsc --noEmit`, `npx eslint .`. The decisions are covered by the two test files. The
+`npm test`, `npx tsc --noEmit`, `npx eslint .`. The decisions are covered by their test files. The
 spawn and the typed command are main wiring and are checked by hand in the app: open a project, start
 `claude` in two panes and send a message in each, quit, relaunch, and see both conversations back in
 their own panes; repeat with one of them in a worktree, and with that worktree removed while the app is

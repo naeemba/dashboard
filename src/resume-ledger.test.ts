@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { ClaudeSlot } from './claude-resume';
+import type { PaneConversation } from './claude-resume';
 import { RESUME_GRACE_MS, resumeLedger } from './resume-ledger';
 import type { SavedPage } from './session';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
-const slot = (session: string, directory = '/work/api'): ClaudeSlot => ({ session, directory });
+const conversation = (session: string, directory = '/work/api'): PaneConversation => ({ session, directory });
 const pages: SavedPage[] = [
-  { path: '/work/api', mode: 'terminals', focused: 0, names: [], claude: [null, slot(ID), null, null, null] },
+  { path: '/work/api', mode: 'terminals', focused: 0, names: [], claude: [null, conversation(ID), null, null, null] },
 ];
 const everywhere = (): boolean => true;
 const LAUNCH = 1_000_000;
@@ -15,7 +15,7 @@ const LAUNCH = 1_000_000;
 describe('resumeLedger', () => {
   it('hands a pane its saved session once, so a project reopened later in the run starts empty', () => {
     const ledger = resumeLedger(pages, everywhere);
-    expect(ledger.take('/work/api', 1, '0:1', LAUNCH)).toEqual(slot(ID));
+    expect(ledger.take('/work/api', 1, '0:1', LAUNCH)).toEqual(conversation(ID));
     expect(ledger.take('/work/api', 1, '3:1', LAUNCH + 60_000)).toBeNull();
   });
 
@@ -35,7 +35,7 @@ describe('resumeLedger', () => {
   it('holds a resumed pane before any reading has come in', () => {
     const ledger = resumeLedger(pages, everywhere);
     ledger.take('/work/api', 1, '0:1', LAUNCH);
-    expect(ledger.held()).toEqual(new Map([['0:1', slot(ID)]]));
+    expect(ledger.held()).toEqual(new Map([['0:1', conversation(ID)]]));
   });
 
   // The first sweep reads every log there is and can take longer than the grace. What it found was
@@ -44,29 +44,40 @@ describe('resumeLedger', () => {
     const ledger = resumeLedger(pages, everywhere);
     ledger.take('/work/api', 1, '0:1', LAUNCH);
     ledger.place({ byPane: new Map(), takenAt: LAUNCH + RESUME_GRACE_MS - 1 });
-    expect(ledger.held()).toEqual(new Map([['0:1', slot(ID)]]));
+    expect(ledger.held()).toEqual(new Map([['0:1', conversation(ID)]]));
   });
 
   // A Claude exited after the restart is not resumed on the launch after.
   it('answers with the reading alone once one is taken after the grace', () => {
     const ledger = resumeLedger(pages, everywhere);
     ledger.take('/work/api', 1, '0:1', LAUNCH);
-    ledger.place({ byPane: new Map([['0:3', slot(OTHER)]]), takenAt: LAUNCH + RESUME_GRACE_MS });
-    expect(ledger.held()).toEqual(new Map([['0:3', slot(OTHER)]]));
+    ledger.place({ byPane: new Map([['0:3', conversation(OTHER)]]), takenAt: LAUNCH + RESUME_GRACE_MS });
+    expect(ledger.held()).toEqual(new Map([['0:3', conversation(OTHER)]]));
   });
 
   // A sweep that read the panes before Quit can finish after it, and must not put back what Quit's
   // own reading replaced: /clear then Quit would resume the conversation from before the /clear.
   it('keeps the newer reading when an older one arrives after it', () => {
     const ledger = resumeLedger([], everywhere);
-    ledger.place({ byPane: new Map([['0:1', slot(OTHER)]]), takenAt: LAUNCH + 90_000 });
-    ledger.place({ byPane: new Map([['0:1', slot(ID)]]), takenAt: LAUNCH + 60_000 });
-    expect(ledger.held()).toEqual(new Map([['0:1', slot(OTHER)]]));
+    ledger.place({ byPane: new Map([['0:1', conversation(OTHER)]]), takenAt: LAUNCH + 90_000 });
+    ledger.place({ byPane: new Map([['0:1', conversation(ID)]]), takenAt: LAUNCH + 60_000 });
+    expect(ledger.held()).toEqual(new Map([['0:1', conversation(OTHER)]]));
+  });
+
+  // A project opened late in the run resumes its own panes; it must not put back a launch pane whose
+  // Claude has been exited since, or the launch after brings back a conversation you closed.
+  it('times each pane\'s grace from its own resume', () => {
+    const ledger = resumeLedger([...pages, { ...pages[0], path: '/work/web', claude: [conversation(OTHER, '/work/web')] }], everywhere);
+    ledger.take('/work/api', 1, '0:1', LAUNCH);
+    ledger.place({ byPane: new Map(), takenAt: LAUNCH + RESUME_GRACE_MS });
+    ledger.take('/work/web', 0, '1:0', LAUNCH + 600_000);
+    ledger.place({ byPane: new Map(), takenAt: LAUNCH + 600_000 });
+    expect(ledger.held()).toEqual(new Map([['1:0', conversation(OTHER, '/work/web')]]));
   });
 
   it('answers with the latest reading when nothing was resumed', () => {
     const ledger = resumeLedger(pages, everywhere);
-    ledger.place({ byPane: new Map([['0:3', slot(OTHER)]]), takenAt: LAUNCH });
-    expect(ledger.held()).toEqual(new Map([['0:3', slot(OTHER)]]));
+    ledger.place({ byPane: new Map([['0:3', conversation(OTHER)]]), takenAt: LAUNCH });
+    expect(ledger.held()).toEqual(new Map([['0:3', conversation(OTHER)]]));
   });
 });

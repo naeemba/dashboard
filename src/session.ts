@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { isClaudeSlot, type ClaudeSlot } from './claude-resume';
+import { isPaneConversation, type PaneConversation } from './claude-resume';
 import { PROJECT_MODES, type Mode } from './modes';
 import { TERMINAL_COUNT } from './terminals';
 
@@ -17,7 +17,7 @@ export type Session = { pages: SessionPage[]; activeIndex: number };
 // What is on disk: the layout the renderer sends, plus which Claude Code conversation each grid pane was
 // running, one slot per pane like `names`. Main fills these in; the renderer never sees them change.
 // claude-resume.ts holds why each slot carries its folder.
-export type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[] };
+export type SavedPage = SessionPage & { claude: (PaneConversation | null)[] };
 export type SavedSession = { pages: SavedPage[]; activeIndex: number };
 
 const EMPTY: SavedSession = { pages: [], activeIndex: 0 };
@@ -53,7 +53,7 @@ function toSessionPage(stored: unknown): SavedPage | null {
     names: (Array.isArray(names) ? names : []).map((name) => (typeof name === 'string' ? name : null)),
     // A slot that is not a whole one is no session at all, never half of one: its id is typed into a
     // shell. A file written before the field existed resumes nothing.
-    claude: (Array.isArray(claude) ? claude : []).map((slot) => (isClaudeSlot(slot) ? slot : null)),
+    claude: (Array.isArray(claude) ? claude : []).map((slot) => (isPaneConversation(slot) ? slot : null)),
   };
 }
 
