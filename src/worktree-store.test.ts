@@ -7,6 +7,7 @@ import {
   entryForCard,
   entryForPath,
   livingEntries,
+  panesAtLaunch,
   readWorktrees,
   stillLiving,
   parseWorktrees,
@@ -255,6 +256,15 @@ describe('withoutPanes', () => {
   // The shell that was reviewing is dead either way, so the flag describing it goes with the pane.
   it('takes the review mark off a record that gives up its pane', () => {
     expect(withoutPanes([{ ...entry, reviewing: true }])[0]).toMatchObject({ pane: null, reviewing: false });
+  });
+});
+
+describe('panesAtLaunch', () => {
+  it('clears each pane and keeps the one it held, leaving out a record that had none', () => {
+    const idle = { ...entry, cardId: 'idle', pane: null };
+    const { entries, panes } = panesAtLaunch([entry, idle]);
+    expect(entries).toEqual([{ ...entry, pane: null }, idle]);
+    expect([...panes]).toEqual([[entry.cardId, 2]]);
   });
 });
 

@@ -60,6 +60,7 @@ import {
   stillLiving,
   withEntry,
   withoutPane,
+  panesAtLaunch,
   withoutPanes,
   withoutWorktree,
   worktreesDiffer,
@@ -147,11 +148,10 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 let worktrees: WorktreeEntry[] = [];
 // The pane each card's agent was in when the app last ran, kept from before the clearing so a restart
 // resumes the agent in that pane and nowhere else. agentToResume holds why.
-const agentPanesBeforeLaunch = new Map<string, number>();
+let agentPanesBeforeLaunch = new Map<string, number>();
 try {
   const recorded = livingEntries(readWorktrees(worktreesFile), existsSync);
-  for (const entry of recorded) if (entry.pane !== null) agentPanesBeforeLaunch.set(entry.cardId, entry.pane);
-  worktrees = withoutPanes(recorded);
+  ({ entries: worktrees, panes: agentPanesBeforeLaunch } = panesAtLaunch(recorded));
 } catch (error: unknown) {
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
