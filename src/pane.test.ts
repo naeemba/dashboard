@@ -21,6 +21,13 @@ const terminal = (rows: string[], baseY = 2): PaneTerminal => ({
 });
 
 describe('paneScreen', () => {
+  // xterm's trim keeps a space a program wrote, and Claude Code's fullscreen view writes them to the edge.
+  it('drops the spaces a program wrote at the end of a row', () => {
+    const written = { ...terminal([]), rows: 1 };
+    written.buffer.active.getLine = () => ({ translateToString: () => 'docs/a/   ' });
+    expect(paneScreen(written)).toEqual(['docs/a/']);
+  });
+
   it('reads the live screen, never the scrollback above it', () => {
     expect(paneScreen(terminal(['npm test', '3 passing']))).toEqual(['npm test', '3 passing']);
   });
