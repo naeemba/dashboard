@@ -97,6 +97,15 @@ export function agentArguments(shellCommand: string, prompt: string): string[] {
     : ['-lic', `exec claude ${quoted}`];
 }
 
+// A session the app resumes as a card's agent, after a restart, starts the way the ship started it:
+// the pane's only process, so the pane reads as the agent's for as long as Claude Code runs. The id is
+// a UUID by the time it gets here — claude-resume.ts refuses anything else — so it needs no quoting.
+export function agentResumeArguments(shellCommand: string, session: string): string[] {
+  return isPowerShell(shellCommand)
+    ? ['-Command', `claude --resume ${session}`]
+    : ['-lic', `exec claude --resume ${session}`];
+}
+
 // A command run across projects goes through the user's shell, login and interactive, for the same
 // reason spelled out above editorArguments: an app launched from the Dock inherits almost no PATH, so
 // `npm` is not found unless the shell's own startup files have run. `-l` is where Homebrew is and `-i`

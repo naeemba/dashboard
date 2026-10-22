@@ -80,6 +80,11 @@ project later in the same run does not resume again) and:
 The command is typed into an ordinary shell rather than run as the pane's process, so exiting Claude
 returns to a prompt and the pane is never dead.
 
+A session whose folder is a card's recorded worktree was that card's agent, and comes back as it: the
+pane is started the way a ship starts one (`exec claude --resume <id>`) and the worktree record names
+the pane again. Without that the status bar would not print the branch, the card could be shipped a
+second time into the same worktree, and the review sweep would start beside the resumed agent.
+
 ### 4. The first half minute after a launch
 
 A resumed Claude takes a moment to write its session file, and the first sweep runs three seconds after
@@ -87,8 +92,11 @@ launch. Read naively, the layout write that follows the restore, or a first swee
 Claude has written its file, would save every pane as `null`, and a crash in that window would lose all
 of them.
 
-So a pane that was resumed keeps its restored slot as its value until the first sweep that runs at
-least 30 seconds after launch. Before that, a pane's slot is the live reading when there is one and the
+So a pane that was resumed keeps its restored slot as its value until a reading taken at least 30
+seconds after the panes were resumed. Taken, not arrived: the first sweep reads every log on the
+machine and can finish late, and what it saw is as old as the moment it looked. A reading older than
+the latest one is ignored, so a sweep that looked before Quit cannot overwrite Quit's reading. A
+reading with no process tree (`ps` missing or timed out) is no reading, and nothing is written for it. Before that, a pane's slot is the live reading when there is one and the
 restored slot when there is not; from then on it is the live reading alone, so a Claude you exit after
 the restart is not resumed next time. This rule lives in `claude-resume.ts`, not in main.
 

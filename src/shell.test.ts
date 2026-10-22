@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentArguments, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
+import { agentArguments, agentResumeArguments, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
 import { defaultSettings } from './settings';
 
 describe('pickShell', () => {
@@ -103,6 +103,18 @@ describe('locateCommand', () => {
   it('asks PowerShell in the only spelling it has', () => {
     expect(locateCommand('powershell.exe', 'nvim'))
       .toBe('(Get-Command nvim -ErrorAction SilentlyContinue).Source');
+  });
+});
+
+describe('agentResumeArguments', () => {
+  it('resumes a session the way a ship starts one, as the pane\'s only process', () => {
+    expect(agentResumeArguments('/bin/zsh', 'ccaaf965-c864-48db-8044-30bf27d93087'))
+      .toEqual(['-lic', 'exec claude --resume ccaaf965-c864-48db-8044-30bf27d93087']);
+  });
+
+  it('leaves PowerShell without exec, which it does not have', () => {
+    expect(agentResumeArguments('pwsh', 'ccaaf965-c864-48db-8044-30bf27d93087'))
+      .toEqual(['-Command', 'claude --resume ccaaf965-c864-48db-8044-30bf27d93087']);
   });
 });
 

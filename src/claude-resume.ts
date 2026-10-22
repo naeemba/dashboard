@@ -1,5 +1,6 @@
 import type { SavedSession, Session } from './session';
 import { TERMINAL_COUNT, terminalId } from './terminals';
+import type { WorktreeEntry } from './worktree-store';
 
 // Which Claude Code conversation each pane was running, and how a launch gets it back.
 //
@@ -9,10 +10,11 @@ import { TERMINAL_COUNT, terminalId } from './terminals';
 // started in a worktree pane is not found from the project's own checkout.
 export type ClaudeSlot = { session: string; directory: string };
 
-// How long after a launch a resumed pane keeps its saved session without a live reading behind it. A
+// How long after a pane is resumed it keeps its saved session without a live reading behind it. A
 // resumed Claude takes a moment to write ~/.claude/sessions/<pid>.json and the first sweep runs three
-// seconds in, so without this the first write after a launch would save every pane as empty and a crash
-// then would lose all of them. A sweep runs every 30 seconds, so the first one past this has seen them.
+// seconds into the launch, so without this the first write after a launch would save every pane as
+// empty and a crash then would lose all of them. Measured to when a reading was taken, not when it
+// arrived: resume-ledger.ts holds why.
 export const RESUME_GRACE_MS = 30_000;
 
 // The id is typed into a shell, so it is held to the shape Claude Code gives it. Anything else in a
@@ -25,15 +27,15 @@ export function isClaudeSlot(value: unknown): value is ClaudeSlot {
     && typeof directory === 'string' && directory !== '';
 }
 
-// What each pane counts as running, by terminal id. Inside the grace a pane that was resumed keeps its
-// saved slot unless a live reading says otherwise; after it, only the live reading counts, so a Claude
-// you exited after the restart does not come back on the launch after.
+// What each pane counts as running, by terminal id. For a reading taken inside the grace a pane that
+// was resumed keeps its saved slot unless the reading says otherwise; after it, only the reading counts,
+// so a Claude you exited after the restart does not come back on the launch after.
 export function heldSlots(
   live: ReadonlyMap<string, ClaudeSlot>,
   resumed: ReadonlyMap<string, ClaudeSlot>,
-  sinceLaunch: number,
+  sinceResume: number,
 ): ReadonlyMap<string, ClaudeSlot> {
-  return sinceLaunch >= RESUME_GRACE_MS ? live : new Map([...resumed, ...live]);
+  return sinceResume >= RESUME_GRACE_MS ? live : new Map([...resumed, ...live]);
 }
 
 // The renderer's layout with each page's panes filled in. A page is matched to its slot by path, the
@@ -65,6 +67,17 @@ export function resumable(
   exists: (directory: string) => boolean,
 ): slot is ClaudeSlot {
   return slot !== null && slot !== undefined && exists(slot.directory);
+}
+
+// The card whose worktree a session ran in, if any. That session was the card's agent, and it comes
+// back as the agent: the record names the pane again, so the status bar prints the branch, a second
+// ship of the card is refused, and the review sweep waits for it rather than starting beside it.
+export function cardResumedIn(
+  entries: readonly WorktreeEntry[],
+  projectPath: string,
+  slot: ClaudeSlot,
+): WorktreeEntry | undefined {
+  return entries.find((entry) => entry.projectPath === projectPath && entry.worktreePath === slot.directory);
 }
 
 // Typed into the pane's own shell rather than run as the pane's process, so exiting Claude leaves a

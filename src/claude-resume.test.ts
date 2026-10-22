@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { WorktreeEntry } from './worktree-store';
 import {
-  RESUME_GRACE_MS, heldSlots, isClaudeSlot, resumable, resumeLine, withClaude, type ClaudeSlot,
+  RESUME_GRACE_MS, cardResumedIn, heldSlots, isClaudeSlot, resumable, resumeLine, withClaude, type ClaudeSlot,
 } from './claude-resume';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
@@ -89,5 +90,23 @@ describe('resumable', () => {
 describe('resumeLine', () => {
   it('types the resume and presses Enter', () => {
     expect(resumeLine(slot(ID))).toBe(`claude --resume ${ID}\r`);
+  });
+});
+
+describe('cardResumedIn', () => {
+  const entry = (projectPath: string, worktreePath: string): WorktreeEntry => ({
+    cardId: 'c1', title: 'Fix login', projectPath, branch: 'fix-login', worktreePath,
+    pane: null, startedAt: '2026-10-22T00:00:00.000Z', reviewing: false,
+  });
+  const entries = [entry('/work/api', '/work/api-worktrees/fix-login')];
+
+  // A session that ran in a card's worktree was that card's agent, and comes back as it.
+  it('names the card whose worktree the session ran in', () => {
+    expect(cardResumedIn(entries, '/work/api', slot(ID, '/work/api-worktrees/fix-login'))).toBe(entries[0]);
+  });
+
+  it('names no card for a session in the project itself, or in another project\'s worktree', () => {
+    expect(cardResumedIn(entries, '/work/api', slot(ID, '/work/api'))).toBeUndefined();
+    expect(cardResumedIn(entries, '/work/web', slot(ID, '/work/api-worktrees/fix-login'))).toBeUndefined();
   });
 });

@@ -15,7 +15,7 @@ import { git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
-import { agentArguments, editorArguments, pickShell } from './shell';
+import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { taskRunner } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
@@ -29,7 +29,7 @@ import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneOpeners } from './pane-openers';
 import { registerProjectFiles } from './project-files-ipc';
 import { sessionStore } from './session-store';
-import { resumeLine } from './claude-resume';
+import { cardResumedIn, resumeLine, type ClaudeSlot } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -133,7 +133,8 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Every pane comes back null with it. No shell outlives the app, so nothing this file says was in
 // pane 2 is in pane 2 a moment after launch: that pane is a plain shell in the project, and a record
 // still naming it would put a branch name under the status bar of a checkout the pane is not in —
-// which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
+// which is the wrong-checkout mistake the branch is printed there to prevent. A card's agent that a
+// restart resumes is in that pane again, and resumeIn names it on the record again. Clearing it also gives
 // the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
 //
@@ -367,8 +368,8 @@ function worktreeList(): WorktreeList {
 // worktreesDiffer's to say.
 //
 // The records are what it looks at, not the pane directories riding along with them, and that is enough
-// rather than lucky: the only two things that move a pane into or out of a worktree are a ship and a
-// worktree removed, and both change a record here. A pane whose folder changes for any other reason —
+// rather than lucky: the only things that move a pane into or out of a worktree are a ship, a card's
+// agent resumed after a restart, and a worktree removed, and all three change a record here. A pane whose folder changes for any other reason —
 // a project closed, a project opened in a freed slot, an agent exiting — has moved between two
 // ordinary checkouts, which is not something the status bar prints or a badge reads.
 function setWorktrees(next: WorktreeEntry[]): void {
@@ -486,14 +487,28 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
-    // A pane that was running Claude Code when the app last quit starts in that conversation's folder
-    // with the resume typed into its shell. session-store.ts says when a pane has one.
+    terminalCommands.set(id, { args: [], directory: project.path });
+    // A pane that was running Claude Code when the app last quit; session-store.ts says when it was.
     const resume = claudeSessions.takeResume(project.path, terminalIndex, id);
-    terminalCommands.set(id, { args: [], directory: resume?.directory ?? project.path });
-    spawnTerminal(id);
-    if (resume !== null) shells.get(id)?.write(resumeLine(resume));
+    if (resume === null) spawnTerminal(id);
+    else resumeIn(id, project.path, terminalIndex, resume);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+}
+
+// A session that ran in a card's worktree comes back as that card's agent, exactly as the ship
+// started it, and its record names the pane again; cardResumedIn says what that keeps right. Any other
+// session is typed into a shell in its folder, so exiting it leaves a prompt.
+function resumeIn(id: string, projectPath: string, index: number, resume: ClaudeSlot): void {
+  const card = cardResumedIn(worktrees, projectPath, resume);
+  if (card !== undefined) {
+    recordWorktree({ ...card, pane: index });
+    startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));
+    return;
+  }
+  terminalCommands.set(id, { args: [], directory: resume.directory });
+  spawnTerminal(id);
+  shells.get(id)?.write(resumeLine(resume));
 }
 
 // Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
@@ -501,13 +516,10 @@ function spawnProject(project: Project, projectIndex: number): void {
 // exists to say. The old shell is killed first: retargeting a pane that is still running one would
 // leave two processes writing to the same id.
 //
-// The prompt is the caller's, because there are two agents now: the one that works a card, and the one
-// that reviews the pull request the first one opened.
-function startAgent(id: string, worktreePath: string, prompt: string): void {
-  terminalCommands.set(id, {
-    args: agentArguments(shellCommand, prompt),
-    directory: worktreePath,
-  });
+// What it runs is the caller's, because there are three agents now: the one that works a card, the one
+// that reviews the pull request the first one opened, and either of them resumed after a restart.
+function startAgent(id: string, worktreePath: string, args: string[]): void {
+  terminalCommands.set(id, { args, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
@@ -595,9 +607,9 @@ ipcMain.on('projects:close', (_event, slot: number) => {
 const tokenUsage = usageSweep({
   panePids: () => new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id])),
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
-  processTree: async () => (await processTree()) ?? '',
+  processTree,
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
-  placed: (byPane) => claudeSessions.placed(byPane),
+  placed: (placement) => claudeSessions.placed(placement),
   // Held, not reported: a sweep that fails before a window has opened must not box and exit the
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
   // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
@@ -737,7 +749,7 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
   // per pane in this project — claimsPane holds why the project half of that matters.
   const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
   if (claimed) recordWorktree(withoutPane(claimed));
-  startAgent(terminalId(slot, pane), entry.worktreePath, prompt);
+  startAgent(terminalId(slot, pane), entry.worktreePath, agentArguments(shellCommand, prompt));
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
@@ -1021,7 +1033,8 @@ function createWindow(): void {
       if (response !== 1) return;
       // One last reading before the shells die, so a conversation started or cleared since the last
       // sweep is the one the next launch resumes. A reading that fails still quits, on the last sweep's.
-      await tokenUsage.placeNow().then((byPane) => claudeSessions.placed(byPane), () => undefined);
+      const placement = await tokenUsage.placeNow().catch(() => null);
+      if (placement !== null) claudeSessions.placed(placement);
       mainWindow.destroy();
     }).finally(() => {
       // Reset on the rejection path too. Leave it true after a failed dialog and every later close

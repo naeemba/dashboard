@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { existsSync } from 'node:fs';
-import { heldSlots, resumable, withClaude, type ClaudeSlot } from './claude-resume';
+import { withClaude, type ClaudeSlot } from './claude-resume';
+import { resumeLedger, type SessionPlacement } from './resume-ledger';
 import { readSession, writeSession, type Session } from './session';
 
 // session.json, read once at launch and written by main alone. The renderer sends the layout whenever it
@@ -8,8 +9,8 @@ import { readSession, writeSession, type Session } from './session';
 // which only main can see. Two writers of one file would each wipe the other's half.
 //
 // Main-process wiring, out of main.ts because main had reached its 600-line ceiling. No test file, under
-// the exemption CLAUDE.md gives main's wiring: every rule here is claude-resume.ts's or session.ts's and
-// is tested there. What is left is when to write, and handing each saved slot to its pane once.
+// the exemption CLAUDE.md gives main's wiring: what a pane is owed and what it counts as running is
+// resume-ledger.ts's, and the file's shape is session.ts's, both tested. What is left is when to write.
 
 export type ClaudeSessions = {
   // The conversation a pane being spawned should resume, or null. Asked once per pane per launch: the
@@ -17,15 +18,12 @@ export type ClaudeSessions = {
   // starts empty like any project opened by hand.
   takeResume(projectPath: string, index: number, id: string): ClaudeSlot | null;
   // Where every live session is, from a sweep or from Quit.
-  placed(byPane: ReadonlyMap<string, ClaudeSlot>): void;
+  placed(placement: SessionPlacement): void;
 };
 
 export function sessionStore(file: string, slotOf: (projectPath: string) => number): ClaudeSessions {
   const saved = readSession(file);
-  const pending = new Map(saved.pages.map((page) => [page.path, [...page.claude]]));
-  const launchedAt = Date.now();
-  const resumed = new Map<string, ClaudeSlot>();
-  let live: ReadonlyMap<string, ClaudeSlot> = new Map();
+  const ledger = resumeLedger(saved.pages, existsSync);
   let layout: Session | null = null;
   let lastWritten = '';
 
@@ -34,7 +32,7 @@ export function sessionStore(file: string, slotOf: (projectPath: string) => numb
   // sessions writes nothing either.
   function write(): void {
     if (layout === null) return;
-    const session = withClaude(layout, slotOf, heldSlots(live, resumed, Date.now() - launchedAt));
+    const session = withClaude(layout, slotOf, ledger.held());
     const encoded = JSON.stringify(session);
     if (encoded === lastWritten) return;
     lastWritten = encoded;
@@ -48,16 +46,9 @@ export function sessionStore(file: string, slotOf: (projectPath: string) => numb
   });
 
   return {
-    takeResume(projectPath, index, id) {
-      const slots = pending.get(projectPath);
-      const slot = slots?.[index];
-      if (slots !== undefined) slots[index] = null;
-      if (!resumable(slot, existsSync)) return null;
-      resumed.set(id, slot);
-      return slot;
-    },
-    placed(byPane) {
-      live = byPane;
+    takeResume: (projectPath, index, id) => ledger.take(projectPath, index, id, Date.now()),
+    placed(placement) {
+      ledger.place(placement);
       write();
     },
   };

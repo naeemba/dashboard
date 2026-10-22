@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
 import { liveSessions, sweepUsage, type LiveSession } from './usage-store';
+import type { SessionPlacement } from './resume-ledger';
 import { parentProcesses, sessionsByPane } from './pane-sessions';
 import { worktreesRoot } from './ship';
 
@@ -14,12 +15,10 @@ import { worktreesRoot } from './ship';
 // belongs to itself: it touches the shells and the open projects and nothing else there, and the three
 // modules above already do the thinking. What is left in main is the four things only main can say.
 //
-// No test file, and that is the exemption CLAUDE.md gives main's wiring, which travels with the code
-// rather than the filename — the same one task-runner.ts sits under. Nothing is decided here. What
-// counts as a change is usageDiffers's and usage.test.ts pins it; what a log adds up to is
-// usage-store.ts's; which pane a session is in is pane-sessions.ts's. What is left is two timers and a
-// map, and a test of those is a test of mocks. A branch that moves in here owes a test wherever it
-// sits.
+// What counts as a change is usageDiffers's and usage.test.ts pins it; what a log adds up to is
+// usage-store.ts's; which pane a session is in is pane-sessions.ts's. What is left is two timers, a map,
+// and the one branch that lives here — a reading with no process tree is no reading — which
+// usage-sweep.test.ts pins.
 
 export type UsageSweepPorts = {
   // The process id of every pane's shell, by terminal id. The one thing that says which pane a Claude
@@ -28,15 +27,16 @@ export type UsageSweepPorts = {
   // Every open project, with the folder its worktrees live in — a pane in a worktree is still that
   // project's pane, and its tokens belong on that project's row.
   openProjects(): readonly string[];
-  // The process tree, as `ps -eo pid=,ppid=` prints it. Empty on a machine that has no `ps`: the
-  // project figures still stand and only the per-pane ones go missing, which is the smaller half
-  // rather than the screen.
-  processTree(): Promise<string>;
+  // The process tree, as `ps -eo pid=,ppid=` prints it, or null when `ps` gave no answer — missing,
+  // or timed out on a loaded machine. The project figures still stand and only the per-pane ones go
+  // missing, which is the smaller half rather than the screen.
+  processTree(): Promise<string | null>;
   // Tell the renderer. Called only for a sweep that found different figures.
   publish(usage: UsageSnapshot): void;
   // Where every live session is, by pane, after every sweep whether or not the figures moved. Main keeps
-  // it so a restart can resume each pane's conversation; claude-resume.ts holds the rest.
-  placed(byPane: ReadonlyMap<string, LiveSession>): void;
+  // it so a restart can resume each pane's conversation; resume-ledger.ts holds the rest. Not called
+  // for a sweep that had no process tree.
+  placed(placement: SessionPlacement): void;
   // A sweep that threw. Wired to failure.ts's `hold`, which says it now if there is a bar and holds
   // it until there is one, and dedups so a sweep failing every half minute does not repaint the bar
   // every tick. Named for what it is rather than failure.ts's `report`: this cannot box and exit the
@@ -53,14 +53,17 @@ const USAGE_SWEEP_MS = 30_000;
 // five shells and a window to get on screen first.
 const FIRST_SWEEP_MS = 3_000;
 
+type Placement = SessionPlacement & { byPane: ReadonlyMap<string, LiveSession> };
+
 export type UsageSweep = {
   // What the renderer's first read answers with. Everything after it arrives unasked on usage:change.
   latest(): UsageSnapshot;
   // Sweep from now until the app quits.
   start(): void;
-  // The same reading the sweep takes, taken now. Quit asks for it so a conversation started, or a
-  // /clear typed, in the last half minute is the one saved.
-  placeNow(): Promise<Map<string, LiveSession>>;
+  // The same reading the sweep takes, taken now, or null when there is no process tree to take it
+  // from. Quit asks for it so a conversation started, or a /clear typed, in the last half minute is
+  // the one saved.
+  placeNow(): Promise<Placement | null>;
 };
 
 export function usageSweep(ports: UsageSweepPorts): UsageSweep {
@@ -70,24 +73,28 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
   let usage: UsageSnapshot = NO_USAGE;
 
   // One spelling of "which session is in which pane" for the sweep and for quit, so the two cannot
-  // place a session differently.
-  async function placeSessions(): Promise<Map<string, LiveSession>> {
-    const [tree, sessions] = await Promise.all([ports.processTree(), liveSessions(claudeSessions)]);
-    return sessionsByPane(parentProcesses(tree), ports.panePids(), sessions);
+  // place a session differently. With no tree, every claude started at a prompt has no pane, and
+  // "nothing is running anywhere" saved over the last reading would resume nothing next launch.
+  async function placeSessions(): Promise<Placement | null> {
+    const takenAt = Date.now();
+    const tree = await ports.processTree();
+    if (tree === null) return null;
+    const sessions = await liveSessions(claudeSessions);
+    return { byPane: sessionsByPane(parentProcesses(tree), ports.panePids(), sessions), takenAt };
   }
 
   async function run(): Promise<void> {
     const now = Date.now();
     // Two reads that need nothing from each other: the logs, and where each running session is.
-    const [, byPane] = await Promise.all([sweepUsage(claudeLogs, usageFiles, now), placeSessions()]);
-    ports.placed(byPane);
+    const [, placement] = await Promise.all([sweepUsage(claudeLogs, usageFiles, now), placeSessions()]);
+    if (placement !== null) ports.placed(placement);
     const open = ports.openProjects().map((projectPath) => ({
       path: projectPath, worktrees: worktreesRoot(projectPath),
     }));
     const next = snapshotOf(
       usageFiles.values(),
       open,
-      new Map([...byPane].map(([pane, live]) => [pane, live.session])),
+      new Map([...(placement?.byPane ?? [])].map(([pane, live]) => [pane, live.session])),
       now,
     );
     // Nothing crosses for a sweep that found the same figures. Whether that is worth a message is
