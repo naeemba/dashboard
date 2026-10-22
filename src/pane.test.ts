@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Bell } from './waiting';
-import { paneLastLine, paneLooksBusy, paneScreen, paneScrollback, type PaneTerminal } from './pane';
+import { cellColumn, paneLastLine, paneLooksBusy, paneScreen, paneScrollback, type PaneTerminal } from './pane';
 
 // A screen of `rows` lines starting at `baseY`, with the scrollback above it filled with lines that
 // must never be read.
@@ -87,5 +87,33 @@ describe('paneScrollback', () => {
       buffer: { active: { baseY: 0, length: 3, getLine: (row) => (row === 0 ? { translateToString: () => 'here' } : undefined) } },
     };
     expect(paneScrollback(gappy)).toBe('here\n');
+  });
+});
+
+// A row as xterm lays it out: a wide character is a cell of width 2 followed by a spacer of width 0.
+const cells = (...row: [string, number][]) => ({
+  length: row.length,
+  getCell: (column: number) => {
+    const [chars, width] = row[column] ?? ['', 1];
+    return { getChars: () => chars, getWidth: () => width };
+  },
+});
+
+describe('cellColumn', () => {
+  it('counts a wide character as the two cells it takes', () => {
+    // `漢 src`: the string has `s` at 2, the screen at cell 3.
+    const line = cells(['漢', 2], ['', 0], [' ', 1], ['s', 1], ['r', 1], ['c', 1]);
+    expect(cellColumn(line, 2)).toBe(3);
+    expect(cellColumn(line, 5)).toBe(6);
+  });
+
+  it('counts an emoji as its two characters in one cell', () => {
+    const line = cells(['😀', 1], [' ', 1], ['a', 1]);
+    expect(cellColumn(line, 3)).toBe(2);
+  });
+
+  it('is the string offset itself on a plain row and a missing one', () => {
+    expect(cellColumn(cells(['a', 1], ['b', 1], ['', 1]), 2)).toBe(2);
+    expect(cellColumn(undefined, 4)).toBe(4);
   });
 });

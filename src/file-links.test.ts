@@ -40,12 +40,16 @@ describe('fileLinksIn', () => {
   });
 
   it('does not start a path in the middle of a word', () => {
-    expect(paths('abc/def')).toEqual(['abc/def']);
+    expect(paths('foo:src/a.ts')).toEqual([]);
+    expect(paths('über/x.ts')).toEqual([]);
     expect(paths('key=src/a.ts')).toEqual(['src/a.ts']);
   });
 
-  it('passes over a folder', () => {
+  // The rule is "no slash and no extension", not "is a folder": a folder two deep still underlines, and
+  // main finds no file there and says so, the way it does for `and/or`.
+  it('passes over a bare word followed by a slash', () => {
     expect(paths('cd src/')).toEqual([]);
+    expect(paths('cd src/lib/')).toEqual(['src/lib']);
   });
 });
 

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { fileCandidates, firstFile } from './file-open';
+import { fileCandidates, firstFile, wholePath } from './file-open';
 
 describe('fileCandidates', () => {
   it('tries the live folder, then the starting folder, then the project, once each', () => {
@@ -17,6 +17,16 @@ describe('fileCandidates', () => {
 
   it('resolves ../ against each folder', () => {
     expect(fileCandidates('../b.ts', ['/project/src'], '/home/me')).toEqual(['/project/b.ts']);
+  });
+});
+
+// What decides whether the pane's live folder is looked up at all: only when this answers nothing.
+describe('wholePath', () => {
+  it('names the place for ~/ and an absolute path, and nothing for a relative one', () => {
+    expect(wholePath('~/.zshrc', '/home/me')).toBe('/home/me/.zshrc');
+    expect(wholePath('/etc/hosts', '/home/me')).toBe('/etc/hosts');
+    expect(wholePath('src/a.ts', '/home/me')).toBeUndefined();
+    expect(wholePath('../b.ts', '/home/me')).toBeUndefined();
   });
 });
 

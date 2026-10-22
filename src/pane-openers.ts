@@ -2,7 +2,7 @@ import { app, ipcMain, shell } from 'electron';
 import { findPaneFile, noSuchFile, type PaneFolders } from './file-open';
 import type { FileLink } from './file-links';
 import { isOpenableLink } from './links';
-import { openFileInEditor, openScrollback } from './nvim-remote';
+import { openFileInEditor, openScrollback, type EditorTarget } from './nvim-remote';
 
 // What a pane hands out of itself: a URL to the browser, its scrollback to nvim, a path it printed to
 // nvim. Main-process wiring only, out of main.ts because main had reached its 600-line ceiling; every
@@ -24,7 +24,7 @@ export function registerPaneOpeners(main: {
   ipcMain.handle('file:open', async (_event, slot: number, index: number, link: FileLink) => {
     const file = await findPaneFile(link.path, main.paneFolders(slot, index), app.getPath('home'));
     if (file === undefined) return { ok: false, message: noSuchFile(link.path) };
-    const editor = { temporaryDirectory: app.getPath('temp'), shellCommand: main.shellCommand(), slot };
+    const editor: EditorTarget = { temporaryDirectory: app.getPath('temp'), shellCommand: main.shellCommand(), slot };
     return openFileInEditor(editor, file, link.line, link.column);
   });
 }

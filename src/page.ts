@@ -10,7 +10,7 @@ import type { ManagerView } from './manager-view';
 import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
-import { PANE_SCROLLBACK, bufferLine, paneScreen } from './pane';
+import { PANE_SCROLLBACK, bufferLine, cellColumn, paneScreen } from './pane';
 import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
@@ -171,17 +171,24 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     // decides what is safe to hand the operating system.
     terminal.loadAddon(new WebLinksAddon((_event, uri) => options.bridge.openExternal(uri)));
     // A file path underlines the same way and opens in this project's nvim. file-links.ts decides what
-    // reads as a path; xterm counts columns and rows from 1, and the end column is the last cell.
-    terminal.registerLinkProvider({
-      provideLinks: (row, callback) => {
-        const text = bufferLine(terminal.buffer.active, row - 1);
-        callback(fileLinksIn(text).map((link) => ({
-          range: { start: { x: link.start + 1, y: row }, end: { x: link.end, y: row } },
-          text: text.slice(link.start, link.end),
-          activate: () => options.openFile(page, index, link),
-        })));
-      },
-    });
+    // reads as a path; xterm counts columns and rows from 1, and the end column is the last cell. The
+    // shells only: a click in nvim is nvim's, and a link there would swap the buffer you were editing.
+    if (index !== EDITOR_INDEX) {
+      terminal.registerLinkProvider({
+        provideLinks: (row, callback) => {
+          const text = bufferLine(terminal.buffer.active, row - 1);
+          const line = terminal.buffer.active.getLine(row - 1);
+          callback(fileLinksIn(text).map((link) => ({
+            range: {
+              start: { x: cellColumn(line, link.start) + 1, y: row },
+              end: { x: cellColumn(line, link.end), y: row },
+            },
+            text: text.slice(link.start, link.end),
+            activate: () => options.openFile(page, index, link),
+          })));
+        },
+      });
+    }
     terminal.open(container);
 
     const pane: Pane = { terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0 };

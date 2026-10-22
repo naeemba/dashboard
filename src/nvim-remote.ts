@@ -147,16 +147,22 @@ export function dropScrollbackFiles(): void {
   written.clear();
 }
 
+// Which nvim a hand-over goes to: the project's slot, the temp folder its socket lives in, and the shell
+// that finds nvim on your PATH.
+export type EditorTarget = { temporaryDirectory: string; shellCommand: string; slot: number };
+// What a hand-over answers: whether the file is in front of you, and what the status bar says.
+export type Handover = { ok: boolean; message: string };
+
 // The hand-over both the scrollback key and a path in a pane go through: find nvim, get ready, wait for
 // the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
 // ok-or-why-not rather than throwing, because every one of these has something to put in the status bar
 // and nothing to put in the editor. `prepare` answers a message when it could not get ready.
 async function handToEditor(
-  editor: { temporaryDirectory: string; shellCommand: string; slot: number },
+  editor: EditorTarget,
   what: string,
   prepare: () => Promise<string | null>,
   argumentLists: (socket: string) => string[][],
-): Promise<{ ok: boolean; message: string }> {
+): Promise<Handover> {
   // Asked before the wait, not after. A machine with no nvim has an editor pane that exits on the spot
   // and a socket that is never coming, so without this the answer is fifteen seconds of nothing
   // followed by a message about a start that was never going to happen.
@@ -185,7 +191,7 @@ export function openScrollback(
   slot: number,
   index: number,
   text: string,
-): Promise<{ ok: boolean; message: string }> {
+): Promise<Handover> {
   const file = scrollbackFile(temporaryDirectory, slot, index);
   return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the scrollback', async () => {
     try {
@@ -206,11 +212,11 @@ export function openScrollback(
 // A file already on disk: a path a pane printed, which main has found. The renderer starts nvim the
 // moment you pick the path, so the wait is the scrollback's.
 export function openFileInEditor(
-  editor: { temporaryDirectory: string; shellCommand: string; slot: number },
+  editor: EditorTarget,
   file: string,
   line?: number,
   column?: number,
-): Promise<{ ok: boolean; message: string }> {
+): Promise<Handover> {
   return handToEditor(editor, path.basename(file), async () => null,
     (socket) => [openFileArguments(socket, file, line, column)]);
 }
