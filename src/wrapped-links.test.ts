@@ -20,7 +20,7 @@ const buffer = (rows: string[]): WrapBuffer => ({
     };
   },
 });
-const paths = (rows: string[], row: number, columns = COLUMNS) => linksStartingOn(buffer(rows), row, columns, fileLinksIn)
+const paths = (rows: string[], row: number, width = COLUMNS) => linksStartingOn(buffer(rows), row, () => width, fileLinksIn)
   .map(({ link, start, end }) => [link.path, start.row, start.column, end.row, end.column]);
 
 describe('linksStartingOn', () => {
@@ -56,13 +56,20 @@ describe('linksStartingOn', () => {
     expect(paths(['- edit in', '  src/a.ts'], 1)).toEqual([['src/a.ts', 1, 2, 1, 10]]);
   });
 
-  // Printed at ten cells, then the pane was zoomed wider: the rows keep the width they were printed at.
+  // Printed at ten cells, then the pane was zoomed wider: each row is measured against the width it had.
   it('joins a path printed before the pane grew', () => {
-    expect(paths(['- a/b/cde/', '  f/g.md.'], 0, COLUMNS + 4)).toEqual([['a/b/cde/f/g.md', 0, 2, 1, 8]]);
+    const printedAtTen = (row: number) => (row < 2 ? COLUMNS : COLUMNS + 4);
+    const links = linksStartingOn(buffer(['- a/b/cde/', '  f/g.md.']), 0, printedAtTen, fileLinksIn);
+    expect(links.map(({ link }) => link.path)).toEqual(['a/b/cde/f/g.md']);
   });
 
-  it('keeps a path off the row below when a wider row in its block shows it was not cut', () => {
-    expect(paths(['- a/b/c/', '  d.md and', '  more text'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
+  it('keeps a path off the indented row under it when it stops short of the width it was printed at', () => {
+    expect(paths(['- a/b/c/', '  d.md'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
+    expect(paths(['- a/b/c/', '  d.md'], 0, COLUMNS + 4)).toEqual([['a/b/c', 0, 2, 0, 7]]);
+  });
+
+  it('joins a cut row one cell short of its width', () => {
+    expect(paths(['- a/b/cd/', '  e.md'], 0)).toEqual([['a/b/cd/e.md', 0, 2, 1, 6]]);
   });
 
   it('keeps the space a terminal wrap fell after', () => {
@@ -70,7 +77,7 @@ describe('linksStartingOn', () => {
   });
 
   it('with Infinity columns, only a row the terminal wrapped carries on', () => {
-    const infinite = (rows: string[]) => linksStartingOn(buffer(rows), 0, Infinity, fileLinksIn).map(({ link }) => link.path);
+    const infinite = (rows: string[]) => linksStartingOn(buffer(rows), 0, () => Infinity, fileLinksIn).map(({ link }) => link.path);
     expect(infinite(['- a/b/cde/', '  f/g.md.'])).toEqual(['a/b/cde']);
     expect(infinite(['see a/b/cd', '>e.ts'])).toEqual(['a/b/cde.ts']);
   });
@@ -83,13 +90,13 @@ describe('linksStartingOn', () => {
 
 describe('linksTouching', () => {
   it('gives the middle row of three the link passing through it', () => {
-    const links = linksTouching(buffer(['- a/b/cde/', '  fgh/ijk/', '  l.md']), 1, COLUMNS, fileLinksIn);
+    const links = linksTouching(buffer(['- a/b/cde/', '  fgh/ijk/', '  l.md']), 1, () => COLUMNS, fileLinksIn);
     expect(links.map(({ link }) => link.path)).toEqual(['a/b/cde/fgh/ijk/l.md']);
   });
 
   // Hovering the second half underlines and opens the whole address, from where it starts.
   it('gives the row below the link that ends on it', () => {
-    const links = linksTouching(buffer(['https://ex', '  am.co/a.']), 1, COLUMNS, webLinksIn);
+    const links = linksTouching(buffer(['https://ex', '  am.co/a.']), 1, () => COLUMNS, webLinksIn);
     expect(links.map(({ text, start, end }) => [text, start.row, end.row, end.column])).toEqual([
       ['https://exam.co/a', 0, 1, 9],
     ]);

@@ -10,6 +10,7 @@ import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
+import { printWidths } from './print-widths';
 import { linksTouching } from './wrapped-links';
 import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
@@ -166,6 +167,12 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       macOptionIsMeta: true,
     });
     const fit = new FitAddon();
+    const widths = printWidths(() => terminal.cols);
+    let lastCols = terminal.cols;
+    terminal.onResize(({ cols }) => {
+      widths.resized(terminal.buffer.active.length, lastCols);
+      lastCols = cols;
+    });
     terminal.loadAddon(fit);
     // A link underlines under the pointer: a URL opens in the real browser, where main decides what is
     // safe to hand the operating system, and a file path in this project's nvim. file-links.ts decides
@@ -173,7 +180,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     // and the end column is the last cell.
     const linksOn = <T extends LinkSpan>(row: number, find: (text: string) => T[], open: (link: T, text: string) => void): ILink[] => (
       // nvim lays out its own rows, so only a row the terminal wrapped carries on there.
-      linksTouching(terminal.buffer.active, row - 1, index === EDITOR_INDEX ? Infinity : terminal.cols, find).map((placed) => ({
+      linksTouching(terminal.buffer.active, row - 1, index === EDITOR_INDEX ? () => Infinity : widths.at, find).map((placed) => ({
         range: {
           start: { x: placed.start.column + 1, y: placed.start.row + 1 },
           end: { x: placed.end.column, y: placed.end.row + 1 },
@@ -192,7 +199,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     });
     terminal.open(container);
 
-    const pane: Pane = { terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0 };
+    const pane: Pane = { terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths };
     terminal.onData((data) => {
       if (!pane.exited) {
         options.bridge.sendInput(id, data);
