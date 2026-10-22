@@ -7,7 +7,7 @@ describe('parseSession', () => {
   it('keeps a saved layout as it was written', () => {
     expect(parseSession({ pages: [page], activeIndex: 0 }))
       .toEqual({
-        pages: [{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [] }],
+        pages: [{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [], claude: [] }],
         activeIndex: 0,
       });
   });
@@ -22,7 +22,7 @@ describe('parseSession', () => {
   it('drops a page with no usable path and keeps the others', () => {
     const stored = { pages: [{ mode: 'nvim' }, page, { path: '' }], activeIndex: 1 };
     expect(parseSession(stored).pages)
-      .toEqual([{ path: page.path, mode: 'board', focused: 3, names: [] }]);
+      .toEqual([{ path: page.path, mode: 'board', focused: 3, names: [], claude: [] }]);
   });
 
   // Restoring a view that does not exist would leave the page showing nothing at all.
@@ -63,6 +63,18 @@ describe('parseSession', () => {
   it('drops a name that is not text', () => {
     expect(parseSession({ pages: [{ ...page, names: [7, {}, 'claude', null, false] }] }).pages[0].names)
       .toEqual([null, null, 'claude', null, null]);
+  });
+
+  // A slot's id is typed into a shell on launch, so a slot that is not whole is no slot.
+  it('keeps each pane\'s Claude session and drops a slot that is not one', () => {
+    const resume = { session: 'ccaaf965-c864-48db-8044-30bf27d93087', directory: '/Users/sharp/work/api' };
+    const stored = { pages: [{ ...page, claude: [resume, null, { session: 'x; rm -rf ~', directory: '/' }, 7] }] };
+    expect(parseSession(stored).pages[0].claude).toEqual([resume, null, null, null]);
+  });
+
+  it('resumes nothing from a file written before sessions were kept', () => {
+    expect(parseSession({ pages: [page] }).pages[0].claude).toEqual([]);
+    expect(parseSession({ pages: [{ ...page, claude: 'abc' }] }).pages[0].claude).toEqual([]);
   });
 
   it('keeps the order the pages were written in, since that is the tab strip', () => {

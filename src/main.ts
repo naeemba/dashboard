@@ -15,20 +15,21 @@ import { git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
-import { agentArguments, editorArguments, pickShell } from './shell';
+import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { taskRunner } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
 } from './terminals';
-import { BOARD_FILE_PATH, openBoard, peekBoard, readBoard, writeBoard } from './board-store';
-import { readNotes, writeNotes } from './notes-store';
+import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneOpeners } from './pane-openers';
-import { readSession, writeSession, type Session } from './session';
+import { registerProjectFiles } from './project-files-ipc';
+import { sessionStore } from './session-store';
+import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -59,6 +60,7 @@ import {
   stillLiving,
   withEntry,
   withoutPane,
+  panesAtLaunch,
   withoutPanes,
   withoutWorktree,
   worktreesDiffer,
@@ -66,7 +68,7 @@ import {
   type WorktreeEntry,
 } from './worktree-store';
 import type { Settings } from './settings';
-import { moveCardById, shipColumnIndex, type Board } from './board';
+import { moveCardById, shipColumnIndex } from './board';
 import { reviewSweep } from './review-flow';
 import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 import { isManagerPath } from './manager';
@@ -123,10 +125,8 @@ if (existsSync(environmentFile)) {
 // the same reason read the other way round: a new project in an old slot inherits the ids that a
 // notification, a worktree record or a board's ship may still be naming.
 const projects: (Project | undefined)[] = [];
-// The recently opened projects live next to the app's other per-user state, and so does the layout the
-// last run was left in.
+// The recently opened projects live next to the app's other per-user state.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
-const sessionFile = path.join(app.getPath('userData'), 'session.json');
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
 // flight forever with nothing able to clear it.
@@ -134,7 +134,8 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Every pane comes back null with it. No shell outlives the app, so nothing this file says was in
 // pane 2 is in pane 2 a moment after launch: that pane is a plain shell in the project, and a record
 // still naming it would put a branch name under the status bar of a checkout the pane is not in —
-// which is the wrong-checkout mistake the branch is printed there to prevent. Clearing it also gives
+// which is the wrong-checkout mistake the branch is printed there to prevent. A card's agent that a
+// restart resumes is in that pane again, and resumeIn names it on the record again. Clearing it also gives
 // the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
 // it hands the folder that is already there to a pane. Written out, so the file says what this says.
 //
@@ -145,8 +146,12 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
 // half built and has nothing to shut down yet.
 let worktrees: WorktreeEntry[] = [];
+// The pane each card's agent was in when the app last ran, kept from before the clearing so a restart
+// resumes the agent in that pane and nowhere else. agentToResume holds why.
+let agentPanesBeforeLaunch = new Map<string, number>();
 try {
-  worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
+  const recorded = livingEntries(readWorktrees(worktreesFile), existsSync);
+  ({ entries: worktrees, panes: agentPanesBeforeLaunch } = panesAtLaunch(recorded));
 } catch (error: unknown) {
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
@@ -368,8 +373,8 @@ function worktreeList(): WorktreeList {
 // worktreesDiffer's to say.
 //
 // The records are what it looks at, not the pane directories riding along with them, and that is enough
-// rather than lucky: the only two things that move a pane into or out of a worktree are a ship and a
-// worktree removed, and both change a record here. A pane whose folder changes for any other reason —
+// rather than lucky: the only things that move a pane into or out of a worktree are a ship, a card's
+// agent resumed after a restart, and a worktree removed, and all three change a record here. A pane whose folder changes for any other reason —
 // a project closed, a project opened in a freed slot, an agent exiting — has moved between two
 // ordinary checkouts, which is not something the status bar prints or a badge reads.
 function setWorktrees(next: WorktreeEntry[]): void {
@@ -488,9 +493,28 @@ function spawnProject(project: Project, projectIndex: number): void {
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
     terminalCommands.set(id, { args: [], directory: project.path });
-    spawnTerminal(id);
+    // A pane that was running Claude Code when the app last quit; session-store.ts says when it was.
+    const resume = claudeSessions.takeResume(project.path, terminalIndex, id);
+    if (resume === null) spawnTerminal(id);
+    else resumeIn(id, project.path, terminalIndex, resume);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+}
+
+// A session that ran as a card's agent comes back as it, exactly as the ship started it; agentToResume
+// says which sessions those are. Its record names the pane again, so the status bar prints the branch,
+// a second ship of the card is refused, and the review sweep waits for it rather than starting beside
+// it. Any other session is typed into a shell in its folder, so exiting it leaves a prompt.
+function resumeIn(id: string, projectPath: string, index: number, resume: PaneConversation): void {
+  const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, index, realPath);
+  if (card !== undefined) {
+    recordWorktree({ ...card, pane: index });
+    startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));
+    return;
+  }
+  terminalCommands.set(id, { args: [], directory: resume.directory });
+  spawnTerminal(id);
+  shells.get(id)?.write(resumeLine(resume));
 }
 
 // Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
@@ -498,13 +522,10 @@ function spawnProject(project: Project, projectIndex: number): void {
 // exists to say. The old shell is killed first: retargeting a pane that is still running one would
 // leave two processes writing to the same id.
 //
-// The prompt is the caller's, because there are two agents now: the one that works a card, and the one
-// that reviews the pull request the first one opened.
-function startAgent(id: string, worktreePath: string, prompt: string): void {
-  terminalCommands.set(id, {
-    args: agentArguments(shellCommand, prompt),
-    directory: worktreePath,
-  });
+// What it runs is the caller's, because there are three agents now: the one that works a card, the one
+// that reviews the pull request the first one opened, and either of them resumed after a restart.
+function startAgent(id: string, worktreePath: string, args: string[]): void {
+  terminalCommands.set(id, { args, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
@@ -592,8 +613,9 @@ ipcMain.on('projects:close', (_event, slot: number) => {
 const tokenUsage = usageSweep({
   panePids: () => new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id])),
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
-  processTree: async () => (await processTree()) ?? '',
+  processTree,
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
+  placed: (placement) => claudeSessions.placed(placement),
   // Held, not reported: a sweep that fails before a window has opened must not box and exit the
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
   // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
@@ -609,10 +631,9 @@ ipcMain.handle('markets:read', () => readMarkets(settings.weatherPlace));
 // The renderer's first read. Everything after it arrives unasked on usage:change.
 ipcMain.handle('usage:read', () => tokenUsage.latest());
 
-// Read once at startup and written back whenever the layout changes, so a crash loses at most the
-// change you were making rather than every project you had open.
-ipcMain.handle('session:read', () => readSession(sessionFile));
-ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, session));
+// Read once at startup and written back whenever the layout changes or a pane's Claude session does,
+// so a crash loses at most the change you were making, or half a minute of sessions.
+const claudeSessions = sessionStore(path.join(app.getPath('userData'), 'session.json'), slotOfProject);
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
@@ -660,35 +681,7 @@ ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
 });
-// Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
-// is a convenience — writing the two explanation files — so a read-only project folder must not cost
-// the user a board.json that is sitting right there and perfectly readable.
-ipcMain.handle('board:peek', (_event, projectPath: string) => peekBoard(projectPath));
-ipcMain.handle('board:read', (_event, projectPath: string) => {
-  try {
-    return openBoard(projectPath);
-  } finally {
-    // After the read, which is what creates .dashboard on a project that has never had a board — and
-    // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
-    // that board never notices the command line again for as long as you stay on the screen.
-    boards.watch(projectPath);
-  }
-});
-// invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
-// The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
-// the renderer: it already has the board it just sent.
-ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
-  boards.wrote(projectPath, writeBoard(projectPath, board));
-});
-
-// The project's page of notes. No watcher and no seeding: the notes are one box one person types
-// into, and a project that has never had any has no file until the first keystroke lands.
-ipcMain.handle('notes:read', (_event, projectPath: string) => readNotes(projectPath));
-// invoke, not send, for the same reason board:write is: a write that fails rejects in the renderer
-// and reaches the status bar, rather than leaving a page on screen that is not on disk.
-ipcMain.handle('notes:write', (_event, projectPath: string, text: string) => {
-  writeNotes(projectPath, text);
-});
+registerProjectFiles(boards);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -762,7 +755,7 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
   // per pane in this project — claimsPane holds why the project half of that matters.
   const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
   if (claimed) recordWorktree(withoutPane(claimed));
-  startAgent(terminalId(slot, pane), entry.worktreePath, prompt);
+  startAgent(terminalId(slot, pane), entry.worktreePath, agentArguments(shellCommand, prompt));
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
@@ -1042,8 +1035,13 @@ function createWindow(): void {
       cancelId: 0,
       message: 'Quit Dashboard?',
       detail: 'Every shell in every open project is killed, including anything still running in one.',
-    }).then(({ response }) => {
-      if (response === 1) mainWindow.destroy();
+    }).then(async ({ response }) => {
+      if (response !== 1) return;
+      // One last reading before the shells die, so a conversation started or cleared since the last
+      // sweep is the one the next launch resumes. A reading that fails still quits, on the last sweep's.
+      const placement = await tokenUsage.placeNow().catch(() => null);
+      if (placement !== null) claudeSessions.placed(placement);
+      mainWindow.destroy();
     }).finally(() => {
       // Reset on the rejection path too. Leave it true after a failed dialog and every later close
       // is cancelled before it asks anything: the window can only be shut by Force Quit, which is

@@ -51,11 +51,10 @@ describe('paneOfProcess', () => {
 
 describe('sessionsByPane', () => {
   it('places the live sessions and drops the ones with no pane', () => {
-    expect(sessionsByPane(parentProcesses(PS), PANES, [
-      { pid: 3690, session: 'a' },
-      { pid: 999, session: 'elsewhere' },
-      { pid: 84623, session: 'b' },
-    ])).toEqual(new Map([['1:2', 'a'], ['1:4', 'b']]));
+    const a = { pid: 3690, session: 'a' };
+    const b = { pid: 84623, session: 'b' };
+    expect(sessionsByPane(parentProcesses(PS), PANES, [a, { pid: 999, session: 'elsewhere' }, b]))
+      .toEqual(new Map([['1:2', a], ['1:4', b]]));
   });
 
   it('drops a session whose process has gone', () => {

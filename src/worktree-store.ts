@@ -177,6 +177,18 @@ export function withoutPanes(
   ));
 }
 
+// The launch's clearing, with the pane each card held before it. One function so the panes are always
+// read before withoutPanes empties them: read after, the map is empty, and every card's agent comes
+// back after a restart typed into a plain shell instead of resumed in its own pane.
+export function panesAtLaunch(recorded: readonly WorktreeEntry[]): {
+  entries: WorktreeEntry[];
+  panes: Map<string, number>;
+} {
+  const panes = new Map<string, number>();
+  for (const entry of recorded) if (entry.pane !== null) panes.set(entry.cardId, entry.pane);
+  return { entries: withoutPanes(recorded), panes };
+}
+
 // The record giving a pane up, when a ship comes to take it. The project is half the address: pane
 // numbers are per project — terminalId scopes them and freePane counts within one slot — so a match
 // on the number alone hands one project's ship the record of a card working in another.
