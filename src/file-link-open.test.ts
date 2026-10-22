@@ -4,6 +4,8 @@ import { fileLinkOpener, visibleLinks, type ScreenBuffer } from './file-link-ope
 import type { Handover } from './nvim-remote';
 import type { Page } from './page';
 
+const COLUMNS = 80;
+
 // A buffer whose screen starts `viewportY` lines down, laid out the way xterm does it: a Han character
 // is a cell of width 2 followed by a spacer of width 0, anything else one cell.
 const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
@@ -17,6 +19,7 @@ const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
       /\p{Script=Han}/u.test(chars) ? [[chars, 2], ['', 0]] : [[chars, 1]]
     ));
     return {
+      isWrapped: false,
       length: cells.length,
       translateToString: (trim) => (trim ? text.trimEnd() : text),
       getCell: (column) => {
@@ -30,7 +33,7 @@ const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
 describe('visibleLinks', () => {
   it('reads the rows from viewportY down, bottom row first', () => {
     const screen = buffer(['old.ts above the screen', 'top.ts', 'x', '  bottom.ts'], 1);
-    expect(visibleLinks(screen, 3).map(({ row, column, link }) => [row, column, link.path])).toEqual([
+    expect(visibleLinks(screen, 3, COLUMNS).map(({ row, column, link }) => [row, column, link.path])).toEqual([
       [2, 2, 'bottom.ts'],
       [0, 0, 'top.ts'],
     ]);
@@ -38,7 +41,7 @@ describe('visibleLinks', () => {
 
   // The string has `a` at 2, the screen at cell 3: the label goes over the cell, not the offset.
   it('places a path after a wide character by its cell', () => {
-    expect(visibleLinks(buffer(['漢 a.ts'], 0), 1).map(({ column, link }) => [column, link.start])).toEqual([[3, 2]]);
+    expect(visibleLinks(buffer(['漢 a.ts'], 0), 1, COLUMNS).map(({ column, link }) => [column, link.start])).toEqual([[3, 2]]);
   });
 });
 
