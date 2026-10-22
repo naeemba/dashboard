@@ -6,11 +6,11 @@
 // Nothing here knows whether the file exists. That is main's to answer, against the pane's own folder,
 // when you actually open one; file-open.ts holds that half.
 
-export type FileLink = {
-  // Where the path sits in the line, as string offsets, end exclusive. The line number and column are
-  // inside the span, so the underline covers `main.ts:42` whole.
-  start: number;
-  end: number;
+// Where a link sits in the line, as string offsets, end exclusive.
+export type LinkSpan = { start: number; end: number };
+
+// The line number and column are inside the span, so the underline covers `main.ts:42` whole.
+export type FileLink = LinkSpan & {
   path: string;
   line?: number;
   column?: number;
@@ -28,10 +28,9 @@ const URL_PATTERN = /\b[a-z][\w+.-]*:\/\/\S+/gi;
 // The last segment has a letter after its final dot: `main.ts`, not the `1.5` of a version number.
 const EXTENSION = /\.[A-Za-z]\w*$/;
 
-// ponytail: one row at a time, so a path the terminal wrapped onto a second row is found only as far as
-// the first row goes. Joining wrapped rows is the upgrade if long paths keep getting cut.
+// One line of text; wrapped-links.ts joins a row to the one it carries on to before asking.
 export function fileLinksIn(text: string): FileLink[] {
-  // A URL is the web links addon's. Its path part looks exactly like a file path, and without this the
+  // A URL is webLinksIn's. Its path part looks exactly like a file path, and without this the
   // `/docs/intro` of `https://example.com/docs/intro` would underline twice.
   const urls = [...text.matchAll(URL_PATTERN)].map((match) => [match.index, match.index + match[0].length]);
   const links: FileLink[] = [];
@@ -49,6 +48,14 @@ export function fileLinksIn(text: string): FileLink[] {
     links.push(link);
   }
   return links;
+}
+
+// The web addresses a click opens in the browser: the pattern xterm's web links addon used, which
+// leaves out the full stop or bracket a sentence puts after an address.
+const WEB_LINK = /https?:\/\/[^\s"'!*(){}|\\^<>`]*[^\s"':,.!?{}|\\^~[\]`()<>]/gi;
+
+export function webLinksIn(text: string): LinkSpan[] {
+  return [...text.matchAll(WEB_LINK)].map((match) => ({ start: match.index, end: match.index + match[0].length }));
 }
 
 // The letters the hint key puts over the paths on screen, home row first. One letter each, so a path is

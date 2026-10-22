@@ -1,16 +1,16 @@
 import { Terminal } from '@xterm/xterm';
-import type { ITheme } from '@xterm/xterm';
+import type { ILink, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
 import { createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
-import { fileLinksIn, type FileLink } from './file-links';
+import { fileLinksIn, webLinksIn, type FileLink, type LinkSpan } from './file-links';
 import type { ManagerView } from './manager-view';
 import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
-import { PANE_SCROLLBACK, bufferLine, cellColumn, paneScreen } from './pane';
+import { PANE_SCROLLBACK, paneScreen } from './pane';
+import { linksTouching } from './wrapped-links';
 import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
@@ -167,28 +167,29 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     });
     const fit = new FitAddon();
     terminal.loadAddon(fit);
-    // A URL in the output underlines under the pointer and opens in the real browser when clicked; main
-    // decides what is safe to hand the operating system.
-    terminal.loadAddon(new WebLinksAddon((_event, uri) => options.bridge.openExternal(uri)));
-    // A file path underlines the same way and opens in this project's nvim. file-links.ts decides what
-    // reads as a path; xterm counts columns and rows from 1, and the end column is the last cell. The
-    // shells only: a click in nvim is nvim's, and a link there would swap the buffer you were editing.
-    if (index !== EDITOR_INDEX) {
-      terminal.registerLinkProvider({
-        provideLinks: (row, callback) => {
-          const text = bufferLine(terminal.buffer.active, row - 1);
-          const line = terminal.buffer.active.getLine(row - 1);
-          callback(fileLinksIn(text).map((link) => ({
-            range: {
-              start: { x: cellColumn(line, link.start) + 1, y: row },
-              end: { x: cellColumn(line, link.end), y: row },
-            },
-            text: text.slice(link.start, link.end),
-            activate: () => options.openFile(page, index, link),
-          })));
+    // A link underlines under the pointer: a URL opens in the real browser, where main decides what is
+    // safe to hand the operating system, and a file path in this project's nvim. file-links.ts decides
+    // what reads as either, wrapped-links.ts which rows one spans. xterm counts columns and rows from 1,
+    // and the end column is the last cell.
+    const linksOn = <T extends LinkSpan>(row: number, find: (text: string) => T[], open: (link: T, text: string) => void): ILink[] => (
+      // nvim lays out its own rows, so only a row the terminal wrapped carries on there.
+      linksTouching(terminal.buffer.active, row - 1, index === EDITOR_INDEX ? Infinity : terminal.cols, find).map((placed) => ({
+        range: {
+          start: { x: placed.start.column + 1, y: placed.start.row + 1 },
+          end: { x: placed.end.column, y: placed.end.row + 1 },
         },
-      });
-    }
+        text: placed.text,
+        activate: () => open(placed.link, placed.text),
+      }))
+    );
+    // File paths in the shells only: a click in nvim is nvim's, and a link there would swap the buffer
+    // you were editing.
+    terminal.registerLinkProvider({
+      provideLinks: (row, callback) => callback([
+        ...linksOn(row, webLinksIn, (_link, url) => options.bridge.openExternal(url)),
+        ...(index === EDITOR_INDEX ? [] : linksOn(row, fileLinksIn, (link) => options.openFile(page, index, link))),
+      ]),
+    });
     terminal.open(container);
 
     const pane: Pane = { terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0 };

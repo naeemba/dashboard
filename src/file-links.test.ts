@@ -34,8 +34,8 @@ describe('fileLinksIn', () => {
     expect(paths('version 1.5.2 hello world')).toEqual([]);
   });
 
-  // The web links addon has those; underlining their path part as a file would draw two links.
-  it('leaves a url to the web links addon', () => {
+  // webLinksIn has those; underlining their path part as a file would draw two links.
+  it('leaves a url to webLinksIn', () => {
     expect(paths('see https://example.com/docs/intro.html now')).toEqual([]);
   });
 

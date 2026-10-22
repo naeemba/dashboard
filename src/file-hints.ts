@@ -21,7 +21,7 @@ export function showFileHints(page: Page, open: OpenFileLink): string {
   const pane = page.panes[index];
   const screen = pane?.terminal.element?.querySelector('.xterm-screen');
   if (!pane || !screen) return '';
-  const links = visibleLinks(pane.terminal.buffer.active, pane.terminal.rows);
+  const links = visibleLinks(pane.terminal.buffer.active, pane.terminal.rows, pane.terminal.cols);
   if (links.length === 0) return 'no file path on this pane';
 
   const bounds = screen.getBoundingClientRect();
