@@ -173,22 +173,31 @@ export async function sweepUsage(
 // the process's pid, and leaves it behind when the process dies — so this says "has run", not "is
 // running". Nothing here checks: a stale pid is not in the process tree, and the walk in
 // pane-sessions.ts finds no pane for it and drops it.
-export async function liveSessions(directory: string): Promise<{ pid: number; session: string }[]> {
+// One running Claude Code, as its ~/.claude/sessions/<pid>.json says: the process, the conversation, and
+// the folder it was started in, which is the folder `claude --resume` has to be run from. A record with
+// no folder still counts towards the figures; it is only never resumed.
+export type LiveSession = { pid: number; session: string; directory: string };
+
+export async function liveSessions(directory: string): Promise<LiveSession[]> {
   let names: string[];
   try {
     names = await readdir(directory);
   } catch {
     return [];
   }
-  const sessions: { pid: number; session: string }[] = [];
+  const sessions: LiveSession[] = [];
   for (const name of names) {
     if (!name.endsWith('.json')) continue;
     try {
       const record = JSON.parse(await readFile(path.join(directory, name), 'utf8')) as {
-        pid?: unknown; sessionId?: unknown;
+        pid?: unknown; sessionId?: unknown; cwd?: unknown;
       };
       if (typeof record.pid !== 'number' || typeof record.sessionId !== 'string') continue;
-      sessions.push({ pid: record.pid, session: record.sessionId });
+      sessions.push({
+        pid: record.pid,
+        session: record.sessionId,
+        directory: typeof record.cwd === 'string' ? record.cwd : '',
+      });
     } catch {
       // Half-written, or a file of Claude Code's we do not know the shape of. One pane's figure goes
       // missing rather than the sweep.

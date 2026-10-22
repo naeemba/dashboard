@@ -121,7 +121,7 @@ describe('liveSessions', () => {
     const directory = await sessionsDirectory({
       '900.json': JSON.stringify({ pid: 900, sessionId: 'a' }),
     });
-    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a' }]);
+    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a', directory: '' }]);
   });
 
   it('ignores a file that is not one of the records', async () => {
@@ -129,7 +129,7 @@ describe('liveSessions', () => {
       '900.json': JSON.stringify({ pid: 900, sessionId: 'a' }),
       'notes.txt': 'not a record',
     });
-    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a' }]);
+    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a', directory: '' }]);
   });
 
   it('drops a record missing a pid or a session rather than reading undefined off it', async () => {
@@ -145,7 +145,14 @@ describe('liveSessions', () => {
       '900.json': '{"pid": 900, "sessi',
       '901.json': JSON.stringify({ pid: 901, sessionId: 'b' }),
     });
-    expect(await liveSessions(directory)).toEqual([{ pid: 901, session: 'b' }]);
+    expect(await liveSessions(directory)).toEqual([{ pid: 901, session: 'b', directory: '' }]);
+  });
+
+  it('reads the folder the session was started in', async () => {
+    const directory = await sessionsDirectory({
+      '900.json': JSON.stringify({ pid: 900, sessionId: 'a', cwd: '/work/api' }),
+    });
+    expect(await liveSessions(directory)).toEqual([{ pid: 900, session: 'a', directory: '/work/api' }]);
   });
 
   it('answers with nothing when Claude Code has never run on this machine', async () => {

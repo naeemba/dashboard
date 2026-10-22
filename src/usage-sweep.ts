@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
-import { liveSessions, sweepUsage } from './usage-store';
+import { liveSessions, sweepUsage, type LiveSession } from './usage-store';
 import { parentProcesses, sessionsByPane } from './pane-sessions';
 import { worktreesRoot } from './ship';
 
@@ -34,6 +34,9 @@ export type UsageSweepPorts = {
   processTree(): Promise<string>;
   // Tell the renderer. Called only for a sweep that found different figures.
   publish(usage: UsageSnapshot): void;
+  // Where every live session is, by pane, after every sweep whether or not the figures moved. Main keeps
+  // it so a restart can resume each pane's conversation; claude-resume.ts holds the rest.
+  placed(byPane: ReadonlyMap<string, LiveSession>): void;
   // A sweep that threw. Wired to failure.ts's `hold`, which says it now if there is a bar and holds
   // it until there is one, and dedups so a sweep failing every half minute does not repaint the bar
   // every tick. Named for what it is rather than failure.ts's `report`: this cannot box and exit the
@@ -55,6 +58,9 @@ export type UsageSweep = {
   latest(): UsageSnapshot;
   // Sweep from now until the app quits.
   start(): void;
+  // The same reading the sweep takes, taken now. Quit asks for it so a conversation started, or a
+  // /clear typed, in the last half minute is the one saved.
+  placeNow(): Promise<Map<string, LiveSession>>;
 };
 
 export function usageSweep(ports: UsageSweepPorts): UsageSweep {
@@ -63,22 +69,25 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
   const usageFiles = new Map<string, FileUsage>();
   let usage: UsageSnapshot = NO_USAGE;
 
+  // One spelling of "which session is in which pane" for the sweep and for quit, so the two cannot
+  // place a session differently.
+  async function placeSessions(): Promise<Map<string, LiveSession>> {
+    const [tree, sessions] = await Promise.all([ports.processTree(), liveSessions(claudeSessions)]);
+    return sessionsByPane(parentProcesses(tree), ports.panePids(), sessions);
+  }
+
   async function run(): Promise<void> {
     const now = Date.now();
-    // Three reads that need nothing from each other: the logs, the process tree, and the sessions
-    // Claude Code has running.
-    const [, tree, sessions] = await Promise.all([
-      sweepUsage(claudeLogs, usageFiles, now),
-      ports.processTree(),
-      liveSessions(claudeSessions),
-    ]);
+    // Two reads that need nothing from each other: the logs, and where each running session is.
+    const [, byPane] = await Promise.all([sweepUsage(claudeLogs, usageFiles, now), placeSessions()]);
+    ports.placed(byPane);
     const open = ports.openProjects().map((projectPath) => ({
       path: projectPath, worktrees: worktreesRoot(projectPath),
     }));
     const next = snapshotOf(
       usageFiles.values(),
       open,
-      sessionsByPane(parentProcesses(tree), ports.panePids(), sessions),
+      new Map([...byPane].map(([pane, live]) => [pane, live.session])),
       now,
     );
     // Nothing crosses for a sweep that found the same figures. Whether that is worth a message is
@@ -100,5 +109,5 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
     }, delay).unref();
   }
 
-  return { latest: () => usage, start: () => sweepLater(FIRST_SWEEP_MS) };
+  return { latest: () => usage, start: () => sweepLater(FIRST_SWEEP_MS), placeNow: placeSessions };
 }

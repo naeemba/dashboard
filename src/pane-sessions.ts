@@ -47,21 +47,22 @@ export function paneOfProcess(
   return undefined;
 }
 
-// Every live session placed on the pane it is running in. A session whose process has already gone is
-// dropped on its own: its pid is not in the tree, so the walk finds no parent and no pane.
+// Every live session placed on the pane it is running in, whole: the token figures read its id, the
+// resume reads its folder. A session whose process has already gone is dropped on its own: its pid is
+// not in the tree, so the walk finds no parent and no pane.
 //
 // Two sessions in one pane cannot happen while both are running — claude holds the terminal — but a
 // stale file left by a crash can still name that pane. The last one wins, which is the newer of the
 // two, because a stale pid is only reused by a process that started later.
-export function sessionsByPane(
+export function sessionsByPane<Live extends { pid: number }>(
   parents: ReadonlyMap<number, number>,
   panes: ReadonlyMap<number, string>,
-  sessions: readonly { pid: number; session: string }[],
-): Map<string, string> {
-  const byPane = new Map<string, string>();
-  for (const { pid, session } of sessions) {
-    const pane = paneOfProcess(parents, panes, pid);
-    if (pane !== undefined) byPane.set(pane, session);
+  sessions: readonly Live[],
+): Map<string, Live> {
+  const byPane = new Map<string, Live>();
+  for (const live of sessions) {
+    const pane = paneOfProcess(parents, panes, live.pid);
+    if (pane !== undefined) byPane.set(pane, live);
   }
   return byPane;
 }

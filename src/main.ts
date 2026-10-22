@@ -594,6 +594,7 @@ const tokenUsage = usageSweep({
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
   processTree: async () => (await processTree()) ?? '',
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
+  placed: () => undefined,
   // Held, not reported: a sweep that fails before a window has opened must not box and exit the
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
   // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
