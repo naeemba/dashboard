@@ -76,7 +76,14 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "ab171aa8-c950-4458-9f27-b4608534e01d",
+          "title": "Open a file path printed in a pane in the project's nvim",
+          "notes": "Click a path, or press Alt+O for hint mode (letter labels over every path on screen). Resolve against the pane's live cwd, falling back to the project root. Only existing regular files open. Open with nvim --remote +line in the current window, then switch to nvim mode.",
+          "priority": "medium"
+        }
+      ]
     },
     {
       "name": "Review",
