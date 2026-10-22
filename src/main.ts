@@ -28,7 +28,8 @@ import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneOpeners } from './pane-openers';
 import { registerProjectFiles } from './project-files-ipc';
-import { readSession, writeSession, type Session } from './session';
+import { sessionStore } from './session-store';
+import { resumeLine } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -123,10 +124,8 @@ if (existsSync(environmentFile)) {
 // the same reason read the other way round: a new project in an old slot inherits the ids that a
 // notification, a worktree record or a board's ship may still be naming.
 const projects: (Project | undefined)[] = [];
-// The recently opened projects live next to the app's other per-user state, and so does the layout the
-// last run was left in.
+// The recently opened projects live next to the app's other per-user state.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
-const sessionFile = path.join(app.getPath('userData'), 'session.json');
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
 // flight forever with nothing able to clear it.
@@ -487,8 +486,12 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
     const id = terminalId(projectIndex, terminalIndex);
-    terminalCommands.set(id, { args: [], directory: project.path });
+    // A pane that was running Claude Code when the app last quit starts in that conversation's folder
+    // with the resume typed into its shell. session-store.ts says when a pane has one.
+    const resume = claudeSessions.takeResume(project.path, terminalIndex, id);
+    terminalCommands.set(id, { args: [], directory: resume?.directory ?? project.path });
     spawnTerminal(id);
+    if (resume !== null) shells.get(id)?.write(resumeLine(resume));
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
 }
@@ -594,7 +597,7 @@ const tokenUsage = usageSweep({
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
   processTree: async () => (await processTree()) ?? '',
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
-  placed: () => undefined,
+  placed: (byPane) => claudeSessions.placed(byPane),
   // Held, not reported: a sweep that fails before a window has opened must not box and exit the
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
   // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
@@ -610,12 +613,9 @@ ipcMain.handle('markets:read', () => readMarkets(settings.weatherPlace));
 // The renderer's first read. Everything after it arrives unasked on usage:change.
 ipcMain.handle('usage:read', () => tokenUsage.latest());
 
-// Read once at startup and written back whenever the layout changes, so a crash loses at most the
-// change you were making rather than every project you had open.
-ipcMain.handle('session:read', () => readSession(sessionFile));
-ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, {
-  ...session, pages: session.pages.map((entry) => ({ ...entry, claude: [] })),
-}));
+// Read once at startup and written back whenever the layout changes or a pane's Claude session does,
+// so a crash loses at most the change you were making, or half a minute of sessions.
+const claudeSessions = sessionStore(path.join(app.getPath('userData'), 'session.json'), slotOfProject);
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
@@ -1017,8 +1017,12 @@ function createWindow(): void {
       cancelId: 0,
       message: 'Quit Dashboard?',
       detail: 'Every shell in every open project is killed, including anything still running in one.',
-    }).then(({ response }) => {
-      if (response === 1) mainWindow.destroy();
+    }).then(async ({ response }) => {
+      if (response !== 1) return;
+      // One last reading before the shells die, so a conversation started or cleared since the last
+      // sweep is the one the next launch resumes. A reading that fails still quits, on the last sweep's.
+      await tokenUsage.placeNow().then((byPane) => claudeSessions.placed(byPane), () => undefined);
+      mainWindow.destroy();
     }).finally(() => {
       // Reset on the rejection path too. Leave it true after a failed dialog and every later close
       // is cancelled before it asks anything: the window can only be shut by Force Quit, which is
