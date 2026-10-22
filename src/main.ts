@@ -612,7 +612,9 @@ ipcMain.handle('usage:read', () => tokenUsage.latest());
 // Read once at startup and written back whenever the layout changes, so a crash loses at most the
 // change you were making rather than every project you had open.
 ipcMain.handle('session:read', () => readSession(sessionFile));
-ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, session));
+ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, {
+  ...session, pages: session.pages.map((entry) => ({ ...entry, claude: [] })),
+}));
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.

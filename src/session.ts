@@ -1,10 +1,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { isClaudeSlot, type ClaudeSlot } from './claude-resume';
 import { PROJECT_MODES, type Mode } from './modes';
 import { TERMINAL_COUNT } from './terminals';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
 // was left on, and which pane had the keyboard. Not the shells themselves — those die with the app, and
-// every pane comes back empty at its project's directory, and what each pane was called.
+// every pane comes back empty at its project's directory, and what each pane was called, except a pane
+// that was running Claude Code, which resumes that conversation.
 //
 // `names` is one slot per pane of the grid, `null` for a pane nobody named. Not a list of the panes
 // that have one: with the panes that do not left out, a name lands on the wrong pane the moment a
@@ -12,8 +14,13 @@ import { TERMINAL_COUNT } from './terminals';
 // program that set it, so a restored pane says nothing until something in it speaks up.
 export type SessionPage = { path: string; mode: Mode; focused: number; names: (string | null)[] };
 export type Session = { pages: SessionPage[]; activeIndex: number };
+// What is on disk: the layout the renderer sends, plus which Claude Code conversation each grid pane was
+// running, one slot per pane like `names`. Main fills these in; the renderer never sees them change.
+// claude-resume.ts holds why each slot carries its folder.
+export type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[] };
+export type SavedSession = { pages: SavedPage[]; activeIndex: number };
 
-const EMPTY: Session = { pages: [], activeIndex: 0 };
+const EMPTY: SavedSession = { pages: [], activeIndex: 0 };
 
 // The modes a project can be left on are already spelled once, in modes.ts. Reading them back off
 // that list is what keeps a new project view from being restorable everywhere except out of this
@@ -29,11 +36,11 @@ function isPaneIndex(value: unknown): value is number {
 // A page is worth restoring only if it says which project it is. Everything else has a sane answer —
 // the view a project opens as, the pane it opens on — so a file written by an older version, or edited
 // by hand, costs you a detail rather than the whole layout.
-function toSessionPage(stored: unknown): SessionPage | null {
+function toSessionPage(stored: unknown): SavedPage | null {
   // Destructuring anything that is not an object gives undefined fields, which the path check below
   // already rejects, so the only shape worth guarding against here is the one that would throw.
-  const { path, mode, focused, names } = (stored ?? {}) as
-    { path?: unknown; mode?: unknown; focused?: unknown; names?: unknown };
+  const { path, mode, focused, names, claude } = (stored ?? {}) as
+    { path?: unknown; mode?: unknown; focused?: unknown; names?: unknown; claude?: unknown };
   if (typeof path !== 'string' || path === '') return null;
   return {
     path,
@@ -44,10 +51,13 @@ function toSessionPage(stored: unknown): SessionPage | null {
     // anything else in a slot would be drawn on the pane exactly as it is. Its length is not forced to
     // the grid: the restore reads it by pane, so a slot with no pane behind it is skipped anyway.
     names: (Array.isArray(names) ? names : []).map((name) => (typeof name === 'string' ? name : null)),
+    // A slot that is not a whole one is no session at all, never half of one: its id is typed into a
+    // shell. A file written before the field existed resumes nothing.
+    claude: (Array.isArray(claude) ? claude : []).map((slot) => (isClaudeSlot(slot) ? slot : null)),
   };
 }
 
-export function parseSession(stored: unknown): Session {
+export function parseSession(stored: unknown): SavedSession {
   const { pages, activeIndex } = (stored ?? {}) as { pages?: unknown; activeIndex?: unknown };
   const restored = (Array.isArray(pages) ? pages : []).flatMap((entry) => toSessionPage(entry) ?? []);
   // An activeIndex pointing past the end would open on a page that is not there. First page instead.
@@ -58,7 +68,7 @@ export function parseSession(stored: unknown): Session {
 // Like the recents file, this is a convenience rather than state to recover, reading and writing alike:
 // a missing or damaged file just means the window opens empty, and a write that fails must not take
 // down whatever the caller was doing.
-export function readSession(file: string): Session {
+export function readSession(file: string): SavedSession {
   try {
     return parseSession(JSON.parse(readFileSync(file, 'utf8')));
   } catch {
@@ -66,7 +76,7 @@ export function readSession(file: string): Session {
   }
 }
 
-export function writeSession(file: string, session: Session): void {
+export function writeSession(file: string, session: SavedSession): void {
   try {
     writeFileSync(file, JSON.stringify(session));
   } catch {
