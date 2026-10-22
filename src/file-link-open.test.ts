@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { FileLink } from './file-links';
 import { fileLinkOpener, visibleLinks, type ScreenBuffer } from './file-link-open';
+import type { Handover } from './nvim-remote';
 import type { Page } from './page';
 
-// A buffer whose screen starts `viewportY` lines down, one cell per character.
+// A buffer whose screen starts `viewportY` lines down, laid out the way xterm does it: a Han character
+// is a cell of width 2 followed by a spacer of width 0, anything else one cell.
 const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
   baseY: viewportY,
   length: lines.length,
@@ -11,10 +13,16 @@ const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
   getLine: (row) => {
     const text = lines[row];
     if (text === undefined) return undefined;
+    const cells = [...text].flatMap((chars): [string, number][] => (
+      /\p{Script=Han}/u.test(chars) ? [[chars, 2], ['', 0]] : [[chars, 1]]
+    ));
     return {
-      length: text.length,
+      length: cells.length,
       translateToString: (trim) => (trim ? text.trimEnd() : text),
-      getCell: (column) => ({ getChars: () => text[column] ?? '', getWidth: () => 1 }),
+      getCell: (column) => {
+        const [chars, width] = cells[column] ?? ['', 1];
+        return { getChars: () => chars, getWidth: () => width };
+      },
     };
   },
 });
@@ -27,12 +35,17 @@ describe('visibleLinks', () => {
       [0, 0, 'top.ts'],
     ]);
   });
+
+  // The string has `a` at 2, the screen at cell 3: the label goes over the cell, not the offset.
+  it('places a path after a wide character by its cell', () => {
+    expect(visibleLinks(buffer(['漢 a.ts'], 0), 1).map(({ column, link }) => [column, link.start])).toEqual([[3, 2]]);
+  });
 });
 
 describe('fileLinkOpener', () => {
   const page = { slot: 2 } as Page;
   const link: FileLink = { start: 0, end: 8, path: 'src/a.ts' };
-  const run = (answer: Promise<{ ok: boolean; message: string }>) => {
+  const run = (answer: Promise<Handover>) => {
     const calls: string[] = [];
     const open = fileLinkOpener({ openFile: (slot, index) => { calls.push(`open ${slot} ${index}`); return answer; } }, {
       startEditor: () => calls.push('start'),

@@ -608,7 +608,7 @@ function openScrollback(page: Page): void {
   );
 }
 
-// A file path in a pane, by click or by the hint key; file-hints.ts holds the order of it.
+// A file path in a pane, by click or by the hint key; file-link-open.ts holds the order of it.
 const openFileLink = fileLinkOpener(bridge, {
   startEditor, showEditor: (page) => { if (pages[activeIndex] === page) setMode('nvim'); }, report: (message) => showError('file', message),
 });
