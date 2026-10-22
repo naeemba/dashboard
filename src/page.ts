@@ -170,7 +170,8 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     const widths = printWidths(() => terminal.cols);
     let lastCols = terminal.cols;
     terminal.onResize(({ cols }) => {
-      widths.resized(terminal.buffer.active.length, lastCols);
+      const marker = terminal.registerMarker(0);
+      if (marker) widths.resized(marker, lastCols);
       lastCols = cols;
     });
     terminal.loadAddon(fit);
@@ -208,6 +209,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       if (data === '\r') {
         pane.exited = false;
         terminal.reset();
+        widths.reset();
         options.bridge.restart(id);
       }
     });
