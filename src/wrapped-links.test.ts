@@ -30,6 +30,10 @@ describe('linksStartingOn', () => {
     expect(paths(['- a/b/cd/ ', '  e/f.md  '], 0)).toEqual([['a/b/cd/e/f.md', 0, 2, 1, 8]]);
   });
 
+  it('keeps a path off the row under it when the spaces after it, not the path, reach the edge', () => {
+    expect(paths(['- a/b/c/  ', '  d.md    '], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
+  });
+
   // How Claude Code prints a path too long for its list item: cut at the edge, the rest indented.
   it('joins a path the program broke at the edge and indented', () => {
     expect(paths(['- a/b/cde/', '  f/g.md.'], 0)).toEqual([['a/b/cde/f/g.md', 0, 2, 1, 8]]);
