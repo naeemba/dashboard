@@ -6,11 +6,11 @@
 // Nothing here knows whether the file exists. That is main's to answer, against the pane's own folder,
 // when you actually open one; file-open.ts holds that half.
 
-export type FileLink = {
-  // Where the path sits in the line, as string offsets, end exclusive. The line number and column are
-  // inside the span, so the underline covers `main.ts:42` whole.
-  start: number;
-  end: number;
+// Where a link sits in the line, as string offsets, end exclusive.
+export type LinkSpan = { start: number; end: number };
+
+// The line number and column are inside the span, so the underline covers `main.ts:42` whole.
+export type FileLink = LinkSpan & {
   path: string;
   line?: number;
   column?: number;
@@ -54,7 +54,7 @@ export function fileLinksIn(text: string): FileLink[] {
 // leaves out the full stop or bracket a sentence puts after an address.
 const WEB_LINK = /https?:\/\/[^\s"'!*(){}|\\^<>`]*[^\s"':,.!?{}|\\^~[\]`()<>]/gi;
 
-export function webLinksIn(text: string): { start: number; end: number }[] {
+export function webLinksIn(text: string): LinkSpan[] {
   return [...text.matchAll(WEB_LINK)].map((match) => ({ start: match.index, end: match.index + match[0].length }));
 }
 

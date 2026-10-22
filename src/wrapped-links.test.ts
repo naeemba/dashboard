@@ -51,6 +51,15 @@ describe('linksStartingOn', () => {
     expect(paths(['- a/b/c', '  d.md'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
   });
 
+  // Prose indents every row under its bullet; a word at the edge is not a path cut short.
+  it('keeps a prose row ending at the edge off the indented path below it', () => {
+    expect(paths(['- edit in', '  src/a.ts'], 1)).toEqual([['src/a.ts', 1, 2, 1, 10]]);
+  });
+
+  it('keeps the space a terminal wrap fell after', () => {
+    expect(paths(['see this ', '>src/a.ts'], 1)).toEqual([['src/a.ts', 1, 0, 1, 8]]);
+  });
+
   it('keeps a row to itself when the next one is blank or starts with a space after a wrap', () => {
     expect(paths(['- a/b/cde/', ''], 0)).toEqual([['a/b/cde', 0, 2, 0, 9]]);
     expect(paths(['see a/b/cd', '> e.ts'], 0)).toEqual([['a/b/cd', 0, 4, 0, 10]]);

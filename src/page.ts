@@ -4,13 +4,13 @@ import { FitAddon } from '@xterm/addon-fit';
 import { createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
-import { fileLinksIn, webLinksIn, type FileLink } from './file-links';
+import { fileLinksIn, webLinksIn, type FileLink, type LinkSpan } from './file-links';
 import type { ManagerView } from './manager-view';
 import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
-import { linksTouching, type LinkSpan } from './wrapped-links';
+import { linksTouching } from './wrapped-links';
 import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
@@ -172,7 +172,8 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     // what reads as either, wrapped-links.ts which rows one spans. xterm counts columns and rows from 1,
     // and the end column is the last cell.
     const linksOn = <T extends LinkSpan>(row: number, find: (text: string) => T[], open: (link: T, text: string) => void): ILink[] => (
-      linksTouching(terminal.buffer.active, row - 1, terminal.cols, find).map((placed) => ({
+      // nvim lays out its own rows, so only a row the terminal wrapped carries on there.
+      linksTouching(terminal.buffer.active, row - 1, index === EDITOR_INDEX ? Infinity : terminal.cols, find).map((placed) => ({
         range: {
           start: { x: placed.start.column + 1, y: placed.start.row + 1 },
           end: { x: placed.end.column, y: placed.end.row + 1 },

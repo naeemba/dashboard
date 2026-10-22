@@ -39,6 +39,14 @@ describe('visibleLinks', () => {
     ]);
   });
 
+  // The first half has scrolled off the top; the tail still gets a letter, where it begins.
+  it('labels a wrapped path whose first row is above the screen', () => {
+    const screen = buffer(['- a/b/cde/', '  f/g.md.', 'x'], 1);
+    expect(visibleLinks(screen, 2, 10).map(({ row, column, link }) => [row, column, link.path])).toEqual([
+      [0, 2, 'a/b/cde/f/g.md'],
+    ]);
+  });
+
   // The string has `a` at 2, the screen at cell 3: the label goes over the cell, not the offset.
   it('places a path after a wide character by its cell', () => {
     expect(visibleLinks(buffer(['漢 a.ts'], 0), 1, COLUMNS).map(({ column, link }) => [column, link.start])).toEqual([[3, 2]]);
