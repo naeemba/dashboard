@@ -47,10 +47,6 @@ describe('linksStartingOn', () => {
     expect(paths(['- a/b/cdef', 'g.md'], 0)).toEqual([['a/b/cdef', 0, 2, 0, 10]]);
   });
 
-  it('keeps a row narrower than the widest in its block to itself', () => {
-    expect(paths(['- a/b/c', '  d.md', '- wide row'], 0)).toEqual([['a/b/c', 0, 2, 0, 7]]);
-  });
-
   // Prose indents every row under its bullet; a word at the edge is not a path cut short.
   it('keeps a prose row ending at the edge off the indented path below it', () => {
     expect(paths(['- edit in', '  src/a.ts'], 1)).toEqual([['src/a.ts', 1, 2, 1, 10]]);

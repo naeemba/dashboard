@@ -167,13 +167,14 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       macOptionIsMeta: true,
     });
     const fit = new FitAddon();
-    const widths = printWidths(() => terminal.cols);
-    let lastCols = terminal.cols;
-    terminal.onResize(({ cols }) => {
-      const marker = terminal.registerMarker(0);
-      if (marker) widths.resized(marker, lastCols);
-      lastCols = cols;
+    const widths = printWidths({
+      cols: () => terminal.cols,
+      mark: () => terminal.registerMarker(0),
+      isNormalBuffer: () => terminal.buffer.active.type === 'normal',
     });
+    terminal.onResize(() => widths.resized());
+    terminal.buffer.onBufferChange(() => widths.resized());
+    terminal.onCursorMove(() => widths.cursorMoved(terminal.buffer.active.baseY + terminal.buffer.active.cursorY));
     terminal.loadAddon(fit);
     // A link underlines under the pointer: a URL opens in the real browser, where main decides what is
     // safe to hand the operating system, and a file path in this project's nvim. file-links.ts decides
