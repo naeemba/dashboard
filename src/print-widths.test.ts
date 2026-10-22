@@ -82,17 +82,17 @@ describe('printWidths', () => {
       resize(80);
       state.cursor = 10;
       widths.rowErased(10);
-      expect([widths.at(5), widths.at(15), widths.at(30)]).toEqual([120, 80, 80]);
+      expect([widths.at(5), widths.at(15), widths.at(30)]).toEqual([100, 80, 80]);
     });
 
     it('gives the moved boundary the width of the first boundary at or below the line', () => {
-      const { state, widths, resize } = pane(100);
+      const { state, widths, resize } = pane(80);
       state.cursor = 40;
-      resize(80);
       resize(90);
+      resize(100);
       state.cursor = 20;
       widths.rowErased(20);
-      expect([widths.at(5), widths.at(25)]).toEqual([80, 90]);
+      expect([widths.at(5), widths.at(25)]).toEqual([80, 100]);
     });
 
     it('leaves the boundary alone when the cursor stays at or below it', () => {
