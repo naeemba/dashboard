@@ -15,6 +15,7 @@ import { openHelp } from './help';
 import { createModeSwitch, createTabStrip } from './chrome-bars';
 import { mapShortcut, type Action } from './shortcuts';
 import { failureNotice, failureText } from './failure';
+import { fileLinkOpener, showFileHints } from './file-hints';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
@@ -442,6 +443,7 @@ const buildPage = createPageBuilder({
   onError: showError,
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
+  openFile: (page, index, link) => openFileLink(page, index, link),
 });
 
 // Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
@@ -606,6 +608,11 @@ function openScrollback(page: Page): void {
   );
 }
 
+// A file path in a pane, by click or by the hint key; file-link-open.ts holds the order of it.
+const openFileLink = fileLinkOpener(bridge, {
+  startEditor, showEditor: (page) => { if (pages[activeIndex] === page) setMode('nvim'); }, report: (message) => showError('file', message),
+});
+
 // Naming the focused pane. What you type wins over the title the program in it sets, and an empty box
 // clears it back to following the title — the overlay's two answers, kept apart here: null is a cancel
 // and changes nothing.
@@ -705,6 +712,7 @@ function apply(action: Action): void {
     case 'terminal-zoom': return toggleZoom(page);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
+    case 'terminal-file-hints': return showError('file', showFileHints(page, openFileLink));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.

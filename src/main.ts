@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
@@ -13,7 +13,6 @@ import {
 import { baseName } from './base-name';
 import { git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
-import { isOpenableLink } from './links';
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
 import { agentArguments, editorArguments, pickShell } from './shell';
@@ -27,7 +26,8 @@ import { readNotes, writeNotes } from './notes-store';
 import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
-import { dropScrollbackFiles, editorSocket, openScrollback, removeSocket } from './nvim-remote';
+import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
+import { registerPaneOpeners } from './pane-openers';
 import { readSession, writeSession, type Session } from './session';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
@@ -425,11 +425,13 @@ setInterval(() => {
   void reviews.run().catch((error: unknown) => failures.hold(`Review check failed: ${failureText(error)}`));
 }, WORKING_REPORT_MS).unref();
 
-// Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
-// decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
-ipcMain.handle('scrollback:open', (_event, slot: number, index: number, text: string) => (
-  openScrollback(app.getPath('temp'), shellCommand, slot, index, text)
-));
+registerPaneOpeners({
+  shellCommand: () => shellCommand,
+  paneFolders: (slot, index) => {
+    const id = terminalId(slot, index);
+    return { pid: shells.get(id)?.pid, startDirectory: terminalCommands.get(id)?.directory, projectPath: projects[slot]?.path };
+  },
+});
 
 function spawnTerminal(id: string): void {
   const entry = terminalCommands.get(id);
@@ -645,9 +647,6 @@ ipcMain.on('notification:show', (_event, title: string, body: string, paneId: st
   notification.show();
 });
 
-ipcMain.on('link:open', (_event, url: string) => {
-  if (isOpenableLink(url)) shell.openExternal(url);
-});
 ipcMain.on('pty:input', (_event, id: string, data: string) => {
   shells.get(id)?.write(data);
 });

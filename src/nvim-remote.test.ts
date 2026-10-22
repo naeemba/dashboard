@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { editorSocket, nvimFromOutput, scrollbackFile, tabArguments, wipeArguments } from './nvim-remote';
+import {
+  editorSocket, nvimFromOutput, openFileArguments, scrollbackFile, tabArguments, wipeArguments,
+} from './nvim-remote';
 
 describe('nvimFromOutput', () => {
   it('takes the path the shell printed', () => {
@@ -55,5 +57,27 @@ describe('tabArguments', () => {
   it('asks for a tab, not an edit of what you were writing', () => {
     expect(tabArguments('/tmp/one.sock', '/tmp/scrollback.txt'))
       .toEqual(['--server', '/tmp/one.sock', '--remote-tab', '/tmp/scrollback.txt']);
+  });
+});
+
+describe('openFileArguments', () => {
+  it('drops the file and puts the cursor on the line and column the pane named', () => {
+    expect(openFileArguments('/tmp/s.sock', '/p/a.ts', 42, 7)).toEqual([
+      '--server', '/tmp/s.sock', '--remote-expr',
+      "execute(['drop ' .. fnameescape('/p/a.ts'), 'call cursor(42, 7)', 'normal! zz'])",
+    ]);
+  });
+
+  it('starts at the first column when the pane named only a line', () => {
+    expect(openFileArguments('/s', '/a.ts', 3)[3]).toContain("'call cursor(3, 1)'");
+  });
+
+  it('leaves the cursor alone when there is no line', () => {
+    expect(openFileArguments('/s', '/a.ts')[3]).toBe("execute(['drop ' .. fnameescape('/a.ts')])");
+  });
+
+  // The path sits inside a vimscript string, so a quote in it must not end the string early.
+  it('doubles a quote in the path', () => {
+    expect(openFileArguments('/s', "/it's.ts")[3]).toContain("fnameescape('/it''s.ts')");
   });
 });

@@ -61,8 +61,32 @@ export function paneScreen(terminal: PaneTerminal): string[] {
 // One line by its own number in the buffer, scrollback and screen alike. The trailing spaces come off
 // here and nowhere else: xterm pads every line out to the full width, and a reader that forgets is a
 // row of the manager padded to eighty columns, or a file of whitespace in an editor.
-function bufferLine(buffer: PaneBuffer, row: number): string {
+export function bufferLine(buffer: PaneBuffer, row: number): string {
   return buffer.getLine(row)?.translateToString(true) ?? '';
+}
+
+// One row as cells, which is what xterm places a link and a label by. A string offset into `bufferLine`
+// is not a cell: a wide character (CJK) takes two cells for one character, and an emoji two characters
+// for its cells.
+export type CellLine = {
+  length: number;
+  getCell(column: number): { getChars(): string; getWidth(): number } | undefined;
+};
+
+// The cell, counted from 0, that a string offset into the row's `bufferLine` text starts in. Walks the
+// cells the way `translateToString` builds that text: a wide character's spacer cell adds nothing, and
+// an empty cell reads as one space.
+export function cellColumn(line: CellLine | undefined, stringIndex: number): number {
+  if (!line) return stringIndex;
+  let remaining = stringIndex;
+  let column = 0;
+  for (; column < line.length; column += 1) {
+    const cell = line.getCell(column);
+    if (!cell || cell.getWidth() === 0) continue;
+    if (remaining <= 0) return column;
+    remaining -= cell.getChars().length || 1;
+  }
+  return column + Math.max(remaining, 0);
 }
 
 // One row of what is on screen, counted from the top of it. Both screen readers go through here, so

@@ -126,6 +126,17 @@ export function tabArguments(socket: string, file: string): string[] {
   return ['--server', socket, '--remote-tab', file];
 }
 
+// A path clicked in a pane, opened where you are rather than in a tab of its own: `:drop` is `:edit`
+// for a file no window shows, a jump to the window that already shows it otherwise, and a split
+// rather than E37 when the buffer you are in has unsaved changes. The cursor then goes to the line the
+// pane named and is centred there. Quoted the way wipeArguments quotes, for the same reasons.
+export function openFileArguments(socket: string, file: string, line?: number, column?: number): string[] {
+  const quoted = file.replaceAll("'", "''");
+  const commands = [`'drop ' .. fnameescape('${quoted}')`];
+  if (line !== undefined) commands.push(`'call cursor(${line}, ${column ?? 1})'`, `'normal! zz'`);
+  return ['--server', socket, '--remote-expr', `execute([${commands.join(', ')}])`];
+}
+
 // Every scrollback file this run has written, so quitting takes them with it. A pane's scrollback is
 // whatever was on your screen — an agent's transcript, a .env someone catted — and the removal on the
 // write path below only runs the next time you press the key on that pane, which may be never.
@@ -136,48 +147,76 @@ export function dropScrollbackFiles(): void {
   written.clear();
 }
 
-// The whole of the key: find nvim, write the pane out, wait for the editor to answer, hand it over.
-// Answers ok-or-why-not rather than throwing, because every one of these has something to put in the
-// status bar and nothing to put in the editor.
-export async function openScrollback(
+// Which nvim a hand-over goes to: the project's slot, the temp folder its socket lives in, and the shell
+// that finds nvim on your PATH.
+export type EditorTarget = { temporaryDirectory: string; shellCommand: string; slot: number };
+// What a hand-over answers: whether the file is in front of you, and what the status bar says.
+export type Handover = { ok: boolean; message: string };
+
+// The hand-over both the scrollback key and a path in a pane go through: find nvim, get ready, wait for
+// the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
+// ok-or-why-not rather than throwing, because every one of these has something to put in the status bar
+// and nothing to put in the editor. `prepare` answers a message when it could not get ready.
+async function handToEditor(
+  editor: EditorTarget,
+  what: string,
+  prepare: () => Promise<string | null>,
+  argumentLists: (socket: string) => string[][],
+): Promise<Handover> {
+  // Asked before the wait, not after. A machine with no nvim has an editor pane that exits on the spot
+  // and a socket that is never coming, so without this the answer is fifteen seconds of nothing
+  // followed by a message about a start that was never going to happen.
+  const nvim = await findNvim(editor.shellCommand);
+  if (nvim === null) return { ok: false, message: `nvim is not on your PATH, so there is nowhere to open ${what}` };
+  const unready = await prepare();
+  if (unready !== null) return { ok: false, message: unready };
+  const socket = editorSocket(editor.temporaryDirectory, editor.slot);
+  // Said rather than swallowed. Every other outcome puts a file in front of you; this one leaves the
+  // editor showing whatever it was showing, and without a message that reads as the key doing nothing.
+  if (!await waitForSocket(socket)) return { ok: false, message: `nvim did not start, so there was nowhere to open ${what}` };
+  try {
+    // No shell: nvim's own path, and the arguments handed over as words. Nothing here has to be quoted,
+    // which is the whole reason the path is resolved once rather than run through a shell each time.
+    for (const commandArguments of argumentLists(socket)) await runCommand(nvim, commandArguments);
+    return { ok: true, message: '' };
+  } catch (error) {
+    return { ok: false, message: `nvim would not open ${what}: ${(error as Error).message}` };
+  }
+}
+
+// The whole of the key: write the pane out and hand it over.
+export function openScrollback(
   temporaryDirectory: string,
   shellCommand: string,
   slot: number,
   index: number,
   text: string,
-): Promise<{ ok: boolean; message: string }> {
-  // Asked before the wait, not after. A machine with no nvim has an editor pane that exits on the spot
-  // and a socket that is never coming, so without this the answer is fifteen seconds of nothing
-  // followed by a message about a start that was never going to happen.
-  const nvim = await findNvim(shellCommand);
-  if (nvim === null) {
-    return { ok: false, message: 'nvim is not on your PATH, so there is nowhere to put the scrollback' };
-  }
+): Promise<Handover> {
   const file = scrollbackFile(temporaryDirectory, slot, index);
-  try {
-    // Owner-only, and never written into a file that is already there. The temp folder is shared, and
-    // the default mode would leave a transcript readable by every account on the machine. The
-    // remove-then-`wx` pair is the other half: without it, a file planted at this path by someone else
-    // is a file this writes your scrollback into, mode and all.
-    rmSync(file, { force: true });
-    await writeFile(file, text, { mode: 0o600, flag: 'wx' });
-    written.add(file);
-  } catch (error) {
-    return { ok: false, message: `could not write the scrollback: ${(error as Error).message}` };
-  }
-  const socket = editorSocket(temporaryDirectory, slot);
-  // Said rather than swallowed. Every other outcome puts a file in front of you; this one leaves the
-  // editor showing whatever it was showing, and without a message that reads as the key doing nothing.
-  if (!await waitForSocket(socket)) {
-    return { ok: false, message: 'nvim did not start, so there was nowhere to put the scrollback' };
-  }
-  try {
-    // No shell: nvim's own path, and the arguments handed over as words. Nothing here has to be quoted,
-    // which is the whole reason the path is resolved once rather than run through a shell each time.
-    await runCommand(nvim, wipeArguments(socket, file));
-    await runCommand(nvim, tabArguments(socket, file));
-    return { ok: true, message: '' };
-  } catch (error) {
-    return { ok: false, message: `nvim would not open the scrollback: ${(error as Error).message}` };
-  }
+  return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the scrollback', async () => {
+    try {
+      // Owner-only, and never written into a file that is already there. The temp folder is shared, and
+      // the default mode would leave a transcript readable by every account on the machine. The
+      // remove-then-`wx` pair is the other half: without it, a file planted at this path by someone else
+      // is a file this writes your scrollback into, mode and all.
+      rmSync(file, { force: true });
+      await writeFile(file, text, { mode: 0o600, flag: 'wx' });
+      written.add(file);
+      return null;
+    } catch (error) {
+      return `could not write the scrollback: ${(error as Error).message}`;
+    }
+  }, (socket) => [wipeArguments(socket, file), tabArguments(socket, file)]);
+}
+
+// A file already on disk: a path a pane printed, which main has found. The renderer starts nvim the
+// moment you pick the path, so the wait is the scrollback's.
+export function openFileInEditor(
+  editor: EditorTarget,
+  file: string,
+  line?: number,
+  column?: number,
+): Promise<Handover> {
+  return handToEditor(editor, path.basename(file), async () => null,
+    (socket) => [openFileArguments(socket, file, line, column)]);
 }

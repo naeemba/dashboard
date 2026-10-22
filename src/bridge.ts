@@ -1,7 +1,9 @@
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 import type { Board } from './board';
+import type { FileLink } from './file-links';
 import type { MarketsSnapshot } from './markets';
+import type { Handover } from './nvim-remote';
 import type { PaneUse } from './pane-reading';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
@@ -49,7 +51,9 @@ export type DashboardBridge = {
   // bytes going past, not the screen they built. The pane's own index travels too: each pane gets its
   // own file, so two of them can be read side by side. Answers ok-or-why-not, the shape shipCard and
   // removeWorktree already answer in, rather than leaving an empty string to mean it worked.
-  openScrollback(slot: number, index: number, text: string): Promise<{ ok: boolean; message: string }>;
+  openScrollback(slot: number, index: number, text: string): Promise<Handover>;
+  // A path a pane printed, opened in the project's nvim. Main finds the file; file-open.ts holds how.
+  openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;

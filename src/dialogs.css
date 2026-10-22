@@ -457,3 +457,21 @@
   color: var(--muted);
   font-size: 11px;
 }
+
+/* The hint key's letters, laid over the pane's own screen so each sits on the path it opens. */
+.file-hints {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  outline: none;
+}
+
+.file-hint {
+  position: absolute;
+  padding: 0 2px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--background);
+  background: var(--yellow);
+  border-radius: 2px;
+}
