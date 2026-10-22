@@ -60,6 +60,12 @@ describe('linksStartingOn', () => {
     expect(paths(['see this ', '>src/a.ts'], 1)).toEqual([['src/a.ts', 1, 0, 1, 8]]);
   });
 
+  it('with Infinity columns, only a row the terminal wrapped carries on', () => {
+    const infinite = (rows: string[]) => linksStartingOn(buffer(rows), 0, Infinity, fileLinksIn).map(({ link }) => link.path);
+    expect(infinite(['- a/b/cde/', '  f/g.md.'])).toEqual(['a/b/cde']);
+    expect(infinite(['see a/b/cd', '>e.ts'])).toEqual(['a/b/cde.ts']);
+  });
+
   it('keeps a row to itself when the next one is blank or starts with a space after a wrap', () => {
     expect(paths(['- a/b/cde/', ''], 0)).toEqual([['a/b/cde', 0, 2, 0, 9]]);
     expect(paths(['see a/b/cd', '> e.ts'], 0)).toEqual([['a/b/cd', 0, 4, 0, 10]]);

@@ -23,7 +23,8 @@ type PlacedLink<T> = {
 // ponytail: a row the program wrapped is told apart from one that merely ends near the edge by
 // reaching the last column or the one before it, ending in a word with a slash in it (a path or an
 // address in progress, never a prose word like `in`), with an indented row under it — so a path that
-// happens to end there takes the first word of an indented next row with it. Pass `Infinity` as the
+// happens to end there takes the first word of an indented next row with it, and a path the program
+// cut before its first slash stays two halves, the tail read as a path of its own. Pass `Infinity` as the
 // columns to read only the terminal's own wraps, for a pane such as nvim that lays out its rows itself.
 function carriedOn(buffer: WrapBuffer, row: number, columns: number): number | null {
   const next = buffer.getLine(row + 1);
