@@ -21,13 +21,13 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
 } from './terminals';
-import { BOARD_FILE_PATH, openBoard, peekBoard, readBoard, writeBoard } from './board-store';
-import { readNotes, writeNotes } from './notes-store';
+import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneOpeners } from './pane-openers';
+import { registerProjectFiles } from './project-files-ipc';
 import { readSession, writeSession, type Session } from './session';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
@@ -66,7 +66,7 @@ import {
   type WorktreeEntry,
 } from './worktree-store';
 import type { Settings } from './settings';
-import { moveCardById, shipColumnIndex, type Board } from './board';
+import { moveCardById, shipColumnIndex } from './board';
 import { reviewSweep } from './review-flow';
 import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 import { isManagerPath } from './manager';
@@ -660,35 +660,7 @@ ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
 ipcMain.on('pty:restart', (_event, id: string) => {
   if (!shells.has(id)) spawnTerminal(id);
 });
-// Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
-// is a convenience — writing the two explanation files — so a read-only project folder must not cost
-// the user a board.json that is sitting right there and perfectly readable.
-ipcMain.handle('board:peek', (_event, projectPath: string) => peekBoard(projectPath));
-ipcMain.handle('board:read', (_event, projectPath: string) => {
-  try {
-    return openBoard(projectPath);
-  } finally {
-    // After the read, which is what creates .dashboard on a project that has never had a board — and
-    // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
-    // that board never notices the command line again for as long as you stay on the screen.
-    boards.watch(projectPath);
-  }
-});
-// invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
-// The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
-// the renderer: it already has the board it just sent.
-ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
-  boards.wrote(projectPath, writeBoard(projectPath, board));
-});
-
-// The project's page of notes. No watcher and no seeding: the notes are one box one person types
-// into, and a project that has never had any has no file until the first keystroke lands.
-ipcMain.handle('notes:read', (_event, projectPath: string) => readNotes(projectPath));
-// invoke, not send, for the same reason board:write is: a write that fails rejects in the renderer
-// and reaches the status bar, rather than leaving a page on screen that is not on disk.
-ipcMain.handle('notes:write', (_event, projectPath: string, text: string) => {
-  writeNotes(projectPath, text);
-});
+registerProjectFiles(boards);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
