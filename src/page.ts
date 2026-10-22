@@ -174,7 +174,16 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     });
     terminal.onResize(() => widths.resized());
     terminal.buffer.onBufferChange(() => widths.resized());
-    terminal.onCursorMove(() => widths.cursorMoved(terminal.buffer.active.baseY + terminal.buffer.active.cursorY));
+    // A program redrawing a live frame erases its rows before writing them again. The handlers run before
+    // xterm's own erase, with the cursor on the row being erased, and return false so xterm still erases.
+    // Erase-in-display of everything starts again at the top of the screen.
+    const erasing = (wholeScreen: boolean) => (params: ReadonlyArray<number | number[]>) => {
+      const { baseY, cursorY } = terminal.buffer.active;
+      widths.rowErased(wholeScreen && (params[0] === 2 || params[0] === 3) ? baseY : baseY + cursorY);
+      return false;
+    };
+    terminal.parser.registerCsiHandler({ final: 'K' }, erasing(false));
+    terminal.parser.registerCsiHandler({ final: 'J' }, erasing(true));
     terminal.loadAddon(fit);
     // A link underlines under the pointer: a URL opens in the real browser, where main decides what is
     // safe to hand the operating system, and a file path in this project's nvim. file-links.ts decides

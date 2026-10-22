@@ -70,7 +70,7 @@ describe('printWidths', () => {
       state.cursor = 40;
       resize(80);
       state.cursor = 35;
-      widths.cursorMoved(35);
+      widths.rowErased(35);
       expect([widths.at(34), widths.at(35), widths.at(39)]).toEqual([120, 80, 80]);
     });
 
@@ -81,8 +81,18 @@ describe('printWidths', () => {
       state.cursor = 40;
       resize(80);
       state.cursor = 10;
-      widths.cursorMoved(10);
+      widths.rowErased(10);
       expect([widths.at(5), widths.at(15), widths.at(30)]).toEqual([120, 80, 80]);
+    });
+
+    it('gives the moved boundary the width of the first boundary at or below the line', () => {
+      const { state, widths, resize } = pane(100);
+      state.cursor = 40;
+      resize(80);
+      resize(90);
+      state.cursor = 20;
+      widths.rowErased(20);
+      expect([widths.at(5), widths.at(25)]).toEqual([80, 90]);
     });
 
     it('leaves the boundary alone when the cursor stays at or below it', () => {
@@ -90,8 +100,8 @@ describe('printWidths', () => {
       state.cursor = 40;
       resize(80);
       state.cursor = 50;
-      widths.cursorMoved(50);
-      widths.cursorMoved(40);
+      widths.rowErased(50);
+      widths.rowErased(40);
       expect([widths.at(39), widths.at(40)]).toEqual([120, 80]);
     });
   });
@@ -103,6 +113,17 @@ describe('printWidths', () => {
       resize(140);
       state.normal = false;
       expect(widths.at(3)).toBe(140);
+    });
+
+    it('keeps the boundaries when a screen row is reported there', () => {
+      const { state, widths, resize } = pane(80);
+      state.cursor = 540;
+      resize(120);
+      state.normal = false;
+      state.cursor = 3;
+      widths.rowErased(3);
+      state.normal = true;
+      expect(widths.at(500)).toBe(80);
     });
 
     it('records a resize that happened there once the normal buffer is back', () => {

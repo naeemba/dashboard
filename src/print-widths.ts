@@ -12,9 +12,10 @@ export type LineMarker = Pick<IMarker, 'line' | 'isDisposed'>;
 export type PrintWidths = {
   // Call on every resize, and when the normal buffer comes back: records the width the pane had until now.
   resized(): void;
-  // Call when the cursor moves, with its line in the buffer: a program that redraws a live frame writes
-  // its next output above the cursor, so a boundary below that line moves up to it.
-  cursorMoved(line: number): void;
+  // Call when the program erases a row, with its line in the buffer: a program that redraws a live frame
+  // erases it from its top and writes its next output there, above the cursor, so a boundary below that
+  // line moves up to it.
+  rowErased(line: number): void;
   // Call when the buffer is emptied: the rows the boundaries pointed at are gone.
   reset(): void;
   at: WidthAt;
@@ -39,11 +40,14 @@ export function printWidths({ cols, mark, isNormalBuffer }: PrintWidthsSource): 
       boundaries.push({ marker: mark(), cols: lastCols });
       lastCols = cols();
     },
-    cursorMoved: (line) => {
+    rowErased: (line) => {
       const latest = boundaries.at(-1);
-      if (!latest || line >= latest.marker.line) return;
+      if (!isNormalBuffer() || !latest || line >= latest.marker.line) return;
+      // The rows above the new line were printed at the width of the first boundary at or below it.
+      const below = boundaries.find(({ marker }) => !marker.isDisposed && marker.line >= line);
+      if (!below) return;
       // Older boundaries at or below the new line would shadow it: `at` takes the first match.
-      boundaries = [...boundaries.filter(({ marker }) => marker.line < line), { marker: mark(), cols: latest.cols }];
+      boundaries = [...boundaries.filter(({ marker }) => marker.line < line), { marker: mark(), cols: below.cols }];
     },
     reset: () => { boundaries = []; },
     // The first resize after the row was printed holds the width the row had until then. A trimmed
