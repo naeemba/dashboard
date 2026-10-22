@@ -76,7 +76,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "7eee4121-9adf-449a-a0e0-da592aa89573",
+          "title": "Resume each pane's Claude session after a restart",
+          "notes": "Restarting the app kills every pane, and every Claude conversation in them has to be found again by hand. claude --continue only finds the latest session in a folder, so two Claude panes on one checkout both come back as the same one.\n\nThe token sweep already places each live session on its pane through ~/.claude/sessions/<pid>.json. Keep that map with the session's cwd, save it per pane in session.json (after any sweep that changed it, and once more on Quit), and on launch start each such pane's shell in that folder with claude --resume <id> typed into it. A folder that is gone gets a plain shell and no resume.\n\nSpec: docs/superpowers/specs/2026-10-22-resume-claude-sessions-design.md",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-22T09:46:13.168Z",
+          "updatedAt": "2026-10-22T09:46:13.168Z"
+        }
+      ]
     },
     {
       "name": "Review",
