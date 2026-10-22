@@ -79,8 +79,14 @@ export function quoteForShell(value: string, shellCommand: string): string {
 // the file's tail, so the pane reads `nvim · board.json`. `-c` runs after the user's config, so it
 // wins over a config that left 'title' off or set a titlestring of its own.
 export function editorArguments(shellCommand: string, socket: string): string[] {
-  const command = `nvim --listen ${quoteForShell(socket, shellCommand)} `
-    + `-c ${quoteForShell('set title titlestring=%t', shellCommand)}`;
+  return asPaneProcess(shellCommand, `nvim --listen ${quoteForShell(socket, shellCommand)} `
+    + `-c ${quoteForShell('set title titlestring=%t', shellCommand)}`);
+}
+
+// A program run as a pane's only process, through a login and interactive shell. One spelling for the
+// editor and both agents, so a change to how a pane's program starts reaches all three: an agent
+// resumed after a restart must start exactly the way the ship started it.
+function asPaneProcess(shellCommand: string, command: string): string[] {
   return isPowerShell(shellCommand) ? ['-Command', command] : ['-lic', `exec ${command}`];
 }
 
@@ -91,19 +97,14 @@ export function editorArguments(shellCommand: string, socket: string): string[] 
 //
 // PowerShell gets no `exec` — it has none — so the shell stays as claude's parent there.
 export function agentArguments(shellCommand: string, prompt: string): string[] {
-  const quoted = quoteForShell(prompt, shellCommand);
-  return isPowerShell(shellCommand)
-    ? ['-Command', `claude ${quoted}`]
-    : ['-lic', `exec claude ${quoted}`];
+  return asPaneProcess(shellCommand, `claude ${quoteForShell(prompt, shellCommand)}`);
 }
 
 // A session the app resumes as a card's agent, after a restart, starts the way the ship started it:
 // the pane's only process, so the pane reads as the agent's for as long as Claude Code runs. The id is
 // a UUID by the time it gets here — claude-resume.ts refuses anything else — so it needs no quoting.
 export function agentResumeArguments(shellCommand: string, session: string): string[] {
-  return isPowerShell(shellCommand)
-    ? ['-Command', `claude --resume ${session}`]
-    : ['-lic', `exec claude --resume ${session}`];
+  return asPaneProcess(shellCommand, `claude --resume ${session}`);
 }
 
 // A command run across projects goes through the user's shell, login and interactive, for the same

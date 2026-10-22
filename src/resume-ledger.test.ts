@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { RESUME_GRACE_MS, type ClaudeSlot } from './claude-resume';
-import { resumeLedger } from './resume-ledger';
+import type { ClaudeSlot } from './claude-resume';
+import { RESUME_GRACE_MS, resumeLedger } from './resume-ledger';
 import type { SavedPage } from './session';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';

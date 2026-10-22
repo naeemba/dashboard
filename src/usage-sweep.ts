@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
-import { liveSessions, sweepUsage, type LiveSession } from './usage-store';
+import { liveSessions, sweepUsage } from './usage-store';
 import type { SessionPlacement } from './resume-ledger';
 import { parentProcesses, sessionsByPane } from './pane-sessions';
 import { worktreesRoot } from './ship';
@@ -53,8 +53,6 @@ const USAGE_SWEEP_MS = 30_000;
 // five shells and a window to get on screen first.
 const FIRST_SWEEP_MS = 3_000;
 
-type Placement = SessionPlacement & { byPane: ReadonlyMap<string, LiveSession> };
-
 export type UsageSweep = {
   // What the renderer's first read answers with. Everything after it arrives unasked on usage:change.
   latest(): UsageSnapshot;
@@ -63,7 +61,7 @@ export type UsageSweep = {
   // The same reading the sweep takes, taken now, or null when there is no process tree to take it
   // from. Quit asks for it so a conversation started, or a /clear typed, in the last half minute is
   // the one saved.
-  placeNow(): Promise<Placement | null>;
+  placeNow(): Promise<SessionPlacement | null>;
 };
 
 export function usageSweep(ports: UsageSweepPorts): UsageSweep {
@@ -75,11 +73,10 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
   // One spelling of "which session is in which pane" for the sweep and for quit, so the two cannot
   // place a session differently. With no tree, every claude started at a prompt has no pane, and
   // "nothing is running anywhere" saved over the last reading would resume nothing next launch.
-  async function placeSessions(): Promise<Placement | null> {
+  async function placeSessions(): Promise<SessionPlacement | null> {
     const takenAt = Date.now();
-    const tree = await ports.processTree();
+    const [tree, sessions] = await Promise.all([ports.processTree(), liveSessions(claudeSessions)]);
     if (tree === null) return null;
-    const sessions = await liveSessions(claudeSessions);
     return { byPane: sessionsByPane(parentProcesses(tree), ports.panePids(), sessions), takenAt };
   }
 

@@ -29,7 +29,7 @@ import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneOpeners } from './pane-openers';
 import { registerProjectFiles } from './project-files-ipc';
 import { sessionStore } from './session-store';
-import { cardResumedIn, resumeLine, type ClaudeSlot } from './claude-resume';
+import { resumeLine, type ClaudeSlot } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import {
@@ -491,16 +491,17 @@ function spawnProject(project: Project, projectIndex: number): void {
     // A pane that was running Claude Code when the app last quit; session-store.ts says when it was.
     const resume = claudeSessions.takeResume(project.path, terminalIndex, id);
     if (resume === null) spawnTerminal(id);
-    else resumeIn(id, project.path, terminalIndex, resume);
+    else resumeIn(id, terminalIndex, resume);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
 }
 
-// A session that ran in a card's worktree comes back as that card's agent, exactly as the ship
-// started it, and its record names the pane again; cardResumedIn says what that keeps right. Any other
+// A session that ran in a card's worktree was that card's agent, and comes back as it, exactly as the
+// ship started it. Its record names the pane again, so the status bar prints the branch, a second ship
+// of the card is refused, and the review sweep waits for it rather than starting beside it. Any other
 // session is typed into a shell in its folder, so exiting it leaves a prompt.
-function resumeIn(id: string, projectPath: string, index: number, resume: ClaudeSlot): void {
-  const card = cardResumedIn(worktrees, projectPath, resume);
+function resumeIn(id: string, index: number, resume: ClaudeSlot): void {
+  const card = entryForPath(worktrees, resume.directory);
   if (card !== undefined) {
     recordWorktree({ ...card, pane: index });
     startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));

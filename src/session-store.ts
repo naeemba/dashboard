@@ -12,7 +12,7 @@ import { readSession, writeSession, type Session } from './session';
 // the exemption CLAUDE.md gives main's wiring: what a pane is owed and what it counts as running is
 // resume-ledger.ts's, and the file's shape is session.ts's, both tested. What is left is when to write.
 
-export type ClaudeSessions = {
+type ClaudeSessions = {
   // The conversation a pane being spawned should resume, or null. Asked once per pane per launch: the
   // slot is used up whether or not it resumes, so a project closed and opened again later in the run
   // starts empty like any project opened by hand.

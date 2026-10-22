@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { WorktreeEntry } from './worktree-store';
 import {
-  RESUME_GRACE_MS, cardResumedIn, heldSlots, isClaudeSlot, resumable, resumeLine, withClaude, type ClaudeSlot,
+  isClaudeSlot, resumable, resumeLine, withClaude, type ClaudeSlot,
 } from './claude-resume';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
@@ -24,24 +23,6 @@ describe('isClaudeSlot', () => {
     expect(isClaudeSlot({ session: ID })).toBe(false);
     expect(isClaudeSlot(null)).toBe(false);
     expect(isClaudeSlot(7)).toBe(false);
-  });
-});
-
-describe('heldSlots', () => {
-  const resumed = new Map([['0:1', slot(ID)], ['0:3', slot(OTHER)]]);
-
-  // A resumed Claude has not written its session file yet when the first sweep runs, and a crash then
-  // must not cost the next launch every pane.
-  it('keeps a resumed pane until the grace runs out, with a live reading winning', () => {
-    const live = new Map([['0:3', slot(ID, '/work/api-tree')]]);
-    expect(heldSlots(live, resumed, RESUME_GRACE_MS - 1))
-      .toEqual(new Map([['0:1', slot(ID)], ['0:3', slot(ID, '/work/api-tree')]]));
-  });
-
-  // A Claude exited after the restart must not come back on the launch after.
-  it('answers with the live reading alone once the grace is over', () => {
-    const live = new Map([['0:3', slot(OTHER)]]);
-    expect(heldSlots(live, resumed, RESUME_GRACE_MS)).toEqual(live);
   });
 });
 
@@ -93,20 +74,3 @@ describe('resumeLine', () => {
   });
 });
 
-describe('cardResumedIn', () => {
-  const entry = (projectPath: string, worktreePath: string): WorktreeEntry => ({
-    cardId: 'c1', title: 'Fix login', projectPath, branch: 'fix-login', worktreePath,
-    pane: null, startedAt: '2026-10-22T00:00:00.000Z', reviewing: false,
-  });
-  const entries = [entry('/work/api', '/work/api-worktrees/fix-login')];
-
-  // A session that ran in a card's worktree was that card's agent, and comes back as it.
-  it('names the card whose worktree the session ran in', () => {
-    expect(cardResumedIn(entries, '/work/api', slot(ID, '/work/api-worktrees/fix-login'))).toBe(entries[0]);
-  });
-
-  it('names no card for a session in the project itself, or in another project\'s worktree', () => {
-    expect(cardResumedIn(entries, '/work/api', slot(ID, '/work/api'))).toBeUndefined();
-    expect(cardResumedIn(entries, '/work/web', slot(ID, '/work/api-worktrees/fix-login'))).toBeUndefined();
-  });
-});
