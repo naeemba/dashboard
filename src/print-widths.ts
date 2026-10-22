@@ -6,8 +6,16 @@ import type { IMarker } from '@xterm/xterm';
 export type WidthAt = (row: number) => number;
 
 // The part of xterm's marker this needs: its line follows the row through scrollback trimming, and it is
-// disposed when that row is trimmed away.
-export type LineMarker = Pick<IMarker, 'line' | 'isDisposed'>;
+// disposed when that row is trimmed away. A boundary that leaves the table is disposed by hand, or its
+// listeners stay on the line list until the row scrolls out.
+export type LineMarker = Pick<IMarker, 'line' | 'isDisposed' | 'dispose'>;
+
+// The line a program is about to rewrite when it erases: the cursor's line, except that erasing the whole
+// screen (`ESC[2J`) is followed by a cursor-home, so the rewrite starts at the top of the screen. `ESC[3J`
+// alone only clears the scrollback and leaves the screen rows as they are.
+export function erasedLine(final: 'K' | 'J', firstParameter: number, screenTop: number, cursorLine: number): number {
+  return final === 'J' && firstParameter === 2 ? screenTop : cursorLine;
+}
 
 export type PrintWidths = {
   // Call on every resize, and when the normal buffer comes back: records the width the pane had until now.
@@ -25,19 +33,21 @@ type Boundary = { marker: LineMarker; cols: number };
 
 type PrintWidthsSource = {
   cols: () => number;
-  // The cursor's line, where output printed from now on starts.
-  mark: () => LineMarker;
+  // The cursor's line in the buffer.
+  cursorLine: () => number;
+  // A marker on the given buffer line, wherever the cursor is.
+  mark: (line: number) => LineMarker;
   // The alternate screen is redrawn by its program at every resize, and its markers die when it closes.
   isNormalBuffer: () => boolean;
 };
 
-export function printWidths({ cols, mark, isNormalBuffer }: PrintWidthsSource): PrintWidths {
+export function printWidths({ cols, cursorLine, mark, isNormalBuffer }: PrintWidthsSource): PrintWidths {
   let boundaries: Boundary[] = [];
   let lastCols = cols();
   return {
     resized: () => {
       if (!isNormalBuffer() || cols() === lastCols) return;
-      boundaries.push({ marker: mark(), cols: lastCols });
+      boundaries.push({ marker: mark(cursorLine()), cols: lastCols });
       lastCols = cols();
     },
     rowErased: (line) => {
@@ -47,9 +57,14 @@ export function printWidths({ cols, mark, isNormalBuffer }: PrintWidthsSource): 
       const below = boundaries.find(({ marker }) => !marker.isDisposed && marker.line >= line);
       if (!below) return;
       // Older boundaries at or below the new line would shadow it: `at` takes the first match.
-      boundaries = [...boundaries.filter(({ marker }) => marker.line < line), { marker: mark(), cols: below.cols }];
+      const kept = boundaries.filter(({ marker }) => marker.line < line);
+      boundaries.forEach((boundary) => { if (!kept.includes(boundary)) boundary.marker.dispose(); });
+      boundaries = [...kept, { marker: mark(line), cols: below.cols }];
     },
-    reset: () => { boundaries = []; },
+    reset: () => {
+      boundaries.forEach(({ marker }) => marker.dispose());
+      boundaries = [];
+    },
     // The first resize after the row was printed holds the width the row had until then. A trimmed
     // boundary is skipped: every row before it is gone too.
     at: (row) => (isNormalBuffer() ? boundaries.find(({ marker }) => !marker.isDisposed && marker.line > row)?.cols : undefined) ?? cols(),

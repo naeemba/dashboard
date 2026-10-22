@@ -10,7 +10,7 @@ import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
-import { printWidths } from './print-widths';
+import { erasedLine, printWidths } from './print-widths';
 import { linksTouching } from './wrapped-links';
 import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
@@ -169,21 +169,21 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     const fit = new FitAddon();
     const widths = printWidths({
       cols: () => terminal.cols,
-      mark: () => terminal.registerMarker(0),
+      cursorLine: () => terminal.buffer.active.baseY + terminal.buffer.active.cursorY,
+      mark: (line) => terminal.registerMarker(line - (terminal.buffer.active.baseY + terminal.buffer.active.cursorY)),
       isNormalBuffer: () => terminal.buffer.active.type === 'normal',
     });
     terminal.onResize(() => widths.resized());
     terminal.buffer.onBufferChange(() => widths.resized());
     // A program redrawing a live frame erases its rows before writing them again. The handlers run before
     // xterm's own erase, with the cursor on the row being erased, and return false so xterm still erases.
-    // Erase-in-display of everything starts again at the top of the screen.
-    const erasing = (wholeScreen: boolean) => (params: ReadonlyArray<number | number[]>) => {
+    const erasing = (final: 'K' | 'J') => (params: ReadonlyArray<number | number[]>) => {
       const { baseY, cursorY } = terminal.buffer.active;
-      widths.rowErased(wholeScreen && (params[0] === 2 || params[0] === 3) ? baseY : baseY + cursorY);
+      widths.rowErased(erasedLine(final, Number(params[0] ?? 0), baseY, baseY + cursorY));
       return false;
     };
-    terminal.parser.registerCsiHandler({ final: 'K' }, erasing(false));
-    terminal.parser.registerCsiHandler({ final: 'J' }, erasing(true));
+    terminal.parser.registerCsiHandler({ final: 'K' }, erasing('K'));
+    terminal.parser.registerCsiHandler({ final: 'J' }, erasing('J'));
     terminal.loadAddon(fit);
     // A link underlines under the pointer: a URL opens in the real browser, where main decides what is
     // safe to hand the operating system, and a file path in this project's nvim. file-links.ts decides

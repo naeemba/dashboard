@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { printWidths } from './print-widths';
+import { erasedLine, printWidths } from './print-widths';
 
-type Fake = { line: number; isDisposed: boolean };
+type Fake = { line: number; isDisposed: boolean; dispose: () => void };
 
 // A pane whose width, cursor line and buffer the test moves by hand.
 function pane(cols: number) {
   const state = { cols, cursor: 0, normal: true };
   const widths = printWidths({
     cols: () => state.cols,
-    mark: () => ({ line: state.cursor, isDisposed: false }),
+    cursorLine: () => state.cursor,
+    mark: (line) => ({ line, isDisposed: false, dispose: () => {} }),
     isNormalBuffer: () => state.normal,
   });
   const resize = (to: number) => { state.cols = to; widths.resized(); };
@@ -41,7 +42,8 @@ describe('printWidths', () => {
     const state = { cols: 80, cursor: 0 };
     const widths = printWidths({
       cols: () => state.cols,
-      mark: () => { const marker = { line: state.cursor, isDisposed: false }; marks.push(marker); return marker; },
+      cursorLine: () => state.cursor,
+      mark: (line) => { const marker = { line, isDisposed: false, dispose: () => {} }; marks.push(marker); return marker; },
       isNormalBuffer: () => true,
     });
     state.cursor = 10;
@@ -64,7 +66,7 @@ describe('printWidths', () => {
     expect(widths.at(0)).toBe(120);
   });
 
-  describe('a cursor that moves above the latest boundary', () => {
+  describe('a row erased above the latest boundary', () => {
     it('moves the boundary up, so rows printed there read the new width', () => {
       const { state, widths, resize } = pane(120);
       state.cursor = 40;
@@ -95,7 +97,7 @@ describe('printWidths', () => {
       expect([widths.at(5), widths.at(25)]).toEqual([80, 100]);
     });
 
-    it('leaves the boundary alone when the cursor stays at or below it', () => {
+    it('leaves the boundary alone when the erased row is at or below it', () => {
       const { state, widths, resize } = pane(120);
       state.cursor = 40;
       resize(80);
@@ -103,6 +105,59 @@ describe('printWidths', () => {
       widths.rowErased(50);
       widths.rowErased(40);
       expect([widths.at(39), widths.at(40)]).toEqual([120, 80]);
+    });
+  });
+
+  describe('the boundary goes on the reported line, not the cursor', () => {
+    it('reads the new width from the top of a cleared screen while the cursor is still below', () => {
+      const { state, widths, resize } = pane(120);
+      state.cursor = 40;
+      resize(80);
+      widths.rowErased(0);
+      expect(widths.at(10)).toBe(80);
+    });
+  });
+
+  describe('disposing boundaries', () => {
+    function tracked() {
+      const marks: Fake[] = [];
+      const state = { cols: 120, cursor: 0 };
+      const widths = printWidths({
+        cols: () => state.cols,
+        cursorLine: () => state.cursor,
+        mark: (line) => {
+          const marker = { line, isDisposed: false, dispose: () => { marker.isDisposed = true; } };
+          marks.push(marker);
+          return marker;
+        },
+        isNormalBuffer: () => true,
+      });
+      state.cursor = 40;
+      state.cols = 80;
+      widths.resized();
+      return { marks, widths };
+    }
+
+    it('disposes the boundary a moved one replaces', () => {
+      const { marks, widths } = tracked();
+      widths.rowErased(30);
+      expect(marks.map((marker) => marker.isDisposed)).toEqual([true, false]);
+    });
+
+    it('disposes every boundary on reset', () => {
+      const { marks, widths } = tracked();
+      widths.reset();
+      expect(marks[0].isDisposed).toBe(true);
+    });
+  });
+
+  describe('erasedLine', () => {
+    it('is the cursor line for an erase-in-line and for a partial erase-in-display', () => {
+      expect([erasedLine('K', 2, 100, 140), erasedLine('J', 0, 100, 140), erasedLine('J', 3, 100, 140)]).toEqual([140, 140, 140]);
+    });
+
+    it('is the top of the screen for a whole-screen erase-in-display', () => {
+      expect(erasedLine('J', 2, 100, 140)).toBe(100);
     });
   });
 
