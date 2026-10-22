@@ -69,19 +69,24 @@ export function resumable(
 
 // The card whose agent a resumed conversation was, or undefined when it comes back typed into a shell.
 // It ran in the card's worktree, compared in real paths since Claude Code records the folder as the
-// process saw it and a project opened through a symlink does not. And it is in a pane of the card's
-// own project, which is what a record's pane number counts in, with no pane given the card yet: every
-// record loses its pane at launch, so a second pane in the same worktree finds it taken and stays a
-// shell, as it was started.
+// process saw it and a project opened through a symlink does not. And it is in the pane the card's
+// record named when the app last ran, in the card's own project, which is what that number counts in.
+// The pane is the one the records held before the launch cleared them, never whichever matching pane
+// spawns first: a second Claude opened by hand in the same worktree, in a lower pane, would otherwise
+// come back as the agent and leave the real one typed into a shell.
 export function agentToResume(
   entries: readonly WorktreeEntry[],
+  panesBeforeLaunch: ReadonlyMap<string, number>,
   conversation: PaneConversation,
   projectPath: string,
+  index: number,
   realPath: (path: string) => string,
 ): WorktreeEntry | undefined {
   const directory = realPath(conversation.directory);
   return entries.find((entry) => (
-    entry.projectPath === projectPath && entry.pane === null && realPath(entry.worktreePath) === directory
+    entry.projectPath === projectPath
+    && panesBeforeLaunch.get(entry.cardId) === index
+    && realPath(entry.worktreePath) === directory
   ));
 }
 

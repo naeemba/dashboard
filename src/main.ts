@@ -145,8 +145,13 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
 // half built and has nothing to shut down yet.
 let worktrees: WorktreeEntry[] = [];
+// The pane each card's agent was in when the app last ran, kept from before the clearing so a restart
+// resumes the agent in that pane and nowhere else. agentToResume holds why.
+const agentPanesBeforeLaunch = new Map<string, number>();
 try {
-  worktrees = withoutPanes(livingEntries(readWorktrees(worktreesFile), existsSync));
+  const recorded = livingEntries(readWorktrees(worktreesFile), existsSync);
+  for (const entry of recorded) if (entry.pane !== null) agentPanesBeforeLaunch.set(entry.cardId, entry.pane);
+  worktrees = withoutPanes(recorded);
 } catch (error: unknown) {
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
@@ -501,7 +506,7 @@ function spawnProject(project: Project, projectIndex: number): void {
 // a second ship of the card is refused, and the review sweep waits for it rather than starting beside
 // it. Any other session is typed into a shell in its folder, so exiting it leaves a prompt.
 function resumeIn(id: string, projectPath: string, index: number, resume: PaneConversation): void {
-  const card = agentToResume(worktrees, resume, projectPath, realPath);
+  const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, index, realPath);
   if (card !== undefined) {
     recordWorktree({ ...card, pane: index });
     startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));

@@ -57,7 +57,7 @@ else drops to `null`; a file written before the field existed reads as all `null
 
 Main becomes the only writer of `session.json`. The renderer keeps sending the layout on
 `session:write` exactly as now; main remembers the last layout it was sent and writes it with the
-`claude` slots filled in from its map, translating a pane id to its project path and pane index. That
+`claude` entries filled in from its map, translating a pane id to its project path and pane index. That
 merge happens:
 
 - on every `session:write` from the renderer;
@@ -69,11 +69,11 @@ The layout half is untouched, so the renderer's own reasons for when to save sti
 
 ### 3. Restoring it
 
-Main reads the saved slots once at startup and holds them as pending, keyed by project path and pane
-index. When `spawnProject` spawns a pane that has a pending slot, it takes the slot (so reopening the
+Main reads the saved conversations once at startup and holds them as pending, keyed by project path and pane
+index. When `spawnProject` spawns a pane that has a pending conversation, it takes it (so reopening the
 project later in the same run does not resume again) and:
 
-- when the slot's directory exists: points the pane's `terminalCommands` entry at that directory,
+- when the conversation's directory exists: points the pane's `terminalCommands` entry at that directory,
   spawns the shell there, and writes `claude --resume <id>\r` into it;
 - when it does not (a worktree removed while the app was closed): spawns the plain shell at the project
   path and resumes nothing. Resuming from the wrong folder would only print "No conversation found".
@@ -84,8 +84,9 @@ returns to a prompt and the pane is never dead.
 A session whose folder is a card's recorded worktree was that card's agent, and comes back as it: the
 pane is started the way a ship starts one (`exec claude --resume <id>`) and the worktree record names
 the pane again. That holds only for a conversation in a pane of the card's own project, matched to the
-worktree by real path, and only for the first such pane: every record loses its pane at launch, so a
-second Claude in the same worktree finds the card taken and comes back typed into a shell. This rule is
+worktree by real path, and only in the pane the card's record named when the app last ran. Main keeps
+each card's pane from before the launch clears the records, so a second Claude opened by hand in the same
+worktree comes back typed into a shell whichever pane spawns first. This rule is
 `agentToResume` in `claude-resume.ts`. Without that the status bar would not print the branch, the card could be shipped a
 second time into the same worktree, and the review sweep would start beside the resumed agent.
 

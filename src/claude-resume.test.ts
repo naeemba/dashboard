@@ -86,31 +86,39 @@ describe('agentToResume', () => {
   const asGiven = (path: string): string => path;
   const inWorktree = conversation(ID, '/work/api.worktrees/fix-login');
 
-  it('names the card whose worktree the conversation ran in', () => {
-    expect(agentToResume([card], inWorktree, '/work/api', asGiven)).toBe(card);
+  const inPane2 = new Map([['c1', 2]]);
+
+  it('names the card whose worktree the conversation ran in, in the pane its record named', () => {
+    expect(agentToResume([card], inPane2, inWorktree, '/work/api', 2, asGiven)).toBe(card);
   });
 
   it('types any other conversation into a shell', () => {
-    expect(agentToResume([card], conversation(ID), '/work/api', asGiven)).toBeUndefined();
+    expect(agentToResume([card], inPane2, conversation(ID), '/work/api', 2, asGiven)).toBeUndefined();
   });
 
   // A Claude started by hand in another project's pane, after a `cd` into the worktree: the record's
   // pane counts in the card's own project, so naming it there would point at a plain shell.
   it('leaves a conversation in another project\'s pane a shell', () => {
-    expect(agentToResume([card], inWorktree, '/work/web', asGiven)).toBeUndefined();
+    expect(agentToResume([card], inPane2, inWorktree, '/work/web', 2, asGiven)).toBeUndefined();
   });
 
-  // A second Claude in the worktree must not come back as the agent too, or the record names the wrong
-  // pane and exiting the one started by hand leaves a dead pane.
-  it('leaves a second pane in the worktree a shell once the card has its pane', () => {
-    expect(agentToResume([{ ...card, pane: 2 }], inWorktree, '/work/api', asGiven)).toBeUndefined();
+  // The agent is in pane 4 and a second Claude was opened by hand in the worktree in pane 2. Pane 2
+  // spawns first and must not come back as the agent, or the real one is typed into a shell.
+  it('leaves a second pane in the worktree a shell, whichever spawns first', () => {
+    const inPane4 = new Map([['c1', 4]]);
+    expect(agentToResume([card], inPane4, inWorktree, '/work/api', 2, asGiven)).toBeUndefined();
+    expect(agentToResume([card], inPane4, inWorktree, '/work/api', 4, asGiven)).toBe(card);
+  });
+
+  it('leaves a card with no pane before the launch a shell', () => {
+    expect(agentToResume([card], new Map(), inWorktree, '/work/api', 2, asGiven)).toBeUndefined();
   });
 
   // The project was opened through a symlink, and Claude Code recorded the folder it really is.
   it('matches the worktree through its real path', () => {
     const real = (path: string): string => path.replace('/work/', '/mnt/data/');
     const recorded = conversation(ID, '/mnt/data/api.worktrees/fix-login');
-    expect(agentToResume([card], recorded, '/work/api', real)).toBe(card);
+    expect(agentToResume([card], inPane2, recorded, '/work/api', 2, real)).toBe(card);
   });
 });
 
