@@ -30,8 +30,7 @@ export function registerProjectFiles(boards: BoardWatchers, changes: BoardChange
   // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
   // the renderer: it already has the board it just sent.
   ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
-    changes.wrote(projectPath, board);
-    boards.wrote(projectPath, writeBoard(projectPath, board));
+    changes.wrote(projectPath, board, () => boards.wrote(projectPath, writeBoard(projectPath, board)));
   });
 
   // The project's page of notes. No watcher and no seeding: the notes are one box one person types
