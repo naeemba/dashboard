@@ -140,6 +140,7 @@ describe('hears, on the manager page', () => {
     expect(hears('manager-page', 'manager', true)).toBe(true);
     expect(hears('manager-page', 'board', true)).toBe(true);
     expect(hears('manager-page', 'command', true)).toBe(true);
+    expect(hears('manager-page', 'log', true)).toBe(true);
   });
 
   it('does not hear it on a project, including on a project board', () => {

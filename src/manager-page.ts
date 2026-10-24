@@ -4,6 +4,7 @@ import { createCommandView } from './command-view';
 import type { DashboardBridge } from './bridge';
 import type { SendPlan } from './free-pane';
 import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
+import { createLogView } from './log-view';
 import { createManagerReads } from './manager-reads';
 import { createManagerView } from './manager-view';
 import { createMarketsView } from './markets-view';
@@ -17,8 +18,8 @@ import type { WorktreeEntry } from './worktree-store';
 import type { JumpToWorktree } from './worktree-view';
 
 // The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
-// editor. It has four views — the list of what every project's panes want, a board of its own above
-// every project's board, the command screen, and a page of notes — and the mode keys for the two it
+// editor. It has five views — the list of what every project's panes want, a board of its own above
+// every project's board, the command screen, a page of notes, and the app's log — and the mode keys for the two it
 // does not have do nothing here.
 //
 // Its board is a board like any other as far as the renderer is concerned: same field, same mode,
@@ -140,17 +141,25 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   const notesView = document.createElement('div');
   notesView.className = 'view view-notes';
   notesView.append(notes.element);
-  // Above the four views rather than inside one, so it is on screen whichever section is showing.
+  const log = createLogView({
+    bridge: options.bridge,
+    onError: (message) => options.onError('log', message),
+  });
+  // Above the five views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);
   // Above the strip, and on screen whichever section is showing for the same reason the strip is.
-  element.append(createMarketsView(options.bridge), strip.element, manager.element, cards.element, command.element, notesView);
+  element.append(
+    createMarketsView(options.bridge), strip.element, manager.element, cards.element, command.element,
+    notesView, log.element,
+  );
   const page: Page = {
     project: MANAGER_PROJECT, element,
     views: {
       manager: manager.element, board: cards.element, command: command.element, notes: notesView,
+      log: log.element,
     },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes, manager, command, strip,
+    board: cards, notes, manager, command, strip, log,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.

@@ -3,7 +3,7 @@ import { SECTIONS, nextSectionMode, sectionIndex } from './manager-sections';
 
 describe('SECTIONS', () => {
   it('is the order the strip prints, general first', () => {
-    expect(SECTIONS.map((section) => section.name)).toEqual(['general', 'board', 'command', 'notes']);
+    expect(SECTIONS.map((section) => section.name)).toEqual(['general', 'board', 'command', 'notes', 'log']);
   });
 });
 
@@ -25,13 +25,15 @@ describe('nextSectionMode', () => {
     expect(nextSectionMode('manager', 'next')).toBe('board');
     expect(nextSectionMode('board', 'next')).toBe('command');
     expect(nextSectionMode('command', 'next')).toBe('notes');
+    expect(nextSectionMode('notes', 'next')).toBe('log');
+    expect(nextSectionMode('log', 'previous')).toBe('notes');
     expect(nextSectionMode('notes', 'previous')).toBe('command');
     expect(nextSectionMode('command', 'previous')).toBe('board');
   });
 
   it('does not wrap at either end', () => {
     expect(nextSectionMode('manager', 'previous')).toBe('manager');
-    expect(nextSectionMode('notes', 'next')).toBe('notes');
+    expect(nextSectionMode('log', 'next')).toBe('log');
   });
 
   it('leaves a mode that is no section of the manager where it is', () => {

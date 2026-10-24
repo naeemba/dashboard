@@ -114,14 +114,16 @@ body *:not(.pane, .pane *) {
 /* The manager: prose and lists, no panes. It takes the keyboard when you arrive, and a focus ring
    around the whole page says nothing useful, so the tab strip is what marks it instead. */
 .view-manager,
-.view-command {
+.view-command,
+.view-log {
   padding: 20px 24px;
   overflow-y: auto;
   background: var(--background);
 }
 
 .view-manager:focus,
-.view-command:focus {
+.view-command:focus,
+.view-log:focus {
   outline: none;
 }
 
@@ -308,6 +310,63 @@ body *:not(.pane, .pane *) {
   background: none;
   color: var(--brightWhite);
   font: inherit;
+}
+
+/* The log is a flex column so the list scrolls under a filter box that stays put. */
+.view-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.view-log[hidden] {
+  display: none;
+}
+
+/* The command box grows along its row; in this column the same flex: 1 would stretch it down the page. */
+.log-filter {
+  flex: none;
+  padding: 4px 8px;
+}
+
+.log-file {
+  margin: 0;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* min-height: 0 lets the list shrink below its rows and scroll, rather than pushing the column taller
+   than the page. The command list's prose cap does not apply: a log line is wanted at full width. */
+.log-list {
+  flex: 1;
+  min-height: 0;
+  max-width: none;
+  overflow-y: auto;
+  font-family: var(--mono-font);
+  font-size: 12px;
+}
+
+/* One line each until unfolded, so a long message does not push the rest of the page off screen.
+   Block rather than the command row's flex: an ellipsis needs the text in a block, not a flex item. */
+.log-list .log-row {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-list .log-row.unfolded {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.log-row.level-error {
+  color: var(--red);
+}
+
+.log-row.level-warn {
+  color: var(--yellow);
 }
 
 /* Room under the command box before the project rows start; the rows themselves are styled with

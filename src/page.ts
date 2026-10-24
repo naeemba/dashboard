@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
+import type { LogView } from './log-view';
 import { fileLinksIn, webLinksIn, type FileLink, type LinkSpan } from './file-links';
 import type { ManagerView } from './manager-view';
 import type { Mode, ProjectMode } from './modes';
@@ -99,6 +100,8 @@ export type Page = {
   // them shows.
   command: CommandView | null;
   strip: SectionStrip | null;
+  // Only the manager has one: it is the app's log, not a project's.
+  log: LogView | null;
 };
 
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
@@ -321,7 +324,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     }
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null,
+      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page

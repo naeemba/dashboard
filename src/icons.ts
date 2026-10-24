@@ -5,7 +5,7 @@ import {
   ArrowDownWideNarrow, Bitcoin, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
-  MessageSquare, NotebookPen, Rocket, Settings, Square, SquareCheck, SquareTerminal, Sun,
+  MessageSquare, NotebookPen, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
@@ -38,6 +38,7 @@ const ICONS = {
   branch: GitBranch,
   general: LayoutDashboard,
   keyboard: Keyboard,
+  log: ScrollText,
   notes: NotebookPen,
   parent: CornerLeftUp,
   pullRequest: GitPullRequest,
@@ -90,6 +91,7 @@ export function labelled(
 // Complete on purpose, so a new mode does not compile until it has one.
 export const MODE_GLYPHS: Record<Mode, IconName> = {
   terminals: 'terminal', nvim: 'editor', board: 'board', notes: 'notes', manager: 'general', command: 'command',
+  log: 'log',
 };
 
 // A button holding an icon and a name, the shape every bar of tabs in the app is built from.

@@ -340,6 +340,10 @@ function focusMode(page: Page, entering: boolean): void {
     if (entering) page.command.render();
     page.command.focus();
   }
+  if (page.mode === 'log' && page.log) {
+    if (entering) void page.log.open();
+    else page.log.focus();
+  }
   if (page.mode === 'terminals') return focusTerminal(page.focused);
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
@@ -701,6 +705,9 @@ function apply(action: Action): void {
     case 'command-select':
     case 'command-open':
     case 'command-cancel': return page.command?.runAction(action);
+    case 'log-select':
+    case 'log-open':
+    case 'log-filter-reset': return page.log?.runAction(action);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.
