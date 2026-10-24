@@ -31,10 +31,10 @@ worktree). It is read in a fifth section of the manager.
 - `src/log-entry.ts`, shared and pure, beside `log-entry.test.ts`: the types,
   `parseLogLine(line)` (an entry or `undefined`), `rotationNames(base, count)`
   (the rename order), `needsRotation(currentSize, appendSize, limit)`, and
-  `matchesLogFilter(entry, filter)` for level, kind and text.
-- `src/log-store.ts`, main only: `append(entry)` and `tail(count)`. Every
-  append and rotation runs through one promise chain, so two writers cannot
-  interleave or rotate twice. A write that fails is written to stderr and
+  `matchesLogFilter(entry, query)`: every word of the query appears in the level, kind, project or message.
+- `src/log-store.ts`, main only: `log(draft)` and `tail(count)`. Writes are
+  synchronous: main is one thread, so two entries cannot interleave and no
+  rotation runs twice. A write that fails is written to stderr and
   dropped: logging never takes the app down or blocks what it was logging.
   `tail` reads the newest files until it has `count` entries.
 - IPC, `<noun>:<verb>`:
@@ -76,9 +76,14 @@ months. A command-screen run is logged as `task run on 3 projects`.
   branch in `focusMode` and `modeLabel`, and a name and blurb in `src/help.ts`.
 - `src/log-view.ts`: rows newest first, each `time  level  kind  project
   message`, error rows coloured. Arrow keys walk the rows; Enter, or a click,
-  opens the whole entry in the dialog sheet. `f` opens a filter box (level,
-  kind, text) through `matchesLogFilter`; `Shift+F` clears it. The box gets
-  `dir = 'auto'`. New keys are rows in `src/actions.ts`, scoped to `log`.
+  unfolds the row to its full message and project path, and again folds it.
+  A filter box sits above the rows the way the command box sits above the
+  command screen's, and takes the keyboard on arrival. Every word typed must
+  appear in the row's level, kind, project or message (`error card` finds
+  failed card entries), through `matchesLogFilter`. No letter key opens it: a
+  bare letter bound on this screen would fire while you type in the box.
+  Escape empties it. The box gets `dir = 'auto'`. The keys (arrows, Enter,
+  Escape) are rows in `src/actions.ts`, scoped to `log`.
 - On arrival the view asks `log:read`; while it exists, `log:appended`
   entries are added at the top. The view keeps at most 1000 rows; older ones
   are in the file. The section's heading prints the path of `dashboard.log`
@@ -91,7 +96,7 @@ months. A command-screen run is logged as `task run on 3 projects`.
 
 - `log-entry.test.ts`: rotation threshold at and past the limit, the rename
   order for five files, a corrupt or truncated line skipped, the filter on
-  each field and on all three together.
+  each field, on several words at once, and an empty query matching everything.
 - No DOM test environment, so the view, the live update and the rotation on
   disk are checked by hand in the app: fill past 5 MB with a loop of
   `log:write`, see `.1` appear and `.4` never exceeded.
