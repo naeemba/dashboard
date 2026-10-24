@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, Notification } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
@@ -16,7 +16,7 @@ import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-s
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
-import { taskRunner } from './task-runner';
+import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
@@ -26,6 +26,7 @@ import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
+import { registerPaneChannels } from './pane-channels';
 import { registerPaneOpeners } from './pane-openers';
 import { registerProjectFiles } from './project-files-ipc';
 import { sessionStore } from './session-store';
@@ -648,39 +649,7 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-// Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
-// to land on. Without that half you arrive at whatever project you were last on and go looking for the
-// pane the banner had already named.
-ipcMain.on('notification:show', (_event, title: string, body: string, paneId: string) => {
-  const notification = new Notification({ title, body });
-  notification.on('click', () => {
-    // Landing on the pane is no use behind a window that is not on screen. macOS activates the app
-    // for a click but leaves a minimized window in the Dock, and on Windows and Linux nothing
-    // activates it at all, so ask for the window every time. show() is the hidden-to-shown
-    // transition; coming back from the Dock is restore()'s, so both are needed.
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    sendToRenderer('notification:click', paneId);
-  });
-  notification.show();
-});
-
-ipcMain.on('pty:input', (_event, id: string, data: string) => {
-  shells.get(id)?.write(data);
-});
-// Recorded whether or not a shell is listening, because the pane that has none is exactly the pane
-// about to get one: a pane whose shell exited, the editor before nvim is started, a pane a ship is
-// about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
-ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
-  paneSizes.set(id, { cols, rows });
-  shells.get(id)?.resize(cols, rows);
-});
-ipcMain.on('pty:restart', (_event, id: string) => {
-  if (!shells.has(id)) spawnTerminal(id);
-});
+registerPaneChannels({ shells, paneSizes, spawnTerminal, window: liveWindow, send: sendToRenderer });
 registerProjectFiles(boards);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
@@ -980,13 +949,7 @@ ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean,
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
 // last picked.
-const tasks = taskRunner({
-  send: (result) => sendToRenderer('task:update', result),
-  shellCommand: () => shellCommand,
-});
-
-ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => tasks.run(command, projectPaths));
-ipcMain.on('task:cancel', () => tasks.cancel());
+const tasks = registerTasks({ send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
