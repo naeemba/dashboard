@@ -49,6 +49,10 @@ const bridge: DashboardBridge = {
     ipcRenderer.on('usage:change', (_event, usage) => listener(usage)),
   onFailure: (listener) =>
     ipcRenderer.on('failure:show', (_event, message) => listener(message)),
+  writeLog: (draft) => ipcRenderer.send('log:write', draft),
+  readLog: () => ipcRenderer.invoke('log:read'),
+  onLogAppended: (listener) =>
+    ipcRenderer.on('log:appended', (_event, entry) => listener(entry)),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

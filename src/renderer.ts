@@ -14,7 +14,8 @@ import './manager.css';
 import { openHelp } from './help';
 import { createModeSwitch, createTabStrip } from './chrome-bars';
 import { mapShortcut, type Action } from './shortcuts';
-import { failureNotice, failureText } from './failure';
+import { failureText } from './failure';
+import { createStatusError } from './status-error';
 import { fileLinkOpener, showFileHints } from './file-hints';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
@@ -91,43 +92,9 @@ const tabStrip = createTabStrip((index) => showPage(index));
 const modeSwitch = createModeSwitch((mode) => setMode(mode));
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-// Its own span, between the two, because renderStatus() rewrites the pane label on every keystroke.
-// A message written into that span is gone by the next arrow key, which is how the salvage notice
-// used to disappear before anyone could read it.
-const statusError = document.createElement('span');
-statusError.className = 'error';
-statusElement.append(modeSwitch.element, statusError, statusTerminal);
-
-// Whoever wrote the message on screen owns it, and only that owner may clear it. Without the owner a
-// clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
-// look at another project's board and the message is gone while the card still is not on disk.
-let errorOwner = '';
-function showError(owner: string, message: string): void {
-  if (message === '' && errorOwner !== owner) return;
-  errorOwner = message === '' ? '' : owner;
-  statusError.textContent = message;
-}
-
-// Failures nobody caught, from either side of the wire, under one owner so they never clear a board's
-// message or have one cleared by them.
-//
-// Main's arrive over the channel, and this is registered at module load rather than in start(), because
-// the launch's own failures are sent the moment the page finishes loading — later than a listener set
-// up here, earlier than anything start() awaits.
-//
-// This side's are the window's, and they cost no shell: a pty lives in main, and a throw inside a
-// listener here is caught by the browser, which logs it and carries on. What it costs is that nobody
-// knows. The board simply does not redraw, or a key does nothing, and the console is the only place it
-// is written down. Now the bar says it.
-bridge.onFailure((message) => showError('failure', message));
-// `error` when the thrown value is there, `message` when it is not — a cross-origin script gives the
-// browser nothing to hand over and only the sentence "Script error." to say.
-window.addEventListener('error', (event) => {
-  showError('failure', failureNotice(event.error ?? event.message));
-});
-window.addEventListener('unhandledrejection', (event) => {
-  showError('failure', failureNotice(event.reason));
-});
+const statusError = createStatusError(bridge);
+const showError = statusError.show;
+statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
 document.getElementById('title')?.append(tabStrip.element);
 const pagesElement = document.getElementById('pages') as HTMLElement;
