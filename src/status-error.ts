@@ -33,8 +33,8 @@ export function createStatusError(bridge: DashboardBridge): StatusError {
     element.textContent = message;
   }
 
+  // A clear is never logged, so the owner rule is notice's alone.
   function show(owner: string, message: string): void {
-    if (message === '' && errorOwner !== owner) return;
     if (shouldLogError(message, element.textContent ?? '')) bridge.writeLog({ level: 'error', kind: 'error', message });
     notice(owner, message);
   }

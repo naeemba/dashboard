@@ -100,7 +100,7 @@ export function createLogView(options: LogOptions): LogView {
   // The thousand-row cap is the read's: anything older is in the file.
   options.bridge.onLogAppended((entry) => {
     entries.push(entry);
-    if (entries.length > LOG_READ_COUNT) entries = entries.slice(-LOG_READ_COUNT);
+    if (entries.length > LOG_READ_COUNT) entries.shift();
     if (element.closest('[hidden]')) return;
     refilter(true);
     draw(false);

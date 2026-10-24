@@ -36,7 +36,7 @@ export function parseLogLine(line: string): LogEntry | undefined {
   if (!LOG_LEVELS.some((known) => known === level) || !LOG_KINDS.some((known) => known === kind)) return undefined;
   if (project !== undefined && typeof project !== 'string') return undefined;
   return {
-    time, level: level as LogLevel, kind: kind as LogKind, ...(project === undefined ? {} : { project }), message,
+    time, level: level as LogLevel, kind: kind as LogKind, ...inProject(project), message,
   };
 }
 

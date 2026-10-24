@@ -222,7 +222,10 @@ const boardCommand = path
 const paneEnvironment = { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>;
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
-const boards = boardWatchers((projectPath) => { sendToRenderer('board:change', projectPath); boardLog.changed(projectPath); });
+const boards = boardWatchers((projectPath) => {
+  sendToRenderer('board:change', projectPath);
+  boardLog.changed(projectPath);
+});
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
@@ -538,7 +541,8 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
   agentsAtWork.started(id, Date.now());
-  logFile.log(agentStartEntry(projects[paneFromId(id).slot]?.path, paneFromId(id).index));
+  const { slot, index } = paneFromId(id);
+  logFile.log(agentStartEntry(projects[slot]?.path, index));
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -866,7 +870,11 @@ async function shipCard(request: ShipRequest): Promise<ShipResult> {
     shippingCards.delete(cardId);
   }
 }
-ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => { const result = await shipCard(request); logFile.log(shipEntry(request, result)); return result; });
+ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
+  const result = await shipCard(request);
+  logFile.log(shipEntry(request, result));
+  return result;
+});
 
 // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
 // a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
@@ -953,9 +961,11 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
   }
 }
 
-ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean, projectPath: string) => (
-  removeWorktree(worktreePath, force, projectPath).then((result) => { logFile.log(removalEntry(projectPath, worktreePath, result)); return result; })
-));
+ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean, projectPath: string) => {
+  const result = await removeWorktree(worktreePath, force, projectPath);
+  logFile.log(removalEntry(projectPath, worktreePath, result));
+  return result;
+});
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
@@ -1036,7 +1046,10 @@ function createWindow(): void {
   failures.windowOpened();
 }
 
-app.on('ready', () => { logFile.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` }); createWindow(); });
+app.on('ready', () => {
+  logFile.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
+  createWindow();
+});
 app.on('will-quit', () => {
   logFile.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();

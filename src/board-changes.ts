@@ -14,15 +14,11 @@ export type BoardChanges = {
 export function boardChanges(log: (draft: LogDraft) => void, peek: (projectPath: string) => Board | null): BoardChanges {
   const last = new Map<string, Board>();
 
-  function record(projectPath: string, before: Board | undefined | null, after: Board, fromCommand: boolean): void {
+  // `prefix` says who moved it: nothing for the app, `board command moved ` for the command.
+  function record(projectPath: string, before: Board | undefined, after: Board, kind: 'card' | 'board', prefix: string): void {
     last.set(projectPath, after);
     if (!before) return;
-    for (const move of cardMoves(before, after)) {
-      log({
-        level: 'info', kind: fromCommand ? 'board' : 'card', project: projectPath,
-        message: fromCommand ? `board command moved ${move}` : move,
-      });
-    }
+    for (const move of cardMoves(before, after)) log({ level: 'info', kind, project: projectPath, message: `${prefix}${move}` });
   }
 
   return {
@@ -33,13 +29,13 @@ export function boardChanges(log: (draft: LogDraft) => void, peek: (projectPath:
     // that never reached the file, and leave that unwritten board as the one the next write is read
     // against.
     wrote: (projectPath, board, write) => {
-      const before = last.get(projectPath) ?? peek(projectPath);
+      const before = last.get(projectPath) ?? peek(projectPath) ?? undefined;
       write();
-      record(projectPath, before, board, false);
+      record(projectPath, before, board, 'card', '');
     },
     changed: (projectPath) => {
       const board = peek(projectPath);
-      if (board) record(projectPath, last.get(projectPath), board, true);
+      if (board) record(projectPath, last.get(projectPath), board, 'board', 'board command moved ');
     },
   };
 }
