@@ -21,13 +21,16 @@ import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
 } from './terminals';
-import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
+import { boardChanges } from './board-changes';
+import { BOARD_FILE_PATH, peekBoard, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
 import { registerPaneOpeners } from './pane-openers';
+import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
+import { registerLog } from './log-ipc';
 import { registerProjectFiles } from './project-files-ipc';
 import { sessionStore } from './session-store';
 import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
@@ -103,6 +106,8 @@ const failures = failureReporter({
 });
 process.on('uncaughtException', (error: unknown) => failures.report(error));
 process.on('unhandledRejection', (error: unknown) => failures.report(error));
+const logFile = registerLog(app.getPath('userData'), sendToRenderer);
+const boardLog = boardChanges((draft) => logFile.log(draft), peekBoard);
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a
 // launch that cannot read it opens on the shipped defaults with nothing you set applied — worth a line
@@ -217,7 +222,7 @@ const boardCommand = path
 const paneEnvironment = { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>;
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
-const boards = boardWatchers((projectPath) => sendToRenderer('board:change', projectPath));
+const boards = boardWatchers((projectPath) => { sendToRenderer('board:change', projectPath); boardLog.changed(projectPath); });
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
@@ -481,6 +486,8 @@ function spawnTerminal(id: string): void {
     // renderer a pane that is busy working had died.
     if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
+    const { slot, index } = paneFromId(id);
+    logFile.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
@@ -531,6 +538,7 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
   agentsAtWork.started(id, Date.now());
+  logFile.log(agentStartEntry(projects[paneFromId(id).slot]?.path, paneFromId(id).index));
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -571,6 +579,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
   if (replaced) {
+    logFile.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
     spawnProject(picked, index);
   }
@@ -594,6 +603,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
+  logFile.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
   for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
@@ -650,7 +660,7 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   return shellCommand;
 });
 registerPaneChannels({ shells, paneSizes, spawnTerminal, window: liveWindow, send: sendToRenderer });
-registerProjectFiles(boards);
+registerProjectFiles(boards, boardLog);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -809,7 +819,7 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
   return attachPane(entry, slot, workPrompt(cardId));
 }
 
-ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
+async function shipCard(request: ShipRequest): Promise<ShipResult> {
   const { projectPath, cardId, title, slot } = request;
   // The board already declines to ship from the manager's page. This is the second lock, for a caller
   // that gets past it: with no project behind it, git would run in whatever folder the app started in.
@@ -855,7 +865,8 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     // nothing on screen able to clear it.
     shippingCards.delete(cardId);
   }
-});
+}
+ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => { const result = await shipCard(request); logFile.log(shipEntry(request, result)); return result; });
 
 // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
 // a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
@@ -943,7 +954,7 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
 }
 
 ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean, projectPath: string) => (
-  removeWorktree(worktreePath, force, projectPath)
+  removeWorktree(worktreePath, force, projectPath).then((result) => { logFile.log(removalEntry(projectPath, worktreePath, result)); return result; })
 ));
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
@@ -1025,8 +1036,9 @@ function createWindow(): void {
   failures.windowOpened();
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => { logFile.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` }); createWindow(); });
 app.on('will-quit', () => {
+  logFile.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.

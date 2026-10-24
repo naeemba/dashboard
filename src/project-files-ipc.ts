@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import type { Board } from './board';
 import { openBoard, peekBoard, writeBoard } from './board-store';
+import type { BoardChanges } from './board-changes';
 import type { BoardWatchers } from './board-watch';
 import { readNotes, writeNotes } from './notes-store';
 
@@ -8,14 +9,16 @@ import { readNotes, writeNotes } from './notes-store';
 // wiring only, out of main.ts because main had reached its 600-line ceiling; what a board or a page of
 // notes is, and how either is read and written, is board-store.ts's and notes-store.ts's. Main hands over
 // the one thing only it holds, the watchers that tell the renderer about a write from somewhere else.
-export function registerProjectFiles(boards: BoardWatchers): void {
+export function registerProjectFiles(boards: BoardWatchers, changes: BoardChanges): void {
   // Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
   // is a convenience — writing the two explanation files — so a read-only project folder must not cost
   // the user a board.json that is sitting right there and perfectly readable.
   ipcMain.handle('board:peek', (_event, projectPath: string) => peekBoard(projectPath));
   ipcMain.handle('board:read', (_event, projectPath: string) => {
     try {
-      return openBoard(projectPath);
+      const read = openBoard(projectPath);
+      changes.seen(projectPath, read.board);
+      return read;
     } finally {
       // After the read, which is what creates .dashboard on a project that has never had a board — and
       // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
@@ -27,6 +30,7 @@ export function registerProjectFiles(boards: BoardWatchers): void {
   // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
   // the renderer: it already has the board it just sent.
   ipcMain.handle('board:write', (_event, projectPath: string, board: Board) => {
+    changes.wrote(projectPath, board);
     boards.wrote(projectPath, writeBoard(projectPath, board));
   });
 
