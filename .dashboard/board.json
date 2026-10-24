@@ -82,7 +82,14 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "7dbfc844-78a3-4661-9b7b-a855fe3eefe3",
+          "title": "Add a logger with a log section in the manager",
+          "notes": "JSON-lines log in userData, rotated across 5 files of 5 MB (25 MB total). Main writes; the renderer sends over log:write, reads with log:read, and gets live updates via log:appended. Fifth manager section \"log\": rows newest first, level and text filter, Enter opens the entry. Logs errors (every failureText), app/project/pane/agent lifecycle, card moves, ships, worktrees and board CLI writes. Never pane output, typed text or command arguments.",
+          "priority": "medium"
+        }
+      ]
     },
     {
       "name": "Review",
