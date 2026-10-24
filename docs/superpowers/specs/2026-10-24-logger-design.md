@@ -79,8 +79,8 @@ months. A command-screen run is logged as `task run on 3 projects`.
   unfolds the row to its full message and project path, and again folds it.
   A filter box sits above the rows the way the command box sits above the
   command screen's, and takes the keyboard on arrival. Every word typed must
-  appear in the row's level, kind, project or message (`error card` finds
-  failed card entries), through `matchesLogFilter`. No letter key opens it: a
+  appear in the row's level, kind, project or message (`error ship` finds
+  the ships that failed), through `matchesLogFilter`. No letter key opens it: a
   bare letter bound on this screen would fire while you type in the box.
   Escape empties it. The box gets `dir = 'auto'`. The keys (arrows, Enter,
   Escape) are rows in `src/actions.ts`, scoped to `log`.

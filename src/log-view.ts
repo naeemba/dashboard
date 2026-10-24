@@ -95,11 +95,13 @@ export function createLogView(options: LogOptions): LogView {
 
   // Kept while the section is hidden too, but drawn only while it is showing: arriving re-reads the
   // file anyway, so drawing a thousand rows nobody can see on every line would be work thrown away.
+  // Hidden means this section or anything around it — on a project's page the whole manager page is
+  // hidden, and the section's own attribute still says it is the one showing.
   // The thousand-row cap is the read's: anything older is in the file.
   options.bridge.onLogAppended((entry) => {
     entries.push(entry);
     if (entries.length > LOG_READ_COUNT) entries = entries.slice(-LOG_READ_COUNT);
-    if (element.hidden) return;
+    if (element.closest('[hidden]')) return;
     refilter(true);
     draw(false);
   });

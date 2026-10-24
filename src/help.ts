@@ -303,7 +303,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'is what takes the project away.',
   log: 'What the app did and what went wrong, newest first: errors, panes and agents exiting, cards '
     + 'moving, ships, worktrees, projects opening and closing. Type in the box to filter — every word '
-    + 'must appear, so `error card` is the card writes that failed. Kept in dashboard.log in the app\'s '
+    + 'must appear, so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s '
     + 'data folder, five files of 5 MB; the path is at the top. Never what you type in a pane.',
   app: 'There is a second way to find a key, for when you know you are reaching for one and not which. '
     + 'Hold Ctrl, Cmd or Alt without pressing anything else and a panel near the bottom names every '

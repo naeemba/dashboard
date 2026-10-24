@@ -81,10 +81,12 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
   }
 
   // The newest `count`, oldest first. Files are read newest first and stop as soon as there are enough,
-  // so the usual read is the live file alone.
+  // so the usual read is the live file alone. Each file is walked from its end and parsed only as far
+  // back as is needed: this runs on every arrival, and parsing a whole 5 MB file each time is most of
+  // what an arrival would cost.
   function tail(count: number): LogEntry[] {
     if (count <= 0) return [];
-    let entries: LogEntry[] = [];
+    const newestFirst: LogEntry[] = [];
     for (const file of files) {
       let text: string;
       try {
@@ -92,10 +94,16 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
       } catch {
         continue;
       }
-      entries = [...text.split('\n').flatMap((line) => parseLogLine(line) ?? []), ...entries];
-      if (entries.length >= count) break;
+      let end = text.length;
+      while (end > 0 && newestFirst.length < count) {
+        const start = text.lastIndexOf('\n', end - 1) + 1;
+        const entry = parseLogLine(text.slice(start, end));
+        if (entry) newestFirst.push(entry);
+        end = start - 1;
+      }
+      if (newestFirst.length >= count) break;
     }
-    return entries.slice(-count);
+    return newestFirst.reverse();
   }
 
   return { file: files[0], log, tail };

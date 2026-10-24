@@ -94,6 +94,9 @@ describe('entry wording', () => {
     expect(shipEntry(request, { ok: false, message: 'no free pane' })).toEqual({
       level: 'error', kind: 'ship', project: '/work/shop', message: '"Fix login" not shipped: no free pane',
     });
+    expect(shipEntry(request, { ok: false, message: '"Fix login" is on the manager\'s board' })).toEqual({
+      level: 'error', kind: 'ship', project: '/work/shop', message: 'not shipped: "Fix login" is on the manager\'s board',
+    });
   });
   it('reads a removal as info, a refused one as a warning', () => {
     expect(removalEntry('/work/shop', '/work/shop-fix', { ok: true, message: '', dirty: [] })).toEqual({

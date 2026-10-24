@@ -137,6 +137,15 @@ describe('logStore', () => {
     expect(store.tail(200_000)).toHaveLength(200_000);
   });
 
+  it('reads the last two of a large live file', () => {
+    const lines = Array.from({ length: 50_000 }, (_, index) => JSON.stringify(
+      { time: '2026-01-01T00:00:00.000Z', level: 'info', kind: 'app', message: `entry ${index}` },
+    ));
+    writeFileSync(path.join(directory, 'dashboard.log'), `${lines.join('\n')}\n`);
+    const store = logStore(directory, () => undefined);
+    expect(store.tail(2).map((entry) => entry.message)).toEqual(['entry 49998', 'entry 49999']);
+  });
+
   it('returns nothing for a count of zero', () => {
     const store = logStore(directory, () => undefined);
     store.log(info('one'));

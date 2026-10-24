@@ -51,7 +51,7 @@ export function needsRotation(currentSize: number, appendSize: number, limit: nu
   return currentSize > 0 && currentSize + appendSize > limit;
 }
 
-// Every word of the query, anywhere in the row as it reads. `error card` is the failed card writes.
+// Every word of the query, anywhere in the row as it reads. `error ship` is the failed ships.
 export function matchesLogFilter(entry: LogEntry, query: string): boolean {
   const text = [entry.level, entry.kind, entry.project ?? '', entry.message].join(' ').toLowerCase();
   return query.toLowerCase().split(/\s+/).filter((word) => word !== '').every((word) => text.includes(word));
@@ -77,7 +77,11 @@ export function agentStartEntry(project: string | undefined, index: number): Log
 export function shipEntry(request: ShipRequest, result: ShipResult): LogDraft {
   const project = request.projectPath;
   if (result.ok) return { level: 'info', kind: 'ship', project, message: `"${request.title}" shipped on ${result.entry.branch}` };
-  return { level: 'error', kind: 'ship', project, message: `"${request.title}" not shipped: ${result.message}` };
+  // Some of main's refusals already name the card, and naming it again reads `"Fix login" not shipped:
+  // "Fix login" is on…`.
+  const title = `"${request.title}"`;
+  const message = result.message.includes(title) ? `not shipped: ${result.message}` : `${title} not shipped: ${result.message}`;
+  return { level: 'error', kind: 'ship', project, message };
 }
 
 // A refusal is a warning: a worktree with changes in it asks you a second time, it does not fail.
