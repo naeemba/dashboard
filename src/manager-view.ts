@@ -39,8 +39,9 @@ export type ManagerOptions = {
   // The removal key on a worktree row, and its button. What is asked, and what is forced, is
   // worktree-removal.ts's.
   onRemoveWorktree(target: WorktreeTarget): void;
-  // A sentence for the status bar, or '' to take back the one this view put there.
-  onError(message: string): void;
+  // A sentence for the status bar, or '' to take back the one this view put there. Every one is an
+  // answer to a jump, never a failure, so none of them goes in the log.
+  onNotice(message: string): void;
   // What a key is bound to now, so the status bar names the removal key in force.
   binding(actionName: string): string;
   // Every open project's board and every worktree git knows of in it, read in the background.
@@ -437,7 +438,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     if (!line) return;
     if (line.kind === 'pane') return options.onJump(line.slot, line.pane.index);
     if (line.kind === 'need') {
-      options.onError(options.onJumpNeed(line.need));
+      options.onNotice(options.onJumpNeed(line.need));
       return options.onChanged();
     }
     // A worktree with no pane, or in a project closed since, says so rather than looking like a key
@@ -446,7 +447,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // to it; a landing that worked has left this page already.
     if (line.kind === 'worktree') {
       const { worktree } = line;
-      options.onError(worktree.entry ? options.onJumpWorktree(worktree.entry) : noPaneText(worktree));
+      options.onNotice(worktree.entry ? options.onJumpWorktree(worktree.entry) : noPaneText(worktree));
     }
     else toggle(line.row);
     options.onChanged();

@@ -90,6 +90,9 @@ export type BoardOptions = {
   // lands, must not leave its own previous failure sitting on screen. Another producer's message is
   // not this board's to clear, which the renderer enforces.
   onError(message: string): void;
+  // A hint, a refusal or progress, on the same span under the same owner, but kept out of the log:
+  // the log's error lines are failures, and a card hidden by the filter is not one.
+  onNotice(message: string): void;
   // Everything in flight, asked for on every render rather than fetched and held here. One copy of
   // worktrees.json in the renderer, so a worktree removed from the Ctrl+Shift+W list cannot leave a
   // card on the board behind it still reading `shipped · <branch> · terminal 3`.
@@ -287,7 +290,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       // Said once the write lands, since a write that lands clears the status bar.
       written = save().then((saved) => {
         const hidden = saved ? hiddenSelectedCard(state.board, state.selection, filter, Date.now(), editing !== null) : undefined;
-        if (hidden) options.onError(`"${hidden.title}" is hidden by the filter — Shift+F shows every card`);
+        if (hidden) options.onNotice(`"${hidden.title}" is hidden by the filter — Shift+F shows every card`);
         return saved;
       });
     }
@@ -328,7 +331,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // arrow, and nothing happens or ever will.
   function sayIfUnread(): void {
     if (isUnreadForGood(state, reads.pending())) {
-      options.onError('This board was not read, so nothing may be saved over it. Leave this screen and come back to read it again.');
+      options.onNotice('This board was not read, so nothing may be saved over it. Leave this screen and come back to read it again.');
     }
   }
 
@@ -359,12 +362,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     // old title and nothing says why, which reads as the keyboard having missed the keystroke.
     const card = cardAt(state.board, state.selection);
     if (field === 'title' && value.trim() === '' && card && hasSubtasks(state.board, state.selection)) {
-      options.onError(`"${card.title}" has subtasks — delete it with d`);
+      options.onNotice(`"${card.title}" has subtasks — delete it with d`);
     }
     // The other refusal worth a word: the card keeps the number it had, and nothing on screen would
     // say so. commitPullRequest asks pullRequestFrom on the same text, so the two agree by construction.
     if (field === 'pullRequest' && value.trim() !== '' && pullRequestFrom(value) === null) {
-      options.onError(`"${value.trim()}" is not a pull request number — write 14 or #14`);
+      options.onNotice(`"${value.trim()}" is not a pull request number — write 14 or #14`);
     }
     void apply(COMMITS[field](state, value));
     element.focus();
@@ -584,7 +587,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     // the one refusal you can reach with the mouse, and the only place that knows it was refused.
     if (id === '') return;
     const at = selectionOf(state.board, id);
-    if (!at) return options.onError('That card belongs to another project — a card stays on the board it was made on');
+    if (!at) return options.onNotice('That card belongs to another project — a card stays on the board it was made on');
     const row = realRow(visible, columnIndex, dropMarker.rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length);
     moveThenShip(at, dropCard(state.board, at, columnIndex, row), 'drop');
   }
@@ -738,7 +741,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   function ship(before: Card, landed: Card, home: ShipHome): void {
-    options.onError(`shipping "${before.title}"…`);
+    options.onNotice(`shipping "${before.title}"…`);
     const forgetHome = shipsAway.leave(options.projectPath, home);
     options.bridge.shipCard({
       projectPath: options.projectPath,
@@ -748,8 +751,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     }).then(
       async (result) => {
         forgetHome();
-        if (!result.ok) return options.onError(result.message);
-        options.onError('');
+        // A notice, not a failure, because main has already logged this one as the `ship` entry: through
+        // onError the log would hold every failed ship twice.
+        if (!result.ok) return options.onNotice(result.message);
+        options.onNotice('');
         await bringHome({
           read: () => readAgain(false),
           // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
@@ -874,7 +879,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     runAction(action: Action): void {
       if (busy()) return sayIfUnread();
       if (actsOnHiddenCard(state.board, visible, state.selection, action.kind)) {
-        return options.onError('The filter hides every card in this column — Shift+F shows them again');
+        return options.onNotice('The filter hides every card in this column — Shift+F shows them again');
       }
       switch (action.kind) {
         case 'board-select': {
@@ -910,7 +915,7 @@ export function createBoardView(options: BoardOptions): BoardView {
           // say one thing while the board does another.
           const above = rowAbove(visible, state.selection);
           const ring = attachmentRing(state.board, state.selection, above);
-          if (ring) return options.onError(`"${ring.title}" is already a subtask of this card`);
+          if (ring) return options.onNotice(`"${ring.title}" is already a subtask of this card`);
           return change(attachToCardAbove(state.board, state.selection, above));
         }
         case 'board-detach': return change(detachCard(state.board, state.selection));

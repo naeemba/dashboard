@@ -94,6 +94,7 @@ const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
 const statusError = createStatusError(bridge);
 const showError = statusError.show;
+const showNotice = statusError.notice;
 statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
 document.getElementById('title')?.append(tabStrip.element);
@@ -412,6 +413,7 @@ const buildPage = createPageBuilder({
   shellCommand: () => shellCommand,
   onChanged: () => renderStatus(),
   onError: showError,
+  onNotice: showNotice,
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
@@ -478,10 +480,10 @@ async function closeProject(slot: number): Promise<void> {
     // and the sheet below, so no keystroke can arrive in the gap.
     closing = false;
   }
-  if (refusal !== '') return showError('close', refusal);
+  if (refusal !== '') return showNotice('close', refusal);
   // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
   // is: cancelling the dialog leaves no path back here to clear it.
-  showError('close', '');
+  showNotice('close', '');
   // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
   // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
   // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
@@ -503,7 +505,7 @@ async function closeProject(slot: number): Promise<void> {
     // Read again with the page and for the same reason: the answer was given over a quiet project, and
     // a pane that took an agent or a question while the dialog was up is one the close refuses over.
     const late = await closeRefusalFor(closingPage);
-    if (late !== '') return showError('close', late);
+    if (late !== '') return showNotice('close', late);
     // The page's place in the list, found after that question rather than before it: asking main is a
     // round trip, and a project closed from elsewhere while it was out shifts every page after it
     // along. The index taken before would splice a different project out of the list.
@@ -646,7 +648,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'needs-you-next') return showError('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
+  if (action.kind === 'needs-you-next') return showNotice('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {
     worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);
     return void worktreeDialog.closed.then(() => {
@@ -683,7 +685,7 @@ function apply(action: Action): void {
     case 'terminal-zoom': return toggleZoom(page);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
-    case 'terminal-file-hints': return showError('file', showFileHints(page, openFileLink));
+    case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
@@ -967,6 +969,7 @@ async function start(): Promise<void> {
     binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
     onChanged: renderStatus,
     onError: showError,
+    onNotice: showNotice,
     onJump: goToPane,
     onJumpWorktree: jumpToWorktree,
     onJumpNeed: jumpToNeed,

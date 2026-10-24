@@ -18,6 +18,7 @@ export type CardsOptions = {
   // screens read the same file — this page and that project's own tab — and neither may clear a
   // message the other put on the bar.
   onError(slot: number, message: string): void;
+  onNotice(slot: number, message: string): void;
   // Handed straight to every stacked board, so all of them draw their badges from the renderer's one
   // copy of the record.
   worktrees(): readonly WorktreeEntry[];
@@ -65,6 +66,7 @@ export function createCardsView(options: CardsOptions): BoardView {
         if (page.project.path === activePath) options.onChanged();
       },
       onError: (message) => options.onError(page.slot, message),
+      onNotice: (message) => options.onNotice(page.slot, message),
       worktrees: options.worktrees,
     });
     const section = document.createElement('section');

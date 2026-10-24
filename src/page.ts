@@ -42,6 +42,8 @@ export type PageOptions = {
   onChanged(): void;
   // The status bar's error span, which only the owner that wrote a message may clear.
   onError(owner: string, message: string): void;
+  // The same span for what is not a failure, which the log leaves out. status-error.ts says why.
+  onNotice(owner: string, message: string): void;
   // Whether the manager's list is the screen in front, which is the one screen a repeat bell has
   // something new to say to. waiting.ts holds why.
   managerInFront(): boolean;
@@ -358,6 +360,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       onChanged: options.onChanged,
       // A slot each, so one project's board never clears another one's failure.
       onError: (message) => options.onError(`board:${slot}`, message),
+      onNotice: (message) => options.onNotice(`board:${slot}`, message),
       worktrees: options.worktrees,
     });
     views.board.append(page.board.element);

@@ -2,7 +2,11 @@ import type { DashboardBridge } from './bridge';
 import { shouldLogError } from './error-log';
 import { failureNotice } from './failure';
 
-export type StatusError = { element: HTMLElement; show(owner: string, message: string): void };
+export type StatusError = {
+  element: HTMLElement;
+  show(owner: string, message: string): void;
+  notice(owner: string, message: string): void;
+};
 
 // The status bar's error span. Out of renderer.ts, which had reached its 600-line ceiling.
 //
@@ -14,18 +18,25 @@ export type StatusError = { element: HTMLElement; show(owner: string, message: s
 // clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
 // look at another project's board and the message is gone while the card still is not on disk.
 //
-// Every message it shows is also a line in the log, which is the one place every error a person sees
-// already passes through.
+// A failure goes through show, and is also a line in the log, which is the one place every error a
+// person sees already passes through. Everything else the bar says — a hint, a refusal, progress like
+// `shipping "Fix login"…` — goes through notice, which draws the same and logs nothing: logged, every
+// ship would leave a red error line behind it and the log would read as a list of key presses.
 export function createStatusError(bridge: DashboardBridge): StatusError {
   const element = document.createElement('span');
   element.className = 'error';
   let errorOwner = '';
 
+  function notice(owner: string, message: string): void {
+    if (message === '' && errorOwner !== owner) return;
+    errorOwner = message === '' ? '' : owner;
+    element.textContent = message;
+  }
+
   function show(owner: string, message: string): void {
     if (message === '' && errorOwner !== owner) return;
     if (shouldLogError(message, element.textContent ?? '')) bridge.writeLog({ level: 'error', kind: 'error', message });
-    errorOwner = message === '' ? '' : owner;
-    element.textContent = message;
+    notice(owner, message);
   }
 
   // Failures nobody caught, from either side of the wire, under one owner so they never clear a board's
@@ -48,5 +59,5 @@ export function createStatusError(bridge: DashboardBridge): StatusError {
   window.addEventListener('unhandledrejection', (event) => {
     show('failure', failureNotice(event.reason));
   });
-  return { element, show };
+  return { element, show, notice };
 }

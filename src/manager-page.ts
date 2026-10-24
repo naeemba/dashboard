@@ -47,6 +47,8 @@ export type ManagerPageOptions = {
   onChanged(): void;
   // The status bar's error span, which only the owner that wrote a message may clear.
   onError(owner: string, message: string): void;
+  // The same span for what is not a failure, which the log leaves out. status-error.ts says why.
+  onNotice(owner: string, message: string): void;
   // The four things the renderer alone can do: land on a pane, answer one, close a project, and show
   // another section of this page. Their shapes are the views' own — this file passes them straight
   // through rather than putting a second spelling of each in front of the ones over in manager-view.
@@ -90,7 +92,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     onAnswer: options.onAnswer,
     onClose: options.onClose,
     onChanged: options.onChanged,
-    onError: (message) => options.onError('manager', message),
+    onNotice: (message) => options.onNotice('manager', message),
     binding: options.binding,
     reads,
     // The removal gives the keyboard back to the list after each question, and asks for the records
@@ -111,6 +113,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     // A slot each, and a different owner from the same project's own board, so the two screens reading
     // one file never clear each other's message.
     onError: (slot, message) => options.onError(`cards:${slot}`, message),
+    onNotice: (slot, message) => options.onNotice(`cards:${slot}`, message),
     worktrees: options.worktrees,
   });
   const command = createCommandView({
