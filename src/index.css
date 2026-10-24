@@ -337,7 +337,13 @@ body *:not(.pane, .pane *) {
 }
 
 /* min-height: 0 lets the list shrink below its rows and scroll, rather than pushing the column taller
-   than the page. The command list's prose cap does not apply: a log line is wanted at full width. */
+   than the page. The command list's prose cap and its room under the box do not apply: a log line is
+   wanted at full width, and the column's gap already spaces it. Two classes so it outranks
+   .command-list's margin, which comes later in this file. */
+.log-list.command-list {
+  margin: 0;
+}
+
 .log-list {
   flex: 1;
   min-height: 0;
@@ -348,9 +354,15 @@ body *:not(.pane, .pane *) {
 }
 
 /* One line each until unfolded, so a long message does not push the rest of the page off screen.
-   Block rather than the command row's flex: an ellipsis needs the text in a block, not a flex item. */
+   Block rather than the command row's flex: an ellipsis needs the text in a block, not a flex item.
+   A line, not the command row's card: a page of entries is the point, and a card each fits fifteen.
+   The command list's highlight still outranks this, so the selected line keeps its tint. */
 .log-list .log-row {
   display: block;
+  margin: 0;
+  padding: 2px 8px;
+  border: 0;
+  background: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

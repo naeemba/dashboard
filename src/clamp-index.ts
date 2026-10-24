@@ -7,7 +7,10 @@ export function clampIndex(value: number, lastIndex: number): number {
 // Where a selection lands once the list under it has been rebuilt: on the same thing it was on,
 // wherever that has moved to. A thing that is gone leaves the selection at the position it held,
 // clamped, rather than throwing it back to the top of the list.
-export function heldIndex(keys: readonly string[], key: string, previous: number): number {
-  const found = keys.indexOf(key);
+//
+// Any key compared with ===: a string for a list whose rows are named, the row's own object for one
+// whose rows are not. Undefined is a selection that was on nothing, which holds the position.
+export function heldIndex<Key>(keys: readonly Key[], key: Key | undefined, previous: number): number {
+  const found = keys.findIndex((each) => each === key);
   return found === -1 ? clampIndex(previous, keys.length - 1) : found;
 }
