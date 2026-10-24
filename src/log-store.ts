@@ -1,4 +1,4 @@
-import { appendFileSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
+import { appendFileSync, closeSync, openSync, readFileSync, readSync, renameSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import {
   LOG_FILE, LOG_FILE_COUNT, LOG_FILE_LIMIT, logFileNames, needsRotation, parseLogLine,
@@ -10,6 +10,8 @@ import {
 // never interleave in the file or start the same rotation twice, and an append is microseconds.
 export type LogStore = { file: string; log(draft: LogDraft): void; tail(count: number): LogEntry[] };
 
+const NEWLINE = 0x0a;
+
 function sizeOf(file: string): number {
   try {
     return statSync(file).size;
@@ -18,29 +20,54 @@ function sizeOf(file: string): number {
   }
 }
 
+function lastByte(file: string, size: number): number {
+  const descriptor = openSync(file, 'r');
+  try {
+    const buffer = Buffer.alloc(1);
+    readSync(descriptor, buffer, 0, 1, size - 1);
+    return buffer[0];
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 export function logStore(directory: string, onAppended: (entry: LogEntry) => void, limit = LOG_FILE_LIMIT): LogStore {
   const files = logFileNames(path.join(directory, LOG_FILE), LOG_FILE_COUNT);
 
   // The oldest goes, then every file moves a place down. A file missing from the middle is skipped:
-  // there is nothing of it to move.
+  // there is nothing of it to move. Any other failure stops the rotation and reaches log(), which drops
+  // the entry: skipping it would let the live file stay over the limit and shift the history away on
+  // every later write.
   function rotate(): void {
     rmSync(files[files.length - 1], { force: true });
     for (let index = files.length - 2; index >= 0; index--) {
       try {
         renameSync(files[index], files[index + 1]);
-      } catch {
-        // Nothing at this place in the list.
+      } catch (error: unknown) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       }
     }
+  }
+
+  // A crash mid-write leaves the live file without its last newline. The first append after start looks
+  // at that one byte, so the next entry starts its own line instead of gluing onto the broken one.
+  let liveFileChecked = false;
+  function needsLeadingNewline(): boolean {
+    if (liveFileChecked) return false;
+    const size = sizeOf(files[0]);
+    const endsWithNewline = size === 0 || lastByte(files[0], size) === NEWLINE;
+    liveFileChecked = true;
+    return !endsWithNewline;
   }
 
   // A write that fails costs that entry and nothing else. Logging is never a reason for the thing being
   // logged to fail, and the terminal the app started from still hears about it.
   function log(draft: LogDraft): void {
     const entry: LogEntry = { time: new Date().toISOString(), ...draft };
-    const line = `${JSON.stringify(entry)}\n`;
+    let line = `${JSON.stringify(entry)}\n`;
     try {
       if (needsRotation(sizeOf(files[0]), Buffer.byteLength(line), limit)) rotate();
+      else if (needsLeadingNewline()) line = `\n${line}`;
       appendFileSync(files[0], line);
     } catch (error: unknown) {
       console.error('log entry not written:', error);
@@ -56,7 +83,8 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
   // The newest `count`, oldest first. Files are read newest first and stop as soon as there are enough,
   // so the usual read is the live file alone.
   function tail(count: number): LogEntry[] {
-    const entries: LogEntry[] = [];
+    if (count <= 0) return [];
+    let entries: LogEntry[] = [];
     for (const file of files) {
       let text: string;
       try {
@@ -64,7 +92,7 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
       } catch {
         continue;
       }
-      entries.unshift(...text.split('\n').flatMap((line) => parseLogLine(line) ?? []));
+      entries = [...text.split('\n').flatMap((line) => parseLogLine(line) ?? []), ...entries];
       if (entries.length >= count) break;
     }
     return entries.slice(-count);
