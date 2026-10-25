@@ -1,6 +1,10 @@
 {
   "columns": [
     {
+      "name": "Backlog",
+      "cards": []
+    },
+    {
       "name": "Todo",
       "cards": [
         {
@@ -72,7 +76,8 @@
           "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
           "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
           "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -82,14 +87,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "7dbfc844-78a3-4661-9b7b-a855fe3eefe3",
-          "title": "Add a logger with a log section in the manager",
-          "notes": "JSON-lines log in userData, rotated across 5 files of 5 MB (25 MB total). Main writes; the renderer sends over log:write, reads with log:read, and gets live updates via log:appended. Fifth manager section \"log\": rows newest first, level and text filter, Enter opens the entry. Logs errors (every failureText), app/project/pane/agent lifecycle, card moves, ships, worktrees and board CLI writes. Never pane output, typed text or command arguments.",
-          "priority": "medium"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -175,6 +173,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "7dbfc844-78a3-4661-9b7b-a855fe3eefe3",
+          "title": "Add a logger with a log section in the manager",
+          "notes": "JSON-lines log in userData, rotated across 5 files of 5 MB (25 MB total). Main writes; the renderer sends over log:write, reads with log:read, and gets live updates via log:appended. Fifth manager section \"log\": rows newest first, level and text filter, Enter opens the entry. Logs errors (every failureText), app/project/pane/agent lifecycle, card moves, ships, worktrees and board CLI writes. Never pane output, typed text or command arguments.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-25T12:32:32.973Z",
+          "branch": "logger",
+          "pullRequest": 81,
+          "comments": [
+            {
+              "at": "2026-10-25T12:32:32.973Z",
+              "body": "PR #81 open: JSON-lines log in five rotated 5 MB files, a log section in the manager with a filter, failures and lifecycle events logged. Not done: board-kind errors log as error; command-screen runs not logged."
             }
           ]
         }
