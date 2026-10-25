@@ -175,22 +175,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "7dbfc844-78a3-4661-9b7b-a855fe3eefe3",
-          "title": "Add a logger with a log section in the manager",
-          "notes": "JSON-lines log in userData, rotated across 5 files of 5 MB (25 MB total). Main writes; the renderer sends over log:write, reads with log:read, and gets live updates via log:appended. Fifth manager section \"log\": rows newest first, level and text filter, Enter opens the entry. Logs errors (every failureText), app/project/pane/agent lifecycle, card moves, ships, worktrees and board CLI writes. Never pane output, typed text or command arguments.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-25T12:32:32.973Z",
-          "branch": "logger",
-          "pullRequest": 81,
-          "comments": [
-            {
-              "at": "2026-10-25T12:32:32.973Z",
-              "body": "PR #81 open: JSON-lines log in five rotated 5 MB files, a log section in the manager with a filter, failures and lifecycle events logged. Not done: board-kind errors log as error; command-screen runs not logged."
-            }
-          ]
         }
       ]
     },
@@ -909,6 +893,26 @@
             {
               "at": "2026-09-30T00:02:30.903Z",
               "body": "Also in PR #65: once a card's review has landed it in Done, the app removes its worktree (branch kept, never forced) as soon as no pane has a shell left in it. If git refuses over uncommitted files, the card says so and the worktree stays on the worktree list."
+            }
+          ]
+        },
+        {
+          "id": "7dbfc844-78a3-4661-9b7b-a855fe3eefe3",
+          "title": "Add a logger with a log section in the manager",
+          "notes": "JSON-lines log in userData, rotated across 5 files of 5 MB (25 MB total). Main writes; the renderer sends over log:write, reads with log:read, and gets live updates via log:appended. Fifth manager section \"log\": rows newest first, level and text filter, Enter opens the entry. Logs errors (every failureText), app/project/pane/agent lifecycle, card moves, ships, worktrees and board CLI writes. Never pane output, typed text or command arguments.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-25T13:28:40.862Z",
+          "branch": "logger",
+          "pullRequest": 81,
+          "comments": [
+            {
+              "at": "2026-10-25T12:32:32.973Z",
+              "body": "PR #81 open: JSON-lines log in five rotated 5 MB files, a log section in the manager with a filter, failures and lifecycle events logged. Not done: board-kind errors log as error; command-screen runs not logged."
+            },
+            {
+              "at": "2026-10-25T13:28:40.862Z",
+              "body": "Merged PR #81 (v1.16.0): application log in five rotated 5 MB JSON-lines files with a log section in the manager. Two review rounds. Follow-up: a project opened without a .dashboard folder gets no board watcher, so board command moves there go unlogged until the board is opened."
             }
           ]
         }
