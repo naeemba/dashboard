@@ -42,3 +42,13 @@ export function registerProjectFiles(boards: BoardWatchers, changes: BoardChange
     writeNotes(projectPath, text);
   });
 }
+
+// Watched from the open, not only from the first board read: a `board move` an agent runs before anyone
+// presses Ctrl+B would otherwise reach no watcher and never be logged. The board on disk is the one the
+// first change is compared with. A project with no .dashboard yet refuses the watch, and board:read
+// starts it once the folder exists.
+export function watchProjectBoard(boards: BoardWatchers, changes: BoardChanges, projectPath: string): void {
+  const board = peekBoard(projectPath);
+  if (board) changes.seen(projectPath, board);
+  boards.watch(projectPath);
+}

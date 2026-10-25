@@ -29,8 +29,8 @@ worktree). It is read in a fifth section of the manager.
 ## 2. Files and channels
 
 - `src/log-entry.ts`, shared and pure, beside `log-entry.test.ts`: the types,
-  `parseLogLine(line)` (an entry or `undefined`), `rotationNames(base, count)`
-  (the rename order), `needsRotation(currentSize, appendSize, limit)`, and
+  `parseLogLine(line)` (an entry or `undefined`), `logFileNames(base, count)`
+  (the five file names, live first: the rename order), `needsRotation(currentSize, appendSize, limit)`, and
   `matchesLogFilter(entry, query)`: every word of the query appears in the level, kind, project or message.
 - `src/log-store.ts`, main only: `log(draft)` and `tail(count)`. Writes are
   synchronous: main is one thread, so two entries cannot interleave and no
@@ -51,17 +51,19 @@ worktree). It is read in a fifth section of the manager.
 | kind | level | from | example |
 |---|---|---|---|
 | `app` | info | main | `started v1.42.0`, `quit` |
-| `project` | info | renderer | `opened`, `closed` |
+| `project` | info | main (`projects:open`, `projects:close`) | `opened`, `closed` |
 | `pane` | info, warn on non-zero exit | main | `terminal 3 exited (code 1)` |
-| `agent` | info | main | `started in terminal 2`, `exited` |
-| `card` | info | renderer | `"Fix login" Doing → Review` |
-| `ship` | info, error on failure | renderer | `fix-login worktree created` |
-| `worktree` | info, error on failure | main | `removed fix-login` |
+| `agent` | info | main | `started in terminal 2`, `agent in terminal 2 exited (code 0)` |
+| `card` | info | main (`board-changes.ts`, on the app's own board writes) | `"Fix login" Doing → Review` |
+| `ship` | info, error on failure | main (`worktree:create`) | `fix-login worktree created` |
+| `worktree` | info, warn when git refuses | main | `removed fix-login` |
 | `board` | info on a `board` command write, error on unreadable or failed write | main | `board.json unreadable, kept as board.broken.json` |
-| `error` | error | renderer | every message that goes through `failureText` |
+| `error` | error | renderer | every failure the status bar shows through `show` |
 
-`failureText` is where every error shown to a person already goes, so the
-`error` row is logged there once rather than at each of its callers.
+The status bar's `show` (`src/status-error.ts`) is where every failure shown
+to a person arrives, so the `error` row is logged there once rather than at
+each of its callers. Hints, refusals and progress go through `notice` and are
+not logged.
 
 Never logged: pane output, anything typed into a pane, the command text from
 the command screen, the contents of `.env` or settings. Typed text carries

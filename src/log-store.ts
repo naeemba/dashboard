@@ -55,20 +55,20 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
   function needsLeadingNewline(): boolean {
     if (liveFileChecked) return false;
     const size = sizeOf(files[0]);
-    const endsWithNewline = size === 0 || lastByte(files[0], size) === NEWLINE;
-    liveFileChecked = true;
-    return !endsWithNewline;
+    return size !== 0 && lastByte(files[0], size) !== NEWLINE;
   }
 
   // A write that fails costs that entry and nothing else. Logging is never a reason for the thing being
   // logged to fail, and the terminal the app started from still hears about it.
   function log(draft: LogDraft): void {
-    const entry: LogEntry = { time: new Date().toISOString(), ...draft };
+    const entry: LogEntry = { ...draft, time: new Date().toISOString() };
     let line = `${JSON.stringify(entry)}\n`;
     try {
       if (needsRotation(sizeOf(files[0]), Buffer.byteLength(line), limit)) rotate();
       else if (needsLeadingNewline()) line = `\n${line}`;
       appendFileSync(files[0], line);
+      // Only once the append has landed: a failed one leaves the broken line still unterminated.
+      liveFileChecked = true;
     } catch (error: unknown) {
       console.error('log entry not written:', error);
       return;

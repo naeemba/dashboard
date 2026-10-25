@@ -31,7 +31,7 @@ import { registerPaneChannels } from './pane-channels';
 import { registerPaneOpeners } from './pane-openers';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
 import { registerLog } from './log-ipc';
-import { registerProjectFiles } from './project-files-ipc';
+import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
 import { sessionStore } from './session-store';
 import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
@@ -106,8 +106,8 @@ const failures = failureReporter({
 });
 process.on('uncaughtException', (error: unknown) => failures.report(error));
 process.on('unhandledRejection', (error: unknown) => failures.report(error));
-const logFile = registerLog(app.getPath('userData'), sendToRenderer);
-const boardLog = boardChanges((draft) => logFile.log(draft), peekBoard);
+const logStore = registerLog(app.getPath('userData'), sendToRenderer);
+const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a
 // launch that cannot read it opens on the shipped defaults with nothing you set applied — worth a line
@@ -490,7 +490,7 @@ function spawnTerminal(id: string): void {
     if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
     const { slot, index } = paneFromId(id);
-    logFile.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
+    logStore.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
@@ -542,7 +542,7 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
   agentsAtWork.started(id, Date.now());
   const { slot, index } = paneFromId(id);
-  logFile.log(agentStartEntry(projects[slot]?.path, index));
+  logStore.log(agentStartEntry(projects[slot]?.path, index));
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -583,9 +583,10 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
   if (replaced) {
-    logFile.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
+    logStore.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
     spawnProject(picked, index);
+    watchProjectBoard(boards, boardLog, picked.path);
   }
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
@@ -607,7 +608,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
-  logFile.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
+  logStore.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
   for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
@@ -782,6 +783,9 @@ const reviews = reviewSweep({
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
   queue: shipInProject,
+  // Through the move log, so the watcher's read-back finds the board it already holds and does not
+  // log the sweep's own move as the `board` command's.
+  writeBoard: (projectPath, board) => boardLog.wrote(projectPath, board, () => writeBoard(projectPath, board)),
 });
 
 // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
@@ -872,7 +876,7 @@ async function shipCard(request: ShipRequest): Promise<ShipResult> {
 }
 ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
   const result = await shipCard(request);
-  logFile.log(shipEntry(request, result));
+  logStore.log(shipEntry(request, result));
   return result;
 });
 
@@ -963,7 +967,7 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
 
 ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean, projectPath: string) => {
   const result = await removeWorktree(worktreePath, force, projectPath);
-  logFile.log(removalEntry(projectPath, worktreePath, result));
+  logStore.log(removalEntry(projectPath, worktreePath, result));
   return result;
 });
 
@@ -1047,11 +1051,11 @@ function createWindow(): void {
 }
 
 app.on('ready', () => {
-  logFile.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
+  logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
   createWindow();
 });
 app.on('will-quit', () => {
-  logFile.log({ level: 'info', kind: 'app', message: 'quit' });
+  logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.

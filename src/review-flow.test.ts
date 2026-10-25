@@ -70,6 +70,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
         return { ok: true, entry: started };
       },
       queue: (_key, run) => run(),
+      writeBoard: (projectPath, board) => { writeBoard(projectPath, board); },
       ...over,
     },
   };

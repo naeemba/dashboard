@@ -40,7 +40,10 @@ export function createLogView(options: LogOptions): LogView {
 
   // Oldest first, as the file holds them; drawn reversed.
   let entries: LogEntry[] = [];
-  const unfolded = new Set<LogEntry>();
+  // Keyed on the line, not the object: arriving re-reads the file into fresh objects, and the selection
+  // and the unfolded rows have to survive that.
+  const keyOf = (entry: LogEntry): string => JSON.stringify(entry);
+  const unfolded = new Set<string>();
   let selected = 0;
   let shown: LogEntry[] = [];
   let readFailed = false;
@@ -52,7 +55,7 @@ export function createLogView(options: LogOptions): LogView {
   function refilter(follow: boolean): void {
     const previous = shown[selected];
     shown = entries.filter((entry) => matchesLogFilter(entry, input.value)).reverse();
-    selected = follow ? heldIndex(shown, previous, selected) : 0;
+    selected = follow ? heldIndex(shown.map(keyOf), previous && keyOf(previous), selected) : 0;
   }
 
   // `scroll` only when a key or a click moved the selection: a line arriving must not drag a list
@@ -62,7 +65,7 @@ export function createLogView(options: LogOptions): LogView {
       const row = document.createElement('li');
       row.className = `log-row level-${entry.level}`;
       row.classList.toggle('highlighted', index === selected);
-      row.classList.toggle('unfolded', unfolded.has(entry));
+      row.classList.toggle('unfolded', unfolded.has(keyOf(entry)));
       const project = entry.project === undefined ? '' : `  ${entry.project}`;
       row.textContent = `${new Date(entry.time).toLocaleString()}  ${entry.level}  ${entry.kind}${project}  ${entry.message}`;
       // A click is the selection moving there, then what Enter does there. The keyboard goes back to the
@@ -83,8 +86,9 @@ export function createLogView(options: LogOptions): LogView {
   function toggle(): void {
     const entry = shown[selected];
     if (entry === undefined) return;
-    if (unfolded.has(entry)) unfolded.delete(entry);
-    else unfolded.add(entry);
+    const key = keyOf(entry);
+    if (unfolded.has(key)) unfolded.delete(key);
+    else unfolded.add(key);
     draw(true);
   }
 
