@@ -2,11 +2,13 @@ import { appendFileSync, chmodSync, existsSync, mkdtempSync, rmSync, statSync, w
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LogEntry } from './log-entry';
+import type { LogDraft, LogEntry } from './log-entry';
 import { logStore } from './log-store';
 
-// Lets one test make a rename fail the way a busy or locked file does; every other test renames for real.
+// Lets one test make a rename or an append fail the way a busy or locked file does; every other test
+// writes for real.
 const renames = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
+const appends = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
   return {
@@ -14,6 +16,10 @@ vi.mock('node:fs', async (importOriginal) => {
     renameSync: (from: string, to: string) => {
       if (renames.failure) throw renames.failure;
       return actual.renameSync(from, to);
+    },
+    appendFileSync: (...parameters: Parameters<typeof actual.appendFileSync>) => {
+      if (appends.failure) throw appends.failure;
+      return actual.appendFileSync(...parameters);
     },
   };
 });
@@ -128,6 +134,28 @@ describe('logStore', () => {
     expect(store.tail(10).at(-1)?.message).toBe('started');
     store.log(info('next'));
     expect(store.tail(10).map((entry) => entry.message)).toEqual(['started', 'next']);
+  });
+
+  it('still starts a fresh line after a half-written line when the first append failed', () => {
+    appendFileSync(path.join(directory, 'dashboard.log'), '{"time":"2026');
+    const store = logStore(directory, () => undefined);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    appends.failure = Object.assign(new Error('resource busy'), { code: 'EBUSY' });
+    try {
+      store.log(info('lost'));
+    } finally {
+      appends.failure = undefined;
+      consoleError.mockRestore();
+    }
+    store.log(info('kept'));
+    expect(store.tail(10).map((entry) => entry.message)).toEqual(['kept']);
+  });
+
+  it('stamps the time itself, whatever time the draft carries', () => {
+    const announced: LogEntry[] = [];
+    const store = logStore(directory, (entry) => announced.push(entry));
+    store.log({ ...info('started'), time: '1999-01-01T00:00:00.000Z' } as LogDraft);
+    expect(announced[0].time).not.toBe('1999-01-01T00:00:00.000Z');
   });
 
   it('reads a live file with more lines than one call can spread', () => {

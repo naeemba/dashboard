@@ -40,9 +40,11 @@ export function createLogView(options: LogOptions): LogView {
 
   // Oldest first, as the file holds them; drawn reversed.
   let entries: LogEntry[] = [];
-  // Keyed on the line, not the object: arriving re-reads the file into fresh objects, and the selection
-  // and the unfolded rows have to survive that.
-  const keyOf = (entry: LogEntry): string => JSON.stringify(entry);
+  // Keyed on the fields, not the object: arriving re-reads the file into fresh objects, and the selection
+  // and the unfolded rows have to survive that. In a fixed order, because an entry that arrived live and
+  // the same entry read back from the file hold their properties in different orders.
+  const keyOf = (entry: LogEntry): string =>
+    JSON.stringify([entry.time, entry.level, entry.kind, entry.project ?? '', entry.message]);
   const unfolded = new Set<string>();
   let selected = 0;
   let shown: LogEntry[] = [];
