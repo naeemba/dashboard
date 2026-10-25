@@ -51,18 +51,21 @@ export type Action =
   | { kind: 'command-select'; direction: 'up' | 'down' }
   | { kind: 'command-open' }
   | { kind: 'command-run-in-panes' }
-  | { kind: 'command-cancel' };
+  | { kind: 'command-cancel' }
+  | { kind: 'log-select'; direction: 'up' | 'down' }
+  | { kind: 'log-open' }
+  | { kind: 'log-filter-reset' };
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
-// `terminals`, `board`, `manager` and `command` are each heard only on their own screen, so the
+// `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
 // board's bare `D` never reaches a terminal.
 //
 // `manager-page` is the one that is not a mode: it means any section of the manager, whichever of its
-// four views is showing. The strip keys need it, because they have to work on all four and an action
+// five views is showing. The strip keys need it, because they have to work on all five and an action
 // may name only one scope — two rows sharing a binding is what this app already treats as a
 // hand-edited settings file. It cannot be answered from the mode alone, because `board` is a mode the
 // manager shares with every project, so `hears` is told which page you are on.
-export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'command' | 'manager-page';
+export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'manager-page';
 
 // Whether two actions can be heard at the same moment, which is the whole of what "these two want the
 // same key" means. Exported because two places ask it and they must not each hold their own idea of
@@ -71,7 +74,7 @@ export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'comman
 // to another one — or warns about a clash that cannot happen.
 //
 // Scopes are not a flat list of equals: `global` is heard everywhere, and `manager-page` covers the
-// four modes the manager shows.
+// five modes the manager shows.
 export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
   if (one === 'global' || other === 'global' || one === other) return true;
   // Asked of SECTIONS rather than through isSection, which takes a Mode: a scope is not a mode, and a
@@ -84,7 +87,8 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.
-export type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'sections';
+export type ActionGroup =
+  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'sections';
 
 export type ActionEntry = {
   // It is the key in settings.json, so renaming one is renaming a line in the user's file. A rename
@@ -430,7 +434,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     mac: 'Backspace', other: 'Backspace',
   },
   // The strip along the top of the manager page. manager-page scope, because they have to work on all
-  // four sections and two of those — board and notes — are modes every project also has, and a
+  // five sections and two of those — board and notes — are modes every project also has, and a
   // project's own board or notes must not hear these.
   //
   // Alt+H and Alt+L are the vim directions, the same two letters terminal-move already uses for left
@@ -441,7 +445,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   // Their own group, not the manager's: the help dialog prints a screen's keys from the group named
   // after that screen, so in the manager group these two would be listed on the general list and
   // nowhere else — invisible on the board, the command screen and the notes, which are the places you
-  // most need to know how to get out. helpSections prints this group on all four sections instead.
+  // most need to know how to get out. helpSections prints this group on all five sections instead.
   {
     name: 'section-previous', description: 'The section to the left, along the top',
     group: 'sections', scope: 'manager-page',
@@ -478,6 +482,21 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'command-cancel', description: 'Stop a run',
     group: 'command', scope: 'command', action: { kind: 'command-cancel' },
     mac: 'Escape', other: 'Escape',
+  },
+  // The log section. Bare arrows, a bare Enter and Escape, heard on this screen only, for the command
+  // screen's reason. No letter key at all: the filter box holds the keyboard and takes every letter.
+  ...(['up', 'down'] as const).map((direction): ActionEntry => ({
+    name: `log-select-${direction}`, description: `Move the selection ${direction}`,
+    group: 'log', scope: 'log', action: { kind: 'log-select', direction },
+    mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],
+  })),
+  {
+    name: 'log-open', description: 'Unfold the entry, or fold it again',
+    group: 'log', scope: 'log', action: { kind: 'log-open' }, mac: 'Enter', other: 'Enter',
+  },
+  {
+    name: 'log-filter-reset', description: 'Empty the filter',
+    group: 'log', scope: 'log', action: { kind: 'log-filter-reset' }, mac: 'Escape', other: 'Escape',
   },
 ];
 

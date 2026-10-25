@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BOARD_FILE_PATH, parseBoard, readBoard, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, parseBoard, readBoard } from './board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from './failure';
 import { allCards, cardById, type Board } from './board';
@@ -49,6 +49,8 @@ export type ReviewPorts = {
   // Run this with the project's git queue held — the same queue the ships use, so a review and a ship
   // of two different cards in one repository cannot land on git's index lock together.
   queue: <T>(key: string, run: () => Promise<T>) => Promise<T>;
+  // Write the project's board. Main's watcher is not told, so the screen still redraws from it.
+  writeBoard: (projectPath: string, board: Board) => void;
 };
 
 // The pull request on a worktree's own board, or null when the agent has not opened one yet. That
@@ -92,12 +94,12 @@ function projectBoard(projectPath: string): Board | null {
 // The app's own move on a project's board. Deliberately not remembered the way board:write is: the
 // screen has not heard of this change, so main's watcher has to read it back as somebody else's write
 // and redraw — the same path a card moved from the `board` command takes.
-function editProjectBoard(projectPath: string, edit: (board: Board) => Board | null): void {
+function editProjectBoard(ports: ReviewPorts, projectPath: string, edit: (board: Board) => Board | null): void {
   try {
     const next = edit(readBoard(projectPath).board);
     // Null is the edit having nothing to do. The file's bytes and its mtime are left alone, so no
     // board is redrawn for a move that did not happen.
-    if (next) writeBoard(projectPath, next);
+    if (next) ports.writeBoard(projectPath, next);
   } catch {
     // A board that cannot be read or written. The review itself is unaffected, and the worktree list
     // still says where this card's work went.
@@ -171,7 +173,7 @@ async function clearWorktree(ports: ReviewPorts, entry: WorktreeEntry): Promise<
     .catch((error: unknown) => ({ ok: false, message: failureText(error), dirty: [] as string[] }));
   if (removed.ok) return;
   const reason = refusal(entry, removed, 'remove it from the worktree list');
-  editProjectBoard(entry.projectPath, (board) => worktreeKept(board, entry.cardId, reason));
+  editProjectBoard(ports, entry.projectPath, (board) => worktreeKept(board, entry.cardId, reason));
 }
 
 export type ReviewSweep = {
@@ -272,7 +274,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     reviewed.add(entry.cardId);
     // Before the swap, and whether or not the swap works: the card is finished and nothing has checked
     // it, which is the whole of what the column says.
-    editProjectBoard(entry.projectPath, (board) => intoReview(board, entry.cardId));
+    editProjectBoard(ports, entry.projectPath, (board) => intoReview(board, entry.cardId));
     const swap = await ports
       .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
       .catch((error: unknown) => ({
@@ -286,7 +288,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // The card is the only place this can be said. A review starts on a timer rather than a keystroke,
     // so there is no status bar waiting on an answer and nothing on screen it belongs to.
     if (swap.message !== '') {
-      editProjectBoard(entry.projectPath, (board) => reviewRefused(board, entry.cardId, swap.message));
+      editProjectBoard(ports, entry.projectPath, (board) => reviewRefused(board, entry.cardId, swap.message));
     }
   }
 

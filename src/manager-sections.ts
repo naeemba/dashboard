@@ -15,6 +15,8 @@ export const SECTIONS: readonly { name: string; mode: Mode }[] = [
   // Last on purpose. Alt+H and Alt+L walk this order, and putting a fourth name anywhere but the end
   // would move the three that were already there under fingers that know where they are.
   { name: 'notes', mode: 'notes' },
+  // Last for the same reason notes was.
+  { name: 'log', mode: 'log' },
 ];
 
 // Where this mode sits on the strip, or -1 for a mode the manager never shows. Board is a mode the

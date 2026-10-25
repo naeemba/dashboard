@@ -68,6 +68,9 @@ export function modeLabel(page: StatusPage): string {
   // end of the bar to follow. Without the branch it would fall through to the pane label below and
   // name a terminal you are not looking at.
   if (page.mode === 'notes') return 'notes';
+  // The filter box is the whole of what this screen takes, as the notes box is, so it is named and
+  // nothing more rather than falling through to a pane you are not looking at.
+  if (page.mode === 'log') return 'log';
   if (page.mode === 'command') return page.commandStatusLabel;
   if (page.paneCount === 0) return '';
   const label = paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory), page.focusedName);

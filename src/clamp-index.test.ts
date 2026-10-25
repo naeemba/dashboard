@@ -29,4 +29,15 @@ describe('heldIndex', () => {
   it('answers 0 for a list with nothing left in it', () => {
     expect(heldIndex([], 'b', 3)).toBe(0);
   });
+
+  // The log's rows have no key of their own, so the entry itself is the key: the same object is the
+  // same line, and an equal-looking one is not.
+  it('follows an object by identity rather than by what it holds', () => {
+    const held = { message: 'b' };
+    expect(heldIndex([{ message: 'a' }, { message: 'b' }, held], held, 0)).toBe(2);
+  });
+
+  it('holds the position when there was nothing selected before', () => {
+    expect(heldIndex(['a', 'b'], undefined, 1)).toBe(1);
+  });
 });

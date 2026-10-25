@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, Notification } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
@@ -16,18 +16,22 @@ import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-s
 import { anyShellStandsIn } from './shell-directory';
 import { commandOutput, shellDirectories } from './shell-directory-lookup';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
-import { taskRunner } from './task-runner';
+import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
   EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
 } from './terminals';
-import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
+import { boardChanges } from './board-changes';
+import { BOARD_FILE_PATH, peekBoard, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
+import { registerPaneChannels } from './pane-channels';
 import { registerPaneOpeners } from './pane-openers';
-import { registerProjectFiles } from './project-files-ipc';
+import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
+import { registerLog } from './log-ipc';
+import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
 import { sessionStore } from './session-store';
 import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
@@ -102,6 +106,8 @@ const failures = failureReporter({
 });
 process.on('uncaughtException', (error: unknown) => failures.report(error));
 process.on('unhandledRejection', (error: unknown) => failures.report(error));
+const logStore = registerLog(app.getPath('userData'), sendToRenderer);
+const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a
 // launch that cannot read it opens on the shipped defaults with nothing you set applied — worth a line
@@ -216,7 +222,10 @@ const boardCommand = path
 const paneEnvironment = { ...process.env, DASHBOARD_BOARD: boardCommand } as Record<string, string>;
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
-const boards = boardWatchers((projectPath) => sendToRenderer('board:change', projectPath));
+const boards = boardWatchers((projectPath) => {
+  sendToRenderer('board:change', projectPath);
+  boardLog.changed(projectPath);
+});
 // What each terminal id runs and where. Every pane is the same shell and differs only in what it is
 // asked to run: nothing for the five terminals, nvim for the editor. The editor is registered here like
 // any other, which is what lets the renderer start it later through the ordinary restart path.
@@ -480,6 +489,8 @@ function spawnTerminal(id: string): void {
     // renderer a pane that is busy working had died.
     if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
+    const { slot, index } = paneFromId(id);
+    logStore.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
     sendToRenderer('pty:exit', id, exitCode);
   });
@@ -530,6 +541,8 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
   agentsAtWork.started(id, Date.now());
+  const { slot, index } = paneFromId(id);
+  logStore.log(agentStartEntry(projects[slot]?.path, index));
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -570,8 +583,10 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   const index = matchIndex === -1 ? projects.length : matchIndex;
   const replaced = replacesProject(projects[index], picked);
   if (replaced) {
+    logStore.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
     spawnProject(picked, index);
+    watchProjectBoard(boards, boardLog, picked.path);
   }
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
@@ -593,6 +608,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
+  logStore.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
   for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
@@ -648,40 +664,8 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-// Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
-// to land on. Without that half you arrive at whatever project you were last on and go looking for the
-// pane the banner had already named.
-ipcMain.on('notification:show', (_event, title: string, body: string, paneId: string) => {
-  const notification = new Notification({ title, body });
-  notification.on('click', () => {
-    // Landing on the pane is no use behind a window that is not on screen. macOS activates the app
-    // for a click but leaves a minimized window in the Dock, and on Windows and Linux nothing
-    // activates it at all, so ask for the window every time. show() is the hidden-to-shown
-    // transition; coming back from the Dock is restore()'s, so both are needed.
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    sendToRenderer('notification:click', paneId);
-  });
-  notification.show();
-});
-
-ipcMain.on('pty:input', (_event, id: string, data: string) => {
-  shells.get(id)?.write(data);
-});
-// Recorded whether or not a shell is listening, because the pane that has none is exactly the pane
-// about to get one: a pane whose shell exited, the editor before nvim is started, a pane a ship is
-// about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
-ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
-  paneSizes.set(id, { cols, rows });
-  shells.get(id)?.resize(cols, rows);
-});
-ipcMain.on('pty:restart', (_event, id: string) => {
-  if (!shells.has(id)) spawnTerminal(id);
-});
-registerProjectFiles(boards);
+registerPaneChannels({ shells, paneSizes, spawnTerminal, window: liveWindow, send: sendToRenderer });
+registerProjectFiles(boards, boardLog);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -799,6 +783,9 @@ const reviews = reviewSweep({
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
   queue: shipInProject,
+  // Through the move log, so the watcher's read-back finds the board it already holds and does not
+  // log the sweep's own move as the `board` command's.
+  writeBoard: (projectPath, board) => boardLog.wrote(projectPath, board, () => writeBoard(projectPath, board)),
 });
 
 // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
@@ -840,7 +827,7 @@ async function runShip(request: ShipRequest): Promise<ShipResult> {
   return attachPane(entry, slot, workPrompt(cardId));
 }
 
-ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<ShipResult> => {
+async function shipCard(request: ShipRequest): Promise<ShipResult> {
   const { projectPath, cardId, title, slot } = request;
   // The board already declines to ship from the manager's page. This is the second lock, for a caller
   // that gets past it: with no project behind it, git would run in whatever folder the app started in.
@@ -886,6 +873,11 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest): Promise<
     // nothing on screen able to clear it.
     shippingCards.delete(cardId);
   }
+}
+ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
+  const result = await shipCard(request);
+  logStore.log(shipEntry(request, result));
+  return result;
 });
 
 // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
@@ -973,20 +965,16 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
   }
 }
 
-ipcMain.handle('worktree:remove', (_event, worktreePath: string, force: boolean, projectPath: string) => (
-  removeWorktree(worktreePath, force, projectPath)
-));
+ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean, projectPath: string) => {
+  const result = await removeWorktree(worktreePath, force, projectPath);
+  logStore.log(removalEntry(projectPath, worktreePath, result));
+  return result;
+});
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
 // last picked.
-const tasks = taskRunner({
-  send: (result) => sendToRenderer('task:update', result),
-  shellCommand: () => shellCommand,
-});
-
-ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => tasks.run(command, projectPaths));
-ipcMain.on('task:cancel', () => tasks.cancel());
+const tasks = registerTasks({ send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -1062,8 +1050,12 @@ function createWindow(): void {
   failures.windowOpened();
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+  logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
+  createWindow();
+});
 app.on('will-quit', () => {
+  logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.

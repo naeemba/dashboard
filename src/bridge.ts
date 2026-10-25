@@ -7,6 +7,7 @@ import type { Handover } from './nvim-remote';
 import type { PaneUse } from './pane-reading';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
+import type { LogDraft, LogEntry, LogRead } from './log-entry';
 import type { Settings } from './settings';
 import type { TaskResult } from './tasks';
 import type { UsageSnapshot } from './usage';
@@ -143,6 +144,10 @@ export type DashboardBridge = {
   // One line about something that broke on main's side of the wire. What reaches here and why the app
   // is still up to hear it are failure.ts's.
   onFailure(listener: (message: string) => void): void;
+  // The log. Writes are fire and forget: main stamps the time, and a write that fails costs that line.
+  writeLog(draft: LogDraft): void;
+  readLog(): Promise<LogRead>;
+  onLogAppended(listener: (entry: LogEntry) => void): void;
 };
 
 declare global {

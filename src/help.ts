@@ -15,7 +15,7 @@ export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 export const MODE_NAMES: Record<Mode, string> = {
   terminals: 'Terminals', nvim: 'nvim', board: 'Board', notes: 'Notes',
-  manager: 'Manager', command: 'Command',
+  manager: 'Manager', command: 'Command', log: 'Log',
 };
 
 // What each screen and each group is, for the person who has not been told. The things worth knowing
@@ -196,7 +196,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'take the keyboard somewhere you cannot see, and it does nothing here instead.',
   manager: 'The first tab, and the only page that is not a project: no folder and no shells, so the '
     + 'terminal and nvim keys do nothing here. It is where the window lands when nothing was open '
-    + 'last time. Four sections are named along the top — general, board, command, notes — and the '
+    + 'last time. Five sections are named along the top — general, board, command, notes, log — and the '
     + 'board and notes keys still come straight here to those two. '
     + 'Above those names is a row of four cards for looking at only — no key reaches them: today in the '
     + 'Persian and the Gregorian calendar with the weather for the place set in settings, then Bitcoin '
@@ -273,16 +273,17 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'moderate — would need a parser per tool, and every tool words it differently. '
     + 'The command you typed lasts while the app is running and is gone on restart, and so are the '
     + 'results: a run answers a question you are asking now, and is not a record of anything.',
-  sections: 'The manager is four screens with one strip of names above them. These two keys walk it, '
-    + 'from any of the four. The arrows are deliberately not these keys: on the board they move '
+  sections: 'The manager is five screens with one strip of names above them. These two keys walk it, '
+    + 'from any of the five. The arrows are deliberately not these keys: on the board they move '
     + 'between cards, and in the notes they move the caret.',
   modes: 'A project is shown four ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The four are named along the foot of a project\'s page, the '
-    + 'one you are on lit, and a click on a name goes there the way its key does. The manager has four '
+    + 'one you are on lit, and a click on a name goes there the way its key does. The manager has five '
     + 'sections of its own, named along the '
     + 'top: its list of what the panes want, a board of its own above every project\'s, one command run across '
-    + 'projects, and a page of notes about none of them. Two of the four mode keys land on a section '
-    + 'rather than doing nothing there — the board key and the notes key.',
+    + 'projects, a page of notes about none of them, and what the app itself has been doing. Two of '
+    + 'the four mode keys land on a section rather than doing nothing there — the board key and the '
+    + 'notes key.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
     + 'order you put them in. A click on a tab goes to it, the same as its jump key. A project cannot be moved in front of the manager, so the first two move '
     + 'keys both land it in tab 2. The next and previous keys walk the whole strip, so they pass '
@@ -300,6 +301,10 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Nor is a job you put in the background, which leaves the shell at its prompt. So a close it '
     + 'allows is still not a promise that nothing was running — which is why it asks first, and Enter '
     + 'is what takes the project away.',
+  log: 'What the app did and what went wrong, newest first: errors, panes and agents exiting, cards '
+    + 'moving, ships, worktrees, projects opening and closing. Type in the box to filter — every word '
+    + 'must appear, so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s '
+    + 'data folder, five files of 5 MB; the path is at the top. Never what you type in a pane.',
   app: 'There is a second way to find a key, for when you know you are reaching for one and not which. '
     + 'Hold Ctrl, Cmd or Alt without pressing anything else and a panel near the bottom names every '
     + 'key that modifier can still start on the screen you are on, each row saying what is left to '
@@ -357,7 +362,7 @@ function groupShortcuts(
 
 // The group named after the screen, then whatever that screen takes without a binding. nvim and notes
 // have no group at all, so their lists are only the second half.
-// The manager's four screens get one more, and only there: `onManagerPage` is the same question
+// The manager's five screens get one more, and only there: `onManagerPage` is the same question
 // `hears` asks before firing a manager-page action, asked here so the dialog never lists a key that
 // question would refuse. A project's own board and its own notes are `isSection(mode)` too, and must
 // not get these rows.

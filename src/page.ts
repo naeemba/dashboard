@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
 import type { CommandView } from './command-view';
+import type { LogView } from './log-view';
 import { fileLinksIn, webLinksIn, type FileLink, type LinkSpan } from './file-links';
 import type { ManagerView } from './manager-view';
 import type { Mode, ProjectMode } from './modes';
@@ -41,6 +42,8 @@ export type PageOptions = {
   onChanged(): void;
   // The status bar's error span, which only the owner that wrote a message may clear.
   onError(owner: string, message: string): void;
+  // The same span for what is not a failure, which the log leaves out. status-error.ts says why.
+  onNotice(owner: string, message: string): void;
   // Whether the manager's list is the screen in front, which is the one screen a repeat bell has
   // something new to say to. waiting.ts holds why.
   managerInFront(): boolean;
@@ -99,6 +102,8 @@ export type Page = {
   // them shows.
   command: CommandView | null;
   strip: SectionStrip | null;
+  // Only the manager has one: it is the app's log, not a project's.
+  log: LogView | null;
 };
 
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
@@ -321,7 +326,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     }
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null,
+      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -355,6 +360,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       onChanged: options.onChanged,
       // A slot each, so one project's board never clears another one's failure.
       onError: (message) => options.onError(`board:${slot}`, message),
+      onNotice: (message) => options.onNotice(`board:${slot}`, message),
       worktrees: options.worktrees,
     });
     views.board.append(page.board.element);

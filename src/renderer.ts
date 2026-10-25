@@ -14,7 +14,8 @@ import './manager.css';
 import { openHelp } from './help';
 import { createModeSwitch, createTabStrip } from './chrome-bars';
 import { mapShortcut, type Action } from './shortcuts';
-import { failureNotice, failureText } from './failure';
+import { failureText } from './failure';
+import { createStatusError } from './status-error';
 import { fileLinkOpener, showFileHints } from './file-hints';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
@@ -91,43 +92,10 @@ const tabStrip = createTabStrip((index) => showPage(index));
 const modeSwitch = createModeSwitch((mode) => setMode(mode));
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-// Its own span, between the two, because renderStatus() rewrites the pane label on every keystroke.
-// A message written into that span is gone by the next arrow key, which is how the salvage notice
-// used to disappear before anyone could read it.
-const statusError = document.createElement('span');
-statusError.className = 'error';
-statusElement.append(modeSwitch.element, statusError, statusTerminal);
-
-// Whoever wrote the message on screen owns it, and only that owner may clear it. Without the owner a
-// clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
-// look at another project's board and the message is gone while the card still is not on disk.
-let errorOwner = '';
-function showError(owner: string, message: string): void {
-  if (message === '' && errorOwner !== owner) return;
-  errorOwner = message === '' ? '' : owner;
-  statusError.textContent = message;
-}
-
-// Failures nobody caught, from either side of the wire, under one owner so they never clear a board's
-// message or have one cleared by them.
-//
-// Main's arrive over the channel, and this is registered at module load rather than in start(), because
-// the launch's own failures are sent the moment the page finishes loading — later than a listener set
-// up here, earlier than anything start() awaits.
-//
-// This side's are the window's, and they cost no shell: a pty lives in main, and a throw inside a
-// listener here is caught by the browser, which logs it and carries on. What it costs is that nobody
-// knows. The board simply does not redraw, or a key does nothing, and the console is the only place it
-// is written down. Now the bar says it.
-bridge.onFailure((message) => showError('failure', message));
-// `error` when the thrown value is there, `message` when it is not — a cross-origin script gives the
-// browser nothing to hand over and only the sentence "Script error." to say.
-window.addEventListener('error', (event) => {
-  showError('failure', failureNotice(event.error ?? event.message));
-});
-window.addEventListener('unhandledrejection', (event) => {
-  showError('failure', failureNotice(event.reason));
-});
+const statusError = createStatusError(bridge);
+const showError = statusError.show;
+const showNotice = statusError.notice;
+statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
 document.getElementById('title')?.append(tabStrip.element);
 const pagesElement = document.getElementById('pages') as HTMLElement;
@@ -373,6 +341,10 @@ function focusMode(page: Page, entering: boolean): void {
     if (entering) page.command.render();
     page.command.focus();
   }
+  if (page.mode === 'log' && page.log) {
+    if (entering) void page.log.open();
+    else page.log.focus();
+  }
   if (page.mode === 'terminals') return focusTerminal(page.focused);
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
@@ -441,6 +413,7 @@ const buildPage = createPageBuilder({
   shellCommand: () => shellCommand,
   onChanged: () => renderStatus(),
   onError: showError,
+  onNotice: showNotice,
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
@@ -507,10 +480,10 @@ async function closeProject(slot: number): Promise<void> {
     // and the sheet below, so no keystroke can arrive in the gap.
     closing = false;
   }
-  if (refusal !== '') return showError('close', refusal);
+  if (refusal !== '') return showNotice('close', refusal);
   // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
   // is: cancelling the dialog leaves no path back here to clear it.
-  showError('close', '');
+  showNotice('close', '');
   // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
   // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
   // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
@@ -532,7 +505,7 @@ async function closeProject(slot: number): Promise<void> {
     // Read again with the page and for the same reason: the answer was given over a quiet project, and
     // a pane that took an agent or a question while the dialog was up is one the close refuses over.
     const late = await closeRefusalFor(closingPage);
-    if (late !== '') return showError('close', late);
+    if (late !== '') return showNotice('close', late);
     // The page's place in the list, found after that question rather than before it: asking main is a
     // round trip, and a project closed from elsewhere while it was out shifts every page after it
     // along. The index taken before would splice a different project out of the list.
@@ -675,7 +648,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
-  if (action.kind === 'needs-you-next') return showError('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
+  if (action.kind === 'needs-you-next') return showNotice('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {
     worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);
     return void worktreeDialog.closed.then(() => {
@@ -712,7 +685,7 @@ function apply(action: Action): void {
     case 'terminal-zoom': return toggleZoom(page);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
-    case 'terminal-file-hints': return showError('file', showFileHints(page, openFileLink));
+    case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
     // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
@@ -734,6 +707,9 @@ function apply(action: Action): void {
     case 'command-select':
     case 'command-open':
     case 'command-cancel': return page.command?.runAction(action);
+    case 'log-select':
+    case 'log-open':
+    case 'log-filter-reset': return page.log?.runAction(action);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.
@@ -993,6 +969,7 @@ async function start(): Promise<void> {
     binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
     onChanged: renderStatus,
     onError: showError,
+    onNotice: showNotice,
     onJump: goToPane,
     onJumpWorktree: jumpToWorktree,
     onJumpNeed: jumpToNeed,
