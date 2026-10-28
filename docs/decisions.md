@@ -158,3 +158,17 @@ file and/or here". The file is only looked for when you open one.
 The file opens with `:drop`, in the window you were editing in, not a new tab.
 The scrollback gets a tab because it is a copy you read beside your work; a
 path is a file you went to.
+
+## The host owns the list of open projects
+
+Two screens can open and close projects, so the renderer no longer decides what is open. Main does, and
+pushes `projects:change` with the whole list; each renderer makes its pages match through
+`pageMoves` in `page-reconcile.ts`. The reply to a renderer's own `projects:open` carries the same
+list, so the push and the reply are idempotent whichever lands first. Settings stay on the screen that
+shows them: a mac on a Linux host keeps its Cmd keys.
+
+## Comments do not count toward the 600-line ceiling
+
+`main.ts` and `renderer.ts` are measured in code lines with `grep -cvE '^\s*(//|$)'`. Comments are never
+dropped or packed to fit. This branch moved `processTree`, `baseBranch` and `shellLivesIn` out of
+`main.ts`, and `showPicker` and page syncing out of `renderer.ts`, instead.

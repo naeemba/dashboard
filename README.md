@@ -56,6 +56,19 @@ A key binding is written the way you would say it, `Ctrl+Shift+K`, matching the 
 whatever character the keyboard reports for it, so Option+H is Option+H on any layout. `null` means no
 key at all. Delete the file and everything — keys, theme, font, shell — goes back to how it shipped.
 
+## Second screen
+
+One Dashboard can show another's session. On the machine that holds the work, open the settings screen
+and set a port in the Host section, in the row labelled `Port (next launch)`; the port is read at the next
+launch. Copy the token from the `Token` row under it. On the other machine, open the project list (Ctrl+S)
+and choose Connect to a host, then type `address:port` and paste the token. From then on that window is a
+second screen of the first: the same shells, boards and notes, with its own selected pane and mode. Each
+shell is sized to the smaller of the two windows. Choose Disconnect in the same list to come back to the
+machine's own projects. Launch with `--remote` to connect to the last host straight away.
+
+The wire is plain text, guarded by the token. It is meant for a home network; a token in the wrong hands
+is a shell as you. The host must not sleep on lid close; that is the operating system's setting.
+
 ## Modes
 
 Each project remembers its own mode, so Ctrl+2 lands on project 2 in whatever view you left it in. The project keys work from all four; nothing else does — Mod+1..5 and Option+HJKL only mean something when the terminals are on screen.
