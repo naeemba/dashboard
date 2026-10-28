@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, parseSettings, resetKeys,
+  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
 } from './settings';
 import { ACTIONS, scopesOverlap } from './actions';
 import { THEME } from './theme';
@@ -247,5 +247,17 @@ describe('isPort', () => {
     expect(isPort('65536')).toBe(false);
     expect(isPort('77.5')).toBe(false);
     expect(isPort('')).toBe(false);
+  });
+});
+
+describe('resetAll', () => {
+  it('keeps the token and the remote, and resets the port', () => {
+    const settings = parseSettings({
+      host: { port: 7777, token: 'abc' }, remote: { address: '10.0.0.2:7777', token: 'xyz' }, weatherPlace: 'Oslo',
+    }, true);
+    const reset = resetAll(settings, true);
+    expect(reset.host).toEqual({ port: null, token: 'abc' });
+    expect(reset.remote).toEqual(settings.remote);
+    expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
   });
 });

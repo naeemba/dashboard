@@ -4,7 +4,7 @@ import { labelled } from './icons';
 import { keycaps } from './keycaps';
 import { confirmOverlay, openOverlay } from './overlay';
 import {
-  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetKeys,
+  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, resetKeys,
   type Settings,
 } from './settings';
 import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
@@ -198,7 +198,7 @@ export function openSettings(
         return say('');
       }
       if (row.kind === 'reset-keys') return commit(resetKeys(settings, isMac));
-      if (row.kind === 'reset-all') return commit(defaultSettings(isMac));
+      if (row.kind === 'reset-all') return commit(resetAll(settings, isMac));
       if (row.kind === 'heading') return;
       if (row.kind === 'host-token') {
         void navigator.clipboard.writeText(row.value);

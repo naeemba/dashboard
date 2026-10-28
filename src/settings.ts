@@ -206,6 +206,14 @@ export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
 }
 
+// Every preference back to what this build ships. The host token and the remembered host stay: they are
+// pairings with another machine, not preferences, and wiping the token would lock out the screen that
+// holds the old one with no explanation.
+export function resetAll(settings: Settings, isMac: boolean): Settings {
+  const defaults = defaultSettings(isMac);
+  return { ...defaults, host: { ...defaults.host, token: settings.host.token }, remote: settings.remote };
+}
+
 // The chosen lines of one object: what is left of it once every entry equal to what this build ships is
 // taken out.
 // Every line it holds, whatever it is called. Naming the settings here instead would mean the next one
