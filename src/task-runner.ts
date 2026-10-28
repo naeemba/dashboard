@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import type { Channels } from './channels';
 import { spawn } from 'node:child_process';
 import { tailLines } from './manager';
 import { taskArguments } from './shell';
@@ -124,9 +124,9 @@ export function taskRunner(ports: TaskPorts): TaskRunner {
 
 // The command screen's two channels, beside the runner they drive. Out of main.ts for the 600-line
 // ceiling; main keeps the returned runner because quitting stops it.
-export function registerTasks(ports: TaskPorts): TaskRunner {
+export function registerTasks(table: Channels, ports: TaskPorts): TaskRunner {
   const tasks = taskRunner(ports);
-  ipcMain.on('task:run', (_event, command: string, projectPaths: string[]) => tasks.run(command, projectPaths));
-  ipcMain.on('task:cancel', () => tasks.cancel());
+  table.on('task:run', (_screen, command: string, projectPaths: string[]) => tasks.run(command, projectPaths));
+  table.on('task:cancel', () => tasks.cancel());
   return tasks;
 }

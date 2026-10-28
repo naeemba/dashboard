@@ -1,15 +1,9 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, Menu } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import {
-  projectFromPath,
-  readRecentPaths,
-  rememberRecentPath,
-  replacesProject,
-  type Project,
-} from './projects';
+import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, type Project } from './projects';
 import { baseName } from './base-name';
 import { git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
@@ -30,6 +24,7 @@ import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
 import { registerPaneOpeners } from './pane-openers';
+import { channels, registerWithIpc } from './channels';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
 import { registerLog } from './log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
@@ -107,7 +102,8 @@ const failures = failureReporter({
 });
 process.on('uncaughtException', (error: unknown) => failures.report(error));
 process.on('unhandledRejection', (error: unknown) => failures.report(error));
-const logStore = registerLog(app.getPath('userData'), sendToRenderer);
+const table = channels();
+const logStore = registerLog(table, app.getPath('userData'), sendToRenderer);
 const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a
@@ -279,7 +275,7 @@ function agentRunsIn(slot: number, pane: number | null): boolean {
 // What the renderer can see and main cannot: which panes still have an agent working in them. The
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
 const agentsAtWork = workingPanes();
-ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
+table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
 
 // The other direction, and the one thing only main can answer: the reading of a project's five shells,
 // for the two screens that also have to know what is running in a pane. pane-reading.ts holds what
@@ -296,7 +292,7 @@ ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids,
 //
 // A project with no slot here answers with nothing at all, and nothing is the truth: every shell this
 // app has is in this file, so a project main cannot place has none left to run anything.
-ipcMain.handle('panes:read', (_event, projectPath: string): PaneUse[] => {
+table.handle('panes:read', (_screen, projectPath: string): PaneUse[] => {
   const slot = slotOfProject(projectPath);
   if (slot === -1) return [];
   return paneReadingsIn(slot, null)
@@ -436,7 +432,7 @@ setInterval(() => {
   void reviews.run().catch((error: unknown) => failures.hold(`Review check failed: ${failureText(error)}`));
 }, WORKING_REPORT_MS).unref();
 
-registerPaneOpeners({
+registerPaneOpeners(table, {
   shellCommand: () => shellCommand,
   paneFolders: (slot, index) => {
     const id = terminalId(slot, index);
@@ -567,10 +563,10 @@ async function baseBranch(projectPath: string): Promise<string> {
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
-ipcMain.handle('projects:recent', () =>
+table.handle('projects:recent', () =>
   readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
 // A null path opens the folder dialog; a path from the picker skips it.
-ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
+table.handle('projects:open', async (_screen, projectPath: string | null) => {
   if (projectPath === null) {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
     if (canceled) return null;
@@ -600,7 +596,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
 // every pane on read: no shell of this project survives the close, so a record still naming pane 2
 // would put a branch under a pane that is a plain shell of some other project — and would hold its
 // card in flight, unable to be shipped again, with nothing left running to finish it.
-ipcMain.on('projects:close', (_event, slot: number) => {
+table.on('projects:close', (_screen, slot: number) => {
   const closing = projects[slot];
   // A slot that holds nothing has already been closed, and there is nothing of it left to kill.
   // Answered first so a slot past the end of the list is not written into it as a hole.
@@ -641,21 +637,21 @@ tokenUsage.start();
 
 // The manager's four cards. The place is read from the settings main holds, so a change made on the
 // settings screen reaches the weather on the next read.
-ipcMain.handle('markets:read', () => readMarkets(settings.weatherPlace));
+table.handle('markets:read', () => readMarkets(settings.weatherPlace));
 
 // The renderer's first read. Everything after it arrives unasked on usage:change.
-ipcMain.handle('usage:read', () => tokenUsage.latest());
+table.handle('usage:read', () => tokenUsage.latest());
 
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
 // so a crash loses at most the change you were making, or half a minute of sessions.
-const claudeSessions = sessionStore(path.join(app.getPath('userData'), 'session.json'), slotOfProject);
+const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), 'session.json'), slotOfProject);
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
-ipcMain.handle('settings:read', () => ({ settings, shellCommand }));
+table.handle('settings:read', () => ({ settings, shellCommand }));
 // Answers with the newly resolved shell so the renderer never has to re-derive pickShell's precedence
 // to know which family of shell a dropped path is quoted for.
-ipcMain.handle('settings:write', (_event, next: Settings) => {
+table.handle('settings:write', (_screen, next: Settings) => {
   settings = next;
   // Panes already running keep the shell they started with. Nothing here kills one: there are
   // long-running jobs in them, and a settings change is not a reason to lose one.
@@ -663,8 +659,8 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-registerPaneChannels({ shells, screens: paneScreens, spawnTerminal, window: liveWindow, send: sendToRenderer });
-registerProjectFiles(boards, boardLog);
+registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow, send: sendToRenderer });
+registerProjectFiles(table, boards, boardLog);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -873,7 +869,7 @@ async function shipCard(request: ShipRequest): Promise<ShipResult> {
     shippingCards.delete(cardId);
   }
 }
-ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
+table.handle('worktree:create', async (_screen, request: ShipRequest) => {
   const result = await shipCard(request);
   logStore.log(shipEntry(request, result));
   return result;
@@ -881,7 +877,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
 
 // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
 // a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
-ipcMain.handle('worktree:list', () => {
+table.handle('worktree:list', () => {
   dropDeadWorktrees();
   return worktreeList();
 });
@@ -893,7 +889,7 @@ ipcMain.handle('worktree:list', () => {
 // worktreeState is git's own answer rather than the ship's narrower one, because git is what refuses
 // the removal this row's `d` is about to ask for. Run concurrently — this is main, and every pane's
 // bytes flow through it.
-ipcMain.handle('worktree:check', async () => {
+table.handle('worktree:check', async () => {
   const results = await Promise.all(worktrees.map(async (entry) => (
     { worktreePath: entry.worktreePath, ...await worktreeState(entry.worktreePath) }
   )));
@@ -904,7 +900,7 @@ ipcMain.handle('worktree:check', async () => {
 });
 
 // Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
-ipcMain.handle('worktree:scan', (_event, projectPaths: string[]) => (
+table.handle('worktree:scan', (_screen, projectPaths: string[]) => (
   scanWorktrees(projectPaths, worktrees)
 ));
 
@@ -964,7 +960,7 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
   }
 }
 
-ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean, projectPath: string) => {
+table.handle('worktree:remove', async (_screen, worktreePath: string, force: boolean, projectPath: string) => {
   const result = await removeWorktree(worktreePath, force, projectPath);
   logStore.log(removalEntry(projectPath, worktreePath, result));
   return result;
@@ -973,7 +969,7 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
 // last picked.
-const tasks = registerTasks({ send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
+const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -1048,6 +1044,8 @@ function createWindow(): void {
   // that was never finished.
   failures.windowOpened();
 }
+
+registerWithIpc(table, () => null);
 
 app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });

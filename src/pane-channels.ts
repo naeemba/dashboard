@@ -1,12 +1,13 @@
-import { Notification, ipcMain, type BrowserWindow } from 'electron';
+import { Notification, type BrowserWindow } from 'electron';
+import type { Channels } from './channels';
 import type * as pty from 'node-pty';
-import { LOCAL_SCREEN, type Screens } from './screens';
+import type { Screens } from './screens';
 
 // What a pane sends the main process: its keystrokes, its size, a request to restart its shell, and a
 // banner for it. Main-process wiring only, out of main.ts because main had reached its 600-line
 // ceiling. Main hands over what only it holds — the live shells, the recorded sizes, how to spawn one,
 // and the way to the renderer.
-export function registerPaneChannels(main: {
+export function registerPaneChannels(table: Channels, main: {
   shells: Map<string, pty.IPty>;
   screens: Screens;
   spawnTerminal(id: string): void;
@@ -16,7 +17,7 @@ export function registerPaneChannels(main: {
   // Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
   // to land on. Without that half you arrive at whatever project you were last on and go looking for the
   // pane the banner had already named.
-  ipcMain.on('notification:show', (_event, title: string, body: string, paneId: string) => {
+  table.on('notification:show', (_screen, title: string, body: string, paneId: string) => {
     const notification = new Notification({ title, body });
     notification.on('click', () => {
       // Landing on the pane is no use behind a window that is not on screen. macOS activates the app
@@ -34,18 +35,18 @@ export function registerPaneChannels(main: {
     notification.show();
   });
 
-  ipcMain.on('pty:input', (_event, id: string, data: string) => {
+  table.on('pty:input', (_screen, id: string, data: string) => {
     main.shells.get(id)?.write(data);
   });
   // Recorded whether or not a shell is listening, because the pane that has none is exactly the pane
   // about to get one: a pane whose shell exited, the editor before nvim is started, a pane a ship is
   // about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
-  ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
-    main.screens.resize(LOCAL_SCREEN, id, { cols, rows });
+  table.on('pty:resize', (screen, id: string, cols: number, rows: number) => {
+    main.screens.resize(screen, id, { cols, rows });
     const size = main.screens.sizeOf(id);
     if (size) main.shells.get(id)?.resize(size.cols, size.rows);
   });
-  ipcMain.on('pty:restart', (_event, id: string) => {
+  table.on('pty:restart', (_screen, id: string) => {
     if (!main.shells.has(id)) main.spawnTerminal(id);
   });
 }
