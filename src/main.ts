@@ -230,10 +230,11 @@ function liveWindow(): BrowserWindow | undefined {
 }
 
 // Every push goes to the local window and to every remote screen. remoteHost is set once at launch,
-// below, and is null when the settings give no port.
-function sendToRenderer(channel: string, ...payload: unknown[]): void {
-  if (remote.reachesWindow()) liveWindow()?.webContents.send(channel, ...payload);
-  remoteHost?.broadcast(channel, payload);
+// below, and is null when the settings give no port. tellOthers skips the screen that caused it.
+function sendToRenderer(channel: string, ...payload: unknown[]): void { tellOthers('', channel, ...payload); }
+function tellOthers(screen: string, channel: string, ...payload: unknown[]): void {
+  if (screen !== LOCAL_SCREEN && remote.reachesWindow()) liveWindow()?.webContents.send(channel, ...payload);
+  remoteHost?.broadcast(channel, payload, screen);
 }
 
 // What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty can
@@ -631,7 +632,7 @@ table.handle('settings:write', (_screen, next: Settings) => {
   return shellCommand;
 });
 registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow });
-registerProjectFiles(table, boards, boardLog);
+registerProjectFiles(table, boards, boardLog, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently

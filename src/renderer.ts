@@ -796,6 +796,13 @@ bridge.onBoardChange((projectPath) => {
   page.board?.reload(projectPath);
 });
 
+// Another screen wrote a page of notes. The box in front reads its file again; open() keeps anything
+// typed here that has not been written yet. Any other box reads again when you arrive at it.
+bridge.onNotesChange(() => {
+  const page = pages[activeIndex];
+  if (page.mode === 'notes') void page.notes?.open();
+});
+
 // jumps.ts says where each of these lands.
 const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
 

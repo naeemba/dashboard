@@ -99,9 +99,9 @@ export type DashboardBridge = {
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.
   onBoardChange(listener: (projectPath: string) => void): void;
-  // The project's page of notes, read and written whole. There is no change event to go with these:
-  // the notes are one box that one person types into, where the board is a file an agent moves cards
-  // in while you are looking at it.
+  // The project's page of notes, read and written whole. The change event is another screen's write:
+  // the box is one person typing, but that person can be at either machine.
+  onNotesChange(listener: (projectPath: string) => void): void;
   readNotes(projectPath: string): Promise<string>;
   writeNotes(projectPath: string, text: string): Promise<void>;
   // The settings, and the shell that was resolved from them. One call, because the renderer needs
