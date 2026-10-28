@@ -5,7 +5,7 @@ import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, type Project } from './projects';
 import { baseName } from './base-name';
-import { git } from './git';
+import { baseBranch, git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { anyShellStandsIn } from './shell-directory';
 import { shellDirectories } from './shell-directory-lookup';
@@ -23,6 +23,8 @@ import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
+import { startHost } from './host-wiring';
+import type { RemoteHost } from './remote-host';
 import { registerPaneOpeners } from './pane-openers';
 import { channels, registerWithIpc } from './channels';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
@@ -228,8 +230,12 @@ function liveWindow(): BrowserWindow | undefined {
   return mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
 }
 
+// Set once at launch, below, when the settings give a port. Every push goes to the local window and to
+// every remote screen; notification:click reaching them too is harmless, none of them asks to be clicked.
+let remoteHost: RemoteHost | null = null;
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
   liveWindow()?.webContents.send(channel, ...payload);
+  remoteHost?.broadcast(channel, payload);
 }
 
 // What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty can
@@ -531,26 +537,6 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
-}
-
-// origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
-// same reason: origin/HEAD is not set in every clone.
-async function baseBranch(projectPath: string): Promise<string> {
-  try {
-    const head = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], projectPath);
-    return head.replace(/^origin\//, '');
-  } catch {
-    // Not set in this clone; try the usual names.
-  }
-  for (const candidate of ['main', 'master']) {
-    try {
-      await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${candidate}`], projectPath);
-      return candidate;
-    } catch {
-      // Try the next one.
-    }
-  }
-  throw new Error('cannot tell which branch on origin is the main one');
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -1047,11 +1033,17 @@ function createWindow(): void {
 
 registerWithIpc(table, () => null);
 
+remoteHost = startHost({
+  table, rings, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
+  projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft),
+});
+
 app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
   createWindow();
 });
 app.on('will-quit', () => {
+  remoteHost?.close();
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until

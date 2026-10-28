@@ -50,3 +50,12 @@ export function registerPaneChannels(table: Channels, main: {
     if (!main.shells.has(id)) main.spawnTerminal(id);
   });
 }
+
+// A screen that leaves stops voting on the size of every pane it drew, so each shell goes to what the
+// screens still looking at it ask for. A pane nobody has measured keeps the size it has.
+export function resizeShellsToScreens(shells: Map<string, pty.IPty>, screens: Screens): void {
+  for (const [id, shell] of shells) {
+    const size = screens.sizeOf(id);
+    if (size) shell.resize(size.cols, size.rows);
+  }
+}
