@@ -439,7 +439,7 @@ function setPage(project: Project, slot: number): void {
 }
 
 const { removePage, applyProjects } = createPageSync({
-  pages: () => pages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
+  pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
   setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange,
 });
 
