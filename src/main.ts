@@ -1024,7 +1024,7 @@ function createWindow(): void {
 // on leaving another host.
 const held: HeldByMain = {
   table, rings, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
-  projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft),
+  projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
 const remote = registerRemote(held, {

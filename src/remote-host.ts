@@ -4,7 +4,7 @@ import { failureText } from './failure';
 import type { LogDraft } from './log-entry';
 import { closeReason, gateFrame } from './host-gate';
 import {
-  CLOSE_NO_HELLO, HELLO_TIMEOUT_MS, decodeFrame, encodeFrame, type Push, type Reply,
+  CLOSE_NO_HELLO, HEARTBEAT_MS, HELLO_TIMEOUT_MS, MAX_FRAME_BYTES, decodeFrame, encodeFrame, type Push, type Reply,
 } from './remote-protocol';
 
 // The host's side of the wire: one websocket server, one screen per connection. A connection's first
@@ -18,14 +18,30 @@ export type HostPorts = {
   onJoin(screen: string, send: (channel: string, args: unknown[]) => void): void;
   onLeave(screen: string): void;
   log(draft: LogDraft): void;
+  // For a failure nobody asked for, which only the status bar can tell: a port that could not be opened.
+  hold(message: string): void;
 };
 
-export type RemoteHost = { broadcast(channel: string, args: unknown[]): void; close(): void };
+// `except` is a screen that is not told, because it is the one that caused the push.
+export type RemoteHost = { broadcast(channel: string, args: unknown[], except?: string): void; close(): void };
 
-export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
-  const server = new WebSocketServer({ port });
+// heartbeatMs exists for the test of a screen that stops answering.
+export function startRemoteHost(port: number, ports: HostPorts, heartbeatMs: number = HEARTBEAT_MS): RemoteHost {
+  const server = new WebSocketServer({ port, maxPayload: MAX_FRAME_BYTES });
   const screens = new Map<string, WebSocket>();
+  // The screens that have answered since the last ping. A close comes only when a write fails after
+  // the kernel's retransmission timeout, or never on a quiet pane, and until then a sleeping mac's
+  // smaller size keeps every shell shrunk and its share of the output piles up in main.
+  const answered = new WeakSet<WebSocket>();
   let nextScreen = 1;
+
+  const heartbeat = setInterval(() => {
+    for (const socket of screens.values()) {
+      if (!answered.delete(socket)) socket.terminate();
+      else socket.ping();
+    }
+  }, heartbeatMs);
+  heartbeat.unref();
 
   function push(socket: WebSocket, frame: Push | Reply): void {
     if (socket.readyState === socket.OPEN) socket.send(encodeFrame(frame));
@@ -44,6 +60,8 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
       ports.log({ level: 'warn', kind: 'screen', message: `${address}: ${failureText(error)}` });
     });
 
+    socket.on('pong', () => answered.add(socket));
+
     socket.on('message', (raw) => {
       const answer = gateFrame(joined, decodeFrame(String(raw)), ports.token(), ports.version);
       if (answer.action === 'ignore') return;
@@ -56,6 +74,7 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
         joined = true;
         clearTimeout(helloTimer);
         screens.set(screen, socket);
+        answered.add(socket);
         ports.log({ level: 'info', kind: 'screen', message: `${address} joined` });
         push(socket, { id: answer.id, result: null });
         return ports.onJoin(screen, (channel, args) => push(socket, { channel, args }));
@@ -76,14 +95,17 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
   });
 
   server.on('error', (error) => {
-    ports.log({ level: 'error', kind: 'screen', message: `Not listening on ${port}: ${failureText(error)}` });
+    const message = `Not listening on ${port}: ${failureText(error)}`;
+    ports.log({ level: 'error', kind: 'screen', message });
+    ports.hold(message);
   });
 
   return {
-    broadcast(channel, args) {
-      for (const socket of screens.values()) push(socket, { channel, args });
+    broadcast(channel, args, except) {
+      for (const [screen, socket] of screens) if (screen !== except) push(socket, { channel, args });
     },
     close() {
+      clearInterval(heartbeat);
       for (const socket of screens.values()) socket.close(1001, 'Host closing');
       server.close();
     },

@@ -34,6 +34,7 @@ describe('isClientChannel', () => {
   it('keeps what belongs to the screen on the screen', () => {
     for (const channel of [
       'link:open', 'notification:show', 'settings:read', 'settings:write', 'host:connect', 'host:disconnect', 'session:restored',
+      'markets:read',
     ]) {
       expect(isClientChannel(channel)).toBe(true);
     }

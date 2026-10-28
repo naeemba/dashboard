@@ -7,7 +7,7 @@ import type { Screens } from './screens';
 
 // What the host needs from the main process, which holds all of it. Out of main.ts because main had
 // reached its 600-line ceiling; this is only the plumbing between the two.
-export type HeldByMain = HeldForRemote & { shells: Map<string, pty.IPty>; screens: Screens };
+export type HeldByMain = HeldForRemote & { shells: Map<string, pty.IPty>; screens: Screens; hold(message: string): void };
 
 // After the join replay a screen gets the same pushes as everyone. A screen that leaves stops voting
 // on pane sizes, so the shells are resized to whoever is left. No port in the settings means the host
@@ -24,5 +24,6 @@ export function startHost(held: HeldByMain): RemoteHost | null {
       resizeShellsToScreens(held.shells, held.screens);
     },
     log: held.log,
+    hold: held.hold,
   });
 }

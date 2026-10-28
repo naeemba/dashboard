@@ -16,14 +16,21 @@ export const REQUEST_TIMEOUT_MS = 10_000;
 // A connection that has not said hello by now is closed: a socket that never speaks is not a screen.
 export const HELLO_TIMEOUT_MS = 5_000;
 export const CLOSE_NO_HELLO = 4000;
+// How often the host pings each screen. A screen that has not answered the last ping by the next one
+// is gone (a mac asleep, a wifi that dropped) even though its socket never closed, and is dropped.
+export const HEARTBEAT_MS = 10_000;
+// The largest frame the host reads. A screen's biggest is a whole board or page of notes; ws's own
+// default of 100 MB would let a connection that has not said hello make main parse that much.
+export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 
 // What never leaves the screen: a link opens in the browser you are looking at, a banner shows on the
 // desk you are sitting at, and the settings (keys, font, theme) are this machine's. A mac on a Linux
-// host must keep its Cmd bindings. Connecting and disconnecting are the client's own by definition, and
+// host must keep its Cmd bindings. The weather and prices on the manager are read with this machine's
+// Place, and do not depend on whose session is shown. Connecting and disconnecting are the client's own by definition, and
 // so is the window saying it has restored its own session, which is what `--remote` waits for.
 const CLIENT_CHANNELS = new Set([
   'link:open', 'notification:show', 'settings:read', 'settings:write', 'host:connect', 'host:disconnect',
-  'session:restored',
+  'session:restored', 'markets:read',
 ]);
 
 export function isClientChannel(channel: string): boolean {
