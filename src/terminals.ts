@@ -119,8 +119,8 @@ export type PaneSize = {
 
 export const DEFAULT_PANE_SIZE: PaneSize = { cols: 80, rows: 24 };
 
-export function sizeOfPane(sizes: ReadonlyMap<string, PaneSize>, id: string): PaneSize {
-  return sizes.get(id) ?? DEFAULT_PANE_SIZE;
+export function sizeOfPane(sizes: { sizeOf(id: string): PaneSize | undefined }, id: string): PaneSize {
+  return sizes.sizeOf(id) ?? DEFAULT_PANE_SIZE;
 }
 
 // Which view a pane is on. The editor is the only pane not in the grid, so landing on it means

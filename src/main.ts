@@ -20,9 +20,8 @@ import { paneRing, type PaneRing } from './pane-ring';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
-import {
-  EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
-} from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId } from './terminals';
+import { screens } from './screens';
 import { boardChanges } from './board-changes';
 import { BOARD_FILE_PATH, peekBoard, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
@@ -198,7 +197,7 @@ const rings = new Map<string, PaneRing>();
 // How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
-const paneSizes = new Map<string, PaneSize>();
+const paneScreens = screens();
 // The shell each pane was actually spawned with, written when the pty starts. Not the shellCommand
 // above: that is the live setting, and changing it leaves every already-running pane on the shell it
 // started with — which is what the settings screen tells you. A ship reads what the pty says is in the
@@ -460,7 +459,7 @@ function spawnTerminal(id: string): void {
   }
   let terminalProcess: pty.IPty;
   try {
-    const { cols, rows } = sizeOfPane(paneSizes, id);
+    const { cols, rows } = sizeOfPane(paneScreens, id);
     terminalProcess = pty.spawn(shellCommand, args, {
       name: 'xterm-256color',
       cols,
@@ -616,7 +615,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     shells.delete(id);
     terminalProcess?.kill();
     terminalCommands.delete(id);
-    paneSizes.delete(id);
+    paneScreens.drop(id);
     rings.delete(id);
     paneShells.delete(id);
   }
@@ -664,7 +663,7 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-registerPaneChannels({ shells, paneSizes, spawnTerminal, window: liveWindow, send: sendToRenderer });
+registerPaneChannels({ shells, screens: paneScreens, spawnTerminal, window: liveWindow, send: sendToRenderer });
 registerProjectFiles(boards, boardLog);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already

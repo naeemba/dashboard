@@ -1,6 +1,6 @@
 import { Notification, ipcMain, type BrowserWindow } from 'electron';
 import type * as pty from 'node-pty';
-import type { PaneSize } from './terminals';
+import { LOCAL_SCREEN, type Screens } from './screens';
 
 // What a pane sends the main process: its keystrokes, its size, a request to restart its shell, and a
 // banner for it. Main-process wiring only, out of main.ts because main had reached its 600-line
@@ -8,7 +8,7 @@ import type { PaneSize } from './terminals';
 // and the way to the renderer.
 export function registerPaneChannels(main: {
   shells: Map<string, pty.IPty>;
-  paneSizes: Map<string, PaneSize>;
+  screens: Screens;
   spawnTerminal(id: string): void;
   window(): BrowserWindow | undefined;
   send(channel: string, ...payload: unknown[]): void;
@@ -41,8 +41,9 @@ export function registerPaneChannels(main: {
   // about to get one: a pane whose shell exited, the editor before nvim is started, a pane a ship is
   // about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
   ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
-    main.paneSizes.set(id, { cols, rows });
-    main.shells.get(id)?.resize(cols, rows);
+    main.screens.resize(LOCAL_SCREEN, id, { cols, rows });
+    const size = main.screens.sizeOf(id);
+    if (size) main.shells.get(id)?.resize(size.cols, size.rows);
   });
   ipcMain.on('pty:restart', (_event, id: string) => {
     if (!main.shells.has(id)) main.spawnTerminal(id);
