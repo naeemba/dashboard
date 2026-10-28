@@ -7,7 +7,7 @@ import type { Settings } from './settings';
 describe('startHost', () => {
   it('listens on nothing when the settings give no port', () => {
     const held = {
-      table: channels(), version: '1', rings: new Map(), shells: new Map(), screens: screens(),
+      table: channels(), version: '1', screenCopies: new Map(), shells: new Map(), screens: screens(),
       settings: () => ({ host: { port: null, token: 't' } }) as Settings,
       projects: () => ({ projects: [] }), worktrees: () => ({ entries: [], paneDirectories: {} }),
       usage: () => 'usage' as never, log: () => undefined, hold: () => undefined,

@@ -9,7 +9,7 @@ import { baseBranch, git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { shellDirectories, shellLiveness } from './shell-directory-lookup';
 import { processTree } from './process-tree';
-import { paneRing, type PaneRing } from './pane-ring';
+import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -181,7 +181,7 @@ let settings = keepHostToken(readSettings(settingsFile, isMac), (made) => writeS
 tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
-const rings = new Map<string, PaneRing>();
+const screenCopies = new Map<string, PaneScreenCopy>();
 // How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
@@ -455,7 +455,7 @@ function spawnTerminal(id: string): void {
     // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
     // a dead shell shows, rather than the spawn taking the window down. A missing nvim is not this case:
     // the shell starts, fails to find it, and exits 127 on its own.
-    rings.get(id)?.exit(127);
+    screenCopies.get(id)?.exit(127);
     sendToRenderer('pty:exit', id, 127);
     return;
   }
@@ -463,9 +463,9 @@ function spawnTerminal(id: string): void {
   // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
   // through this function, so one line covers every pane that exists.
   paneShells.set(id, shellCommand);
-  const ring = paneRing(() => terminalProcess);
-  rings.set(id, ring);
-  terminalProcess.onData((data) => { ring.push(data); sendToRenderer('pty:data', id, data); });
+  const copy = paneScreenCopy(() => terminalProcess);
+  screenCopies.set(id, copy);
+  terminalProcess.onData((data) => { copy.push(data); sendToRenderer('pty:data', id, data); });
   terminalProcess.onExit(({ exitCode }) => {
     // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
     // the agent in the same tick, and the killed shell's exit arrives after that: without the check it
@@ -476,7 +476,7 @@ function spawnTerminal(id: string): void {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
-    ring.exit(exitCode);
+    copy.exit(exitCode);
     sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, terminalProcess);
@@ -586,7 +586,7 @@ table.on('projects:close', (_screen, slot: number) => {
     terminalProcess?.kill();
     terminalCommands.delete(id);
     paneScreens.drop(id);
-    rings.delete(id);
+    screenCopies.delete(id);
     paneShells.delete(id);
   }
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
@@ -1027,7 +1027,7 @@ function createWindow(): void {
 // This machine's session, as the host serves it to a remote screen and as the local window gets it back
 // on leaving another host.
 const held: HeldByMain = {
-  table, rings, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
+  table, screenCopies, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
   projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.

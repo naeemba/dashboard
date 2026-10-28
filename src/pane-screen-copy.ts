@@ -12,10 +12,15 @@ import { Terminal } from '@xterm/headless';
 // It also holds how its shell ended. One is made per spawn and dropped with the pane, so the exit code
 // goes when the shell it belongs to does, with no bookkeeping of its own: a screen joining after a
 // shell died is told so, rather than shown a pane that looks alive and swallows every key.
-export const PANE_SCROLLBACK = 1000;
+//
+// The replay keeps a tenth of the lines a pane on screen keeps (pane.ts's PANE_SCROLLBACK). Every live
+// pane has one of these in main for as long as it runs, at about 12 bytes a cell: ten thousand lines
+// of a 200-column pane is some 24 MB, times six panes a project. A screen joining, or this window
+// coming home from another host, starts a pane at most this far back from its end.
+export const REPLAY_SCROLLBACK = 1000;
 const RESET = '\x1bc';
 
-export type PaneRing = {
+export type PaneScreenCopy = {
   push(data: string): void;
   replay(): string;
   exit(code: number): void;
@@ -24,9 +29,9 @@ export type PaneRing = {
 
 // `size` is the shell's own size, read on every push: the shell redraws for a resize in the bytes that
 // follow it, so taking the size there keeps the copy in step without anyone telling it about resizes.
-export function paneRing(size: () => { cols: number; rows: number }): PaneRing {
+export function paneScreenCopy(size: () => { cols: number; rows: number }): PaneScreenCopy {
   const { cols, rows } = size();
-  const terminal = new Terminal({ cols, rows, scrollback: PANE_SCROLLBACK, allowProposedApi: true });
+  const terminal = new Terminal({ cols, rows, scrollback: REPLAY_SCROLLBACK, allowProposedApi: true });
   const serializer = new SerializeAddon();
   terminal.loadAddon(serializer);
   // The terminal parses on a timer, so what was pushed and not parsed yet is kept beside it and

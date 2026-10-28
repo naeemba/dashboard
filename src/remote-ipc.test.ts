@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocketServer } from 'ws';
 import type { Channels } from './channels';
-import type { PaneRing } from './pane-ring';
+import type { PaneScreenCopy } from './pane-screen-copy';
 import { connectAtLaunch, registerRemote, type HeldForRemote } from './remote-ipc';
 import { decodeFrame, encodeFrame, isRequest } from './remote-protocol';
 import type { Settings } from './settings';
@@ -34,7 +34,7 @@ function wired() {
   const table = { handle: (channel: string, handler: (...args: unknown[]) => unknown) => handlers.set(channel, handler) } as unknown as Channels;
   const held: HeldForRemote = {
     table, version: '1', settings: () => ({ remote: {} }) as Settings, log: () => undefined,
-    rings: new Map([['0:1', { replay: () => 'ring', exitCode: () => undefined } as PaneRing]]),
+    screenCopies: new Map([['0:1', { replay: () => 'copy', exitCode: () => undefined } as PaneScreenCopy]]),
     projects: () => ({ projects: [] }),
     worktrees: () => ({ entries: [], paneDirectories: {} }),
     usage: () => 'usage' as never,
@@ -49,7 +49,7 @@ function wired() {
 const localReplay = [
   ['host:change', 'local'],
   ['projects:change', { projects: [] }],
-  ['pty:data', '0:1', 'ring'],
+  ['pty:data', '0:1', 'copy'],
   ['worktree:change', { entries: [], paneDirectories: {} }],
   ['usage:change', 'usage'],
 ];

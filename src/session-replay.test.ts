@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { paneRing } from './pane-ring';
+import { paneScreenCopy } from './pane-screen-copy';
 import { replaySession } from './session-replay';
 
 describe('replaySession', () => {
   it('replays the output of every pane that has any, then the panes whose shell has ended', () => {
-    const live = paneRing(() => ({ cols: 80, rows: 24 }));
+    const live = paneScreenCopy(() => ({ cols: 80, rows: 24 }));
     live.push('prompt');
-    const ended = paneRing(() => ({ cols: 80, rows: 24 }));
+    const ended = paneScreenCopy(() => ({ cols: 80, rows: 24 }));
     ended.push('bye');
     ended.exit(1);
-    const quiet = paneRing(() => ({ cols: 80, rows: 24 }));
+    const quiet = paneScreenCopy(() => ({ cols: 80, rows: 24 }));
     const sent: unknown[][] = [];
     replaySession({
-      rings: new Map([['0:0', live], ['0:1', ended], ['0:2', quiet]]),
+      screenCopies: new Map([['0:0', live], ['0:1', ended], ['0:2', quiet]]),
       projects: () => ({ projects: [] }),
       worktrees: () => ({ entries: [], paneDirectories: {} }),
       usage: () => 'usage' as never,
