@@ -68,4 +68,28 @@ describe('connectRemote', () => {
     await expect(client.invoke('board:read', [])).resolves.toBe('again');
     expect(statuses).toEqual(['', `Reconnecting to ${address}…`, '']);
   }, 10_000);
+
+  it('closes the socket when the hello is never answered', async () => {
+    const address = await hostOn(() => null);
+    let closed = false;
+    server!.on('connection', (socket) => {
+      socket.removeAllListeners('message');
+      socket.on('close', () => { closed = true; });
+    });
+    await expect(connectRemote(address, 'good', ports(), 50)).rejects.toThrow(`No answer from ${address}`);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(closed).toBe(true);
+  });
+
+  it('stops retrying and says why when a reconnect is refused for its token', async () => {
+    const statuses: string[] = [];
+    const address = await hostOn(() => null);
+    client = await connectRemote(address, 'good', { ...ports(), status: (text) => statuses.push(text) });
+    let connections = 0;
+    server!.on('connection', () => { connections++; });
+    for (const socket of server!.clients) socket.close(4001, 'The host refused the token');
+    await new Promise((resolve) => setTimeout(resolve, 2_500));
+    expect(statuses.at(-1)).toBe('The host refused the token');
+    expect(connections).toBe(0);
+  }, 10_000);
 });

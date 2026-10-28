@@ -234,7 +234,7 @@ function liveWindow(): BrowserWindow | undefined {
 // every remote screen; notification:click reaching them too is harmless, none of them asks to be clicked.
 let remoteHost: RemoteHost | null = null;
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
-  liveWindow()?.webContents.send(channel, ...payload);
+  if (remote.reachesWindow(channel)) liveWindow()?.webContents.send(channel, ...payload);
   remoteHost?.broadcast(channel, payload);
 }
 

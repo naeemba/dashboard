@@ -1,9 +1,10 @@
 import WebSocket from 'ws';
 import type { RemoteTarget } from './channels';
+import { failureText } from './failure';
 import type { LogDraft } from './log-entry';
 import { pendingRequests } from './pending-requests';
 import {
-  HELLO_CHANNEL, REQUEST_TIMEOUT_MS, decodeFrame, encodeFrame, isReply, type Frame,
+  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, HELLO_CHANNEL, REQUEST_TIMEOUT_MS, decodeFrame, encodeFrame, isReply, type Frame,
 } from './remote-protocol';
 
 // This screen's side of the wire. One socket to the host; every request gets an id and a timer, every
@@ -24,7 +25,10 @@ export type RemoteClient = RemoteTarget & {
 
 const RECONNECT_MS = 2_000;
 
-export function connectRemote(address: string, token: string, ports: ClientPorts): Promise<RemoteClient> {
+// helloTimeoutMs exists for the test of a host that never answers the hello.
+export function connectRemote(
+  address: string, token: string, ports: ClientPorts, helloTimeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<RemoteClient> {
   const pending = pendingRequests();
   let socket: WebSocket | null = null;
   let nextId = 1;
@@ -33,16 +37,17 @@ export function connectRemote(address: string, token: string, ports: ClientPorts
   let everAccepted = false;
   let reconnectTimer: NodeJS.Timeout | null = null;
 
-  function send(frame: Frame): boolean {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return false;
-    socket.send(encodeFrame(frame));
+  // `via` is the socket that is saying hello and is not the live one yet.
+  function send(frame: Frame, via: WebSocket | null = socket): boolean {
+    if (!via || via.readyState !== WebSocket.OPEN) return false;
+    via.send(encodeFrame(frame));
     return true;
   }
 
-  function request(channel: string, args: unknown[], timeoutMs: number): Promise<unknown> {
+  function request(channel: string, args: unknown[], timeoutMs: number, via: WebSocket | null = socket): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = nextId++;
-      if (!send({ id, channel, args })) return reject(new Error(`Not connected to ${address}`));
+      if (!send({ id, channel, args }, via)) return reject(new Error(`Not connected to ${address}`));
       // The timer is cleared once the request settles, so a busy session leaves no timers behind.
       const timer = setTimeout(() => pending.expire(id, address), timeoutMs);
       timer.unref();
@@ -56,12 +61,18 @@ export function connectRemote(address: string, token: string, ports: ClientPorts
       const next = new WebSocket(`ws://${address}`);
       next.on('open', () => {
         if (closed) return next.close();
-        socket = next;
-        request(HELLO_CHANNEL, [token, ports.version], REQUEST_TIMEOUT_MS).then(() => {
+        // The socket goes live only once the host accepts: until then nothing else may travel over it.
+        request(HELLO_CHANNEL, [token, ports.version], helloTimeoutMs, next).then(() => {
+          socket = next;
+          if (everAccepted) ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
           everAccepted = true;
           ports.status('');
           resolve();
-        }, reject);
+        }, (error: unknown) => {
+          // A hello that was refused or never answered leaves no socket behind to push into the renderer.
+          next.terminate();
+          reject(error);
+        });
       });
       next.on('message', (raw) => {
         const frame = decodeFrame(String(raw));
@@ -69,13 +80,20 @@ export function connectRemote(address: string, token: string, ports: ClientPorts
         if (isReply(frame)) pending.settle(frame);
         else if ('channel' in frame) ports.push(frame.channel, frame.args);
       });
-      next.on('error', (error) => { if (!everAccepted) reject(error); });
-      next.on('close', (_code, reason) => {
+      next.on('error', (error) => { if (!everAccepted) reject(new Error(`Could not reach ${address}: ${failureText(error)}`)); });
+      next.on('close', (code, reason) => {
         if (socket === next) socket = null;
         // Before the failAll, so the host's own reason beats the generic one the hello would get.
         if (!everAccepted) reject(new Error(reason.toString() || `Could not reach ${address}`));
         pending.failAll(`Lost ${address}`);
         if (!everAccepted || closed) return;
+        // A refusal will be the same on the next try; say why and stop rather than loop on a stale token.
+        if (code === CLOSE_BAD_TOKEN || code === CLOSE_BAD_VERSION) {
+          ports.status(reason.toString());
+          ports.log({ level: 'error', kind: 'screen', message: `${address} refused the reconnect: ${reason.toString()}` });
+          return;
+        }
+        ports.log({ level: 'warn', kind: 'screen', message: `lost ${address}` });
         ports.status(`Reconnecting to ${address}…`);
         reconnectTimer = setTimeout(() => void open().catch(() => undefined), RECONNECT_MS);
       });

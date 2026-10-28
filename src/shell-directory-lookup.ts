@@ -11,9 +11,9 @@ import {
 // asks before it removes a finished card's worktree. What those answers mean is shell-directory.ts's,
 // and it is tested there, including how one question is shared between the cards asking it.
 //
-// Out of main.ts because main had reached the 600-line ceiling. No test file, under the exemption
-// CLAUDE.md gives spawning: this runs `lsof`, reads `ps` through the `processTree` main hands it,
-// and hands the text on, and a test of that is a test of mocks.
+// Out of main.ts because main had reached the 600-line ceiling. The spawning half (`lsof`, `ps` through
+// the `processTree` main hands it) has no test, under the exemption CLAUDE.md gives spawning: a test of
+// that is a test of mocks. shellLiveness, the one branch here, is tested in shell-directory-lookup.test.ts.
 //
 // One `ps` and one `lsof` per tick, whatever the number of shells and cards. `lsof` takes a list of
 // pids and answers for all of them in about the time it takes for one, so twenty shells cost what

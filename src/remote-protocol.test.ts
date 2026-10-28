@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, decodeFrame, encodeFrame, helloRefusal, isClientChannel, isReply, isRequest,
+  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, decodeFrame, encodeFrame, helloRefusal, isClientChannel, isReply, isRequest, reachesLocalScreen,
 } from './remote-protocol';
 
 describe('frames', () => {
@@ -57,5 +57,19 @@ describe('helloRefusal', () => {
     expect(helloRefusal('t', '1.16.0', 't', '1.17.0')).toEqual({
       code: CLOSE_BAD_VERSION, reason: 'The host runs Dashboard 1.17.0, this is 1.16.0',
     });
+  });
+});
+
+describe('reachesLocalScreen', () => {
+  it('lets everything through when this screen is not joined', () => {
+    expect(reachesLocalScreen('pty:data', false)).toBe(true);
+  });
+
+  it('holds back the local session\'s pushes while joined, but not the app\'s own notices', () => {
+    expect(reachesLocalScreen('pty:data', true)).toBe(false);
+    expect(reachesLocalScreen('board:change', true)).toBe(false);
+    for (const channel of ['notification:click', 'failure:show', 'host:status', 'projects:change']) {
+      expect(reachesLocalScreen(channel, true)).toBe(true);
+    }
   });
 });
