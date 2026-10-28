@@ -22,9 +22,8 @@ import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
-import { startHost } from './host-wiring';
+import { startHost, type HeldByMain } from './host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-ipc';
-import type { RemoteHost } from './remote-host';
 import { registerPaneOpeners } from './pane-openers';
 import { channels, registerWithIpc } from './channels';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
@@ -230,9 +229,8 @@ function liveWindow(): BrowserWindow | undefined {
   return mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
 }
 
-// Set once at launch, below, when the settings give a port. Every push goes to the local window and to
-// every remote screen; notification:click reaching them too is harmless, none of them asks to be clicked.
-let remoteHost: RemoteHost | null = null;
+// Every push goes to the local window and to every remote screen. remoteHost is set once at launch,
+// below, and is null when the settings give no port.
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
   if (remote.reachesWindow(channel)) liveWindow()?.webContents.send(channel, ...payload);
   remoteHost?.broadcast(channel, payload);
@@ -1021,18 +1019,19 @@ function createWindow(): void {
   failures.windowOpened();
 }
 
-// Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
-const remote = registerRemote(table, {
-  version: app.getVersion(), send: (channel, ...payload) => liveWindow()?.webContents.send(channel, ...payload),
-  settings: () => settings, saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
-  log: (draft) => logStore.log(draft), localProjects: openProjects,
-});
-registerWithIpc(table, remote.current);
-
-remoteHost = startHost({
+// This machine's session, as the host serves it to a remote screen and as the local window gets it back
+// on leaving another host.
+const held: HeldByMain = {
   table, rings, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
   projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft),
+};
+// Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
+const remote = registerRemote(held, {
+  send: (channel, ...payload) => liveWindow()?.webContents.send(channel, ...payload),
+  saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
 });
+registerWithIpc(table, remote.current);
+const remoteHost = startHost(held);
 
 app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });

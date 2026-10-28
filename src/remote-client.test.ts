@@ -27,7 +27,7 @@ function hostOn(answer: (channel: string, args: unknown[]) => unknown): Promise<
   });
 }
 
-const ports = () => ({ version: '1.17.0', push: () => undefined, status: () => undefined, log: () => undefined });
+const ports = () => ({ version: '1.17.0', push: () => undefined, status: () => undefined, log: () => undefined, gone: () => undefined });
 
 describe('connectRemote', () => {
   it('connects, then forwards a request and brings back its result', async () => {
@@ -83,14 +83,16 @@ describe('connectRemote', () => {
 
   it('stops retrying and says why when a reconnect is refused for its token', async () => {
     const statuses: string[] = [];
+    let gone = false;
     const address = await hostOn(() => null);
-    client = await connectRemote(address, 'good', { ...ports(), status: (text) => statuses.push(text) });
+    client = await connectRemote(address, 'good', { ...ports(), status: (text) => statuses.push(text), gone: () => { gone = true; } });
     let connections = 0;
     server!.on('connection', () => { connections++; });
     for (const socket of server!.clients) socket.close(4001, 'The host refused the token');
     await new Promise((resolve) => setTimeout(resolve, 2_500));
     expect(statuses.at(-1)).toBe('The host refused the token');
     expect(connections).toBe(0);
+    expect(gone).toBe(true);
   }, 10_000);
 
   it('drops a reconnect whose hello is still out when the client is closed', async () => {

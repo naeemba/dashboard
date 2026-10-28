@@ -1,12 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocketServer } from 'ws';
 import type { Channels } from './channels';
-import { registerRemote } from './remote-ipc';
+import type { PaneRing } from './pane-ring';
+import { registerRemote, type HeldForRemote } from './remote-ipc';
 import { decodeFrame, encodeFrame, isRequest } from './remote-protocol';
 import type { Settings } from './settings';
 
 let server: WebSocketServer | undefined;
 afterEach(() => { server?.close(); });
+
+// What the real host sends: its list under its own name for itself, on joining and in the reply to an open.
+const hostList = { host: 'local', projects: [{ name: 'api', path: '/code/api', missing: false }] };
 
 function host(): Promise<string> {
   return new Promise((resolve) => {
@@ -14,41 +18,105 @@ function host(): Promise<string> {
     server.on('connection', (socket) => socket.on('message', (raw) => {
       const frame = decodeFrame(String(raw));
       if (!frame || !isRequest(frame)) return;
+      if (frame.channel === 'projects:open') return socket.send(encodeFrame({ id: frame.id, result: { index: 0, open: hostList } }));
       if (frame.args[0] !== 'good') return socket.close(4001, 'The host refused the token');
       socket.send(encodeFrame({ id: frame.id, result: null }));
+      socket.send(encodeFrame({ channel: 'projects:change', args: [hostList] }));
     }));
   });
 }
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 
 function wired() {
   const handlers = new Map<string, (...args: unknown[]) => unknown>();
   const sent: unknown[][] = [];
   const table = { handle: (channel: string, handler: (...args: unknown[]) => unknown) => handlers.set(channel, handler) } as unknown as Channels;
-  const remote = registerRemote(table, {
-    version: '1', send: (...message) => { sent.push(message); }, settings: () => ({ remote: {} }) as Settings,
-    saveSettings: () => undefined, log: () => undefined, localProjects: () => 'local',
-  });
+  const held: HeldForRemote = {
+    table, version: '1', settings: () => ({ remote: {} }) as Settings, log: () => undefined,
+    rings: new Map([['0:1', { replay: () => 'ring' } as PaneRing]]),
+    projects: () => ({ host: 'local', projects: [] }),
+    worktrees: () => ({ entries: [], paneDirectories: {} }),
+    usage: () => 'usage' as never,
+  };
+  const remote = registerRemote(held, { send: (...message) => { sent.push(message); }, saveSettings: () => undefined });
   const connect = (address: string, token: string) => handlers.get('host:connect')!('screen', address, token) as Promise<string>;
-  return { remote, sent, connect };
+  const disconnect = () => handlers.get('host:disconnect')!('screen');
+  return { remote, sent, connect, disconnect };
 }
+
+// The local session told to the window, as a screen joining it would be.
+const localReplay = [
+  ['projects:change', { host: 'local', projects: [] }],
+  ['pty:data', '0:1', 'ring'],
+  ['worktree:change', { entries: [], paneDirectories: {} }],
+  ['usage:change', 'usage'],
+];
 
 describe('registerRemote', () => {
   it('keeps only the newest of two overlapping connects', async () => {
     const address = await host();
     const { remote, connect } = wired();
     await Promise.all([connect(address, 'good'), connect(address, 'good')]);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await settle();
     expect(server!.clients.size).toBe(1);
     expect(remote.current()).not.toBeNull();
     for (const socket of server!.clients) socket.close();
   });
 
-  it('puts the local projects back when a connect fails after a join', async () => {
+  it('names the joined address on the host list, pushed and in the reply to an open', async () => {
     const address = await host();
     const { remote, sent, connect } = wired();
     expect(await connect(address, 'good')).toBe('');
+    await settle();
+    expect(sent).toContainEqual(['projects:change', { ...hostList, host: address }]);
+    await expect(remote.current()!.invoke('projects:open', [null])).resolves.toEqual({ index: 0, open: { ...hostList, host: address } });
+    for (const socket of server!.clients) socket.close();
+  });
+
+  it('holds local pushes back from the window while a connect is out', async () => {
+    const address = await host();
+    const { remote, connect } = wired();
+    const connecting = connect(address, 'good');
+    expect(remote.reachesWindow('pty:data')).toBe(false);
+    await connecting;
+    expect(remote.reachesWindow('pty:data')).toBe(false);
+    expect(remote.reachesWindow('host:status')).toBe(true);
+    for (const socket of server!.clients) socket.close();
+  });
+
+  it('puts the local session back when a connect fails after a join', async () => {
+    const address = await host();
+    const { remote, sent, connect } = wired();
+    expect(await connect(address, 'good')).toBe('');
+    sent.length = 0;
     expect(await connect(address, 'bad')).toBe('The host refused the token');
     expect(remote.current()).toBeNull();
-    expect(sent).toContainEqual(['projects:change', 'local']);
+    expect(remote.reachesWindow('pty:data')).toBe(true);
+    // The old client's close clears the status line first.
+    expect(sent).toEqual([['host:status', ''], ...localReplay]);
+  });
+
+  it('catches the window up with the local session on disconnect', async () => {
+    const address = await host();
+    const { remote, sent, connect, disconnect } = wired();
+    await connect(address, 'good');
+    await settle();
+    sent.length = 0;
+    disconnect();
+    expect(remote.current()).toBeNull();
+    expect(sent).toEqual([['host:status', ''], ...localReplay]);
+  });
+
+  it('goes back to the local session and keeps the reason when a reconnect is refused', async () => {
+    const address = await host();
+    const { remote, sent, connect } = wired();
+    await connect(address, 'good');
+    await settle();
+    sent.length = 0;
+    for (const socket of server!.clients) socket.close(4001, 'The host refused the token');
+    await settle();
+    expect(remote.current()).toBeNull();
+    expect(sent).toEqual([['host:status', 'The host refused the token'], ...localReplay]);
   });
 });

@@ -15,6 +15,8 @@ export type ClientPorts = {
   push(channel: string, args: unknown[]): void;
   status(text: string): void;
   log(draft: LogDraft): void;
+  // The host refused a reconnect, so this client has stopped trying and will never carry a request again.
+  gone(): void;
 };
 
 export type RemoteClient = RemoteTarget & {
@@ -100,7 +102,7 @@ export function connectRemote(
         if (code === CLOSE_BAD_TOKEN || code === CLOSE_BAD_VERSION) {
           ports.status(reason.toString());
           ports.log({ level: 'error', kind: 'screen', message: `${address} refused the reconnect: ${reason.toString()}` });
-          return;
+          return ports.gone();
         }
         ports.log({ level: 'warn', kind: 'screen', message: `lost ${address}` });
         ports.status(`Reconnecting to ${address}…`);

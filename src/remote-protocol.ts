@@ -83,3 +83,17 @@ const LOCAL_ONLY_PUSHES = new Set(['notification:click', 'failure:show', 'host:s
 export function reachesLocalScreen(channel: string, joinedToHost: boolean): boolean {
   return !joinedToHost || LOCAL_ONLY_PUSHES.has(channel);
 }
+
+// The host names its own list LOCAL_SCREEN, which is what it is from where the host stands. Relayed as
+// it is, this screen would take the host's projects for its own: it would never offer Disconnect, and
+// "a new project" would ask the host for a folder dialog the host refuses. So the list a screen joined
+// through is stamped with the address it joined, on the push and on the reply to an open alike.
+export function stampHost(channel: string, args: unknown[], address: string): unknown[] {
+  if (channel !== 'projects:change' || !isRecord(args[0])) return args;
+  return [{ ...args[0], host: address }, ...args.slice(1)];
+}
+
+export function stampReply(channel: string, result: unknown, address: string): unknown {
+  if (channel !== 'projects:open' || !isRecord(result) || !isRecord(result.open)) return result;
+  return { ...result, open: { ...result.open, host: address } };
+}

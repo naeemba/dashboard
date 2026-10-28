@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, decodeFrame, encodeFrame, helloRefusal, isClientChannel, isReply, isRequest, reachesLocalScreen,
+  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, decodeFrame, encodeFrame, helloRefusal, isClientChannel, isReply, isRequest, reachesLocalScreen, stampHost, stampReply,
 } from './remote-protocol';
 
 describe('frames', () => {
@@ -71,5 +71,21 @@ describe('reachesLocalScreen', () => {
     for (const channel of ['notification:click', 'failure:show', 'host:status', 'projects:change']) {
       expect(reachesLocalScreen(channel, true)).toBe(true);
     }
+  });
+});
+
+describe('stampHost and stampReply', () => {
+  const list = { host: 'local', projects: [null] };
+
+  it('names the joined address on the projects push and the reply to an open', () => {
+    expect(stampHost('projects:change', [list], '10.0.0.2:7777')).toEqual([{ host: '10.0.0.2:7777', projects: [null] }]);
+    expect(stampReply('projects:open', { index: 0, open: list }, '10.0.0.2:7777'))
+      .toEqual({ index: 0, open: { host: '10.0.0.2:7777', projects: [null] } });
+  });
+
+  it('leaves every other channel and a cancelled open alone', () => {
+    expect(stampHost('pty:data', ['0-1', 'hi'], 'h')).toEqual(['0-1', 'hi']);
+    expect(stampReply('projects:recent', [list], 'h')).toEqual([list]);
+    expect(stampReply('projects:open', null, 'h')).toBeNull();
   });
 });
