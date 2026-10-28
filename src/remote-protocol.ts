@@ -1,7 +1,7 @@
 import { isRecord } from './is-record';
 
-// The wire between a screen and the host: the bridge's own channels, one JSON frame per line of the
-// socket. A request carries an id so its reply finds it; a push has none. Shared by remote-host.ts and
+// The wire between a screen and the host: the bridge's own channels, one JSON frame per
+// message. A request carries an id so its reply finds it; a push has none. Shared by remote-host.ts and
 // remote-client.ts so neither holds its own idea of the shape.
 export type Request = { id: number; channel: string; args: unknown[] };
 export type Reply = { id: number; result?: unknown; error?: string };
@@ -25,7 +25,12 @@ export function isClientChannel(channel: string): boolean {
   return CLIENT_CHANNELS.has(channel);
 }
 
+// JSON drops an undefined field, so a reply that answers nothing would arrive with no result at all.
+// A fire-and-forget handler answers undefined; it goes out as null so the client's reply still lands.
 export function encodeFrame(frame: Frame): string {
+  if (isReply(frame) && frame.result === undefined && frame.error === undefined) {
+    return JSON.stringify({ ...frame, result: null });
+  }
   return JSON.stringify(frame);
 }
 
@@ -59,6 +64,7 @@ export function isReply(frame: Frame): frame is Reply {
 export function helloRefusal(
   token: string, version: string, expectedToken: string, expectedVersion: string,
 ): { code: number; reason: string } | null {
+  // Plain !== is accepted: the host listens on a home network, and the token is the only gate.
   if (token !== expectedToken) return { code: CLOSE_BAD_TOKEN, reason: 'The host refused the token' };
   if (version !== expectedVersion) {
     return { code: CLOSE_BAD_VERSION, reason: `The host runs Dashboard ${expectedVersion}, this is ${version}` };

@@ -11,6 +11,10 @@ describe('frames', () => {
     for (const frame of [request, reply, push]) expect(decodeFrame(encodeFrame(frame))).toEqual(frame);
   });
 
+  it('keeps a reply with no result as a null result on the wire', () => {
+    expect(decodeFrame(encodeFrame({ id: 1, result: undefined }))).toEqual({ id: 1, result: null });
+  });
+
   it('tells the three apart', () => {
     expect(isRequest({ id: 1, channel: 'x:y', args: [] })).toBe(true);
     expect(isReply({ id: 1, result: null })).toBe(true);
