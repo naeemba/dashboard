@@ -808,11 +808,12 @@ bridge.onBoardChange((projectPath) => {
   page.board?.reload(projectPath);
 });
 
-// Another screen wrote a page of notes. The box in front reads its file again; open() keeps anything
-// typed here that has not been written yet. Any other box reads again when you arrive at it.
-bridge.onNotesChange(() => {
+// Another screen wrote a page of notes. The box in front reads its file again if the page is its own,
+// keeping anything typed here that has not been written yet. Any other box reads again when you
+// arrive at it.
+bridge.onNotesChange((projectPath) => {
   const page = pages[activeIndex];
-  if (page.mode === 'notes') void page.notes?.open();
+  if (page.mode === 'notes') void page.notes?.reload(projectPath);
 });
 
 // jumps.ts says where each of these lands.
