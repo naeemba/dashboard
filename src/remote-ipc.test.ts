@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocketServer } from 'ws';
 import type { Channels } from './channels';
 import type { PaneRing } from './pane-ring';
-import { registerRemote, type HeldForRemote } from './remote-ipc';
+import { connectAtLaunch, registerRemote, type HeldForRemote } from './remote-ipc';
 import { decodeFrame, encodeFrame, isRequest } from './remote-protocol';
 import type { Settings } from './settings';
 
@@ -118,5 +118,37 @@ describe('registerRemote', () => {
     await settle();
     expect(remote.current()).toBeNull();
     expect(sent).toEqual([['host:status', 'The host refused the token'], ...localReplay]);
+  });
+});
+
+describe('connectAtLaunch', () => {
+  function launched(argv: string[]) {
+    const listeners = new Map<string, () => void>();
+    const connects: unknown[][] = [];
+    const held: string[] = [];
+    const table = {
+      on: (channel: string, listener: () => void) => listeners.set(channel, listener),
+      invoke: async (_screen: string, channel: string, args: unknown[]) => { connects.push([channel, ...args]); return 'refused'; },
+    } as unknown as Channels;
+    const settings = () => ({ remote: { address: '10.0.0.2:7777', token: 't' } }) as Settings;
+    connectAtLaunch(argv, settings, table, (message) => held.push(message));
+    return { restored: () => listeners.get('session:restored')!(), connects, held };
+  }
+
+  it('joins once the window has restored, and only the first time', async () => {
+    const launch = launched(['--remote']);
+    expect(launch.connects).toEqual([]);
+    launch.restored();
+    launch.restored();
+    await settle();
+    expect(launch.connects).toEqual([['host:connect', '10.0.0.2:7777', 't']]);
+    expect(launch.held).toEqual(['refused']);
+  });
+
+  it('joins nothing without --remote', async () => {
+    const launch = launched([]);
+    launch.restored();
+    await settle();
+    expect(launch.connects).toEqual([]);
   });
 });

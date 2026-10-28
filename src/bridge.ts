@@ -84,6 +84,9 @@ export type DashboardBridge = {
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;
   saveSession(session: Session): void;
+  // The saved projects are open again, or have failed to. What `--remote` waits for before it joins a
+  // host, so the restore's own opens are not relayed to it.
+  sessionRestored(): void;
   readBoard(projectPath: string): Promise<BoardRead>;
   // A read that changes nothing on disk, for the manager's counts: null when there is nothing to
   // count. board-store.ts says why the manager may not use readBoard.

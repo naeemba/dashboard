@@ -1010,7 +1010,8 @@ async function start(): Promise<void> {
     // Fallen through to whatever xterm renders instead.
   }
   applyAppearance();
-  await restore(session);
+  // Said whether or not the restore threw: a launch with `--remote` joins its host only after this.
+  await restore(session).finally(() => bridge.sessionRestored());
 }
 
 start().catch((error: unknown) => {

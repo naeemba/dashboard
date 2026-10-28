@@ -19,9 +19,11 @@ export const CLOSE_NO_HELLO = 4000;
 
 // What never leaves the screen: a link opens in the browser you are looking at, a banner shows on the
 // desk you are sitting at, and the settings (keys, font, theme) are this machine's. A mac on a Linux
-// host must keep its Cmd bindings. Connecting and disconnecting are the client's own by definition.
+// host must keep its Cmd bindings. Connecting and disconnecting are the client's own by definition, and
+// so is the window saying it has restored its own session, which is what `--remote` waits for.
 const CLIENT_CHANNELS = new Set([
   'link:open', 'notification:show', 'settings:read', 'settings:write', 'host:connect', 'host:disconnect',
+  'session:restored',
 ]);
 
 export function isClientChannel(channel: string): boolean {

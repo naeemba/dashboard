@@ -1,4 +1,3 @@
-import type { BrowserWindow } from 'electron';
 import { LOCAL_SCREEN } from './screens';
 import type { Channels, RemoteTarget } from './channels';
 import { failureText } from './failure';
@@ -99,14 +98,20 @@ export function registerRemote(held: HeldForRemote, window: {
   return { current, reachesWindow: (channel) => reachesLocalScreen(channel, client !== null || connecting) };
 }
 
-// `--remote` on the command line: join the remembered host as soon as the page can hear the push. A
-// refusal is held for the status bar rather than thrown, because the launch itself went fine.
-export function connectAtLaunch(
-  window: BrowserWindow | undefined, argv: string[], settings: Settings, table: Channels, hold: (message: string) => void,
-): void {
-  if (!window || !argv.includes('--remote') || settings.remote.address === '') return;
-  window.webContents.once('did-finish-load', () => {
-    void table.invoke(LOCAL_SCREEN, 'host:connect', [settings.remote.address, settings.remote.token])
+// `--remote` on the command line: join the remembered host once the window has put its own session
+// back, which the renderer says on `session:restored`. Not on the page load: the restore is still
+// opening the saved projects then, and each one it opens after the join is relayed, and lands on the
+// host's desk as a tab of a folder that is not there. Waiting for the renderer is simpler than holding
+// back the local opens until the connect settles, which would have to tell a restore's open from one
+// you asked for. Once per launch: a reloaded page restores again but does not connect again.
+// A refusal is held for the status bar rather than thrown, because the launch itself went fine.
+export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void): void {
+  let waiting = argv.includes('--remote');
+  table.on('session:restored', () => {
+    const { address, token } = settings().remote;
+    if (!waiting || address === '') return;
+    waiting = false;
+    void table.invoke(LOCAL_SCREEN, 'host:connect', [address, token])
       .then((refusal) => { if (refusal) hold(String(refusal)); });
   });
 }

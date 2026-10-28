@@ -27,6 +27,7 @@ const bridge: DashboardBridge = {
   onExit: (listener) => ipcRenderer.on('pty:exit', (_event, id, exitCode) => listener(id, exitCode)),
   getSession: () => ipcRenderer.invoke('session:read'),
   saveSession: (session) => ipcRenderer.send('session:write', session),
+  sessionRestored: () => ipcRenderer.send('session:restored'),
   readBoard: (projectPath) => ipcRenderer.invoke('board:read', projectPath),
   peekBoard: (projectPath) => ipcRenderer.invoke('board:peek', projectPath),
   writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),

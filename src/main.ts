@@ -1030,13 +1030,14 @@ const remote = registerRemote(held, {
   send: (channel, ...payload) => liveWindow()?.webContents.send(channel, ...payload),
   saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
 });
+// Before registerWithIpc, which only answers the channels already in the table.
+connectAtLaunch(process.argv, () => settings, table, failures.hold);
 registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 
 app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
   createWindow();
-  connectAtLaunch(liveWindow(), process.argv, settings, table, failures.hold);
 });
 app.on('will-quit', () => {
   remoteHost?.close();
