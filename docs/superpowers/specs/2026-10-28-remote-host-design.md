@@ -110,14 +110,20 @@ The screen you are looking at owns these:
 - `link:open` opens in the client's browser.
 - `notification:show` shows on the client. The click lands on the pane in
   the client's window.
-- `scrollback:open` and `file:open` write the text to the host (over a new
-  host channel `file:write` into the host's temp folder) and then ask the
-  host's nvim pane to open it. The editor is the host's; the file must be
-  where the editor is.
-- `projects:open` with `null` today opens a native folder dialog. On the
-  remote client that would browse the mac. The relay instead asks the
-  host for `projects:folders` of a given directory and the picker walks
-  the host's disk as rows. Starting folder: the host's home.
+- `settings:read` and `settings:write`: keys, font and theme are the
+  screen's. A mac on a Linux host keeps its Cmd bindings.
+- `host:connect` and `host:disconnect`.
+
+Everything else goes to the host, including `scrollback:open` and
+`file:open`: both carry what they need in their arguments (the text, the
+link), and the editor they open into is the host's nvim, so the file must
+be written where the host is.
+
+`projects:open` with `null` today opens a native folder dialog. On the
+remote client that would browse the mac, and relayed it would raise a dialog
+on the host's desk. While connected, the client asks for a folder path on
+the host in a text prompt instead, and the host refuses a `null` from any
+remote screen.
 
 ## 5. Files
 
