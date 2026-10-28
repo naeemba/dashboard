@@ -38,6 +38,11 @@ export type WorkingPanes = {
   // An agent has just been started in this pane. True from the keystroke, the way the process itself
   // is, so the window before the first report is not read as quiet.
   started: (id: string, now: number) => void;
+  // Whether this app is a screen of another host right now. Its window draws that host's panes then
+  // and reports them there, so nothing reports this machine's agents: every one counts as working
+  // while away, and for the floor after coming home, until the window has looked at its own panes
+  // again. Told on every sweep, so the way home is noticed on the sweep that follows it.
+  away: (isAway: boolean, now: number) => void;
   // Whether the pane still counts as working.
   works: (id: string, now: number) => boolean;
 };
@@ -46,12 +51,19 @@ export function workingPanes(): WorkingPanes {
   // When each pane was last seen working. A pane that is not in here at all has had no agent started in
   // it this run, and the caller has already asked whether one is running before it gets here.
   const lastWorkingAt = new Map<string, number>();
+  let wasAway = false;
+  let cameHomeAt = -Infinity;
   return {
     report: (ids, now) => { for (const id of ids) lastWorkingAt.set(id, now); },
     started: (id, now) => { lastWorkingAt.set(id, now); },
+    away: (isAway, now) => {
+      if (wasAway && !isAway) cameHomeAt = now;
+      wasAway = isAway;
+    },
     works: (id, now) => {
-      const seen = lastWorkingAt.get(id);
-      return seen !== undefined && now - seen < WORKING_FLOOR_MS;
+      if (wasAway) return true;
+      const seen = Math.max(lastWorkingAt.get(id) ?? -Infinity, cameHomeAt);
+      return now - seen < WORKING_FLOOR_MS;
     },
   };
 }
