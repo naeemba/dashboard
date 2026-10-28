@@ -16,6 +16,7 @@ import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-s
 import { anyShellStandsIn } from './shell-directory';
 import { shellDirectories } from './shell-directory-lookup';
 import { processTree } from './process-tree';
+import { paneRing, type PaneRing } from './pane-ring';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -193,6 +194,7 @@ let settings = readSettings(settingsFile, isMac);
 tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
+const rings = new Map<string, PaneRing>();
 // How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
@@ -477,7 +479,8 @@ function spawnTerminal(id: string): void {
   // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
   // through this function, so one line covers every pane that exists.
   paneShells.set(id, shellCommand);
-  terminalProcess.onData((data) => sendToRenderer('pty:data', id, data));
+  const ring = paneRing(); rings.set(id, ring);
+  terminalProcess.onData((data) => { ring.push(data); sendToRenderer('pty:data', id, data); });
   terminalProcess.onExit(({ exitCode }) => {
     // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
     // the agent in the same tick, and the killed shell's exit arrives after that: without the check it
@@ -614,6 +617,7 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     terminalProcess?.kill();
     terminalCommands.delete(id);
     paneSizes.delete(id);
+    rings.delete(id);
     paneShells.delete(id);
   }
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
