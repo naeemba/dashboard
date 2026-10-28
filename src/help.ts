@@ -303,7 +303,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'is what takes the project away. '
     + 'The project list has one more row at the bottom, Connect to a host: another Dashboard, on another '
     + 'machine, that has a port and a token in its settings. Connected, this window is a second screen '
-    + 'of that session — its projects, its shells, its boards — and the row becomes Disconnect. Opening '
+    + 'of that session — its projects, its shells, its boards — and the row becomes Disconnect. Until '
+    + 'you search, the host you last connected to leads the list as Reconnect, so the list and Enter '
+    + 'take you back to it. Opening '
     + 'a new project while connected asks for a folder path on the host, since a folder dialog here '
     + 'would show this machine\'s disk.',
   log: 'What the app did and what went wrong, newest first: errors, panes and agents exiting, cards '

@@ -36,10 +36,19 @@ describe('connect rows', () => {
     expect(rows.map((row) => row.choice)).toEqual([{ kind: 'open', path: null }, { kind: 'connect' }]);
   });
 
-  it('offers the last host first when there is one', () => {
-    const rows = pickerRows([], '', { connectedTo: null, lastAddress: '10.0.0.2:7777' });
+  it('offers the last host as the first row when there is one', () => {
+    const rows = pickerRows([project('api', '/code/api')], '', { connectedTo: null, lastAddress: '10.0.0.2:7777' });
     expect(rows.map((row) => row.choice)).toEqual([
-      { kind: 'open', path: null }, { kind: 'reconnect', address: '10.0.0.2:7777' }, { kind: 'connect' },
+      { kind: 'reconnect', address: '10.0.0.2:7777' }, { kind: 'open', path: '/code/api' },
+      { kind: 'open', path: null }, { kind: 'connect' },
+    ]);
+  });
+
+  it('leads with the matches once something is typed', () => {
+    const rows = pickerRows([project('api', '/code/api')], 'api', { connectedTo: null, lastAddress: '10.0.0.2:7777' });
+    expect(rows.map((row) => row.choice)).toEqual([
+      { kind: 'open', path: '/code/api' }, { kind: 'open', path: null },
+      { kind: 'reconnect', address: '10.0.0.2:7777' }, { kind: 'connect' },
     ]);
   });
 

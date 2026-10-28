@@ -70,7 +70,7 @@ describe('reachesLocalScreen', () => {
   it('holds back the local session\'s pushes while joined, but not the app\'s own notices', () => {
     expect(reachesLocalScreen('pty:data', true)).toBe(false);
     expect(reachesLocalScreen('board:change', true)).toBe(false);
-    for (const channel of ['notification:click', 'failure:show', 'host:status', 'projects:change']) {
+    for (const channel of ['failure:show', 'host:status', 'projects:change']) {
       expect(reachesLocalScreen(channel, true)).toBe(true);
     }
   });

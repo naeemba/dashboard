@@ -80,7 +80,7 @@ export function helloRefusal(
 // What the local window may still be sent while this app is a screen of another host. Its own shells
 // and boards push under pane ids such as `0:1` that collide with the host's after the renderer resets,
 // so only the app's own notices get through; the host's pushes arrive by the client, not by this gate.
-const LOCAL_ONLY_PUSHES = new Set(['notification:click', 'failure:show', 'host:status', 'projects:change']);
+const LOCAL_ONLY_PUSHES = new Set(['failure:show', 'host:status', 'projects:change']);
 
 export function reachesLocalScreen(channel: string, joinedToHost: boolean): boolean {
   return !joinedToHost || LOCAL_ONLY_PUSHES.has(channel);

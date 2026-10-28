@@ -458,7 +458,8 @@ function spawnTerminal(id: string): void {
   // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
   // through this function, so one line covers every pane that exists.
   paneShells.set(id, shellCommand);
-  const ring = paneRing(); rings.set(id, ring);
+  const ring = paneRing();
+  rings.set(id, ring);
   terminalProcess.onData((data) => { ring.push(data); sendToRenderer('pty:data', id, data); });
   terminalProcess.onExit(({ exitCode }) => {
     // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
@@ -627,7 +628,7 @@ table.handle('settings:write', (_screen, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow, send: sendToRenderer });
+registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow });
 registerProjectFiles(table, boards, boardLog);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already

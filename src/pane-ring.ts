@@ -5,7 +5,7 @@
 export const PANE_RING_LIMIT = 256 * 1024;
 const RESET = '\x1bc';
 
-export type PaneRing = { push(data: string): void; replay(): string; clear(): void };
+export type PaneRing = { push(data: string): void; replay(): string };
 
 export function paneRing(limit = PANE_RING_LIMIT): PaneRing {
   // ponytail: one string, sliced when it overflows; a chunk list if the slice ever shows in a profile.
@@ -16,6 +16,5 @@ export function paneRing(limit = PANE_RING_LIMIT): PaneRing {
       if (text.length > limit) text = text.slice(text.length - limit);
     },
     replay: () => RESET + text,
-    clear() { text = ''; },
   };
 }

@@ -12,11 +12,11 @@ export function registerPaneChannels(table: Channels, main: {
   screens: Screens;
   spawnTerminal(id: string): void;
   window(): BrowserWindow | undefined;
-  send(channel: string, ...payload: unknown[]): void;
 }): void {
   // Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
   // to land on. Without that half you arrive at whatever project you were last on and go looking for the
-  // pane the banner had already named.
+  // pane the banner had already named. Only this machine's window is told: the banner shows on the
+  // desk it was raised on, and a remote screen landing on the pane would be answering a banner it never saw.
   table.on('notification:show', (_screen, title: string, body: string, paneId: string) => {
     const notification = new Notification({ title, body });
     notification.on('click', () => {
@@ -25,12 +25,11 @@ export function registerPaneChannels(table: Channels, main: {
       // activates it at all, so ask for the window every time. show() is the hidden-to-shown
       // transition; coming back from the Dock is restore()'s, so both are needed.
       const window = main.window();
-      if (window) {
-        if (window.isMinimized()) window.restore();
-        window.show();
-        window.focus();
-      }
-      main.send('notification:click', paneId);
+      if (!window) return;
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      window.webContents.send('notification:click', paneId);
     });
     notification.show();
   });

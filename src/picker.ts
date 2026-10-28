@@ -49,6 +49,8 @@ function hostRows(state: PickerState): Row[] {
 }
 
 // What the picker shows for a query: the matches, tightest first, then the rows that are not projects.
+// With nothing typed, the host you last joined leads instead, so Ctrl+S and Enter takes you back to it;
+// a search still leads with its matches, so typing a name and pressing Enter opens that project.
 export function pickerRows(projects: Project[], query: string, state: PickerState): Row[] {
   const matched: Row[] = projects
     .map((project) => ({ project, score: fuzzyScore(`${project.name} ${project.path}`, query) }))
@@ -60,8 +62,10 @@ export function pickerRows(projects: Project[], query: string, state: PickerStat
       detail: entry.project.path,
       choice: { kind: 'open', path: entry.project.path },
     }));
-  // Last and always present, so a search that matches nothing still leaves something to press Enter on.
-  return [...matched, NEW_PROJECT, ...hostRows(state)];
+  // Always present, so a search that matches nothing still leaves something to press Enter on.
+  const hosts = hostRows(state);
+  if (query === '' && hosts[0].choice.kind === 'reconnect') return [hosts[0], ...matched, NEW_PROJECT, ...hosts.slice(1)];
+  return [...matched, NEW_PROJECT, ...hosts];
 }
 
 function glyphFor(row: Row): 'folderPlus' | 'folder' | 'plug' {

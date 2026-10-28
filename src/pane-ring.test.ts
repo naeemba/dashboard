@@ -15,11 +15,4 @@ describe('paneRing', () => {
     ring.push('ij');
     expect(ring.replay()).toBe('\x1bcfghij');
   });
-
-  it('is empty after a clear', () => {
-    const ring = paneRing(5);
-    ring.push('abc');
-    ring.clear();
-    expect(ring.replay()).toBe('\x1bc');
-  });
 });
