@@ -92,4 +92,33 @@ describe('connectRemote', () => {
     expect(statuses.at(-1)).toBe('The host refused the token');
     expect(connections).toBe(0);
   }, 10_000);
+
+  it('drops a reconnect whose hello is still out when the client is closed', async () => {
+    const pushed: unknown[] = [];
+    let connections = 0;
+    server = new WebSocketServer({ port: 0 });
+    await new Promise((resolve) => server!.on('listening', resolve));
+    const address = `127.0.0.1:${(server.address() as { port: number }).port}`;
+    server.on('connection', (socket) => {
+      const first = ++connections === 1;
+      socket.on('close', () => { connections--; });
+      socket.on('message', (raw) => {
+        const frame = decodeFrame(String(raw));
+        if (!frame || !isRequest(frame)) return;
+        const answer = () => {
+          socket.send(encodeFrame({ id: frame.id, result: null }));
+          socket.send(encodeFrame({ channel: 'pty:data', args: ['0-1', 'replay'] }));
+        };
+        if (first) socket.send(encodeFrame({ id: frame.id, result: null }));
+        else setTimeout(() => socket.readyState === socket.OPEN && answer(), 500);
+      });
+    });
+    client = await connectRemote(address, 'good', { ...ports(), push: (channel, args) => pushed.push([channel, args]) });
+    for (const socket of server.clients) socket.terminate();
+    await new Promise((resolve) => setTimeout(resolve, 2_300));
+    client.close();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(pushed).toEqual([]);
+    expect(server.clients.size).toBe(0);
+  }, 10_000);
 });

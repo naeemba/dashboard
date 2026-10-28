@@ -36,6 +36,8 @@ export function connectRemote(
   // Set by the first accepted hello. Before it a failure is the caller's to hear; after it, a retry's.
   let everAccepted = false;
   let reconnectTimer: NodeJS.Timeout | null = null;
+  // The socket whose hello is out. close() cannot reach it through `socket`, which goes live only on acceptance.
+  let connecting: WebSocket | null = null;
 
   // `via` is the socket that is saying hello and is not the live one yet.
   function send(frame: Frame, via: WebSocket | null = socket): boolean {
@@ -59,10 +61,16 @@ export function connectRemote(
   function open(): Promise<void> {
     return new Promise((resolve, reject) => {
       const next = new WebSocket(`ws://${address}`);
+      connecting = next;
       next.on('open', () => {
         if (closed) return next.close();
         // The socket goes live only once the host accepts: until then nothing else may travel over it.
         request(HELLO_CHANNEL, [token, ports.version], helloTimeoutMs, next).then(() => {
+          connecting = null;
+          if (closed) {
+            next.terminate();
+            return resolve();
+          }
           socket = next;
           if (everAccepted) ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
           everAccepted = true;
@@ -70,13 +78,14 @@ export function connectRemote(
           resolve();
         }, (error: unknown) => {
           // A hello that was refused or never answered leaves no socket behind to push into the renderer.
+          connecting = null;
           next.terminate();
           reject(error);
         });
       });
       next.on('message', (raw) => {
         const frame = decodeFrame(String(raw));
-        if (!frame) return;
+        if (!frame || closed) return;
         if (isReply(frame)) pending.settle(frame);
         else if ('channel' in frame) ports.push(frame.channel, frame.args);
       });
@@ -110,6 +119,7 @@ export function connectRemote(
     close() {
       closed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      connecting?.terminate();
       socket?.close(1000, 'Disconnected');
       ports.status('');
     },
