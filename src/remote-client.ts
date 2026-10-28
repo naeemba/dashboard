@@ -3,6 +3,7 @@ import type { RemoteTarget } from './channels';
 import { failureText } from './failure';
 import type { LogDraft } from './log-entry';
 import { pendingRequests } from './pending-requests';
+import { sentSizes } from './sent-sizes';
 import {
   CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, HELLO_CHANNEL, REQUEST_TIMEOUT_MS, decodeFrame, encodeFrame, isReply, type Frame,
 } from './remote-protocol';
@@ -27,11 +28,12 @@ export type RemoteClient = RemoteTarget & {
 
 const RECONNECT_MS = 2_000;
 
-// helloTimeoutMs exists for the test of a host that never answers the hello.
+// helloTimeoutMs exists for the test of a host that never answers the hello, or never opens the socket.
 export function connectRemote(
   address: string, token: string, ports: ClientPorts, helloTimeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<RemoteClient> {
   const pending = pendingRequests();
+  const sizes = sentSizes();
   let socket: WebSocket | null = null;
   let nextId = 1;
   let closed = false;
@@ -62,7 +64,9 @@ export function connectRemote(
   // Opens a socket and says hello. Resolves once the host accepts; rejects with the host's reason.
   function open(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const next = new WebSocket(`ws://${address}`);
+      // Without a handshake timeout a mistyped address waits out the system's TCP timeout, over a minute
+      // with nothing on the screen, and so does every retry of a host that has gone.
+      const next = new WebSocket(`ws://${address}`, { handshakeTimeout: helloTimeoutMs });
       connecting = next;
       next.on('open', () => {
         if (closed) return next.close();
@@ -74,7 +78,10 @@ export function connectRemote(
             return resolve();
           }
           socket = next;
-          if (everAccepted) ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
+          if (everAccepted) {
+            ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
+            for (const args of sizes.all()) send({ id: nextId++, channel: 'pty:resize', args });
+          }
           everAccepted = true;
           ports.status('');
           resolve();
@@ -116,6 +123,8 @@ export function connectRemote(
     invoke: (channel: string, args: unknown[], timeoutMs: number = REQUEST_TIMEOUT_MS) => request(channel, args, timeoutMs),
     send(channel, args) {
       // Dropped when down, never queued: a queued `rm` landing a minute late is worse than a lost key.
+      // A size is the exception that is kept, to be told again on the way back in.
+      sizes.remember(channel, args);
       send({ id: nextId++, channel, args });
     },
     close() {

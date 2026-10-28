@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { createServer, type Server } from 'node:net';
 import { WebSocketServer } from 'ws';
 import { connectRemote, type RemoteClient } from './remote-client';
 import { decodeFrame, encodeFrame, isRequest } from './remote-protocol';
@@ -67,6 +68,25 @@ describe('connectRemote', () => {
     await new Promise((resolve) => setTimeout(resolve, 2_300));
     await expect(client.invoke('board:read', [])).resolves.toBe('again');
     expect(statuses).toEqual(['', `Reconnecting to ${address}…`, '']);
+  }, 10_000);
+
+  it('gives up on a host that takes the connection and never opens the socket', async () => {
+    const silent: Server = createServer(() => undefined);
+    await new Promise<void>((resolve) => silent.listen(0, '127.0.0.1', resolve));
+    const address = `127.0.0.1:${(silent.address() as { port: number }).port}`;
+    await expect(connectRemote(address, 'good', ports(), 50)).rejects.toThrow(`Could not reach ${address}`);
+    silent.close();
+  });
+
+  it('tells the host every pane size again after a reconnect', async () => {
+    const resizes: unknown[][] = [];
+    const address = await hostOn((channel, args) => { if (channel === 'pty:resize') resizes.push(args); });
+    client = await connectRemote(address, 'good', ports());
+    client.send('pty:resize', ['0:1', 120, 40]);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    for (const socket of server!.clients) socket.terminate();
+    await new Promise((resolve) => setTimeout(resolve, 2_300));
+    expect(resizes).toEqual([['0:1', 120, 40], ['0:1', 120, 40]]);
   }, 10_000);
 
   it('closes the socket when the hello is never answered', async () => {
