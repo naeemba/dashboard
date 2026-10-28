@@ -459,7 +459,7 @@ function spawnTerminal(id: string): void {
   // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
   // through this function, so one line covers every pane that exists.
   paneShells.set(id, shellCommand);
-  const ring = paneRing();
+  const ring = paneRing(() => terminalProcess);
   rings.set(id, ring);
   terminalProcess.onData((data) => { ring.push(data); sendToRenderer('pty:data', id, data); });
   terminalProcess.onExit(({ exitCode }) => {

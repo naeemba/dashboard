@@ -4,12 +4,12 @@ import { replaySession } from './session-replay';
 
 describe('replaySession', () => {
   it('replays the output of every pane that has any, then the panes whose shell has ended', () => {
-    const live = paneRing();
+    const live = paneRing(() => ({ cols: 80, rows: 24 }));
     live.push('prompt');
-    const ended = paneRing();
+    const ended = paneRing(() => ({ cols: 80, rows: 24 }));
     ended.push('bye');
     ended.exit(1);
-    const quiet = paneRing();
+    const quiet = paneRing(() => ({ cols: 80, rows: 24 }));
     const sent: unknown[][] = [];
     replaySession({
       rings: new Map([['0:0', live], ['0:1', ended], ['0:2', quiet]]),
