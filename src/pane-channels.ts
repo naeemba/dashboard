@@ -42,8 +42,7 @@ export function registerPaneChannels(table: Channels, main: {
   // about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
   table.on('pty:resize', (screen, id: string, cols: number, rows: number) => {
     main.screens.resize(screen, id, { cols, rows });
-    const size = main.screens.sizeOf(id);
-    if (size) main.shells.get(id)?.resize(size.cols, size.rows);
+    fitShell(main.shells, main.screens, id);
   });
   table.on('pty:restart', (_screen, id: string) => {
     if (!main.shells.has(id)) main.spawnTerminal(id);
@@ -53,8 +52,15 @@ export function registerPaneChannels(table: Channels, main: {
 // A screen that leaves stops voting on the size of every pane it drew, so each shell goes to what the
 // screens still looking at it ask for. A pane nobody has measured keeps the size it has.
 export function resizeShellsToScreens(shells: Map<string, pty.IPty>, screens: Screens): void {
-  for (const [id, shell] of shells) {
-    const size = screens.sizeOf(id);
-    if (size) shell.resize(size.cols, size.rows);
-  }
+  for (const id of shells.keys()) fitShell(shells, screens, id);
+}
+
+// Puts a shell at the size the screens agree on. A size it already has is not sent again: every resize
+// is a SIGWINCH, and a full-screen program in the pane redraws on each one, so a second screen
+// reporting the same size, or one leaving that did not hold the smallest, would flash every pane.
+function fitShell(shells: Map<string, pty.IPty>, screens: Screens, id: string): void {
+  const shell = shells.get(id);
+  const size = screens.sizeOf(id);
+  if (!shell || !size || (shell.cols === size.cols && shell.rows === size.rows)) return;
+  shell.resize(size.cols, size.rows);
 }

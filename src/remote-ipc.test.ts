@@ -34,7 +34,7 @@ function wired() {
   const table = { handle: (channel: string, handler: (...args: unknown[]) => unknown) => handlers.set(channel, handler) } as unknown as Channels;
   const held: HeldForRemote = {
     table, version: '1', settings: () => ({ remote: {} }) as Settings, log: () => undefined,
-    rings: new Map([['0:1', { replay: () => 'ring' } as PaneRing]]),
+    rings: new Map([['0:1', { replay: () => 'ring', exitCode: () => undefined } as PaneRing]]),
     projects: () => ({ projects: [] }),
     worktrees: () => ({ entries: [], paneDirectories: {} }),
     usage: () => 'usage' as never,

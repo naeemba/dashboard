@@ -451,6 +451,7 @@ function spawnTerminal(id: string): void {
     // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
     // a dead shell shows, rather than the spawn taking the window down. A missing nvim is not this case:
     // the shell starts, fails to find it, and exits 127 on its own.
+    rings.get(id)?.exit(127);
     sendToRenderer('pty:exit', id, 127);
     return;
   }
@@ -471,6 +472,7 @@ function spawnTerminal(id: string): void {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
+    ring.exit(exitCode);
     sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, terminalProcess);
