@@ -37,6 +37,10 @@ export type DashboardBridge = {
   getRecentProjects(): Promise<Project[]>;
   openProject(projectPath: string | null): Promise<{ index: number; open: OpenProjects } | null>;
   onProjectsChange(listener: (open: OpenProjects) => void): void;
+  // Join another Dashboard's session, or go back to this one. Resolves '' or the host's refusal.
+  connectHost(address: string, token: string): Promise<string>;
+  disconnectHost(): Promise<void>;
+  onHostStatus(listener: (text: string) => void): void;
   // Closing a project: its five shells and its editor are killed and its slot is given up. The page is
   // the renderer's to take off the screen; nothing comes back, because there is nothing to answer — the
   // one thing that could refuse is read off the panes, and the renderer has already asked them.

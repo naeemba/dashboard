@@ -7,8 +7,7 @@ import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, 
 import { baseName } from './base-name';
 import { baseBranch, git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
-import { anyShellStandsIn } from './shell-directory';
-import { shellDirectories } from './shell-directory-lookup';
+import { shellDirectories, shellLiveness } from './shell-directory-lookup';
 import { processTree } from './process-tree';
 import { paneRing, type PaneRing } from './pane-ring';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
@@ -24,6 +23,7 @@ import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
 import { startHost } from './host-wiring';
+import { connectAtLaunch, registerRemote } from './remote-ipc';
 import type { RemoteHost } from './remote-host';
 import { registerPaneOpeners } from './pane-openers';
 import { channels, registerWithIpc } from './channels';
@@ -335,21 +335,10 @@ function shellsIn(worktreePath: string): string[] {
     .map(([id]) => id);
 }
 
-// Whether any pane's shell stands in this folder, which is what the review sweep waits on before it
-// removes a finished card's worktree. shell-directory.ts says which folders count and what an
-// unanswered question means; this asks each live shell, and what it started, where it is now, since a
-// `cd` typed into a pane never reaches terminalCommands.
-const askShellDirectories = shellDirectories(processTree);
-async function shellLivesIn(worktreePath: string): Promise<boolean> {
-  // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
-  if (shellsIn(worktreePath).length > 0) return true;
-  const realWorktreePath = realPath(worktreePath);
-  const live = Array.from(shells, ([id, terminalProcess]) => ({
-    opened: terminalCommands.get(id)?.directory ?? '', pid: terminalProcess.pid,
-  }));
-  const directories = await askShellDirectories(live.map(({ pid }) => pid));
-  return anyShellStandsIn(live, directories, worktreePath, realWorktreePath);
-}
+// shell-directory-lookup.ts says what asking a shell where it is means.
+const shellLivesIn = shellLiveness({
+  shells, opened: terminalCommands, shellsIn, ask: shellDirectories(processTree),
+});
 
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
 // is where the two of them being one answer is explained.
@@ -1031,7 +1020,13 @@ function createWindow(): void {
   failures.windowOpened();
 }
 
-registerWithIpc(table, () => null);
+// Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
+const remote = registerRemote(table, {
+  version: app.getVersion(), send: (channel, ...payload) => liveWindow()?.webContents.send(channel, ...payload),
+  settings: () => settings, saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
+  log: (draft) => logStore.log(draft), localProjects: openProjects,
+});
+registerWithIpc(table, remote.current);
 
 remoteHost = startHost({
   table, rings, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
@@ -1041,6 +1036,7 @@ remoteHost = startHost({
 app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
   createWindow();
+  connectAtLaunch(liveWindow(), process.argv, settings, table, failures.hold);
 });
 app.on('will-quit', () => {
   remoteHost?.close();
