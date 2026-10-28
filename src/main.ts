@@ -532,8 +532,10 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
 table.handle('projects:recent', () =>
   readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
 // A null path opens the folder dialog; a path from the picker skips it.
-table.handle('projects:open', async (_screen, projectPath: string | null) => {
+table.handle('projects:open', async (screen, projectPath: string | null) => {
   if (projectPath === null) {
+    // A dialog here would open on the host's desk; the other screen types the path instead.
+    if (screen !== LOCAL_SCREEN) throw new Error("Type the folder's path on the host");
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
     if (canceled) return null;
     projectPath = filePaths[0];
@@ -541,8 +543,7 @@ table.handle('projects:open', async (_screen, projectPath: string | null) => {
   const picked = projectFromPath(projectPath);
   const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
-  const replaced = replacesProject(projects[index], picked);
-  if (replaced) {
+  if (replacesProject(projects[index], picked)) {
     logStore.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
     spawnProject(picked, index);

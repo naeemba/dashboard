@@ -23,6 +23,8 @@ export type PageSyncPorts = {
 export type PageSync = {
   removePage(slot: number): void;
   applyProjects(open: OpenProjects): void;
+  // Which host the pages on screen were built from; LOCAL_SCREEN for this machine's own.
+  host(): string;
 };
 
 export function createPageSync(ports: PageSyncPorts): PageSync {
@@ -75,5 +77,5 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
   }
   ports.onProjectsChange(applyProjects);
 
-  return { removePage, applyProjects };
+  return { removePage, applyProjects, host: () => currentHost };
 }

@@ -18,7 +18,8 @@ import { failureText } from './failure';
 import { createStatusError } from './status-error';
 import { fileLinkOpener, showFileHints } from './file-hints';
 import { type Mode } from './modes';
-import { openPicker } from './picker';
+import { LOCAL_SCREEN } from './screens';
+import { showPicker as runPicker, typedHostFolder } from './connect-flow';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
@@ -438,7 +439,7 @@ function setPage(project: Project, slot: number): void {
   fitPage(page);
 }
 
-const { removePage, applyProjects } = createPageSync({
+const { removePage, applyProjects, host } = createPageSync({
   pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
   setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange,
 });
@@ -543,7 +544,11 @@ function moveProject(index: number): void {
 
 // Main owns the decision and answers with the whole list, which applyProjects makes true here. A null
 // path asks main for the folder dialog.
-async function openProject(projectPath: string | null): Promise<void> {
+async function openProject(requested: string | null): Promise<void> {
+  // Connected, "a new project" is a path typed for the host; the folder dialog would show this disk.
+  const remote = requested === null && host() !== LOCAL_SCREEN;
+  const projectPath = remote ? await typedHostFolder(host()) : requested;
+  if (remote && projectPath === null) return showPage(activeIndex);
   const opened = await bridge.openProject(projectPath);
   if (!opened) return showPage(activeIndex);
   applyProjects(opened.open);
@@ -551,19 +556,11 @@ async function openProject(projectPath: string | null): Promise<void> {
   if (position !== -1) showPage(position);
 }
 
-// Projects already open come first and win the deduplication, so the picker shows the live page for one
-// that is also in the history.
-async function showPicker(): Promise<void> {
-  const recent = await bridge.getRecentProjects();
-  const byPath = new Map<string, Project>();
-  for (const page of projectPages()) {
-    if (!page.project.missing) byPath.set(page.project.path, page.project);
-  }
-  for (const project of recent) if (!byPath.has(project.path)) byPath.set(project.path, project);
-  const choice = await openPicker([...byPath.values()]);
-  if (choice === undefined) return showPage(activeIndex);
-  await openProject(choice);
-}
+const showPicker = () => runPicker({
+  bridge, projectPages, openProject, host, showNotice,
+  settings: () => settings, setSettings: (next) => { settings = next; }, restore: () => showPage(activeIndex),
+});
+bridge.onHostStatus((text) => showNotice('host', text));
 
 // Ctrl+`: the pane you are looking at, as a file in the project's nvim.
 //
