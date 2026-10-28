@@ -87,17 +87,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "cb8ff4a0-49d5-4696-ab2c-e18197c11484",
-          "title": "Remote host: the mac as a second screen of the laptop's session",
-          "notes": "Spec: docs/superpowers/specs/2026-10-28-remote-host-design.md. The laptop app listens on a websocket; the mac app connects from the Ctrl+S picker and relays the bridge. One session, two screens.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-10-28T10:41:41.907Z",
-          "updatedAt": "2026-10-28T11:00:33.315Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -183,6 +173,23 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "cb8ff4a0-49d5-4696-ab2c-e18197c11484",
+          "title": "Remote host: the mac as a second screen of the laptop's session",
+          "notes": "Spec: docs/superpowers/specs/2026-10-28-remote-host-design.md. The laptop app listens on a websocket; the mac app connects from the Ctrl+S picker and relays the bridge. One session, two screens.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-28T10:41:41.907Z",
+          "updatedAt": "2026-10-28T12:27:07.273Z",
+          "branch": "remote-host",
+          "pullRequest": 82,
+          "comments": [
+            {
+              "at": "2026-10-28T12:27:07.273Z",
+              "body": "PR #82 open: websocket host and client, channel table, project list owned by main, pane rings, per-screen sizes, picker rows, settings. Hand check with two instances still owed."
             }
           ]
         }
