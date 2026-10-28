@@ -11,6 +11,8 @@ export type SettingsRow =
   | { kind: 'font-size'; label: string; value: string }
   | { kind: 'shell'; label: string; value: string }
   | { kind: 'weather-place'; label: string; value: string }
+  | { kind: 'host-port'; label: string; value: string }
+  | { kind: 'host-token'; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
 
@@ -56,6 +58,12 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   });
   rows.push({ kind: 'heading', label: 'Weather' });
   rows.push({ kind: 'weather-place', label: 'Place', value: settings.weatherPlace });
+  rows.push({ kind: 'heading', label: 'Host' });
+  // Read once at launch, so a change here waits for the next one.
+  rows.push({
+    kind: 'host-port', label: 'Port (next launch)', value: settings.host.port === null ? '' : String(settings.host.port),
+  });
+  rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
   rows.push({ kind: 'heading', label: 'Reset' });
   rows.push({ kind: 'reset-keys', label: 'Reset every key to its default' });
   rows.push({ kind: 'reset-all', label: 'Reset everything to defaults' });

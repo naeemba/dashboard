@@ -31,6 +31,7 @@ import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
 import { sessionStore } from './session-store';
 import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
+import { keepHostToken } from './host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import { blockingChanges, branchNameFor, changedFiles, oneAtATime, uncommittedCount, workPrompt, worktreePathFor } from './ship';
 import {
@@ -38,9 +39,7 @@ import {
   freePane,
   runsAnAgent,
   shipCanTake,
-  type PaneCommand,
-  type PaneReading,
-  type PaneUse,
+  type PaneCommand, type PaneReading, type PaneUse,
 } from './pane-reading';
 import { usageSweep } from './usage-sweep';
 import {
@@ -172,7 +171,7 @@ const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFI
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
 const isMac = process.platform === 'darwin';
-let settings = readSettings(settingsFile, isMac);
+let settings = keepHostToken(readSettings(settingsFile, isMac), (made) => writeSettings(settingsFile, made, isMac));
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
 // nothing strips those lines until the settings screen is next opened. Tidying it once here drops
 // everything that still matches this build, so the next default to move reaches these people. It cannot
