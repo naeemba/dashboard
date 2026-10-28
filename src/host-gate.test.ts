@@ -22,6 +22,12 @@ describe('gateFrame', () => {
     expect(gateFrame(true, request, 't', '1')).toEqual({ action: 'serve', request });
     expect(gateFrame(true, { channel: 'x', args: [] }, 't', '1')).toEqual({ action: 'ignore' });
   });
+  it("refuses the screen's own channels with an error reply once joined", () => {
+    for (const channel of ['settings:write', 'link:open', 'notification:show', 'host:connect']) {
+      expect(gateFrame(true, { id: 3, channel, args: [] }, 't', '1'))
+        .toEqual({ action: 'refuse', id: 3, error: `Not served to a remote screen: ${channel}` });
+    }
+  });
 });
 
 describe('closeReason', () => {

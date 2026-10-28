@@ -59,6 +59,7 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
         ports.log({ level: 'warn', kind: 'screen', message: `${address} refused: ${answer.reason}` });
         return refuse(answer.code, answer.reason);
       }
+      if (answer.action === 'refuse') return push(socket, { id: answer.id, error: answer.error });
       if (answer.action === 'join') {
         joined = true;
         clearTimeout(helloTimer);
