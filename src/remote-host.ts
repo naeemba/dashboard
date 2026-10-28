@@ -2,8 +2,9 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import type { Channels } from './channels';
 import { failureText } from './failure';
 import type { LogDraft } from './log-entry';
+import { closeReason, gateFrame } from './host-gate';
 import {
-  HELLO_CHANNEL, decodeFrame, encodeFrame, helloRefusal, isRequest, type Push, type Reply,
+  CLOSE_NO_HELLO, HELLO_TIMEOUT_MS, decodeFrame, encodeFrame, type Push, type Reply,
 } from './remote-protocol';
 
 // The host's side of the wire: one websocket server, one screen per connection. A connection's first
@@ -40,27 +41,41 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
     const screen = `screen-${nextScreen++}@${address}`;
     let joined = false;
 
+    // No hello in time and the connection is not a screen.
+    const helloTimer = setTimeout(() => socket.close(CLOSE_NO_HELLO, 'No hello'), HELLO_TIMEOUT_MS);
+    function refuse(code: number, reason: string): void {
+      socket.close(code, closeReason(reason));
+    }
+
+    // ws emits error for a malformed frame or invalid UTF-8; unhandled, Node throws.
+    socket.on('error', (error) => {
+      ports.log({ level: 'warn', kind: 'screen', message: `${address}: ${failureText(error)}` });
+    });
+
     socket.on('message', (raw) => {
-      const frame = decodeFrame(String(raw));
-      if (!frame || !isRequest(frame)) return;
-      if (!joined) {
-        if (frame.channel !== HELLO_CHANNEL) return socket.close(4000, 'Say hello first');
-        const [token, version] = frame.args as [string, string];
-        const refusal = helloRefusal(token, version, ports.token(), ports.version);
-        if (refusal) {
-          ports.log({ level: 'warn', kind: 'screen', message: `${address} refused: ${refusal.reason}` });
-          return socket.close(refusal.code, refusal.reason);
-        }
+      const answer = gateFrame(joined, decodeFrame(String(raw)), ports.token(), ports.version);
+      if (answer.action === 'ignore') return;
+      if (answer.action === 'close') {
+        ports.log({ level: 'warn', kind: 'screen', message: `${address} refused: ${answer.reason}` });
+        return refuse(answer.code, answer.reason);
+      }
+      if (answer.action === 'join') {
         joined = true;
+        clearTimeout(helloTimer);
         screens.set(screen, socket);
         ports.log({ level: 'info', kind: 'screen', message: `${address} joined` });
-        push(socket, { id: frame.id, result: null });
+        push(socket, { id: answer.id, result: null });
         return ports.onJoin(screen, (channel, args) => push(socket, { channel, args }));
       }
+      const frame = answer.request;
       // A send has no reply of its own, but the client gives every frame an id, so it gets an empty one.
       if (ports.table.kind(frame.channel) === 'on') {
-        ports.table.dispatch(screen, frame.channel, frame.args);
-        return push(socket, { id: frame.id, result: null });
+        try {
+          ports.table.dispatch(screen, frame.channel, frame.args);
+          return push(socket, { id: frame.id, result: null });
+        } catch (error) {
+          return push(socket, { id: frame.id, error: failureText(error) });
+        }
       }
       void ports.table.invoke(screen, frame.channel, frame.args)
         .then((result) => push(socket, { id: frame.id, result }))
@@ -68,6 +83,7 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
     });
 
     socket.on('close', () => {
+      clearTimeout(helloTimer);
       if (!joined) return;
       screens.delete(screen);
       ports.onLeave(screen);

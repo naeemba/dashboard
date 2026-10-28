@@ -13,6 +13,9 @@ export const HELLO_CHANNEL = 'host:hello';
 export const CLOSE_BAD_TOKEN = 4001;
 export const CLOSE_BAD_VERSION = 4002;
 export const REQUEST_TIMEOUT_MS = 10_000;
+// A connection that has not said hello by now is closed: a socket that never speaks is not a screen.
+export const HELLO_TIMEOUT_MS = 5_000;
+export const CLOSE_NO_HELLO = 4000;
 
 // What never leaves the screen: a link opens in the browser you are looking at, a banner shows on the
 // desk you are sitting at, and the settings (keys, font, theme) are this machine's. A mac on a Linux
