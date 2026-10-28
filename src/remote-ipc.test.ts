@@ -70,19 +70,40 @@ describe('registerRemote', () => {
     const { remote, sent, connect } = wired();
     expect(await connect(address, 'good')).toBe('');
     await settle();
-    expect(sent.filter(([channel]) => channel !== 'host:status')).toEqual([['host:change', address], ['projects:change', hostList]]);
+    expect(sent.filter(([channel]) => channel !== 'host:report')).toEqual([['host:change', address], ['projects:change', hostList]]);
     await expect(remote.current()!.invoke('projects:open', [null])).resolves.toEqual({ index: 0, open: hostList });
     for (const socket of server!.clients) socket.close();
   });
 
-  it('holds local pushes back from the window while a connect is out', async () => {
+  it('holds local pushes back from the window from the first frame of the host on', async () => {
     const address = await host();
     const { remote, connect } = wired();
     const connecting = connect(address, 'good');
-    expect(remote.reachesWindow()).toBe(false);
+    expect(remote.reachesWindow()).toBe(true);
     await connecting;
+    await settle();
     expect(remote.reachesWindow()).toBe(false);
     for (const socket of server!.clients) socket.close();
+  });
+
+  it('leaves the window alone when the first connect is refused before the host said anything', async () => {
+    const address = await host();
+    const { remote, sent, connect } = wired();
+    expect(await connect(address, 'bad')).toBe('The host refused the token');
+    expect(remote.reachesWindow()).toBe(true);
+    expect(sent).toEqual([]);
+  });
+
+  it('drops what a connect overtaken by a disconnect hears from its host', async () => {
+    const address = await host();
+    const { remote, sent, connect, disconnect } = wired();
+    const connecting = connect(address, 'good');
+    disconnect();
+    await connecting;
+    await settle();
+    expect(remote.current()).toBeNull();
+    expect(remote.reachesWindow()).toBe(true);
+    expect(sent).toEqual([]);
   });
 
   it('puts the local session back when a connect fails after a join', async () => {
@@ -94,7 +115,7 @@ describe('registerRemote', () => {
     expect(remote.current()).toBeNull();
     expect(remote.reachesWindow()).toBe(true);
     // The old client's close clears the status line first.
-    expect(sent).toEqual([['host:status', ''], ...localReplay]);
+    expect(sent).toEqual([['host:report', ''], ...localReplay]);
   });
 
   it('catches the window up with the local session on disconnect', async () => {
@@ -105,7 +126,7 @@ describe('registerRemote', () => {
     sent.length = 0;
     disconnect();
     expect(remote.current()).toBeNull();
-    expect(sent).toEqual([['host:status', ''], ...localReplay]);
+    expect(sent).toEqual([['host:report', ''], ...localReplay]);
   });
 
   it('goes back to the local session and keeps the reason when a reconnect is refused', async () => {
@@ -117,7 +138,7 @@ describe('registerRemote', () => {
     for (const socket of server!.clients) socket.close(4001, 'The host refused the token');
     await settle();
     expect(remote.current()).toBeNull();
-    expect(sent).toEqual([['host:status', 'The host refused the token'], ...localReplay]);
+    expect(sent).toEqual([['host:report', 'The host refused the token'], ...localReplay]);
   });
 });
 
@@ -143,6 +164,24 @@ describe('connectAtLaunch', () => {
     await settle();
     expect(launch.connects).toEqual([['host:connect', '10.0.0.2:7777', 't']]);
     expect(launch.held).toEqual(['refused']);
+  });
+
+  it('says why nothing happened when no host is remembered, and does not join one remembered later', async () => {
+    const listeners = new Map<string, () => void>();
+    const connects: unknown[] = [];
+    const held: string[] = [];
+    let address = '';
+    const table = {
+      on: (channel: string, listener: () => void) => listeners.set(channel, listener),
+      invoke: async (...args: unknown[]) => { connects.push(args); return ''; },
+    } as unknown as Channels;
+    connectAtLaunch(['--remote'], () => ({ remote: { address, token: 't' } }) as Settings, table, (message) => held.push(message));
+    listeners.get('session:restored')!();
+    address = '10.0.0.2:7777';
+    listeners.get('session:restored')!();
+    await settle();
+    expect(connects).toEqual([]);
+    expect(held).toEqual(['No host remembered for --remote: connect to one from the project list once']);
   });
 
   it('joins nothing without --remote', async () => {

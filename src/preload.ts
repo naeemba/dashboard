@@ -10,7 +10,7 @@ const bridge: DashboardBridge = {
     ipcRenderer.on('projects:change', (_event, open) => listener(open)),
   connectHost: (address, token) => ipcRenderer.invoke('host:connect', address, token),
   disconnectHost: () => ipcRenderer.invoke('host:disconnect'),
-  onHostStatus: (listener) => ipcRenderer.on('host:status', (_event, text) => listener(text)),
+  onHostReport: (listener) => ipcRenderer.on('host:report', (_event, text) => listener(text)),
   onHostChange: (listener) => ipcRenderer.on('host:change', (_event, host) => listener(host)),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openExternal: (url) => ipcRenderer.send('link:open', url),

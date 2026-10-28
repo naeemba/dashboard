@@ -1,7 +1,5 @@
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
-
-export type OpenProjects = { projects: (Project | null)[] };
 import type { Board } from './board';
 import type { FileLink } from './file-links';
 import type { MarketsSnapshot } from './markets';
@@ -14,6 +12,8 @@ import type { Settings } from './settings';
 import type { TaskResult } from './tasks';
 import type { UsageSnapshot } from './usage';
 import type { WorktreeEntry } from './worktree-store';
+
+export type OpenProjects = { projects: (Project | null)[] };
 
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
 // what says which five panes are candidates for the agent.
@@ -40,7 +40,7 @@ export type DashboardBridge = {
   // Join another Dashboard's session, or go back to this one. Resolves '' or the host's refusal.
   connectHost(address: string, token: string): Promise<string>;
   disconnectHost(): Promise<void>;
-  onHostStatus(listener: (text: string) => void): void;
+  onHostReport(listener: (text: string) => void): void;
   // Which session the window shows: the joined host's address, or LOCAL_SCREEN for this machine's own.
   // Said before that session's list arrives, so the pages of the one before are taken down first.
   onHostChange(listener: (host: string) => void): void;

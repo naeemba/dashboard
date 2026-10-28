@@ -560,7 +560,7 @@ const showPicker = () => runPicker({
   bridge, projectPages, openProject, host, showNotice, pick: openPicker, prompt: promptOverlay,
   settings: () => settings, setSettings: (next) => { settings = next; }, restore: () => showPage(activeIndex),
 });
-bridge.onHostStatus((text) => showNotice('host', text));
+bridge.onHostReport((text) => showNotice('host', text));
 
 // Ctrl+`: the pane you are looking at, as a file in the project's nvim.
 //

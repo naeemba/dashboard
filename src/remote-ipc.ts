@@ -25,36 +25,43 @@ export function registerRemote(held: HeldForRemote, window: {
   // Each connect takes a number. One that finishes after a newer connect or a disconnect has started
   // is stale, and is closed rather than kept: two live clients would both push into the renderer.
   let generation = 0;
-  // A connect that is out has already taken the window from this machine's session: the host's replay
-  // can arrive before the connect resolves, and a local push landing among it would draw a local
-  // shell's output into the host's pane of the same id.
-  let connecting = false;
+  // Set by the host's first frame, which is when the window stops showing this machine's session. From
+  // there a local push landing among the host's replay would draw a local shell's output into the
+  // host's pane of the same id. Not from the start of the connect: one refused before the host ever
+  // answered never took the window, and has nothing to give back.
+  let handedOver = false;
 
   // While joined, this machine's own pushes were held back from its window, so coming home it is told
   // everything a screen joining this session would be.
   function backToLocal(): void {
+    handedOver = false;
     window.send('host:change', LOCAL_SCREEN);
     replaySession(held, (channel, args) => window.send(channel, ...args));
   }
 
   held.table.handle('host:connect', async (_screen, address: string, token: string): Promise<string> => {
-    const mine = ++generation;
+    // Closed before the number moves on, so the old client's clearing of the status line still lands.
     client?.close();
     client = null;
-    connecting = true;
+    const mine = ++generation;
     try {
       const joined = await connectRemote(address, token, {
         version: held.version,
+        // A connect that a newer one or a disconnect has overtaken says nothing more to the window: its
+        // host's replay can arrive before the stale check below gets to close it.
         // The host calls its own list LOCAL_SCREEN, which is what it is from where the host stands. Taken
         // as it comes, this screen would read the host's projects as its own: it would never offer
         // Disconnect, and "a new project" would ask the host for a folder dialog the host refuses. So
-        // each list is told whose it is first. Not at the start of the connect: a mistyped token would
-        // take every local page down and rebuild it. The window takes a repeat as nothing.
+        // each list is told whose it is first. The window takes a repeat as nothing.
         push(channel, args) {
+          if (mine !== generation) return;
+          handedOver = true;
           if (channel === 'projects:change') window.send('host:change', address);
           window.send(channel, ...args);
         },
-        status: (text) => window.send('host:status', text),
+        status(text) {
+          if (mine === generation) window.send('host:report', text);
+        },
         log: held.log,
         // A refused reconnect ends the visit. The client has put the reason on the status line, where
         // it stays; every request would fail from here, so they run locally again.
@@ -70,11 +77,9 @@ export function registerRemote(held: HeldForRemote, window: {
       }
       client = joined;
     } catch (error: unknown) {
-      // The window was held back while the connect was out, and an old host's projects may still be on it.
-      if (mine === generation) backToLocal();
+      // An old host's projects, or the start of this one's replay, may be on the window.
+      if (mine === generation && handedOver) backToLocal();
       return failureText(error);
-    } finally {
-      if (mine === generation) connecting = false;
     }
     window.saveSettings({ ...held.settings(), remote: { address, token } });
     held.log({ level: 'info', kind: 'screen', message: `connected to ${address}` });
@@ -82,22 +87,21 @@ export function registerRemote(held: HeldForRemote, window: {
   });
 
   held.table.handle('host:disconnect', () => {
-    generation++;
-    const away = client !== null || connecting;
-    connecting = false;
+    const away = client !== null || handedOver;
     if (client) {
       held.log({ level: 'info', kind: 'screen', message: `disconnected from ${client.address}` });
       client.close();
       client = null;
     }
+    generation++;
     if (away) backToLocal();
   });
 
-  // What the local window may be sent by main while this app is a screen of another host: nothing. Its
-  // own shells and boards push under pane ids such as `0:1` that collide with the host's, and the host's
-  // pushes arrive by the client instead. The app's own notices (a failure, the status line, the host
-  // change) and the way back home go to the window directly, not through this gate.
-  const reachesWindow = (): boolean => client === null && !connecting;
+  // What the local window may be sent by main while it shows another host: nothing. Its own shells and
+  // boards push under pane ids such as `0:1` that collide with the host's, and the host's pushes arrive
+  // by the client instead. The app's own notices (a failure, the status line, the host change) and the
+  // way back home go to the window directly, not through this gate.
+  const reachesWindow = (): boolean => client === null && !handedOver;
 
   // What registerWithIpc relays through.
   return { current: () => client, reachesWindow };
@@ -113,9 +117,10 @@ export function registerRemote(held: HeldForRemote, window: {
 export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void): void {
   let waiting = argv.includes('--remote');
   table.on('session:restored', () => {
-    const { address, token } = settings().remote;
-    if (!waiting || address === '') return;
+    if (!waiting) return;
     waiting = false;
+    const { address, token } = settings().remote;
+    if (address === '') return hold('No host remembered for --remote: connect to one from the project list once');
     void table.invoke(LOCAL_SCREEN, 'host:connect', [address, token])
       .then((refusal) => { if (refusal) hold(String(refusal)); });
   });

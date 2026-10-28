@@ -18,7 +18,7 @@ function hostOn(answer: (channel: string, args: unknown[]) => unknown): Promise<
       socket.on('message', (raw) => {
         const frame = decodeFrame(String(raw));
         if (!frame || !isRequest(frame)) return;
-        if (frame.channel === 'host:hello') {
+        if (frame.channel === 'host:join') {
           if (frame.args[0] !== 'good') return socket.close(4001, 'The host refused the token');
           return socket.send(encodeFrame({ id: frame.id, result: null }));
         }

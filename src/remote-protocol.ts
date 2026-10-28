@@ -8,7 +8,7 @@ export type Reply = { id: number; result?: unknown; error?: string };
 export type Push = { channel: string; args: unknown[] };
 export type Frame = Request | Reply | Push;
 
-export const HELLO_CHANNEL = 'host:hello';
+export const HELLO_CHANNEL = 'host:join';
 // Close codes a client reads to say why it was refused. 4000 and up are an application's own.
 export const CLOSE_BAD_TOKEN = 4001;
 export const CLOSE_BAD_VERSION = 4002;

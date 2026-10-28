@@ -84,7 +84,7 @@ windows that list must have one owner.
   <address>` as the first picker row. Launching with `--remote` connects
   straight away.
 - **Handshake.** First frame from the client is
-  `{ channel: 'host:hello', args: [token, version] }`. A wrong token closes
+  `{ channel: 'host:join', args: [token, version] }`. A wrong token closes
   the socket with code 4001 and the client shows `The host refused the
   token`. A different `package.json` version closes with 4002 and names
   both versions: the two apps must be the same build, since the protocol is

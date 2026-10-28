@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { closeReason, gateFrame } from './host-gate';
 
-const hello = (token: string, version: string) => ({ id: 1, channel: 'host:hello', args: [token, version] });
+const hello = (token: string, version: string) => ({ id: 1, channel: 'host:join', args: [token, version] });
 
 describe('gateFrame', () => {
   it('closes 4000 on a push, a reply, junk or another channel before hello', () => {
