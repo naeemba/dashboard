@@ -14,7 +14,8 @@ import { baseName } from './base-name';
 import { git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
 import { anyShellStandsIn } from './shell-directory';
-import { commandOutput, shellDirectories } from './shell-directory-lookup';
+import { shellDirectories } from './shell-directory-lookup';
+import { processTree } from './process-tree';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
@@ -179,11 +180,6 @@ const shippingCards = new Set<string>();
 // worktree and leaves the agent running in a folder git has just deleted, writing errors into a pane
 // the app counts as free. Held for the length of the one removal, the way shippingCards is.
 const removingWorktrees = new Set<string>();
-// The process tree, as `ps -eo pid=,ppid=` prints it, or null when `ps` gave no answer. One spelling
-// for both sweeps that read it, so the token figures and the worktree sweep see the same tree.
-function processTree(): Promise<string | null> {
-  return commandOutput('ps', ['-eo', 'pid=,ppid=']);
-}
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
