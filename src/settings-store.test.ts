@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -46,6 +46,13 @@ describe('writeSettings', () => {
     expect(readSettings(path, true)).toEqual(settings);
     // Indented, because the whole point of this file is that a person opens it.
     expect(readFileSync(path, 'utf8')).toContain('\n  "shellCommand"');
+  });
+
+  it('leaves the file readable by this account only, since it holds the tokens', () => {
+    const path = file();
+    writeFileSync(path, '{}', { mode: 0o644 });
+    writeSettings(path, defaultSettings(true), true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
   });
 
   it('swallows a write it cannot do, the way the session file does', () => {
