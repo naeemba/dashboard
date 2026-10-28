@@ -442,6 +442,18 @@ function setPage(project: Project, slot: number): void {
 const { removePage, applyProjects, host } = createPageSync({
   pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
   setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
+  // While away every save went to the host, which keeps only its own window's, so main still holds this
+  // machine's layout from before the connect. Saving is held until it is back on the pages: the bare
+  // rebuild saved straight away would write every view, focus and name off to disk for good.
+  comeHome(rebuild) {
+    restoring = true;
+    rebuild();
+    void bridge.getSession().then(applyLayout, () => undefined).finally(() => {
+      restoring = false;
+      landOn(activeIndex);
+      renderStatus();
+    });
+  },
 });
 
 // Asked twice — once before the question and once with the answer — so it is one function. What the
@@ -916,6 +928,25 @@ bridge.onTaskUpdate((result) => {
   pages.find((page) => !isProjectPage(page))?.command?.update(result);
 });
 
+// Each open project's view, focused pane and typed names, as the session has them. By path, not
+// position: an entry that failed to open has no page, so the two lists no longer line up and index 3
+// would hand project 4's view to project 5.
+function applyLayout(session: Session): void {
+  for (const entry of session.pages) {
+    const page = pages.find((candidate) => candidate.project.path === entry.path);
+    // A folder that went away while the app was closed comes back as the same dead page it would have
+    // become had it gone away mid-run. There is no view on it to restore.
+    if (!page || page.project.missing) continue;
+    showMode(page, entry.mode);
+    page.focused = entry.focused;
+    // Only the names you typed come back. A title dies with the program that set it, so a restored
+    // pane says nothing until whatever starts in it speaks up.
+    entry.names.forEach((name, index) => {
+      if (name !== null && page.panes[index]) page.panes[index].typedName = name;
+    });
+  }
+}
+
 // Puts back what the last run was left on: the same projects in the same order, each on the view it was
 // showing, with the same pane focused. One at a time, because main hands out a slot per project in the
 // order they are opened and that order is the tab strip.
@@ -937,21 +968,7 @@ async function restore(session: Session): Promise<void> {
         showError('start', `Failed to open ${entry.path}: ${failureText(error)}`);
       }
     }
-    for (const entry of session.pages) {
-      // By path, not position: an entry that failed to open has no page, so the two lists no longer
-      // line up and index 3 would hand project 4's view to project 5.
-      const page = pages.find((candidate) => candidate.project.path === entry.path);
-      // A folder that went away while the app was closed comes back as the same dead page it would have
-      // become had it gone away mid-run. There is no view on it to restore.
-      if (!page || page.project.missing) continue;
-      showMode(page, entry.mode);
-      page.focused = entry.focused;
-      // Only the names you typed come back. A title dies with the program that set it, so a restored
-      // pane says nothing until whatever starts in it speaks up.
-      entry.names.forEach((name, index) => {
-        if (name !== null && page.panes[index]) page.panes[index].typedName = name;
-      });
-    }
+    applyLayout(session);
   } finally {
     // Saving again from here on, so the landing below is what writes the restored layout back — with any
     // project whose folder has gone missing already dropped from it.

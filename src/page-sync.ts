@@ -1,8 +1,7 @@
 import type { OpenProjects } from './bridge';
 import { isProjectPage } from './manager';
 import { discardPanes, type Page } from './page';
-import { landingAfterMoves, pageMoves, type PageMove } from './page-reconcile';
-import { LOCAL_SCREEN } from './screens';
+import { hostTracker, landingAfterMoves } from './page-reconcile';
 import type { Project } from './projects';
 
 // What the renderer hands over: its live list of pages, the tab it is on, and the few things that put
@@ -17,6 +16,9 @@ export type PageSyncPorts = {
   // Moves the tab marker to a page that shifted, without arriving on it.
   follow(index: number): void;
   renderStatus(): void;
+  // Back from another host: `rebuild` puts this machine's pages back bare, and the renderer runs it with
+  // saving held off until it has put their views, focus and names back.
+  comeHome(rebuild: () => void): void;
   onProjectsChange(listener: (open: OpenProjects) => void): void;
   onHostChange(listener: (host: string) => void): void;
 };
@@ -29,12 +31,7 @@ export type PageSync = {
 };
 
 export function createPageSync(ports: PageSyncPorts): PageSync {
-  // Which host's list the pages were built from. A different one means none of them belong here.
-  let currentHost = LOCAL_SCREEN;
-  // Set when the host changes, so the next list takes every page down before building its own. Not
-  // done on the change itself: taken down together with the build, the page you stood on lands on the
-  // new host's page of the same slot, as one arrival, rather than on whatever was left in between.
-  let stale = false;
+  const hosts = hostTracker();
   const { positionOfSlot, projectPages } = ports;
 
   // Drops what a project's page holds: its panes and its board.
@@ -59,35 +56,31 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
     const pages = ports.pages();
     const standingSlot = pages[ports.activeIndex()]?.slot ?? null;
     const current = projectPages().map((page) => ({ slot: page.slot, project: page.project }));
-    // Another host's slot 0 is not this one's: nothing on screen belongs to it.
-    const moves: PageMove[] = stale
-      ? [...current.map(({ slot }) => ({ kind: 'remove' as const, slot })), ...pageMoves([], open)]
-      : pageMoves(current, open);
-    stale = false;
-    for (const move of moves) {
-      if (move.kind === 'remove') removePage(move.slot);
-      else {
-        // A rebuild replaces the page where it stands, so the old one is only emptied, not taken out.
-        if (move.kind === 'rebuild') discardPage(pages[positionOfSlot(move.slot)]);
-        ports.setPage(move.project, move.slot);
+    const { moves, home } = hosts.movesFor(current, open);
+    const apply = (): void => {
+      for (const move of moves) {
+        if (move.kind === 'remove') removePage(move.slot);
+        else {
+          // A rebuild replaces the page where it stands, so the old one is only emptied, not taken out.
+          if (move.kind === 'rebuild') discardPage(pages[positionOfSlot(move.slot)]);
+          ports.setPage(move.project, move.slot);
+        }
       }
-    }
-    const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
-    if (landing.takeFocus) ports.landOn(landing.position);
-    else {
-      // Removals ahead of the page shift it along; follow it without taking its focus, and keep the
-      // pages this call built out of sight.
-      pages.forEach((page, index) => { page.element.hidden = index !== landing.position; });
-      ports.follow(landing.position);
-    }
-    ports.renderStatus();
+      const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
+      if (landing.takeFocus) ports.landOn(landing.position);
+      else {
+        // Removals ahead of the page shift it along; follow it without taking its focus, and keep the
+        // pages this call built out of sight.
+        pages.forEach((page, index) => { page.element.hidden = index !== landing.position; });
+        ports.follow(landing.position);
+      }
+      ports.renderStatus();
+    };
+    if (home) ports.comeHome(apply);
+    else apply();
   }
   ports.onProjectsChange(applyProjects);
-  ports.onHostChange((host) => {
-    if (host === currentHost) return;
-    currentHost = host;
-    stale = true;
-  });
+  ports.onHostChange(hosts.change);
 
-  return { removePage, applyProjects, host: () => currentHost };
+  return { removePage, applyProjects, host: hosts.host };
 }

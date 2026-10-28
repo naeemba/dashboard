@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { landingAfterMoves, pageMoves } from './page-reconcile';
+import { hostTracker, landingAfterMoves, pageMoves } from './page-reconcile';
 import type { Project } from './projects';
 
 const project = (path: string, missing = false): Project => ({ name: path.split('/').pop() ?? path, path, missing });
@@ -62,3 +62,44 @@ describe('landingAfterMoves', () => {
     expect(landingAfterMoves(1, [], positions([0, 1]), 1, 2)).toEqual({ position: 1, takeFocus: false });
   });
 });
+
+describe('hostTracker', () => {
+  const current = [{ slot: 0, project: project('/a') }, { slot: 1, project: project('/b') }];
+
+  it('reconciles as usual while the host stays the same, and takes a repeat of it as nothing', () => {
+    const hosts = hostTracker();
+    hosts.change('local');
+    expect(hosts.movesFor(current, { projects: [project('/a'), project('/b')] })).toEqual({ moves: [], home: false });
+  });
+
+  it('replaces every page with the first list of a new host, then reconciles again', () => {
+    const hosts = hostTracker();
+    hosts.change('10.0.0.2:7777');
+    hosts.change('10.0.0.2:7777');
+    expect(hosts.host()).toBe('10.0.0.2:7777');
+    expect(hosts.movesFor(current, { projects: [project('/a')] })).toEqual({
+      moves: [{ kind: 'remove', slot: 0 }, { kind: 'remove', slot: 1 }, { kind: 'build', slot: 0, project: project('/a') }],
+      home: false,
+    });
+    expect(hosts.movesFor([{ slot: 0, project: project('/a') }], { projects: [project('/a')] }).moves).toEqual([]);
+  });
+
+  it('says when a list brings this machine back, so its layout can be put back on the bare pages', () => {
+    const hosts = hostTracker();
+    hosts.change('10.0.0.2:7777');
+    hosts.movesFor(current, { projects: [project('/x')] });
+    hosts.change('local');
+    const { moves, home } = hosts.movesFor([{ slot: 0, project: project('/x') }], { projects: [project('/a')] });
+    expect(home).toBe(true);
+    expect(moves).toEqual([{ kind: 'remove', slot: 0 }, { kind: 'build', slot: 0, project: project('/a') }]);
+  });
+
+  it('lands on the page of the same slot after a host change, as an arrival', () => {
+    const hosts = hostTracker();
+    hosts.change('10.0.0.2:7777');
+    const { moves } = hosts.movesFor(current, { projects: [project('/x'), project('/y')] });
+    const position = (slot: number | null) => (slot === null ? -1 : slot + 1);
+    expect(landingAfterMoves(1, moves, position, 2, 3)).toEqual({ position: 2, takeFocus: true });
+  });
+});
+

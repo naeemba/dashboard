@@ -34,3 +34,13 @@ describe('session:write', () => {
     expect(existsSync(file)).toBe(true);
   });
 });
+
+describe('session:read', () => {
+  it("answers the host window's latest layout, which another screen's never replaces", async () => {
+    const { table } = store();
+    expect(await table.invoke(LOCAL_SCREEN, 'session:read', [])).toEqual({ pages: [], activeIndex: 0 });
+    table.dispatch(LOCAL_SCREEN, 'session:write', [layout]);
+    table.dispatch('couch', 'session:write', [{ pages: [], activeIndex: 0 }]);
+    expect(await table.invoke(LOCAL_SCREEN, 'session:read', [])).toEqual(layout);
+  });
+});

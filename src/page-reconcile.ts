@@ -1,6 +1,7 @@
 import type { OpenProjects } from './bridge';
 import { clampIndex } from './clamp-index';
 import type { Project } from './projects';
+import { LOCAL_SCREEN } from './screens';
 
 // What the renderer does to its pages when the host says which projects are open. The host owns the
 // list, since two screens can open and close projects; each screen gets the list and makes its pages
@@ -40,3 +41,36 @@ export function landingAfterMoves(
   const touched = moves.some((move) => move.kind !== 'build' && move.slot === standingSlot);
   return { position, takeFocus: touched };
 }
+
+// Which host's list the pages on screen were built from. A list from a different host than the pages'
+// replaces every page: another host's slot 0 is not this one's. The change is noted when the host says
+// so and acted on with its first list, so the page you stood on lands on the new host's page of the
+// same slot, as one arrival, rather than on whatever was left in between. A repeat of the host the
+// pages already show changes nothing. `home` says the list brought this machine's own pages back, which
+// were rebuilt bare and get their layout back from session.json.
+export type HostTracker = {
+  change(host: string): void;
+  movesFor(current: { slot: number; project: Project }[], open: OpenProjects): { moves: PageMove[]; home: boolean };
+  host(): string;
+};
+
+export function hostTracker(): HostTracker {
+  let shown = LOCAL_SCREEN;
+  let stale = false;
+  return {
+    change(host) {
+      if (host === shown) return;
+      shown = host;
+      stale = true;
+    },
+    movesFor(current, open) {
+      const replacing = stale;
+      stale = false;
+      if (!replacing) return { moves: pageMoves(current, open), home: false };
+      const removals = current.map(({ slot }): PageMove => ({ kind: 'remove', slot }));
+      return { moves: [...removals, ...pageMoves([], open)], home: shown === LOCAL_SCREEN };
+    },
+    host: () => shown,
+  };
+}
+

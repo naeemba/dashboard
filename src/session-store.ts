@@ -35,7 +35,10 @@ export function sessionStore(table: Channels, file: string, slotOf: (projectPath
     writeSession(file, next.session);
   }
 
-  table.handle('session:read', () => saved);
+  // The layout the window last sent, once it has sent one. The window asks again when it comes back
+  // from another host, and its pages are rebuilt bare then: what they had before the connect is here,
+  // because nothing another screen sends replaces it.
+  table.handle('session:read', () => layout ?? saved);
   table.on('session:write', (screen, next: Session) => {
     // A couch layout must not overwrite the desk's: the file is the host window's.
     if (screen !== LOCAL_SCREEN) return;
