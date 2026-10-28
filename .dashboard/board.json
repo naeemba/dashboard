@@ -2,17 +2,7 @@
   "columns": [
     {
       "name": "Backlog",
-      "cards": [
-        {
-          "id": "cb8ff4a0-49d5-4696-ab2c-e18197c11484",
-          "title": "Remote host: the mac as a second screen of the laptop's session",
-          "notes": "Spec: docs/superpowers/specs/2026-10-28-remote-host-design.md. The laptop app listens on a websocket; the mac app connects from the Ctrl+S picker and relays the bridge. One session, two screens.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-10-28T10:41:41.907Z",
-          "updatedAt": "2026-10-28T10:41:41.907Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Todo",
@@ -97,7 +87,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "cb8ff4a0-49d5-4696-ab2c-e18197c11484",
+          "title": "Remote host: the mac as a second screen of the laptop's session",
+          "notes": "Spec: docs/superpowers/specs/2026-10-28-remote-host-design.md. The laptop app listens on a websocket; the mac app connects from the Ctrl+S picker and relays the bridge. One session, two screens.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-10-28T10:41:41.907Z",
+          "updatedAt": "2026-10-28T11:00:33.315Z"
+        }
+      ]
     },
     {
       "name": "Review",
