@@ -30,6 +30,7 @@ import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
 import { WORKING_REPORT_MS } from './working-panes';
 import type { WorktreeList } from './bridge';
+import { createPageSync } from './page-sync';
 import { NO_USAGE, type UsageSnapshot } from './usage';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
@@ -43,7 +44,7 @@ import { closeRefusal, closingPanes } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, showMode, type Page,
+  createPageBuilder, fitPage, fitPanes, panesById, restylePanes, showMode, type Page,
 } from './page';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
@@ -437,6 +438,11 @@ function setPage(project: Project, slot: number): void {
   fitPage(page);
 }
 
+const { removePage, applyProjects } = createPageSync({
+  pages: () => pages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
+  setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange,
+});
+
 // Asked twice — once before the question and once with the answer — so it is one function. What the
 // flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
 // `panes:read`, and this only puts the names to it.
@@ -512,10 +518,7 @@ async function closeProject(slot: number): Promise<void> {
     const closingPosition = positionOfSlot(slot);
     if (closingPosition === -1) return;
     bridge.closeProject(slot);
-    discardPanes(slot);
-    closingPage.board?.close();
-    closingPage.element.remove();
-    pages.splice(closingPosition, 1);
+    removePage(slot);
     // The page that went can be the one you were standing on, since the key closes the project you are
     // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
     // it was the last one, which is the manager at worst. A close from the manager's own list is the
@@ -538,14 +541,12 @@ function moveProject(index: number): void {
   renderStatus();
 }
 
-// Main owns the decision and reports it as `replaced`, so a page is only rebuilt when its shells were.
-// A null path asks main for the folder dialog.
+// Main owns the decision and answers with the whole list, which applyProjects makes true here. A null
+// path asks main for the folder dialog.
 async function openProject(projectPath: string | null): Promise<void> {
   const opened = await bridge.openProject(projectPath);
   if (!opened) return showPage(activeIndex);
-  if (opened.replaced) {
-    setPage(opened.project, opened.index);
-  }
+  applyProjects(opened.open);
   const position = positionOfSlot(opened.index);
   if (position !== -1) showPage(position);
 }

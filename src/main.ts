@@ -15,7 +15,7 @@ import { agentArguments, agentResumeArguments, editorArguments, pickShell } from
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId } from './terminals';
-import { screens } from './screens';
+import { LOCAL_SCREEN, screens } from './screens';
 import { boardChanges } from './board-changes';
 import { BOARD_FILE_PATH, peekBoard, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
@@ -32,15 +32,7 @@ import { sessionStore } from './session-store';
 import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import {
-  blockingChanges,
-  branchNameFor,
-  changedFiles,
-  oneAtATime,
-  uncommittedCount,
-  workPrompt,
-  worktreePathFor,
-} from './ship';
+import { blockingChanges, branchNameFor, changedFiles, oneAtATime, uncommittedCount, workPrompt, worktreePathFor } from './ship';
 import {
   busyPanes,
   freePane,
@@ -70,7 +62,7 @@ import {
 import type { Settings } from './settings';
 import { moveCardById, shipColumnIndex } from './board';
 import { reviewSweep } from './review-flow';
-import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
+import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 import { isManagerPath } from './manager';
 
 if (started) app.quit();
@@ -587,7 +579,9 @@ table.handle('projects:open', async (_screen, projectPath: string | null) => {
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   // The slot holds a project either way by now: it was just filled, or the path matched one that is
   // open. `picked` is only what stops the type being optional, never an answer anyone receives.
-  return { index, project: projects[index] ?? picked, replaced };
+  const open = openProjects();
+  sendToRenderer('projects:change', open);
+  return { index, open };
 });
 // Closing a project. Its six panes are killed and forgotten, and its slot is emptied. Nothing is
 // answered: whether anything was running in it was read off the panes themselves, which only the
@@ -618,6 +612,7 @@ table.on('projects:close', (_screen, slot: number) => {
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
   setWorktrees(withoutPanes(worktrees, closing.path));
+  sendToRenderer('projects:change', openProjects());
 });
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
 // when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
@@ -667,6 +662,12 @@ registerProjectFiles(table, boards, boardLog);
 // the day a slot means something other than an index into this array.
 function slotOfProject(projectPath: string): number {
   return projects.findIndex((project) => project?.path === projectPath);
+}
+
+// The list every screen draws its tabs from. `host` is what the renderer tells one session from
+// another by; the local window's is LOCAL_SCREEN and a remote screen's is the address it typed.
+function openProjects(): OpenProjects {
+  return { host: LOCAL_SCREEN, projects: projects.map((project) => project ?? null) };
 }
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
