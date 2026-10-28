@@ -76,26 +76,3 @@ export function helloRefusal(
   }
   return null;
 }
-
-// What the local window may still be sent while this app is a screen of another host. Its own shells
-// and boards push under pane ids such as `0:1` that collide with the host's after the renderer resets,
-// so only the app's own notices get through; the host's pushes arrive by the client, not by this gate.
-const LOCAL_ONLY_PUSHES = new Set(['failure:show', 'host:status', 'projects:change']);
-
-export function reachesLocalScreen(channel: string, joinedToHost: boolean): boolean {
-  return !joinedToHost || LOCAL_ONLY_PUSHES.has(channel);
-}
-
-// The host names its own list LOCAL_SCREEN, which is what it is from where the host stands. Relayed as
-// it is, this screen would take the host's projects for its own: it would never offer Disconnect, and
-// "a new project" would ask the host for a folder dialog the host refuses. So the list a screen joined
-// through is stamped with the address it joined, on the push and on the reply to an open alike.
-export function stampHost(channel: string, args: unknown[], address: string): unknown[] {
-  if (channel !== 'projects:change' || !isRecord(args[0])) return args;
-  return [{ ...args[0], host: address }, ...args.slice(1)];
-}
-
-export function stampReply(channel: string, result: unknown, address: string): unknown {
-  if (channel !== 'projects:open' || !isRecord(result) || !isRecord(result.open)) return result;
-  return { ...result, open: { ...result.open, host: address } };
-}

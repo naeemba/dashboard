@@ -232,7 +232,7 @@ function liveWindow(): BrowserWindow | undefined {
 // Every push goes to the local window and to every remote screen. remoteHost is set once at launch,
 // below, and is null when the settings give no port.
 function sendToRenderer(channel: string, ...payload: unknown[]): void {
-  if (remote.reachesWindow(channel)) liveWindow()?.webContents.send(channel, ...payload);
+  if (remote.reachesWindow()) liveWindow()?.webContents.send(channel, ...payload);
   remoteHost?.broadcast(channel, payload);
 }
 
@@ -638,11 +638,9 @@ function slotOfProject(projectPath: string): number {
   return projects.findIndex((project) => project?.path === projectPath);
 }
 
-// The list every screen draws its tabs from. `host` is what the renderer tells one session from
-// another by; the local window's is LOCAL_SCREEN and a remote screen's is the address it typed.
-function openProjects(): OpenProjects {
-  return { host: LOCAL_SCREEN, projects: projects.map((project) => project ?? null) };
-}
+// The list every screen draws its tabs from. Which session it is the list of travels on its own, as
+// `host:change` from remote-ipc.ts.
+const openProjects = (): OpenProjects => ({ projects: projects.map((project) => project ?? null) });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   setWorktrees(withEntry(worktrees, entry));

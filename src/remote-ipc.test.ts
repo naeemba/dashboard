@@ -9,8 +9,8 @@ import type { Settings } from './settings';
 let server: WebSocketServer | undefined;
 afterEach(() => { server?.close(); });
 
-// What the real host sends: its list under its own name for itself, on joining and in the reply to an open.
-const hostList = { host: 'local', projects: [{ name: 'api', path: '/code/api', missing: false }] };
+// What the real host sends, on joining and in the reply to an open.
+const hostList = { projects: [{ name: 'api', path: '/code/api', missing: false }] };
 
 function host(): Promise<string> {
   return new Promise((resolve) => {
@@ -35,7 +35,7 @@ function wired() {
   const held: HeldForRemote = {
     table, version: '1', settings: () => ({ remote: {} }) as Settings, log: () => undefined,
     rings: new Map([['0:1', { replay: () => 'ring' } as PaneRing]]),
-    projects: () => ({ host: 'local', projects: [] }),
+    projects: () => ({ projects: [] }),
     worktrees: () => ({ entries: [], paneDirectories: {} }),
     usage: () => 'usage' as never,
   };
@@ -47,7 +47,8 @@ function wired() {
 
 // The local session told to the window, as a screen joining it would be.
 const localReplay = [
-  ['projects:change', { host: 'local', projects: [] }],
+  ['host:change', 'local'],
+  ['projects:change', { projects: [] }],
   ['pty:data', '0:1', 'ring'],
   ['worktree:change', { entries: [], paneDirectories: {} }],
   ['usage:change', 'usage'],
@@ -64,13 +65,13 @@ describe('registerRemote', () => {
     for (const socket of server!.clients) socket.close();
   });
 
-  it('names the joined address on the host list, pushed and in the reply to an open', async () => {
+  it('names the joined address before the host list, and relays the reply to an open as it is', async () => {
     const address = await host();
     const { remote, sent, connect } = wired();
     expect(await connect(address, 'good')).toBe('');
     await settle();
-    expect(sent).toContainEqual(['projects:change', { ...hostList, host: address }]);
-    await expect(remote.current()!.invoke('projects:open', [null])).resolves.toEqual({ index: 0, open: { ...hostList, host: address } });
+    expect(sent.filter(([channel]) => channel !== 'host:status')).toEqual([['host:change', address], ['projects:change', hostList]]);
+    await expect(remote.current()!.invoke('projects:open', [null])).resolves.toEqual({ index: 0, open: hostList });
     for (const socket of server!.clients) socket.close();
   });
 
@@ -78,10 +79,9 @@ describe('registerRemote', () => {
     const address = await host();
     const { remote, connect } = wired();
     const connecting = connect(address, 'good');
-    expect(remote.reachesWindow('pty:data')).toBe(false);
+    expect(remote.reachesWindow()).toBe(false);
     await connecting;
-    expect(remote.reachesWindow('pty:data')).toBe(false);
-    expect(remote.reachesWindow('host:status')).toBe(true);
+    expect(remote.reachesWindow()).toBe(false);
     for (const socket of server!.clients) socket.close();
   });
 
@@ -92,7 +92,7 @@ describe('registerRemote', () => {
     sent.length = 0;
     expect(await connect(address, 'bad')).toBe('The host refused the token');
     expect(remote.current()).toBeNull();
-    expect(remote.reachesWindow('pty:data')).toBe(true);
+    expect(remote.reachesWindow()).toBe(true);
     // The old client's close clears the status line first.
     expect(sent).toEqual([['host:status', ''], ...localReplay]);
   });

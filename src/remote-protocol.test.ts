@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, decodeFrame, encodeFrame, helloRefusal, isClientChannel, isReply, isRequest, reachesLocalScreen, stampHost, stampReply,
+  CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, decodeFrame, encodeFrame, helloRefusal, isClientChannel, isReply, isRequest,
 } from './remote-protocol';
 
 describe('frames', () => {
@@ -59,35 +59,5 @@ describe('helloRefusal', () => {
     expect(helloRefusal('t', '1.16.0', 't', '1.17.0')).toEqual({
       code: CLOSE_BAD_VERSION, reason: 'The host runs Dashboard 1.17.0, this is 1.16.0',
     });
-  });
-});
-
-describe('reachesLocalScreen', () => {
-  it('lets everything through when this screen is not joined', () => {
-    expect(reachesLocalScreen('pty:data', false)).toBe(true);
-  });
-
-  it('holds back the local session\'s pushes while joined, but not the app\'s own notices', () => {
-    expect(reachesLocalScreen('pty:data', true)).toBe(false);
-    expect(reachesLocalScreen('board:change', true)).toBe(false);
-    for (const channel of ['failure:show', 'host:status', 'projects:change']) {
-      expect(reachesLocalScreen(channel, true)).toBe(true);
-    }
-  });
-});
-
-describe('stampHost and stampReply', () => {
-  const list = { host: 'local', projects: [null] };
-
-  it('names the joined address on the projects push and the reply to an open', () => {
-    expect(stampHost('projects:change', [list], '10.0.0.2:7777')).toEqual([{ host: '10.0.0.2:7777', projects: [null] }]);
-    expect(stampReply('projects:open', { index: 0, open: list }, '10.0.0.2:7777'))
-      .toEqual({ index: 0, open: { host: '10.0.0.2:7777', projects: [null] } });
-  });
-
-  it('leaves every other channel and a cancelled open alone', () => {
-    expect(stampHost('pty:data', ['0-1', 'hi'], 'h')).toEqual(['0-1', 'hi']);
-    expect(stampReply('projects:recent', [list], 'h')).toEqual([list]);
-    expect(stampReply('projects:open', null, 'h')).toBeNull();
   });
 });

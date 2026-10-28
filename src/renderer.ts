@@ -441,7 +441,7 @@ function setPage(project: Project, slot: number): void {
 
 const { removePage, applyProjects, host } = createPageSync({
   pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
-  setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange,
+  setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
 });
 
 // Asked twice — once before the question and once with the answer — so it is one function. What the

@@ -1,7 +1,7 @@
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 
-export type OpenProjects = { host: string; projects: (Project | null)[] };
+export type OpenProjects = { projects: (Project | null)[] };
 import type { Board } from './board';
 import type { FileLink } from './file-links';
 import type { MarketsSnapshot } from './markets';
@@ -41,6 +41,9 @@ export type DashboardBridge = {
   connectHost(address: string, token: string): Promise<string>;
   disconnectHost(): Promise<void>;
   onHostStatus(listener: (text: string) => void): void;
+  // Which session the window shows: the joined host's address, or LOCAL_SCREEN for this machine's own.
+  // Said before that session's list arrives, so the pages of the one before are taken down first.
+  onHostChange(listener: (host: string) => void): void;
   // Closing a project: its five shells and its editor are killed and its slot is given up. The page is
   // the renderer's to take off the screen; nothing comes back, because there is nothing to answer — the
   // one thing that could refuse is read off the panes, and the renderer has already asked them.

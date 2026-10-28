@@ -1,7 +1,7 @@
 import type { OpenProjects } from './bridge';
 import { isProjectPage } from './manager';
 import { discardPanes, type Page } from './page';
-import { landingAfterMoves, pageMoves } from './page-reconcile';
+import { landingAfterMoves, pageMoves, type PageMove } from './page-reconcile';
 import { LOCAL_SCREEN } from './screens';
 import type { Project } from './projects';
 
@@ -18,6 +18,7 @@ export type PageSyncPorts = {
   follow(index: number): void;
   renderStatus(): void;
   onProjectsChange(listener: (open: OpenProjects) => void): void;
+  onHostChange(listener: (host: string) => void): void;
 };
 
 export type PageSync = {
@@ -30,6 +31,10 @@ export type PageSync = {
 export function createPageSync(ports: PageSyncPorts): PageSync {
   // Which host's list the pages were built from. A different one means none of them belong here.
   let currentHost = LOCAL_SCREEN;
+  // Set when the host changes, so the next list takes every page down before building its own. Not
+  // done on the change itself: taken down together with the build, the page you stood on lands on the
+  // new host's page of the same slot, as one arrival, rather than on whatever was left in between.
+  let stale = false;
   const { positionOfSlot, projectPages } = ports;
 
   // Drops what a project's page holds: its panes and its board.
@@ -54,17 +59,19 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
     const pages = ports.pages();
     const standingSlot = pages[ports.activeIndex()]?.slot ?? null;
     const current = projectPages().map((page) => ({ slot: page.slot, project: page.project }));
-    const moves = pageMoves(current, currentHost, open);
+    // Another host's slot 0 is not this one's: nothing on screen belongs to it.
+    const moves: PageMove[] = stale
+      ? [...current.map(({ slot }) => ({ kind: 'remove' as const, slot })), ...pageMoves([], open)]
+      : pageMoves(current, open);
+    stale = false;
     for (const move of moves) {
-      if (move.kind === 'reset') for (const page of projectPages()) removePage(page.slot);
-      else if (move.kind === 'remove') removePage(move.slot);
+      if (move.kind === 'remove') removePage(move.slot);
       else {
         // A rebuild replaces the page where it stands, so the old one is only emptied, not taken out.
         if (move.kind === 'rebuild') discardPage(pages[positionOfSlot(move.slot)]);
         ports.setPage(move.project, move.slot);
       }
     }
-    currentHost = open.host;
     const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
     if (landing.takeFocus) ports.landOn(landing.position);
     else {
@@ -76,6 +83,11 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
     ports.renderStatus();
   }
   ports.onProjectsChange(applyProjects);
+  ports.onHostChange((host) => {
+    if (host === currentHost) return;
+    currentHost = host;
+    stale = true;
+  });
 
   return { removePage, applyProjects, host: () => currentHost };
 }

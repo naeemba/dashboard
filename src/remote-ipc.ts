@@ -3,7 +3,6 @@ import type { Channels, RemoteTarget } from './channels';
 import { failureText } from './failure';
 import type { LogDraft } from './log-entry';
 import { connectRemote, type RemoteClient } from './remote-client';
-import { reachesLocalScreen, stampHost, stampReply } from './remote-protocol';
 import { replaySession, type SessionState } from './session-replay';
 import type { Settings } from './settings';
 
@@ -21,7 +20,7 @@ export type HeldForRemote = SessionState & {
 export function registerRemote(held: HeldForRemote, window: {
   send(channel: string, ...payload: unknown[]): void;
   saveSettings(next: Settings): void;
-}): { current(): RemoteTarget | null; reachesWindow(channel: string): boolean } {
+}): { current(): RemoteTarget | null; reachesWindow(): boolean } {
   let client: RemoteClient | null = null;
   // Each connect takes a number. One that finishes after a newer connect or a disconnect has started
   // is stale, and is closed rather than kept: two live clients would both push into the renderer.
@@ -34,6 +33,7 @@ export function registerRemote(held: HeldForRemote, window: {
   // While joined, this machine's own pushes were held back from its window, so coming home it is told
   // everything a screen joining this session would be.
   function backToLocal(): void {
+    window.send('host:change', LOCAL_SCREEN);
     replaySession(held, (channel, args) => window.send(channel, ...args));
   }
 
@@ -45,7 +45,15 @@ export function registerRemote(held: HeldForRemote, window: {
     try {
       const joined = await connectRemote(address, token, {
         version: held.version,
-        push: (channel, args) => window.send(channel, ...stampHost(channel, args, address)),
+        // The host calls its own list LOCAL_SCREEN, which is what it is from where the host stands. Taken
+        // as it comes, this screen would read the host's projects as its own: it would never offer
+        // Disconnect, and "a new project" would ask the host for a folder dialog the host refuses. So
+        // each list is told whose it is first. Not at the start of the connect: a mistyped token would
+        // take every local page down and rebuild it. The window takes a repeat as nothing.
+        push(channel, args) {
+          if (channel === 'projects:change') window.send('host:change', address);
+          window.send(channel, ...args);
+        },
         status: (text) => window.send('host:status', text),
         log: held.log,
         // A refused reconnect ends the visit. The client has put the reason on the status line, where
@@ -85,17 +93,14 @@ export function registerRemote(held: HeldForRemote, window: {
     if (away) backToLocal();
   });
 
-  // What registerWithIpc relays through. The reply to an open carries the list, so it is stamped like the push.
-  function current(): RemoteTarget | null {
-    const joined = client;
-    if (!joined) return null;
-    return {
-      invoke: async (channel, args) => stampReply(channel, await joined.invoke(channel, args), joined.address),
-      send: (channel, args) => joined.send(channel, args),
-    };
-  }
+  // What the local window may be sent by main while this app is a screen of another host: nothing. Its
+  // own shells and boards push under pane ids such as `0:1` that collide with the host's, and the host's
+  // pushes arrive by the client instead. The app's own notices (a failure, the status line, the host
+  // change) and the way back home go to the window directly, not through this gate.
+  const reachesWindow = (): boolean => client === null && !connecting;
 
-  return { current, reachesWindow: (channel) => reachesLocalScreen(channel, client !== null || connecting) };
+  // What registerWithIpc relays through.
+  return { current: () => client, reachesWindow };
 }
 
 // `--remote` on the command line: join the remembered host once the window has put its own session
