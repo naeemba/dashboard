@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { settingsRows, stepSelection } from './settings-rows';
 import { ACTIONS } from './actions';
-import { bindKey, defaultSettings } from './settings';
+import { bindKey, defaultSettings, parseSettings } from './settings';
 
 const settings = defaultSettings(true);
 const rows = settingsRows(settings);
@@ -26,6 +26,15 @@ describe('settingsRows', () => {
     expect(kinds).toContain('weather-place');
     expect(kinds).toContain('reset-keys');
     expect(kinds).toContain('reset-all');
+  });
+
+  it('lists the host port and token under a Host heading', () => {
+    const hosted = settingsRows(parseSettings({ host: { token: 'abc' } }, false));
+    expect(hosted).toContainEqual({ kind: 'heading', label: 'Host' });
+    expect(hosted).toContainEqual({ kind: 'host-port', label: 'Port (next launch)', value: '' });
+    expect(hosted).toContainEqual({ kind: 'host-token', label: 'Token', value: 'abc' });
+    const listening = settingsRows(parseSettings({ host: { port: 7777 } }, false));
+    expect(listening).toContainEqual({ kind: 'host-port', label: 'Port (next launch)', value: '7777' });
   });
 
   it('opens with a heading, and headings are not selectable', () => {

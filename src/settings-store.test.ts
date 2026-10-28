@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -48,6 +48,13 @@ describe('writeSettings', () => {
     expect(readFileSync(path, 'utf8')).toContain('\n  "shellCommand"');
   });
 
+  it('leaves the file readable by this account only, since it holds the tokens', () => {
+    const path = file();
+    writeFileSync(path, '{}', { mode: 0o644 });
+    writeSettings(path, defaultSettings(true), true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+  });
+
   it('swallows a write it cannot do, the way the session file does', () => {
     expect(() => writeSettings('/', defaultSettings(true), true)).not.toThrow();
   });
@@ -58,7 +65,7 @@ describe('writeSettings', () => {
     const path = file();
     writeSettings(path, { ...defaultSettings(true), font: { name: 'Menlo', size: 14 } }, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { name: 'Menlo', size: 14 }, theme: {}, keys: {} });
+      .toEqual({ font: { name: 'Menlo', size: 14 }, theme: {}, keys: {}, host: {}, remote: {} });
   });
 
   it('writes a key you chose, a key you cleared, and a colour you changed', () => {
@@ -91,7 +98,7 @@ describe('tidySettingsFile', () => {
     writeFileSync(path, JSON.stringify({ ...shipped, font: { name: 'Menlo', size: shipped.font.size } }));
     tidySettingsFile(path, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {} });
+      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {}, host: {}, remote: {} });
   });
 
   // The rule is "this is what we ship, so leave it out", not "this line is called shellCommand". Nothing

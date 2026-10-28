@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseSettings, withoutShipped, type Settings } from './settings';
 
@@ -31,11 +31,19 @@ function serialize(value: unknown): string {
 
 // isMac is here rather than at the call site because withoutShipped is not optional: a caller that
 // forgot it would write this build's defaults into the file and freeze them, with nothing failing.
+// Readable by this account only: the file holds the host's token and the one this screen joins with,
+// and either is enough to type into a shell. The mode on the write covers a new file; the chmod covers
+// one an older build left readable by every account on the machine.
+function writePrivately(file: string, text: string): void {
+  writeFileSync(file, text, { mode: 0o600 });
+  chmodSync(file, 0o600);
+}
+
 export function writeSettings(file: string, settings: Settings, isMac: boolean): void {
   try {
     // The directory may not exist yet the first time anything is written.
     mkdirSync(path.dirname(file), { recursive: true });
-    writeFileSync(file, serialize(withoutShipped(settings, isMac)));
+    writePrivately(file, serialize(withoutShipped(settings, isMac)));
   } catch {
     // The change is live in this run; it just will not survive a restart.
   }
@@ -52,7 +60,7 @@ export function tidySettingsFile(file: string, isMac: boolean): void {
   try {
     const stored = JSON.parse(readFileSync(file, 'utf8'));
     const tidied = withoutShipped(stored, isMac);
-    if (JSON.stringify(tidied) !== JSON.stringify(stored)) writeFileSync(file, serialize(tidied));
+    if (JSON.stringify(tidied) !== JSON.stringify(stored)) writePrivately(file, serialize(tidied));
   } catch {
     // No file, nothing readable in it, or nowhere to write it back. All three mean: leave it alone.
   }

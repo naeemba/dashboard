@@ -19,6 +19,7 @@ import { createStatusError } from './status-error';
 import { fileLinkOpener, showFileHints } from './file-hints';
 import { type Mode } from './modes';
 import { openPicker } from './picker';
+import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './connect-flow';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
@@ -30,6 +31,7 @@ import type { Session } from './session';
 import type { WorktreeEntry } from './worktree-store';
 import { WORKING_REPORT_MS } from './working-panes';
 import type { WorktreeList } from './bridge';
+import { createPageSync } from './page-sync';
 import { NO_USAGE, type UsageSnapshot } from './usage';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
@@ -43,7 +45,7 @@ import { closeRefusal, closingPanes } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, discardPanes, fitPage, fitPanes, panesById, restylePanes, showMode, type Page,
+  createPageBuilder, fitPage, fitPanes, panesById, restylePanes, showMode, type Page,
 } from './page';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
@@ -437,6 +439,23 @@ function setPage(project: Project, slot: number): void {
   fitPage(page);
 }
 
+const { removePage, applyProjects, host } = createPageSync({
+  pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
+  setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
+  // While away every save went to the host, which keeps only its own window's, so main still holds this
+  // machine's layout from before the connect. Saving is held until it is back on the pages: the bare
+  // rebuild saved straight away would write every view, focus and name off to disk for good.
+  comeHome(rebuild) {
+    restoring = true;
+    rebuild();
+    void bridge.getSession().then(applyLayout, () => undefined).finally(() => {
+      restoring = false;
+      landOn(activeIndex);
+      renderStatus();
+    });
+  },
+});
+
 // Asked twice — once before the question and once with the answer — so it is one function. What the
 // flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
 // `panes:read`, and this only puts the names to it.
@@ -512,10 +531,7 @@ async function closeProject(slot: number): Promise<void> {
     const closingPosition = positionOfSlot(slot);
     if (closingPosition === -1) return;
     bridge.closeProject(slot);
-    discardPanes(slot);
-    closingPage.board?.close();
-    closingPage.element.remove();
-    pages.splice(closingPosition, 1);
+    removePage(slot);
     // The page that went can be the one you were standing on, since the key closes the project you are
     // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
     // it was the last one, which is the manager at worst. A close from the manager's own list is the
@@ -538,31 +554,25 @@ function moveProject(index: number): void {
   renderStatus();
 }
 
-// Main owns the decision and reports it as `replaced`, so a page is only rebuilt when its shells were.
-// A null path asks main for the folder dialog.
-async function openProject(projectPath: string | null): Promise<void> {
+// Main owns the decision and answers with the whole list, which applyProjects makes true here. A null
+// path asks main for the folder dialog.
+async function openProject(requested: string | null): Promise<void> {
+  // Connected, "a new project" is a path typed for the host; the folder dialog would show this disk.
+  const remote = requested === null && isRemoteHost(host());
+  const projectPath = remote ? await typedHostFolder(host(), promptOverlay) : requested;
+  if (remote && projectPath === null) return showPage(activeIndex);
   const opened = await bridge.openProject(projectPath);
   if (!opened) return showPage(activeIndex);
-  if (opened.replaced) {
-    setPage(opened.project, opened.index);
-  }
+  applyProjects(opened.open);
   const position = positionOfSlot(opened.index);
   if (position !== -1) showPage(position);
 }
 
-// Projects already open come first and win the deduplication, so the picker shows the live page for one
-// that is also in the history.
-async function showPicker(): Promise<void> {
-  const recent = await bridge.getRecentProjects();
-  const byPath = new Map<string, Project>();
-  for (const page of projectPages()) {
-    if (!page.project.missing) byPath.set(page.project.path, page.project);
-  }
-  for (const project of recent) if (!byPath.has(project.path)) byPath.set(project.path, project);
-  const choice = await openPicker([...byPath.values()]);
-  if (choice === undefined) return showPage(activeIndex);
-  await openProject(choice);
-}
+const showPicker = () => runPicker({
+  bridge, projectPages, openProject, host, showNotice, pick: openPicker, prompt: promptOverlay,
+  settings: () => settings, setSettings: (next) => { settings = next; }, restore: () => showPage(activeIndex),
+});
+bridge.onHostReport((text) => showNotice('host', text));
 
 // Ctrl+`: the pane you are looking at, as a file in the project's nvim.
 //
@@ -798,6 +808,14 @@ bridge.onBoardChange((projectPath) => {
   page.board?.reload(projectPath);
 });
 
+// Another screen wrote a page of notes. The box in front reads its file again if the page is its own,
+// keeping anything typed here that has not been written yet. Any other box reads again when you
+// arrive at it.
+bridge.onNotesChange((projectPath) => {
+  const page = pages[activeIndex];
+  if (page.mode === 'notes') void page.notes?.reload(projectPath);
+});
+
 // jumps.ts says where each of these lands.
 const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
 
@@ -911,6 +929,25 @@ bridge.onTaskUpdate((result) => {
   pages.find((page) => !isProjectPage(page))?.command?.update(result);
 });
 
+// Each open project's view, focused pane and typed names, as the session has them. By path, not
+// position: an entry that failed to open has no page, so the two lists no longer line up and index 3
+// would hand project 4's view to project 5.
+function applyLayout(session: Session): void {
+  for (const entry of session.pages) {
+    const page = pages.find((candidate) => candidate.project.path === entry.path);
+    // A folder that went away while the app was closed comes back as the same dead page it would have
+    // become had it gone away mid-run. There is no view on it to restore.
+    if (!page || page.project.missing) continue;
+    showMode(page, entry.mode);
+    page.focused = entry.focused;
+    // Only the names you typed come back. A title dies with the program that set it, so a restored
+    // pane says nothing until whatever starts in it speaks up.
+    entry.names.forEach((name, index) => {
+      if (name !== null && page.panes[index]) page.panes[index].typedName = name;
+    });
+  }
+}
+
 // Puts back what the last run was left on: the same projects in the same order, each on the view it was
 // showing, with the same pane focused. One at a time, because main hands out a slot per project in the
 // order they are opened and that order is the tab strip.
@@ -932,21 +969,7 @@ async function restore(session: Session): Promise<void> {
         showError('start', `Failed to open ${entry.path}: ${failureText(error)}`);
       }
     }
-    for (const entry of session.pages) {
-      // By path, not position: an entry that failed to open has no page, so the two lists no longer
-      // line up and index 3 would hand project 4's view to project 5.
-      const page = pages.find((candidate) => candidate.project.path === entry.path);
-      // A folder that went away while the app was closed comes back as the same dead page it would have
-      // become had it gone away mid-run. There is no view on it to restore.
-      if (!page || page.project.missing) continue;
-      showMode(page, entry.mode);
-      page.focused = entry.focused;
-      // Only the names you typed come back. A title dies with the program that set it, so a restored
-      // pane says nothing until whatever starts in it speaks up.
-      entry.names.forEach((name, index) => {
-        if (name !== null && page.panes[index]) page.panes[index].typedName = name;
-      });
-    }
+    applyLayout(session);
   } finally {
     // Saving again from here on, so the landing below is what writes the restored layout back — with any
     // project whose folder has gone missing already dropped from it.
@@ -1012,7 +1035,8 @@ async function start(): Promise<void> {
     // Fallen through to whatever xterm renders instead.
   }
   applyAppearance();
-  await restore(session);
+  // Said whether or not the restore threw: a launch with `--remote` joins its host only after this.
+  await restore(session).finally(() => bridge.sessionRestored());
 }
 
 start().catch((error: unknown) => {

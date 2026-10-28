@@ -2,17 +2,18 @@ import { execFile } from 'node:child_process';
 import { readlink } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { parentProcesses } from './pane-sessions';
+import { realPath } from './worktree-scan';
 import {
-  answerDespiteFailure, familiesOf, lsofDirectories, oneQuestionAtATime, type ShellDirectories,
+  anyShellStandsIn, answerDespiteFailure, familiesOf, lsofDirectories, oneQuestionAtATime, type ShellDirectories,
 } from './shell-directory';
 
 // Where every pane's shell, and everything it started, is standing right now — what the review sweep
 // asks before it removes a finished card's worktree. What those answers mean is shell-directory.ts's,
 // and it is tested there, including how one question is shared between the cards asking it.
 //
-// Out of main.ts because main had reached the 600-line ceiling. No test file, under the exemption
-// CLAUDE.md gives spawning: this runs `lsof`, reads `ps` through the `processTree` main hands it,
-// and hands the text on, and a test of that is a test of mocks.
+// Out of main.ts because main had reached the 600-line ceiling. The spawning half (`lsof`, `ps` through
+// the `processTree` main hands it) has no test, under the exemption CLAUDE.md gives spawning: a test of
+// that is a test of mocks. shellLiveness, the one branch here, is tested in shell-directory-lookup.test.ts.
 //
 // One `ps` and one `lsof` per tick, whatever the number of shells and cards. `lsof` takes a list of
 // pids and answers for all of them in about the time it takes for one, so twenty shells cost what
@@ -31,6 +32,25 @@ export function shellDirectories(
   processTree: () => Promise<string | null>,
 ): (shellPids: readonly number[]) => Promise<ShellDirectories> {
   return oneQuestionAtATime((shellPids: readonly number[]) => familyDirectories(processTree, shellPids));
+}
+
+// Whether any pane's shell stands in this folder, which is what the review sweep waits on before it
+// removes a finished card's worktree. shell-directory.ts says which folders count and what an
+// unanswered question means; this asks each live shell, and what it started, where it is now, since a
+// `cd` typed into a pane never reaches the folder the pane was opened in.
+export function shellLiveness(held: {
+  shells: ReadonlyMap<string, { pid: number }>;
+  opened: ReadonlyMap<string, { directory: string }>;
+  shellsIn(worktreePath: string): string[];
+  ask(shellPids: readonly number[]): Promise<ShellDirectories>;
+}): (worktreePath: string) => Promise<boolean> {
+  return async (worktreePath) => {
+    // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
+    if (held.shellsIn(worktreePath).length > 0) return true;
+    const live = Array.from(held.shells, ([id, { pid }]) => ({ opened: held.opened.get(id)?.directory ?? '', pid }));
+    const directories = await held.ask(live.map(({ pid }) => pid));
+    return anyShellStandsIn(live, directories, worktreePath, realPath(worktreePath));
+  };
 }
 
 async function familyDirectories(

@@ -1,5 +1,6 @@
-import { ipcMain } from 'electron';
+import type { Channels } from './channels';
 import { existsSync } from 'node:fs';
+import { LOCAL_SCREEN } from './screens';
 import { sessionToWrite, type PaneConversation } from './claude-resume';
 import { resumeLedger, type SessionPlacement } from './resume-ledger';
 import { readSession, writeSession, type Session } from './session';
@@ -21,7 +22,7 @@ type ClaudeSessions = {
   placed(placement: SessionPlacement): void;
 };
 
-export function sessionStore(file: string, slotOf: (projectPath: string) => number): ClaudeSessions {
+export function sessionStore(table: Channels, file: string, slotOf: (projectPath: string) => number): ClaudeSessions {
   const saved = readSession(file);
   const ledger = resumeLedger(saved.pages, existsSync);
   let layout: Session | null = null;
@@ -34,8 +35,13 @@ export function sessionStore(file: string, slotOf: (projectPath: string) => numb
     writeSession(file, next.session);
   }
 
-  ipcMain.handle('session:read', () => saved);
-  ipcMain.on('session:write', (_event, next: Session) => {
+  // The layout the window last sent, once it has sent one. The window asks again when it comes back
+  // from another host, and its pages are rebuilt bare then: what they had before the connect is here,
+  // because nothing another screen sends replaces it.
+  table.handle('session:read', () => layout ?? saved);
+  table.on('session:write', (screen, next: Session) => {
+    // A couch layout must not overwrite the desk's: the file is the host window's.
+    if (screen !== LOCAL_SCREEN) return;
     layout = next;
     write();
   });

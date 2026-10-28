@@ -16,6 +16,10 @@ export type Settings = {
   // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
   // geocoder whenever it changes, so it is never blank.
   weatherPlace: string;
+  // The port a second Dashboard joins this one on (null: do not listen) and the token it must show.
+  host: { port: number | null; token: string };
+  // The host this Dashboard last joined, remembered by the connect dialog. Not a settings screen row.
+  remote: { address: string; token: string };
 };
 
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
@@ -44,6 +48,12 @@ export function isFontSize(value: string): boolean {
   return value.trim() !== '' && Number.isFinite(size) && size >= 6 && size <= 72;
 }
 
+// The same range parseSettings holds a stored port to. Exported for the settings screen's message.
+export function isPort(value: string | number): boolean {
+  const port = Number(value);
+  return /^\d+$/.test(String(value).trim()) && port >= 1 && port <= 65535;
+}
+
 export function defaultSettings(isMac: boolean): Settings {
   return {
     shellCommand: '',
@@ -51,6 +61,8 @@ export function defaultSettings(isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [name, String(THEME[name as keyof typeof THEME])])),
     keys: Object.fromEntries(ACTIONS.map((entry) => [entry.name, defaultBinding(entry, isMac)])),
     weatherPlace: DEFAULT_WEATHER_PLACE,
+    host: { port: null, token: '' },
+    remote: { address: '', token: '' },
   };
 }
 
@@ -106,6 +118,8 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedKeys = asRecord(raw.keys);
   const storedTheme = asRecord(raw.theme);
   const storedFont = asRecord(raw.font);
+  const storedHost = asRecord(raw.host);
+  const storedRemote = asRecord(raw.remote);
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
@@ -128,6 +142,14 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     keys: Object.fromEntries(bindings.map(({ entry, binding }) => [entry.name, binding])),
     weatherPlace: typeof raw.weatherPlace === 'string' && raw.weatherPlace.trim() !== ''
       ? raw.weatherPlace.trim() : defaults.weatherPlace,
+    host: {
+      port: typeof storedHost.port === 'number' && isPort(storedHost.port) ? storedHost.port : null,
+      token: typeof storedHost.token === 'string' ? storedHost.token : '',
+    },
+    remote: {
+      address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',
+      token: typeof storedRemote.token === 'string' ? storedRemote.token : '',
+    },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 
@@ -182,6 +204,14 @@ export function bindKey(settings: Settings, name: string, binding: string | null
 
 export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
+}
+
+// Every preference back to what this build ships. The host token and the remembered host stay: they are
+// pairings with another machine, not preferences, and wiping the token would lock out the screen that
+// holds the old one with no explanation.
+export function resetAll(settings: Settings, isMac: boolean): Settings {
+  const defaults = defaultSettings(isMac);
+  return { ...defaults, host: { ...defaults.host, token: settings.host.token }, remote: settings.remote };
 }
 
 // The chosen lines of one object: what is left of it once every entry equal to what this build ships is

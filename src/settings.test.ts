@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, parseSettings, resetKeys,
+  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
 } from './settings';
 import { ACTIONS, scopesOverlap } from './actions';
 import { THEME } from './theme';
@@ -215,5 +215,51 @@ describe('holderOfBinding, across overlapping scopes', () => {
   it('has global colliding with everything', () => {
     expect(scopesOverlap('global', 'terminals')).toBe(true);
     expect(scopesOverlap('manager-page', 'global')).toBe(true);
+  });
+});
+
+describe('host and remote', () => {
+  it('defaults to no port, no token and no remote', () => {
+    const settings = parseSettings({}, true);
+    expect(settings.host).toEqual({ port: null, token: '' });
+    expect(settings.remote).toEqual({ address: '', token: '' });
+  });
+
+  it('keeps a port in range and drops one outside it', () => {
+    expect(parseSettings({ host: { port: 7777 } }, true).host.port).toBe(7777);
+    expect(parseSettings({ host: { port: 0 } }, true).host.port).toBeNull();
+    expect(parseSettings({ host: { port: 70000 } }, true).host.port).toBeNull();
+    expect(parseSettings({ host: { port: '7777' } }, true).host.port).toBeNull();
+  });
+
+  it('keeps a token and a remote as written', () => {
+    const settings = parseSettings({ host: { token: 'abc' }, remote: { address: '10.0.0.2:7777', token: 'xyz' } }, true);
+    expect(settings.host.token).toBe('abc');
+    expect(settings.remote).toEqual({ address: '10.0.0.2:7777', token: 'xyz' });
+  });
+});
+
+describe('isPort', () => {
+  it('accepts 1 to 65535 and nothing else', () => {
+    expect(isPort('1')).toBe(true);
+    expect(isPort('65535')).toBe(true);
+    expect(isPort('0')).toBe(false);
+    expect(isPort('65536')).toBe(false);
+    expect(isPort('77.5')).toBe(false);
+    expect(isPort('')).toBe(false);
+    expect(isPort(7777)).toBe(true);
+    expect(isPort(77.5)).toBe(false);
+  });
+});
+
+describe('resetAll', () => {
+  it('keeps the token and the remote, and resets the port', () => {
+    const settings = parseSettings({
+      host: { port: 7777, token: 'abc' }, remote: { address: '10.0.0.2:7777', token: 'xyz' }, weatherPlace: 'Oslo',
+    }, true);
+    const reset = resetAll(settings, true);
+    expect(reset.host).toEqual({ port: null, token: 'abc' });
+    expect(reset.remote).toEqual(settings.remote);
+    expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
   });
 });

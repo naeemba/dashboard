@@ -15,3 +15,23 @@ export async function git(args: string[], cwd: string): Promise<string> {
   const { stdout } = await runCommand('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
   return stdout.trimEnd();
 }
+
+// origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
+// same reason: origin/HEAD is not set in every clone.
+export async function baseBranch(projectPath: string): Promise<string> {
+  try {
+    const head = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], projectPath);
+    return head.replace(/^origin\//, '');
+  } catch {
+    // Not set in this clone; try the usual names.
+  }
+  for (const candidate of ['main', 'master']) {
+    try {
+      await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${candidate}`], projectPath);
+      return candidate;
+    } catch {
+      // Try the next one.
+    }
+  }
+  throw new Error('cannot tell which branch on origin is the main one');
+}

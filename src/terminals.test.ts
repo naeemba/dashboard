@@ -167,14 +167,15 @@ describe('sizeOfPane', () => {
   // long ago and nothing about it changes, so no new size is ever sent — spawn at the default and the
   // agent draws its prompt box at 80 columns inside a pane twice that wide, and stays there.
   it('gives a measured pane the size it reported', () => {
-    const sizes = new Map([['0:2', { cols: 163, rows: 42 }]]);
+    const map = new Map([['0:2', { cols: 163, rows: 42 }]]);
+    const sizes = { sizeOf: (id: string) => map.get(id) };
     expect(sizeOfPane(sizes, '0:2')).toEqual({ cols: 163, rows: 42 });
   });
 
   // Matches xterm's own starting size on purpose. A pane nobody has measured is 80x24 in the renderer
   // too, so both halves agree from the first byte and the first fit has nothing to correct.
   it('gives an unmeasured pane the size a fresh terminal already is', () => {
-    expect(sizeOfPane(new Map(), '0:2')).toBe(DEFAULT_PANE_SIZE);
+    expect(sizeOfPane({ sizeOf: () => undefined }, '0:2')).toBe(DEFAULT_PANE_SIZE);
     expect(DEFAULT_PANE_SIZE).toEqual({ cols: 80, rows: 24 });
   });
 });

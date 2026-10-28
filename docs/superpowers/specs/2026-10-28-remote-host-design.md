@@ -56,10 +56,12 @@ windows that list must have one owner.
   connected screens, like tmux. A screen that disconnects takes its report
   with it, and the shell is resized to what remains. `sizeOfPane` in
   `terminals.ts` grows a `smallest(sizes)` beside a test.
-- **Scrollback.** The host keeps the last 256 KB of output per pane in a
-  ring (`src/pane-ring.ts`, tested). On connect, before anything else, the
-  client receives one `pty:data` per live pane holding that ring, then live
-  output. The renderer already handles `pty:data`; nothing new on its side.
+- **Scrollback.** The host feeds each pane's output into a headless
+  terminal (`src/pane-screen-copy.ts`, tested) that keeps the last 1000
+  lines of scrollback. On connect, before anything else, the client
+  receives one `pty:data` per live pane holding that terminal's serialized
+  screen and modes after a full reset, then live output. The renderer
+  already handles `pty:data`; nothing new on its side.
 - **Session file.** `session.json` is the host's. The host writes it from
   its own page list and the host window's view. The remote client's
   `session:write` is accepted and ignored: a couch layout must not
@@ -84,7 +86,7 @@ windows that list must have one owner.
   <address>` as the first picker row. Launching with `--remote` connects
   straight away.
 - **Handshake.** First frame from the client is
-  `{ channel: 'host:hello', args: [token, version] }`. A wrong token closes
+  `{ channel: 'host:join', args: [token, version] }`. A wrong token closes
   the socket with code 4001 and the client shows `The host refused the
   token`. A different `package.json` version closes with 4002 and names
   both versions: the two apps must be the same build, since the protocol is
@@ -95,7 +97,7 @@ windows that list must have one owner.
   and not an oversight.
 - **Reconnect.** When the socket drops, the client keeps the page list it
   has, greys the status bar with `Reconnecting to <address>…`, and tries
-  every two seconds. On success the rings are replayed into each pane
+  every two seconds. On success the screen copies are replayed into each pane
   after a clear, so nothing is doubled. Keystrokes typed while
   disconnected are dropped, not queued: a queued `rm` landing a minute late
   is worse than a lost keystroke.
@@ -137,7 +139,7 @@ remote screen.
   Mechanical, the bodies do not change.
 - `src/remote-client.ts`: the relay. One websocket, a pending-request map,
   the reconnect loop, the client-side channel table.
-- `src/pane-ring.ts` and test.
+- `src/pane-screen-copy.ts` and test.
 - `src/screens.ts` and test: the set of connected screens, their pane sizes,
   `smallest`.
 - `src/picker.ts`: the connect, reconnect and disconnect rows.
@@ -163,7 +165,7 @@ remote screen.
 
 - `remote-protocol.test.ts`: encode and decode round trips, refusal of an
   unknown channel, the handshake frames.
-- `pane-ring.test.ts`: capacity, overwrite, replay order.
+- `pane-screen-copy.test.ts`: replay order, modes kept, scrollback capped.
 - `screens.test.ts`: smallest of several sizes, a screen leaving, no screens.
 - `picker.test.ts`: the three new rows and when each appears.
 - `settings.test.ts`: `host` and `remote` parse, token generated once.

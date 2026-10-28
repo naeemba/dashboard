@@ -6,6 +6,12 @@ const bridge: DashboardBridge = {
   getRecentProjects: () => ipcRenderer.invoke('projects:recent'),
   openProject: (projectPath) => ipcRenderer.invoke('projects:open', projectPath),
   closeProject: (slot) => ipcRenderer.send('projects:close', slot),
+  onProjectsChange: (listener) =>
+    ipcRenderer.on('projects:change', (_event, open) => listener(open)),
+  connectHost: (address, token) => ipcRenderer.invoke('host:connect', address, token),
+  disconnectHost: () => ipcRenderer.invoke('host:disconnect'),
+  onHostReport: (listener) => ipcRenderer.on('host:report', (_event, text) => listener(text)),
+  onHostChange: (listener) => ipcRenderer.on('host:change', (_event, host) => listener(host)),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openExternal: (url) => ipcRenderer.send('link:open', url),
   notify: (title, body, paneId) => ipcRenderer.send('notification:show', title, body, paneId),
@@ -22,11 +28,14 @@ const bridge: DashboardBridge = {
   onExit: (listener) => ipcRenderer.on('pty:exit', (_event, id, exitCode) => listener(id, exitCode)),
   getSession: () => ipcRenderer.invoke('session:read'),
   saveSession: (session) => ipcRenderer.send('session:write', session),
+  sessionRestored: () => ipcRenderer.send('session:restored'),
   readBoard: (projectPath) => ipcRenderer.invoke('board:read', projectPath),
   peekBoard: (projectPath) => ipcRenderer.invoke('board:peek', projectPath),
   writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),
   onBoardChange: (listener) =>
     ipcRenderer.on('board:change', (_event, projectPath) => listener(projectPath)),
+  onNotesChange: (listener) =>
+    ipcRenderer.on('notes:change', (_event, projectPath) => listener(projectPath)),
   readNotes: (projectPath) => ipcRenderer.invoke('notes:read', projectPath),
   writeNotes: (projectPath, text) => ipcRenderer.invoke('notes:write', projectPath, text),
   getSettings: () => ipcRenderer.invoke('settings:read'),

@@ -5,7 +5,7 @@ import { paneLabel } from './terminals';
 // writes entries and the renderer reads and filters them, so both sides import the one shape.
 export const LOG_LEVELS = ['error', 'warn', 'info'] as const;
 export type LogLevel = typeof LOG_LEVELS[number];
-export const LOG_KINDS = ['app', 'project', 'pane', 'agent', 'card', 'ship', 'worktree', 'board', 'error'] as const;
+export const LOG_KINDS = ['app', 'project', 'pane', 'agent', 'card', 'ship', 'worktree', 'board', 'error', 'screen'] as const;
 export type LogKind = typeof LOG_KINDS[number];
 
 export type LogEntry = { time: string; level: LogLevel; kind: LogKind; project?: string; message: string };

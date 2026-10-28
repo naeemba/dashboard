@@ -13,6 +13,8 @@ import type { TaskResult } from './tasks';
 import type { UsageSnapshot } from './usage';
 import type { WorktreeEntry } from './worktree-store';
 
+export type OpenProjects = { projects: (Project | null)[] };
+
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
 // what says which five panes are candidates for the agent.
 export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
@@ -33,7 +35,15 @@ export type WorktreeList = { entries: WorktreeEntry[]; paneDirectories: Record<s
 export type DashboardBridge = {
   platform: string;
   getRecentProjects(): Promise<Project[]>;
-  openProject(projectPath: string | null): Promise<{ index: number; project: Project; replaced: boolean } | null>;
+  openProject(projectPath: string | null): Promise<{ index: number; open: OpenProjects } | null>;
+  onProjectsChange(listener: (open: OpenProjects) => void): void;
+  // Join another Dashboard's session, or go back to this one. Resolves '' or the host's refusal.
+  connectHost(address: string, token: string): Promise<string>;
+  disconnectHost(): Promise<void>;
+  onHostReport(listener: (text: string) => void): void;
+  // Which session the window shows: the joined host's address, or LOCAL_SCREEN for this machine's own.
+  // Said before that session's list arrives, so the pages of the one before are taken down first.
+  onHostChange(listener: (host: string) => void): void;
   // Closing a project: its five shells and its editor are killed and its slot is given up. The page is
   // the renderer's to take off the screen; nothing comes back, because there is nothing to answer — the
   // one thing that could refuse is read off the panes, and the renderer has already asked them.
@@ -77,6 +87,9 @@ export type DashboardBridge = {
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;
   saveSession(session: Session): void;
+  // The saved projects are open again, or have failed to. What `--remote` waits for before it joins a
+  // host, so the restore's own opens are not relayed to it.
+  sessionRestored(): void;
   readBoard(projectPath: string): Promise<BoardRead>;
   // A read that changes nothing on disk, for the manager's counts: null when there is nothing to
   // count. board-store.ts says why the manager may not use readBoard.
@@ -86,9 +99,9 @@ export type DashboardBridge = {
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.
   onBoardChange(listener: (projectPath: string) => void): void;
-  // The project's page of notes, read and written whole. There is no change event to go with these:
-  // the notes are one box that one person types into, where the board is a file an agent moves cards
-  // in while you are looking at it.
+  // The project's page of notes, read and written whole. The change event is another screen's write:
+  // the box is one person typing, but that person can be at either machine.
+  onNotesChange(listener: (projectPath: string) => void): void;
   readNotes(projectPath: string): Promise<string>;
   writeNotes(projectPath: string, text: string): Promise<void>;
   // The settings, and the shell that was resolved from them. One call, because the renderer needs

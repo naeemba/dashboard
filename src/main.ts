@@ -1,26 +1,20 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, Menu } from 'electron';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import {
-  projectFromPath,
-  readRecentPaths,
-  rememberRecentPath,
-  replacesProject,
-  type Project,
-} from './projects';
+import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, type Project } from './projects';
 import { baseName } from './base-name';
-import { git } from './git';
+import { baseBranch, git } from './git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
-import { anyShellStandsIn } from './shell-directory';
-import { commandOutput, shellDirectories } from './shell-directory-lookup';
+import { shellDirectories, shellLiveness } from './shell-directory-lookup';
+import { processTree } from './process-tree';
+import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
-import {
-  EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId, type PaneSize,
-} from './terminals';
+import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId } from './terminals';
+import { LOCAL_SCREEN, screens, windowHears } from './screens';
 import { boardChanges } from './board-changes';
 import { BOARD_FILE_PATH, peekBoard, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
@@ -28,31 +22,25 @@ import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
+import { startHost, type HeldByMain } from './host-wiring';
+import { connectAtLaunch, registerRemote } from './remote-ipc';
 import { registerPaneOpeners } from './pane-openers';
+import { channels, registerWithIpc } from './channels';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
 import { registerLog } from './log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
 import { sessionStore } from './session-store';
 import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
+import { keepHostToken } from './host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import {
-  blockingChanges,
-  branchNameFor,
-  changedFiles,
-  oneAtATime,
-  uncommittedCount,
-  workPrompt,
-  worktreePathFor,
-} from './ship';
+import { blockingChanges, branchNameFor, changedFiles, oneAtATime, uncommittedCount, workPrompt, worktreePathFor } from './ship';
 import {
   busyPanes,
   freePane,
   runsAnAgent,
   shipCanTake,
-  type PaneCommand,
-  type PaneReading,
-  type PaneUse,
+  type PaneCommand, type PaneReading, type PaneUse,
 } from './pane-reading';
 import { usageSweep } from './usage-sweep';
 import {
@@ -74,7 +62,7 @@ import {
 import type { Settings } from './settings';
 import { moveCardById, shipColumnIndex } from './board';
 import { reviewSweep } from './review-flow';
-import type { ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
+import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
 import { isManagerPath } from './manager';
 
 if (started) app.quit();
@@ -106,7 +94,8 @@ const failures = failureReporter({
 });
 process.on('uncaughtException', (error: unknown) => failures.report(error));
 process.on('unhandledRejection', (error: unknown) => failures.report(error));
-const logStore = registerLog(app.getPath('userData'), sendToRenderer);
+const table = channels();
+const logStore = registerLog(table, app.getPath('userData'), sendToRenderer);
 const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a
@@ -179,16 +168,11 @@ const shippingCards = new Set<string>();
 // worktree and leaves the agent running in a folder git has just deleted, writing errors into a pane
 // the app counts as free. Held for the length of the one removal, the way shippingCards is.
 const removingWorktrees = new Set<string>();
-// The process tree, as `ps -eo pid=,ppid=` prints it, or null when `ps` gave no answer. One spelling
-// for both sweeps that read it, so the token figures and the worktree sweep see the same tree.
-function processTree(): Promise<string | null> {
-  return commandOutput('ps', ['-eo', 'pid=,ppid=']);
-}
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
 const isMac = process.platform === 'darwin';
-let settings = readSettings(settingsFile, isMac);
+let settings = keepHostToken(readSettings(settingsFile, isMac), (made) => writeSettings(settingsFile, made, isMac));
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
 // nothing strips those lines until the settings screen is next opened. Tidying it once here drops
 // everything that still matches this build, so the next default to move reaches these people. It cannot
@@ -197,10 +181,11 @@ let settings = readSettings(settingsFile, isMac);
 tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
 const shells = new Map<string, pty.IPty>();
+const screenCopies = new Map<string, PaneScreenCopy>();
 // How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
-const paneSizes = new Map<string, PaneSize>();
+const paneScreens = screens();
 // The shell each pane was actually spawned with, written when the pty starts. Not the shellCommand
 // above: that is the live setting, and changing it leaves every already-running pane on the shell it
 // started with — which is what the settings screen tells you. A ship reads what the pty says is in the
@@ -244,8 +229,12 @@ function liveWindow(): BrowserWindow | undefined {
   return mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
 }
 
-function sendToRenderer(channel: string, ...payload: unknown[]): void {
-  liveWindow()?.webContents.send(channel, ...payload);
+// Every push goes to the local window and to every remote screen. remoteHost is set once at launch,
+// below, and is null when the settings give no port. tellOthers skips the screen that caused it.
+function sendToRenderer(channel: string, ...payload: unknown[]): void { tellOthers('', channel, ...payload); }
+function tellOthers(screen: string, channel: string, ...payload: unknown[]): void {
+  if (windowHears(screen, remote.reachesWindow())) liveWindow()?.webContents.send(channel, ...payload);
+  remoteHost?.broadcast(channel, payload, screen);
 }
 
 // What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty can
@@ -282,7 +271,7 @@ function agentRunsIn(slot: number, pane: number | null): boolean {
 // What the renderer can see and main cannot: which panes still have an agent working in them. The
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
 const agentsAtWork = workingPanes();
-ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
+table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
 
 // The other direction, and the one thing only main can answer: the reading of a project's five shells,
 // for the two screens that also have to know what is running in a pane. pane-reading.ts holds what
@@ -299,7 +288,7 @@ ipcMain.on('panes:report', (_event, ids: string[]) => { agentsAtWork.report(ids,
 //
 // A project with no slot here answers with nothing at all, and nothing is the truth: every shell this
 // app has is in this file, so a project main cannot place has none left to run anything.
-ipcMain.handle('panes:read', (_event, projectPath: string): PaneUse[] => {
+table.handle('panes:read', (_screen, projectPath: string): PaneUse[] => {
   const slot = slotOfProject(projectPath);
   if (slot === -1) return [];
   return paneReadingsIn(slot, null)
@@ -345,21 +334,10 @@ function shellsIn(worktreePath: string): string[] {
     .map(([id]) => id);
 }
 
-// Whether any pane's shell stands in this folder, which is what the review sweep waits on before it
-// removes a finished card's worktree. shell-directory.ts says which folders count and what an
-// unanswered question means; this asks each live shell, and what it started, where it is now, since a
-// `cd` typed into a pane never reaches terminalCommands.
-const askShellDirectories = shellDirectories(processTree);
-async function shellLivesIn(worktreePath: string): Promise<boolean> {
-  // The cheap answer first: a shell opened there needs no process spawned to ask where it is.
-  if (shellsIn(worktreePath).length > 0) return true;
-  const realWorktreePath = realPath(worktreePath);
-  const live = Array.from(shells, ([id, terminalProcess]) => ({
-    opened: terminalCommands.get(id)?.directory ?? '', pid: terminalProcess.pid,
-  }));
-  const directories = await askShellDirectories(live.map(({ pid }) => pid));
-  return anyShellStandsIn(live, directories, worktreePath, realWorktreePath);
-}
+// shell-directory-lookup.ts says what asking a shell where it is means.
+const shellLivesIn = shellLiveness({
+  shells, opened: terminalCommands, shellsIn, ask: shellDirectories(processTree),
+});
 
 // The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
 // is where the two of them being one answer is explained.
@@ -436,10 +414,13 @@ setInterval(() => {
   } catch (error: unknown) {
     failures.hold(`Worktree list not updated: ${failureText(error)}`);
   }
+  // While this app is a screen of another host nothing reports this machine's agents; working-panes.ts
+  // says what that means for the sweep, before and after coming home.
+  agentsAtWork.away(remote.current() !== null, Date.now());
   void reviews.run().catch((error: unknown) => failures.hold(`Review check failed: ${failureText(error)}`));
 }, WORKING_REPORT_MS).unref();
 
-registerPaneOpeners({
+registerPaneOpeners(table, {
   shellCommand: () => shellCommand,
   paneFolders: (slot, index) => {
     const id = terminalId(slot, index);
@@ -462,7 +443,7 @@ function spawnTerminal(id: string): void {
   }
   let terminalProcess: pty.IPty;
   try {
-    const { cols, rows } = sizeOfPane(paneSizes, id);
+    const { cols, rows } = sizeOfPane(paneScreens, id);
     terminalProcess = pty.spawn(shellCommand, args, {
       name: 'xterm-256color',
       cols,
@@ -474,6 +455,7 @@ function spawnTerminal(id: string): void {
     // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
     // a dead shell shows, rather than the spawn taking the window down. A missing nvim is not this case:
     // the shell starts, fails to find it, and exits 127 on its own.
+    screenCopies.get(id)?.exit(127);
     sendToRenderer('pty:exit', id, 127);
     return;
   }
@@ -481,7 +463,9 @@ function spawnTerminal(id: string): void {
   // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
   // through this function, so one line covers every pane that exists.
   paneShells.set(id, shellCommand);
-  terminalProcess.onData((data) => sendToRenderer('pty:data', id, data));
+  const copy = paneScreenCopy(() => terminalProcess);
+  screenCopies.set(id, copy);
+  terminalProcess.onData((data) => { copy.push(data); sendToRenderer('pty:data', id, data); });
   terminalProcess.onExit(({ exitCode }) => {
     // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
     // the agent in the same tick, and the killed shell's exit arrives after that: without the check it
@@ -492,6 +476,7 @@ function spawnTerminal(id: string): void {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
+    copy.exit(exitCode);
     sendToRenderer('pty:exit', id, exitCode);
   });
   shells.set(id, terminalProcess);
@@ -548,32 +533,14 @@ function startAgent(id: string, worktreePath: string, args: string[]): void {
   spawnTerminal(id);
 }
 
-// origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
-// same reason: origin/HEAD is not set in every clone.
-async function baseBranch(projectPath: string): Promise<string> {
-  try {
-    const head = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], projectPath);
-    return head.replace(/^origin\//, '');
-  } catch {
-    // Not set in this clone; try the usual names.
-  }
-  for (const candidate of ['main', 'master']) {
-    try {
-      await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${candidate}`], projectPath);
-      return candidate;
-    } catch {
-      // Try the next one.
-    }
-  }
-  throw new Error('cannot tell which branch on origin is the main one');
-}
-
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
-ipcMain.handle('projects:recent', () =>
+table.handle('projects:recent', () =>
   readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
 // A null path opens the folder dialog; a path from the picker skips it.
-ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
+table.handle('projects:open', async (screen, projectPath: string | null) => {
   if (projectPath === null) {
+    // A dialog here would open on the host's desk; the other screen types the path instead.
+    if (screen !== LOCAL_SCREEN) throw new Error("Type the folder's path on the host");
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
     if (canceled) return null;
     projectPath = filePaths[0];
@@ -581,8 +548,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   const picked = projectFromPath(projectPath);
   const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
-  const replaced = replacesProject(projects[index], picked);
-  if (replaced) {
+  if (replacesProject(projects[index], picked)) {
     logStore.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
     spawnProject(picked, index);
@@ -593,7 +559,9 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
   // The slot holds a project either way by now: it was just filled, or the path matched one that is
   // open. `picked` is only what stops the type being optional, never an answer anyone receives.
-  return { index, project: projects[index] ?? picked, replaced };
+  const open = openProjects();
+  sendToRenderer('projects:change', open);
+  return { index, open };
 });
 // Closing a project. Its six panes are killed and forgotten, and its slot is emptied. Nothing is
 // answered: whether anything was running in it was read off the panes themselves, which only the
@@ -602,7 +570,7 @@ ipcMain.handle('projects:open', async (_event, projectPath: string | null) => {
 // every pane on read: no shell of this project survives the close, so a record still naming pane 2
 // would put a branch under a pane that is a plain shell of some other project — and would hold its
 // card in flight, unable to be shipped again, with nothing left running to finish it.
-ipcMain.on('projects:close', (_event, slot: number) => {
+table.on('projects:close', (_screen, slot: number) => {
   const closing = projects[slot];
   // A slot that holds nothing has already been closed, and there is nothing of it left to kill.
   // Answered first so a slot past the end of the list is not written into it as a hole.
@@ -617,12 +585,14 @@ ipcMain.on('projects:close', (_event, slot: number) => {
     shells.delete(id);
     terminalProcess?.kill();
     terminalCommands.delete(id);
-    paneSizes.delete(id);
+    paneScreens.drop(id);
+    screenCopies.delete(id);
     paneShells.delete(id);
   }
   // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
   setWorktrees(withoutPanes(worktrees, closing.path));
+  sendToRenderer('projects:change', openProjects());
 });
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
 // when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
@@ -642,21 +612,21 @@ tokenUsage.start();
 
 // The manager's four cards. The place is read from the settings main holds, so a change made on the
 // settings screen reaches the weather on the next read.
-ipcMain.handle('markets:read', () => readMarkets(settings.weatherPlace));
+table.handle('markets:read', () => readMarkets(settings.weatherPlace));
 
 // The renderer's first read. Everything after it arrives unasked on usage:change.
-ipcMain.handle('usage:read', () => tokenUsage.latest());
+table.handle('usage:read', () => tokenUsage.latest());
 
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
 // so a crash loses at most the change you were making, or half a minute of sessions.
-const claudeSessions = sessionStore(path.join(app.getPath('userData'), 'session.json'), slotOfProject);
+const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), 'session.json'), slotOfProject);
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
-ipcMain.handle('settings:read', () => ({ settings, shellCommand }));
+table.handle('settings:read', () => ({ settings, shellCommand }));
 // Answers with the newly resolved shell so the renderer never has to re-derive pickShell's precedence
 // to know which family of shell a dropped path is quoted for.
-ipcMain.handle('settings:write', (_event, next: Settings) => {
+table.handle('settings:write', (_screen, next: Settings) => {
   settings = next;
   // Panes already running keep the shell they started with. Nothing here kills one: there are
   // long-running jobs in them, and a settings change is not a reason to lose one.
@@ -664,8 +634,8 @@ ipcMain.handle('settings:write', (_event, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-registerPaneChannels({ shells, paneSizes, spawnTerminal, window: liveWindow, send: sendToRenderer });
-registerProjectFiles(boards, boardLog);
+registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow });
+registerProjectFiles(table, boards, boardLog, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -673,6 +643,10 @@ registerProjectFiles(boards, boardLog);
 function slotOfProject(projectPath: string): number {
   return projects.findIndex((project) => project?.path === projectPath);
 }
+
+// The list every screen draws its tabs from. Which session it is the list of travels on its own, as
+// `host:change` from remote-ipc.ts.
+const openProjects = (): OpenProjects => ({ projects: projects.map((project) => project ?? null) });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   setWorktrees(withEntry(worktrees, entry));
@@ -874,7 +848,7 @@ async function shipCard(request: ShipRequest): Promise<ShipResult> {
     shippingCards.delete(cardId);
   }
 }
-ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
+table.handle('worktree:create', async (_screen, request: ShipRequest) => {
   const result = await shipCard(request);
   logStore.log(shipEntry(request, result));
   return result;
@@ -882,7 +856,7 @@ ipcMain.handle('worktree:create', async (_event, request: ShipRequest) => {
 
 // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
 // a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
-ipcMain.handle('worktree:list', () => {
+table.handle('worktree:list', () => {
   dropDeadWorktrees();
   return worktreeList();
 });
@@ -894,7 +868,7 @@ ipcMain.handle('worktree:list', () => {
 // worktreeState is git's own answer rather than the ship's narrower one, because git is what refuses
 // the removal this row's `d` is about to ask for. Run concurrently — this is main, and every pane's
 // bytes flow through it.
-ipcMain.handle('worktree:check', async () => {
+table.handle('worktree:check', async () => {
   const results = await Promise.all(worktrees.map(async (entry) => (
     { worktreePath: entry.worktreePath, ...await worktreeState(entry.worktreePath) }
   )));
@@ -905,7 +879,7 @@ ipcMain.handle('worktree:check', async () => {
 });
 
 // Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
-ipcMain.handle('worktree:scan', (_event, projectPaths: string[]) => (
+table.handle('worktree:scan', (_screen, projectPaths: string[]) => (
   scanWorktrees(projectPaths, worktrees)
 ));
 
@@ -965,7 +939,7 @@ async function removeWorktree(worktreePath: string, force: boolean, projectPath?
   }
 }
 
-ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: boolean, projectPath: string) => {
+table.handle('worktree:remove', async (_screen, worktreePath: string, force: boolean, projectPath: string) => {
   const result = await removeWorktree(worktreePath, force, projectPath);
   logStore.log(removalEntry(projectPath, worktreePath, result));
   return result;
@@ -974,7 +948,7 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
 // last picked.
-const tasks = registerTasks({ send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
+const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
 
 function createWindow(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -1050,11 +1024,28 @@ function createWindow(): void {
   failures.windowOpened();
 }
 
+// This machine's session, as the host serves it to a remote screen and as the local window gets it back
+// on leaving another host.
+const held: HeldByMain = {
+  table, screenCopies, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
+  projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
+};
+// Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
+const remote = registerRemote(held, {
+  send: (channel, ...payload) => liveWindow()?.webContents.send(channel, ...payload),
+  saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
+});
+// Before registerWithIpc, which only answers the channels already in the table.
+connectAtLaunch(process.argv, () => settings, table, failures.hold);
+registerWithIpc(table, remote.current);
+const remoteHost = startHost(held);
+
 app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
   createWindow();
 });
 app.on('will-quit', () => {
+  remoteHost?.close();
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until

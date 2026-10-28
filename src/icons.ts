@@ -5,7 +5,7 @@ import {
   ArrowDownWideNarrow, Bitcoin, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
-  MessageSquare, NotebookPen, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
+  MessageSquare, NotebookPen, Plug, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
@@ -41,6 +41,7 @@ const ICONS = {
   log: ScrollText,
   notes: NotebookPen,
   parent: CornerLeftUp,
+  plug: Plug,
   pullRequest: GitPullRequest,
   rain: CloudRain,
   reset: X,

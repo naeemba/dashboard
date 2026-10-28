@@ -33,6 +33,9 @@ export type NotesView = {
   // replaced by the older page. Never rejects — a read or a write that fails reports itself through
   // onError — so the caller has nothing to catch.
   open(): Promise<void>;
+  // Another screen wrote a page of notes. Read again the way open() does, but only when the page is
+  // this box's own, and without the keyboard: you did not ask to come here.
+  reload(projectPath: string): Promise<void>;
 };
 
 // How long the box waits after you stop typing before it writes. The board saves on every change
@@ -126,48 +129,53 @@ export function createNotesView(options: NotesOptions): NotesView {
     }, SAVE_DELAY_MS);
   });
 
+  async function read(): Promise<void> {
+    await flush();
+    const token = ++latestRead;
+    // The box holds something the file does not: a sentence a write never took, or a paragraph
+    // typed into a box a read never filled. Reading would replace it with the older page and it
+    // would be gone from the box as well as the file.
+    if (!mayRead(state, element.value)) {
+      sayIfStranded();
+      return;
+    }
+    let text: string;
+    try {
+      text = await options.bridge.readNotes(options.projectPath);
+    } catch (error: unknown) {
+      // Said out loud rather than thrown. The box keeps whatever it was showing, which is the last
+      // thing that was on disk, so a folder that has gone unreadable does not also blank the page in
+      // front of you and then save the blank back over it. On a first arrival it was showing
+      // nothing, so the box is shut for writing from here on, and type into it before a read lands
+      // and it is shut for reading too — sayIfStranded is what keeps saying so.
+      if (token === latestRead) {
+        state = readFailed(state);
+        options.onError(`Notes not read, so nothing is written: ${String(error)}`);
+      }
+      return;
+    }
+    // A read another one has overtaken says nothing: the newer one is the page you asked for. And
+    // the box is asked again because you may have the keyboard while the read is away, since open()
+    // takes it before reading, so a character typed into the gap is text like any other.
+    if (token !== latestRead) return;
+    if (!mayRead(state, element.value)) {
+      sayIfStranded();
+      return;
+    }
+    element.value = text;
+    state = readLanded(text);
+    // A read that lands clears the failure it replaces; nothing else knows the message is stale.
+    options.onError('');
+  }
+
   return {
     element,
-    async open(): Promise<void> {
+    open(): Promise<void> {
       // Focus before the read, the way the board takes it: the view you came from is already hidden,
       // so until the box has the keyboard a character typed straight after the mode key lands nowhere.
       element.focus();
-      await flush();
-      const token = ++latestRead;
-      // The box holds something the file does not: a sentence a write never took, or a paragraph
-      // typed into a box a read never filled. Reading would replace it with the older page and it
-      // would be gone from the box as well as the file.
-      if (!mayRead(state, element.value)) {
-        sayIfStranded();
-        return;
-      }
-      let text: string;
-      try {
-        text = await options.bridge.readNotes(options.projectPath);
-      } catch (error: unknown) {
-        // Said out loud rather than thrown. The box keeps whatever it was showing, which is the last
-        // thing that was on disk, so a folder that has gone unreadable does not also blank the page in
-        // front of you and then save the blank back over it. On a first arrival it was showing
-        // nothing, so the box is shut for writing from here on, and type into it before a read lands
-        // and it is shut for reading too — sayIfStranded is what keeps saying so.
-        if (token === latestRead) {
-          state = readFailed(state);
-          options.onError(`Notes not read, so nothing is written: ${String(error)}`);
-        }
-        return;
-      }
-      // A read another one has overtaken says nothing: the newer one is the page you asked for. And
-      // the box is asked again because you have the keyboard while the read is away — the focus above
-      // is taken before it on purpose — so a character typed into the gap is text like any other.
-      if (token !== latestRead) return;
-      if (!mayRead(state, element.value)) {
-        sayIfStranded();
-        return;
-      }
-      element.value = text;
-      state = readLanded(text);
-      // A read that lands clears the failure it replaces; nothing else knows the message is stale.
-      options.onError('');
+      return read();
     },
+    reload: (projectPath) => (projectPath === options.projectPath ? read() : Promise.resolve()),
   };
 }

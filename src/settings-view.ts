@@ -4,7 +4,7 @@ import { labelled } from './icons';
 import { keycaps } from './keycaps';
 import { confirmOverlay, openOverlay } from './overlay';
 import {
-  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, resetKeys,
+  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, resetKeys,
   type Settings,
 } from './settings';
 import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
@@ -105,6 +105,8 @@ export function openSettings(
             if (row.binding === null) value.classList.add('unbound');
           } else if (row.kind === 'reset-keys' || row.kind === 'reset-all') {
             value.textContent = 'Enter';
+          } else if (row.kind === 'host-port' && row.value === '') {
+            value.textContent = 'not listening';
           } else {
             value.textContent = row.value === '' ? 'from the environment' : row.value;
           }
@@ -126,7 +128,7 @@ export function openSettings(
     // Enter commits too: unlike a card description there is never a newline to type here.
     function startEditing(row: SettingsRow): void {
       if (row.kind === 'heading' || row.kind === 'key'
-        || row.kind === 'reset-keys' || row.kind === 'reset-all') return;
+        || row.kind === 'reset-keys' || row.kind === 'reset-all' || row.kind === 'host-token') return;
       const input = document.createElement('input');
       input.className = 'settings-edit';
       input.value = row.value;
@@ -159,6 +161,11 @@ export function openSettings(
         } else if (row.kind === 'weather-place') {
           // Blank is not a place the geocoder can find, so it means the one the app ships with.
           commit({ ...settings, weatherPlace: text === '' ? DEFAULT_WEATHER_PLACE : text });
+        } else if (row.kind === 'host-port') {
+          // Empty means do not listen. The laptop must also be told not to sleep on lid close; that is
+          // the operating system's setting, not this one.
+          if (text !== '' && !isPort(text)) say(`"${text}" is not a port. Anything from 1 to 65535, or empty to stop listening.`);
+          else commit({ ...settings, host: { ...settings.host, port: text === '' ? null : Number(text) } });
         } else {
           // The shell. Empty is the file saying "work it out from the environment", which is a real
           // answer rather than a blank, so there is nothing to refuse.
@@ -191,8 +198,12 @@ export function openSettings(
         return say('');
       }
       if (row.kind === 'reset-keys') return commit(resetKeys(settings, isMac));
-      if (row.kind === 'reset-all') return commit(defaultSettings(isMac));
+      if (row.kind === 'reset-all') return commit(resetAll(settings, isMac));
       if (row.kind === 'heading') return;
+      if (row.kind === 'host-token') {
+        void navigator.clipboard.writeText(row.value);
+        return say('Token copied');
+      }
       return startEditing(row);
     }
 
