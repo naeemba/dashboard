@@ -60,7 +60,8 @@ windows that list must have one owner.
   terminal (`src/pane-screen-copy.ts`, tested) that keeps the last 1000
   lines of scrollback. On connect, before anything else, the client
   receives one `pty:data` per live pane holding that terminal's serialized
-  screen and modes after a full reset, then live output. The renderer already handles `pty:data`; nothing new on its side.
+  screen and modes after a full reset, then live output. The renderer
+  already handles `pty:data`; nothing new on its side.
 - **Session file.** `session.json` is the host's. The host writes it from
   its own page list and the host window's view. The remote client's
   `session:write` is accepted and ignored: a couch layout must not

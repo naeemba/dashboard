@@ -155,8 +155,8 @@ export function createNotesView(options: NotesOptions): NotesView {
       return;
     }
     // A read another one has overtaken says nothing: the newer one is the page you asked for. And
-    // the box is asked again because you have the keyboard while the read is away — the focus above
-    // is taken before it on purpose in open() — so a character typed into the gap is text like any other.
+    // the box is asked again because you may have the keyboard while the read is away, since open()
+    // takes it before reading, so a character typed into the gap is text like any other.
     if (token !== latestRead) return;
     if (!mayRead(state, element.value)) {
       sayIfStranded();
@@ -165,7 +165,7 @@ export function createNotesView(options: NotesOptions): NotesView {
     element.value = text;
     state = readLanded(text);
     // A read that lands clears the failure it replaces; nothing else knows the message is stale.
-      options.onError('');
+    options.onError('');
   }
 
   return {
