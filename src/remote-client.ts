@@ -9,7 +9,7 @@ import {
 
 // This screen's side of the wire. One socket to the host; every request gets an id and a timer, every
 // push goes to the renderer as if main had sent it. A socket that drops after the first accepted hello
-// is retried every two seconds, and the host replays each pane on the way back in.
+// is retried, and the host replays each pane on the way back in.
 export type ClientPorts = {
   version: string;
   push(channel: string, args: unknown[]): void;
@@ -25,7 +25,12 @@ export type RemoteClient = RemoteTarget & {
   close(): void;
 };
 
+// Every two seconds for the first minute of an outage, then every thirty, and the loss is logged once
+// per outage rather than per try. At two seconds for good, a host left off for a day would write
+// 43,000 "lost" lines into the log. Untested wiring: the client's tests run real sockets.
 const RECONNECT_MS = 2_000;
+const QUICK_RECONNECTS = 30;
+const SLOW_RECONNECT_MS = 30_000;
 
 // helloTimeoutMs exists for the test of a host that never answers the hello, or never opens the socket.
 export function connectRemote(
@@ -44,6 +49,8 @@ export function connectRemote(
   // Set by the first accepted hello. Before it a failure is the caller's to hear; after it, a retry's.
   let everAccepted = false;
   let reconnectTimer: NodeJS.Timeout | null = null;
+  // Tries since the last accepted hello; zero while the socket is up.
+  let failedReconnects = 0;
   // The socket whose hello is out. close() cannot reach it through `socket`, which goes live only on acceptance.
   let connecting: WebSocket | null = null;
 
@@ -82,6 +89,7 @@ export function connectRemote(
             return resolve();
           }
           socket = next;
+          failedReconnects = 0;
           if (everAccepted) {
             ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
             for (const args of sizes.values()) send({ id: nextId++, channel: 'pty:resize', args });
@@ -115,9 +123,11 @@ export function connectRemote(
           ports.log({ level: 'error', kind: 'screen', message: `${address} refused the reconnect: ${reason.toString()}` });
           return ports.gone();
         }
-        ports.log({ level: 'warn', kind: 'screen', message: `lost ${address}` });
+        if (failedReconnects === 0) ports.log({ level: 'warn', kind: 'screen', message: `lost ${address}` });
         ports.status(`Reconnecting to ${address}…`);
-        reconnectTimer = setTimeout(() => void open().catch(() => undefined), RECONNECT_MS);
+        const delay = failedReconnects < QUICK_RECONNECTS ? RECONNECT_MS : SLOW_RECONNECT_MS;
+        failedReconnects++;
+        reconnectTimer = setTimeout(() => void open().catch(() => undefined), delay);
       });
     });
   }
