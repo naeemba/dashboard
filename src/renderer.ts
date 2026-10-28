@@ -18,8 +18,8 @@ import { failureText } from './failure';
 import { createStatusError } from './status-error';
 import { fileLinkOpener, showFileHints } from './file-hints';
 import { type Mode } from './modes';
-import { LOCAL_SCREEN } from './screens';
-import { showPicker as runPicker, typedHostFolder } from './connect-flow';
+import { openPicker } from './picker';
+import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './connect-flow';
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
@@ -546,8 +546,8 @@ function moveProject(index: number): void {
 // path asks main for the folder dialog.
 async function openProject(requested: string | null): Promise<void> {
   // Connected, "a new project" is a path typed for the host; the folder dialog would show this disk.
-  const remote = requested === null && host() !== LOCAL_SCREEN;
-  const projectPath = remote ? await typedHostFolder(host()) : requested;
+  const remote = requested === null && isRemoteHost(host());
+  const projectPath = remote ? await typedHostFolder(host(), promptOverlay) : requested;
   if (remote && projectPath === null) return showPage(activeIndex);
   const opened = await bridge.openProject(projectPath);
   if (!opened) return showPage(activeIndex);
@@ -557,7 +557,7 @@ async function openProject(requested: string | null): Promise<void> {
 }
 
 const showPicker = () => runPicker({
-  bridge, projectPages, openProject, host, showNotice,
+  bridge, projectPages, openProject, host, showNotice, pick: openPicker, prompt: promptOverlay,
   settings: () => settings, setSettings: (next) => { settings = next; }, restore: () => showPage(activeIndex),
 });
 bridge.onHostStatus((text) => showNotice('host', text));
