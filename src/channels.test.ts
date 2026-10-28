@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { channels } from './channels';
+import { describe, expect, it, vi } from 'vitest';
+import { channels, registerWithIpc } from './channels';
+
+const callbacks = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>());
+vi.mock('electron', () => ({
+  ipcMain: {
+    handle: (channel: string, callback: (...args: unknown[]) => unknown) => callbacks.set(channel, callback),
+    on: (channel: string, callback: (...args: unknown[]) => unknown) => callbacks.set(channel, callback),
+  },
+}));
 
 describe('channels', () => {
   it('invokes a handler with the screen first and answers its result', async () => {
@@ -37,5 +45,28 @@ describe('channels', () => {
     expect(table.kind('board:read')).toBe('handle');
     expect(table.kind('pty:input')).toBe('on');
     expect(table.kind('nope:nothing')).toBeUndefined();
+  });
+
+  it('keeps the client-local channels on the table while a remote host is set', async () => {
+    const table = channels();
+    const seen: string[] = [];
+    table.handle('settings:read', () => { seen.push('table:settings:read'); });
+    table.handle('board:read', () => { seen.push('table:board:read'); });
+    const remote = {
+      invoke: async (channel: string) => { seen.push(`remote:${channel}`); },
+      send: () => {},
+    };
+    callbacks.clear();
+    registerWithIpc(table, () => remote);
+    await callbacks.get('settings:read')!({}, 1);
+    await callbacks.get('board:read')!({}, '/code/api');
+    expect(seen).toEqual(['table:settings:read', 'remote:board:read']);
+
+    seen.length = 0;
+    callbacks.clear();
+    registerWithIpc(table, () => null);
+    await callbacks.get('settings:read')!({});
+    await callbacks.get('board:read')!({});
+    expect(seen).toEqual(['table:settings:read', 'table:board:read']);
   });
 });
