@@ -414,7 +414,10 @@ setInterval(() => {
   } catch (error: unknown) {
     failures.hold(`Worktree list not updated: ${failureText(error)}`);
   }
-  void reviews.run().catch((error: unknown) => failures.hold(`Review check failed: ${failureText(error)}`));
+  // Not while this app is a screen of another host: the window draws the host's panes then, so nothing
+  // reports this machine's agents at work, and a finished card's agent still running its follow-up
+  // pass would look idle and lose its worktree to a review.
+  if (!remote.current()) void reviews.run().catch((error: unknown) => failures.hold(`Review check failed: ${failureText(error)}`));
 }, WORKING_REPORT_MS).unref();
 
 registerPaneOpeners(table, {
