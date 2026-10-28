@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { closeReason, gateFrame } from './host-gate';
-import { startHostIfConfigured, type HostPorts } from './remote-host';
 
 const hello = (token: string, version: string) => ({ id: 1, channel: 'host:hello', args: [token, version] });
 
@@ -34,12 +33,5 @@ describe('closeReason', () => {
   it('cuts to 123 bytes and leaves a short one alone', () => {
     expect(closeReason('short')).toBe('short');
     expect(Buffer.byteLength(closeReason('é'.repeat(100)))).toBeLessThanOrEqual(123);
-  });
-});
-
-describe('startHostIfConfigured', () => {
-  it('starts nothing without a port', () => {
-    const untouched = new Proxy({}, { get: () => { throw new Error('touched'); } }) as HostPorts;
-    expect(startHostIfConfigured(null, untouched)).toBeNull();
   });
 });

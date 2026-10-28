@@ -247,6 +247,8 @@ describe('isPort', () => {
     expect(isPort('65536')).toBe(false);
     expect(isPort('77.5')).toBe(false);
     expect(isPort('')).toBe(false);
+    expect(isPort(7777)).toBe(true);
+    expect(isPort(77.5)).toBe(false);
   });
 });
 

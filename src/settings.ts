@@ -49,9 +49,9 @@ export function isFontSize(value: string): boolean {
 }
 
 // The same range parseSettings holds a stored port to. Exported for the settings screen's message.
-export function isPort(value: string): boolean {
+export function isPort(value: string | number): boolean {
   const port = Number(value);
-  return /^\d+$/.test(value.trim()) && port >= 1 && port <= 65535;
+  return /^\d+$/.test(String(value).trim()) && port >= 1 && port <= 65535;
 }
 
 export function defaultSettings(isMac: boolean): Settings {
@@ -143,7 +143,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     weatherPlace: typeof raw.weatherPlace === 'string' && raw.weatherPlace.trim() !== ''
       ? raw.weatherPlace.trim() : defaults.weatherPlace,
     host: {
-      port: typeof storedHost.port === 'number' && isPort(String(storedHost.port)) ? storedHost.port : null,
+      port: typeof storedHost.port === 'number' && isPort(storedHost.port) ? storedHost.port : null,
       token: typeof storedHost.token === 'string' ? storedHost.token : '',
     },
     remote: {

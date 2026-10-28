@@ -5,7 +5,7 @@ import type { Reply } from './remote-protocol';
 // hangs on a wifi that went away.
 export type Pending = {
   open(id: number, resolve: (value: unknown) => void, reject: (error: Error) => void): void;
-  settle(reply: Reply): boolean;
+  settle(reply: Reply): void;
   expire(id: number, address: string): void;
   failAll(reason: string): void;
 };
@@ -16,11 +16,10 @@ export function pendingRequests(): Pending {
     open(id, resolve, reject) { waiting.set(id, { resolve, reject }); },
     settle(reply) {
       const entry = waiting.get(reply.id);
-      if (!entry) return false;
+      if (!entry) return;
       waiting.delete(reply.id);
       if (reply.error !== undefined) entry.reject(new Error(reply.error));
       else entry.resolve(reply.result);
-      return true;
     },
     expire(id, address) {
       const entry = waiting.get(id);

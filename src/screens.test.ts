@@ -31,11 +31,4 @@ describe('screens', () => {
     all.drop('0-1');
     expect(all.sizeOf('0-1')).toBeUndefined();
   });
-
-  it('lists the screens that have reported', () => {
-    const all = screens();
-    all.resize(LOCAL_SCREEN, '0-1', { cols: 80, rows: 24 });
-    all.resize('mac', '0-2', { cols: 80, rows: 24 });
-    expect(all.ids().sort()).toEqual(['local', 'mac']);
-  });
 });

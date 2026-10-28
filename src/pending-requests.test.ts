@@ -5,7 +5,7 @@ describe('pendingRequests', () => {
   it('settles a reply by id with its result', async () => {
     const pending = pendingRequests();
     const answer = new Promise((resolve, reject) => pending.open(1, resolve, reject));
-    expect(pending.settle({ id: 1, result: 'ok' })).toBe(true);
+    pending.settle({ id: 1, result: 'ok' });
     await expect(answer).resolves.toBe('ok');
   });
 
@@ -16,16 +16,11 @@ describe('pendingRequests', () => {
     await expect(answer).rejects.toThrow('disk full');
   });
 
-  it('says so when nobody waits for the id', () => {
-    expect(pendingRequests().settle({ id: 9, result: null })).toBe(false);
-  });
-
   it('expires a request naming the host', async () => {
     const pending = pendingRequests();
     const answer = new Promise((resolve, reject) => pending.open(3, resolve, reject));
     pending.expire(3, '10.0.0.2:7777');
     await expect(answer).rejects.toThrow('No answer from 10.0.0.2:7777');
-    expect(pending.settle({ id: 3, result: null })).toBe(false);
   });
 
   it('fails everything open when the socket goes', async () => {

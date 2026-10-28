@@ -10,7 +10,6 @@ export type Screens = {
   forget(screen: string): void;
   drop(paneId: string): void;
   sizeOf(paneId: string): PaneSize | undefined;
-  ids(): string[];
 };
 
 export function screens(): Screens {
@@ -38,6 +37,5 @@ export function screens(): Screens {
       }
       return smallest;
     },
-    ids: () => [...sizes.keys()],
   };
 }

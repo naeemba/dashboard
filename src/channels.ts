@@ -15,7 +15,6 @@ export type Channels = {
   dispatch(screen: string, channel: string, args: unknown[]): void;
   handled(): string[];
   listened(): string[];
-  kind(channel: string): 'handle' | 'on' | undefined;
 };
 
 export type RemoteTarget = {
@@ -29,17 +28,21 @@ export function channels(): Channels {
   return {
     handle(channel, handler) { handlers.set(channel, handler); },
     on(channel, handler) { listeners.set(channel, handler); },
+    // A send arriving as a request, which is how a remote screen sends everything, is dispatched and
+    // answered null: it has no reply of its own, but the screen's frame has an id that waits for one.
     async invoke(screen, channel, args) {
       const handler = handlers.get(channel);
-      if (!handler) throw new Error(`No such channel: ${channel}`);
-      return handler(screen, ...args);
+      if (handler) return handler(screen, ...args);
+      const listener = listeners.get(channel);
+      if (!listener) throw new Error(`No such channel: ${channel}`);
+      listener(screen, ...args);
+      return null;
     },
     dispatch(screen, channel, args) {
       listeners.get(channel)?.(screen, ...args);
     },
     handled: () => [...handlers.keys()],
     listened: () => [...listeners.keys()],
-    kind: (channel) => (handlers.has(channel) ? 'handle' : listeners.has(channel) ? 'on' : undefined),
   };
 }
 

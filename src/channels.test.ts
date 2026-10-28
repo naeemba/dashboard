@@ -36,15 +36,21 @@ describe('channels', () => {
     await expect(table.invoke('mac', 'board:write', [])).rejects.toThrow('disk full');
   });
 
-  it('lists the registered names and tells which kind each is', () => {
+  it('lists the registered names', () => {
     const table = channels();
     table.handle('board:read', () => 1);
     table.on('pty:input', () => {});
     expect(table.handled()).toEqual(['board:read']);
     expect(table.listened()).toEqual(['pty:input']);
-    expect(table.kind('board:read')).toBe('handle');
-    expect(table.kind('pty:input')).toBe('on');
-    expect(table.kind('nope:nothing')).toBeUndefined();
+  });
+
+  it('dispatches a send that arrives as a request and answers null', async () => {
+    const table = channels();
+    const typed: unknown[] = [];
+    table.on('pty:input', (screen, id, data) => { typed.push(screen, id, data); return 'ignored'; });
+    await expect(table.invoke('mac', 'pty:input', ['0:1', 'ls'])).resolves.toBeNull();
+    expect(typed).toEqual(['mac', '0:1', 'ls']);
+    await expect(table.invoke('mac', 'nope:nothing', [])).rejects.toThrow('No such channel: nope:nothing');
   });
 
   it('keeps the client-local channels on the table while a remote host is set', async () => {

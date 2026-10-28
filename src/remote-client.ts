@@ -3,7 +3,6 @@ import type { RemoteTarget } from './channels';
 import { failureText } from './failure';
 import type { LogDraft } from './log-entry';
 import { pendingRequests } from './pending-requests';
-import { sentSizes } from './sent-sizes';
 import {
   CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, HELLO_CHANNEL, REQUEST_TIMEOUT_MS, decodeFrame, encodeFrame, isReply, type Frame,
 } from './remote-protocol';
@@ -33,7 +32,12 @@ export function connectRemote(
   address: string, token: string, ports: ClientPorts, helloTimeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<RemoteClient> {
   const pending = pendingRequests();
-  const sizes = sentSizes();
+  // The last size this screen reported for each pane. The host forgets a screen's sizes when its socket
+  // drops, and the renderer only reports a size when the window changes, so after a reconnect these are
+  // sent again; without them every shell snaps to the host window's width.
+  // ponytail: a closed pane's size is kept and resent; harmless, the host records it against a pane that
+  // is either gone or reported afresh when the renderer draws it.
+  const sizes = new Map<unknown, unknown[]>();
   let socket: WebSocket | null = null;
   let nextId = 1;
   let closed = false;
@@ -80,7 +84,7 @@ export function connectRemote(
           socket = next;
           if (everAccepted) {
             ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
-            for (const args of sizes.all()) send({ id: nextId++, channel: 'pty:resize', args });
+            for (const args of sizes.values()) send({ id: nextId++, channel: 'pty:resize', args });
           }
           everAccepted = true;
           ports.status('');
@@ -124,7 +128,7 @@ export function connectRemote(
     send(channel, args) {
       // Dropped when down, never queued: a queued `rm` landing a minute late is worse than a lost key.
       // A size is the exception that is kept, to be told again on the way back in.
-      sizes.remember(channel, args);
+      if (channel === 'pty:resize') sizes.set(args[0], args);
       send({ id: nextId++, channel, args });
     },
     close() {

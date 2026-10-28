@@ -23,12 +23,18 @@ export type ConnectFlowPorts = {
 
 const KEEPS_YOU_HERE = 'Enter connects, Escape keeps you here';
 
+// What a prompt answered, trimmed. Null when it was dismissed or left empty.
+function typedText(answer: string | null): string | null {
+  const text = answer?.trim() ?? '';
+  return text === '' ? null : text;
+}
+
 // Asks for the address and token of a host to join. Null when either is dismissed or the address is empty.
 async function askForHost(ports: ConnectFlowPorts, address: string): Promise<{ address: string; token: string } | null> {
-  const typedAddress = await ports.prompt('Host address', address, '192.168.1.20:7777', KEEPS_YOU_HERE);
-  if (typedAddress === null || typedAddress.trim() === '') return null;
+  const typedAddress = typedText(await ports.prompt('Host address', address, '192.168.1.20:7777', KEEPS_YOU_HERE));
+  if (typedAddress === null) return null;
   const token = await ports.prompt('Host token', '', "from the host's settings screen", KEEPS_YOU_HERE);
-  return token === null ? null : { address: typedAddress.trim(), token };
+  return token === null ? null : { address: typedAddress, token };
 }
 
 // Projects already open come first and win the deduplication, so the picker shows the live page for one
@@ -75,6 +81,5 @@ export const isRemoteHost = (host: string): boolean => host !== LOCAL_SCREEN;
 // Opening a new project while connected would raise a folder dialog on the host's desk, so the path is
 // typed instead. Null when dismissed.
 export async function typedHostFolder(host: string, prompt: ConnectFlowPorts['prompt']): Promise<string | null> {
-  const typed = await prompt(`Folder on ${host}`, '', '/home/you/code/project', 'Enter opens it, Escape keeps you here');
-  return typed === null || typed.trim() === '' ? null : typed.trim();
+  return typedText(await prompt(`Folder on ${host}`, '', '/home/you/code/project', 'Enter opens it, Escape keeps you here'));
 }

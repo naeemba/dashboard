@@ -22,11 +22,6 @@ export type HostPorts = {
 
 export type RemoteHost = { broadcast(channel: string, args: unknown[]): void; close(): void };
 
-// No port in the settings means the host is off, and nothing listens.
-export function startHostIfConfigured(port: number | null, ports: HostPorts): RemoteHost | null {
-  return port === null ? null : startRemoteHost(port, ports);
-}
-
 export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
   const server = new WebSocketServer({ port });
   const screens = new Map<string, WebSocket>();
@@ -43,9 +38,6 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
 
     // No hello in time and the connection is not a screen.
     const helloTimer = setTimeout(() => socket.close(CLOSE_NO_HELLO, 'No hello'), HELLO_TIMEOUT_MS);
-    function refuse(code: number, reason: string): void {
-      socket.close(code, closeReason(reason));
-    }
 
     // ws emits error for a malformed frame or invalid UTF-8; unhandled, Node throws.
     socket.on('error', (error) => {
@@ -57,7 +49,7 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
       if (answer.action === 'ignore') return;
       if (answer.action === 'close') {
         ports.log({ level: 'warn', kind: 'screen', message: `${address} refused: ${answer.reason}` });
-        return refuse(answer.code, answer.reason);
+        return socket.close(answer.code, closeReason(answer.reason));
       }
       if (answer.action === 'refuse') return push(socket, { id: answer.id, error: answer.error });
       if (answer.action === 'join') {
@@ -69,15 +61,6 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
         return ports.onJoin(screen, (channel, args) => push(socket, { channel, args }));
       }
       const frame = answer.request;
-      // A send has no reply of its own, but the client gives every frame an id, so it gets an empty one.
-      if (ports.table.kind(frame.channel) === 'on') {
-        try {
-          ports.table.dispatch(screen, frame.channel, frame.args);
-          return push(socket, { id: frame.id, result: null });
-        } catch (error) {
-          return push(socket, { id: frame.id, error: failureText(error) });
-        }
-      }
       void ports.table.invoke(screen, frame.channel, frame.args)
         .then((result) => push(socket, { id: frame.id, result }))
         .catch((error: unknown) => push(socket, { id: frame.id, error: failureText(error) }));
