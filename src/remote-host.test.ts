@@ -60,6 +60,23 @@ describe('startRemoteHost', () => {
     expect(wired.left).toEqual(wired.joined);
   });
 
+  // The screen that wrote a board already has it; every other screen must hear of the write.
+  it('pushes to every screen but the one that caused it', async () => {
+    const port = await freePort();
+    const wired = hosted();
+    host = startRemoteHost(port, wired.ports);
+    const firstPushed: unknown[][] = [];
+    const secondPushed: unknown[][] = [];
+    client = await connectRemote(`127.0.0.1:${port}`, 'good', clientPorts(firstPushed));
+    const second = await connectRemote(`127.0.0.1:${port}`, 'good', clientPorts(secondPushed));
+    await settle();
+    host.broadcast('board:change', ['/code/api'], wired.joined[0]);
+    await settle();
+    second.close();
+    expect(firstPushed).not.toContainEqual(['board:change', '/code/api']);
+    expect(secondPushed).toContainEqual(['board:change', '/code/api']);
+  });
+
   it('drops a screen that stops answering its pings', async () => {
     const port = await freePort();
     const wired = hosted();

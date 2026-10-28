@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screens, LOCAL_SCREEN } from './screens';
+import { screens, windowHears, LOCAL_SCREEN } from './screens';
 import { sizeOfPane, DEFAULT_PANE_SIZE } from './terminals';
 
 describe('screens', () => {
@@ -30,5 +30,19 @@ describe('screens', () => {
     all.resize('mac', '0-1', { cols: 80, rows: 24 });
     all.drop('0-1');
     expect(all.sizeOf('0-1')).toBeUndefined();
+  });
+});
+
+// The window left open on the laptop must hear the mac's board write, or its next save puts the mac's
+// moved cards back.
+describe('windowHears', () => {
+  it('tells the window about another screen, never about its own write', () => {
+    expect(windowHears('screen-1', true)).toBe(true);
+    expect(windowHears('', true)).toBe(true);
+    expect(windowHears(LOCAL_SCREEN, true)).toBe(false);
+  });
+
+  it('tells the window nothing while it shows another host', () => {
+    expect(windowHears('screen-1', false)).toBe(false);
   });
 });

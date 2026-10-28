@@ -5,6 +5,13 @@ import type { PaneSize } from './terminals';
 // The host's own window is a screen like the others, named LOCAL_SCREEN.
 export const LOCAL_SCREEN = 'local';
 
+// Whether the host's own window is told about a push a screen caused. Not when the window caused it
+// (it already has what it wrote), and not while it shows another host's session (main's ids collide
+// with that host's). Every other screen but the cause hears it from the host's broadcast.
+export function windowHears(cause: string, reachesWindow: boolean): boolean {
+  return cause !== LOCAL_SCREEN && reachesWindow;
+}
+
 export type Screens = {
   resize(screen: string, paneId: string, size: PaneSize): void;
   forget(screen: string): void;

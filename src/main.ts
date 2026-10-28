@@ -14,7 +14,7 @@ import { agentArguments, agentResumeArguments, editorArguments, pickShell } from
 import { registerTasks } from './task-runner';
 import { TITLE_BAR_HEIGHT } from './theme';
 import { EDITOR_INDEX, TERMINAL_COUNT, paneFromId, paneIds, sizeOfPane, terminalId } from './terminals';
-import { LOCAL_SCREEN, screens } from './screens';
+import { LOCAL_SCREEN, screens, windowHears } from './screens';
 import { boardChanges } from './board-changes';
 import { BOARD_FILE_PATH, peekBoard, readBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
@@ -233,7 +233,7 @@ function liveWindow(): BrowserWindow | undefined {
 // below, and is null when the settings give no port. tellOthers skips the screen that caused it.
 function sendToRenderer(channel: string, ...payload: unknown[]): void { tellOthers('', channel, ...payload); }
 function tellOthers(screen: string, channel: string, ...payload: unknown[]): void {
-  if (screen !== LOCAL_SCREEN && remote.reachesWindow()) liveWindow()?.webContents.send(channel, ...payload);
+  if (windowHears(screen, remote.reachesWindow())) liveWindow()?.webContents.send(channel, ...payload);
   remoteHost?.broadcast(channel, payload, screen);
 }
 
