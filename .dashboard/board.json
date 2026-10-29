@@ -193,16 +193,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "27d9e1ca-59bb-44a9-8006-d14ba2d11cdc",
-          "title": "Fix the worker layout from #84: fixed main pane, scrolling worker list, button and status row",
-          "notes": "Found on first use of 1.19.0.\n\n- Both the main pane and the worker list scroll. Main should stay fixed to the page height; only the worker list on the right scrolls.\n- The worker list's scrollbar is not visible.\n- The new-pane button sits after the last worker. It belongs top right.\n- The row along the bottom of the app that showed different things is gone since #84. Bring it back.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-29T15:04:51.642Z",
-          "branch": "fix-the-worker-layout-from-84-fixed-main-pa",
-          "pullRequest": 85
         }
       ]
     },
@@ -992,6 +982,16 @@
           "updatedAt": "2026-10-29T14:00:27.262Z",
           "branch": "main-session-that-dispatches-tasks-into-wor",
           "pullRequest": 84
+        },
+        {
+          "id": "27d9e1ca-59bb-44a9-8006-d14ba2d11cdc",
+          "title": "Fix the worker layout from #84: fixed main pane, scrolling worker list, button and status row",
+          "notes": "Found on first use of 1.19.0.\n\n- Both the main pane and the worker list scroll. Main should stay fixed to the page height; only the worker list on the right scrolls.\n- The worker list's scrollbar is not visible.\n- The new-pane button sits after the last worker. It belongs top right.\n- The row along the bottom of the app that showed different things is gone since #84. Bring it back.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-29T15:09:04.554Z",
+          "branch": "fix-the-worker-layout-from-84-fixed-main-pa",
+          "pullRequest": 85
         }
       ]
     }
