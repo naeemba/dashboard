@@ -30,7 +30,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'sending main a message, and says so on its pane either way: a yellow edge while it waits on a '
     + 'permission, which rings like a bell and raises a notification, and a green one when its turn is '
     + 'over. Going to the pane clears the edge, and so does the worker getting back to work. Main only '
-    + 'runs a worker in, or closes, a pane it started or one with nothing running in it. The new-pane key, or the button under the list, opens '
+    + 'runs a worker in, or closes, a pane it started or one with nothing running in it. The new-pane key, or the button above the list, opens '
     + 'a plain shell at the bottom of it. The first focus key is main and the next eight count down the '
     + 'list; past those, the down and up keys walk it, and it scrolls to keep the pane you are in in '
     + 'sight. The panes keep running while you are on another project or '

@@ -53,7 +53,7 @@ export type PageOptions = {
   worktrees(): readonly WorktreeEntry[];
   // A file path clicked in one of the page's panes, which the renderer opens in the page's nvim.
   openFile(page: Page, index: number, link: FileLink): void;
-  // The button under the worker list, which does what the new-pane key does.
+  // The button above the worker list, which does what the new-pane key does.
   addPane(page: Page): void;
 };
 
@@ -394,7 +394,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
   }
 
   // One terminal onto the page, in its place: main in the view's left column, a worker in the list in
-  // number order, ahead of the button that adds one.
+  // number order.
   function addPane(page: Page, index: number): void {
     const terminals = page.views.terminals;
     if (!terminals || !page.workers) return;
@@ -408,7 +408,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     if (index === MAIN_INDEX) terminals.prepend(pane.element);
     else {
       const next = page.panes.find((other) => other.index > index)?.element;
-      page.workers.insertBefore(pane.element, next ?? page.workers.querySelector(':scope > .add-pane'));
+      page.workers.insertBefore(pane.element, next ?? null);
     }
     page.panes.push(pane);
     page.panes.sort((first, second) => first.index - second.index);
@@ -464,16 +464,19 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       return page;
     }
     element.append(...Object.values(views));
-    // Main on the left, full height; the workers in a list down the right that scrolls once there are
-    // more than fit, with the button that opens another at its foot.
-    page.workers = document.createElement('div');
-    page.workers.className = 'workers';
+    // Main on the left, full height; down the right, the button that opens another worker and under it
+    // the workers in a list that scrolls once there are more than fit. The button sits outside the list,
+    // so scrolling never takes it off the screen.
+    const column = document.createElement('div');
+    column.className = 'worker-column';
     const add = document.createElement('button');
     add.className = 'add-pane';
     add.textContent = '+ New pane';
     add.addEventListener('click', () => options.addPane(page));
-    page.workers.append(add);
-    views.terminals.append(page.workers);
+    page.workers = document.createElement('div');
+    page.workers.className = 'workers';
+    column.append(add, page.workers);
+    views.terminals.append(column);
     for (const index of open) addPane(page, index);
     const editorId = terminalId(slot, EDITOR_INDEX);
     page.editor = buildPane(views.nvim, editorId, page, EDITOR_INDEX);

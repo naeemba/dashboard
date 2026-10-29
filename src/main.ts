@@ -735,7 +735,7 @@ function takePane(projectPath: string, index: number, cardId: string): void {
   if (claimed) recordWorktree(withoutPane(claimed));
 }
 
-// The key and the button under the worker list. A project with no folder has no panes to add to.
+// The key and the button above the worker list. A project with no folder has no panes to add to.
 table.handle('pane:add', (_screen, slot: number) => {
   if (projects[slot] === undefined || projects[slot].missing) return null;
   return { index: openWorker(slot), open: openProjects() };
