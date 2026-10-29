@@ -1,4 +1,4 @@
-import type { PermissionMode, PermissionResult, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -6,7 +6,7 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import type { ChatEvent } from './chat-transcript';
+import { modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { failureText } from './failure';
 import { isRecord } from './is-record';
@@ -16,9 +16,9 @@ import { isRecord } from './is-record';
 // rather than starting another. The renderer draws; everything here is the session and the questions
 // it is waiting on.
 //
-// A conversation outlives the app by its id. The app picks the id when it starts one and keeps it per
-// project in chat-sessions.json; the next launch resumes that id on the first prompt and reads its
-// history back for the pane to draw. The drawer card is what gets to list older ones.
+// A conversation outlives the app by its id. The app keeps the id the session reports per project in
+// chat-sessions.json; the next launch resumes that id on the first prompt and reads its history back
+// for the pane to draw. /resume lists the older ones.
 
 export type ChatHost = {
   send(slot: number, event: ChatEvent): void;
@@ -35,6 +35,9 @@ export type ChatHost = {
 export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
+
+// The conversations /resume offers, newest first, and the one this page is on.
+export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
 
 export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close(): void };
 
@@ -164,19 +167,15 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
     const environment = { ...host.environment, PATH: await shellPath };
-    // Before an id is remembered: a binary that is not there would otherwise leave the next launch
-    // resuming a conversation that never started.
     const executable = claudeExecutable();
     const resume = remembered[projectPath];
-    const sessionId = resume ?? randomUUID();
-    if (!resume) remember(projectPath, sessionId);
     const input = inputQueue<SDKUserMessage>();
     const asks: Session['asks'] = new Map();
     const session: Session = { input, asks, stopped: false, query: query({
       prompt: input,
       options: {
         cwd: projectPath,
-        ...(resume ? { resume } : { sessionId }),
+        ...(resume ? { resume } : {}),
         model: preferences.get(slot)?.model ?? undefined,
         permissionMode: preferences.get(slot)?.permissionMode,
         env: environment,
@@ -198,6 +197,17 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
       let error: string | null = null;
       try {
         for await (const message of session.query) {
+          if (message.type === 'system' && message.subtype === 'init' && remembered[projectPath] !== message.session_id) {
+            remember(projectPath, message.session_id);
+          }
+          // /clear: the session goes on in a new conversation, which the next turn's init names. Until
+          // then the cleared one is not what the next launch should resume.
+          if (message.type === 'conversation_reset') {
+            remember(projectPath, undefined);
+            host.send(slot, { kind: 'reset' });
+          }
+          const mode = modeOf(message as unknown as Record<string, unknown>);
+          if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
           if (relayed(message)) host.send(slot, { kind: 'message', message: message as unknown as Record<string, unknown> });
         }
       } catch (thrown: unknown) {
@@ -214,23 +224,53 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     return session;
   }
 
-  // A prompt for this page's session, which is started if it is not running.
-  table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
-    const projectPath = host.projectPath(slot);
-    if (projectPath === undefined) return;
-    host.send(slot, { kind: 'prompt', content });
+  // This page's session, started if it is not running. One that fails to start is forgotten, so the
+  // next prompt tries again.
+  function running(slot: number, projectPath: string): Promise<Session> {
     let session = sessions.get(slot);
     if (!session) {
       session = start(slot, projectPath);
       sessions.set(slot, session);
-    }
-    session.then(
-      (running) => running.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }),
-      (error: unknown) => {
-        sessions.delete(slot);
+      session.catch((error: unknown) => {
+        if (sessions.get(slot) === session) sessions.delete(slot);
         host.send(slot, { kind: 'ended', error: failureText(error) });
-      },
+      });
+    }
+    return session;
+  }
+
+  // A prompt for this page's session.
+  table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return;
+    host.send(slot, { kind: 'prompt', content });
+    running(slot, projectPath).then(
+      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }),
+      () => undefined,
     );
+  });
+
+  // The slash commands the session would run, for the menu. Asked for when a slash is typed, which
+  // starts the session the way a prompt would: the list is the CLI's, and only a running one has it.
+  // Nothing is remembered until a prompt is sent, so a session started for the menu alone and
+  // closed with the app costs nothing on the next launch.
+  table.handle('chat:commands', async (_screen, slot: number): Promise<SlashCommand[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return (await running(slot, projectPath)).query.supportedCommands();
+  });
+
+  // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:
+  // a worktree's are its own, so a worker's conversations do not crowd the project's.
+  table.handle('chat:sessions', async (_screen, slot: number): Promise<ChatSessions> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return { current: null, sessions: [] };
+    const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
+    const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
+    return {
+      current: remembered[projectPath] ?? null,
+      sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
+    };
   });
 
   table.on('chat:interrupt', (_screen, slot: number) => {
@@ -295,6 +335,16 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     const projectPath = host.projectPath(slot);
     stop(slot);
     if (projectPath !== undefined) remember(projectPath, undefined);
+    host.send(slot, { kind: 'reset' });
+  });
+
+  // An earlier conversation picked in /resume: the running one is closed and the page remembers the
+  // picked one, so every screen reads it back and the next prompt carries it on.
+  table.on('chat:resume', (_screen, slot: number, sessionId: string) => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return;
+    stop(slot);
+    remember(projectPath, sessionId);
     host.send(slot, { kind: 'reset' });
   });
 

@@ -1,5 +1,6 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
+import { typedCommand } from './chat-commands';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -105,13 +106,19 @@ function assistant(transcript: Transcript, content: unknown): Transcript {
   return { ...transcript, entries, live: '' };
 }
 
+// What the session writes into the conversation in the user's name when a turn is stopped: drawn as
+// the notice the stop is, not as something you said.
+const INTERRUPTED = /^\[Request interrupted by user/;
+const STOPPED = { kind: 'notice', text: 'Stopped.' } as const satisfies ChatEntry;
+
 function user(transcript: Transcript, content: unknown): Transcript {
   let entries = transcript.entries;
   const said: string[] = [];
   const images: ChatImage[] = [];
   for (const block of blocksOf(content)) {
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
-    if (block.type === 'text') said.push(text(block.text));
+    if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
+    else if (block.type === 'text') said.push(typedCommand(text(block.text)) ?? text(block.text));
     if (block.type === 'image') {
       const picture = image(block);
       if (picture) images.push(picture);
@@ -131,11 +138,13 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
   return transcript;
 }
 
-function resultNotice(message: Record<string, unknown>): string | null {
+// A stopped turn says so once: the session has usually written its own stop into the conversation
+// already, just before the result.
+function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefined): string | null {
   if (message.subtype === 'success' && message.is_error !== true) return null;
   const errors = Array.isArray(message.errors) ? message.errors.map(String) : [];
   if (errors.length > 0) return errors.join('\n');
-  if (message.subtype === 'error_during_execution') return 'Stopped.';
+  if (message.subtype === 'error_during_execution') return last === STOPPED ? null : STOPPED.text;
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';
 }
 
@@ -149,7 +158,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     case 'user': return user(transcript, inner.content);
     case 'stream_event': return streamed(transcript, message.event);
     case 'result': {
-      const notice = resultNotice(message);
+      const notice = resultNotice(message, transcript.entries.at(-1));
       const entries = notice ? [...transcript.entries, { kind: 'notice', text: notice } as const] : transcript.entries;
       return { ...transcript, entries, live: '', busy: false };
     }
@@ -175,13 +184,20 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   return transcript;
 }
 
+// The permission mode a session message says the session is now in: the one it started in, which its
+// settings may have set, or one it moved to by itself — a plan approved, an edit allowed with "do not
+// ask again", which Claude Code answers by accepting edits for the rest of the session.
+export function modeOf(message: Record<string, unknown>): PermissionMode | null {
+  if (message.type !== 'system' || (message.subtype !== 'init' && message.subtype !== 'status')) return null;
+  return typeof message.permissionMode === 'string' ? message.permissionMode as PermissionMode : null;
+}
+
 // What an event says about the model or permission mode the session is on: a choice made on some
-// screen, or the mode the session started in, which its settings may have set.
+// screen, or a mode the session reports.
 export function preferencesOf(event: ChatEvent): ChatPreferences | null {
   if (event.kind === 'configured') return event.change;
-  const message = event.kind === 'message' ? event.message : null;
-  if (message?.type !== 'system' || message.subtype !== 'init' || typeof message.permissionMode !== 'string') return null;
-  return { permissionMode: message.permissionMode as PermissionMode };
+  const mode = event.kind === 'message' ? modeOf(event.message) : null;
+  return mode ? { permissionMode: mode } : null;
 }
 
 // The conversation read back from disk, unless something has already been drawn: a prompt sent or a
