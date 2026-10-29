@@ -105,16 +105,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "655f99f4-0179-4ebd-9a3a-3ad05387cb1d",
-          "title": "Investigate the Claude screen's bugs and bring it to parity with Claude Code",
-          "notes": "The Claude screen (Ctrl+Shift+A, from #83) has bugs found on first use. Investigate it end to end in the running app and fix what is broken.\n\nThen close the gap with Claude Code: list every feature the Claude Code TUI has that this screen lacks, and build them. Known gaps from the #83 card: slash commands (skills like /pr-loop, /rebuild, /work-card must work), plan mode, the /resume picker.\n\nThis comes before moving the main and worker panes onto the chat view; that move only makes sense once the screen can do what the terminal does.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-29T15:15:21.525Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -200,6 +191,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "655f99f4-0179-4ebd-9a3a-3ad05387cb1d",
+          "title": "Investigate the Claude screen's bugs and bring it to parity with Claude Code",
+          "notes": "The Claude screen (Ctrl+Shift+A, from #83) has bugs found on first use. Investigate it end to end in the running app and fix what is broken.\n\nThen close the gap with Claude Code: list every feature the Claude Code TUI has that this screen lacks, and build them. Known gaps from the #83 card: slash commands (skills like /pr-loop, /rebuild, /work-card must work), plan mode, the /resume picker.\n\nThis comes before moving the main and worker panes onto the chat view; that move only makes sense once the screen can do what the terminal does.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-29T15:33:52.065Z",
+          "branch": "investigate-the-claude-screen-s-bugs-and-br",
+          "pullRequest": 86,
+          "comments": [
+            {
+              "at": "2026-10-29T15:33:52.024Z",
+              "body": "Shipped in PR #86 (1.20.0). Fixed: an interrupted turn drawn as your own prompt; /clear leaving the screen and the next launch on the old conversation; raw <command-name> tags in read-back; the foot not following mode changes the session made itself. Added: slash command list, /resume search sheet, /plan and plan mode on Shift+Tab with plan approval, decline with a reason, prompt history. Still missing (needs cards): @ completion, ! bash mode, Ctrl+R, thinking, todo panel, subagent progress, queued prompts, /rename, MCP status, image drop."
             }
           ]
         }
