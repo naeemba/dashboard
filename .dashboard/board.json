@@ -105,17 +105,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "a639736a-a343-4932-b55a-053956055186",
-          "title": "Main session that dispatches tasks into worker panes",
-          "notes": "Each project gets one main session, full height on the left, and a scrollable list of worker panes on the right. The main session is where I talk; it dispatches tasks into fresh panes instead of running them itself.\n\nLayout: main pane left, full height. Right half is a scrollable list of worker panes, as many as dispatched. Keys: Ctrl+1 main, Ctrl+2..9 the first eight workers, j/k past that. A key spawns a new worker pane when there is no task, with a button beside it.\n\nDispatch: the main session is launched with a name (claude --name main). A session command beside board gives it the glue: session claim returns a pane id; session run <id> \"<prompt>\" starts claude in that pane with the prompt as the argument, never by typing into a live REPL; session release <id> closes it. Main talks to a worker over SendMessage to its name.\n\nDone signal: the worker's prompt ends with \"SendMessage to main when done\". A Stop hook in the worker sends the same message regardless, so a worker that forgets or dies on an error still reports.\n\nPermissions: auto mode everywhere. The worker's Notification hook (permission_prompt) calls session notify <id> blocked; the app marks the pane and raises a notification so I can answer it. The app never scrapes pane text for prompts.\n\nWorktrees: a card task reuses the worktree the board already made for the card. A non-card task gets a throwaway worktree, removed after the worker has committed, pushed and opened the PR, never before. Research needs no worktree; it reads the main checkout.\n\nDispatch rule, one line in main's prompt: a pane is for a task I asked for (do X, review X, research X), never for a lookup main needs mid-task; those stay inline or in the Agent tool.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-10-29T11:10:36.419Z",
-          "updatedAt": "2026-10-29T13:17:00.015Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -981,6 +971,17 @@
               "body": "Shipped in PR #83 (v1.18.0): Claude screen on Ctrl+Shift+A. One SDK query per project in streaming input mode, markdown/code/images/diffs rendered, tool calls folded, canUseTool and AskUserQuestion as keyboard rows with a notification, Esc interrupts, model and edit mode keys, context bar, image paste, @file via the CLI, conversation resumed across launches. Not run in the app yet: needs a rebuild."
             }
           ]
+        },
+        {
+          "id": "a639736a-a343-4932-b55a-053956055186",
+          "title": "Main session that dispatches tasks into worker panes",
+          "notes": "Each project gets one main session, full height on the left, and a scrollable list of worker panes on the right. The main session is where I talk; it dispatches tasks into fresh panes instead of running them itself.\n\nLayout: main pane left, full height. Right half is a scrollable list of worker panes, as many as dispatched. Keys: Ctrl+1 main, Ctrl+2..9 the first eight workers, j/k past that. A key spawns a new worker pane when there is no task, with a button beside it.\n\nDispatch: the main session is launched with a name (claude --name main). A session command beside board gives it the glue: session claim returns a pane id; session run <id> \"<prompt>\" starts claude in that pane with the prompt as the argument, never by typing into a live REPL; session release <id> closes it. Main talks to a worker over SendMessage to its name.\n\nDone signal: the worker's prompt ends with \"SendMessage to main when done\". A Stop hook in the worker sends the same message regardless, so a worker that forgets or dies on an error still reports.\n\nPermissions: auto mode everywhere. The worker's Notification hook (permission_prompt) calls session notify <id> blocked; the app marks the pane and raises a notification so I can answer it. The app never scrapes pane text for prompts.\n\nWorktrees: a card task reuses the worktree the board already made for the card. A non-card task gets a throwaway worktree, removed after the worker has committed, pushed and opened the PR, never before. Research needs no worktree; it reads the main checkout.\n\nDispatch rule, one line in main's prompt: a pane is for a task I asked for (do X, review X, research X), never for a lookup main needs mid-task; those stay inline or in the Agent tool.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-29T11:10:36.419Z",
+          "updatedAt": "2026-10-29T14:00:27.262Z",
+          "branch": "main-session-that-dispatches-tasks-into-wor",
+          "pullRequest": 84
         }
       ]
     }
