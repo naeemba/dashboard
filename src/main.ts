@@ -919,12 +919,15 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   directoryOf: (id) => terminalCommands.get(id)?.directory,
   shellCommand: () => shellCommand,
   openWorker,
-  // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does.
+  // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
+  // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
+  // this worker pushes would never be reviewed.
   startWorker(id, directory, args, cardId) {
     const entry = cardId === null ? undefined : entryForCard(worktrees, cardId);
     const { slot, index } = paneFromId(id);
     takePane(projects[slot]?.path ?? '', index, cardId ?? '');
-    if (entry) recordWorktree({ ...entry, pane: index });
+    if (entry) reviews.forget(entry.cardId);
+    if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
     startAgent(id, directory, args);
   },
   closeWorker,
