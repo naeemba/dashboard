@@ -6,6 +6,11 @@ import type { Mode } from './modes';
 // leaves its number free for the next one, which is what keeps the labels short.
 export const MAIN_INDEX = 0;
 
+// A worker rather than main, the editor or the Claude screen: the panes that come and go.
+export function isWorker(index: number): boolean {
+  return index > MAIN_INDEX;
+}
+
 // The editor and the Claude screen are numbered below the terminals rather than after them: workers
 // have no last number, so anything counted from the end of them would one day be a worker's. The one
 // place that says so: move either and every caller follows.

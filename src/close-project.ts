@@ -1,5 +1,5 @@
 import { paneIsBusy, programIn, type PaneUse } from './pane-reading';
-import { MAIN_INDEX } from './terminals';
+import { isWorker } from './terminals';
 
 // Whether a project can be closed, and the sentence saying why not. Closing takes every shell and the
 // editor away at once and there is no undo for it, so the one thing worth stopping it for is a pane
@@ -27,7 +27,7 @@ export type ClosingPane = PaneUse & { name: string };
 // so a close that counted it could never happen; its conversation comes back with the project.
 export function closeRefusal(projectName: string, panes: readonly ClosingPane[]): string {
   const running = panes
-    .filter((pane) => pane.index !== MAIN_INDEX && !pane.exited && paneIsBusy(pane))
+    .filter((pane) => isWorker(pane.index) && !pane.exited && paneIsBusy(pane))
     .map((pane) => `${pane.name} ${programIn(pane)}`);
   if (running.length === 0) return '';
   return `${projectName} is still running in ${running.join(', ')} — stop it and close again`;

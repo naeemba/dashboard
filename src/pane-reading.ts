@@ -1,5 +1,5 @@
 import { baseName } from './base-name';
-import { MAIN_INDEX } from './terminals';
+import { isWorker } from './terminals';
 
 // What can be read off one of a project's panes, and what three screens make of it. Nothing here
 // touches a file or a git command, which is the point: main takes the reading off the pty, and the
@@ -121,7 +121,7 @@ export function freePane<Pane extends { index: number; inWorktree: boolean }>(
   panes: readonly Pane[],
   isFree: (pane: Pane) => boolean,
 ): number | null {
-  const free = panes.filter((pane) => pane.index !== MAIN_INDEX && isFree(pane));
+  const free = panes.filter((pane) => isWorker(pane.index) && isFree(pane));
   return (free.find((pane) => !pane.inWorktree) ?? free[0])?.index ?? null;
 }
 

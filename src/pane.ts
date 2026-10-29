@@ -32,12 +32,10 @@ export const PANE_SCROLLBACK = 10000;
 
 // `index` is which pane this is — main, a worker's number, or the editor's — since workers come and go
 // and a page's list of panes has gaps. `element` is the box it is drawn in, which a worker that closes
-// takes off the page with it. `mark` is what a worker's hooks last said about it, drawn on the box and
-// cleared by arriving, the way the bell is.
+// takes off the page with it. What a worker's hooks last said is drawn on that box as `data-mark`.
 export type Pane = {
   index: number;
   element: HTMLElement;
-  mark?: 'blocked' | 'done';
   terminal: Terminal;
   fit: FitAddon;
   exited: boolean;

@@ -1,4 +1,5 @@
-import { MAIN_INDEX, type Direction } from './terminals';
+import { clampIndex } from './clamp-index';
+import { MAIN_INDEX, isWorker, type Direction } from './terminals';
 
 // Where the keyboard goes among a project's terminals: the main session in a column of its own on the
 // left, the workers in a list down the right. Every answer is asked of `open`, the indices of the panes
@@ -22,13 +23,13 @@ export function stepPane(open: readonly number[], current: number, step: 1 | -1)
 // stop at its ends. From main, right is the top worker: the list may be scrolled anywhere, and the top
 // is the one place that is the same answer every time.
 export function neighborPane(open: readonly number[], current: number, direction: Direction): number {
-  const workers = open.filter((index) => index !== MAIN_INDEX);
+  const workers = open.filter(isWorker);
   if (current === MAIN_INDEX) return direction === 'right' ? workers[0] ?? current : current;
   if (direction === 'left') return open.includes(MAIN_INDEX) ? MAIN_INDEX : current;
   const at = workers.indexOf(current);
   if (direction === 'right' || at === -1) return current;
   const next = at + (direction === 'down' ? 1 : -1);
-  return workers[Math.min(Math.max(next, 0), workers.length - 1)];
+  return workers[clampIndex(next, workers.length - 1)];
 }
 
 // The number a new worker gets: the lowest one no open pane holds, so a list that has had workers come

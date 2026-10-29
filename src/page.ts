@@ -19,7 +19,7 @@ import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
 import { CHAT_INDEX, EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, terminalId } from './terminals';
-import type { PaneState } from './session-cli';
+import type { WorkerState } from './session-cli';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -64,7 +64,7 @@ export const panesById = new Map<string, Pane>();
 // The same for the Claude screens, by slot: a chat event names the page's slot and nothing else.
 const chatsBySlot = new Map<number, ChatView>();
 // What each pane does when its worker's hooks report, by terminal id, the way a pty's bytes find it.
-const markersById = new Map<string, (state: PaneState) => void>();
+const markersById = new Map<string, (state: WorkerState) => void>();
 
 // One pane let go of for good: the verdict its bell has pending, the terminal itself, and its place in
 // the maps above. The timer matters as much as the terminal: a bell rung a moment before the close still
@@ -342,16 +342,20 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
         // Whether a repeat bell is worth a redraw is waiting.ts's to answer; this reads which page is in
         // front and draws what it says.
         const redraws = redrawsForBell(pane.bell, options.managerInFront());
-        if (!isRinging(pane.bell)) pane.bell = 'waiting';
+        ring('is waiting');
         if (redraws) options.onChanged();
-        // Read again rather than reused from above: the banner is only worth raising if the window is
-        // still behind something else now, which is when it would actually appear.
-        if (raisesNotification(document.hasFocus(), pane.bell)) {
-          pane.bell = 'notified';
-          options.bridge.notify(page.project.name, `${paneLabel(index, undefined, paneName(pane))} is waiting`, id);
-        }
       }, BELL_SETTLE_MS);
     });
+    // The pane marked as asking, and its banner if one is due. The bell and a worker's permission prompt
+    // both come here, so the two banners name the pane the same way. The focus is read again rather
+    // than reused: the banner is only worth raising if the window is still behind something else now,
+    // which is when it would actually appear.
+    function ring(saying: string): void {
+      if (!isRinging(pane.bell)) pane.bell = 'waiting';
+      if (!raisesNotification(document.hasFocus(), pane.bell)) return;
+      pane.bell = 'notified';
+      options.bridge.notify(page.project.name, `${paneLabel(index, undefined, paneName(pane))} ${saying}`, id);
+    }
     // Arriving at the pane is the answer to whatever it was asking, so the mark comes off here rather
     // than in the focus handlers: this fires for every way in, including landing back on the pane the
     // page already called focused, which the caller's onFocus deliberately ignores.
@@ -360,7 +364,6 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     terminal.textarea?.addEventListener('focus', () => {
       const wasRinging = isRinging(pane.bell);
       pane.bell = 'quiet';
-      pane.mark = undefined;
       delete container.dataset.mark;
       // A worker down a scrolled list is brought into sight; the list only scrolls as far as it must.
       container.scrollIntoView({ block: 'nearest' });
@@ -381,15 +384,8 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // for. The pane you are looking at is not marked, for the reason marksWaiting gives.
     markersById.set(id, (state) => {
       if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
-      pane.mark = state;
       container.dataset.mark = state;
-      if (markRings(state)) {
-        if (!isRinging(pane.bell)) pane.bell = 'waiting';
-        if (raisesNotification(document.hasFocus(), pane.bell)) {
-          pane.bell = 'notified';
-          options.bridge.notify(page.project.name, `${paneLabel(index, undefined, paneName(pane))} is waiting on a permission`, id);
-        }
-      }
+      if (markRings(state)) ring('is waiting on a permission');
       options.onChanged();
     });
     return pane;
@@ -434,7 +430,6 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     if (!page.panes.some((pane) => pane.index === page.focused)) page.focused = MAIN_INDEX;
     if (lostFocus) focusedPane(page)?.terminal.focus();
     fitPanes(page);
-    options.onChanged();
   }
 
   function buildPage(project: Project, slot: number, open: readonly number[]): Page {

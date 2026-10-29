@@ -294,7 +294,7 @@ table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, 
 table.handle('panes:read', (_screen, projectPath: string): PaneUse[] => {
   const slot = slotOfProject(projectPath);
   if (slot === -1) return [];
-  return paneReadingsIn(slot, null)
+  return paneReadingsIn(slot)
     .map((pane) => ({ ...pane, exited: !shells.has(terminalId(slot, pane.index)) }));
 });
 
@@ -532,10 +532,7 @@ function resumeIn(id: string, projectPath: string, index: number, resume: PaneCo
 // What it runs is the caller's, because there are three agents now: the one that works a card, the one
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
 function startAgent(id: string, worktreePath: string, args: string[]): void {
-  const opening = !terminalCommands.has(id);
-  terminalCommands.set(id, { args, directory: worktreePath });
-  // A worker that was not open yet is drawn before its first byte arrives, or the byte has no pane.
-  if (opening) panesChanged();
+  setPaneCommand(id, { args, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
@@ -678,10 +675,17 @@ function openPanes(slot: number): number[] {
 function openWorker(slot: number): number {
   const index = nextPaneIndex(openPanes(slot));
   const id = terminalId(slot, index);
-  terminalCommands.set(id, { args: [], directory: projects[slot]?.path ?? '' });
-  panesChanged();
+  setPaneCommand(id, { args: [], directory: projects[slot]?.path ?? '' });
   spawnTerminal(id);
   return index;
+}
+
+// What a pane runs from now on. A pane is open while it has a command, so one that had none is a worker
+// opening, and every screen is told before its first byte arrives, or the byte has no pane to land in.
+function setPaneCommand(id: string, command: PaneCommand): void {
+  const opening = !terminalCommands.has(id);
+  terminalCommands.set(id, command);
+  if (opening) panesChanged();
 }
 
 // One pane let go of for good. Out of the map before the kill: the exit arrives afterwards and is
@@ -701,9 +705,17 @@ function dropPane(id: string): void {
 function closeWorker(id: string): void {
   const { slot, index } = paneFromId(id);
   dropPane(id);
-  const claimed = claimsPane(worktrees, projects[slot]?.path ?? '', index, '');
-  if (claimed) recordWorktree(withoutPane(claimed));
+  takePane(projects[slot]?.path ?? '', index, '');
   panesChanged();
+}
+
+// The pane may still be named by another card's record, whose agent has exited and left it in that
+// worktree. Taking the pane — for a card, a worker, or to close it — is what ends that claim, so the old
+// record gives it up here: one record per pane in this project. claimsPane holds why the project half
+// matters. `cardId` is the card taking it, whose own record is left alone.
+function takePane(projectPath: string, index: number, cardId: string): void {
+  const claimed = claimsPane(worktrees, projectPath, index, cardId);
+  if (claimed) recordWorktree(withoutPane(claimed));
 }
 
 // The key and the button under the worker list. A project with no folder has no panes to add to.
@@ -719,28 +731,15 @@ function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
 
 // The lowest-numbered worker of this project that nobody is using, or the number a new one would get
 // when every worker is taken: workers are opened as they are needed, so there is always one going.
-// `freeing` is a pane that is about to be handed back — the one a worktree on its way out is holding —
-// counted as free.
-//
-// One function because the review asks a step earlier than the ship does: before it removes the card's
-// worktree, rather than after. Two spellings of "which panes are busy" would drift, and the drift costs
-// a worktree — the folder deleted, then no pane for the review, and a card saying so where the
-// checkout you were about to look at used to be.
-function freePaneIn(slot: number, freeing: number | null = null): number {
-  // What counts as free is shipCanTake's, the same answer attachPane picks by: a pane the review is
-  // handed is one the ship would take.
-  return freePane(paneReadingsIn(slot, freeing), shipCanTake) ?? nextPaneIndex(openPanes(slot));
+// What counts as free is shipCanTake's.
+function freePaneIn(slot: number): number {
+  return freePane(paneReadingsIn(slot), shipCanTake) ?? nextPaneIndex(openPanes(slot));
 }
 
 // Every open terminal of the project as pane-reading.ts reads them.
-function paneReadingsIn(slot: number, freeing: number | null): PaneReading[] {
+function paneReadingsIn(slot: number): PaneReading[] {
   const projectPath = projects[slot]?.path;
   return openPanes(slot).map((index): PaneReading => {
-    // The pane being handed back is described as one with nothing in it, which is what it is a moment
-    // later. Said once here rather than field by field, so a field added below cannot forget it.
-    if (index === freeing) {
-      return { index, foreground: undefined, shell: undefined, command: undefined, inWorktree: false };
-    }
     const id = terminalId(slot, index);
     const command = terminalCommands.get(id);
     return {
@@ -767,11 +766,7 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
     };
   }
   const pane = freePaneIn(slot);
-  // The pane may still be named by another card's record, whose agent has exited and left it in that
-  // worktree. Taking the pane is what ends that claim, so the old record gives it up here — one record
-  // per pane in this project — claimsPane holds why the project half of that matters.
-  const claimed = claimsPane(worktrees, entry.projectPath, pane, entry.cardId);
-  if (claimed) recordWorktree(withoutPane(claimed));
+  takePane(entry.projectPath, pane, entry.cardId);
   startAgent(terminalId(slot, pane), entry.worktreePath, agentArguments(shellCommand, prompt));
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
@@ -787,7 +782,6 @@ const reviews = reviewSweep({
   worktrees: () => worktrees,
   slotOf: slotOfProject,
   agentWorksIn,
-  freePaneIn,
   shellLivesIn,
   removeWorktree,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
@@ -924,9 +918,8 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does.
   startWorker(id, directory, args, cardId) {
     const entry = cardId === null ? undefined : entryForCard(worktrees, cardId);
-    const { index } = paneFromId(id);
-    const claimed = entry && claimsPane(worktrees, entry.projectPath, index, entry.cardId);
-    if (claimed) recordWorktree(withoutPane(claimed));
+    const { slot, index } = paneFromId(id);
+    takePane(projects[slot]?.path ?? '', index, cardId ?? '');
     if (entry) recordWorktree({ ...entry, pane: index });
     startAgent(id, directory, args);
   },
@@ -939,9 +932,11 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   },
   makeWorktree: (projectPath, title) => shipInProject(projectPath, () => makeThrowawayWorktree(projectPath, title)),
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
+  // The worktree dialog's own removal, so a folder deleted by hand and a sweep landing mid-removal are
+  // handled the one way. Unforced: unfinishedWork has already said there is nothing in it to lose.
   removeWorktree: (worktreePath, projectPath) => shipInProject(projectPath, async () => {
-    await git(['worktree', 'remove', worktreePath], projectPath);
-    forgetSize(worktreePath);
+    const removal = await removeWorktree(worktreePath, false, projectPath);
+    if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
 }), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
 

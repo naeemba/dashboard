@@ -8,7 +8,7 @@ import type { FileLink } from './file-links';
 import type { MarketsSnapshot } from './markets';
 import type { Handover } from './nvim-remote';
 import type { PaneUse } from './pane-reading';
-import type { PaneState } from './session-cli';
+import type { WorkerState } from './session-cli';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
@@ -93,7 +93,7 @@ export type DashboardBridge = {
   // that has it on, or null for a page with no folder.
   addPane(slot: number): Promise<{ index: number; open: OpenProjects } | null>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
-  onPaneMark(listener: (id: string, state: PaneState) => void): void;
+  onPaneMark(listener: (id: string, state: WorkerState) => void): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;

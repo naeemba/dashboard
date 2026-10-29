@@ -1,9 +1,9 @@
-import path from 'node:path';
 import { baseName } from './base-name';
 import { workerArguments, workerSessionName } from './dispatch';
 import { failureText } from './failure';
 import { worktreesRoot } from './ship';
-import { parseSessionCommand, type PaneState, type SessionReply, type SessionRequest } from './session-cli';
+import { ranInProject } from './usage';
+import { parseSessionCommand, type WorkerState, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from './terminals';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
@@ -23,7 +23,7 @@ export type SessionPorts = {
   openWorker(slot: number): number;
   startWorker(id: string, directory: string, args: string[], cardId: string | null): void;
   closeWorker(id: string): void;
-  mark(id: string, state: PaneState): void;
+  mark(id: string, state: WorkerState): void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
@@ -32,11 +32,11 @@ export type SessionPorts = {
 };
 
 // Which open project a folder belongs to: its checkout, or anywhere in the folder its worktrees go,
-// which holds both a card's and a throwaway one. -1 for a folder outside every one of them.
+// which holds both a card's and a throwaway one — the same test the token figures count a session by.
+// -1 for a folder outside every one of them.
 export function projectOfFolder(projectPaths: readonly (string | undefined)[], directory: string): number {
-  const inside = (root: string): boolean => directory === root || directory.startsWith(`${root}${path.sep}`);
   return projectPaths.findIndex((projectPath) => (
-    projectPath !== undefined && (inside(projectPath) || inside(worktreesRoot(projectPath)))
+    projectPath !== undefined && ranInProject(directory, projectPath, worktreesRoot(projectPath))
   ));
 }
 
@@ -46,7 +46,7 @@ const refused = (output: string): SessionReply => ({ ok: false, output });
 export function sessionRequests(ports: SessionPorts): (request: SessionRequest) => Promise<SessionReply> {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
   // because a worker run a second time has not finished the second task.
-  const states = new Map<string, PaneState>();
+  const states = new Map<string, WorkerState>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, string>();
 

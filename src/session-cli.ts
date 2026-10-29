@@ -2,14 +2,14 @@
 // so a typo is answered without the app, and by main, which answers the rest. One parser, because the
 // command and the app it talks to are built from the same tree and must not disagree on a spelling.
 
-export type PaneState = 'blocked' | 'done';
+export type WorkerState = 'blocked' | 'done';
 
 export type SessionCommand =
   | { kind: 'claim' }
   | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean }
   | { kind: 'list' }
   | { kind: 'release'; id: string }
-  | { kind: 'notify'; id: string; state: PaneState };
+  | { kind: 'notify'; id: string; state: WorkerState };
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.

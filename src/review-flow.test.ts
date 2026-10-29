@@ -58,7 +58,6 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       worktrees: () => [entry],
       slotOf: () => 0,
       agentWorksIn: () => false,
-      freePaneIn: () => 0,
       shellLivesIn: async () => false,
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
@@ -287,25 +286,6 @@ describe('reviewSweep', () => {
     await sweep.run();
     expect(log.removed).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Backlog');
-  });
-
-  // The pane question is asked before the worktree is destroyed, counting the card's own pane as the
-  // free one it is about to become — so a card that has one is never held up by the other four.
-  it('waits for a pane when the card never had one of its own', async () => {
-    const { entry } = flight(12);
-    const { ports: made, log } = ports({ ...entry, pane: null }, { freePaneIn: () => null });
-    await reviewSweep(made).run();
-    expect(log.removed).toEqual([]);
-  });
-
-  it('swaps a card that has a pane even when every other pane is taken', async () => {
-    const { entry } = flight(12);
-    const { ports: made, log } = ports(entry, {
-      // The one the card is holding, and nothing else.
-      freePaneIn: (_slot, freeing) => freeing,
-    });
-    await reviewSweep(made).run();
-    expect(log.removed).toEqual([entry.worktreePath]);
   });
 
   // Nothing on screen is waiting on a review, so the card is the only place this can be said.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CHAT_INDEX, DEFAULT_PANE_SIZE, EDITOR_INDEX, MAIN_INDEX, branchOfPane, modeOfPane, paneFromId,
+  CHAT_INDEX, DEFAULT_PANE_SIZE, EDITOR_INDEX, MAIN_INDEX, branchOfPane, isWorker, modeOfPane, paneFromId,
   paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
 } from './terminals';
 
@@ -34,6 +34,15 @@ describe('paneLabel', () => {
     expect(paneLabel(2, undefined, 'dev server')).toBe('terminal 3 · dev server');
     expect(paneLabel(2, 'panes-name-themselves', 'dev server'))
       .toBe('terminal 3 · panes-name-themselves · dev server');
+  });
+});
+
+describe('isWorker', () => {
+  it('counts the panes after main and nothing else', () => {
+    expect(isWorker(3)).toBe(true);
+    expect(isWorker(MAIN_INDEX)).toBe(false);
+    expect(isWorker(EDITOR_INDEX)).toBe(false);
+    expect(isWorker(CHAT_INDEX)).toBe(false);
   });
 });
 

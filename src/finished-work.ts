@@ -1,4 +1,5 @@
 import { failureText } from './failure';
+import type { runProgram } from './git';
 import { changedFiles } from './ship';
 
 // Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open. Only
@@ -7,7 +8,7 @@ import { changedFiles } from './ship';
 // folder and so does this: an uncommitted board move is work not yet on the branch.
 //
 // Null when it is all done, otherwise the reason the folder stays, written to follow "kept <folder>:".
-export type RunProgram = (program: string, args: string[], cwd: string) => Promise<string>;
+export type RunProgram = typeof runProgram;
 
 export async function unfinishedWork(run: RunProgram, worktreePath: string): Promise<string | null> {
   if (changedFiles(await run('git', ['status', '--porcelain'], worktreePath)).length > 0) {

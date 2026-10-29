@@ -1,3 +1,5 @@
+import type { WorkerState } from './session-cli';
+
 // What a bell means. Three questions with three answers, kept here rather than inline in the handler
 // so they can be tested: does this bell mark the pane, does it raise a banner, and which panes on a
 // page are currently asking for you. `renderer.ts` reads the browser for the two flags and wires the
@@ -74,6 +76,6 @@ export function anyWaiting(panes: readonly { bell: Bell }[]): boolean {
 // What a worker's hooks report, read as a bell. Blocked is a permission prompt, which only you can
 // answer, so it rings; done is for the main session, which hears about it on its own, and a banner per
 // finished worker would bury the ones that are asking.
-export function markRings(state: 'blocked' | 'done'): boolean {
+export function markRings(state: WorkerState): boolean {
   return state === 'blocked';
 }

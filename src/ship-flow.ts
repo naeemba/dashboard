@@ -4,7 +4,8 @@ import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
 import { failureText } from './failure';
 import { baseBranch, git } from './git';
 import { isManagerPath } from './manager';
-import { blockingChanges, branchNameFor, uncommittedCount, workPrompt, worktreePathFor } from './ship';
+import { blockingChanges, uncommittedCount, workPrompt } from './ship';
+import { addBranchWorktree } from './throwaway-worktree';
 import { entryForCard, type WorktreeEntry } from './worktree-store';
 
 // A card moved into Ship: the worktree, the branch, the board move and the pane. Out of main.ts because
@@ -75,10 +76,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
       // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
     }
 
-    const heads = await git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
-    const branch = branchNameFor(title, cardId, heads.split('\n').filter((name) => name !== ''));
-    const worktreePath = worktreePathFor(projectPath, branch);
-    await git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
+    const { branch, worktreePath } = await addBranchWorktree(projectPath, title, cardId, base);
 
     // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
     // worktree that exists is always one the worktree list can show you and remove. An orphan worktree
