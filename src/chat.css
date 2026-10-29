@@ -249,3 +249,46 @@
 .hljs-title, .hljs-section, .hljs-function { color: var(--blue); }
 .hljs-type, .hljs-class, .hljs-variable { color: var(--cyan); }
 .hljs-deletion { color: var(--red); }
+
+/* The slash commands matching what is typed. Hidden with the attribute, and the display below would
+   beat it. */
+.chat-menu {
+  display: flex;
+  flex-direction: column;
+  max-height: 40%;
+  overflow-y: auto;
+  margin: 0 0 8px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.chat-menu[hidden] {
+  display: none;
+}
+
+.chat-menu-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chat-menu-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.chat-menu-row.selected {
+  background: var(--tint);
+}
+
+.chat-plan {
+  padding: 4px 10px;
+  border-left: 3px solid var(--yellow);
+}
