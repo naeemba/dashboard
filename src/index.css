@@ -50,7 +50,10 @@ body *:not(.pane, .pane *) {
   position: relative;
 }
 
-/* One project is on screen at a time, and within it one view. Both stack in the same place. */
+/* One project is on screen at a time, and within it one view. Both stack in the same place. A view
+   rule that sets its own `position` wins over this one and swaps the box the page's size for one as
+   tall as its contents: the page scrolls and paints over the status bar. The view is already
+   positioned, so anything inside it anchors to it as it is. */
 .page, .view {
   display: block;
   position: absolute;
@@ -71,28 +74,35 @@ body *:not(.pane, .pane *) {
 }
 
 /* The main session on the left, full height, and the workers in a list down the right. Each placed by
-   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. Positioned
-   so the zoomed pane can cover all of it. */
+   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. */
 .view-terminals {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: minmax(0, 1fr);
   gap: 2px;
-  position: relative;
 }
 
 .view-terminals > .pane {
   grid-column: 1;
 }
 
-/* Three to a screen: one or two workers share the height between them, and a fourth starts the
-   scroll. Not positioned, so a zoomed worker escapes it to cover the whole view. */
-.workers {
-  grid-column: 2;
+/* The right column: the new-pane button on top, the list under it taking what is left. Neither is
+   positioned, so a zoomed worker escapes both to cover the whole view. */
+.worker-column, .workers {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-height: 0;
+}
+
+.worker-column {
+  grid-column: 2;
+}
+
+/* Three to a screen: one or two workers share the height between them, and a fourth starts the
+   scroll. */
+.workers {
+  flex: 1;
   overflow-y: auto;
 }
 
@@ -100,10 +110,12 @@ body *:not(.pane, .pane *) {
   flex: 1 0 calc((100% - 4px) / 3);
 }
 
-/* The new-pane key's twin at the foot of the list, and the whole of the list before there is a worker. */
+/* The new-pane key's twin. */
 .add-pane {
   flex: none;
+  align-self: flex-end;
   height: 26px;
+  padding: 0 12px;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   background: none;

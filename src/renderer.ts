@@ -414,7 +414,7 @@ const builder = createPageBuilder({
   addPane: (page) => addPane(page),
 });
 
-// The new-pane key and the button under the list. Main opens it and answers with the list that has it
+// The new-pane key and the button above the list. Main opens it and answers with the list that has it
 // on, the way an open does, so the pane is on this page before it is given the keyboard.
 function addPane(page: Page): void {
   void openWorker(page.slot).then((index) => {
