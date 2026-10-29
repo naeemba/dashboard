@@ -13,12 +13,12 @@ describe('replaySession', () => {
     const sent: unknown[][] = [];
     replaySession({
       screenCopies: new Map([['0:0', live], ['0:1', ended], ['0:2', quiet]]),
-      projects: () => ({ projects: [] }),
+      projects: () => ({ projects: [], panes: [] }),
       worktrees: () => ({ entries: [], paneDirectories: {} }),
       usage: () => 'usage' as never,
     }, (channel, args) => sent.push([channel, ...args]));
     expect(sent).toEqual([
-      ['projects:change', { projects: [] }],
+      ['projects:change', { projects: [], panes: [] }],
       ['pty:data', '0:0', '\x1bcprompt'],
       ['pty:data', '0:1', '\x1bcbye'],
       ['pty:exit', '0:1', 1],

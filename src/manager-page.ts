@@ -162,7 +162,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
       log: log.element,
     },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes, manager, command, strip, log, chat: null,
+    board: cards, notes, manager, command, strip, log, chat: null, workers: null,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.

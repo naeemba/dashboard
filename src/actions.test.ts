@@ -45,21 +45,24 @@ describe('the action table', () => {
   });
 
   it('leaves the macOS-only keys unbound elsewhere', () => {
-    const focusFirst = ACTIONS.find((entry) => entry.name === 'terminal-focus-1')!;
-    expect(defaultBinding(focusFirst, true)).toBe('Cmd+1');
-    // Ctrl+1..9 is the projects on every platform, so off macOS there is no modifier left.
-    expect(defaultBinding(focusFirst, false)).toBeNull();
     const clearLine = ACTIONS.find((entry) => entry.name === 'terminal-clear-line')!;
     expect(defaultBinding(clearLine, false)).toBeNull();
   });
 
-  it('covers all nine projects, all five terminals and all four directions', () => {
+  // Ctrl+1..9 is the projects on every platform, so off macOS the panes are on Alt instead.
+  it('puts the pane keys on Cmd on a mac and on Alt elsewhere', () => {
+    const focusFirst = ACTIONS.find((entry) => entry.name === 'terminal-focus-1')!;
+    expect(defaultBinding(focusFirst, true)).toBe('Cmd+1');
+    expect(defaultBinding(focusFirst, false)).toBe('Alt+1');
+  });
+
+  it('covers all nine projects, main and eight workers, and all four directions', () => {
     const names = new Set(ACTIONS.map((entry) => entry.name));
     for (let number = 1; number <= 9; number++) {
       expect(names.has(`project-jump-${number}`)).toBe(true);
       expect(names.has(`project-move-${number}`)).toBe(true);
     }
-    for (let number = 1; number <= 5; number++) expect(names.has(`terminal-focus-${number}`)).toBe(true);
+    for (let number = 1; number <= 9; number++) expect(names.has(`terminal-focus-${number}`)).toBe(true);
     for (const direction of ['left', 'right', 'up', 'down']) {
       expect(names.has(`terminal-move-${direction}`)).toBe(true);
       expect(names.has(`board-select-${direction}`)).toBe(true);

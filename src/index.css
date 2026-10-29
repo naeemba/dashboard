@@ -70,12 +70,51 @@ body *:not(.pane, .pane *) {
   visibility: hidden;
 }
 
-/* The five shells. Six columns divide evenly into two on top and three below. */
+/* The main session on the left, full height, and the workers in a list down the right. Each placed by
+   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. Positioned
+   so the zoomed pane can cover all of it. */
 .view-terminals {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: 2fr 1fr;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: minmax(0, 1fr);
   gap: 2px;
+  position: relative;
+}
+
+.view-terminals > .pane {
+  grid-column: 1;
+}
+
+/* Three to a screen: one or two workers share the height between them, and a fourth starts the
+   scroll. Not positioned, so a zoomed worker escapes it to cover the whole view. */
+.workers {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.workers > .pane {
+  flex: 1 0 calc((100% - 4px) / 3);
+}
+
+/* The new-pane key's twin at the foot of the list, and the whole of the list before there is a worker. */
+.add-pane {
+  flex: none;
+  height: 26px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.add-pane:hover {
+  background: var(--hover);
+  color: var(--brightWhite);
 }
 
 /* One pane, the whole page. Splits are nvim's business, not the dashboard's. */
@@ -421,21 +460,24 @@ body *:not(.pane, .pane *) {
   outline-offset: -1px;
 }
 
-/* Two on top, three on bottom. Six columns divide evenly into both. Assumes TERMINAL_COUNT = 5.
-   Placed cell by cell rather than by span, because an auto-placed pane has to find a free cell and the
-   zoomed pane below takes all of them — the other four would be pushed into new rows under it. */
-.pane:nth-child(1) { grid-area: 1 / 1 / 2 / 4; }
-.pane:nth-child(2) { grid-area: 1 / 4 / 2 / 7; }
-.pane:nth-child(3) { grid-area: 2 / 1 / 3 / 3; }
-.pane:nth-child(4) { grid-area: 2 / 3 / 3 / 5; }
-.pane:nth-child(5) { grid-area: 2 / 5 / 3 / 7; }
+/* What a worker's hooks last said: waiting on a permission, or its turn over. Inside the box, so it
+   reads beside the focus outline rather than fighting it. */
+.pane[data-mark="blocked"] {
+  box-shadow: inset 0 0 0 1px var(--yellow);
+}
 
-/* Zoom: the view is marked, and the pane holding the keyboard takes every cell and covers the rest.
-   Written against :focus-within rather than a class on one pane, so the zoom follows the keyboard and
-   you can never be typing into a pane hidden under another one. The four underneath keep their cells
-   and so keep their size, which is why zooming resizes one shell and not five. */
+.pane[data-mark="done"] {
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+
+/* Zoom: the view is marked, and the pane holding the keyboard covers the whole of it, the worker list
+   included. Written against :focus-within rather than a class on one pane, so the zoom follows the
+   keyboard and you can never be typing into a pane hidden under another one. Main and the list keep
+   their columns underneath, so zooming main resizes one shell; zooming a worker lets the others in the
+   list share its share. */
 .view-terminals.zoom .pane:focus-within {
-  grid-area: 1 / 1 / -1 / -1;
+  position: absolute;
+  inset: 0;
   z-index: 1;
 }
 

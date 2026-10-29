@@ -73,8 +73,8 @@ describe('entry wording', () => {
     expect(paneExitEntry('/work/shop', 2, 1, false).level).toBe('warn');
   });
   it('files an agent pane exit under agent', () => {
-    expect(paneExitEntry('/work/shop', 0, 0, true)).toEqual({
-      level: 'info', kind: 'agent', project: '/work/shop', message: 'agent in terminal 1 exited (code 0)',
+    expect(paneExitEntry('/work/shop', 1, 0, true)).toEqual({
+      level: 'info', kind: 'agent', project: '/work/shop', message: 'agent in terminal 2 exited (code 0)',
     });
   });
   it('leaves the project out when the pane has none', () => {

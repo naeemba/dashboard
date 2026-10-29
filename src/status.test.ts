@@ -82,7 +82,7 @@ describe('modeLabel', () => {
       focused: 0,
       worktrees,
       focusedDirectory: '/Users/sharp/workspace/personal/dashboard',
-    }))).toBe('terminal 1');
+    }))).toBe('main');
   });
 
   it('names the branch when the focused pane is in a worktree', () => {
@@ -114,11 +114,11 @@ describe('terminalStatus', () => {
 
 describe('the focused pane’s tokens', () => {
   it('says what the agent in the pane has cost, after the name', () => {
-    expect(modeLabel(page({ focusedTokens: 9_200_000 }))).toBe('terminal 1 · 9.2M');
+    expect(modeLabel(page({ focusedTokens: 9_200_000 }))).toBe('main · 9.2M');
   });
 
   it('says nothing for a pane with no agent in it, which is most of them', () => {
-    expect(modeLabel(page({ focusedTokens: 0 }))).toBe('terminal 1');
+    expect(modeLabel(page({ focusedTokens: 0 }))).toBe('main');
   });
 
   it('keeps out of the board, the manager and nvim, which name no single shell', () => {

@@ -69,11 +69,10 @@ describe('whichKeyRows', () => {
 
   it('leaves out an action with no key, which is not a key you could press', () => {
     const other = defaultSettings(false).keys;
-    // The five pane keys ship unbound off macOS: Ctrl with a digit already belongs to the projects
-    // there, so there is no modifier left to reach a pane by number.
-    expect(other['terminal-focus-1']).toBeNull();
+    // Clearing the line ships unbound off macOS, where Ctrl+U already reaches the shell on its own.
+    expect(other['terminal-clear-line']).toBeNull();
     expect(whichKeyRows(cmd, other, 'terminals', false, false)
-      .some((row) => row.action.startsWith('Focus a terminal'))).toBe(false);
+      .some((row) => row.action === "Clear the shell's current line")).toBe(false);
   });
 
   it('comes back empty when nothing on this screen starts with what is held', () => {

@@ -11,7 +11,9 @@ export type PageSyncPorts = {
   positionOfSlot(slot: number | null): number;
   projectPages(): Page[];
   activeIndex(): number;
-  setPage(project: Project, slot: number): void;
+  setPage(project: Project, slot: number, open: readonly number[]): void;
+  // Makes a page's terminals the ones the list says it has open.
+  syncPanes(page: Page, open: readonly number[]): void;
   landOn(index: number): void;
   // Moves the tab marker to a page that shifted, without arriving on it.
   follow(index: number): void;
@@ -63,9 +65,12 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
         else {
           // A rebuild replaces the page where it stands, so the old one is only emptied, not taken out.
           if (move.kind === 'rebuild') discardPage(pages[positionOfSlot(move.slot)]);
-          ports.setPage(move.project, move.slot);
+          ports.setPage(move.project, move.slot, open.panes[move.slot] ?? []);
         }
       }
+      // A worker opening or closing changes no page, only what is on one. Every page is asked, since
+      // the list does not say which changed; one that already matches is left as it is.
+      for (const page of projectPages()) ports.syncPanes(page, open.panes[page.slot] ?? []);
       const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
       if (landing.takeFocus) ports.landOn(landing.position);
       else {

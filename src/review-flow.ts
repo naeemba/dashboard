@@ -29,10 +29,6 @@ export type ReviewPorts = {
   // start by itself. Working is read off the pane's screen, which only the renderer can see; main.ts
   // says how the answer gets there.
   agentWorksIn: (slot: number, pane: number | null) => boolean;
-  // A pane of that page nobody is using, or null when all five are taken. `freeing` is a pane about to
-  // be handed back — the one the card's own worktree is holding — counted as free, so the answer asked
-  // before anything is destroyed is the answer the pane is given after.
-  freePaneIn: (slot: number, freeing: number | null) => number | null;
   // Whether any pane still has a shell standing in this folder — opened there, moved there with `cd`,
   // or running a program there that it started from somewhere else.
   // A finished card's worktree waits until this is false: the review pane you are typing a follow-up
@@ -263,14 +259,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       if (board !== null && allCards(board).length > 0) reviewed.add(entry.cardId);
       return;
     }
-    // Asked before anything is removed, counting the card's own pane as the free one it is about to
-    // become. If there is still nothing going, nothing is marked and nothing is touched: free a pane
-    // and the next tick starts the review, rather than the worktree being destroyed first and the card
-    // left carrying a line about a pane that came free a second later.
     // A review already running for it. Asked here rather than first, so the card reaching Done is
-    // still seen above and its worktree cleared.
+    // still seen above and its worktree cleared. There is no waiting for a pane: a review that finds
+    // every worker busy opens a new one.
     if (entry.reviewing) return;
-    if (ports.freePaneIn(slot, entry.pane) === null) return;
     reviewed.add(entry.cardId);
     // Before the swap, and whether or not the swap works: the card is finished and nothing has checked
     // it, which is the whole of what the column says.

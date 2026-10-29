@@ -1,44 +1,31 @@
 import type { Mode } from './modes';
 
-export const TERMINAL_COUNT = 5;
+// A project's terminals are its main session and the worker panes beside it. The main session is
+// always pane 0, full height on the left; workers are numbered from 1 and come and go, so a project has
+// as many as it has been given and the numbers of the ones still open never move. A worker that closes
+// leaves its number free for the next one, which is what keeps the labels short.
+export const MAIN_INDEX = 0;
 
-// The editor is a sixth pty for the project, sitting one past the grid's five. The one place that
-// says so: move the editor and every caller follows.
-export const EDITOR_INDEX = TERMINAL_COUNT;
+// A worker rather than main, the editor or the Claude screen: the panes that come and go.
+export function isWorker(index: number): boolean {
+  return index > MAIN_INDEX;
+}
 
-// The Claude screen, one past the editor. It is not a pty, so paneIds leaves it out and main never
-// spawns or kills anything by it; it is a number only so a notification it raises can name it.
-export const CHAT_INDEX = EDITOR_INDEX + 1;
+// The editor and the Claude screen are numbered below the terminals rather than after them: workers
+// have no last number, so anything counted from the end of them would one day be a worker's. The one
+// place that says so: move either and every caller follows.
+export const EDITOR_INDEX = -1;
+
+// The Claude screen. It is not a pty, so main never spawns or kills anything by it; it is a number
+// only so a notification it raises can name it.
+export const CHAT_INDEX = -2;
 
 export type Direction = 'left' | 'right' | 'up' | 'down';
-
-// Matches the grid in index.css: two on top (0 1), three on bottom (2 3 4).
-// Edges stay put; up/down pick the nearest pane by centre, so the bottom-middle pane (3) is only
-// reachable sideways and a move up does not always undo a move down.
-const NEIGHBORS: Record<Direction, number[]> = {
-  left: [0, 0, 2, 2, 3],
-  right: [1, 1, 3, 4, 4],
-  up: [0, 1, 0, 1, 1],
-  down: [2, 4, 2, 3, 4],
-};
 
 // `slot` and `index` all the way through: the same pair paneFromId gives back and the same pair the
 // renderer's pages carry, so one id is never described in two vocabularies.
 export function terminalId(slot: number, index: number): string {
   return `${slot}:${index}`;
-}
-
-// Every pane of one project, in the order they were made: the grid's five and the editor one past
-// them. Main kills a project's panes by this list and the renderer lets them go by it, and both would
-// otherwise walk the layout themselves, which is what EDITOR_INDEX above exists to stop. The spawn
-// keeps its own loop: the editor is registered without being started, so it is not one of the six
-// treated alike.
-export function paneIds(slot: number): string[] {
-  return Array.from({ length: EDITOR_INDEX + 1 }, (_value, index) => terminalId(slot, index));
-}
-
-export function neighbor(index: number, direction: Direction): number {
-  return NEIGHBORS[direction][index];
 }
 
 // The one spelling of a pane's name. The status bar and the bell's notification both say it, and a
@@ -51,11 +38,10 @@ export function neighbor(index: number, direction: Direction): number {
 // The name goes last of the three. The status bar is one line and the end of it is what a narrow
 // window drops first, so the order is what we can least afford to lose, first: which pane the
 // keyboard is in, then which checkout it is looking at, then what someone called it.
-// The editor is asked for by the same number every other pane is, because everything that lists a
-// project's panes walks paneIds and gets it last. `terminal 6` would name a pane that is not in the
-// grid and that no focus key reaches.
+// The editor and the main session have names rather than numbers: neither is one of the workers, and
+// `terminal 1` beside a column of workers would read as the first of them.
 export function paneLabel(index: number, branch?: string, name?: string): string {
-  const base = index === EDITOR_INDEX ? 'nvim' : `terminal ${index + 1}`;
+  const base = index === EDITOR_INDEX ? 'nvim' : index === MAIN_INDEX ? 'main' : `terminal ${index + 1}`;
   return [base, branch, name].filter((part) => part !== undefined).join(' · ');
 }
 

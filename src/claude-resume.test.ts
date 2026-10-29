@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agentToResume, isPaneConversation, resumable, resumeLine, sessionToWrite, withClaude, type PaneConversation,
+  agentToResume, isPaneConversation, mainResume, resumable, resumedAs, resumeLine, sessionToWrite, withClaude, type PaneConversation,
 } from './claude-resume';
 import type { WorktreeEntry } from './worktree-store';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
 const conversation = (session: string, directory = '/work/api'): PaneConversation => ({ session, directory });
+const none = (): boolean => false;
 
 describe('isPaneConversation', () => {
   it('keeps a session id and the folder it ran in', () => {
@@ -38,12 +39,13 @@ describe('withClaude', () => {
   const slots: Record<string, number> = { '/work/api': 0, '/work/web': 2 };
   const slotOf = (projectPath: string): number => slots[projectPath] ?? -1;
 
-  it('puts each pane\'s session on its page by slot, one entry per grid pane', () => {
+  // As far as the highest pane holding one, since workers have no fixed count.
+  it('puts each pane\'s session on its page by slot, one entry per pane number', () => {
     const held = new Map([['0:1', conversation(ID)], ['2:4', conversation(OTHER, '/work/web')]]);
-    expect(withClaude(layout, slotOf, held)).toEqual({
+    expect(withClaude(layout, slotOf, held, none)).toEqual({
       activeIndex: 1,
       pages: [
-        { ...layout.pages[0], claude: [null, conversation(ID), null, null, null] },
+        { ...layout.pages[0], claude: [null, conversation(ID)] },
         { ...layout.pages[1], claude: [null, null, null, null, conversation(OTHER, '/work/web')] },
       ],
     });
@@ -52,11 +54,24 @@ describe('withClaude', () => {
   // The live reading carries the pid; only the two fields a resume needs are written.
   it('writes only the session and the folder', () => {
     const held = new Map([['0:0', { pid: 900, ...conversation(ID) }]]);
-    expect(withClaude(layout, slotOf, held).pages[0].claude[0]).toEqual(conversation(ID));
+    expect(withClaude(layout, slotOf, held, none).pages[0].claude[0]).toEqual(conversation(ID));
+  });
+
+  // The editor runs nvim, never a conversation to resume, and its number is below the terminals'.
+  it('leaves out a reading that is not a terminal', () => {
+    const held = new Map([['0:-1', conversation(ID)]]);
+    expect(withClaude(layout, slotOf, held, none).pages[0].claude).toEqual([]);
+  });
+
+  // Only main knows which panes hold its workers, and only those come back as its workers.
+  it('marks the panes holding main\'s workers, and no others', () => {
+    const held = new Map([['0:1', conversation(ID)], ['0:2', conversation(OTHER)]]);
+    expect(withClaude(layout, slotOf, held, (id) => id === '0:1').pages[0].claude)
+      .toEqual([null, { ...conversation(ID), dispatched: true }, conversation(OTHER)]);
   });
 
   it('gives a page whose project has no slot no sessions rather than throwing', () => {
-    expect(withClaude(layout, () => -1, new Map()).pages[0].claude).toEqual([]);
+    expect(withClaude(layout, () => -1, new Map(), none).pages[0].claude).toEqual([]);
   });
 });
 
@@ -68,13 +83,27 @@ describe('sessionToWrite', () => {
   // The first sweep can run before the renderer has sent anything: writing then would save no pages,
   // and a crash during startup would come back to an empty window.
   it('writes nothing before the renderer has sent a layout', () => {
-    expect(sessionToWrite(null, slotOf, held, '')).toBeNull();
+    expect(sessionToWrite(null, slotOf, held, none, '')).toBeNull();
   });
 
   it('writes nothing when the file would say what the last write said', () => {
-    const first = sessionToWrite(layout, slotOf, held, '');
-    expect(first?.session).toEqual(withClaude(layout, slotOf, held));
-    expect(sessionToWrite(layout, slotOf, held, first?.encoded ?? '')).toBeNull();
+    const first = sessionToWrite(layout, slotOf, held, none, '');
+    expect(first?.session).toEqual(withClaude(layout, slotOf, held, none));
+    expect(sessionToWrite(layout, slotOf, held, none, first?.encoded ?? '')).toBeNull();
+  });
+});
+
+describe('resumedAs', () => {
+  const card = { cardId: 'c1' } as WorktreeEntry;
+
+  it('brings main\'s worker back as its worker, on a card or not', () => {
+    expect(resumedAs({ ...conversation(ID), dispatched: true }, undefined)).toBe('worker');
+    expect(resumedAs({ ...conversation(ID), dispatched: true }, card)).toBe('worker');
+  });
+
+  it('brings a card\'s agent back as the agent, and anything else into a shell', () => {
+    expect(resumedAs(conversation(ID), card)).toBe('agent');
+    expect(resumedAs(conversation(ID), undefined)).toBe('shell');
   });
 });
 
@@ -119,6 +148,30 @@ describe('agentToResume', () => {
     const real = (path: string): string => path.replace('/work/', '/mnt/data/');
     const recorded = conversation(ID, '/mnt/data/api.worktrees/fix-login');
     expect(agentToResume([card], inPane2, recorded, '/work/api', 2, real)).toBe(card);
+  });
+});
+
+describe('mainResume', () => {
+  const asGiven = (path: string): string => path;
+
+  it('resumes main from a conversation in the project\'s checkout', () => {
+    expect(mainResume(conversation(ID), '/work/api', asGiven)).toEqual({ session: ID });
+  });
+
+  // Opened through a symlink: Claude Code recorded the folder it really is.
+  it('matches the checkout through its real path', () => {
+    const real = (path: string): string => path.replace('/work/', '/mnt/data/');
+    expect(mainResume(conversation(ID, '/mnt/data/api'), '/work/api', real)).toEqual({ session: ID });
+  });
+
+  // A session.json from before main held a card's agent in the first pane.
+  it('hands a conversation from anywhere else to a worker rather than to main', () => {
+    const inWorktree = conversation(ID, '/work/api.worktrees/fix-login');
+    expect(mainResume(inWorktree, '/work/api', asGiven)).toEqual({ worker: inWorktree });
+  });
+
+  it('starts main fresh when nothing was saved', () => {
+    expect(mainResume(null, '/work/api', asGiven)).toEqual({});
   });
 });
 

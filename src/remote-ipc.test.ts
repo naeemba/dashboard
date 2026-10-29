@@ -10,7 +10,7 @@ let server: WebSocketServer | undefined;
 afterEach(() => { server?.close(); });
 
 // What the real host sends, on joining and in the reply to an open.
-const hostList = { projects: [{ name: 'api', path: '/code/api', missing: false }] };
+const hostList = { projects: [{ name: 'api', path: '/code/api', missing: false }], panes: [[0]] };
 
 function host(): Promise<string> {
   return new Promise((resolve) => {
@@ -35,7 +35,7 @@ function wired() {
   const held: HeldForRemote = {
     table, version: '1', settings: () => ({ remote: {} }) as Settings, log: () => undefined,
     screenCopies: new Map([['0:1', { replay: () => 'copy', exitCode: () => undefined } as PaneScreenCopy]]),
-    projects: () => ({ projects: [] }),
+    projects: () => ({ projects: [], panes: [] }),
     worktrees: () => ({ entries: [], paneDirectories: {} }),
     usage: () => 'usage' as never,
   };
@@ -48,7 +48,7 @@ function wired() {
 // The local session told to the window, as a screen joining it would be.
 const localReplay = [
   ['host:change', 'local'],
-  ['projects:change', { projects: [] }],
+  ['projects:change', { projects: [], panes: [] }],
   ['pty:data', '0:1', 'copy'],
   ['worktree:change', { entries: [], paneDirectories: {} }],
   ['usage:change', 'usage'],

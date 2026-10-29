@@ -19,6 +19,19 @@ describe('resumeLedger', () => {
     expect(ledger.take('/work/api', 1, '3:1', LAUNCH + 60_000)).toBeNull();
   });
 
+  // What a launch opens workers for, so it names only what take would still hand out.
+  it('says which panes are still owed a session, and stops once each is taken', () => {
+    const ledger = resumeLedger([{ ...pages[0], claude: [null, conversation(ID), null, conversation(OTHER)] }], everywhere);
+    expect(ledger.owed('/work/api')).toEqual([1, 3]);
+    ledger.take('/work/api', 1, '0:1', LAUNCH);
+    expect(ledger.owed('/work/api')).toEqual([3]);
+    expect(ledger.owed('/work/web')).toEqual([]);
+  });
+
+  it('owes nothing for a session whose folder has gone', () => {
+    expect(resumeLedger(pages, () => false).owed('/work/api')).toEqual([]);
+  });
+
   it('resumes nothing in a pane that had no session, or a project it never saw', () => {
     const ledger = resumeLedger(pages, everywhere);
     expect(ledger.take('/work/api', 0, '0:0', LAUNCH)).toBeNull();

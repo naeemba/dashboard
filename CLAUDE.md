@@ -1,7 +1,7 @@
 # dashboard
 
-Electron terminal dashboard. Each project is a page of five shells, an nvim, a
-kanban board and a notes page.
+Electron terminal dashboard. Each project is a page of a main Claude session and
+the worker panes it dispatches into, an nvim, a kanban board and a notes page.
 
 Settled questions live in `docs/decisions.md`. What breaking each rule below
 looked like lives in `docs/hard-rules.md`. Read the matching section before

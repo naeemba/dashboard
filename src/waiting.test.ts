@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { looksBusy, marksWaiting, raisesNotification, redrawsForBell, waitingNames } from './waiting';
+import { looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell, waitingNames } from './waiting';
 
 describe('looksBusy', () => {
   it('reads an agent still working from the seconds after its spinner', () => {
@@ -94,5 +94,14 @@ describe('waitingNames', () => {
 
   it('says nothing when no pane is asking', () => {
     expect(waitingNames([{ bell: 'quiet', name: 'terminal 1' }])).toEqual([]);
+  });
+});
+
+describe('markRings', () => {
+  // A permission prompt waits on you; a finished worker is the main session's to hear about.
+  it('rings for a worker blocked on a permission and not for one that is done', () => {
+    expect(markRings('blocked')).toBe(true);
+    expect(markRings('done')).toBe(false);
+    expect(markRings('running')).toBe(false);
   });
 });

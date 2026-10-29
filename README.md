@@ -1,6 +1,8 @@
 # dashboard
 
-Keyboard-first terminal dashboard. Each project gets a page, shown four ways: five shells in a fixed grid, a full-window nvim, a kanban board, or a page of notes.
+Keyboard-first terminal dashboard. Each project gets a page, shown several ways: its main Claude Code session beside a list of worker panes it dispatches tasks into, a full-window nvim, a kanban board, a page of notes, or the Claude screen.
+
+The main session dispatches with `node "$DASHBOARD_SESSION"` (`claim`, `run`, `list`, `release`); a worker's hooks report back with `notify`. Ctrl+H on the terminals screen says the rest.
 
 ## Setup
 

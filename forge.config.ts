@@ -31,9 +31,10 @@ const keep = [
 const config: ForgeConfig = {
   packagerConfig: {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
-    // board-cli-entry.js is unpacked for a different reason: it is run by `node`, not by Electron, and
-    // node cannot read a file inside an asar. main.ts points agents at the unpacked copy.
-    asar: { unpack: '{**/node_modules/node-pty/**,**/node_modules/@anthropic-ai/claude-agent-sdk-*/**,**/.vite/build/board-cli-entry.js}' },
+    // board-cli-entry.js and session-cli-entry.js are unpacked for a different reason: they are run by
+    // `node`, not by Electron, and node cannot read a file inside an asar. main.ts points agents at the
+    // unpacked copies.
+    asar: { unpack: '{**/node_modules/node-pty/**,**/node_modules/@anthropic-ai/claude-agent-sdk-*/**,**/.vite/build/board-cli-entry.js,**/.vite/build/session-cli-entry.js}' },
     // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,
     // which still calls itself com.github.Electron while Info.plist says com.electron.dashboard.
     // macOS files an app with Notification Center under the *signing* name, so a Dashboard that
@@ -97,6 +98,13 @@ const config: ForgeConfig = {
         {
           entry: 'src/board-cli-entry.ts',
           config: 'vite.board-cli.config.ts',
+          target: 'main',
+        },
+        // The `session` command, the main session's way to dispatch into worker panes. Built the same
+        // way and for the same reason as `board`.
+        {
+          entry: 'src/session-cli-entry.ts',
+          config: 'vite.session-cli.config.ts',
           target: 'main',
         },
       ],
