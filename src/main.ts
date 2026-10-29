@@ -22,6 +22,7 @@ import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
 import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
+import { registerChatSessions } from './chat-sessions';
 import { startHost, type HeldByMain } from './host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-ipc';
 import { registerPaneOpeners } from './pane-openers';
@@ -578,6 +579,7 @@ table.on('projects:close', (_screen, slot: number) => {
   projects[slot] = undefined;
   logStore.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
+  chats.stop(slot);
   for (const id of paneIds(slot)) {
     // Out of the map before the kill: the exit arrives afterwards and is dropped by the check in
     // spawnTerminal, so no pty:exit goes out for a pane the renderer has already taken off the screen.
@@ -635,6 +637,12 @@ table.handle('settings:write', (_screen, next: Settings) => {
   return shellCommand;
 });
 registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow });
+// The Claude screen's sessions. chat-sessions.ts holds what one is; main hands over the way to every
+// screen and which project a slot holds.
+const chats = registerChatSessions(table, {
+  send: (slot, event) => sendToRenderer('chat:receive', slot, event),
+  projectPath: (slot) => projects[slot]?.path, environment: paneEnvironment, userData: app.getPath('userData'),
+});
 registerProjectFiles(table, boards, boardLog, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
@@ -1048,6 +1056,7 @@ app.on('will-quit', () => {
   remoteHost?.close();
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
+  chats.stopAll();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.
   dropScrollbackFiles();

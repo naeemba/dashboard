@@ -1,3 +1,6 @@
+import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import type { ChatPreferences, ChatState } from './chat-sessions';
+import type { ChatEvent, ImageType } from './chat-transcript';
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 import type { Board } from './board';
@@ -161,7 +164,26 @@ export type DashboardBridge = {
   writeLog(draft: LogDraft): void;
   readLog(): Promise<LogRead>;
   onLogAppended(listener: (entry: LogEntry) => void): void;
+  // The Claude screen's session, one per project page and named by its slot. chat-sessions.ts holds
+  // what main does with each. A prompt is the content of one user message: text and pasted images.
+  chatSend(slot: number, content: ChatContent): void;
+  chatInterrupt(slot: number): void;
+  // The answer to an ask, by the id it arrived with.
+  chatAnswer(slot: number, id: string, result: PermissionResult): void;
+  chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
+  // How full the context window is; null before the session has started.
+  chatMeasure(slot: number): Promise<number | null>;
+  // What a screen opening the page catches up on: the conversation it would resume, the questions
+  // waiting, and the model and mode chosen.
+  chatRead(slot: number): Promise<ChatState>;
+  chatReset(slot: number): void;
+  onChat(listener: (slot: number, event: ChatEvent) => void): void;
 };
+
+export type ChatContent = (
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: ImageType; data: string } }
+)[];
 
 declare global {
   // The one `interface` in src/, and it has to be: this adds a property to a Window that already

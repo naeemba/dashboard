@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_PANE_SIZE, EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds,
+  CHAT_INDEX, DEFAULT_PANE_SIZE, EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds,
   paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
 } from './terminals';
 
@@ -143,6 +143,11 @@ describe('modeOfPane', () => {
     expect(modeOfPane(0)).toBe('terminals');
     expect(modeOfPane(TERMINAL_COUNT - 1)).toBe('terminals');
     expect(modeOfPane(EDITOR_INDEX)).toBe('nvim');
+  });
+
+  // A Claude screen's notification carries this index back, and the click has to land on that screen.
+  it('puts the Claude screen on claude', () => {
+    expect(modeOfPane(CHAT_INDEX)).toBe('claude');
   });
 });
 

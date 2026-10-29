@@ -3,6 +3,7 @@ import type { ILink, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { createBoardView, type BoardView } from './board-view';
 import type { DashboardBridge } from './bridge';
+import { createChatView, type ChatView } from './chat-view';
 import type { CommandView } from './command-view';
 import type { LogView } from './log-view';
 import { fileLinksIn, webLinksIn, type FileLink, type LinkSpan } from './file-links';
@@ -17,7 +18,7 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { EDITOR_INDEX, TERMINAL_COUNT, paneIds, paneLabel, paneName, terminalId } from './terminals';
+import { CHAT_INDEX, EDITOR_INDEX, TERMINAL_COUNT, paneIds, paneLabel, paneName, terminalId } from './terminals';
 import { isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -57,6 +58,8 @@ export type PageOptions = {
 // exit and a keystroke sent to a pane all arrive naming an id and nothing else, so this is how any of
 // them finds the terminal it belongs to.
 export const panesById = new Map<string, Pane>();
+// The same for the Claude screens, by slot: a chat event names the page's slot and nothing else.
+const chatsBySlot = new Map<number, ChatView>();
 
 // Every pane of one slot, let go for good: the verdict its bell has pending, the terminal itself, and
 // its place in the map above. What a closed project's panes need, and the map is why it lives here —
@@ -64,6 +67,7 @@ export const panesById = new Map<string, Pane>();
 // as much as the terminal: a bell rung a moment before the close still has a second to wait, and it
 // would wake to read a screen nobody can see and raise a banner naming a project that is gone.
 export function discardPanes(slot: number): void {
+  chatsBySlot.delete(slot);
   for (const id of paneIds(slot)) {
     const pane = panesById.get(id);
     // A project whose folder had gone was drawn as a page with no panes at all, so there is nothing
@@ -104,6 +108,9 @@ export type Page = {
   strip: SectionStrip | null;
   // Only the manager has one: it is the app's log, not a project's.
   log: LogView | null;
+  // The Claude screen. Null where the board is: the manager and a dead project have no folder to run
+  // a session in.
+  chat: ChatView | null;
 };
 
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
@@ -150,10 +157,27 @@ export function fitPage(page: Page): void {
   page.editor?.fit.fit();
 }
 
+// Zooming is one class on the view; which pane it lands on is the CSS's to answer from what has the
+// keyboard. Nothing is remembered across a restart — the panes come back as the grid they are.
+// The fit is unconditional here, unlike the one in `buildPane`'s focus handler: on the way out of
+// zoom the class is already gone, and the pane that shrank still has to be told.
+export function toggleZoom(page: Page): void {
+  // The CSS grows whichever pane holds the keyboard, so the key has to make sure one does. A click on
+  // the status bar or on a pane's border leaves the keyboard on the body, and the class would then have
+  // nothing to grow and the key would look broken. The class moves first so that the fit the focus
+  // handler runs is already measuring the size the pane is going to keep. The other half is left alone
+  // on purpose: such a click still drops the zoom off the screen until you press something, because the
+  // zoomed pane is read from focus rather than remembered.
+  page.views.terminals?.classList.toggle('zoom');
+  page.panes[page.focused]?.terminal.focus();
+  fitPanes(page);
+}
+
 // Builds the page for one project: its four views, its five shells and its editor — or, for a project
 // whose folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane
 // needs from the renderer are handed over once rather than on every call.
 export function createPageBuilder(options: PageOptions): (project: Project, slot: number) => Page {
+  options.bridge.onChat((slot, event) => chatsBySlot.get(slot)?.receive(event));
   function buildPane(view: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');
     container.className = 'pane';
@@ -319,6 +343,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       nvim: document.createElement('div'),
       board: document.createElement('div'),
       notes: document.createElement('div'),
+      claude: document.createElement('div'),
     };
     for (const [mode, view] of Object.entries(views)) {
       view.className = `view view-${mode}`;
@@ -326,7 +351,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     }
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
-      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null,
+      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null, chat: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -372,6 +397,16 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       onError: (message) => options.onError(`notes:${slot}`, message),
     });
     views.notes.append(page.notes.element);
+    page.chat = createChatView({
+      bridge: options.bridge,
+      slot,
+      projectName: project.name,
+      paneId: terminalId(slot, CHAT_INDEX),
+      onError: (message) => options.onError(`chat:${slot}`, message),
+      onNotice: (message) => options.onNotice(`chat:${slot}`, message),
+    });
+    views.claude.append(page.chat.element);
+    chatsBySlot.set(slot, page.chat);
     return page;
   }
 

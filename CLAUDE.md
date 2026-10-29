@@ -36,7 +36,8 @@ app.
   search box, the board's filter dialog and the notes box; every key in the settings
   screen while a row is armed; Shift on the manager list. A new project view is
   a row in `PROJECT_MODES`, a row in `ACTIONS`, a view in `page.ts`, a branch in
-  `focusMode` and `modeLabel`, and a name and blurb in `src/help.ts`.
+  `focusMode` and `modeLabel`, and a name and blurb in `src/help.ts`. An action's
+  name starts with its scope: it is a key in the user's settings file.
 - **Every `<input>` and `<textarea>` gets `dir = 'auto'`** in the change that
   adds it. These two counts agree:
 

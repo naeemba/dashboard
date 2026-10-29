@@ -62,6 +62,14 @@ const bridge: DashboardBridge = {
   readLog: () => ipcRenderer.invoke('log:read'),
   onLogAppended: (listener) =>
     ipcRenderer.on('log:appended', (_event, entry) => listener(entry)),
+  chatSend: (slot, content) => ipcRenderer.send('chat:send', slot, content),
+  chatInterrupt: (slot) => ipcRenderer.send('chat:interrupt', slot),
+  chatAnswer: (slot, id, result) => ipcRenderer.send('chat:answer', slot, id, result),
+  chatConfigure: (slot, change) => ipcRenderer.invoke('chat:configure', slot, change),
+  chatMeasure: (slot) => ipcRenderer.invoke('chat:measure', slot),
+  chatRead: (slot) => ipcRenderer.invoke('chat:read', slot),
+  chatReset: (slot) => ipcRenderer.send('chat:reset', slot),
+  onChat: (listener) => ipcRenderer.on('chat:receive', (_event, slot, chatEvent) => listener(slot, chatEvent)),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

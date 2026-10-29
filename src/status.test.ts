@@ -57,6 +57,11 @@ describe('modeLabel', () => {
     expect(modeLabel(page({ mode: 'notes' }))).toBe('notes');
   });
 
+  // The same fall-through: the Claude screen is not a pane in the grid.
+  it('names the Claude screen, rather than a pane behind it', () => {
+    expect(modeLabel(page({ mode: 'claude' }))).toBe('claude');
+  });
+
   it('lets the command screen name what the selection is on', () => {
     expect(modeLabel(page({ mode: 'command', commandStatusLabel: 'api · marked · exit 0' })))
       .toBe('api · marked · exit 0');

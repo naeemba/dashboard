@@ -45,7 +45,7 @@ import { closeRefusal, closingPanes } from './close-project';
 import { planSend, type SendPlan } from './free-pane';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, fitPage, fitPanes, panesById, restylePanes, showMode, type Page,
+  createPageBuilder, fitPage, panesById, restylePanes, showMode, toggleZoom, type Page,
 } from './page';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
@@ -289,22 +289,6 @@ function focusTerminal(index: number): void {
   renderStatus();
 }
 
-// Zooming is one class on the view; which pane it lands on is the CSS's to answer from what has the
-// keyboard. Nothing is remembered across a restart — the panes come back as the grid they are.
-// The fit is unconditional here, unlike the one in `buildPane`'s focus handler: on the way out of
-// zoom the class is already gone, and the pane that shrank still has to be told.
-function toggleZoom(page: Page): void {
-  // The CSS grows whichever pane holds the keyboard, so the key has to make sure one does. A click on
-  // the status bar or on a pane's border leaves the keyboard on the body, and the class would then have
-  // nothing to grow and the key would look broken. The class moves first so that the fit the focus
-  // handler runs is already measuring the size the pane is going to keep. The other half is left alone
-  // on purpose: such a click still drops the zoom off the screen until you press something, because the
-  // zoomed pane is read from focus rather than remembered.
-  page.views.terminals?.classList.toggle('zoom');
-  page.panes[page.focused]?.terminal.focus();
-  fitPanes(page);
-}
-
 function setMode(mode: Mode): void {
   const page = pages[activeIndex];
   // A page only switches to a view it has. A dead project has none, and the manager has only the four
@@ -359,6 +343,10 @@ function focusMode(page: Page, entering: boolean): void {
     // working in a project's worktree, since you were last here. open() takes the keyboard itself.
     if (entering) void page.notes.open();
     else page.notes.element.focus();
+  }
+  if (page.mode === 'claude' && page.chat) {
+    if (entering) page.chat.open();
+    else page.chat.focus();
   }
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
@@ -720,6 +708,7 @@ function apply(action: Action): void {
     case 'log-select':
     case 'log-open':
     case 'log-filter-reset': return page.log?.runAction(action);
+    case 'chat': return page.chat?.runCommand(action.command);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.
