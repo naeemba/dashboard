@@ -152,6 +152,11 @@ export function fitPanes(page: Page): void {
 // screen, because until it is measured no pane has told main how big it is, and main spawns the page's
 // shells at whatever it was last told. Separate from fitPanes because the zoom key wants only the grid
 // — the editor is on a view of its own and never carries the zoom class.
+export function fitPage(page: Page): void {
+  fitPanes(page);
+  page.editor?.fit.fit();
+}
+
 // Zooming is one class on the view; which pane it lands on is the CSS's to answer from what has the
 // keyboard. Nothing is remembered across a restart — the panes come back as the grid they are.
 // The fit is unconditional here, unlike the one in `buildPane`'s focus handler: on the way out of
@@ -166,11 +171,6 @@ export function toggleZoom(page: Page): void {
   page.views.terminals?.classList.toggle('zoom');
   page.panes[page.focused]?.terminal.focus();
   fitPanes(page);
-}
-
-export function fitPage(page: Page): void {
-  fitPanes(page);
-  page.editor?.fit.fit();
 }
 
 // Builds the page for one project: its four views, its five shells and its editor — or, for a project

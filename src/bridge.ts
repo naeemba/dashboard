@@ -1,6 +1,6 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences } from './chat-sessions';
-import type { ChatEvent } from './chat-transcript';
+import type { ChatEvent, ImageType } from './chat-transcript';
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
 import type { Board } from './board';
@@ -172,16 +172,16 @@ export type DashboardBridge = {
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
   // How full the context window is; null before the session has started.
-  chatMeasure(slot: number): Promise<{ percentage: number; totalTokens: number; maxTokens: number } | null>;
+  chatMeasure(slot: number): Promise<number | null>;
   // The conversation the page would resume, read back from its transcript.
-  chatRead(slot: number): Promise<{ sessionId: string | null; messages: Record<string, unknown>[] }>;
+  chatRead(slot: number): Promise<Record<string, unknown>[]>;
   chatReset(slot: number): void;
   onChat(listener: (slot: number, event: ChatEvent) => void): void;
 };
 
 export type ChatContent = (
   | { type: 'text'; text: string }
-  | { type: 'image'; source: { type: 'base64'; media_type: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'; data: string } }
+  | { type: 'image'; source: { type: 'base64'; media_type: ImageType; data: string } }
 )[];
 
 declare global {

@@ -7,8 +7,10 @@ import { drawEntry, type DrawnEntry } from './chat-entries';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import {
-  addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, type ChatEvent, type ChatImage, type Transcript,
+  addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, IMAGE_TYPES, type ChatEvent, type ChatImage, type ImageType,
+  type Transcript,
 } from './chat-transcript';
+import type { ChatPreferences } from './chat-sessions';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { isModified } from './shortcuts';
@@ -39,7 +41,8 @@ export type ChatView = {
 const MODELS: (string | undefined)[] = [undefined, 'opus', 'sonnet', 'haiku'];
 // Plan mode has no screen of its own here yet, so the key walks the two modes the pane can show.
 const MODES: PermissionMode[] = ['default', 'acceptEdits'];
-const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
+
+const PAINT_MS = 80;
 
 function next<T>(list: readonly T[], current: T): T {
   return list[(list.indexOf(current) + 1) % list.length];
@@ -57,9 +60,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   log.append(live);
   const ask = createAskPanel((id, result) => {
     bridge.chatAnswer(slot, id, result);
-    asks = asks.filter((each) => each.id !== id);
-    showAsk();
-    if (asks.length === 0) prompt.focus();
+    dropAsk(id);
   });
   const attached = document.createElement('div');
   attached.className = 'chat-attached';
@@ -85,11 +86,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // ponytail: content-visibility skips laying out what is off screen, and markdown is only rendered
   // for an entry once it comes near; every entry still has its box. Recycle boxes if a session long
   // enough to need it turns up.
+  const unfilled = new Map<Element, () => void>();
   const nearScreen = new IntersectionObserver((seen) => {
     for (const each of seen) {
       if (!each.isIntersecting) continue;
       nearScreen.unobserve(each.target);
-      drawn.find((entry) => entry.element === each.target)?.fill?.();
+      unfilled.get(each.target)?.();
+      unfilled.delete(each.target);
     }
   }, { root: log, rootMargin: '800px 0px' });
 
@@ -106,9 +109,31 @@ export function createChatView(options: ChatViewOptions): ChatView {
     foot.replaceChildren(bar, parts.join(' · '));
   }
 
-  let liveFrame = 0;
+  // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
+  let drawnEntries: Transcript['entries'] = [];
+  let painting = 0;
+  let paintedLive = '';
+  // Everything a change puts on screen, at most once every PAINT_MS: a token arrives far more often
+  // than that, and each paint reads the layout and runs markdown over the whole streaming block.
   function render(): void {
+    if (!painting) painting = window.setTimeout(paint, PAINT_MS);
+  }
+
+  function paint(): void {
+    painting = 0;
     const stick = atBottom();
+    if (transcript.entries !== drawnEntries) drawEntries();
+    if (transcript.live !== paintedLive) {
+      paintedLive = transcript.live;
+      live.hidden = paintedLive === '';
+      live.innerHTML = paintedLive ? renderMarkdown(paintedLive) : '';
+    }
+    drawFoot();
+    if (stick) log.scrollTop = log.scrollHeight;
+  }
+
+  function drawEntries(): void {
+    drawnEntries = transcript.entries;
     transcript.entries.forEach((entry, index) => {
       if (drawn[index]?.entry === entry) return;
       const fresh = drawEntry(entry);
@@ -122,25 +147,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
         log.insertBefore(fresh.element, live);
       }
       fresh.element.classList.toggle('selected', index === selected);
-      if (fresh.fill) nearScreen.observe(fresh.element);
+      if (fresh.fill) {
+        unfilled.set(fresh.element, fresh.fill);
+        nearScreen.observe(fresh.element);
+      }
       drawn[index] = fresh;
     });
-    // Markdown for the streaming block once a frame, not once a token.
-    if (!liveFrame) {
-      liveFrame = requestAnimationFrame(() => {
-        liveFrame = 0;
-        live.hidden = transcript.live === '';
-        live.innerHTML = transcript.live ? renderMarkdown(transcript.live) : '';
-        if (stick) log.scrollTop = log.scrollHeight;
-      });
-    }
-    drawFoot();
-    if (stick) log.scrollTop = log.scrollHeight;
   }
 
   function measure(): void {
-    bridge.chatMeasure(slot).then((usage) => {
-      if (usage) context = usage.percentage;
+    bridge.chatMeasure(slot).then((percentage) => {
+      if (percentage !== null) context = percentage;
       drawFoot();
     }, () => undefined);
   }
@@ -149,6 +166,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
     ask.show(asks[0] ?? null);
     drawFoot();
   }
+
+  // An ask answered here or given up on in main. Only the first is ever on screen, so only its going
+  // changes the box.
+  function dropAsk(id: string): void {
+    const wasFirst = asks[0]?.id === id;
+    asks = asks.filter((each) => each.id !== id);
+    if (!wasFirst) return;
+    showAsk();
+    if (asks.length === 0 && seen()) prompt.focus();
+  }
+
+  const working = () => transcript.busy || asks.length > 0;
 
   // On screen and in front: the screen is not under a hidden view or page, and the window has focus.
   const seen = () => document.hasFocus() && element.closest('[hidden]') === null;
@@ -159,7 +188,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const content: ChatContent = [
       ...images.map((picture) => ({
         type: 'image' as const,
-        source: { type: 'base64' as const, media_type: picture.mediaType as typeof IMAGE_TYPES[number], data: picture.data },
+        source: { type: 'base64' as const, media_type: picture.mediaType as ImageType, data: picture.data },
       })),
       ...(text ? [{ type: 'text' as const, text }] : []),
     ];
@@ -231,7 +260,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     chosen.scrollIntoView({ block: 'nearest' });
   }
 
-  function configure(change: { model?: string; permissionMode?: PermissionMode }): void {
+  function configure(change: ChatPreferences): void {
     drawFoot();
     bridge.chatConfigure(slot, change).catch((error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
@@ -239,26 +268,27 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function readEarlier(): void {
     if (earlierRead) return;
     earlierRead = true;
-    bridge.chatRead(slot).then(({ messages }) => {
+    bridge.chatRead(slot).then((messages) => {
       // Something sent before the read came back is newer than anything in it.
       if (transcript.entries.length > 0) return;
       transcript = messages.reduce(applyMessage, transcript);
-      render();
+      paint();
       log.scrollTop = log.scrollHeight;
     }, (error: unknown) => options.onError(`Earlier conversation not read: ${failureText(error)}`));
+  }
+
+  function focus(): void {
+    if (asks.length > 0) ask.focus();
+    else prompt.focus();
   }
 
   return {
     element,
     open() {
       readEarlier();
-      if (asks.length > 0) ask.focus();
-      else prompt.focus();
+      focus();
     },
-    focus() {
-      if (asks.length > 0) ask.focus();
-      else prompt.focus();
-    },
+    focus,
     receive(event) {
       if (event.kind === 'ask') {
         asks = [...asks, event.ask];
@@ -269,15 +299,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
         if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(event.ask)}`, options.paneId);
         return;
       }
-      if (event.kind === 'ask-gone') {
-        const wasFirst = asks[0]?.id === event.id;
-        asks = asks.filter((each) => each.id !== event.id);
-        if (wasFirst) {
-          showAsk();
-          if (asks.length === 0 && seen()) prompt.focus();
-        }
-        return;
-      }
+      if (event.kind === 'ask-gone') return dropAsk(event.id);
       transcript = applyEvent(transcript, event);
       if (event.kind === 'message' && event.message.type === 'result') measure();
       render();
@@ -289,18 +311,21 @@ export function createChatView(options: ChatViewOptions): ChatView {
         const chosen = drawn[selected ?? -1]?.element;
         if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
       }
-      if (command === 'interrupt' && (transcript.busy || asks.length > 0)) bridge.chatInterrupt(slot);
+      if (command === 'interrupt' && working()) bridge.chatInterrupt(slot);
       if (command === 'model') configure({ model: (model = next(MODELS, model)) });
       if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through
       // doing would stop with nothing on screen saying so.
-      if (command === 'new' && (transcript.busy || asks.length > 0)) {
+      if (command === 'new' && working()) {
         options.onNotice('Claude is still working. Escape stops it; then start the new conversation.');
       } else if (command === 'new') {
         bridge.chatReset(slot);
         for (const entry of drawn) entry.element.remove();
+        nearScreen.disconnect();
+        unfilled.clear();
         transcript = EMPTY_TRANSCRIPT;
         drawn = [];
+        drawnEntries = [];
         selected = null;
         asks = [];
         context = null;

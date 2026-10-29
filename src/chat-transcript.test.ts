@@ -62,11 +62,17 @@ describe('applyMessage', () => {
     expect(transcript.entries).toEqual([{ kind: 'notice', text: 'too many' }]);
   });
 
-  it('takes the session, model and mode from init', () => {
-    const transcript = applyMessage(EMPTY_TRANSCRIPT, {
-      type: 'system', subtype: 'init', session_id: 's', model: 'opus', permissionMode: 'default',
-    });
-    expect([transcript.sessionId, transcript.model, transcript.permissionMode]).toEqual(['s', 'opus', 'default']);
+  it('takes the model from init', () => {
+    expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'init', model: 'opus' }).model).toBe('opus');
+  });
+
+  it('cuts a long tool output when it arrives', () => {
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }]),
+      { type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'x'.repeat(30_000) }] } },
+    ]);
+    const entry = transcript.entries[0];
+    expect(entry.kind === 'tool' && entry.result?.text).toMatch(/… 10000 more characters$/);
   });
 });
 

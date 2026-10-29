@@ -1,6 +1,7 @@
 import type { PermissionMode, PermissionResult, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { randomUUID } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
@@ -69,9 +70,18 @@ function claudeExecutable(): string {
     .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 }
 
-// The messages the pane reads. The rest — hook progress, rate limit events, task updates — are left on
-// this side of the wire rather than sent to every screen on every token.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'stream_event']);
+// The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
+// streamed events everything but a block starting and text arriving — are left on this side of the
+// wire rather than sent to every screen on every token. A Write streams the whole file as its input.
+const RELAYED = new Set(['assistant', 'user', 'result', 'system']);
+const RELAYED_STREAM = new Set(['content_block_start', 'text_delta']);
+
+function relayed(message: { type: string; event?: unknown }): boolean {
+  if (message.type !== 'stream_event') return RELAYED.has(message.type);
+  const event = isRecord(message.event) ? message.event : {};
+  const delta = isRecord(event.delta) ? event.delta.type : undefined;
+  return RELAYED_STREAM.has(String(event.type)) || RELAYED_STREAM.has(String(delta));
+}
 
 // A file that is missing, unreadable or not what this app wrote reads as nothing remembered: the cost
 // is a new conversation where the last one would have been resumed.
@@ -96,19 +106,19 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     if (id === undefined) delete remembered[projectPath];
     else remembered[projectPath] = id;
     try {
-      writeFileSync(file, JSON.stringify(remembered, null, 2));
+      replaceFile(file, JSON.stringify(remembered, null, 2));
     } catch {
       // ponytail: a write that fails costs the resume on the next launch and nothing else.
     }
   }
 
-  function ask(slot: number, session: Session, ask: Omit<PermissionAsk, 'id'>, signal: AbortSignal): Promise<PermissionResult> {
+  function ask(slot: number, asks: Session['asks'], ask: Omit<PermissionAsk, 'id'>, signal: AbortSignal): Promise<PermissionResult> {
     const id = randomUUID();
     host.send(slot, { kind: 'ask', ask: { ...ask, id } });
     return new Promise((resolve) => {
-      session.asks.set(id, resolve);
+      asks.set(id, resolve);
       signal.addEventListener('abort', () => {
-        session.asks.delete(id);
+        asks.delete(id);
         host.send(slot, { kind: 'ask-gone', id });
         resolve({ behavior: 'deny', message: 'Interrupted.' });
       }, { once: true });
@@ -121,8 +131,8 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     const sessionId = resume ?? randomUUID();
     if (!resume) remember(projectPath, sessionId);
     const input = inputQueue<SDKUserMessage>();
-    const session = { input, asks: new Map(), stopped: false } as unknown as Session;
-    session.query = query({
+    const asks: Session['asks'] = new Map();
+    const session: Session = { input, asks, stopped: false, query: query({
       prompt: input,
       options: {
         cwd: projectPath,
@@ -132,7 +142,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         includePartialMessages: true,
         pathToClaudeCodeExecutable: claudeExecutable(),
         systemPrompt: { type: 'preset', preset: 'claude_code' },
-        canUseTool: (toolName, toolInput, options) => ask(slot, session, {
+        canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
           toolName,
           input: toolInput,
           title: options.title,
@@ -142,12 +152,12 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
           suppressAlwaysAllowRule: options.suppressAlwaysAllowRule === true,
         }, options.signal),
       },
-    });
+    }) };
     void (async () => {
       let error: string | null = null;
       try {
         for await (const message of session.query) {
-          if (RELAYED.has(message.type)) host.send(slot, { kind: 'message', message: message as unknown as Record<string, unknown> });
+          if (relayed(message)) host.send(slot, { kind: 'message', message: message as unknown as Record<string, unknown> });
         }
       } catch (thrown: unknown) {
         error = failureText(thrown);
@@ -205,8 +215,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   table.handle('chat:measure', async (_screen, slot: number) => {
     const session = await sessions.get(slot);
     if (!session) return null;
-    const usage = await session.query.getContextUsage({ detail: 'summary' });
-    return { percentage: usage.percentage, totalTokens: usage.totalTokens, maxTokens: usage.maxTokens };
+    return (await session.query.getContextUsage({ detail: 'summary' })).percentage;
   });
 
   // The conversation this page would resume, read back from its transcript so the pane can draw it
@@ -214,15 +223,14 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   table.handle('chat:read', async (_screen, slot: number) => {
     const projectPath = host.projectPath(slot);
     const sessionId = projectPath === undefined ? undefined : remembered[projectPath];
-    if (projectPath === undefined || sessionId === undefined) return { sessionId: null, messages: [] };
+    if (projectPath === undefined || sessionId === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
-    return { sessionId, messages: await getSessionMessages(sessionId, { dir: projectPath }) };
+    return getSessionMessages(sessionId, { dir: projectPath });
   });
 
   function stop(slot: number): void {
     const session = sessions.get(slot);
     sessions.delete(slot);
-    preferences.delete(slot);
     void session?.then((running) => {
       running.stopped = true;
       running.input.close();
@@ -234,11 +242,14 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   // starts fresh. The old transcript stays on disk for whatever lists sessions later.
   table.on('chat:reset', (_screen, slot: number) => {
     const projectPath = host.projectPath(slot);
-    const kept = preferences.get(slot);
     stop(slot);
-    if (kept) preferences.set(slot, kept);
     if (projectPath !== undefined) remember(projectPath, undefined);
   });
 
-  return { stop, stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); } };
+  return {
+    // A closed project's choices go with it: a project opened later into the same slot starts on
+    // the defaults.
+    stop: (slot) => { stop(slot); preferences.delete(slot); },
+    stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
+  };
 }

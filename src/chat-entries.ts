@@ -11,10 +11,6 @@ import type { ChatEntry, ChatImage, ToolResult } from './chat-transcript';
 
 export type DrawnEntry = { entry: ChatEntry; element: HTMLElement; fill: (() => void) | null };
 
-// A tool's output past this is cut. A `cat` of a lockfile is a hundred thousand lines nobody reads in
-// a chat, and the DOM pays for every one of them.
-const RESULT_LIMIT = 20_000;
-
 function images(list: ChatImage[]): HTMLImageElement[] {
   return list.flatMap((picture) => {
     const source = safeImage(`data:${picture.mediaType};base64,${picture.data}`);
@@ -52,10 +48,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     parts.push(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2)));
   }
   if (result) {
-    const text = result.text.length > RESULT_LIMIT
-      ? `${result.text.slice(0, RESULT_LIMIT)}\n… ${result.text.length - RESULT_LIMIT} more characters`
-      : result.text;
-    if (text) parts.push(preformatted(result.isError ? 'chat-output chat-error' : 'chat-output', text));
+    if (result.text) parts.push(preformatted(result.isError ? 'chat-output chat-error' : 'chat-output', result.text));
     parts.push(...images(result.images));
   }
   return parts;
@@ -65,9 +58,10 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
   const element = document.createElement('details');
   element.className = 'chat-entry chat-tool';
   const summary = document.createElement('summary');
+  const [look, mark] = entry.result === null ? ['running', '…'] : entry.result.isError ? ['failed', '✗'] : ['', '✓'];
   const state = document.createElement('span');
-  state.className = entry.result === null ? 'chat-tool-state running' : entry.result.isError ? 'chat-tool-state failed' : 'chat-tool-state';
-  state.textContent = entry.result === null ? '…' : entry.result.isError ? '✗' : '✓';
+  state.className = `chat-tool-state ${look}`.trim();
+  state.textContent = mark;
   const name = document.createElement('b');
   name.textContent = entry.name;
   const about = document.createElement('span');

@@ -11,7 +11,15 @@ export type ChatEvent =
   | { kind: 'ask-gone'; id: string }
   | { kind: 'ended'; error: string | null };
 
+// The images the API takes, and so the only ones a pasted image is sent as.
+export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
+export type ImageType = typeof IMAGE_TYPES[number];
+
 export type ChatImage = { mediaType: string; data: string };
+
+// A tool's output past this is cut when it arrives. A `cat` of a lockfile is a hundred thousand
+// lines nobody reads in a chat, and the transcript would hold every one for the whole session.
+const RESULT_LIMIT = 20_000;
 export type ToolResult = { text: string; images: ChatImage[]; isError: boolean };
 
 // One block of the conversation as the pane draws it. An entry is replaced, never edited, when it
@@ -30,14 +38,11 @@ export type Transcript = {
   live: string;
   // Between sending a prompt and the turn's result. What Escape has something to interrupt in.
   busy: boolean;
-  sessionId: string | null;
+  // The model the session says it is on, for the foot line until a model is picked there.
   model: string | null;
-  permissionMode: string | null;
 };
 
-export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, sessionId: null, model: null, permissionMode: null,
-};
+export const EMPTY_TRANSCRIPT: Transcript = { entries: [], live: '', busy: false, model: null };
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -56,19 +61,16 @@ function blocksOf(content: unknown): Record<string, unknown>[] {
 
 function toolResult(block: Record<string, unknown>): ToolResult {
   const blocks = blocksOf(block.content);
+  const said = blocks.filter((part) => part.type === 'text').map((part) => text(part.text)).join('\n');
   return {
-    text: blocks.filter((part) => part.type === 'text').map((part) => text(part.text)).join('\n'),
+    text: said.length > RESULT_LIMIT ? `${said.slice(0, RESULT_LIMIT)}\n… ${said.length - RESULT_LIMIT} more characters` : said,
     images: blocks.filter((part) => part.type === 'image').map(image).filter((part) => part !== null),
     isError: block.is_error === true,
   };
 }
 
 function withResult(entries: ChatEntry[], id: string, result: ToolResult): ChatEntry[] {
-  const index = entries.findLastIndex((entry) => entry.kind === 'tool' && entry.id === id);
-  if (index === -1) return entries;
-  const next = entries.slice();
-  next[index] = { ...(entries[index] as Extract<ChatEntry, { kind: 'tool' }>), result };
-  return next;
+  return entries.map((entry) => (entry.kind === 'tool' && entry.id === id ? { ...entry, result } : entry));
 }
 
 function assistant(transcript: Transcript, content: unknown): Transcript {
@@ -135,12 +137,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     }
     case 'system':
       if (message.subtype === 'init') {
-        return {
-          ...transcript,
-          sessionId: text(message.session_id) || transcript.sessionId,
-          model: text(message.model) || transcript.model,
-          permissionMode: text(message.permissionMode) || transcript.permissionMode,
-        };
+        return { ...transcript, model: text(message.model) || transcript.model };
       }
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
