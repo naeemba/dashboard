@@ -136,16 +136,24 @@ describe('sessionRequests', () => {
 
 describe('projectOfFolder', () => {
   const projects = [undefined, '/work/api', '/work/web'];
+  const asGiven = (path: string): string => path;
 
   it('finds the project from its checkout, anywhere inside it, or one of its worktrees', () => {
-    expect(projectOfFolder(projects, '/work/api')).toBe(1);
-    expect(projectOfFolder(projects, '/work/api/src')).toBe(1);
-    expect(projectOfFolder(projects, '/work/api.worktrees/fix-it')).toBe(1);
+    expect(projectOfFolder(projects, '/work/api', asGiven)).toBe(1);
+    expect(projectOfFolder(projects, '/work/api/src', asGiven)).toBe(1);
+    expect(projectOfFolder(projects, '/work/api.worktrees/fix-it', asGiven)).toBe(1);
   });
 
   // `/work/api-old` starts with `/work/api` and is a different folder.
   it('does not take a folder that only starts with the project\'s name', () => {
-    expect(projectOfFolder(projects, '/work/api-old')).toBe(-1);
-    expect(projectOfFolder(projects, '/elsewhere')).toBe(-1);
+    expect(projectOfFolder(projects, '/work/api-old', asGiven)).toBe(-1);
+    expect(projectOfFolder(projects, '/elsewhere', asGiven)).toBe(-1);
+  });
+
+  // ~/work is a symlink to /mnt/data, and the command reports the folder it really is in.
+  it('finds a project opened through a symlink', () => {
+    const real = (path: string): string => path.replace('/work/', '/mnt/data/');
+    expect(projectOfFolder(projects, '/mnt/data/api', real)).toBe(1);
+    expect(projectOfFolder(projects, '/mnt/data/api.worktrees/fix-it', real)).toBe(1);
   });
 });

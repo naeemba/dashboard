@@ -33,10 +33,15 @@ export type SessionPorts = {
 
 // Which open project a folder belongs to: its checkout, or anywhere in the folder its worktrees go,
 // which holds both a card's and a throwaway one — the same test the token figures count a session by.
-// -1 for a folder outside every one of them.
-export function projectOfFolder(projectPaths: readonly (string | undefined)[], directory: string): number {
+// -1 for a folder outside every one of them. Compared in real paths: the command's folder is its
+// process.cwd(), which has symlinks resolved, and a project opened through one keeps the spelling it
+// was opened by.
+export function projectOfFolder(
+  projectPaths: readonly (string | undefined)[], directory: string, realPath: (path: string) => string,
+): number {
+  const real = realPath(directory);
   return projectPaths.findIndex((projectPath) => (
-    projectPath !== undefined && ranInProject(directory, projectPath, worktreesRoot(projectPath))
+    projectPath !== undefined && ranInProject(real, realPath(projectPath), realPath(worktreesRoot(projectPath)))
   ));
 }
 

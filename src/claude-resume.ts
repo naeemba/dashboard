@@ -94,6 +94,19 @@ export function agentToResume(
   ));
 }
 
+// What a project's saved first pane comes back as. Main resumes it when it ran in the project's
+// checkout, compared in real paths for the reason agentToResume gives. Anything else was not main's: a
+// session.json from before main existed held the first of five shells there, often a card's agent, and
+// that one comes back in a worker rather than being dropped or handed to main.
+export function mainResume(
+  saved: PaneConversation | null,
+  projectPath: string,
+  realPath: (path: string) => string,
+): { session?: string; worker?: PaneConversation } {
+  if (saved === null) return {};
+  return realPath(saved.directory) === realPath(projectPath) ? { session: saved.session } : { worker: saved };
+}
+
 // Typed into the pane's own shell rather than run as the pane's process, so exiting Claude leaves a
 // prompt instead of a dead pane.
 export function resumeLine(conversation: PaneConversation): string {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agentToResume, isPaneConversation, resumable, resumeLine, sessionToWrite, withClaude, type PaneConversation,
+  agentToResume, isPaneConversation, mainResume, resumable, resumeLine, sessionToWrite, withClaude, type PaneConversation,
 } from './claude-resume';
 import type { WorktreeEntry } from './worktree-store';
 
@@ -126,6 +126,30 @@ describe('agentToResume', () => {
     const real = (path: string): string => path.replace('/work/', '/mnt/data/');
     const recorded = conversation(ID, '/mnt/data/api.worktrees/fix-login');
     expect(agentToResume([card], inPane2, recorded, '/work/api', 2, real)).toBe(card);
+  });
+});
+
+describe('mainResume', () => {
+  const asGiven = (path: string): string => path;
+
+  it('resumes main from a conversation in the project\'s checkout', () => {
+    expect(mainResume(conversation(ID), '/work/api', asGiven)).toEqual({ session: ID });
+  });
+
+  // Opened through a symlink: Claude Code recorded the folder it really is.
+  it('matches the checkout through its real path', () => {
+    const real = (path: string): string => path.replace('/work/', '/mnt/data/');
+    expect(mainResume(conversation(ID, '/mnt/data/api'), '/work/api', real)).toEqual({ session: ID });
+  });
+
+  // A session.json from before main held a card's agent in the first pane.
+  it('hands a conversation from anywhere else to a worker rather than to main', () => {
+    const inWorktree = conversation(ID, '/work/api.worktrees/fix-login');
+    expect(mainResume(inWorktree, '/work/api', asGiven)).toEqual({ worker: inWorktree });
+  });
+
+  it('starts main fresh when nothing was saved', () => {
+    expect(mainResume(null, '/work/api', asGiven)).toEqual({});
   });
 });
 

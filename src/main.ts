@@ -37,7 +37,7 @@ import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-e
 import { registerLog } from './log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
 import { sessionStore } from './session-store';
-import { agentToResume, resumeLine, type PaneConversation } from './claude-resume';
+import { agentToResume, mainResume, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { keepHostToken } from './host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
@@ -488,22 +488,26 @@ function spawnTerminal(id: string): void {
 }
 
 // A project starts with its main session, plus a worker for each pane that was running Claude Code when
-// the app last quit — session-store.ts says when it was. Main resumes its own conversation when it had
-// one in the project's checkout; one it had anywhere else is not the project's session to come back as.
+// the app last quit — session-store.ts says when it was. Which of the first pane's comes back as main
+// is mainResume's; one that was not main's comes back in a worker after the rest.
 // The editor is registered but not started: opening nine projects should not launch nine editors, each
 // with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
   const mainId = terminalId(projectIndex, MAIN_INDEX);
-  const resume = claudeSessions.takeResume(project.path, MAIN_INDEX, mainId);
-  const session = resume?.directory === project.path ? resume.session : undefined;
-  terminalCommands.set(mainId, { args: mainArguments(shellCommand, project.path, session), directory: project.path });
+  const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, mainId), project.path, realPath);
+  terminalCommands.set(mainId, { args: mainArguments(shellCommand, project.path, first.session), directory: project.path });
   spawnTerminal(mainId);
   for (const index of claudeSessions.owedResumes(project.path)) {
     const id = terminalId(projectIndex, index);
     const owed = claudeSessions.takeResume(project.path, index, id);
     terminalCommands.set(id, { args: [], directory: project.path });
     if (owed !== null) resumeIn(id, project.path, index, owed);
+  }
+  if (first.worker) {
+    const id = terminalId(projectIndex, nextPaneIndex(openPanes(projectIndex)));
+    terminalCommands.set(id, { args: [], directory: project.path });
+    resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
 }
@@ -512,10 +516,10 @@ function spawnProject(project: Project, projectIndex: number): void {
 // says which sessions those are. Its record names the pane again, so the status bar prints the branch,
 // a second ship of the card is refused, and the review sweep waits for it rather than starting beside
 // it. Any other session is typed into a shell in its folder, so exiting it leaves a prompt.
-function resumeIn(id: string, projectPath: string, index: number, resume: PaneConversation): void {
-  const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, index, realPath);
+function resumeIn(id: string, projectPath: string, savedIndex: number, resume: PaneConversation): void {
+  const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, savedIndex, realPath);
   if (card !== undefined) {
-    recordWorktree({ ...card, pane: index });
+    recordWorktree({ ...card, pane: paneFromId(id).index });
     startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));
     return;
   }
@@ -908,7 +912,7 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // The `session` command. Every decision is session-requests.ts's; what is handed over here is the panes
 // and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
 const sessions = listenForSessions(sessionSocket, sessionRequests({
-  slotOf: (directory) => projectOfFolder(projects.map((project) => project?.path), directory),
+  slotOf: (directory) => projectOfFolder(projects.map((project) => project?.path), directory, realPath),
   projectPath: (slot) => projects[slot]?.path,
   openPanes,
   agentIn: (id) => runsAnAgent(terminalCommands.get(id)),
