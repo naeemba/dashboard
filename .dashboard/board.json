@@ -19,12 +19,6 @@
           "parent": null,
           "createdAt": "2026-10-29T11:44:11.602Z",
           "updatedAt": "2026-10-29T11:44:11.602Z"
-        },
-        {
-          "id": "655f99f4-0179-4ebd-9a3a-3ad05387cb1d",
-          "title": "Investigate the Claude screen's bugs and bring it to parity with Claude Code",
-          "notes": "The Claude screen (Ctrl+Shift+A, from #83) has bugs found on first use. Investigate it end to end in the running app and fix what is broken.\n\nThen close the gap with Claude Code: list every feature the Claude Code TUI has that this screen lacks, and build them. Known gaps from the #83 card: slash commands (skills like /pr-loop, /rebuild, /work-card must work), plan mode, the /resume picker.\n\nThis comes before moving the main and worker panes onto the chat view; that move only makes sense once the screen can do what the terminal does.",
-          "priority": "high"
         }
       ]
     },
@@ -107,7 +101,16 @@
     },
     {
       "name": "Ship",
-      "cards": []
+      "cards": [
+        {
+          "id": "655f99f4-0179-4ebd-9a3a-3ad05387cb1d",
+          "title": "Investigate the Claude screen's bugs and bring it to parity with Claude Code",
+          "notes": "The Claude screen (Ctrl+Shift+A, from #83) has bugs found on first use. Investigate it end to end in the running app and fix what is broken.\n\nThen close the gap with Claude Code: list every feature the Claude Code TUI has that this screen lacks, and build them. Known gaps from the #83 card: slash commands (skills like /pr-loop, /rebuild, /work-card must work), plan mode, the /resume picker.\n\nThis comes before moving the main and worker panes onto the chat view; that move only makes sense once the screen can do what the terminal does.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-29T15:14:52.193Z"
+        }
+      ]
     },
     {
       "name": "Doing",
