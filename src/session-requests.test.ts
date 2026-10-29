@@ -14,6 +14,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
     openPanes: () => open,
     agentIn: (id) => agents.has(id),
+    busyWith: (id) => (agents.has(id) ? 'an agent' : null),
     directoryOf: () => '/work/api',
     shellCommand: () => '/bin/zsh',
     openWorker: () => {
@@ -123,6 +124,49 @@ describe('sessionRequests', () => {
     expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n').map((line) => line.split('\t')[2]))
       .toEqual(['main', 'blocked', 'idle']);
     expect(await answer({ directory: '/work/api', args: ['notify', '2:7', 'done'] })).toMatchObject({ ok: false });
+  });
+
+  // A follow-up typed into a finished worker, or a permission answered, puts it back to work.
+  it('lists a worker as running again once its hooks say so', async () => {
+    const { ports } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    const stateOfWorker = async () => (await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2];
+    await answer({ directory: '/work/api', args: ['notify', '2:1', 'blocked'] });
+    expect(await stateOfWorker()).toBe('blocked');
+    await answer({ directory: '/work/api', args: ['notify', '2:1', 'running'] });
+    expect(await stateOfWorker()).toBe('running');
+  });
+
+  // A dev server started by hand in a worker, or a card's agent a ship started: neither is main's to kill.
+  it('runs in and releases only a pane nobody else is using', async () => {
+    const programs = new Map([['2:1', 'npm'], ['2:2', 'an agent']]);
+    const { ports, closed, started } = project({ busyWith: (id) => programs.get(id) ?? null });
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    expect(await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] }))
+      .toEqual({ ok: false, output: '2:1 is running npm — claim another' });
+    expect(started).toEqual([]);
+    expect(await answer({ directory: '/work/api', args: ['release', '2:2'] }))
+      .toMatchObject({ ok: false, output: expect.stringContaining('which no session run started') });
+    expect(closed).toEqual([]);
+    expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2]).toBe('busy npm');
+  });
+
+  // The first worker has exited, so the pane is free; a second throwaway would make release forget it.
+  it('refuses a second throwaway worktree in a pane that still holds one', async () => {
+    const { ports, started } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'fix the tests'] });
+    ports.agentIn = () => false;
+    ports.busyWith = () => null;
+    expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'again'] })).toEqual({
+      ok: false, output: '2:1 still holds /work/api.worktrees/fix-the-tests — release it first',
+    });
+    expect(started).toHaveLength(1);
   });
 
   it('says a step failed rather than throwing', async () => {

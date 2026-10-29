@@ -44,6 +44,8 @@ import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from 
 import { changedFiles, oneAtATime } from './ship';
 import {
   freePane,
+  paneIsBusy,
+  programIn,
   runsAnAgent,
   shipCanTake,
   type PaneCommand, type PaneReading, type PaneUse,
@@ -916,6 +918,11 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   projectPath: (slot) => projects[slot]?.path,
   openPanes,
   agentIn: (id) => runsAnAgent(terminalCommands.get(id)),
+  busyWith(id) {
+    const { slot, index } = paneFromId(id);
+    const reading = paneReadingsIn(slot).find((pane) => pane.index === index);
+    return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
+  },
   directoryOf: (id) => terminalCommands.get(id)?.directory,
   shellCommand: () => shellCommand,
   openWorker,

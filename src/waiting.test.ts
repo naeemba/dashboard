@@ -102,5 +102,6 @@ describe('markRings', () => {
   it('rings for a worker blocked on a permission and not for one that is done', () => {
     expect(markRings('blocked')).toBe(true);
     expect(markRings('done')).toBe(false);
+    expect(markRings('running')).toBe(false);
   });
 });

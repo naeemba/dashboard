@@ -381,10 +381,12 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     });
     // A worker's hooks. Blocked is a question waiting on you, so it rings the way a bell that turned
     // out to be a question does; done is drawn on the box and nothing more — main is the one it is
-    // for. The pane you are looking at is not marked, for the reason marksWaiting gives.
+    // for. The pane you are looking at is not marked, for the reason marksWaiting gives. Running is the
+    // worker back at work, which takes either mark off wherever you are looking.
     markersById.set(id, (state) => {
-      if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
-      container.dataset.mark = state;
+      if (state === 'running') delete container.dataset.mark;
+      else if (marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) container.dataset.mark = state;
+      else return;
       if (markRings(state)) ring('is waiting on a permission');
       options.onChanged();
     });

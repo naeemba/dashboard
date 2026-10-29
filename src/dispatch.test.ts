@@ -42,6 +42,13 @@ describe('workerSettings', () => {
     expect(settings.hooks.Notification[0].matcher).toBe('permission_prompt');
     expect(settings.hooks.Notification[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 blocked');
   });
+
+  // A follow-up typed into a finished worker, or a permission answered, puts it back to work.
+  it('reports running when a prompt is submitted or a tool has run', () => {
+    const settings = JSON.parse(workerSettings('2:3'));
+    expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
+    expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
+  });
 });
 
 describe('workerArguments', () => {

@@ -33,8 +33,9 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['release'])).toMatchObject({ ok: false });
   });
 
-  it('reads the two things a worker\'s hooks report and nothing else', () => {
+  it('reads the three things a worker\'s hooks report and nothing else', () => {
     expect(parseSessionCommand(['notify', '2:3', 'blocked'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'blocked' } });
+    expect(parseSessionCommand(['notify', '2:3', 'running'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'running' } });
     expect(parseSessionCommand(['notify', '2:3', 'finished'])).toMatchObject({ ok: false });
   });
 

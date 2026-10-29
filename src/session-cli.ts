@@ -2,7 +2,8 @@
 // so a typo is answered without the app, and by main, which answers the rest. One parser, because the
 // command and the app it talks to are built from the same tree and must not disagree on a spelling.
 
-export type WorkerState = 'blocked' | 'done';
+// Running is a worker back at work after either: a prompt submitted or a tool run.
+export type WorkerState = 'running' | 'blocked' | 'done';
 
 export type SessionCommand =
   | { kind: 'claim' }
@@ -22,7 +23,7 @@ export const SESSION_USAGE = `session — the Dashboard panes of the project you
   session run <id> [--card <card id> | --worktree] "<prompt>"
   session list
   session release <id>
-  session notify <id> blocked|done
+  session notify <id> running|blocked|done
 
 claim opens a worker pane and prints its id. run starts Claude in it with the prompt as its argument:
 --card runs it in the worktree the card was shipped into, --worktree in a throwaway one that release
@@ -76,7 +77,9 @@ export function parseSessionCommand(args: readonly string[]): Parsed {
       const id = paneId(rest[0], 'notify');
       if (typeof id !== 'string') return id;
       const state = rest[1];
-      if (state !== 'blocked' && state !== 'done') return refuse('session notify takes blocked or done');
+      if (state !== 'running' && state !== 'blocked' && state !== 'done') {
+        return refuse('session notify takes running, blocked or done');
+      }
       return { ok: true, command: { kind: 'notify', id, state } };
     }
     default: return refuse(verb === undefined ? SESSION_USAGE : `no such command: ${verb}\n\n${SESSION_USAGE}`);

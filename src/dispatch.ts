@@ -62,13 +62,17 @@ export function mainArguments(shellCommand: string, projectPath: string, resume?
 // The hooks a worker runs under, beside whatever the user's own settings hold. Stop is the end of the
 // worker's turn, which for a worker given one task is the task finished or given up on — so main
 // hears about a worker that crashed or forgot to write. permission_prompt is the one Notification
-// that needs a person; the app marks the pane and raises a banner. Neither reads the pane's screen.
+// that needs a person; the app marks the pane and raises a banner. A prompt submitted, or a tool that
+// has run (so any permission was granted), is the worker back at work, which takes either mark off.
+// None of them reads the pane's screen.
 export function workerSettings(id: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
   return JSON.stringify({
     hooks: {
       Stop: [{ hooks: [notify('done')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
+      UserPromptSubmit: [{ hooks: [notify('running')] }],
+      PostToolUse: [{ hooks: [notify('running')] }],
     },
   });
 }

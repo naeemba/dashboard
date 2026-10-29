@@ -17,6 +17,8 @@ export type SessionPorts = {
   // The project's open terminals, ascending, main first.
   openPanes(slot: number): readonly number[];
   agentIn(id: string): boolean;
+  // What is running in the pane when something is (pane-reading.ts's paneIsBusy), or null.
+  busyWith(id: string): string | null;
   directoryOf(id: string): string | undefined;
   shellCommand(): string;
   // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
@@ -54,6 +56,9 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   const states = new Map<string, WorkerState>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, string>();
+  // The workers this session started. Any other pane with something running in it is somebody else's —
+  // a dev server, a card a ship gave an agent — and release would kill it.
+  const started = new Set<string>();
 
   // A worker of the asking project that is open, or why it is not one. Main and the editor are never a
   // worker: one is where the asking happens, the other holds nvim.
@@ -67,7 +72,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
 
   function stateOf(id: string): string {
     if (paneFromId(id).index === MAIN_INDEX) return 'main';
-    if (!ports.agentIn(id)) return 'idle';
+    if (!ports.agentIn(id)) {
+      const program = ports.busyWith(id);
+      return program === null ? 'idle' : `busy ${program}`;
+    }
     return states.get(id) ?? 'running';
   }
 
@@ -75,6 +83,11 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     if (ports.agentIn(id)) return refused(`${id} already has a worker running — release it or claim another`);
+    const program = ports.busyWith(id);
+    if (program !== null) return refused(`${id} is running ${program} — claim another`);
+    // One throwaway per pane, or release would forget the first.
+    const held = throwaways.get(id);
+    if (worktree && held !== undefined) return refused(`${id} still holds ${held} — release it first`);
     let directory = projectPath;
     if (card !== null) {
       const found = ports.cardWorktree(projectPath, card);
@@ -88,6 +101,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     }
     const { index } = paneFromId(id);
     states.delete(id);
+    started.add(id);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt), card);
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}`);
   }
@@ -95,8 +109,11 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   async function release(id: string, slot: number, projectPath: string): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
+    const program = ports.busyWith(id);
+    if (program !== null && !started.has(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
+    started.delete(id);
     const throwaway = throwaways.get(id);
     throwaways.delete(id);
     if (throwaway === undefined) return answered(`released ${id}`);
@@ -121,7 +138,8 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     if (command.kind === 'notify') {
       const { slot, index } = paneFromId(command.id);
       if (!ports.openPanes(slot).includes(index)) return refused(`${command.id} is not open`);
-      states.set(command.id, command.state);
+      if (command.state === 'running') states.delete(command.id);
+      else states.set(command.id, command.state);
       ports.mark(command.id, command.state);
       return answered('');
     }
