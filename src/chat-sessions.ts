@@ -1,4 +1,5 @@
 import type { PermissionMode, PermissionResult, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { replaceFile } from './board-store';
@@ -78,6 +79,24 @@ function claudeExecutable(): string {
   return found.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 }
 
+// The PATH a pane's shell builds from its startup files, which the app itself never read when it was
+// started from a launcher: without it a hook running `node` or an MCP server started with `npx` works
+// for `claude` typed in a pane and not here. An interactive shell may print a banner first, so the
+// PATH is the last line; anything that goes wrong leaves the app's own.
+export function pathFromShell(output: string, fallback: string): string {
+  return output.split('\n').pop()?.trim() || fallback;
+}
+
+function loginShellPath(fallback: string): Promise<string> {
+  const shell = process.env.SHELL;
+  if (!shell || process.platform === 'win32') return Promise.resolve(fallback);
+  return new Promise((resolve) => {
+    execFile(shell, ['-ilc', 'printf %s "$PATH"'], { timeout: 5000, encoding: 'utf8' }, (error, output) => {
+      resolve(error ? fallback : pathFromShell(output, fallback));
+    });
+  });
+}
+
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
 // streamed events everything but a block starting and text arriving — are left on this side of the
 // wire rather than sent to every screen on every token. A Write streams the whole file as its input.
@@ -109,6 +128,8 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   const preferences = new Map<number, ChatPreferences>();
   const file = path.join(host.userData, 'chat-sessions.json');
   const remembered = rememberedSessions(file);
+  // Read once, the first time a session starts, rather than at launch for a screen that may never be used.
+  let shellPath: Promise<string> | undefined;
 
   function remember(projectPath: string, id: string | undefined): void {
     if (id === undefined) delete remembered[projectPath];
@@ -135,6 +156,8 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
 
   async function start(slot: number, projectPath: string): Promise<Session> {
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
+    shellPath ??= loginShellPath(host.environment.PATH ?? '');
+    const environment = { ...host.environment, PATH: await shellPath };
     // Before an id is remembered: a binary that is not there would otherwise leave the next launch
     // resuming a conversation that never started.
     const executable = claudeExecutable();
@@ -149,7 +172,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         cwd: projectPath,
         ...(resume ? { resume } : { sessionId }),
         ...preferences.get(slot),
-        env: host.environment,
+        env: environment,
         includePartialMessages: true,
         pathToClaudeCodeExecutable: executable,
         systemPrompt: { type: 'preset', preset: 'claude_code' },

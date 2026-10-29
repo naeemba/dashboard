@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { inputQueue, rememberedSessions } from './chat-sessions';
+import { inputQueue, pathFromShell, rememberedSessions } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -49,4 +49,11 @@ describe('rememberedSessions', () => {
     expect(rememberedSessions(file('broken.json', '{'))).toEqual({});
     expect(rememberedSessions(file('list.json', '["id"]'))).toEqual({});
   });
+});
+
+describe('pathFromShell', () => {
+  it('takes the last line, past whatever the shell printed on start', () => {
+    expect(pathFromShell('Welcome back\n/home/me/.nvm/bin:/usr/bin', '/usr/bin')).toBe('/home/me/.nvm/bin:/usr/bin');
+  });
+  it('keeps the app\'s own when the shell said nothing', () => expect(pathFromShell('', '/usr/bin')).toBe('/usr/bin'));
 });
