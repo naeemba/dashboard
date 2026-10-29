@@ -63,11 +63,19 @@ export function inputQueue<T>(): InputQueue<T> {
 
 // The CLI the SDK drives, from the platform package npm installed beside it. Named here rather than
 // left to the SDK because a packaged app keeps it in app.asar.unpacked: nothing can be executed from
-// inside an asar, and the SDK would find the copy inside it.
+// inside an asar, and the SDK would find the copy inside it. On a musl Linux npm installs the `-musl`
+// package instead, so that name is tried when the plain one is not there.
 function claudeExecutable(): string {
   const binary = process.platform === 'win32' ? 'claude.exe' : 'claude';
-  return require.resolve(`@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}/${binary}`)
-    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  const name = `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`;
+  let found: string;
+  try {
+    found = require.resolve(`${name}/${binary}`);
+  } catch (error) {
+    if (process.platform !== 'linux') throw error;
+    found = require.resolve(`${name}-musl/${binary}`);
+  }
+  return found.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 }
 
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
@@ -127,6 +135,9 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
 
   async function start(slot: number, projectPath: string): Promise<Session> {
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
+    // Before an id is remembered: a binary that is not there would otherwise leave the next launch
+    // resuming a conversation that never started.
+    const executable = claudeExecutable();
     const resume = remembered[projectPath];
     const sessionId = resume ?? randomUUID();
     if (!resume) remember(projectPath, sessionId);
@@ -140,7 +151,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         ...preferences.get(slot),
         env: host.environment,
         includePartialMessages: true,
-        pathToClaudeCodeExecutable: claudeExecutable(),
+        pathToClaudeCodeExecutable: executable,
         systemPrompt: { type: 'preset', preset: 'claude_code' },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
           toolName,

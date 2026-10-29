@@ -24,6 +24,8 @@ const keep = [
   `${nodePty}/build/Release/spawn-helper`,
   agentSdk,
   agentBinary,
+  // npm installs this one instead on a musl Linux; a path in `keep` that is not there costs nothing.
+  `${agentBinary}-musl`,
 ];
 
 const config: ForgeConfig = {
