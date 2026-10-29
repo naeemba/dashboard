@@ -2,7 +2,14 @@
   "columns": [
     {
       "name": "Backlog",
-      "cards": []
+      "cards": [
+        {
+          "id": "7ade5b82-4ab9-4cec-8dae-f4c4726ca610",
+          "title": "Add a per-project docs directory with one brief spec per change",
+          "notes": "Every project gets a docs directory holding one short spec per change, so a developer can review and check it later. This is project-level and lasts, unlike the per-session specs superpowers writes for each feature.\n\nEach spec is brief but complete: what changed, why, when, and why this approach was chosen over the alternatives.\n\nSuggested improvements: one file per change, named by date and topic. A fixed short template (Context, Decision, Alternatives considered, Consequences, Status) so every spec reads the same. A hard length cap of about one page. Link each spec to its board card and pull request. Mark superseded specs instead of deleting them. A docs index listing specs newest first. Decide whether the session specs from superpowers get promoted into this directory when the change merges.",
+          "priority": "medium"
+        }
+      ]
     },
     {
       "name": "Todo",
