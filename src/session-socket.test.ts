@@ -31,8 +31,11 @@ describe('sessionSocketPath', () => {
 
   // Quitting removes this folder recursively, so it is only ever the one made for the socket.
   it('names the folder it made for the socket, and none for a pipe', () => {
-    const socket = sessionSocketPath('linux', folder('socket-test-'), 42);
+    const temporary = folder('socket-test-');
+    const socket = sessionSocketPath('linux', temporary, 42);
     expect(sessionSocketFolder('linux', socket)).toBe(path.dirname(socket));
+    // A child of the temporary folder, never the folder itself, or quitting would empty /tmp.
+    expect(path.dirname(sessionSocketFolder('linux', socket)!)).toBe(temporary);
     expect(sessionSocketFolder('win32', sessionSocketPath('win32', 'C:\\Temp', 42))).toBeNull();
   });
 });
