@@ -17,7 +17,7 @@ function store() {
   directories.push(directory);
   const file = path.join(directory, 'session.json');
   const table = channels();
-  sessionStore(table, file, () => -1);
+  sessionStore(table, file, () => -1, () => false);
   return { table, file };
 }
 

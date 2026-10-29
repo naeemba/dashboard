@@ -226,6 +226,12 @@ release removes it only once `unfinishedWork` in finished-work.ts says its work 
 and has a pull request. Kept otherwise, and the reply says why. Which pane held it lives in memory, so
 a restart forgets it and it is left for the manager's list to remove.
 
+**Release kills only main's worker, while it is still there.** main.ts keeps one record of the panes
+holding main's worker now: a session run adds the pane, and the agent exiting, anything else started in
+the pane, or the pane closing takes it out. session.json marks those panes `dispatched`, so after a
+restart they come back as main's workers, resumed as the pane's agent with the worker's flags, and no
+other conversation does: a card's agent a ship started, or a Claude you opened by hand, is refused.
+
 Watch for: worker numbers stay put while others close, and a new one takes the lowest number free,
 so it can appear in the middle of the list. Workers come back after a restart only when they were
 running Claude Code; a plain shell worker does not.

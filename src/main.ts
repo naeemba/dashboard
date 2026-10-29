@@ -15,7 +15,7 @@ import { registerTasks } from './task-runner';
 import { openAppWindow } from './app-window';
 import { EDITOR_INDEX, MAIN_INDEX, paneFromId, sizeOfPane, terminalId } from './terminals';
 import { nextPaneIndex } from './pane-layout';
-import { mainArguments } from './dispatch';
+import { mainArguments, workerResumeArguments } from './dispatch';
 import { projectOfFolder, sessionRequests } from './session-requests';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
 import { unfinishedWork } from './finished-work';
@@ -37,7 +37,7 @@ import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-e
 import { registerLog } from './log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
 import { sessionStore } from './session-store';
-import { agentToResume, mainResume, resumeLine, type PaneConversation } from './claude-resume';
+import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation } from './claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from './working-panes';
 import { keepHostToken } from './host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
@@ -316,6 +316,7 @@ function agentWorksIn(slot: number, pane: number | null): boolean {
 //
 // Main is the exception: it is the project's session, so Enter there starts it again.
 function releaseAgentPane(id: string): void {
+  mainsWorkers.delete(id);
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command) || paneFromId(id).index === MAIN_INDEX) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
@@ -517,24 +518,26 @@ function spawnProject(project: Project, projectIndex: number): void {
 // A session that ran as a card's agent comes back as it, exactly as the ship started it; agentToResume
 // says which sessions those are. Its record names the pane again, so the status bar prints the branch,
 // a second ship of the card is refused, and the review sweep waits for it rather than starting beside
-// it. Any other session is typed into a shell in its folder, so exiting it leaves a prompt.
+// it. A worker main dispatched comes back as main's again; resumedAs says how each one comes back.
 function resumeIn(id: string, projectPath: string, savedIndex: number, resume: PaneConversation): void {
   const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, savedIndex, realPath);
-  if (card !== undefined) {
-    recordWorktree({ ...card, pane: paneFromId(id).index });
-    startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));
-  } else {
+  const as = resumedAs(resume, card);
+  if (card !== undefined) recordWorktree({ ...card, pane: paneFromId(id).index });
+  if (as === 'shell') {
     terminalCommands.set(id, { args: [], directory: resume.directory });
     spawnTerminal(id);
     shells.get(id)?.write(resumeLine(resume));
+    return;
   }
-  resumedPanes.add(id);
+  const args = as === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
+  startAgent(id, card?.worktreePath ?? resume.directory, args);
+  if (as === 'worker') mainsWorkers.add(id);
 }
 
-// The panes resumeIn put a conversation back in, which the `session` command may release: a worker main
-// dispatched before the restart is one of them. A pane leaves the set when anything else starts in it or
-// it closes, so release never kills an agent a ship put there later.
-const resumedPanes = new Set<string>();
+// The panes main's worker is in now, which the `session` command may release and session.json marks so
+// a restart knows them again. A pane leaves the set when its agent exits, anything else starts in it, or
+// it closes, so release never kills what somebody else put there afterwards.
+const mainsWorkers = new Set<string>();
 
 // Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
 // 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
@@ -544,7 +547,7 @@ const resumedPanes = new Set<string>();
 // What it runs is the caller's, because there are three agents now: the one that works a card, the one
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
 function startAgent(id: string, worktreePath: string, args: string[]): void {
-  resumedPanes.delete(id);
+  mainsWorkers.delete(id);
   setPaneCommand(id, { args, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
@@ -634,7 +637,7 @@ table.handle('usage:read', () => tokenUsage.latest());
 
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
 // so a crash loses at most the change you were making, or half a minute of sessions.
-const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), 'session.json'), slotOfProject);
+const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), 'session.json'), slotOfProject, (id) => mainsWorkers.has(id));
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
@@ -704,7 +707,7 @@ function setPaneCommand(id: string, command: PaneCommand): void {
 // One pane let go of for good. Out of the map before the kill: the exit arrives afterwards and is
 // dropped by the check in spawnTerminal, so no pty:exit goes out for a pane already off the screen.
 function dropPane(id: string): void {
-  resumedPanes.delete(id);
+  mainsWorkers.delete(id);
   const terminalProcess = shells.get(id);
   shells.delete(id);
   terminalProcess?.kill();
@@ -932,7 +935,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
   },
   directoryOf: (id) => terminalCommands.get(id)?.directory,
-  resumedIn: (id) => resumedPanes.has(id),
+  mainsWorkerIn: (id) => mainsWorkers.has(id),
   shellCommand: () => shellCommand,
   openWorker,
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
@@ -945,6 +948,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
     startAgent(id, directory, args);
+    mainsWorkers.add(id);
   },
   closeWorker,
   mark: (id, state) => sendToRenderer('pane:mark', id, state),

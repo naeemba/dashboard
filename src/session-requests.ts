@@ -20,9 +20,11 @@ export type SessionPorts = {
   // What is running in the pane when something is (pane-reading.ts's paneIsBusy), or null.
   busyWith(id: string): string | null;
   directoryOf(id: string): string | undefined;
-  // A pane main resumed a conversation in at launch, until something else takes the pane. A worker main
-  // dispatched before a restart comes back this way, and the `started` set below has never heard of it.
-  resumedIn(id: string): boolean;
+  // Whether main's worker is in the pane now: one a session run started, or one resumed at launch
+  // because the pane held one when the app quit. Main clears it the moment that stops being true — the
+  // agent exits, something else is started in the pane, or the pane closes — so release never kills
+  // what somebody else put there afterwards.
+  mainsWorkerIn(id: string): boolean;
   shellCommand(): string;
   // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
   openWorker(slot: number): number;
@@ -59,18 +61,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   const states = new Map<string, WorkerState>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, string>();
-  // The workers this session started. Any other pane with something running in it is somebody else's —
-  // a dev server, a card a ship gave an agent — and release would kill it.
-  const started = new Set<string>();
-
-  // Whether what is running in a busy pane is main's worker, so release may kill it. Only while that
-  // worker is still there: once its Claude Code exits the pane is a plain shell again, and a dev server
-  // started in it afterwards is yours. A conversation resumed at launch is the one that was in the pane,
-  // either as an agent or typed into the shell, where it reads as `claude`.
-  function mainsWorker(id: string, program: string): boolean {
-    if (ports.agentIn(id)) return started.has(id) || ports.resumedIn(id);
-    return ports.resumedIn(id) && program === 'claude';
-  }
+  // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
+  // running there is somebody else's — a dev server, a card a ship gave an agent — and release would
+  // kill it. Main's worker always runs as the pane's agent, so a pane that is not running one is not it.
+  const mainsWorker = (id: string): boolean => ports.agentIn(id) && ports.mainsWorkerIn(id);
 
   // A worker of the asking project that is open, or why it is not one. Main and the editor are never a
   // worker: one is where the asking happens, the other holds nvim.
@@ -113,7 +107,6 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     }
     const { index } = paneFromId(id);
     states.delete(id);
-    started.add(id);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt), card);
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}`);
   }
@@ -122,10 +115,9 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     const program = ports.busyWith(id);
-    if (program !== null && !mainsWorker(id, program)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
+    if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
-    started.delete(id);
     const throwaway = throwaways.get(id);
     throwaways.delete(id);
     if (throwaway === undefined) return answered(`released ${id}`);

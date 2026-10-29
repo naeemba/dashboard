@@ -24,14 +24,17 @@ type ClaudeSessions = {
   placed(placement: SessionPlacement): void;
 };
 
-export function sessionStore(table: Channels, file: string, slotOf: (projectPath: string) => number): ClaudeSessions {
+// `dispatched` is main's record of the panes holding its workers, saved so a restart knows them again.
+export function sessionStore(
+  table: Channels, file: string, slotOf: (projectPath: string) => number, dispatched: (id: string) => boolean,
+): ClaudeSessions {
   const saved = readSession(file);
   const ledger = resumeLedger(saved.pages, existsSync);
   let layout: Session | null = null;
   let lastWritten = '';
 
   function write(): void {
-    const next = sessionToWrite(layout, slotOf, ledger.held(), lastWritten);
+    const next = sessionToWrite(layout, slotOf, ledger.held(), dispatched, lastWritten);
     if (next === null) return;
     lastWritten = next.encoded;
     writeSession(file, next.session);

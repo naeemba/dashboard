@@ -87,3 +87,9 @@ export function workerArguments(shellCommand: string, projectPath: string, id: s
     `${prompt}\n\nSendMessage to ${mainSessionName(projectPath)} when done, saying what you did.`,
   ]);
 }
+
+// A worker main dispatched, resumed after a restart in pane `id`: the same flags it was started with, so
+// it still works unasked and its hooks report to the pane it is in now rather than the one it was in.
+export function workerResumeArguments(shellCommand: string, id: string, session: string): string[] {
+  return claudeArguments(shellCommand, ['--resume', session, '--permission-mode', 'auto', '--settings', workerSettings(id)]);
+}
