@@ -43,16 +43,25 @@ const project = (name: string, panes: ProjectPanes['panes']): ProjectPanes => (
 );
 
 describe('planSend', () => {
-  it('sends to one pane per project and names the projects with none', () => {
+  it('sends to one pane per project, and to a new worker in a project with none free', () => {
     const plan = planSend([
       project('web', workers(busy, free)),
       project('api', workers(busy, busy)),
       project('cli', workers(free)),
     ]);
     expect(plan.sends).toEqual([
-      { path: '/work/web', paneIndex: 2 }, { path: '/work/cli', paneIndex: 1 },
+      { path: '/work/web', paneIndex: 2 }, { path: '/work/api', paneIndex: null }, { path: '/work/cli', paneIndex: 1 },
     ]);
-    expect(plan.skipped).toEqual(['api']);
+    expect(plan.skipped).toEqual([]);
+    expect(plan.gone).toEqual([]);
+  });
+
+  // Every project opens with only its main session, which never takes a line.
+  it('does not skip a project that has only its main session', () => {
+    const main: PaneUse = { ...free, index: 0 };
+    const plan = planSend([project('api', [main])]);
+    expect(plan.sends).toEqual([{ path: '/work/api', paneIndex: null }]);
+    expect(plan.skipped).toEqual([]);
     expect(plan.gone).toEqual([]);
   });
 
@@ -71,16 +80,16 @@ describe('sendSummary', () => {
 
   it('names every project it could not reach, so a project that got nothing does not read as one that printed nothing', () => {
     const plan = { sends: [{ path: '/work/web', paneIndex: 0 }], skipped: ['api', 'cli'], gone: [] };
-    expect(sendSummary(plan)).toBe('sent to 1 pane · no free pane in api, cli');
+    expect(sendSummary(plan)).toBe('sent to 1 pane · no new worker in api, cli');
   });
 
   it('says only what was missed when nothing was reached', () => {
-    expect(sendSummary({ sends: [], skipped: ['api'], gone: [] })).toBe('no free pane in api');
+    expect(sendSummary({ sends: [], skipped: ['api'], gone: [] })).toBe('no new worker in api');
   });
 
   it('says a gone project is gone rather than busy, and both reasons at once when both happened', () => {
     const plan = { sends: [], skipped: ['web'], gone: ['api', 'cli'] };
-    expect(sendSummary(plan)).toBe('no free pane in web · api, cli are gone');
+    expect(sendSummary(plan)).toBe('no new worker in web · api, cli are gone');
     expect(sendSummary({ sends: [], skipped: [], gone: ['api'] })).toBe('api is gone');
   });
 });

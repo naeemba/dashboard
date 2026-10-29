@@ -29,41 +29,38 @@ export function freePaneIndex(panes: readonly PaneUse[]): number | null {
 }
 
 export type SendPlan = {
-  // One per project the command is going to, in the order the screen lists them.
-  sends: readonly { path: string; paneIndex: number }[];
-  // The names of the projects whose panes were all taken.
+  // One per project the command is going to, in the order the screen lists them. A null pane is a new
+  // worker: a project opens with its main session and no workers, and a ship opens one when every worker
+  // is taken, so a project with no free worker gets one here too rather than being skipped.
+  sends: readonly { path: string; paneIndex: number | null }[];
+  // The names of the projects a new worker could not be opened in.
   skipped: readonly string[];
   // The names of the projects whose folder is no longer there.
   gone: readonly string[];
 };
 
 export function planSend(projects: readonly ProjectPanes[]): SendPlan {
-  const sends: { path: string; paneIndex: number }[] = [];
-  const skipped: string[] = [];
+  const sends: { path: string; paneIndex: number | null }[] = [];
   const gone: string[] = [];
   for (const project of projects) {
-    if (project.missing) {
-      gone.push(project.name);
-      continue;
-    }
-    const paneIndex = freePaneIndex(project.panes);
-    if (paneIndex === null) skipped.push(project.name);
-    else sends.push({ path: project.path, paneIndex });
+    if (project.missing) gone.push(project.name);
+    else sends.push({ path: project.path, paneIndex: freePaneIndex(project.panes) });
   }
-  return { sends, skipped, gone };
+  return { sends, skipped: [], gone };
 }
 
 // What the status bar says a run did. The projects it missed are named rather than counted: "2
 // skipped" only tells you to go looking, and there are a handful of projects open, not a hundred.
 // Without this line a project that was marked and got nothing looks exactly like one that ran and
 // printed nothing. Two reasons for missing one, kept apart, because they send you to different places:
-// a busy project wants you to go and look at its panes, a gone one wants you to reopen the folder.
+// a project no worker could be opened in wants you to go and look at it, a gone one wants you to
+// reopen the folder.
 export function sendSummary(plan: SendPlan): string {
   const parts: string[] = [];
   if (plan.sends.length > 0) {
     parts.push(`sent to ${plan.sends.length} ${plan.sends.length === 1 ? 'pane' : 'panes'}`);
   }
-  if (plan.skipped.length > 0) parts.push(`no free pane in ${plan.skipped.join(', ')}`);
+  if (plan.skipped.length > 0) parts.push(`no new worker in ${plan.skipped.join(', ')}`);
   if (plan.gone.length > 0) {
     parts.push(`${plan.gone.join(', ')} ${plan.gone.length === 1 ? 'is' : 'are'} gone`);
   }

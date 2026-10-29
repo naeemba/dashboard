@@ -499,7 +499,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   // arrow or Enter has to reach the command box as a character — this one is pressed with the box
   // holding the keyboard, which is where you have just finished typing the command.
   {
-    name: 'command-run-in-panes', description: 'Run it in a free pane of each marked project',
+    name: 'command-run-in-panes', description: 'Run it in a free or new worker of each marked project',
     group: 'command', scope: 'command', action: { kind: 'command-run-in-panes' },
     mac: 'Cmd+Enter', other: 'Ctrl+Enter',
   },

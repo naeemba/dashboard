@@ -1,3 +1,4 @@
+import type { OpenProjects } from './bridge';
 import { planSend, type SendPlan } from './free-pane';
 import { panesById, type Page } from './page';
 import type { PaneUse } from './pane-reading';
@@ -10,13 +11,25 @@ import { terminalId } from './terminals';
 export type PaneSendPorts = {
   projectPages(): Page[];
   readPanes(projectPath: string): Promise<PaneUse[]>;
+  // Main opens a worker and answers with its number and the list that has it on.
+  addPane(slot: number): Promise<{ index: number; open: OpenProjects } | null>;
+  applyProjects(open: OpenProjects): void;
   renderStatus(): void;
 };
 
 export function paneSends(ports: PaneSendPorts): {
   sendToPanes(command: string, paths: readonly string[]): Promise<SendPlan>;
   answerPane(slot: number, index: number, key: string): void;
+  openWorker(slot: number): Promise<number | null>;
 } {
+  // A new worker, on its page before anything is typed into it or it is given the keyboard.
+  async function openWorker(slot: number): Promise<number | null> {
+    const added = await ports.addPane(slot);
+    if (!added) return null;
+    ports.applyProjects(added.open);
+    return added.index;
+  }
+
   // Typing the command screen's command into the shells themselves. That screen marks projects, so which
   // pane in each of them takes the line, and which projects can take it at all, is free-pane.ts's to
   // answer. terminal.input is the same door answerPane and a dropped file already go through, and the
@@ -44,12 +57,21 @@ export function paneSends(ports: PaneSendPorts): {
     // The plan's own answer, keyed by the path it names, so nothing here decides a second time which
     // projects the command reaches. A path with no entry is one the plan deliberately left out — every
     // pane busy, or the folder gone — which is why this loop skips it rather than looking for a pane.
+    // A null pane is a project with no free worker, which gets a new one; a shell typed into before its
+    // prompt is drawn reads the line once it is up. One that cannot be opened is the one skipped.
     const planned = new Map(plan.sends.map((send) => [send.path, send.paneIndex]));
+    const skipped: Page[] = [];
     for (const page of chosen) {
-      const paneIndex = planned.get(page.project.path);
-      if (paneIndex !== undefined) page.panes.find((pane) => pane.index === paneIndex)?.terminal.input(`${command}\r`);
+      if (!planned.has(page.project.path)) continue;
+      const paneIndex = planned.get(page.project.path) ?? await openWorker(page.slot).catch(() => null);
+      if (paneIndex === null) skipped.push(page);
+      else panesById.get(terminalId(page.slot, paneIndex))?.terminal.input(`${command}\r`);
     }
-    return plan;
+    return {
+      ...plan,
+      sends: plan.sends.filter((send) => !skipped.some((page) => page.project.path === send.path)),
+      skipped: skipped.map((page) => page.project.name),
+    };
   }
 
   // Answering a pane from the manager, without going to it. terminal.input is the door a dropped file
@@ -67,5 +89,5 @@ export function paneSends(ports: PaneSendPorts): {
     ports.renderStatus();
   }
 
-  return { sendToPanes, answerPane };
+  return { sendToPanes, answerPane, openWorker };
 }

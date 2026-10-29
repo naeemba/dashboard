@@ -417,10 +417,8 @@ const builder = createPageBuilder({
 // The new-pane key and the button under the list. Main opens it and answers with the list that has it
 // on, the way an open does, so the pane is on this page before it is given the keyboard.
 function addPane(page: Page): void {
-  void bridge.addPane(page.slot).then((added) => {
-    if (!added) return;
-    applyProjects(added.open);
-    if (pages[activeIndex] === page) focusTerminal(added.index);
+  void openWorker(page.slot).then((index) => {
+    if (index !== null && pages[activeIndex] === page) focusTerminal(index);
   }, (error: unknown) => showError('pane', `No new pane: ${failureText(error)}`));
 }
 
@@ -825,7 +823,9 @@ bridge.onNotesChange((projectPath) => {
 const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
 
 // The command screen's lines into the shells, and the manager's answers into a pane; pane-sends.ts.
-const { sendToPanes, answerPane } = paneSends({ projectPages, readPanes: bridge.readPanes, renderStatus });
+const { sendToPanes, answerPane, openWorker } = paneSends({
+  projectPages, readPanes: bridge.readPanes, addPane: bridge.addPane, applyProjects, renderStatus,
+});
 
 bridge.onData((id, data) => {
   const pane = panesById.get(id);
