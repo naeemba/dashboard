@@ -12,7 +12,12 @@ const runCommand = promisify(execFile);
 // the first line only, which shifts its path one character left — and a reader that counts columns
 // then gets a path that is not the one git named. Only the trailing newline is ours to drop.
 export async function git(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await runCommand('git', args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+  return runProgram('git', args, cwd);
+}
+
+// The same for another program, which so far is gh asking whether a branch has a pull request.
+export async function runProgram(program: string, args: string[], cwd: string): Promise<string> {
+  const { stdout } = await runCommand(program, args, { cwd, maxBuffer: 64 * 1024 * 1024 });
   return stdout.trimEnd();
 }
 

@@ -97,7 +97,14 @@ function asPaneProcess(shellCommand: string, command: string): string[] {
 //
 // PowerShell gets no `exec` — it has none — so the shell stays as claude's parent there.
 export function agentArguments(shellCommand: string, prompt: string): string[] {
-  return asPaneProcess(shellCommand, `claude ${quoteForShell(prompt, shellCommand)}`);
+  return claudeArguments(shellCommand, [prompt]);
+}
+
+// The same start with any words after `claude`, each quoted on its own: the main session and its
+// workers carry flags as well as a prompt, and a flag's value is text nobody here wrote.
+export function claudeArguments(shellCommand: string, words: readonly string[]): string[] {
+  const quoted = words.map((word) => quoteForShell(word, shellCommand));
+  return asPaneProcess(shellCommand, ['claude', ...quoted].join(' '));
 }
 
 // A session the app resumes as a card's agent, after a restart, starts the way the ship started it:

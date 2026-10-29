@@ -1,0 +1,53 @@
+import { describe, expect, it } from 'vitest';
+import {
+  mainArguments, mainPrompt, mainSessionName, workerArguments, workerSessionName, workerSettings,
+} from './dispatch';
+
+describe('session names', () => {
+  // Two open projects each have a main, and SendMessage addresses one by its name.
+  it('names main after its project', () => {
+    expect(mainSessionName('/work/My API')).toBe('main-my-api');
+  });
+
+  it('names a worker after its project and the pane it is in', () => {
+    expect(workerSessionName('/work/api', 2)).toBe('api-terminal-3');
+  });
+});
+
+describe('mainArguments', () => {
+  it('starts Claude named, in auto mode, with the dispatch rule appended', () => {
+    const args = mainArguments('/bin/zsh', '/work/api');
+    expect(args[0]).toBe('-lic');
+    expect(args[1]).toMatch(/^exec claude --name main-api --permission-mode auto --append-system-prompt '/);
+    expect(args[1]).not.toContain('--resume');
+  });
+
+  it('resumes the conversation main was in when it is given one', () => {
+    expect(mainArguments('/bin/zsh', '/work/api', 'abc')[1]).toMatch(/ --resume abc$/);
+  });
+
+  it('carries the card\'s dispatch rule word for word', () => {
+    expect(mainPrompt('/work/api')).toContain(
+      'a pane is for a task I asked for (do X, review X, research X), never for a lookup you need mid-task;'
+      + ' those stay inline or in the Agent tool.',
+    );
+  });
+});
+
+describe('workerSettings', () => {
+  // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
+  it('hooks the end of the turn and the permission prompt to the session command', () => {
+    const settings = JSON.parse(workerSettings('2:3'));
+    expect(settings.hooks.Stop[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 done');
+    expect(settings.hooks.Notification[0].matcher).toBe('permission_prompt');
+    expect(settings.hooks.Notification[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 blocked');
+  });
+});
+
+describe('workerArguments', () => {
+  it('hands the prompt over as the argument, ending with the message to main', () => {
+    const args = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests');
+    expect(args[1]).toContain('--name api-terminal-4 --permission-mode auto --settings ');
+    expect(args[1]).toMatch(/'fix the tests\n\nSendMessage to main-api when done, saying what you did\.'$/);
+  });
+});
