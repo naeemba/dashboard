@@ -1,7 +1,7 @@
 import { projectPosition } from './manager';
 import { SECTIONS } from './manager-sections';
 import type { Mode } from './modes';
-import { TERMINAL_COUNT, type Direction } from './terminals';
+import type { Direction } from './terminals';
 
 // What a shortcut does once it has fired. The renderer answers the first three groups; the board view
 // answers the board kinds. Moved here from shortcuts.ts so the table can name the action beside its key.
@@ -25,6 +25,7 @@ export type Action =
   | { kind: 'terminal-copy' }
   | { kind: 'terminal-paste' }
   | { kind: 'terminal-zoom' }
+  | { kind: 'terminal-add' }
   | { kind: 'terminal-scrollback' }
   | { kind: 'terminal-name' }
   | { kind: 'terminal-file-hints' }
@@ -249,15 +250,28 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'mode-claude', description: 'Claude mode', group: 'modes', scope: 'global',
     action: { kind: 'mode-set', mode: 'claude' }, mac: 'Ctrl+Shift+A', other: 'Ctrl+Shift+A',
   },
-  // Ctrl+1..9 belongs to the projects on every platform, so off macOS there is no modifier left to
-  // reach a pane by number. Shipping unbound is better than shipping a key that cannot work.
-  ...range(TERMINAL_COUNT).map((number): ActionEntry => ({
-    name: `terminal-focus-${number}`, description: `Focus terminal ${number}`,
+  // The first is main and the rest count down the worker list, so 2 is the top worker whatever its
+  // number; pane-layout.ts says why a position rather than a pane number. Past the eighth worker,
+  // Alt+J/K walks the list.
+  //
+  // Ctrl+1..9 belongs to the projects on every platform, so off macOS these sit on Alt with a digit.
+  // What that costs a pane is the shell's digit-argument, the count readline and zsh take before a
+  // command, which almost nobody types on purpose.
+  ...range(9).map((number): ActionEntry => ({
+    name: `terminal-focus-${number}`,
+    description: number === 1 ? 'Focus the main session' : `Focus worker ${number - 1} in the list`,
     group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-focus', index: number - 1 },
-    mac: `Cmd+${number}`, other: null,
-    family: 'terminal-focus', familyDescription: 'Focus a terminal',
+    mac: `Cmd+${number}`, other: `Alt+${number}`,
+    family: 'terminal-focus', familyDescription: 'Focus main, then a worker by its place in the list',
   })),
+  // A fresh worker pane, a shell in the project, at the end of the list. The button under the list
+  // does the same. Shift for the reason mode-notes gives: Ctrl+Shift with a letter reaches a pane as
+  // no bytes, so the key costs the shell nothing.
+  {
+    name: 'terminal-add', description: 'Open a new worker pane', group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-add' }, mac: 'Ctrl+Shift+T', other: 'Ctrl+Shift+T',
+  },
   {
     name: 'terminal-next', description: 'Next terminal', group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-next' }, mac: 'Cmd+Right', other: 'Ctrl+Right',

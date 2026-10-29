@@ -115,7 +115,7 @@ describe('parseSettings', () => {
   it('ships different key defaults per platform', () => {
     expect(defaultSettings(true).keys['project-next']).toBe('Cmd+]');
     expect(defaultSettings(false).keys['project-next']).toBe('Ctrl+]');
-    expect(defaultSettings(false).keys['terminal-focus-1']).toBeNull();
+    expect(defaultSettings(false).keys['terminal-clear-line']).toBeNull();
   });
 });
 

@@ -18,6 +18,8 @@ type ClaudeSessions = {
   // saved conversation is used up whether or not it resumes, so a project closed and opened again later in the run
   // starts empty like any project opened by hand.
   takeResume(projectPath: string, index: number, id: string): PaneConversation | null;
+  // The panes of this project with a conversation still to resume; resume-ledger.ts says what for.
+  owedResumes(projectPath: string): number[];
   // Where every live session is, from a sweep or from Quit.
   placed(placement: SessionPlacement): void;
 };
@@ -48,6 +50,7 @@ export function sessionStore(table: Channels, file: string, slotOf: (projectPath
 
   return {
     takeResume: (projectPath, index, id) => ledger.take(projectPath, index, id, Date.now()),
+    owedResumes: (projectPath) => ledger.owed(projectPath),
     placed(placement) {
       ledger.place(placement);
       write();

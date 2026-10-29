@@ -77,7 +77,7 @@ function worktreeNeeds(
   const review = new Set(columnCards(board, REVIEW_COLUMN).map((card) => card.id));
   const done = new Map(columnCards(board, DONE_COLUMN).map((card) => [card.id, card]));
   return row.worktrees.flatMap((entry): Need[] => {
-    const pane = entry.pane === null ? undefined : row.panes[entry.pane];
+    const pane = entry.pane === null ? undefined : row.panes.find((candidate) => candidate.index === entry.pane);
     const working = !entry.reviewing && !review.has(entry.cardId) && !done.has(entry.cardId);
     if (working && isStalled(pane, now)) {
       return [{ ...base, subject: entry.title, kind: 'stalled', since: pane.lastPrintedAt, target: { kind: 'pane', index: pane.index } }];

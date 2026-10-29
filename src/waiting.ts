@@ -70,3 +70,10 @@ export function waitingNames(panes: readonly { bell: Bell; name: string }[]): st
 export function anyWaiting(panes: readonly { bell: Bell }[]): boolean {
   return panes.some((pane) => isRinging(pane.bell));
 }
+
+// What a worker's hooks report, read as a bell. Blocked is a permission prompt, which only you can
+// answer, so it rings; done is for the main session, which hears about it on its own, and a banner per
+// finished worker would bury the ones that are asking.
+export function markRings(state: 'blocked' | 'done'): boolean {
+  return state === 'blocked';
+}

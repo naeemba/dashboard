@@ -87,13 +87,14 @@ describe('positionAfterClose', () => {
 });
 
 describe('managerRows', () => {
+  // Panes are numbered in the order given, the way an unbroken run of them is.
   const page = (
     name: string, slot: number,
     panes: {
       name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
       tail(): string[]; lastPrinted(): string;
     }[],
-  ) => ({ project: { name, path: `/work/${name}` }, slot, panes });
+  ) => ({ project: { name, path: `/work/${name}` }, slot, panes: panes.map((entry, index) => ({ index, ...entry })) });
   const pane = (
     name: string, bell: Bell = 'quiet', exited = false, tail: string[] = [], lastPrintedAt = 0,
   ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });

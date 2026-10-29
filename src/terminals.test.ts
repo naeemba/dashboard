@@ -1,42 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CHAT_INDEX, DEFAULT_PANE_SIZE, EDITOR_INDEX, TERMINAL_COUNT, branchOfPane, modeOfPane, neighbor, paneFromId, paneIds,
+  CHAT_INDEX, DEFAULT_PANE_SIZE, EDITOR_INDEX, MAIN_INDEX, branchOfPane, modeOfPane, paneFromId,
   paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
 } from './terminals';
 
-describe('paneIds', () => {
-  // The six a project is made of: the grid's five and the editor one past them. Main kills a project's
-  // panes by this list and the renderer lets them go by it, so a sixth grid pane added to the layout
-  // reaches both without either being edited.
-  it('names every pane of one project, the editor last', () => {
-    expect(paneIds(3)).toEqual(['3:0', '3:1', '3:2', '3:3', '3:4', '3:5']);
-    expect(paneIds(0)).toHaveLength(TERMINAL_COUNT + 1);
-    expect(paneIds(0)[EDITOR_INDEX]).toBe(terminalId(0, EDITOR_INDEX));
-  });
-});
-
-describe('neighbor', () => {
-  it('moves along a row and stops at the edge', () => {
-    expect(neighbor(0, 'right')).toBe(1);
-    expect(neighbor(1, 'right')).toBe(1);
-    expect(neighbor(3, 'left')).toBe(2);
-    expect(neighbor(2, 'left')).toBe(2);
-  });
-
-  it('moves between rows by horizontal position', () => {
-    expect(neighbor(0, 'down')).toBe(2);
-    expect(neighbor(1, 'down')).toBe(4);
-    expect(neighbor(2, 'up')).toBe(0);
-    expect(neighbor(4, 'up')).toBe(1);
-    expect(neighbor(0, 'up')).toBe(0);
-    expect(neighbor(3, 'down')).toBe(3);
-  });
-});
-
 describe('paneLabel', () => {
-  it('names a pane by its number', () => {
-    expect(paneLabel(0)).toBe('terminal 1');
+  it('names a worker by its number', () => {
+    expect(paneLabel(1)).toBe('terminal 2');
     expect(paneLabel(2)).toBe('terminal 3');
+  });
+
+  // Main is not the first worker, and a column of workers under `terminal 1` would say it was.
+  it('calls the main session main', () => {
+    expect(paneLabel(MAIN_INDEX)).toBe('main');
   });
 
   // The numbering stays, because the focus keys are numbered. The branch is added to it, not swapped
@@ -48,7 +24,7 @@ describe('paneLabel', () => {
   // The name goes last so a truncated status bar drops it before it drops the branch, which is the
   // part that stops a command landing in the wrong checkout.
   // The editor is a pane like the others to everything that lists panes — the manager's rows, the
-  // sentence that refuses to close a project — and `terminal 6` names a pane that is not in the grid.
+  // sentence that refuses to close a project — and it is numbered below the terminals.
   it('calls the editor nvim rather than a sixth terminal', () => {
     expect(paneLabel(EDITOR_INDEX)).toBe('nvim');
     expect(paneLabel(EDITOR_INDEX, undefined, 'board.json')).toBe('nvim · board.json');
@@ -135,13 +111,14 @@ describe('paneFromId', () => {
   it('reads back what terminalId wrote', () => {
     expect(paneFromId(terminalId(3, 2))).toEqual({ slot: 3, index: 2 });
     expect(paneFromId(terminalId(12, 5))).toEqual({ slot: 12, index: 5 });
+    expect(paneFromId(terminalId(4, EDITOR_INDEX))).toEqual({ slot: 4, index: EDITOR_INDEX });
   });
 });
 
 describe('modeOfPane', () => {
-  it('puts the grid on terminals and the editor on nvim', () => {
-    expect(modeOfPane(0)).toBe('terminals');
-    expect(modeOfPane(TERMINAL_COUNT - 1)).toBe('terminals');
+  it('puts main and the workers on terminals and the editor on nvim', () => {
+    expect(modeOfPane(MAIN_INDEX)).toBe('terminals');
+    expect(modeOfPane(12)).toBe('terminals');
     expect(modeOfPane(EDITOR_INDEX)).toBe('nvim');
   });
 

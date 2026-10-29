@@ -32,8 +32,10 @@ describe('parseSession', () => {
   });
 
   // focused indexes the pane array directly, so a number off the end would focus undefined.
-  it('falls back to the first pane for an index outside the grid', () => {
-    expect(parseSession({ pages: [{ ...page, focused: 5 }] }).pages[0].focused).toBe(0);
+  // Workers have no fixed count, so a high number is a pane that may well be open again; whether it is
+  // is the restore's to answer.
+  it('keeps any pane number and falls back to main for anything that is not one', () => {
+    expect(parseSession({ pages: [{ ...page, focused: 5 }] }).pages[0].focused).toBe(5);
     expect(parseSession({ pages: [{ ...page, focused: -1 }] }).pages[0].focused).toBe(0);
     expect(parseSession({ pages: [{ ...page, focused: 1.5 }] }).pages[0].focused).toBe(0);
   });

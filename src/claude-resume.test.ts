@@ -38,12 +38,13 @@ describe('withClaude', () => {
   const slots: Record<string, number> = { '/work/api': 0, '/work/web': 2 };
   const slotOf = (projectPath: string): number => slots[projectPath] ?? -1;
 
-  it('puts each pane\'s session on its page by slot, one entry per grid pane', () => {
+  // As far as the highest pane holding one, since workers have no fixed count.
+  it('puts each pane\'s session on its page by slot, one entry per pane number', () => {
     const held = new Map([['0:1', conversation(ID)], ['2:4', conversation(OTHER, '/work/web')]]);
     expect(withClaude(layout, slotOf, held)).toEqual({
       activeIndex: 1,
       pages: [
-        { ...layout.pages[0], claude: [null, conversation(ID), null, null, null] },
+        { ...layout.pages[0], claude: [null, conversation(ID)] },
         { ...layout.pages[1], claude: [null, null, null, null, conversation(OTHER, '/work/web')] },
       ],
     });
@@ -53,6 +54,12 @@ describe('withClaude', () => {
   it('writes only the session and the folder', () => {
     const held = new Map([['0:0', { pid: 900, ...conversation(ID) }]]);
     expect(withClaude(layout, slotOf, held).pages[0].claude[0]).toEqual(conversation(ID));
+  });
+
+  // The editor runs nvim, never a conversation to resume, and its number is below the terminals'.
+  it('leaves out a reading that is not a terminal', () => {
+    const held = new Map([['0:-1', conversation(ID)]]);
+    expect(withClaude(layout, slotOf, held).pages[0].claude).toEqual([]);
   });
 
   it('gives a page whose project has no slot no sessions rather than throwing', () => {

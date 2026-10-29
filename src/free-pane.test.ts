@@ -4,7 +4,7 @@ import type { PaneUse } from './pane-reading';
 
 // A shell sitting at its own prompt, which is what a pane nobody is using reads as.
 const free: PaneUse = {
-  exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
+  index: 1, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
 };
 const busy: PaneUse = { ...free, foreground: 'npm' };
 const dead: PaneUse = { ...free, exited: true };
@@ -12,13 +12,18 @@ const dead: PaneUse = { ...free, exited: true };
 // standing in the card's checkout, which is why a pane of the project goes first.
 const finished: PaneUse = { ...free, inWorktree: true };
 
+// Workers in order from the first, the way main lists an unbroken run of them.
+function workers(...panes: PaneUse[]): PaneUse[] {
+  return panes.map((pane, offset) => ({ ...pane, index: offset + 1 }));
+}
+
 describe('freePaneIndex', () => {
   it('takes the first pane that is neither dead nor busy', () => {
-    expect(freePaneIndex([dead, busy, free, free])).toBe(2);
+    expect(freePaneIndex(workers(dead, busy, free, free))).toBe(3);
   });
 
   it('answers null when every pane is busy, so the project is skipped rather than interrupted', () => {
-    expect(freePaneIndex([busy, busy, dead])).toBe(null);
+    expect(freePaneIndex(workers(busy, busy, dead))).toBe(null);
   });
 
   it('answers null for a project with no panes at all', () => {
@@ -28,8 +33,8 @@ describe('freePaneIndex', () => {
   // The same order a ship takes a pane in, so a line sent to every project does not land in a finished
   // card's checkout while an empty prompt of the project itself sits below it.
   it('takes a pane still standing in a card\'s worktree last, the way a ship does', () => {
-    expect(freePaneIndex([finished, free])).toBe(1);
-    expect(freePaneIndex([finished, busy])).toBe(0);
+    expect(freePaneIndex(workers(finished, free))).toBe(2);
+    expect(freePaneIndex(workers(finished, busy))).toBe(1);
   });
 });
 
@@ -40,19 +45,19 @@ const project = (name: string, panes: ProjectPanes['panes']): ProjectPanes => (
 describe('planSend', () => {
   it('sends to one pane per project and names the projects with none', () => {
     const plan = planSend([
-      project('web', [busy, free]),
-      project('api', [busy, busy]),
-      project('cli', [free]),
+      project('web', workers(busy, free)),
+      project('api', workers(busy, busy)),
+      project('cli', workers(free)),
     ]);
     expect(plan.sends).toEqual([
-      { path: '/work/web', paneIndex: 1 }, { path: '/work/cli', paneIndex: 0 },
+      { path: '/work/web', paneIndex: 2 }, { path: '/work/cli', paneIndex: 1 },
     ]);
     expect(plan.skipped).toEqual(['api']);
     expect(plan.gone).toEqual([]);
   });
 
   it('keeps a project whose folder is gone out of the busy list, so it is not read as one to go and look at', () => {
-    const plan = planSend([{ ...project('api', []), missing: true }, project('cli', [free])]);
+    const plan = planSend([{ ...project('api', []), missing: true }, project('cli', workers(free))]);
     expect(plan.skipped).toEqual([]);
     expect(plan.gone).toEqual(['api']);
   });

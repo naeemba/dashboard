@@ -1,5 +1,5 @@
 import { baseName } from './base-name';
-import { paneLabel } from './terminals';
+import { MAIN_INDEX } from './terminals';
 
 // What can be read off one of a project's panes, and what three screens make of it. Nothing here
 // touches a file or a git command, which is the point: main takes the reading off the pty, and the
@@ -22,7 +22,9 @@ export function runsAnAgent(command: PaneCommand | undefined): command is PaneCo
 // One pane of a project as a ship sees it. `foreground` is what the pty says is running in the pane at
 // the moment it is asked — the shell itself when the pane is sitting at a prompt, and undefined when the
 // shell has gone. `shell` is the shell this pane was spawned with. `command` is what the pane was asked
-// to run. `inWorktree` is the pane still standing in a card's checkout rather than the project.
+// to run. `inWorktree` is the pane still standing in a card's checkout rather than the project. `index`
+// is which pane it is: workers come and go, so a list of readings has gaps and its positions are not
+// pane numbers.
 //
 // The shell is the pane's own, not the setting. The setting changes under panes that are already
 // running, and its own screen says so: a pane started as zsh is still zsh after you switch the setting
@@ -31,6 +33,7 @@ export function runsAnAgent(command: PaneCommand | undefined): command is PaneCo
 // closed and reopened. A pane respawned after the change really is on the new shell, and the pane's own
 // record gets that right too.
 export type PaneReading = {
+  index: number;
   foreground: string | undefined;
   shell: string | undefined;
   command: PaneCommand | undefined;
@@ -98,43 +101,33 @@ export function shipCanTake(pane: PaneReading): boolean {
 
 // Which of a project's panes to take, or null when there is none. The order is the whole of it, and it
 // is the half two pickers have to agree on: a ship takes a pane here, and the command screen types a
-// line into one, and a user who watched a ship step around terminal 1 expects the line to step around
+// line into one, and a user who watched a ship step around terminal 2 expects the line to step around
 // it too.
 //
-// The lowest-numbered free pane, except that a pane still standing in a worktree goes last. Its agent
+// The lowest-numbered free worker, except that a pane still standing in a worktree goes last. Its agent
 // has exited and handed the pane back, so it is free — but the shell in it is sitting in that checkout
 // under the agent's transcript. A ship kills the shell in the pane it takes, so lowest-first on its own
-// takes terminal 1 back from the card you are reading while terminals 2 to 5 sit at empty prompts; the
+// takes terminal 2 back from the card you are reading while the panes below it sit at empty prompts; the
 // command screen would run your `npm test` in that card's checkout rather than the project's.
+//
+// Never main. It is where you talk to the project's session, and a main whose Claude has exited is a
+// shell waiting for Enter to start it again, not a pane going spare.
 //
 // What counts as free is the caller's, because the two do not agree on a dead pane and should not: a
 // ship spawns a shell in the pane it takes, so a pane whose shell has gone is the best one it could
 // have, while a line typed at a pane with no shell behind it goes nowhere at all. shipCanTake above is
 // the ship's answer and free-pane.ts holds the command screen's; both are built on paneIsBusy.
-export function freePane<Pane extends { inWorktree: boolean }>(
+export function freePane<Pane extends { index: number; inWorktree: boolean }>(
   panes: readonly Pane[],
   isFree: (pane: Pane) => boolean,
 ): number | null {
-  const free = panes.map((pane, index) => ({ pane, index })).filter(({ pane }) => isFree(pane));
-  return (free.find(({ pane }) => !pane.inWorktree) ?? free[0])?.index ?? null;
+  const free = panes.filter((pane) => pane.index !== MAIN_INDEX && isFree(pane));
+  return (free.find((pane) => !pane.inWorktree) ?? free[0])?.index ?? null;
 }
 
 // What was seen running in a pane, for a refusal that names it rather than leaving you to go and look.
-// Two refusals print it — the ship's, below, and the close's in close-project.ts — so it is said once:
-// give the close its own copy and the two describe the same pane differently, `terminal 3 npm` against
-// `terminal 3 an agent`, with nothing failing. The empty string is unreachable for a pane paneIsBusy
-// called busy, which is the only pane either refusal asks about.
+// The close prints it in close-project.ts. The empty string is unreachable for a pane paneIsBusy called
+// busy, which is the only pane that refusal asks about.
 export function programIn(pane: PaneReading): string {
   return runsAnAgent(pane.command) ? 'an agent' : pane.foreground ?? '';
 }
-
-// Why the ship could not have one, named rather than counted — the same states the refusal was decided
-// on, so what this lists is exactly what stopped it. Each pane says what was seen running in it, because
-// the answer is a reading taken the moment you pressed the key: a ship refused by a prompt hook that was
-// still going says `terminal 3 git` rather than leaving you to wonder which pane it meant.
-export function busyPanes(panes: readonly PaneReading[]): string {
-  return panes
-    .flatMap((pane, index) => (paneIsBusy(pane) ? [`${paneLabel(index)} ${programIn(pane)}`] : []))
-    .join(', ');
-}
-

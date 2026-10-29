@@ -1,5 +1,5 @@
 import type { SavedSession, Session } from './session';
-import { TERMINAL_COUNT, terminalId } from './terminals';
+import { paneFromId } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
 
 // Which Claude Code conversation each pane was running, and how a launch gets it back.
@@ -23,6 +23,7 @@ export function isPaneConversation(value: unknown): value is PaneConversation {
 // The renderer's layout with each page's panes filled in. A page is matched to its slot by path, the
 // way the restore matches them, and a page with no open slot gets no sessions rather than another
 // project's. Only the two fields a resume needs are copied: the live reading carries the pid as well.
+// The list runs to the highest-numbered terminal holding one, since workers have no fixed count.
 export function withClaude(
   layout: Session,
   slotOf: (projectPath: string) => number,
@@ -33,10 +34,13 @@ export function withClaude(
     pages: layout.pages.map((page) => {
       const slot = slotOf(page.path);
       if (slot === -1) return { ...page, claude: [] };
-      const claude = Array.from({ length: TERMINAL_COUNT }, (_value, index) => {
-        const found = held.get(terminalId(slot, index));
-        return found === undefined ? null : { session: found.session, directory: found.directory };
-      });
+      const claude: (PaneConversation | null)[] = [];
+      for (const [id, found] of held) {
+        const pane = paneFromId(id);
+        if (pane.slot !== slot || pane.index < 0) continue;
+        while (claude.length <= pane.index) claude.push(null);
+        claude[pane.index] = { session: found.session, directory: found.directory };
+      }
       return { ...page, claude };
     }),
   };

@@ -164,7 +164,7 @@ type ManagerPage = {
   // `tail` and `lastPrinted` are functions because the answer comes off a live terminal: the row asks
   // for it at the moment it draws, so no copy of a pane's screen is kept anywhere to go stale.
   panes: readonly {
-    name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+    index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
     tail(): string[]; lastPrinted(): string;
   }[];
 };
@@ -192,12 +192,12 @@ export function managerRows(
     tokens: usage.projects[page.project.path] ?? NO_TOTALS,
     days: usage.days[page.project.path] ?? NO_DAYS,
     worktrees: orderedWorktrees(worktrees.filter((entry) => entry.projectPath === page.project.path)),
-    panes: page.panes.map((pane, index) => ({
-      index,
+    panes: page.panes.map((pane) => ({
+      index: pane.index,
       name: pane.name,
       state: paneState(pane),
       lastPrintedAt: pane.lastPrintedAt,
-      tokens: usage.panes[terminalId(page.slot, index)] ?? 0,
+      tokens: usage.panes[terminalId(page.slot, pane.index)] ?? 0,
       tail: () => pane.tail(),
       lastPrinted: () => pane.lastPrinted(),
     })),
@@ -205,7 +205,7 @@ export function managerRows(
 }
 
 // What the row says about the project beside its name. Only the panes that want something are counted:
-// a project's shells are five whatever it is doing, so `5 quiet` next to every name would be five
+// a project's shells are there whatever it is doing, so `5 quiet` next to every name would be
 // characters saying nothing.
 export function alertSummary(panes: readonly PaneSummary[]): string {
   const parts: string[] = [];

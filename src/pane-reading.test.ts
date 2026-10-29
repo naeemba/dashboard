@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { paneIsFree } from './free-pane';
 import {
-  busyPanes, freePane, paneIsBusy, runsAnAgent, shipCanTake, type PaneReading,
+  freePane, paneIsBusy, programIn, runsAnAgent, shipCanTake, type PaneReading,
 } from './pane-reading';
 
 describe('runsAnAgent', () => {
@@ -15,6 +15,7 @@ describe('runsAnAgent', () => {
 
 // A pane sitting at a prompt: the pty answers with the shell itself, and nothing was asked of it.
 const idle: PaneReading = {
+  index: 1,
   foreground: 'zsh',
   shell: '/bin/zsh',
   command: { args: [], directory: '/work/api' },
@@ -22,6 +23,7 @@ const idle: PaneReading = {
 };
 const running = (program: string): PaneReading => ({ ...idle, foreground: program });
 const agent: PaneReading = {
+  index: 1,
   foreground: 'claude',
   shell: '/bin/zsh',
   command: { args: ['-lc', 'agent'], directory: '/work/api.worktrees/one' },
@@ -61,23 +63,40 @@ describe('paneIsBusy', () => {
   });
 });
 
+// Readings numbered in order from the first worker, the way paneReadingsIn lists an unbroken run.
+function numbered<Pane>(panes: Pane[], from = 1): (Pane & { index: number })[] {
+  return panes.map((pane, offset) => ({ ...pane, index: from + offset }));
+}
+
 describe('freePane', () => {
-  it('takes the lowest pane nothing is running in', () => {
-    expect(freePane([idle, idle, idle], shipCanTake)).toBe(0);
-    expect(freePane([running('npm'), agent, idle], shipCanTake)).toBe(2);
-    expect(freePane([idle, running('npm'), idle], shipCanTake)).toBe(0);
+  it('takes the lowest worker nothing is running in', () => {
+    expect(freePane(numbered([idle, idle, idle]), shipCanTake)).toBe(1);
+    expect(freePane(numbered([running('npm'), agent, idle]), shipCanTake)).toBe(3);
+    expect(freePane(numbered([idle, running('npm'), idle]), shipCanTake)).toBe(1);
   });
 
-  it('answers null when every pane is busy', () => {
-    expect(freePane([running('npm'), agent, running('nvim')], shipCanTake)).toBe(null);
+  it('answers null when every worker is busy', () => {
+    expect(freePane(numbered([running('npm'), agent, running('nvim')]), shipCanTake)).toBe(null);
+  });
+
+  // Workers close and leave gaps, so the answer is the pane's own number, not where it sat in the list.
+  it('answers with the pane number across a gap', () => {
+    expect(freePane([{ ...running('npm'), index: 1 }, { ...idle, index: 4 }], shipCanTake)).toBe(4);
+  });
+
+  // Main is where you talk to the session. With its Claude exited it is a shell at a prompt, which is
+  // exactly what every other test here calls free.
+  it('never takes main', () => {
+    expect(freePane(numbered([idle], 0), shipCanTake)).toBe(null);
+    expect(freePane(numbered([idle, idle], 0), shipCanTake)).toBe(1);
   });
 
   // The agent has exited and handed the pane back, but its transcript is still on screen and the shell
   // is still standing in the checkout. An empty pane of the project goes first.
   it('takes a pane still standing in a worktree last', () => {
     const finished: PaneReading = { ...idle, command: { args: [], directory: '/work/api.worktrees/one' }, inWorktree: true };
-    expect(freePane([finished, idle], shipCanTake)).toBe(1);
-    expect(freePane([finished, running('npm')], shipCanTake)).toBe(0);
+    expect(freePane(numbered([finished, idle]), shipCanTake)).toBe(2);
+    expect(freePane(numbered([finished, running('npm')]), shipCanTake)).toBe(1);
   });
 
   // The order is the half the command screen shares, so it is pinned against a different idea of free
@@ -86,17 +105,16 @@ describe('freePane', () => {
     const dead = { ...idle, exited: true };
     const inWorktree = { ...idle, exited: false, inWorktree: true };
     const alive = { ...idle, exited: false };
-    expect(freePane([dead, inWorktree, alive], paneIsFree)).toBe(2);
-    expect(freePane([dead, inWorktree], paneIsFree)).toBe(1);
-    expect(freePane([dead], paneIsFree)).toBe(null);
+    expect(freePane(numbered([dead, inWorktree, alive]), paneIsFree)).toBe(3);
+    expect(freePane(numbered([dead, inWorktree]), paneIsFree)).toBe(2);
+    expect(freePane(numbered([dead]), paneIsFree)).toBe(null);
   });
 });
 
-// Both branches of programIn, which close-project.ts prints too — so the ship's refusal and the
-// close's describe the same pane the same way.
-describe('busyPanes', () => {
-  it('names each busy pane and what was seen running in it', () => {
-    expect(busyPanes([running('npm'), idle, agent]))
-      .toBe('terminal 1 npm, terminal 3 an agent');
+// Both branches, which the close's refusal prints.
+describe('programIn', () => {
+  it('names an agent as one and anything else by what the pty has in front', () => {
+    expect(programIn(agent)).toBe('an agent');
+    expect(programIn(running('npm'))).toBe('npm');
   });
 });

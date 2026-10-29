@@ -1,21 +1,20 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { isPaneConversation, type PaneConversation } from './claude-resume';
 import { PROJECT_MODES, type Mode } from './modes';
-import { TERMINAL_COUNT } from './terminals';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
 // was left on, and which pane had the keyboard. Not the shells themselves — those die with the app, and
 // every pane comes back empty at its project's directory, and what each pane was called, except a pane
 // that was running Claude Code, which resumes that conversation.
 //
-// `names` is one entry per pane of the grid, `null` for a pane nobody named. Not a list of the panes
+// `names` is one entry per pane number, `null` for a pane nobody named or a number no pane holds. Not a list of the panes
 // that have one: with the panes that do not left out, a name lands on the wrong pane the moment a
 // middle pane is unnamed. Only the names you typed are here — a title a program set is gone with the
 // program that set it, so a restored pane says nothing until something in it speaks up.
 export type SessionPage = { path: string; mode: Mode; focused: number; names: (string | null)[] };
 export type Session = { pages: SessionPage[]; activeIndex: number };
-// What is on disk: the layout the renderer sends, plus which Claude Code conversation each grid pane was
-// running, one entry per pane like `names`. Main fills these in; the renderer never sees them change.
+// What is on disk: the layout the renderer sends, plus which Claude Code conversation each terminal was
+// running, one entry per pane number like `names`. Main fills these in; the renderer never sees them change.
 // claude-resume.ts holds why each entry carries its folder.
 export type SavedPage = SessionPage & { claude: (PaneConversation | null)[] };
 export type SavedSession = { pages: SavedPage[]; activeIndex: number };
@@ -29,8 +28,10 @@ function isMode(value: unknown): value is Mode {
   return PROJECT_MODES.some((mode) => mode === value);
 }
 
+// Any terminal's number. Whether that pane is open when the layout comes back is the restore's to
+// answer, since workers come and go between runs.
 function isPaneIndex(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < TERMINAL_COUNT;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
 }
 
 // A page is worth restoring only if it says which project it is. Everything else has a sane answer —
@@ -49,7 +50,7 @@ function toSessionPage(stored: unknown): SavedPage | null {
     // Whether a stored name is worth showing — blank, all spaces — is paneName's to answer, at the one
     // place all three kinds of name arrive. This keeps whatever is text and drops what is not, because
     // anything else in an entry would be drawn on the pane exactly as it is. Its length is not forced to
-    // the grid: the restore reads it by pane, so an entry with no pane behind it is skipped anyway.
+    // the panes: the restore reads it by pane, so an entry with no pane behind it is skipped anyway.
     names: (Array.isArray(names) ? names : []).map((name) => (typeof name === 'string' ? name : null)),
     // An entry that is not a whole one is no conversation at all, never half of one: its id is typed into a
     // shell. A file written before the field existed resumes nothing.
