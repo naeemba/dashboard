@@ -32,6 +32,8 @@ export type ChatHost = {
 // prompt is what the session starts with.
 export type ChatPreferences = { model?: string; permissionMode?: PermissionMode };
 
+export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
+
 export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close(): void };
 
 // `stopped` is a close the app asked for — a project closed, a new conversation — which ends the
@@ -39,7 +41,8 @@ export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close()
 type Session = {
   query: Query;
   input: InputQueue<SDKUserMessage>;
-  asks: Map<string, (result: PermissionResult) => void>;
+  // Kept with what was asked, so a screen that connects while one waits can still answer it.
+  asks: Map<string, { ask: PermissionAsk; resolve(result: PermissionResult): void }>;
   stopped: boolean;
 };
 
@@ -103,7 +106,7 @@ function loginShellPath(fallback: string): Promise<string> {
 const RELAYED = new Set(['assistant', 'user', 'result', 'system']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta']);
 
-function relayed(message: { type: string; event?: unknown }): boolean {
+export function relayed(message: { type: string; event?: unknown }): boolean {
   if (message.type !== 'stream_event') return RELAYED.has(message.type);
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
@@ -141,11 +144,12 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     }
   }
 
-  function ask(slot: number, asks: Session['asks'], ask: Omit<PermissionAsk, 'id'>, signal: AbortSignal): Promise<PermissionResult> {
+  function ask(slot: number, asks: Session['asks'], asked: Omit<PermissionAsk, 'id'>, signal: AbortSignal): Promise<PermissionResult> {
     const id = randomUUID();
-    host.send(slot, { kind: 'ask', ask: { ...ask, id } });
+    const pending = { ...asked, id };
+    host.send(slot, { kind: 'ask', ask: pending });
     return new Promise((resolve) => {
-      asks.set(id, resolve);
+      asks.set(id, { ask: pending, resolve });
       signal.addEventListener('abort', () => {
         asks.delete(id);
         host.send(slot, { kind: 'ask-gone', id });
@@ -199,7 +203,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         // way on every prompt after it, so the next one starts a new conversation instead.
         if (resume) remember(projectPath, undefined);
       }
-      for (const resolve of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
+      for (const { resolve } of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
       if (session.stopped) return;
       sessions.delete(slot);
       host.send(slot, { kind: 'ended', error });
@@ -211,6 +215,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
+    host.send(slot, { kind: 'prompt', content });
     let session = sessions.get(slot);
     if (!session) {
       session = start(slot, projectPath);
@@ -229,16 +234,20 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     sessions.get(slot)?.then((session) => session.query.interrupt()).catch(() => undefined);
   });
 
+  // Every screen is told the question is gone, so the one it was not answered on stops showing it.
   table.on('chat:answer', (_screen, slot: number, id: string, result: PermissionResult) => {
     void sessions.get(slot)?.then((session) => {
-      const resolve = session.asks.get(id);
+      const pending = session.asks.get(id);
+      if (!pending) return;
       session.asks.delete(id);
-      resolve?.(result);
-    });
+      pending.resolve(result);
+      host.send(slot, { kind: 'ask-gone', id });
+    }, () => undefined);
   });
 
   table.handle('chat:configure', async (_screen, slot: number, change: ChatPreferences) => {
     preferences.set(slot, { ...preferences.get(slot), ...change });
+    host.send(slot, { kind: 'configured', change });
     const session = await sessions.get(slot);
     if (!session) return;
     if ('model' in change) await session.query.setModel(change.model);
@@ -252,14 +261,18 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     return (await session.query.getContextUsage({ detail: 'summary' })).percentage;
   });
 
-  // The conversation this page would resume, read back from its transcript so the pane can draw it
-  // before anything has been sent.
-  table.handle('chat:read', async (_screen, slot: number) => {
+  // What a screen opening this page needs to catch up: the conversation it would resume, read back
+  // from its transcript, the questions the session is waiting on, and the choices made so far.
+  table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
     const projectPath = host.projectPath(slot);
     const sessionId = projectPath === undefined ? undefined : remembered[projectPath];
-    if (projectPath === undefined || sessionId === undefined) return [];
+    const running = await sessions.get(slot)?.catch(() => undefined);
+    const asks = running ? [...running.asks.values()].map((pending) => pending.ask) : [];
+    const chosen = preferences.get(slot) ?? {};
+    if (projectPath === undefined || sessionId === undefined) return { messages: [], asks, preferences: chosen };
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
-    return getSessionMessages(sessionId, { dir: projectPath });
+    const messages = await getSessionMessages(sessionId, { dir: projectPath });
+    return { messages, asks, preferences: chosen };
   });
 
   function stop(slot: number): void {

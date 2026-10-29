@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { inputQueue, pathFromShell, rememberedSessions } from './chat-sessions';
+import { inputQueue, pathFromShell, relayed, rememberedSessions } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -56,4 +56,16 @@ describe('pathFromShell', () => {
     expect(pathFromShell('Welcome back\n/home/me/.nvm/bin:/usr/bin', '/usr/bin')).toBe('/home/me/.nvm/bin:/usr/bin');
   });
   it('keeps the app\'s own when the shell said nothing', () => expect(pathFromShell('', '/usr/bin')).toBe('/usr/bin'));
+});
+
+describe('relayed', () => {
+  const streamed = (event: unknown) => ({ type: 'stream_event', event });
+  it('relays streamed text', () => {
+    expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'a' } }))).toBe(true);
+  });
+  it('keeps a tool input streaming in, which for a Write is the whole file', () => {
+    expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json: '{' } }))).toBe(false);
+  });
+  it('keeps rate limit events', () => expect(relayed({ type: 'rate_limit_event' })).toBe(false));
+  it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
 });

@@ -1,5 +1,5 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import type { ChatPreferences } from './chat-sessions';
+import type { ChatPreferences, ChatState } from './chat-sessions';
 import type { ChatEvent, ImageType } from './chat-transcript';
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
@@ -173,8 +173,9 @@ export type DashboardBridge = {
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
   // How full the context window is; null before the session has started.
   chatMeasure(slot: number): Promise<number | null>;
-  // The conversation the page would resume, read back from its transcript.
-  chatRead(slot: number): Promise<Record<string, unknown>[]>;
+  // What a screen opening the page catches up on: the conversation it would resume, the questions
+  // waiting, and the model and mode chosen.
+  chatRead(slot: number): Promise<ChatState>;
   chatReset(slot: number): void;
   onChat(listener: (slot: number, event: ChatEvent) => void): void;
 };

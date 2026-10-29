@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, imagesFit, type Transcript } from './chat-transcript';
+import {
+  applyEvent, applyMessage, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+} from './chat-transcript';
+
+const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }] });
 
 const fold = (messages: Record<string, unknown>[], start: Transcript = EMPTY_TRANSCRIPT): Transcript =>
   messages.reduce(applyMessage, start);
@@ -52,7 +56,7 @@ describe('applyMessage', () => {
   });
 
   it('ends the turn on its result and says nothing when it went well', () => {
-    const transcript = applyMessage(addPrompt(EMPTY_TRANSCRIPT, 'hi', []), { type: 'result', subtype: 'success', is_error: false });
+    const transcript = applyMessage(prompted('hi'), { type: 'result', subtype: 'success', is_error: false });
     expect(transcript.busy).toBe(false);
     expect(transcript.entries).toHaveLength(1);
   });
@@ -60,6 +64,21 @@ describe('applyMessage', () => {
   it('says why a turn ended badly', () => {
     const transcript = applyMessage(EMPTY_TRANSCRIPT, { type: 'result', subtype: 'error_max_turns', is_error: true, errors: ['too many'] });
     expect(transcript.entries).toEqual([{ kind: 'notice', text: 'too many' }]);
+  });
+
+  it('says a turn stopped by Escape was stopped', () => {
+    expect(applyMessage(prompted('hi'), { type: 'result', subtype: 'error_during_execution', is_error: true }).entries.at(-1))
+      .toEqual({ kind: 'notice', text: 'Stopped.' });
+  });
+
+  it('says when the conversation was compacted', () => {
+    expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'compact_boundary' }).entries)
+      .toEqual([{ kind: 'notice', text: 'Conversation compacted.' }]);
+  });
+
+  it('starts the live line again when a new block starts', () => {
+    const transcript = fold([delta('old'), { type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_start' } }]);
+    expect(transcript.live).toBe('');
   });
 
   it('takes the model from init', () => {
@@ -78,7 +97,7 @@ describe('applyMessage', () => {
 
 describe('applyEvent', () => {
   it('stops being busy when the session ends, and says why', () => {
-    const transcript = applyEvent(addPrompt(EMPTY_TRANSCRIPT, 'hi', []), { kind: 'ended', error: 'spawn ENOENT' });
+    const transcript = applyEvent(prompted('hi'), { kind: 'ended', error: 'spawn ENOENT' });
     expect(transcript.busy).toBe(false);
     expect(transcript.entries.at(-1)).toEqual({ kind: 'notice', text: 'The session ended: spawn ENOENT' });
   });
@@ -88,4 +107,44 @@ describe('imagesFit', () => {
   it('takes a screenshot under 5 MB', () => expect(imagesFit([4_000_000])).toBe(true));
   it('refuses one over it', () => expect(imagesFit([6_000_000])).toBe(false));
   it('counts a prompt\'s images together', () => expect(imagesFit([3_000_000, 3_000_000])).toBe(false));
+});
+
+describe('the prompt event', () => {
+  it('shows what was asked, images too, and is busy until the result', () => {
+    const transcript = applyEvent(EMPTY_TRANSCRIPT, {
+      kind: 'prompt',
+      content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAA' } }, { type: 'text', text: 'what is this' }],
+    });
+    expect(transcript.busy).toBe(true);
+    expect(transcript.entries).toEqual([{ kind: 'user', text: 'what is this', images: [{ mediaType: 'image/png', data: 'AAA' }] }]);
+  });
+});
+
+describe('preferencesOf', () => {
+  it('takes a choice made on any screen', () => {
+    expect(preferencesOf({ kind: 'configured', change: { permissionMode: 'acceptEdits' } })).toEqual({ permissionMode: 'acceptEdits' });
+  });
+  it('takes the mode the session started in', () => {
+    expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'init', permissionMode: 'acceptEdits' } }))
+      .toEqual({ permissionMode: 'acceptEdits' });
+  });
+  it('says nothing about any other message', () => {
+    expect(preferencesOf({ kind: 'message', message: { type: 'assistant' } })).toBeNull();
+  });
+});
+
+describe('withEarlier', () => {
+  const earlier = [{ type: 'user', parent_tool_use_id: null, message: { content: 'before' } }];
+  it('draws the earlier conversation on an empty screen', () => {
+    expect(withEarlier(EMPTY_TRANSCRIPT, earlier).entries).toEqual([{ kind: 'user', text: 'before', images: [] }]);
+  });
+  it('drops it once something newer is on screen', () => {
+    expect(withEarlier(prompted('now'), earlier).entries).toEqual([{ kind: 'user', text: 'now', images: [] }]);
+  });
+});
+
+describe('working', () => {
+  it('is idle with no turn and no question', () => expect(working(EMPTY_TRANSCRIPT, 0)).toBe(false));
+  it('is working during a turn', () => expect(working(prompted('hi'), 0)).toBe(true));
+  it('is working while a question waits', () => expect(working(EMPTY_TRANSCRIPT, 1)).toBe(true));
 });

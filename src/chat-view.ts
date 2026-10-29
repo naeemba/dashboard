@@ -7,8 +7,8 @@ import { drawEntry, type DrawnEntry } from './chat-entries';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import {
-  addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, IMAGE_TYPES, imagesFit, type ChatEvent, type ChatImage, type ImageType,
-  type Transcript,
+  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { clampIndex } from './clamp-index';
@@ -82,6 +82,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let mode: PermissionMode = 'default';
   let context: number | null = null;
   let earlierRead = false;
+  // Bumped by a new conversation, so a read of the earlier one that comes back after it is dropped.
+  let resets = 0;
 
   // ponytail: content-visibility skips laying out what is off screen, and markdown is only rendered
   // for an entry once it comes near; every entry still has its box. Recycle boxes if a session long
@@ -177,8 +179,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (asks.length === 0 && seen()) prompt.focus();
   }
 
-  const working = () => transcript.busy || asks.length > 0;
-
   // On screen and in front: the screen is not under a hidden view or page, and the window has focus.
   const seen = () => document.hasFocus() && element.closest('[hidden]') === null;
 
@@ -192,8 +192,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       })),
       ...(text ? [{ type: 'text' as const, text }] : []),
     ];
+    // Main sends the prompt back to every screen, this one included, as a `prompt` event.
     bridge.chatSend(slot, content);
-    transcript = addPrompt(transcript, text, images);
     prompt.value = '';
     images = [];
     attached.replaceChildren();
@@ -269,16 +269,35 @@ export function createChatView(options: ChatViewOptions): ChatView {
     bridge.chatConfigure(slot, change).catch((error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
+  function choose(change: ChatPreferences): void {
+    if ('model' in change) model = change.model;
+    if (change.permissionMode) mode = change.permissionMode;
+  }
+
   function readEarlier(): void {
     if (earlierRead) return;
     earlierRead = true;
-    bridge.chatRead(slot).then((messages) => {
-      // Something sent before the read came back is newer than anything in it.
-      if (transcript.entries.length > 0) return;
-      transcript = messages.reduce(applyMessage, transcript);
+    const reading = resets;
+    bridge.chatRead(slot).then((state) => {
+      if (reading !== resets) return;
+      transcript = withEarlier(transcript, state.messages);
+      choose(state.preferences);
+      for (const waiting of state.asks) addAsk(waiting);
       paint();
       log.scrollTop = log.scrollHeight;
     }, (error: unknown) => options.onError(`Earlier conversation not read: ${failureText(error)}`));
+  }
+
+  // A question the session is waiting on. One that is already here — told of it while the read was
+  // on its way — is not added twice.
+  function addAsk(waiting: PermissionAsk): void {
+    if (asks.some((each) => each.id === waiting.id)) return;
+    asks = [...asks, waiting];
+    if (asks.length === 1) {
+      showAsk();
+      if (seen()) ask.focus();
+    }
+    if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
   function focus(): void {
@@ -294,16 +313,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
     },
     focus,
     receive(event) {
-      if (event.kind === 'ask') {
-        asks = [...asks, event.ask];
-        if (asks.length === 1) {
-          showAsk();
-          if (seen()) ask.focus();
-        }
-        if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(event.ask)}`, options.paneId);
-        return;
-      }
+      if (event.kind === 'ask') return addAsk(event.ask);
       if (event.kind === 'ask-gone') return dropAsk(event.id);
+      const change = preferencesOf(event);
+      if (change) choose(change);
       transcript = applyEvent(transcript, event);
       if (event.kind === 'message' && event.message.type === 'result') measure();
       render();
@@ -315,15 +328,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
         const chosen = drawn[selected ?? -1]?.element;
         if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
       }
-      if (command === 'interrupt' && working()) bridge.chatInterrupt(slot);
+      // Always sent: this screen may not know of a turn another one started, and interrupting an idle
+      // session does nothing.
+      if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'model') configure({ model: (model = next(MODELS, model)) });
       if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through
       // doing would stop with nothing on screen saying so.
-      if (command === 'new' && working()) {
+      if (command === 'new' && working(transcript, asks.length)) {
         options.onNotice('Claude is still working. Escape stops it; then start the new conversation.');
       } else if (command === 'new') {
         bridge.chatReset(slot);
+        resets++;
         for (const entry of drawn) entry.element.remove();
         nearScreen.disconnect();
         unfilled.clear();

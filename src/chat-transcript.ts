@@ -1,11 +1,19 @@
+import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
+import type { ChatContent } from './bridge';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
+import type { ChatPreferences } from './chat-sessions';
 
 // What main sends the chat pane, one per thing that happened in its session. `message` is an
 // SDKMessage as the Agent SDK yields it, or a line of a saved session read back for a resume; the two
 // are the same shape where this file reads them, and everything is read as maybe missing.
 export type ChatEvent =
   | { kind: 'message'; message: Record<string, unknown> }
+  // A prompt sent from any screen. The session does not echo one back, so main does, and every screen
+  // shows what was asked rather than only the one it was typed on.
+  | { kind: 'prompt'; content: ChatContent }
+  // A model or permission mode a screen picked, so every screen's foot says the same.
+  | { kind: 'configured'; change: ChatPreferences }
   | { kind: 'ask'; ask: PermissionAsk }
   // A question main stopped waiting on: the turn was interrupted, or the session ended under it.
   | { kind: 'ask-gone'; id: string }
@@ -155,16 +163,33 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   }
 }
 
-// What you typed, put on screen at once: the session does not echo a prompt back.
-export function addPrompt(transcript: Transcript, said: string, images: ChatImage[]): Transcript {
-  return { ...transcript, busy: true, entries: [...transcript.entries, { kind: 'user', text: said, images }] };
-}
-
 export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript {
   if (event.kind === 'message') return applyMessage(transcript, event.message);
+  if (event.kind === 'prompt') return { ...user(transcript, event.content), busy: true };
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
     return { ...transcript, busy: false, live: '', entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
+}
+
+// What an event says about the model or permission mode the session is on: a choice made on some
+// screen, or the mode the session started in, which its settings may have set.
+export function preferencesOf(event: ChatEvent): ChatPreferences | null {
+  if (event.kind === 'configured') return event.change;
+  const message = event.kind === 'message' ? event.message : null;
+  if (message?.type !== 'system' || message.subtype !== 'init' || typeof message.permissionMode !== 'string') return null;
+  return { permissionMode: message.permissionMode as PermissionMode };
+}
+
+// The conversation read back from disk, unless something has already been drawn: a prompt sent or a
+// message arrived before the read came back is newer than anything in it.
+export function withEarlier(transcript: Transcript, messages: Record<string, unknown>[]): Transcript {
+  return transcript.entries.length > 0 ? transcript : messages.reduce(applyMessage, transcript);
+}
+
+// A turn running or a question waiting: what a new conversation is refused under, since the reset
+// would stop Claude half-way with nothing on screen saying so.
+export function working(transcript: Transcript, waitingAsks: number): boolean {
+  return transcript.busy || waitingAsks > 0;
 }
