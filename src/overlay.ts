@@ -131,8 +131,8 @@ export type SearchRow<Choice> = {
 
 // The third sheet: a box to type in with a list under it that the arrows walk, Enter takes the
 // highlighted row and Escape leaves. Three dialogs are this — the project picker, the board's card
-// search and the Claude screen's /resume conversation picker — and they differ only in what a row is and where the rows come from, so the dialog is here
-// and each caller keeps its own rows.
+// search and the Claude screen's /resume conversation picker — and they differ only in what a row
+// is and where the rows come from, so the dialog is here and each caller keeps its own rows.
 //
 // `rows` is asked again each time what has been typed changes rather than given a list once, because
 // the list is a function of what has been typed — and because the board can be written under an open
