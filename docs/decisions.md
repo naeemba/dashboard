@@ -172,3 +172,29 @@ shows them: a mac on a Linux host keeps its Cmd keys.
 `main.ts` and `renderer.ts` are measured in code lines with `grep -cvE '^\s*(//|$)'`. Comments are never
 dropped or packed to fit. This branch moved `processTree`, `baseBranch` and `shellLivesIn` out of
 `main.ts`, and `showPicker` and page syncing out of `renderer.ts`, instead.
+
+## The Claude screen answers permissions itself, in one long session
+
+The Claude screen runs `query()` in streaming input mode, one per project page, and keeps it open:
+every prompt goes into the same process, and a tool that needs a yes arrives through `canUseTool` and
+waits there for the box over the prompt to answer it. Escape is `interrupt()`, which also declines
+whatever was being asked.
+
+The two projects the card pointed at were read first and neither is copied. opcode starts the CLI with
+`--dangerously-skip-permissions` and stops a turn by killing the process. claude-code-webui runs a new
+`query()` per message and handles a refused tool by sending the message again with the tool added to
+`allowedTools`, which runs the turn twice. Both trade the question away; this screen exists to ask it.
+
+The session starts on the first prompt, not on opening the screen: the CLI is a process per project,
+and a screen glanced at once should not hold one open all day.
+
+The app picks the conversation's id and keeps it per project in `chat-sessions.json` in the app's data
+folder, never in `.dashboard/`, since a conversation is personal and the board is tracked. The next
+launch reads it back with `getSessionMessages` and resumes it on the next prompt. A resume that fails
+forgets the id, so the prompt after it starts fresh instead of failing the same way again.
+
+`@path` is passed through as typed: the CLI expands it into the file's contents the way it does in a
+terminal, checked against the pinned SDK by asking for `@package.json`'s version with no tools used.
+
+Watch for: Plan mode is not on the edits key, because the plan's approval would arrive as a plain
+permission ask for `ExitPlanMode` with the plan folded away under it.

@@ -1,10 +1,11 @@
+import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
 import { permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
 
 const ask = (over: Partial<PermissionAsk> = {}): PermissionAsk => ({
   id: '1', toolName: 'Bash', input: { command: 'rm -rf build' }, defaultToNo: false, suppressAlwaysAllowRule: false, ...over,
 });
-const rule = { type: 'addRules', rules: [{ toolName: 'Bash' }], behavior: 'allow', destination: 'session' } as const;
+const rule: PermissionUpdate = { type: 'addRules', rules: [{ toolName: 'Bash' }], behavior: 'allow', destination: 'session' };
 
 describe('permissionChoices', () => {
   it('offers yes and no, opening on yes', () => {

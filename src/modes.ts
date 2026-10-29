@@ -4,7 +4,7 @@
 //
 // Manager is not here, and neither are command and log: those are the manager's own, no project has
 // them, and a saved page naming one would come back on a view its page never built.
-export const PROJECT_MODES = ['terminals', 'nvim', 'board', 'notes'] as const;
+export const PROJECT_MODES = ['terminals', 'nvim', 'board', 'notes', 'claude'] as const;
 // The same four as a type, so page.ts builds its record of views from this list rather than spelling
 // the four names again beside it. A fifth project view is then one row above and nothing else to keep
 // in step.

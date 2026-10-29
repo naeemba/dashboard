@@ -54,7 +54,12 @@ export type Action =
   | { kind: 'command-cancel' }
   | { kind: 'log-select'; direction: 'up' | 'down' }
   | { kind: 'log-open' }
-  | { kind: 'log-filter-reset' };
+  | { kind: 'log-filter-reset' }
+  | { kind: 'chat'; command: ChatCommand };
+
+// What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
+// view, so the renderer passes them on without a case each.
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'interrupt' | 'model' | 'permission-mode' | 'new';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -65,7 +70,7 @@ export type Action =
 // may name only one scope — two rows sharing a binding is what this app already treats as a
 // hand-edited settings file. It cannot be answered from the mode alone, because `board` is a mode the
 // manager shares with every project, so `hears` is told which page you are on.
-export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'manager-page';
+export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'claude' | 'manager-page';
 
 // Whether two actions can be heard at the same moment, which is the whole of what "these two want the
 // same key" means. Exported because two places ask it and they must not each hold their own idea of
@@ -88,7 +93,7 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.
 export type ActionGroup =
-  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'sections';
+  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'claude' | 'sections';
 
 export type ActionEntry = {
   // It is the key in settings.json, so renaming one is renaming a line in the user's file. A rename
@@ -237,6 +242,12 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'mode-notes', description: 'Notes mode', group: 'modes', scope: 'global',
     action: { kind: 'mode-set', mode: 'notes' }, mac: 'Ctrl+Shift+N', other: 'Ctrl+Shift+N',
+  },
+  // Shift for the reason mode-notes gives. A for agent: C is the copy key off a mac, and Ctrl+Shift+C
+  // would be heard on the terminals screen by both.
+  {
+    name: 'mode-claude', description: 'Claude mode', group: 'modes', scope: 'global',
+    action: { kind: 'mode-set', mode: 'claude' }, mac: 'Ctrl+Shift+A', other: 'Ctrl+Shift+A',
   },
   // Ctrl+1..9 belongs to the projects on every platform, so off macOS there is no modifier left to
   // reach a pane by number. Shipping unbound is better than shipping a key that cannot work.
@@ -497,6 +508,36 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'log-filter-reset', description: 'Empty the filter',
     group: 'log', scope: 'log', action: { kind: 'log-filter-reset' }, mac: 'Escape', other: 'Escape',
+  },
+  // The Claude screen. The prompt box holds the keyboard there, so every key a box types with — the
+  // arrows, Enter, a bare letter — has to reach it, and these are Alt keys, the vim directions to walk
+  // the conversation like the terminal keys walk panes. Escape and Shift+Tab are what the Claude Code
+  // terminal uses for the same two things.
+  ...([['up', 'K'], ['down', 'J']] as const).map(([direction, key]): ActionEntry => ({
+    name: `chat-select-${direction}`, description: `Move the selection ${direction} the conversation`,
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: `select-${direction}` },
+    mac: `Alt+${key}`, other: `Alt+${key}`,
+  })),
+  {
+    name: 'chat-unfold', description: 'Unfold the selected tool call, or fold it again',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'unfold' }, mac: 'Alt+O', other: 'Alt+O',
+  },
+  {
+    name: 'chat-interrupt', description: 'Stop Claude, declining anything it is asking',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'interrupt' }, mac: 'Escape', other: 'Escape',
+  },
+  {
+    name: 'chat-model', description: 'Next model',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'model' }, mac: 'Alt+M', other: 'Alt+M',
+  },
+  {
+    name: 'chat-permission-mode', description: 'Ask before edits, or accept them',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'permission-mode' },
+    mac: 'Shift+Tab', other: 'Shift+Tab',
+  },
+  {
+    name: 'chat-new', description: 'Start a new conversation',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'new' }, mac: 'Alt+N', other: 'Alt+N',
   },
 ];
 

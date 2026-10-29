@@ -1,0 +1,251 @@
+/* The Claude screen: a column of conversation over a prompt box. Read like a document rather than a
+   terminal, so prose is in the app's own face and a measure wide enough for code. */
+.view-claude {
+  display: grid;
+  justify-items: center;
+  background: var(--background);
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 110ch);
+  height: 100%;
+  min-height: 0;
+  padding: 0 24px 12px;
+  box-sizing: border-box;
+}
+
+.chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+/* What is off screen is not laid out. The size is a guess the browser replaces with the real one once
+   the entry has been drawn, so the scroll bar settles as the conversation is read. */
+.chat-entry {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 60px;
+  margin: 0 0 12px;
+  padding: 2px 10px;
+  border-left: 2px solid transparent;
+  font: 14px/1.6 var(--ui-font);
+  overflow-wrap: anywhere;
+}
+
+.chat-entry.selected {
+  border-left-color: var(--blue);
+  background: var(--hover);
+}
+
+.chat-live[hidden] {
+  display: none;
+}
+
+.chat-user {
+  color: var(--brightWhite);
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+}
+
+.chat-user p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+
+.chat-notice {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.chat-text table {
+  border-collapse: collapse;
+}
+
+.chat-text th,
+.chat-text td {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+}
+
+.chat-text code,
+.chat-code,
+.chat-diff,
+.chat-input,
+.chat-output {
+  font: 12.5px/1.5 var(--mono-font);
+}
+
+.chat-code,
+.chat-diff,
+.chat-input,
+.chat-output {
+  margin: 6px 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  background: var(--black);
+  border-radius: var(--radius);
+}
+
+.chat-text a {
+  color: var(--blue);
+}
+
+.chat-image {
+  display: block;
+  max-width: 100%;
+  max-height: 480px;
+  margin: 6px 0;
+}
+
+.chat-tool summary {
+  display: flex;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--muted);
+  font: 12.5px/1.6 var(--mono-font);
+}
+
+.chat-tool summary b {
+  color: var(--white);
+  font-weight: 500;
+}
+
+.chat-tool-summary {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-tool-state {
+  color: var(--green);
+}
+
+.chat-tool-state.running {
+  color: var(--yellow);
+}
+
+.chat-tool-state.failed,
+.chat-error {
+  color: var(--red);
+}
+
+.diff-added {
+  color: var(--green);
+}
+
+.diff-removed {
+  color: var(--red);
+}
+
+.diff-same {
+  color: var(--muted);
+}
+
+/* The question over the prompt. Hidden with the attribute, and the display below would beat it. */
+.chat-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 50%;
+  overflow-y: auto;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  outline: none;
+}
+
+.chat-ask[hidden] {
+  display: none;
+}
+
+.chat-ask-title {
+  margin: 0 0 6px;
+  color: var(--brightWhite);
+  font-weight: 600;
+}
+
+.chat-ask-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.chat-ask-row span {
+  color: var(--muted);
+}
+
+.chat-ask-row.selected {
+  background: var(--tint);
+}
+
+.chat-ask-other {
+  flex: 1;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  outline: none;
+}
+
+.chat-attached {
+  display: flex;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chat-attached span {
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.chat-prompt {
+  margin: 6px 0;
+  padding: 10px 12px;
+  font: 14px/1.5 var(--ui-font);
+  color: inherit;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  outline: none;
+  resize: none;
+}
+
+.chat-prompt:focus {
+  border-color: var(--blue);
+}
+
+.chat-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* How full the context is, as a bar that fills from the left. */
+.chat-context {
+  width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--blue) var(--used), var(--line) var(--used));
+}
+
+/* highlight.js, drawn from the theme's own colours rather than a stylesheet of its own. */
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: var(--magenta); }
+.hljs-string, .hljs-addition, .hljs-attr { color: var(--green); }
+.hljs-number, .hljs-literal { color: var(--yellow); }
+.hljs-comment, .hljs-quote { color: var(--muted); font-style: italic; }
+.hljs-title, .hljs-section, .hljs-function { color: var(--blue); }
+.hljs-type, .hljs-class, .hljs-variable { color: var(--cyan); }
+.hljs-deletion { color: var(--red); }

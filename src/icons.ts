@@ -2,7 +2,7 @@
 // whole set is one list to read, and so a screen asks for `icon('rocket')` without knowing which
 // library drew it. Each one is stroked in currentColor and takes the colour of the text around it.
 import {
-  ArrowDownWideNarrow, Bitcoin, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
+  ArrowDownWideNarrow, Bitcoin, Bot, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, Plug, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
@@ -16,6 +16,7 @@ const ICONS = {
   backlog: Inbox,
   bitcoin: Bitcoin,
   board: Columns3,
+  claude: Bot,
   calendar: Calendar,
   checked: SquareCheck,
   cloud: Cloud,
@@ -92,7 +93,7 @@ export function labelled(
 // Complete on purpose, so a new mode does not compile until it has one.
 export const MODE_GLYPHS: Record<Mode, IconName> = {
   terminals: 'terminal', nvim: 'editor', board: 'board', notes: 'notes', manager: 'general', command: 'command',
-  log: 'log',
+  log: 'log', claude: 'claude',
 };
 
 // A button holding an icon and a name, the shape every bar of tabs in the app is built from.

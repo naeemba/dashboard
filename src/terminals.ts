@@ -6,6 +6,10 @@ export const TERMINAL_COUNT = 5;
 // says so: move the editor and every caller follows.
 export const EDITOR_INDEX = TERMINAL_COUNT;
 
+// The Claude screen, one past the editor. It is not a pty, so paneIds leaves it out and main never
+// spawns or kills anything by it; it is a number only so a notification it raises can name it.
+export const CHAT_INDEX = EDITOR_INDEX + 1;
+
 export type Direction = 'left' | 'right' | 'up' | 'down';
 
 // Matches the grid in index.css: two on top (0 1), three on bottom (2 3 4).
@@ -127,6 +131,7 @@ export function sizeOfPane(sizes: { sizeOf(id: string): PaneSize | undefined }, 
 // switching the page to nvim first — otherwise you arrive at a project showing five shells with the
 // pane you were sent to nowhere on screen.
 export function modeOfPane(index: number): Mode {
+  if (index === CHAT_INDEX) return 'claude';
   return index === EDITOR_INDEX ? 'nvim' : 'terminals';
 }
 

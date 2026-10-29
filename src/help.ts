@@ -15,7 +15,7 @@ export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 export const MODE_NAMES: Record<Mode, string> = {
   terminals: 'Terminals', nvim: 'nvim', board: 'Board', notes: 'Notes',
-  manager: 'Manager', command: 'Command', log: 'Log',
+  manager: 'Manager', command: 'Command', log: 'Log', claude: 'Claude',
 };
 
 // What each screen and each group is, for the person who has not been told. The things worth knowing
@@ -273,16 +273,41 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'moderate — would need a parser per tool, and every tool words it differently. '
     + 'The command you typed lasts while the app is running and is gone on restart, and so are the '
     + 'results: a run answers a question you are asking now, and is not a record of anything.',
+  claude: 'A Claude Code conversation drawn as a page rather than a terminal: tables as tables, '
+    + 'code highlighted, images inline, an edit as a diff. It runs in the project\'s folder with the '
+    + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
+    + 'a pane. Nothing starts until you send the first prompt. '
+    + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
+    + 'working and it is read when the turn gets to it. Paste an image to attach it — the line over the '
+    + 'box counts them, and Backspace in an empty box takes the last one off. Write @ and a path to '
+    + 'point Claude at a file. There are no slash commands here. '
+    + 'Every tool call is folded to one line: a mark saying whether it is still running, worked or '
+    + 'failed, the tool and what it touched. The selection keys walk the conversation one entry at a '
+    + 'time, scrolling as they go, and the unfold key opens the call under the selection to show its '
+    + 'command or its diff and what came back; a click does the same. '
+    + 'When Claude wants to use a tool that needs your say, a box over the prompt names it and shows '
+    + 'what it would do, and the arrows and Enter answer it. A tool asked about often offers a row that '
+    + 'stops it asking again this session. A question Claude asks you comes the same way, one question '
+    + 'at a time, with a row to type an answer of your own. If the window is behind something else when '
+    + 'either arrives, a notification says so and clicking it lands here. Escape stops Claude where it '
+    + 'is and declines anything it was asking. '
+    + 'The line at the foot says the model, whether edits are asked about or accepted, how full the '
+    + 'conversation\'s context is and whether Claude is working. The model key walks the models and the '
+    + 'edits key switches between asking and accepting, both for the next thing Claude does. '
+    + 'The conversation outlives the app: the next launch shows it again and the next prompt carries '
+    + 'on from it. The new conversation key starts over; the old one stays in Claude Code\'s own '
+    + 'history on disk. A very long conversation scrolls fine, but only the part near the screen is '
+    + 'drawn properly at any moment, so fast scrolling shows plain text for a moment first.',
   sections: 'The manager is five screens with one strip of names above them. These two keys walk it, '
     + 'from any of the five. The arrows are deliberately not these keys: on the board they move '
     + 'between cards, and in the notes they move the caret.',
-  modes: 'A project is shown four ways and remembers which one you left it on, so jumping to it '
-    + 'lands you back in the same view. The four are named along the foot of a project\'s page, the '
+  modes: 'A project is shown five ways and remembers which one you left it on, so jumping to it '
+    + 'lands you back in the same view. The five are named along the foot of a project\'s page, the '
     + 'one you are on lit, and a click on a name goes there the way its key does. The manager has five '
     + 'sections of its own, named along the '
     + 'top: its list of what the panes want, a board of its own above every project\'s, one command run across '
     + 'projects, a page of notes about none of them, and what the app itself has been doing. Two of '
-    + 'the four mode keys land on a section rather than doing nothing there — the board key and the '
+    + 'the five mode keys land on a section rather than doing nothing there — the board key and the '
     + 'notes key.',
   projects: 'The first tab along the top is the manager; every tab after it is one project, in the '
     + 'order you put them in. A click on a tab goes to it, the same as its jump key. A project cannot be moved in front of the manager, so the first two move '

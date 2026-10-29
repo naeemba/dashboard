@@ -71,6 +71,9 @@ export function modeLabel(page: StatusPage): string {
   // The filter box is the whole of what this screen takes, as the notes box is, so it is named and
   // nothing more rather than falling through to a pane you are not looking at.
   if (page.mode === 'log') return 'log';
+  // The model, the mode and how full the context is are on the screen's own foot line, so the bar
+  // names the screen and nothing more.
+  if (page.mode === 'claude') return 'claude';
   if (page.mode === 'command') return page.commandStatusLabel;
   if (page.paneCount === 0) return '';
   const label = paneLabel(page.focused, branchOfPane(page.worktrees, page.focusedDirectory), page.focusedName);
