@@ -514,29 +514,29 @@ export const ACTIONS: readonly ActionEntry[] = [
   // the conversation like the terminal keys walk panes. Escape and Shift+Tab are what the Claude Code
   // terminal uses for the same two things.
   ...([['up', 'K'], ['down', 'J']] as const).map(([direction, key]): ActionEntry => ({
-    name: `chat-select-${direction}`, description: `Move the selection ${direction} the conversation`,
+    name: `claude-select-${direction}`, description: `Move the selection ${direction} the conversation`,
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: `select-${direction}` },
     mac: `Alt+${key}`, other: `Alt+${key}`,
   })),
   {
-    name: 'chat-unfold', description: 'Unfold the selected tool call, or fold it again',
+    name: 'claude-unfold', description: 'Unfold the selected tool call, or fold it again',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'unfold' }, mac: 'Alt+O', other: 'Alt+O',
   },
   {
-    name: 'chat-interrupt', description: 'Stop Claude, declining anything it is asking',
+    name: 'claude-interrupt', description: 'Stop Claude, declining anything it is asking',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'interrupt' }, mac: 'Escape', other: 'Escape',
   },
   {
-    name: 'chat-model', description: 'Next model',
+    name: 'claude-model', description: 'Next model',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'model' }, mac: 'Alt+M', other: 'Alt+M',
   },
   {
-    name: 'chat-permission-mode', description: 'Ask before edits, or accept them',
+    name: 'claude-permission-mode', description: 'Ask before edits, or accept them',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'permission-mode' },
     mac: 'Shift+Tab', other: 'Shift+Tab',
   },
   {
-    name: 'chat-new', description: 'Start a new conversation',
+    name: 'claude-new', description: 'Start a new conversation',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'new' }, mac: 'Alt+N', other: 'Alt+N',
   },
 ];
