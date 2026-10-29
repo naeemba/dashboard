@@ -17,6 +17,8 @@ export type ChatEvent =
   | { kind: 'ask'; ask: PermissionAsk }
   // A question main stopped waiting on: the turn was interrupted, or the session ended under it.
   | { kind: 'ask-gone'; id: string }
+  // A new conversation started from any screen: every screen clears the old one.
+  | { kind: 'reset' }
   | { kind: 'ended'; error: string | null };
 
 // The images the API takes, and so the only ones a pasted image is sent as.

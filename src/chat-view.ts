@@ -37,8 +37,8 @@ export type ChatView = {
   runCommand(command: ChatCommand): void;
 };
 
-// What the model key walks. Undefined is whatever the session's own settings choose.
-const MODELS: (string | undefined)[] = [undefined, 'opus', 'sonnet', 'haiku'];
+// What the model key walks. Null is whatever the session's own settings choose.
+const MODELS: (string | null)[] = [null, 'opus', 'sonnet', 'haiku'];
 // Plan mode has no screen of its own here yet, so the key walks the two modes the pane can show.
 const MODES: PermissionMode[] = ['default', 'acceptEdits'];
 
@@ -78,7 +78,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let selected: number | null = null;
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
-  let model: string | undefined;
+  let model: string | null = null;
   let mode: PermissionMode = 'default';
   let context: number | null = null;
   let earlierRead = false;
@@ -270,7 +270,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function choose(change: ChatPreferences): void {
-    if ('model' in change) model = change.model;
+    if ('model' in change) model = change.model ?? null;
     if (change.permissionMode) mode = change.permissionMode;
   }
 
@@ -300,6 +300,22 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
+  // A new conversation, started on this screen or another: the old one leaves the screen.
+  function clear(): void {
+    resets++;
+    for (const entry of drawn) entry.element.remove();
+    nearScreen.disconnect();
+    unfilled.clear();
+    transcript = EMPTY_TRANSCRIPT;
+    drawn = [];
+    drawnEntries = [];
+    selected = null;
+    asks = [];
+    context = null;
+    showAsk();
+    render();
+  }
+
   function focus(): void {
     if (asks.length > 0) ask.focus();
     else prompt.focus();
@@ -315,6 +331,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     receive(event) {
       if (event.kind === 'ask') return addAsk(event.ask);
       if (event.kind === 'ask-gone') return dropAsk(event.id);
+      if (event.kind === 'reset') return clear();
       const change = preferencesOf(event);
       if (change) choose(change);
       transcript = applyEvent(transcript, event);
@@ -338,19 +355,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'new' && working(transcript, asks.length)) {
         options.onNotice('Claude is still working. Escape stops it; then start the new conversation.');
       } else if (command === 'new') {
+        // The screen clears when main's reset event comes back, as every other screen does.
         bridge.chatReset(slot);
-        resets++;
-        for (const entry of drawn) entry.element.remove();
-        nearScreen.disconnect();
-        unfilled.clear();
-        transcript = EMPTY_TRANSCRIPT;
-        drawn = [];
-        drawnEntries = [];
-        selected = null;
-        asks = [];
-        context = null;
-        showAsk();
-        render();
         prompt.focus();
       }
     },

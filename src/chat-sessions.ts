@@ -29,8 +29,10 @@ export type ChatHost = {
 };
 
 // What the renderer may change on a running session. Held per slot so a choice made before the first
-// prompt is what the session starts with.
-export type ChatPreferences = { model?: string; permissionMode?: PermissionMode };
+// prompt is what the session starts with. The default model is null rather than undefined: the second
+// screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
+// as no change at all.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
 
@@ -175,7 +177,8 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
       options: {
         cwd: projectPath,
         ...(resume ? { resume } : { sessionId }),
-        ...preferences.get(slot),
+        model: preferences.get(slot)?.model ?? undefined,
+        permissionMode: preferences.get(slot)?.permissionMode,
         env: environment,
         includePartialMessages: true,
         pathToClaudeCodeExecutable: executable,
@@ -250,7 +253,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     host.send(slot, { kind: 'configured', change });
     const session = await sessions.get(slot);
     if (!session) return;
-    if ('model' in change) await session.query.setModel(change.model);
+    if ('model' in change) await session.query.setModel(change.model ?? undefined);
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
   });
 
@@ -266,13 +269,13 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
     const projectPath = host.projectPath(slot);
     const sessionId = projectPath === undefined ? undefined : remembered[projectPath];
+    const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
+    const messages = projectPath === undefined || sessionId === undefined ? [] : await getSessionMessages(sessionId, { dir: projectPath });
+    // Taken after the read, so a question answered on another screen while it ran is not handed back
+    // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
     const asks = running ? [...running.asks.values()].map((pending) => pending.ask) : [];
-    const chosen = preferences.get(slot) ?? {};
-    if (projectPath === undefined || sessionId === undefined) return { messages: [], asks, preferences: chosen };
-    const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
-    const messages = await getSessionMessages(sessionId, { dir: projectPath });
-    return { messages, asks, preferences: chosen };
+    return { messages, asks, preferences: preferences.get(slot) ?? {} };
   });
 
   function stop(slot: number): void {
@@ -286,11 +289,13 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   }
 
   // A new conversation: the running one is closed and the page forgets its id, so the next prompt
-  // starts fresh. The old transcript stays on disk for whatever lists sessions later.
+  // starts fresh. The old transcript stays on disk for whatever lists sessions later. Every screen is
+  // told, so none keeps showing a conversation the next prompt would not continue.
   table.on('chat:reset', (_screen, slot: number) => {
     const projectPath = host.projectPath(slot);
     stop(slot);
     if (projectPath !== undefined) remember(projectPath, undefined);
+    host.send(slot, { kind: 'reset' });
   });
 
   return {
