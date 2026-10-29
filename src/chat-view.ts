@@ -3,7 +3,10 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
+import { completion, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
+import { onEdgeLine, recall } from './chat-history';
+import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import {
@@ -13,11 +16,14 @@ import {
 import type { ChatPreferences } from './chat-sessions';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
+import { searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
 // chat-sessions.ts in main. The keys it answers through the window's lookup are rows in actions.ts and
-// arrive as runCommand; the prompt box reads only Enter and Backspace for itself.
+// arrive as runCommand. The prompt box reads Enter and Backspace for itself, Up and Down for the
+// prompts sent before, and, while the slash command list is open over it, Up, Down, Tab and Enter
+// for that.
 
 export type ChatViewOptions = {
   bridge: DashboardBridge;
@@ -39,8 +45,13 @@ export type ChatView = {
 
 // What the model key walks. Null is whatever the session's own settings choose.
 const MODELS: (string | null)[] = [null, 'opus', 'sonnet', 'haiku'];
-// Plan mode has no screen of its own here yet, so the key walks the two modes the pane can show.
-const MODES: PermissionMode[] = ['default', 'acceptEdits'];
+// What the edits key walks, in the Claude Code terminal's order. A mode the session's settings start
+// it in that is not here — auto, or skipping permissions — is shown, and the key walks on from the top.
+const MODES: PermissionMode[] = ['default', 'acceptEdits', 'plan'];
+const MODE_LABELS: Record<PermissionMode, string> = {
+  default: 'asking before edits', acceptEdits: 'accepting edits', plan: 'planning',
+  auto: 'auto mode', bypassPermissions: 'skipping permissions', dontAsk: 'refusing what is not allowed',
+};
 
 const PAINT_MS = 80;
 
@@ -66,12 +77,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
-  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line. Paste an image to attach it.';
+  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste an image to attach it.';
   prompt.rows = 3;
   prompt.dir = 'auto';
+  const menu = createCommandMenu();
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  element.append(log, ask.element, attached, prompt, foot);
+  element.append(log, ask.element, menu.element, attached, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
@@ -82,6 +94,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let mode: PermissionMode = 'default';
   let context: number | null = null;
   let earlierRead = false;
+  // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
+  let commands: CommandRow[] | null = null;
+  let commandsAsked = false;
+  // Which sent prompt Up has brought back, and what was in the box before it did.
+  let recalled: number | null = null;
+  let draft = '';
   // Bumped by a new conversation, so a read of the earlier one that comes back after it is dropped.
   let resets = 0;
 
@@ -102,7 +120,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function drawFoot(): void {
     const shown = model ?? transcript.model ?? 'default model';
-    const parts = [shown, mode === 'acceptEdits' ? 'accepting edits' : 'asking before edits'];
+    const parts = [shown, MODE_LABELS[mode]];
     if (context !== null) parts.push(`context ${Math.round(context)}%`);
     parts.push(asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready');
     const bar = document.createElement('span');
@@ -182,9 +200,23 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // On screen and in front: the screen is not under a hidden view or page, and the window has focus.
   const seen = () => document.hasFocus() && element.closest('[hidden]') === null;
 
+  function emptyBox(): void {
+    prompt.value = '';
+    recalled = null;
+    menu.update('', []);
+  }
+
   function send(): void {
-    const text = prompt.value.trim();
+    let text = prompt.value.trim();
     if (!text && images.length === 0) return;
+    const own = screenCommand(text);
+    if (own) emptyBox();
+    if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'plan') {
+      configure({ permissionMode: (mode = 'plan') });
+      if (!planSends(own.rest, images.length)) return;
+      text = own.rest;
+    }
     const content: ChatContent = [
       ...images.map((picture) => ({
         type: 'image' as const,
@@ -194,7 +226,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     ];
     // Main sends the prompt back to every screen, this one included, as a `prompt` event.
     bridge.chatSend(slot, content);
-    prompt.value = '';
+    if (commands === null) commandsAsked = false;
+    emptyBox();
     images = [];
     attached.replaceChildren();
     selected = null;
@@ -210,9 +243,67 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }));
   }
 
+  // The list follows what is typed. The first slash asks main for the session's commands, which
+  // starts the session; until they arrive the list holds the screen's own. One ask that fails is not
+  // made again on every keystroke: the session that failed to start has said why, and the next
+  // prompt sent tries again.
+  function updateMenu(): void {
+    if (prompt.value.startsWith('/') && !commandsAsked) {
+      commandsAsked = true;
+      bridge.chatCommands(slot).then((list) => {
+        commands = list;
+        updateMenu();
+      }, () => undefined);
+    }
+    menu.update(prompt.value, commands ?? []);
+  }
+
+  function complete(row: CommandRow, enter: boolean): void {
+    const { text, runs } = completion(row, enter);
+    prompt.value = text;
+    if (runs) send();
+    else updateMenu();
+    prompt.focus();
+  }
+  menu.onClick((row) => complete(row, true));
+
+  // The prompts sent in this conversation, oldest first, what Up walks back through.
+  function sentPrompts(): string[] {
+    return transcript.entries.flatMap((entry) => (entry.kind === 'user' && entry.text.trim() ? [entry.text] : []));
+  }
+
+  function walkHistory(direction: -1 | 1): boolean {
+    if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
+    const sent = sentPrompts();
+    const moved = recall(sent.length, recalled, direction);
+    if (!moved) return false;
+    if (recalled === null) draft = prompt.value;
+    recalled = moved.at;
+    prompt.value = recalled === null ? draft : sent[recalled];
+    // Not opened for a recalled command, so the next Up keeps walking the history.
+    menu.update('', []);
+    return true;
+  }
+
+  prompt.addEventListener('input', () => {
+    recalled = null;
+    updateMenu();
+  });
+
   prompt.addEventListener('keydown', (event) => {
     if (isModified(event)) return;
-    if (event.key === 'Enter') {
+    const arrow = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
+    const menuOpen = menu.open();
+    if (menuOpen && arrow !== 0) {
+      event.preventDefault();
+      menu.move(arrow);
+    } else if (menuOpen && (event.key === 'Tab' || event.key === 'Enter')) {
+      event.preventDefault();
+      const row = menu.picked();
+      if (row) complete(row, event.key === 'Enter');
+    } else if (arrow !== 0) {
+      if (walkHistory(arrow)) event.preventDefault();
+    } else if (event.key === 'Enter') {
       event.preventDefault();
       send();
     } else if (event.key === 'Backspace' && prompt.value === '' && images.length > 0) {
@@ -240,17 +331,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   });
 
-  // A link opens in the browser, where main decides what is safe to hand the system. A click on an
-  // entry moves the selection there; a tool call's own summary unfolds it, which is what the unfold
-  // key does on a selected one.
+  // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
+  // decides what is safe to hand the system, never in this window.
+  element.addEventListener('click', (event) => {
+    const link = event.target instanceof Element ? event.target.closest('a') : null;
+    if (!link) return;
+    event.preventDefault();
+    bridge.openExternal(link.href);
+  });
+
+  // A click on an entry moves the selection there; a tool call's own summary unfolds it, which is what
+  // the unfold key does on a selected one.
   log.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target : null;
-    const link = target?.closest('a');
-    if (link) {
-      event.preventDefault();
-      bridge.openExternal(link.href);
-      return;
-    }
+    if (target?.closest('a')) return;
     const index = drawn.findIndex((entry) => entry.element.contains(target));
     if (index !== -1) select(index);
   });
@@ -300,6 +394,24 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
+  // The project's earlier conversations in a search sheet; the one picked is read back on every
+  // screen and carried on by the next prompt.
+  function showResume(): void {
+    if (working(transcript, asks.length)) {
+      options.onNotice('Claude is still working. Escape stops it; then pick the conversation.');
+      return;
+    }
+    bridge.chatSessions(slot).then(async (found) => {
+      if (found.sessions.length === 0) return options.onNotice('This project has no earlier conversations.');
+      const picked = await searchOverlay({
+        name: 'chat-resume', placeholder: 'Search conversations', rows: (query) => resumeRows(found, query),
+        empty: 'No conversation matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
+      focus();
+    }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  }
+
   // A new conversation, started on this screen or another: the old one leaves the screen.
   function clear(): void {
     resets++;
@@ -312,6 +424,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     selected = null;
     asks = [];
     context = null;
+    recalled = null;
+    draft = '';
     showAsk();
     render();
   }
@@ -331,7 +445,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
     receive(event) {
       if (event.kind === 'ask') return addAsk(event.ask);
       if (event.kind === 'ask-gone') return dropAsk(event.id);
-      if (event.kind === 'reset') return clear();
+      // A new conversation or one picked in /resume, from any screen: whatever the page is on now is
+      // read back, which for a new one is nothing.
+      if (event.kind === 'reset') {
+        clear();
+        earlierRead = false;
+        return readEarlier();
+      }
+      if (event.kind === 'message' && event.message.subtype === 'commands_changed' && Array.isArray(event.message.commands)) {
+        commands = event.message.commands as CommandRow[];
+      }
       const change = preferencesOf(event);
       if (change) choose(change);
       transcript = applyEvent(transcript, event);
@@ -345,9 +468,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
         const chosen = drawn[selected ?? -1]?.element;
         if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
       }
-      // Always sent: this screen may not know of a turn another one started, and interrupting an idle
-      // session does nothing.
-      if (command === 'interrupt') bridge.chatInterrupt(slot);
+      // Escape closes an open command list first, as in Claude Code. Otherwise always sent: this screen
+      // may not know of a turn another one started, and interrupting an idle session does nothing.
+      if (command === 'interrupt' && menu.open()) menu.update('', []);
+      else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'model') configure({ model: (model = next(MODELS, model)) });
       if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through

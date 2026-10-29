@@ -18,7 +18,6 @@ export const BOARD_STALE_MS = 5_000;
 // than a file read.
 export const DIRTY_STALE_MS = 15_000;
 
-
 export type ManagerReadsPorts = {
   // Null when there is nothing to count; board-store.ts's peekBoard says when.
   peekBoard(projectPath: string): Promise<Board | null>;

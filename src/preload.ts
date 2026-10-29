@@ -71,6 +71,9 @@ const bridge: DashboardBridge = {
   chatMeasure: (slot) => ipcRenderer.invoke('chat:measure', slot),
   chatRead: (slot) => ipcRenderer.invoke('chat:read', slot),
   chatReset: (slot) => ipcRenderer.send('chat:reset', slot),
+  chatCommands: (slot) => ipcRenderer.invoke('chat:commands', slot),
+  chatSessions: (slot) => ipcRenderer.invoke('chat:sessions', slot),
+  chatResume: (slot, sessionId) => ipcRenderer.send('chat:resume', slot, sessionId),
   onChat: (listener) => ipcRenderer.on('chat:receive', (_event, slot, chatEvent) => listener(slot, chatEvent)),
 };
 

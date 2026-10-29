@@ -29,12 +29,18 @@ function preformatted(className: string, text: string): HTMLPreElement {
   return pre;
 }
 
-// The call itself, then what came back. A file tool shows its change as a diff; anything else shows
-// its input, which for Bash is the whole command rather than the first line the summary had room for.
+// The call itself, then what came back. A file tool shows its change as a diff, a plan put up for
+// approval reads as the document it is; anything else shows its input, which for Bash is the whole
+// command rather than the first line the summary had room for.
 export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
-  if (diff) {
+  if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
+    const plan = document.createElement('div');
+    plan.className = 'chat-plan chat-text';
+    plan.innerHTML = renderMarkdown(input.plan);
+    parts.push(plan);
+  } else if (diff) {
     const pre = document.createElement('pre');
     pre.className = 'chat-diff';
     pre.append(...diff.map((line) => {

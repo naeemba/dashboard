@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyEvent, applyMessage, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+  applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
 
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }] });
@@ -71,6 +71,17 @@ describe('applyMessage', () => {
       .toEqual({ kind: 'notice', text: 'Stopped.' });
   });
 
+  it('draws the stop the session writes in your name as one notice, not as something you said', () => {
+    const interrupted = { type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'text', text: '[Request interrupted by user]' }] } };
+    const stopped = fold([interrupted, { type: 'result', subtype: 'error_during_execution', is_error: true }], prompted('count'));
+    expect(stopped.entries.slice(1)).toEqual([{ kind: 'notice', text: 'Stopped.' }]);
+  });
+
+  it('reads a saved slash command back as it was typed', () => {
+    const saved = { type: 'user', parent_tool_use_id: null, message: { content: '<command-message>pr-loop</command-message>\n<command-name>/pr-loop</command-name>\n<command-args>12</command-args>' } };
+    expect(applyMessage(EMPTY_TRANSCRIPT, saved).entries).toEqual([{ kind: 'user', text: '/pr-loop 12', images: [] }]);
+  });
+
   it('says when the conversation was compacted', () => {
     expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'compact_boundary' }).entries)
       .toEqual([{ kind: 'notice', text: 'Conversation compacted.' }]);
@@ -128,7 +139,12 @@ describe('preferencesOf', () => {
     expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'init', permissionMode: 'acceptEdits' } }))
       .toEqual({ permissionMode: 'acceptEdits' });
   });
+  it('takes a mode the session moved to by itself, such as a plan approved', () => {
+    expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'status', status: null, permissionMode: 'acceptEdits' } }))
+      .toEqual({ permissionMode: 'acceptEdits' });
+  });
   it('says nothing about any other message', () => {
+    expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'status', status: 'compacting' } })).toBeNull();
     expect(preferencesOf({ kind: 'message', message: { type: 'assistant' } })).toBeNull();
   });
 });
@@ -147,4 +163,14 @@ describe('working', () => {
   it('is idle with no turn and no question', () => expect(working(EMPTY_TRANSCRIPT, 0)).toBe(false));
   it('is working during a turn', () => expect(working(prompted('hi'), 0)).toBe(true));
   it('is working while a question waits', () => expect(working(EMPTY_TRANSCRIPT, 1)).toBe(true));
+});
+
+describe('conversationChange', () => {
+  const init = (id: string) => ({ type: 'system', subtype: 'init', session_id: id });
+  it('remembers a conversation init names for the first time', () => expect(conversationChange(init('b'), 'a')).toEqual({ remember: 'b', reset: false }));
+  it('leaves the one already remembered', () => expect(conversationChange(init('a'), 'a')).toEqual({ reset: false }));
+  it('forgets it and clears every screen on /clear', () => {
+    expect(conversationChange({ type: 'conversation_reset' }, 'a')).toEqual({ remember: null, reset: true });
+  });
+  it('changes nothing for any other message', () => expect(conversationChange({ type: 'assistant' }, 'a')).toEqual({ reset: false }));
 });
