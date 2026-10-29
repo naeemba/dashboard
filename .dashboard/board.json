@@ -114,17 +114,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "2b2f2cfe-9a25-4433-a144-2768d2d179de",
-          "title": "Claude pane on the Agent SDK that renders the chat itself",
-          "notes": "A new pane kind beside the terminal pane: it runs a session through @anthropic-ai/claude-agent-sdk (query() in streaming input mode) and the app renders the chat as HTML. Markdown as markdown: tables, highlighted code, images inline, diffs as diffs, tool calls folded to one line that expands. Terminal panes stay xterm.js for shells, nvim and everything that is not Claude.\n\nWhy: the terminal pane shows Claude's answers as ANSI bytes; a pipe table stays pipes, an image stays [Image #2]. Swapping the emulator changes nothing; only a structured stream does. A read-only reader fed by the transcript jsonl was the smaller option; rejected because it cannot take input and the TUI's own lines (spinner, usage limit) never reach the file. The VS Code extension and desktop app are closed source, no reuse. OpenCode and the like are different agents, not Claude Code.\n\nFirst version, bounded: one pane; prompt box with image paste and @file; streamed text, code, tables, images; tool calls folded; permission dialog from canUseTool, keyboard answered, raising the app notification; AskUserQuestion as a form; Esc to interrupt; context bar from getContextUsage(); model and permission mode per pane (setModel, setPermissionMode). No slash commands, no plan mode UI, no /resume picker in this version; resume by session id only.\n\nFits the other cards: the main session and worker panes (card a639736a) become app code, a query() handle per pane, worker cwd = card worktree, done signal = the result message. CLAUDE.md, rules, skills, hooks, MCP load from cwd via the SDK.\n\nPin the SDK version. Bump weekly: read the SDK CHANGELOG entries since the pin (github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), and skim the Added lines of the CLI CHANGELOG (github.com/anthropics/claude-code/blob/main/CHANGELOG.md) for TUI features worth copying. Measured over 30 CLI versions: about 150 of 2256 entries touch this pane's job, 15 to 20 worth copying; the SDK side is about one Changed entry per release.\n\nBefore writing the permission and stream handling, read how getAsterisk/opcode and sugyan/claude-code-webui do it.\n\nKnown costs, accepted: the input side is ours (about fifteen small pieces), bugs in it are ours, and each CLI release may add a TUI feature the pane lacks until wired. Scrollback must virtualise: a 169k-token session rendered as DOM stalls the renderer.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-10-29T11:38:06.653Z",
-          "updatedAt": "2026-10-29T11:46:16.459Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -971,6 +961,23 @@
             {
               "at": "2026-10-28T14:57:21.561Z",
               "body": "Shipped in PR #82: the laptop hosts its session over a websocket and another Dashboard joins from Ctrl+S as a second screen."
+            }
+          ]
+        },
+        {
+          "id": "2b2f2cfe-9a25-4433-a144-2768d2d179de",
+          "title": "Claude pane on the Agent SDK that renders the chat itself",
+          "notes": "A new pane kind beside the terminal pane: it runs a session through @anthropic-ai/claude-agent-sdk (query() in streaming input mode) and the app renders the chat as HTML. Markdown as markdown: tables, highlighted code, images inline, diffs as diffs, tool calls folded to one line that expands. Terminal panes stay xterm.js for shells, nvim and everything that is not Claude.\n\nWhy: the terminal pane shows Claude's answers as ANSI bytes; a pipe table stays pipes, an image stays [Image #2]. Swapping the emulator changes nothing; only a structured stream does. A read-only reader fed by the transcript jsonl was the smaller option; rejected because it cannot take input and the TUI's own lines (spinner, usage limit) never reach the file. The VS Code extension and desktop app are closed source, no reuse. OpenCode and the like are different agents, not Claude Code.\n\nFirst version, bounded: one pane; prompt box with image paste and @file; streamed text, code, tables, images; tool calls folded; permission dialog from canUseTool, keyboard answered, raising the app notification; AskUserQuestion as a form; Esc to interrupt; context bar from getContextUsage(); model and permission mode per pane (setModel, setPermissionMode). No slash commands, no plan mode UI, no /resume picker in this version; resume by session id only.\n\nFits the other cards: the main session and worker panes (card a639736a) become app code, a query() handle per pane, worker cwd = card worktree, done signal = the result message. CLAUDE.md, rules, skills, hooks, MCP load from cwd via the SDK.\n\nPin the SDK version. Bump weekly: read the SDK CHANGELOG entries since the pin (github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md), and skim the Added lines of the CLI CHANGELOG (github.com/anthropics/claude-code/blob/main/CHANGELOG.md) for TUI features worth copying. Measured over 30 CLI versions: about 150 of 2256 entries touch this pane's job, 15 to 20 worth copying; the SDK side is about one Changed entry per release.\n\nBefore writing the permission and stream handling, read how getAsterisk/opcode and sugyan/claude-code-webui do it.\n\nKnown costs, accepted: the input side is ours (about fifteen small pieces), bugs in it are ours, and each CLI release may add a TUI feature the pane lacks until wired. Scrollback must virtualise: a 169k-token session rendered as DOM stalls the renderer.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-29T11:38:06.653Z",
+          "updatedAt": "2026-10-29T12:12:01.181Z",
+          "branch": "claude-pane-on-the-agent-sdk-that-renders-t",
+          "pullRequest": 83,
+          "comments": [
+            {
+              "at": "2026-10-29T12:12:01.103Z",
+              "body": "Shipped in PR #83 (v1.18.0): Claude screen on Ctrl+Shift+A. One SDK query per project in streaming input mode, markdown/code/images/diffs rendered, tool calls folded, canUseTool and AskUserQuestion as keyboard rows with a notification, Esc interrupts, model and edit mode keys, context bar, image paste, @file via the CLI, conversation resumed across launches. Not run in the app yet: needs a rebuild."
             }
           ]
         }
