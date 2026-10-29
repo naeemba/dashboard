@@ -19,7 +19,7 @@ import { mainArguments } from './dispatch';
 import { projectOfFolder, sessionRequests } from './session-requests';
 import { listenForSessions, sessionSocketPath } from './session-socket';
 import { unfinishedWork } from './finished-work';
-import { makeThrowawayWorktree } from './throwaway-worktree';
+import { makeThrowawayWorktree } from './branch-worktree';
 import { LOCAL_SCREEN, screens, windowHears } from './screens';
 import { boardChanges } from './board-changes';
 import { peekBoard, writeBoard } from './board-store';

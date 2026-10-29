@@ -5,7 +5,7 @@ import { failureText } from './failure';
 import { baseBranch, git } from './git';
 import { isManagerPath } from './manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
-import { addBranchWorktree } from './throwaway-worktree';
+import { addBranchWorktree } from './branch-worktree';
 import { entryForCard, type WorktreeEntry } from './worktree-store';
 
 // A card moved into Ship: the worktree, the branch, the board move and the pane. Out of main.ts because
