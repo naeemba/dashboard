@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -214,7 +214,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
-      if (!own.rest && images.length === 0) return;
+      if (!planSends(own.rest, images.length)) return;
       text = own.rest;
     }
     const content: ChatContent = [
@@ -258,11 +258,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
     menu.update(prompt.value, commands ?? []);
   }
 
-  // A command picked from the list. One that takes no arguments runs on Enter; otherwise, and on
-  // Tab, the box holds it with a space after it, ready for them.
-  function complete(row: CommandRow, run: boolean): void {
-    const runs = run && !row.argumentHint;
-    prompt.value = `/${row.name}${runs ? '' : ' '}`;
+  function complete(row: CommandRow, enter: boolean): void {
+    const { text, runs } = completion(row, enter);
+    prompt.value = text;
     if (runs) send();
     else updateMenu();
     prompt.focus();
@@ -333,17 +331,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   });
 
-  // A link opens in the browser, where main decides what is safe to hand the system. A click on an
-  // entry moves the selection there; a tool call's own summary unfolds it, which is what the unfold
-  // key does on a selected one.
+  // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
+  // decides what is safe to hand the system, never in this window.
+  element.addEventListener('click', (event) => {
+    const link = event.target instanceof Element ? event.target.closest('a') : null;
+    if (!link) return;
+    event.preventDefault();
+    bridge.openExternal(link.href);
+  });
+
+  // A click on an entry moves the selection there; a tool call's own summary unfolds it, which is what
+  // the unfold key does on a selected one.
   log.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target : null;
-    const link = target?.closest('a');
-    if (link) {
-      event.preventDefault();
-      bridge.openExternal(link.href);
-      return;
-    }
+    if (target?.closest('a')) return;
     const index = drawn.findIndex((entry) => entry.element.contains(target));
     if (index !== -1) select(index);
   });
@@ -423,6 +424,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     selected = null;
     asks = [];
     context = null;
+    recalled = null;
+    draft = '';
     showAsk();
     render();
   }
@@ -465,9 +468,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
         const chosen = drawn[selected ?? -1]?.element;
         if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
       }
-      // Always sent: this screen may not know of a turn another one started, and interrupting an idle
-      // session does nothing.
-      if (command === 'interrupt') bridge.chatInterrupt(slot);
+      // Escape closes an open command list first, as in Claude Code. Otherwise always sent: this screen
+      // may not know of a turn another one started, and interrupting an idle session does nothing.
+      if (command === 'interrupt' && menu.open()) menu.update('', []);
+      else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'model') configure({ model: (model = next(MODELS, model)) });
       if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through

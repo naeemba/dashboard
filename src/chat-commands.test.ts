@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -63,5 +63,23 @@ describe('typedCommand', () => {
       .toBe('/work-card abc');
     expect(typedCommand('<command-name>/context</command-name>\n            <command-args></command-args>')).toBe('/context');
   });
+  it('keeps arguments that hold a <', () => {
+    expect(typedCommand('<command-name>/pr-review</command-name>\n<command-args>make sure x < y holds</command-args>'))
+      .toBe('/pr-review make sure x < y holds');
+  });
   it('leaves a prompt that is not one', () => expect(typedCommand('fix the build')).toBeNull());
+});
+
+describe('planSends', () => {
+  it('only switches the mode when nothing came with it', () => expect(planSends('', 0)).toBe(false));
+  it('sends what was typed after it', () => expect(planSends('add a login page', 0)).toBe(true));
+  it('sends a pasted image on its own', () => expect(planSends('', 1)).toBe(true));
+});
+
+describe('completion', () => {
+  it('runs a command without arguments on Enter', () => expect(completion(row('compact'), true)).toEqual({ text: '/compact', runs: true }));
+  it('holds one on Tab, ready for more', () => expect(completion(row('compact'), false)).toEqual({ text: '/compact ', runs: false }));
+  it('holds one that takes arguments even on Enter', () => {
+    expect(completion(row('plan', { argumentHint: '[what]' }), true)).toEqual({ text: '/plan ', runs: false });
+  });
 });

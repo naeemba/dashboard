@@ -109,7 +109,7 @@ function assistant(transcript: Transcript, content: unknown): Transcript {
 // What the session writes into the conversation in the user's name when a turn is stopped: drawn as
 // the notice the stop is, not as something you said.
 const INTERRUPTED = /^\[Request interrupted by user/;
-const STOPPED: ChatEntry = { kind: 'notice', text: 'Stopped.' };
+const STOPPED = { kind: 'notice', text: 'Stopped.' } satisfies ChatEntry;
 
 function user(transcript: Transcript, content: unknown): Transcript {
   let entries = transcript.entries;
@@ -141,11 +141,10 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
 // A stopped turn says so once: the session has usually written its own stop into the conversation
 // already, just before the result.
 function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefined): string | null {
-  const stopped = 'Stopped.';
   if (message.subtype === 'success' && message.is_error !== true) return null;
   const errors = Array.isArray(message.errors) ? message.errors.map(String) : [];
   if (errors.length > 0) return errors.join('\n');
-  if (message.subtype === 'error_during_execution') return last?.kind === 'notice' && last.text === stopped ? null : stopped;
+  if (message.subtype === 'error_during_execution') return last?.kind === 'notice' && last.text === STOPPED.text ? null : STOPPED.text;
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';
 }
 
@@ -191,6 +190,17 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
 export function modeOf(message: Record<string, unknown>): PermissionMode | null {
   if (message.type !== 'system' || (message.subtype !== 'init' && message.subtype !== 'status')) return null;
   return typeof message.permissionMode === 'string' ? message.permissionMode as PermissionMode : null;
+}
+
+// What a session message changes about which conversation the page is on: `init` names the one the
+// session is in, remembered when it differs; /clear's reset leaves none remembered until the next
+// init, and every screen clears.
+export function conversationChange(message: Record<string, unknown>, rememberedId: string | undefined): { remember?: string | null; reset: boolean } {
+  if (message.type === 'conversation_reset') return { remember: null, reset: true };
+  if (message.type === 'system' && message.subtype === 'init' && typeof message.session_id === 'string' && message.session_id !== rememberedId) {
+    return { remember: message.session_id, reset: false };
+  }
+  return { reset: false };
 }
 
 // What an event says about the model or permission mode the session is on: a choice made on some

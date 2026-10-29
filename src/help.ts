@@ -314,7 +314,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'planning, with what to change typed in. A question Claude asks you comes the same way, one question '
     + 'at a time, with a row to type an answer of your own. If the window is behind something else when '
     + 'either arrives, a notification says so and clicking it lands here. Escape stops Claude where it '
-    + 'is and declines anything it was asking. '
+    + 'is and declines anything it was asking; with the command list open it only closes the list. '
     + 'The line at the foot says the model, whether edits are asked about or accepted, how full the '
     + 'conversation\'s context is and whether Claude is working. The model key walks the models and the '
     + 'edits key walks asking, accepting and planning, both for the next thing Claude does; the foot '

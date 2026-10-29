@@ -6,7 +6,7 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { modeOf, type ChatEvent } from './chat-transcript';
+import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { failureText } from './failure';
 import { isRecord } from './is-record';
@@ -195,26 +195,27 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     }) };
     void (async () => {
       let error: string | null = null;
+      // Whether a turn ever began. After one, the conversation remembered may have moved on (/clear,
+      // then a new init), and a crash is no sign the resume was bad.
+      let started = false;
       try {
         for await (const message of session.query) {
-          if (message.type === 'system' && message.subtype === 'init' && remembered[projectPath] !== message.session_id) {
-            remember(projectPath, message.session_id);
-          }
+          const record = message as unknown as Record<string, unknown>;
+          if (message.type === 'system' && message.subtype === 'init') started = true;
           // /clear: the session goes on in a new conversation, which the next turn's init names. Until
           // then the cleared one is not what the next launch should resume.
-          if (message.type === 'conversation_reset') {
-            remember(projectPath, undefined);
-            host.send(slot, { kind: 'reset' });
-          }
-          const mode = modeOf(message as unknown as Record<string, unknown>);
+          const change = conversationChange(record, remembered[projectPath]);
+          if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
+          if (change.reset) host.send(slot, { kind: 'reset' });
+          const mode = modeOf(record);
           if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
-          if (relayed(message)) host.send(slot, { kind: 'message', message: message as unknown as Record<string, unknown> });
+          if (relayed(message)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
         error = failureText(thrown);
         // A resume that cannot start — the file was deleted, the folder moved — would fail the same
         // way on every prompt after it, so the next one starts a new conversation instead.
-        if (resume) remember(projectPath, undefined);
+        if (resume && !started) remember(projectPath, undefined);
       }
       for (const { resolve } of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
       if (session.stopped) return;

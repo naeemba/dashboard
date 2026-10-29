@@ -21,7 +21,7 @@ describe('permissionChoices', () => {
 
   it('leaves always out when the rule would grant more than this call', () => {
     const { choices } = permissionChoices(ask({ suggestions: [rule], suppressAlwaysAllowRule: true }));
-    expect(choices.map((choice) => choice.label)).not.toContain('Yes, and do not ask again for this');
+    expect(choices.map((choice) => choice.label)).toEqual(['Yes', 'No', 'No, and say what to do instead']);
   });
 
   it('opens on No when the session asks for it', () => {

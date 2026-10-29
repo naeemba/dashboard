@@ -9,4 +9,6 @@ export default defineConfig(
   // Every shape in src/ is a `type`, and the two are not interchangeable in the small ways that bite
   // later: an `interface` is open to declaration merging, a `type` is not. Taste a machine can hold.
   { rules: { '@typescript-eslint/consistent-type-definitions': ['error', 'type'] } },
+  // One blank line apart at most; a stray second one is noise a diff then carries.
+  { rules: { 'no-multiple-empty-lines': ['error', { max: 1 }] } },
 );

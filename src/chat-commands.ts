@@ -1,3 +1,4 @@
+import type { SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
 import { fuzzyScore } from './fuzzy';
@@ -9,7 +10,7 @@ import type { SearchRow } from './overlay';
 // session answers with "isn't available in this environment". Those are the screen's own and never
 // reach the session.
 
-export type CommandRow = { name: string; description: string; argumentHint: string; aliases?: string[]; builtin?: boolean };
+export type CommandRow = SlashCommand;
 
 export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string };
 
@@ -25,6 +26,19 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'resume') return { kind: 'resume' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   return null;
+}
+
+// /plan switches the mode; it also sends a prompt only when something came with it.
+export function planSends(rest: string, imageCount: number): boolean {
+  return rest !== '' || imageCount > 0;
+}
+
+// A command picked from the list: what the box holds after, and whether it runs now. One that takes
+// no arguments runs on Enter; otherwise, and on Tab, the box holds it with a space after it, ready
+// for them.
+export function completion(row: CommandRow, enter: boolean): { text: string; runs: boolean } {
+  const runs = enter && !row.argumentHint;
+  return { text: `/${row.name}${runs ? '' : ' '}`, runs };
 }
 
 // The rows the menu offers for what is in the box: only while it is a slash and a name with nothing
@@ -62,9 +76,9 @@ export function resumeRows(found: ChatSessions, query: string, now = Date.now())
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags
 // of their own, read back as what was typed. Null for a message that is not one.
 export function typedCommand(text: string): string | null {
-  const name = /<command-name>([^<]*)<\/command-name>/.exec(text)?.[1]?.trim();
+  const name = /<command-name>([\s\S]*?)<\/command-name>/.exec(text)?.[1]?.trim();
   if (!name) return null;
-  const args = /<command-args>([^<]*)<\/command-args>/.exec(text)?.[1]?.trim();
+  const args = /<command-args>([\s\S]*?)<\/command-args>/.exec(text)?.[1]?.trim();
   const command = name.startsWith('/') ? name : `/${name}`;
   return args ? `${command} ${args}` : command;
 }

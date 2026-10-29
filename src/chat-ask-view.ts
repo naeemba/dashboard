@@ -17,7 +17,6 @@ export type AskPanel = {
 
 type Row = { element: HTMLElement; act(): void; input?: HTMLInputElement };
 
-
 export function createAskPanel(onAnswer: (id: string, result: PermissionResult) => void): AskPanel {
   const element = document.createElement('div');
   element.className = 'chat-ask';

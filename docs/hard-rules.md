@@ -66,8 +66,9 @@ modifier exactly. A plain `Tab` binding cannot match `Ctrl+Tab`.
 
 These exceptions read a key before the guard, all on purpose:
 
-- Tab, in a search box — the project picker's and the board's card search, which
-  are one dialog in `searchOverlay` — and in the board's filter dialog. Nothing
+- Tab, in a search box — the project picker's, the board's card search and the
+  Claude screen's /resume conversation picker, which are one dialog in
+  `searchOverlay` — and in the board's filter dialog. Nothing
   else there is focusable, so Tab would drop focus into the pane behind the
   overlay.
 - Tab, in the notes box, for the same reason one screen out. It is the only key

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyEvent, applyMessage, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+  applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
 
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }] });
@@ -163,4 +163,14 @@ describe('working', () => {
   it('is idle with no turn and no question', () => expect(working(EMPTY_TRANSCRIPT, 0)).toBe(false));
   it('is working during a turn', () => expect(working(prompted('hi'), 0)).toBe(true));
   it('is working while a question waits', () => expect(working(EMPTY_TRANSCRIPT, 1)).toBe(true));
+});
+
+describe('conversationChange', () => {
+  const init = (id: string) => ({ type: 'system', subtype: 'init', session_id: id });
+  it('remembers a conversation init names for the first time', () => expect(conversationChange(init('b'), 'a')).toEqual({ remember: 'b', reset: false }));
+  it('leaves the one already remembered', () => expect(conversationChange(init('a'), 'a')).toEqual({ reset: false }));
+  it('forgets it and clears every screen on /clear', () => {
+    expect(conversationChange({ type: 'conversation_reset' }, 'a')).toEqual({ remember: null, reset: true });
+  });
+  it('changes nothing for any other message', () => expect(conversationChange({ type: 'assistant' }, 'a')).toEqual({ reset: false }));
 });

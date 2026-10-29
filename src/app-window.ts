@@ -78,6 +78,9 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   // What went wrong before there was a bar to say it on. After the load, not before: a message sent to
   // a page that has not run its listeners yet lands nowhere.
   window.webContents.on('did-finish-load', () => options.loaded());
+  // The window never leaves the app's own page. A stray link followed in it would replace every page
+  // and pane on screen, with no way back, and hand the preload's bridge to whatever site it named.
+  window.webContents.on('will-navigate', (event) => event.preventDefault());
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
