@@ -71,24 +71,33 @@ body *:not(.pane, .pane *) {
 }
 
 /* The main session on the left, full height, and the workers in a list down the right. Each placed by
-   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. Positioned
-   so the zoomed pane can cover all of it. */
+   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. The view
+   is already positioned by .view, which is what the zoomed pane covers; a `position` here would replace
+   that absolute box with one as tall as its panes, and the page would scroll over the status bar. */
 .view-terminals {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: minmax(0, 1fr);
   gap: 2px;
-  position: relative;
 }
 
 .view-terminals > .pane {
   grid-column: 1;
 }
 
+/* The right column: the new-pane button on top, the list under it taking what is left. */
+.worker-column {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+
 /* Three to a screen: one or two workers share the height between them, and a fourth starts the
    scroll. Not positioned, so a zoomed worker escapes it to cover the whole view. */
 .workers {
-  grid-column: 2;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -100,10 +109,17 @@ body *:not(.pane, .pane *) {
   flex: 1 0 calc((100% - 4px) / 3);
 }
 
-/* The new-pane key's twin at the foot of the list, and the whole of the list before there is a worker. */
+/* The app's thumb is drawn for a page of prose; beside a column of terminals it is too faint to find. */
+.workers::-webkit-scrollbar-thumb {
+  background-color: var(--muted);
+}
+
+/* The new-pane key's twin, at the top right above the list. */
 .add-pane {
   flex: none;
+  align-self: flex-end;
   height: 26px;
+  padding: 0 12px;
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   background: none;
