@@ -7,7 +7,7 @@ import { drawEntry, type DrawnEntry } from './chat-entries';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import {
-  addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, IMAGE_TYPES, type ChatEvent, type ChatImage, type ImageType,
+  addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, IMAGE_TYPES, imagesFit, type ChatEvent, type ChatImage, type ImageType,
   type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
@@ -229,6 +229,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const reader = new FileReader();
       reader.onload = () => {
         const data = String(reader.result).split(',')[1] ?? '';
+        if (!imagesFit([...images.map((picture) => picture.data.length), data.length])) {
+          options.onNotice('That image would put this prompt over 5 MB of images; Claude cannot take it.');
+          return;
+        }
         images = [...images, { mediaType: file.type, data }];
         drawAttached();
       };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, type Transcript } from './chat-transcript';
+import { addPrompt, applyEvent, applyMessage, EMPTY_TRANSCRIPT, imagesFit, type Transcript } from './chat-transcript';
 
 const fold = (messages: Record<string, unknown>[], start: Transcript = EMPTY_TRANSCRIPT): Transcript =>
   messages.reduce(applyMessage, start);
@@ -82,4 +82,10 @@ describe('applyEvent', () => {
     expect(transcript.busy).toBe(false);
     expect(transcript.entries.at(-1)).toEqual({ kind: 'notice', text: 'The session ended: spawn ENOENT' });
   });
+});
+
+describe('imagesFit', () => {
+  it('takes a screenshot under 5 MB', () => expect(imagesFit([4_000_000])).toBe(true));
+  it('refuses one over it', () => expect(imagesFit([6_000_000])).toBe(false));
+  it('counts a prompt\'s images together', () => expect(imagesFit([3_000_000, 3_000_000])).toBe(false));
 });

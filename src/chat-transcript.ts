@@ -15,6 +15,14 @@ export type ChatEvent =
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export type ImageType = typeof IMAGE_TYPES[number];
 
+// The API refuses an image whose base64 is over 5 MB, so a bigger paste would only end the turn in an
+// error. The cap is on all of a prompt's images together, which also keeps a prompt sent from the
+// second screen under the host's frame limit (MAX_FRAME_BYTES).
+const IMAGE_LIMIT = 5 * 1024 * 1024;
+export function imagesFit(base64Lengths: number[]): boolean {
+  return base64Lengths.reduce((sum, length) => sum + length, 0) <= IMAGE_LIMIT;
+}
+
 export type ChatImage = { mediaType: string; data: string };
 
 // A tool's output past this is cut when it arrives. A `cat` of a lockfile is a hundred thousand
