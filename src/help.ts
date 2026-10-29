@@ -299,7 +299,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
     + 'runs it, or fills the box when it takes arguments. The first slash starts the session, since only '
     + 'a running one knows its commands. Two are this screen\'s own: /resume lists the project\'s earlier '
-    + 'conversations to carry on from, newest first with the one you are on marked, and /plan switches '
+    + 'conversations to carry on from, newest first with the one you are on marked and a box to search them, and /plan switches '
     + 'to plan mode, sending anything after it as the prompt. /clear starts over like the new '
     + 'conversation key. '
     + 'Every tool call is folded to one line: a mark saying whether it is still running, worked or '

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -37,6 +37,23 @@ describe('commandMenu', () => {
 
   it('answers /resume with the screen\'s row, not the session\'s', () => {
     expect(commandMenu('/resume', [row('resume', { description: 'unavailable' })])[0].description).not.toBe('unavailable');
+  });
+});
+
+describe('resumeRows', () => {
+  const now = Date.UTC(2026, 9, 29);
+  const found = {
+    current: 'b',
+    sessions: [
+      { sessionId: 'a', summary: 'Fix the board drag', lastModified: now - 3_600_000, gitBranch: 'main' },
+      { sessionId: 'b', summary: 'Claude screen parity', lastModified: now - 60_000, gitBranch: 'chat' },
+    ],
+  };
+  it('lists newest first with the current one marked', () => {
+    expect(resumeRows(found, '', now).map((row) => row.name)).toEqual(['● Claude screen parity', 'Fix the board drag']);
+  });
+  it('keeps what matches the title or branch', () => {
+    expect(resumeRows(found, 'board', now).map((row) => row.choice)).toEqual(['a']);
   });
 });
 

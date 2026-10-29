@@ -2,9 +2,8 @@ import './chat.css';
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
-import { relativeAge } from './age';
 import { createAskPanel } from './chat-ask-view';
-import { screenCommand, type CommandRow } from './chat-commands';
+import { resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -17,6 +16,7 @@ import {
 import type { ChatPreferences } from './chat-sessions';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
+import { searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -97,12 +97,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
   let commandsAsked = false;
-  let menuOpen = false;
   // Which sent prompt Up has brought back, and what was in the box before it did.
   let recalled: number | null = null;
   let draft = '';
-  // The /resume list is in the box over the prompt.
-  let picking = false;
   // Bumped by a new conversation, so a read of the earlier one that comes back after it is dropped.
   let resets = 0;
 
@@ -123,7 +120,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function drawFoot(): void {
     const shown = model ?? transcript.model ?? 'default model';
-    const parts = [shown, MODE_LABELS[mode] ?? mode];
+    const parts = [shown, MODE_LABELS[mode]];
     if (context !== null) parts.push(`context ${Math.round(context)}%`);
     parts.push(asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready');
     const bar = document.createElement('span');
@@ -185,9 +182,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, () => undefined);
   }
 
-  // A question coming or going takes the box back from the /resume list.
   function showAsk(): void {
-    picking = false;
     ask.show(asks[0] ?? null);
     drawFoot();
   }
@@ -208,7 +203,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function emptyBox(): void {
     prompt.value = '';
     recalled = null;
-    menuOpen = menu.update('', []);
+    menu.update('', []);
   }
 
   function send(): void {
@@ -231,6 +226,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     ];
     // Main sends the prompt back to every screen, this one included, as a `prompt` event.
     bridge.chatSend(slot, content);
+    if (commands === null) commandsAsked = false;
     emptyBox();
     images = [];
     attached.replaceChildren();
@@ -248,16 +244,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   // The list follows what is typed. The first slash asks main for the session's commands, which
-  // starts the session; until they arrive the list holds the screen's own.
+  // starts the session; until they arrive the list holds the screen's own. One ask that fails is not
+  // made again on every keystroke: the session that failed to start has said why, and the next
+  // prompt sent tries again.
   function updateMenu(): void {
     if (prompt.value.startsWith('/') && !commandsAsked) {
       commandsAsked = true;
       bridge.chatCommands(slot).then((list) => {
         commands = list;
         updateMenu();
-      }, () => { commandsAsked = false; });
+      }, () => undefined);
     }
-    menuOpen = menu.update(prompt.value, commands ?? []);
+    menu.update(prompt.value, commands ?? []);
   }
 
   // A command picked from the list. One that takes no arguments runs on Enter; otherwise, and on
@@ -285,7 +283,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     recalled = moved.at;
     prompt.value = recalled === null ? draft : sent[recalled];
     // Not opened for a recalled command, so the next Up keeps walking the history.
-    menuOpen = menu.update('', []);
+    menu.update('', []);
     return true;
   }
 
@@ -297,6 +295,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   prompt.addEventListener('keydown', (event) => {
     if (isModified(event)) return;
     const arrow = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
+    const menuOpen = menu.open();
     if (menuOpen && arrow !== 0) {
       event.preventDefault();
       menu.move(arrow);
@@ -394,27 +393,21 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
-  // The project's earlier conversations in the box over the prompt; the one picked is read back on
-  // every screen and carried on by the next prompt.
+  // The project's earlier conversations in a search sheet; the one picked is read back on every
+  // screen and carried on by the next prompt.
   function showResume(): void {
     if (working(transcript, asks.length)) {
       options.onNotice('Claude is still working. Escape stops it; then pick the conversation.');
       return;
     }
-    bridge.chatSessions(slot).then(({ current, sessions }) => {
-      if (sessions.length === 0) return options.onNotice('This project has no earlier conversations.');
-      if (asks.length > 0) return;
-      ask.pick('Carry on from which conversation?', sessions.map((session) => ({
-        label: `${session.sessionId === current ? '● ' : ''}${session.summary}`,
-        detail: [relativeAge(session.lastModified), session.gitBranch].filter(Boolean).join(' · '),
-        act: () => {
-          showAsk();
-          if (session.sessionId !== current) bridge.chatResume(slot, session.sessionId);
-          prompt.focus();
-        },
-      })));
-      picking = true;
-      ask.focus();
+    bridge.chatSessions(slot).then(async (found) => {
+      if (found.sessions.length === 0) return options.onNotice('This project has no earlier conversations.');
+      const picked = await searchOverlay({
+        name: 'chat-resume', placeholder: 'Search conversations', rows: (query) => resumeRows(found, query),
+        empty: 'No conversation matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
+      focus();
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
   }
 
@@ -435,7 +428,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function focus(): void {
-    if (asks.length > 0 || picking) ask.focus();
+    if (asks.length > 0) ask.focus();
     else prompt.focus();
   }
 
@@ -472,12 +465,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
         const chosen = drawn[selected ?? -1]?.element;
         if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
       }
-      // Escape over the /resume list puts it away. Otherwise always sent: this screen may not know of
-      // a turn another one started, and interrupting an idle session does nothing.
-      if (command === 'interrupt' && picking) {
-        showAsk();
-        prompt.focus();
-      } else if (command === 'interrupt') bridge.chatInterrupt(slot);
+      // Always sent: this screen may not know of a turn another one started, and interrupting an idle
+      // session does nothing.
+      if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'model') configure({ model: (model = next(MODELS, model)) });
       if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through

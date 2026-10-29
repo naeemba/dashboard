@@ -1,5 +1,5 @@
 import { commandMenu, type CommandRow } from './chat-commands';
-import { clampIndex } from './clamp-index';
+import { clampIndex, heldIndex } from './clamp-index';
 
 // The list of slash commands over the prompt box while what is typed there is a slash and a name.
 // The box keeps the keyboard: the view hands it Up and Down while the list is open, and asks it which
@@ -7,8 +7,9 @@ import { clampIndex } from './clamp-index';
 
 export type CommandMenu = {
   element: HTMLElement;
-  // Redrawn for what is in the box now. False when the list has nothing to show and is hidden.
-  update(text: string, commands: CommandRow[]): boolean;
+  // Redrawn for what is in the box now; hidden when nothing matches.
+  update(text: string, commands: CommandRow[]): void;
+  open(): boolean;
   move(by: number): void;
   picked(): CommandRow | null;
   onClick(listener: (row: CommandRow) => void): void;
@@ -30,10 +31,9 @@ export function createCommandMenu(): CommandMenu {
   return {
     element,
     update(text, commands) {
-      const next = commandMenu(text, commands);
       const kept = rows[selected]?.name;
-      rows = next;
-      selected = Math.max(0, rows.findIndex((row) => row.name === kept));
+      rows = commandMenu(text, commands);
+      selected = heldIndex(rows.map((row) => row.name), kept, selected);
       element.hidden = rows.length === 0;
       element.replaceChildren(...rows.map((row) => {
         const line = document.createElement('div');
@@ -47,8 +47,8 @@ export function createCommandMenu(): CommandMenu {
         return line;
       }));
       mark();
-      return rows.length > 0;
     },
+    open: () => !element.hidden,
     move(by) {
       selected = clampIndex(selected + by, rows.length - 1);
       mark();

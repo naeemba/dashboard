@@ -175,7 +175,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
       prompt: input,
       options: {
         cwd: projectPath,
-        ...(resume ? { resume } : {}),
+        resume,
         model: preferences.get(slot)?.model ?? undefined,
         permissionMode: preferences.get(slot)?.permissionMode,
         env: environment,

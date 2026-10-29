@@ -109,7 +109,7 @@ function assistant(transcript: Transcript, content: unknown): Transcript {
 // What the session writes into the conversation in the user's name when a turn is stopped: drawn as
 // the notice the stop is, not as something you said.
 const INTERRUPTED = /^\[Request interrupted by user/;
-const STOPPED = { kind: 'notice', text: 'Stopped.' } as const satisfies ChatEntry;
+const STOPPED: ChatEntry = { kind: 'notice', text: 'Stopped.' };
 
 function user(transcript: Transcript, content: unknown): Transcript {
   let entries = transcript.entries;
@@ -141,10 +141,11 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
 // A stopped turn says so once: the session has usually written its own stop into the conversation
 // already, just before the result.
 function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefined): string | null {
+  const stopped = 'Stopped.';
   if (message.subtype === 'success' && message.is_error !== true) return null;
   const errors = Array.isArray(message.errors) ? message.errors.map(String) : [];
   if (errors.length > 0) return errors.join('\n');
-  if (message.subtype === 'error_during_execution') return last === STOPPED ? null : STOPPED.text;
+  if (message.subtype === 'error_during_execution') return last?.kind === 'notice' && last.text === stopped ? null : stopped;
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';
 }
 

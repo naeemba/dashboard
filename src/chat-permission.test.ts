@@ -16,7 +16,7 @@ describe('permissionChoices', () => {
 
   it('offers always when the session sent rules to add', () => {
     const { choices } = permissionChoices(ask({ suggestions: [rule] }));
-    expect(choices[1].result).toEqual({ behavior: 'allow', updatedInput: { command: 'rm -rf build' }, updatedPermissions: [rule] });
+    expect(choices[1]).toHaveProperty('result', { behavior: 'allow', updatedInput: { command: 'rm -rf build' }, updatedPermissions: [rule] });
   });
 
   it('leaves always out when the rule would grant more than this call', () => {
@@ -31,7 +31,7 @@ describe('permissionChoices', () => {
 
   it('puts a plan up for approval, each yes leaving plan mode for a mode of its own', () => {
     const { choices } = permissionChoices(ask({ toolName: 'ExitPlanMode', input: { plan: '1. do it' } }));
-    expect(choices.map((choice) => choice.result.behavior === 'allow' && choice.result.updatedPermissions)).toEqual([
+    expect(choices.map((choice) => 'result' in choice && choice.result.behavior === 'allow' && choice.result.updatedPermissions)).toEqual([
       [{ type: 'setMode', mode: 'acceptEdits', destination: 'session' }],
       [{ type: 'setMode', mode: 'default', destination: 'session' }],
       false,

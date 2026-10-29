@@ -1,3 +1,8 @@
+import { relativeAge } from './age';
+import type { ChatSessions } from './chat-sessions';
+import { fuzzyScore } from './fuzzy';
+import type { SearchRow } from './overlay';
+
 // Slash commands on the Claude screen. The session runs every command Claude Code has when it is sent
 // as a prompt, skills and the project's own commands included; what the screen adds is the menu that
 // lists them as you type, and the few commands that are a terminal dialog in Claude Code and that the
@@ -38,6 +43,20 @@ export function commandMenu(text: string, sessionCommands: CommandRow[]): Comman
   const aliased = rows.filter((row) => !starts.includes(row) && row.aliases?.some((alias) => alias.toLowerCase().startsWith(typed)));
   const holds = rows.filter((row) => !starts.includes(row) && !aliased.includes(row) && row.name.toLowerCase().includes(typed));
   return [...starts, ...aliased, ...holds];
+}
+
+// What /resume lists for what is typed in its box: the conversations newest first, or the ones whose
+// title and branch match it, best first. The one the page is on is marked.
+export function resumeRows(found: ChatSessions, query: string, now = Date.now()): SearchRow<string>[] {
+  const scored = found.sessions
+    .map((session) => ({ session, score: query ? fuzzyScore(`${session.summary} ${session.gitBranch ?? ''}`, query) : 0 }))
+    .filter((each): each is { session: ChatSessions['sessions'][number]; score: number } => each.score !== null)
+    .sort((one, other) => one.score - other.score || other.session.lastModified - one.session.lastModified);
+  return scored.map(({ session }) => ({
+    name: `${session.sessionId === found.current ? '● ' : ''}${session.summary}`,
+    detail: [relativeAge(session.lastModified, now), session.gitBranch].filter(Boolean).join(' · '),
+    choice: session.sessionId,
+  }));
 }
 
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags

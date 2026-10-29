@@ -16,9 +16,9 @@ export type PermissionAsk = {
   suppressAlwaysAllowRule: boolean;
 };
 
-// `typed` is a row with a box to say why: what is typed there goes back as the reason for the no, and
-// an empty box is the plain no.
-export type PermissionChoice = { label: string; result: PermissionResult; typed?: true };
+// `typed` is a row with a box to say why: what is typed there goes back through `declined` as the
+// reason for the no, and an empty box is the plain no.
+export type PermissionChoice = { label: string; result: PermissionResult } | { label: string; typed: true };
 
 const DENIED = 'The user said no to this tool call.';
 
@@ -35,7 +35,7 @@ function planChoices(ask: PermissionAsk): PermissionChoice[] {
   return [
     { label: 'Yes, and accept edits', result: leave('acceptEdits') },
     { label: 'Yes, and ask before edits', result: leave('default') },
-    { label: 'No, keep planning', result: declined(''), typed: true },
+    { label: 'No, keep planning', typed: true },
   ];
 }
 
@@ -51,9 +51,9 @@ export function permissionChoices(ask: PermissionAsk): { choices: PermissionChoi
       result: { behavior: 'allow', updatedInput: ask.input, updatedPermissions: ask.suggestions },
     });
   }
-  choices.push({ label: 'No', result: declined('') });
-  choices.push({ label: 'No, and say what to do instead', result: declined(''), typed: true });
-  return { choices, start: ask.defaultToNo ? choices.length - 2 : 0 };
+  const no = choices.push({ label: 'No', result: declined('') }) - 1;
+  choices.push({ label: 'No, and say what to do instead', typed: true });
+  return { choices, start: ask.defaultToNo ? no : 0 };
 }
 
 // The sentence over the rows. The session's own when it sent one, else the tool and what it is
