@@ -521,17 +521,17 @@ function spawnProject(project: Project, projectIndex: number): void {
 // it. A worker main dispatched comes back as main's again; resumedAs says how each one comes back.
 function resumeIn(id: string, projectPath: string, savedIndex: number, resume: PaneConversation): void {
   const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, savedIndex, realPath);
-  const as = resumedAs(resume, card);
+  const comesBackAs = resumedAs(resume, card);
   if (card !== undefined) recordWorktree({ ...card, pane: paneFromId(id).index });
-  if (as === 'shell') {
+  if (comesBackAs === 'shell') {
     terminalCommands.set(id, { args: [], directory: resume.directory });
     spawnTerminal(id);
     shells.get(id)?.write(resumeLine(resume));
     return;
   }
-  const args = as === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
+  const args = comesBackAs === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
   startAgent(id, card?.worktreePath ?? resume.directory, args);
-  if (as === 'worker') mainsWorkers.add(id);
+  if (comesBackAs === 'worker') mainsWorkers.add(id);
 }
 
 // The panes main's worker is in now, which the `session` command may release and session.json marks so
