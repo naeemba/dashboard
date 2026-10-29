@@ -9,7 +9,7 @@ describe('startHost', () => {
     const held = {
       table: channels(), version: '1', screenCopies: new Map(), shells: new Map(), screens: screens(),
       settings: () => ({ host: { port: null, token: 't' } }) as Settings,
-      projects: () => ({ projects: [] }), worktrees: () => ({ entries: [], paneDirectories: {} }),
+      projects: () => ({ projects: [], panes: [] }), worktrees: () => ({ entries: [], paneDirectories: {} }),
       usage: () => 'usage' as never, log: () => undefined, hold: () => undefined,
     } as HeldByMain;
     expect(startHost(held)).toBeNull();

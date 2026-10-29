@@ -23,7 +23,7 @@ import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './connec
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
-  EDITOR_INDEX, TERMINAL_COUNT, neighbor, paneFromId, paneLabel, paneName, startsEditor, terminalId,
+  EDITOR_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
@@ -42,11 +42,12 @@ import {
 } from './manager';
 import { createManagerPage } from './manager-page';
 import { closeRefusal, closingPanes } from './close-project';
-import { planSend, type SendPlan } from './free-pane';
+import { paneSends } from './pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, fitPage, panesById, restylePanes, showMode, toggleZoom, type Page,
+  createPageBuilder, fitPage, focusedPane, openIndices, panesById, restylePanes, showMode, toggleZoom, typedNames, type Page,
 } from './page';
+import { neighborPane, paneAtPosition, stepPane } from './pane-layout';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
@@ -166,13 +167,13 @@ function statusPage(page: Page): StatusPage {
     pickerDescription: actionByName('project-picker')?.description ?? '',
     worktrees,
     focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
-    focusedName: paneName(page.panes[page.focused] ?? {}),
+    focusedName: paneName(focusedPane(page) ?? {}),
     editorName: paneName(page.editor ?? {}),
     focusedTokens: usage.panes[terminalId(page.slot, page.focused)] ?? 0,
   };
 }
 
-// The grid's five and the editor, which rings its bell like any other pane.
+// The terminals and the editor, which rings its bell like any other pane.
 function allPanes(page: Page): Pane[] {
   return page.editor === null ? page.panes : [...page.panes, page.editor];
 }
@@ -185,7 +186,7 @@ function allPanes(page: Page): Pane[] {
 // No branch, which is the one thing the status bar adds for itself: it names a single pane and has the
 // room, where these are lists of six.
 function namedPanes(page: Page): (Pane & { name: string })[] {
-  return allPanes(page).map((pane, index) => ({ ...pane, name: paneLabel(index, undefined, paneName(pane)) }));
+  return allPanes(page).map((pane) => ({ ...pane, name: paneLabel(pane.index, undefined, paneName(pane)) }));
 }
 
 // Every open project as the manager lists it. Asked by its redraws and by the key that goes to the
@@ -255,8 +256,8 @@ function saveSession(): void {
       path: page.project.path,
       mode: page.mode,
       focused: page.focused,
-      // The grid's five, which is every pane a name can be typed into; see namePane.
-      names: page.panes.map((pane) => pane.typedName ?? null),
+      // The terminals, which are every pane a name can be typed into; see namePane.
+      names: typedNames(page),
     })),
   };
   // Typing a card title redraws the status bar on every keystroke and changes nothing here.
@@ -280,11 +281,14 @@ function applyAppearance(): void {
   fitAllPages();
 }
 
-function focusTerminal(index: number): void {
+// The terminal with this number, or the one the page last had when there is none — a worker the key
+// counted to that is not open, or one that closed while you were away.
+function focusTerminal(index: number | undefined): void {
   const page = pages[activeIndex];
-  if (page.panes.length > 0) {
-    page.focused = (index + TERMINAL_COUNT) % TERMINAL_COUNT;
-    page.panes[page.focused].terminal.focus();
+  const pane = page.panes.find((candidate) => candidate.index === index) ?? focusedPane(page) ?? page.panes[0];
+  if (pane) {
+    page.focused = pane.index;
+    pane.terminal.focus();
   }
   renderStatus();
 }
@@ -397,7 +401,7 @@ function landOn(index: number): void {
 // while the app runs is a function rather than a value — the settings and the shell do — so a pane built
 // an hour ago draws what is in force now. The bridge is the exception: it is the same object for the
 // life of the window.
-const buildPage = createPageBuilder({
+const builder = createPageBuilder({
   bridge,
   settings: () => settings,
   shellCommand: () => shellCommand,
@@ -407,12 +411,23 @@ const buildPage = createPageBuilder({
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
+  addPane: (page) => addPane(page),
 });
+
+// The new-pane key and the button under the list. Main opens it and answers with the list that has it
+// on, the way an open does, so the pane is on this page before it is given the keyboard.
+function addPane(page: Page): void {
+  void bridge.addPane(page.slot).then((added) => {
+    if (!added) return;
+    applyProjects(added.open);
+    if (pages[activeIndex] === page) focusTerminal(added.index);
+  }, (error: unknown) => showError('pane', `No new pane: ${failureText(error)}`));
+}
 
 // Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
 // live one once the folder exists. A replacement keeps the old page's position in the list.
-function setPage(project: Project, slot: number): void {
-  const page = buildPage(project, slot);
+function setPage(project: Project, slot: number, open: readonly number[]): void {
+  const page = builder.build(project, slot, open);
   const existing = positionOfSlot(slot);
   if (existing === -1) {
     pagesElement.append(page.element);
@@ -429,7 +444,7 @@ function setPage(project: Project, slot: number): void {
 
 const { removePage, applyProjects, host } = createPageSync({
   pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
-  setPage, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
+  setPage, syncPanes: builder.syncPanes, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
   // While away every save went to the host, which keeps only its own window's, so main still holds this
   // machine's layout from before the connect. Saving is held until it is back on the pages: the bare
   // rebuild saved straight away would write every view, focus and name off to disk for good.
@@ -448,7 +463,7 @@ const { removePage, applyProjects, host } = createPageSync({
 // flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
 // `panes:read`, and this only puts the names to it.
 //
-// The five shells, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
+// The terminals, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
 // for as long as the project is open, so on a reading of what the pty has in the foreground it is busy
 // from launch, and a close that counted it would refuse every time with `nvim` named as the thing in
 // the way. It was never much of a signal on the old reading either: it blocked a close only while its
@@ -460,7 +475,7 @@ async function closeRefusalFor(page: Page): Promise<string> {
 }
 
 // Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
-// takes is gone for good — five shells, the editor, and whatever was running in them — so what can stop
+// takes is gone for good — its shells, the editor, and whatever was running in them — so what can stop
 // it, and the sentence saying so, are close-project.ts's. A pane that has exited or is sitting at a
 // prompt stops nothing, so the question below is asked whether or not anything was in the way.
 // The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
@@ -494,10 +509,10 @@ async function closeProject(slot: number): Promise<void> {
   // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
   // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
   // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
-  // twice; this takes five shells and an editor with no undo.
+  // twice; this takes every shell and an editor with no undo.
   void confirmOverlay(
     `Close ${page.project.name}?`,
-    'Enter closes it, its five shells and its editor. Escape keeps it.',
+    'Enter closes it, its shells and its editor. Escape keeps it.',
   ).then(async (confirmed) => {
     // The keyboard back to the page first, for the same reason namePane does it: the sheet that held the
     // focus has gone, so answering Escape here would otherwise leave you unable to type in any pane.
@@ -569,7 +584,7 @@ bridge.onHostReport((text) => showNotice('host', text));
 // the moment nvim is listening rather than a round trip later. On a warm editor it is the same tick
 // either way.
 function openScrollback(page: Page): void {
-  const pane = page.panes[page.focused];
+  const pane = focusedPane(page);
   if (!pane) return;
   const sending = bridge.openScrollback(page.slot, page.focused, paneScrollback(pane.terminal));
   setMode('nvim');
@@ -591,7 +606,7 @@ const openFileLink = fileLinkOpener(bridge, {
 // The grid's five only, and nothing here enforces that: the action's scope does. `terminals` names the
 // one view the editor is not on, so the key cannot be pressed while the editor has the keyboard.
 function namePane(page: Page): void {
-  const pane = page.panes[page.focused];
+  const pane = focusedPane(page);
   if (!pane) return;
   // The placeholder is what the pane is called with no name of yours, so you can see what you are
   // overriding — and, on a pane already saying something useful, that there is nothing worth typing.
@@ -676,20 +691,21 @@ function apply(action: Action): void {
       return;
     case 'project-move': return moveProject(action.index);
     case 'mode-set': return setMode(action.mode);
-    case 'terminal-focus': return focusTerminal(action.index);
-    case 'terminal-next': return focusTerminal(page.focused + 1);
-    case 'terminal-previous': return focusTerminal(page.focused - 1);
-    case 'terminal-move': return focusTerminal(neighbor(page.focused, action.direction));
+    case 'terminal-focus': return focusTerminal(paneAtPosition(openIndices(page), action.index));
+    case 'terminal-next': return focusTerminal(stepPane(openIndices(page), page.focused, 1));
+    case 'terminal-previous': return focusTerminal(stepPane(openIndices(page), page.focused, -1));
+    case 'terminal-move': return focusTerminal(neighborPane(openIndices(page), page.focused, action.direction));
+    case 'terminal-add': return addPane(page);
     case 'terminal-zoom': return toggleZoom(page);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
     case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));
     // Straight to the focused shell: onData already routes it to the pty.
-    case 'terminal-input': return page.panes[page.focused]?.terminal.input(action.data);
+    case 'terminal-input': return focusedPane(page)?.terminal.input(action.data);
     // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
     // Wiring, not a decision: getSelection() returning '' is the whole rule, so it has no module or test.
     case 'terminal-copy': {
-      const selection = page.panes[page.focused]?.terminal.getSelection();
+      const selection = focusedPane(page)?.terminal.getSelection();
       if (selection) void navigator.clipboard.writeText(selection);
       return;
     }
@@ -698,7 +714,7 @@ function apply(action: Action): void {
     // The pane is taken at the keystroke, so a focus move before the clipboard answers cannot send
     // the paste to another shell.
     case 'terminal-paste': {
-      const pane = page.panes[page.focused];
+      const pane = focusedPane(page);
       return void navigator.clipboard.readText().then((text) => pane?.terminal.paste(text));
     }
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
@@ -808,55 +824,8 @@ bridge.onNotesChange((projectPath) => {
 // jumps.ts says where each of these lands.
 const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
 
-// Typing the command screen's command into the shells themselves. That screen marks projects, so which
-// pane in each of them takes the line, and which projects can take it at all, is free-pane.ts's to
-// answer. terminal.input is the same door answerPane and a dropped file already go through, and the
-// carriage return is what an Enter in the pane sends.
-async function sendToPanes(command: string, paths: readonly string[]): Promise<SendPlan> {
-  // One array, both jobs: what planSend is asked about, and where the line is then delivered. Two
-  // collections built from the same filter is how a project comes to be planned for and not written
-  // to, or written to after the plan has left it out.
-  const chosen = projectPages().filter((page) => paths.includes(page.project.path));
-  // Every project's panes read at once rather than one after another, so what the plan is built from is
-  // as near to one moment as this can make it. Asked of main: what is running in a pane is the pty's
-  // foreground process, and reading the pane's own screen instead is what typed a line on top of a dev
-  // server that had printed its banner and gone quiet.
-  const uses = await Promise.all(chosen.map((page) => bridge.readPanes(page.project.path)));
-  const plan = planSend(chosen.map((page, index) => ({
-    name: page.project.name,
-    path: page.project.path,
-    // A project whose folder has gone keeps its page, and that page has no panes — so free-pane.ts is
-    // told why, rather than being left to report an empty project as one whose panes were all taken.
-    missing: page.project.missing,
-    // The five shells, never the editor. It rings a bell like a pane and is listed like one, but a
-    // line of shell typed into nvim is not a command, it is an edit to whatever file is open.
-    panes: uses[index],
-  })));
-  // The plan's own answer, keyed by the path it names, so nothing here decides a second time which
-  // projects the command reaches. A path with no entry is one the plan deliberately left out — every
-  // pane busy, or the folder gone — which is why this loop skips it rather than looking for a pane.
-  const planned = new Map(plan.sends.map((send) => [send.path, send.paneIndex]));
-  for (const page of chosen) {
-    const paneIndex = planned.get(page.project.path);
-    if (paneIndex !== undefined) page.panes[paneIndex].terminal.input(`${command}\r`);
-  }
-  return plan;
-}
-
-// Answering a pane from the manager, without going to it. terminal.input is the door a dropped file
-// already goes through, so the key reaches the pty by the same path typing into the pane does. The
-// bell comes off because the pane has had its answer, and the pane rings again if it asks again. What
-// tells you the key landed is the row going from yellow `waiting` to dim `quiet` under a highlight
-// that has not moved — the row does not leave the list. That is what the highlight staying put is
-// for: the next character is dropped while the pane is quiet, and goes to that same pane the moment
-// it asks again, without anyone picking the row a second time.
-function answerPane(slot: number, index: number, key: string): void {
-  const pane = panesById.get(terminalId(slot, index));
-  if (!pane) return;
-  pane.terminal.input(key);
-  pane.bell = 'quiet';
-  renderStatus();
-}
+// The command screen's lines into the shells, and the manager's answers into a pane; pane-sends.ts.
+const { sendToPanes, answerPane } = paneSends({ projectPages, readPanes: bridge.readPanes, renderStatus });
 
 bridge.onData((id, data) => {
   const pane = panesById.get(id);
@@ -931,9 +900,7 @@ function applyLayout(session: Session): void {
     page.focused = entry.focused;
     // Only the names you typed come back. A title dies with the program that set it, so a restored
     // pane says nothing until whatever starts in it speaks up.
-    entry.names.forEach((name, index) => {
-      if (name !== null && page.panes[index]) page.panes[index].typedName = name;
-    });
+    for (const pane of page.panes) pane.typedName = entry.names[pane.index] ?? pane.typedName;
   }
 }
 

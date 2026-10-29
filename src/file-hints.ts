@@ -1,6 +1,7 @@
 import { hintLabels, type FileLink } from './file-links';
 import { visibleLinks, type OpenFileLink } from './file-link-open';
-import type { Page } from './page';
+import { focusedPane, type Page } from './page';
+import type { Pane } from './pane';
 import { isModified } from './shortcuts';
 
 // Handed on so the renderer, at its size ceiling, takes both halves of the hint key from one import.
@@ -18,9 +19,11 @@ export { fileLinkOpener } from './file-link-open';
 // anything. A modified key does nothing while they are up.
 export function showFileHints(page: Page, open: OpenFileLink): string {
   const index = page.focused;
-  const pane = page.panes[index];
-  const screen = pane?.terminal.element?.querySelector('.xterm-screen');
-  if (!pane || !screen) return '';
+  const focused = focusedPane(page);
+  const screen = focused?.terminal.element?.querySelector('.xterm-screen');
+  if (!focused || !screen) return '';
+  // Held as a Pane: the close below is a function declaration, which TypeScript does not narrow into.
+  const pane: Pane = focused;
   const links = visibleLinks(pane.terminal.buffer.active, pane.terminal.rows, pane.printWidths.at);
   if (links.length === 0) return 'no file path on this pane';
 

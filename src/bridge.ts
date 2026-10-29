@@ -8,6 +8,7 @@ import type { FileLink } from './file-links';
 import type { MarketsSnapshot } from './markets';
 import type { Handover } from './nvim-remote';
 import type { PaneUse } from './pane-reading';
+import type { PaneState } from './session-cli';
 import type { BoardRead } from './board-store';
 import type { Session } from './session';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
@@ -16,10 +17,12 @@ import type { TaskResult } from './tasks';
 import type { UsageSnapshot } from './usage';
 import type { WorktreeEntry } from './worktree-store';
 
-export type OpenProjects = { projects: (Project | null)[] };
+// Each slot's project, and the terminals it has open — main first, then its workers — by number. One
+// list for both, because a worker opening or closing is a change to what every screen has to draw.
+export type OpenProjects = { projects: (Project | null)[]; panes: number[][] };
 
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
-// what says which five panes are candidates for the agent.
+// what says whose workers are candidates for the agent.
 export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
 export type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string };
 
@@ -47,7 +50,7 @@ export type DashboardBridge = {
   // Which session the window shows: the joined host's address, or LOCAL_SCREEN for this machine's own.
   // Said before that session's list arrives, so the pages of the one before are taken down first.
   onHostChange(listener: (host: string) => void): void;
-  // Closing a project: its five shells and its editor are killed and its slot is given up. The page is
+  // Closing a project: its shells and its editor are killed and its slot is given up. The page is
   // the renderer's to take off the screen; nothing comes back, because there is nothing to answer — the
   // one thing that could refuse is read off the panes, and the renderer has already asked them.
   closeProject(slot: number): void;
@@ -77,7 +80,7 @@ export type DashboardBridge = {
   // screen. Whole list each time rather than a change at a time, so a report that goes missing costs
   // one tick's answer instead of leaving a pane marked as working for the rest of the run.
   reportWorkingPanes(ids: string[]): void;
-  // A project's five shells as pane-reading.ts reads them, in pane order, the editor left out. Asked of
+  // A project's open terminals as pane-reading.ts reads them, by pane number, the editor left out. Asked of
   // main because every field is the pty's: what it has in the foreground, and whether it is still
   // there. pane-reading.ts says what the shape is for and why the screens stopped reading it off the
   // panes themselves.
@@ -86,6 +89,11 @@ export type DashboardBridge = {
   // could not reach and names it; the close reads it as nothing to lose and goes ahead, which is what
   // an empty list means — main holds every shell, so a project it has no slot for has no shells left.
   readPanes(projectPath: string): Promise<PaneUse[]>;
+  // A new worker pane on this page: a shell in the project. Answers like openProject, with the list
+  // that has it on, or null for a page with no folder.
+  addPane(slot: number): Promise<{ index: number; open: OpenProjects } | null>;
+  // A worker's hooks saying it is waiting on a permission or has finished its turn.
+  onPaneMark(listener: (id: string, state: PaneState) => void): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;

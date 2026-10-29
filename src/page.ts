@@ -18,8 +18,9 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { CHAT_INDEX, EDITOR_INDEX, TERMINAL_COUNT, paneIds, paneLabel, paneName, terminalId } from './terminals';
-import { isRinging, looksBusy, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
+import { CHAT_INDEX, EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, terminalId } from './terminals';
+import type { PaneState } from './session-cli';
+import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
 
 // A page and the panes on it: what one is, how one is built, and how its panes are measured. Split out
@@ -52,6 +53,8 @@ export type PageOptions = {
   worktrees(): readonly WorktreeEntry[];
   // A file path clicked in one of the page's panes, which the renderer opens in the page's nvim.
   openFile(page: Page, index: number, link: FileLink): void;
+  // The button under the worker list, which does what the new-pane key does.
+  addPane(page: Page): void;
 };
 
 // Every pane in the window by its terminal id, filled as pages are built. The bytes from a pty, an
@@ -60,23 +63,27 @@ export type PageOptions = {
 export const panesById = new Map<string, Pane>();
 // The same for the Claude screens, by slot: a chat event names the page's slot and nothing else.
 const chatsBySlot = new Map<number, ChatView>();
+// What each pane does when its worker's hooks report, by terminal id, the way a pty's bytes find it.
+const markersById = new Map<string, (state: PaneState) => void>();
 
-// Every pane of one slot, let go for good: the verdict its bell has pending, the terminal itself, and
-// its place in the map above. What a closed project's panes need, and the map is why it lives here —
-// a second place deleting from it is a second place that could leave a pane in it. The timer matters
-// as much as the terminal: a bell rung a moment before the close still has a second to wait, and it
-// would wake to read a screen nobody can see and raise a banner naming a project that is gone.
+// One pane let go of for good: the verdict its bell has pending, the terminal itself, and its place in
+// the maps above. The timer matters as much as the terminal: a bell rung a moment before the close still
+// has a second to wait, and it would wake to read a screen nobody can see and raise a banner naming a
+// pane that is gone.
+function discardPane(id: string, pane: Pane): void {
+  window.clearTimeout(pane.bellTimer);
+  pane.terminal.dispose();
+  pane.element.remove();
+  panesById.delete(id);
+  markersById.delete(id);
+}
+
+// Every pane of one slot, let go for good. What a closed project's panes need, and the maps are why it
+// lives here — a second place deleting from them is a second place that could leave a pane in one. A
+// project whose folder had gone was drawn as a page with no panes at all, so nothing is under its slot.
 export function discardPanes(slot: number): void {
   chatsBySlot.delete(slot);
-  for (const id of paneIds(slot)) {
-    const pane = panesById.get(id);
-    // A project whose folder had gone was drawn as a page with no panes at all, so there is nothing
-    // under any of its ids.
-    if (pane === undefined) continue;
-    window.clearTimeout(pane.bellTimer);
-    pane.terminal.dispose();
-    panesById.delete(id);
-  }
+  for (const [id, pane] of [...panesById]) if (paneFromId(id).slot === slot) discardPane(id, pane);
 }
 
 // How long a bell waits before it is believed. Long enough that an agent handed more work has drawn
@@ -91,8 +98,12 @@ export type Page = {
   // that was never built.
   views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
+  // The open terminals in the order they are drawn: main, then the workers by number. `focused` is the
+  // number of the one with the keyboard, never a place in this list.
   panes: Pane[];
   focused: number;
+  // The scrolling list on the right that the workers are drawn in. Null on a page with no terminals.
+  workers: HTMLElement | null;
   slot: number;
   editor: Pane | null;
   editorStarted: boolean;
@@ -112,6 +123,24 @@ export type Page = {
   // a session in.
   chat: ChatView | null;
 };
+
+// The pane with the keyboard, or the one that last had it. Undefined only on a page with no terminals.
+export function focusedPane(page: Page): Pane | undefined {
+  return page.panes.find((pane) => pane.index === page.focused);
+}
+
+// The numbers of the open terminals in drawn order, which is what pane-layout.ts moves the keyboard by.
+export function openIndices(page: Page): number[] {
+  return page.panes.map((pane) => pane.index);
+}
+
+// The names typed on the terminals, by pane number, which is what session.ts keeps: `null` for a pane
+// nobody named and for a number no pane holds.
+export function typedNames(page: Page): (string | null)[] {
+  return Array.from({ length: Math.max(-1, ...openIndices(page)) + 1 }, (_value, index) => (
+    page.panes.find((pane) => pane.index === index)?.typedName ?? null
+  ));
+}
 
 // Switching mode is per page, so each project keeps the view you left it on. A dead project has no
 // views to switch between and ignores the keys.
@@ -142,16 +171,16 @@ export function restylePanes(settings: Settings): void {
   }
 }
 
-// Measures the grid's five panes again. xterm only tells a pty a new size when it is measured, so a
+// Measures the page's terminals again. xterm only tells a pty a new size when it is measured, so a
 // pane that changed shape keeps drawing at the old size until this runs.
 export function fitPanes(page: Page): void {
   for (const pane of page.panes) pane.fit.fit();
 }
 
-// Every pty of one page: the grid's five and the editor. What a page needs the moment it reaches the
+// Every pty of one page: its terminals and the editor. What a page needs the moment it reaches the
 // screen, because until it is measured no pane has told main how big it is, and main spawns the page's
-// shells at whatever it was last told. Separate from fitPanes because the zoom key wants only the grid
-// — the editor is on a view of its own and never carries the zoom class.
+// shells at whatever it was last told. Separate from fitPanes because the zoom key wants only the
+// terminals — the editor is on a view of its own and never carries the zoom class.
 export function fitPage(page: Page): void {
   fitPanes(page);
   page.editor?.fit.fit();
@@ -169,19 +198,28 @@ export function toggleZoom(page: Page): void {
   // on purpose: such a click still drops the zoom off the screen until you press something, because the
   // zoomed pane is read from focus rather than remembered.
   page.views.terminals?.classList.toggle('zoom');
-  page.panes[page.focused]?.terminal.focus();
+  focusedPane(page)?.terminal.focus();
   fitPanes(page);
 }
 
-// Builds the page for one project: its four views, its five shells and its editor — or, for a project
-// whose folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane
-// needs from the renderer are handed over once rather than on every call.
-export function createPageBuilder(options: PageOptions): (project: Project, slot: number) => Page {
+// What the builder hands back: a page for a project, and the step that makes a page's terminals the
+// ones main says it has open.
+export type PageBuilder = {
+  build(project: Project, slot: number, open: readonly number[]): Page;
+  syncPanes(page: Page, open: readonly number[]): void;
+};
+
+// Builds the page for one project: its views, its terminals and its editor — or, for a project whose
+// folder has gone, a page saying so and nothing else. A factory, so the handful of things a pane needs
+// from the renderer are handed over once rather than on every call.
+export function createPageBuilder(options: PageOptions): PageBuilder {
   options.bridge.onChat((slot, event) => chatsBySlot.get(slot)?.receive(event));
-  function buildPane(view: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
+  options.bridge.onPaneMark((id, state) => markersById.get(id)?.(state));
+  // `parent` is where the box goes: the view for main and the editor, the worker list for a worker.
+  function buildPane(parent: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');
     container.className = 'pane';
-    view.append(container);
+    parent.append(container);
 
     const terminal = new Terminal({
       cursorBlink: true,
@@ -239,7 +277,9 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     });
     terminal.open(container);
 
-    const pane: Pane = { terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths };
+    const pane: Pane = {
+      index, element: container, terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths,
+    };
     terminal.onData((data) => {
       if (!pane.exited) {
         options.bridge.sendInput(id, data);
@@ -320,6 +360,10 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     terminal.textarea?.addEventListener('focus', () => {
       const wasRinging = isRinging(pane.bell);
       pane.bell = 'quiet';
+      pane.mark = undefined;
+      delete container.dataset.mark;
+      // A worker down a scrolled list is brought into sight; the list only scrolls as far as it must.
+      container.scrollIntoView({ block: 'nearest' });
       onFocus?.();
       if (wasRinging) options.onChanged();
       // While the panes are zoomed the keyboard moving is the zoom moving: the pane arrived at has grown to
@@ -330,12 +374,70 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       // board, which lands on the pane the page already called focused. The pane's own view is what is
       // asked, so focusing the editor — built by this same function with the same page — does not refit
       // the grid behind it: the nvim view never carries the class.
-      if (view.classList.contains('zoom')) fitPanes(page);
+      if (container.closest('.view')?.classList.contains('zoom')) fitPanes(page);
+    });
+    // A worker's hooks. Blocked is a question waiting on you, so it rings the way a bell that turned
+    // out to be a question does; done is drawn on the box and nothing more — main is the one it is
+    // for. The pane you are looking at is not marked, for the reason marksWaiting gives.
+    markersById.set(id, (state) => {
+      if (!marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) return;
+      pane.mark = state;
+      container.dataset.mark = state;
+      if (markRings(state)) {
+        if (!isRinging(pane.bell)) pane.bell = 'waiting';
+        if (raisesNotification(document.hasFocus(), pane.bell)) {
+          pane.bell = 'notified';
+          options.bridge.notify(page.project.name, `${paneLabel(index, undefined, paneName(pane))} is waiting on a permission`, id);
+        }
+      }
+      options.onChanged();
     });
     return pane;
   }
 
-  function buildPage(project: Project, slot: number): Page {
+  // One terminal onto the page, in its place: main in the view's left column, a worker in the list in
+  // number order, ahead of the button that adds one.
+  function addPane(page: Page, index: number): void {
+    const terminals = page.views.terminals;
+    if (!terminals || !page.workers) return;
+    const id = terminalId(page.slot, index);
+    const parent = index === MAIN_INDEX ? terminals : page.workers;
+    const pane = buildPane(parent, id, page, index, () => {
+      if (page.focused === index) return;
+      page.focused = index;
+      options.onChanged();
+    });
+    if (index === MAIN_INDEX) terminals.prepend(pane.element);
+    else {
+      const next = page.panes.find((other) => other.index > index)?.element;
+      page.workers.insertBefore(pane.element, next ?? page.workers.querySelector(':scope > .add-pane'));
+    }
+    page.panes.push(pane);
+    page.panes.sort((first, second) => first.index - second.index);
+    panesById.set(id, pane);
+  }
+
+  // The page's terminals made to match main's list: a worker main opened is built, one it closed goes.
+  // Closing the pane that had the keyboard hands it to main, since there is nowhere else it is sure to
+  // be; the page with the keyboard is in front, so the move is one you can see.
+  function syncPanes(page: Page, open: readonly number[]): void {
+    const have = openIndices(page);
+    if (have.length === open.length && open.every((index) => have.includes(index))) return;
+    let lostFocus = false;
+    for (const pane of [...page.panes]) {
+      if (open.includes(pane.index)) continue;
+      lostFocus ||= pane.element.contains(document.activeElement);
+      page.panes.splice(page.panes.indexOf(pane), 1);
+      discardPane(terminalId(page.slot, pane.index), pane);
+    }
+    for (const index of open) if (!page.panes.some((pane) => pane.index === index)) addPane(page, index);
+    if (!page.panes.some((pane) => pane.index === page.focused)) page.focused = MAIN_INDEX;
+    if (lostFocus) focusedPane(page)?.terminal.focus();
+    fitPanes(page);
+    options.onChanged();
+  }
+
+  function buildPage(project: Project, slot: number, open: readonly number[]): Page {
     const element = document.createElement('section');
     element.className = 'page';
     const views: Record<ProjectMode, HTMLElement> = {
@@ -350,7 +452,7 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       view.hidden = mode !== 'terminals';
     }
     const page: Page = {
-      project, element, views, mode: 'terminals', panes: [], focused: 0, slot, editor: null,
+      project, element, views, mode: 'terminals', panes: [], focused: MAIN_INDEX, workers: null, slot, editor: null,
       editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null, chat: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
@@ -365,16 +467,17 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
       return page;
     }
     element.append(...Object.values(views));
-    for (let terminalIndex = 0; terminalIndex < TERMINAL_COUNT; terminalIndex++) {
-      const id = terminalId(slot, terminalIndex);
-      const pane = buildPane(views.terminals, id, page, terminalIndex, () => {
-        if (page.focused === terminalIndex) return;
-        page.focused = terminalIndex;
-        options.onChanged();
-      });
-      page.panes.push(pane);
-      panesById.set(id, pane);
-    }
+    // Main on the left, full height; the workers in a list down the right that scrolls once there are
+    // more than fit, with the button that opens another at its foot.
+    page.workers = document.createElement('div');
+    page.workers.className = 'workers';
+    const add = document.createElement('button');
+    add.className = 'add-pane';
+    add.textContent = '+ New pane';
+    add.addEventListener('click', () => options.addPane(page));
+    page.workers.append(add);
+    views.terminals.append(page.workers);
+    for (const index of open) addPane(page, index);
     const editorId = terminalId(slot, EDITOR_INDEX);
     page.editor = buildPane(views.nvim, editorId, page, EDITOR_INDEX);
     panesById.set(editorId, page.editor);
@@ -410,5 +513,5 @@ export function createPageBuilder(options: PageOptions): (project: Project, slot
     return page;
   }
 
-  return buildPage;
+  return { build: buildPage, syncPanes };
 }
