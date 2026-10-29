@@ -101,6 +101,10 @@
     },
     {
       "name": "Ship",
+      "cards": []
+    },
+    {
+      "name": "Doing",
       "cards": [
         {
           "id": "a639736a-a343-4932-b55a-053956055186",
@@ -109,13 +113,9 @@
           "priority": "medium",
           "parent": null,
           "createdAt": "2026-10-29T11:10:36.419Z",
-          "updatedAt": "2026-10-29T13:16:18.880Z"
+          "updatedAt": "2026-10-29T13:17:00.015Z"
         }
       ]
-    },
-    {
-      "name": "Doing",
-      "cards": []
     },
     {
       "name": "Review",
