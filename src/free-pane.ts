@@ -52,7 +52,7 @@ export function planSend(projects: readonly ProjectPanes[]): SendPlan {
 // The plan once its new workers have been asked for: a project whose worker could not be opened got
 // nothing, so it leaves `sends` and is named in `skipped`. Otherwise the status bar would count it in
 // "sent to 2 panes" while it got nothing, the mismatch sendSummary exists to prevent.
-export function afterOpening(plan: SendPlan, unopened: readonly { path: string; name: string }[]): SendPlan {
+export function afterOpening(plan: SendPlan, unopened: readonly Pick<ProjectPanes, 'path' | 'name'>[]): SendPlan {
   const paths = new Set(unopened.map((project) => project.path));
   return {
     ...plan,
