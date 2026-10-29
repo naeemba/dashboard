@@ -18,6 +18,13 @@ export function sessionSocketPath(platform: string, temporary: string, pid: numb
   return path.join(mkdtempSync(path.join(temporary, 'dashboard-')), 'session.sock');
 }
 
+// The folder sessionSocketPath made for the socket, which quitting removes, or null when it made none.
+// Decided here beside it, so a socket put anywhere else never turns the quit into a recursive remove
+// of a folder this file did not make.
+export function sessionSocketFolder(platform: string, socketPath: string): string | null {
+  return platform === 'win32' ? null : path.dirname(socketPath);
+}
+
 // One JSON request per connection, read to its end, then one JSON answer. A request that is not JSON is
 // answered as a refusal rather than dropped, so the command says what went wrong, and so is one of the
 // wrong shape or an answer that throws: either would otherwise leave the command waiting for good.

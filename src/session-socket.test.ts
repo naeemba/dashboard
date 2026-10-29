@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { askApp, listenForSessions, sessionSocketPath } from './session-socket';
+import { askApp, listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
 
 // Every folder a test makes, removed after it.
 const made: string[] = [];
@@ -27,6 +27,13 @@ describe('sessionSocketPath', () => {
 
   it('names a pipe after the process on Windows', () => {
     expect(sessionSocketPath('win32', 'C:\\Temp', 42)).toBe('\\\\.\\pipe\\dashboard-session-42');
+  });
+
+  // Quitting removes this folder recursively, so it is only ever the one made for the socket.
+  it('names the folder it made for the socket, and none for a pipe', () => {
+    const socket = sessionSocketPath('linux', folder('socket-test-'), 42);
+    expect(sessionSocketFolder('linux', socket)).toBe(path.dirname(socket));
+    expect(sessionSocketFolder('win32', sessionSocketPath('win32', 'C:\\Temp', 42))).toBeNull();
   });
 });
 
