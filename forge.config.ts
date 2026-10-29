@@ -8,6 +8,10 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const nodePty = '/node_modules/node-pty';
+// The chat pane's SDK and the Claude Code binary it drives, for the platform being built on. The binary
+// is executed, so it has to sit outside the asar the way node-pty's spawn-helper does.
+const agentSdk = '/node_modules/@anthropic-ai/claude-agent-sdk';
+const agentBinary = `${agentSdk}-${process.platform}-${process.arch}`;
 // build/Release, not prebuilds/: it is the one directory node-pty looks in first, and the copy
 // there has spawn-helper's exec bit, without which posix_spawnp fails. scripts/node-pty-built.sh
 // is what puts it there in a checkout npm left with prebuilds/ alone.
@@ -18,6 +22,8 @@ const keep = [
   `${nodePty}/lib`,
   `${nodePty}/build/Release/pty.node`,
   `${nodePty}/build/Release/spawn-helper`,
+  agentSdk,
+  agentBinary,
 ];
 
 const config: ForgeConfig = {
@@ -25,7 +31,7 @@ const config: ForgeConfig = {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
     // board-cli-entry.js is unpacked for a different reason: it is run by `node`, not by Electron, and
     // node cannot read a file inside an asar. main.ts points agents at the unpacked copy.
-    asar: { unpack: '{**/node_modules/node-pty/**,**/.vite/build/board-cli-entry.js}' },
+    asar: { unpack: '{**/node_modules/node-pty/**,**/node_modules/@anthropic-ai/claude-agent-sdk-*/**,**/.vite/build/board-cli-entry.js}' },
     // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,
     // which still calls itself com.github.Electron while Info.plist says com.electron.dashboard.
     // macOS files an app with Notification Center under the *signing* name, so a Dashboard that
