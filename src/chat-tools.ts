@@ -1,3 +1,5 @@
+import { isRecord } from './is-record';
+
 // A tool call as the chat pane folds it: one line saying what it did, and, for the tools that change a
 // file, the change as a diff. The input is whatever the model sent, so every field is read as maybe
 // missing — a call that was interrupted half-way can arrive with none of them.
@@ -49,7 +51,7 @@ export function toolDiff(name: string, input: Record<string, unknown>): DiffLine
   if (name === 'Edit') return lineDiff(field(input, 'old_string') ?? '', field(input, 'new_string') ?? '');
   if (name === 'Write') return (field(input, 'content') ?? '').split('\n').map((text) => ({ sign: '+', text }));
   if (name === 'MultiEdit' && Array.isArray(input.edits)) {
-    return input.edits.flatMap((edit: Record<string, unknown>) => lineDiff(field(edit, 'old_string') ?? '', field(edit, 'new_string') ?? ''));
+    return input.edits.filter(isRecord).flatMap((edit) => lineDiff(field(edit, 'old_string') ?? '', field(edit, 'new_string') ?? ''));
   }
   return null;
 }

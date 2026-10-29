@@ -51,6 +51,11 @@ describe('toolDiff', () => {
     expect(toolDiff('Write', { content: 'a\nb' })).toEqual([{ sign: '+', text: 'a' }, { sign: '+', text: 'b' }]);
   });
 
+  it('skips a MultiEdit entry that is not an edit rather than throwing', () => {
+    expect(toolDiff('MultiEdit', { edits: [null, { old_string: 'a', new_string: 'b' }] }))
+      .toEqual([{ sign: '-', text: 'a' }, { sign: '+', text: 'b' }]);
+  });
+
   it('has nothing to show for a Bash call', () => {
     expect(toolDiff('Bash', { command: 'ls' })).toBeNull();
   });
