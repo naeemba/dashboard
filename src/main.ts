@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog } from 'electron';
-import { existsSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
@@ -993,6 +993,8 @@ app.on('ready', () => {
 app.on('will-quit', () => {
   remoteHost?.close();
   sessions.close();
+  // The socket's own folder, which session-socket.ts made for this run; Windows has a pipe and no folder.
+  if (process.platform !== 'win32') rmSync(path.dirname(sessionSocket), { recursive: true, force: true });
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   chats.stopAll();

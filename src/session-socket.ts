@@ -1,6 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
+import { failureText } from './failure';
 import type { SessionReply, SessionRequest } from './session-cli';
 
 // The `session` command's way into the running app. A pane's command is a separate node process and
@@ -18,7 +19,8 @@ export function sessionSocketPath(platform: string, temporary: string, pid: numb
 }
 
 // One JSON request per connection, read to its end, then one JSON answer. A request that is not JSON is
-// answered as a refusal rather than dropped, so the command says what went wrong.
+// answered as a refusal rather than dropped, so the command says what went wrong, and so is one of the
+// wrong shape or an answer that throws: either would otherwise leave the command waiting for good.
 export function listenForSessions(
   socketPath: string,
   answer: (request: SessionRequest) => Promise<SessionReply>,
@@ -31,14 +33,19 @@ export function listenForSessions(
     connection.setEncoding('utf8');
     connection.on('data', (chunk: string) => { text += chunk; });
     connection.on('end', () => {
-      let request: SessionRequest;
+      let request: SessionRequest | undefined;
       try {
         request = JSON.parse(text) as SessionRequest;
       } catch {
+        request = undefined;
+      }
+      if (!Array.isArray(request?.args) || typeof request.directory !== 'string') {
         connection.end(JSON.stringify({ ok: false, output: 'the request was not one the app could read' }));
         return;
       }
-      void answer(request).then((reply) => connection.end(JSON.stringify(reply)));
+      void answer(request)
+        .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }))
+        .then((reply) => connection.end(JSON.stringify(reply)));
     });
     // A command killed mid-answer is nobody's to tell.
     connection.on('error', () => undefined);
@@ -64,7 +71,7 @@ export function askApp(socketPath: string, request: SessionRequest): Promise<Ses
       }
     });
     connection.on('error', (error) => {
-      resolve({ ok: false, output: `the Dashboard that opened this pane is not answering: ${error.message}` });
+      resolve({ ok: false, output: `the Dashboard that opened this pane is not answering: ${failureText(error)}` });
     });
   });
 }
