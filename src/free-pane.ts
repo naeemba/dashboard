@@ -49,6 +49,18 @@ export function planSend(projects: readonly ProjectPanes[]): SendPlan {
   return { sends, skipped: [], gone };
 }
 
+// The plan once its new workers have been asked for: a project whose worker could not be opened got
+// nothing, so it leaves `sends` and is named in `skipped`. Otherwise the status bar would count it in
+// "sent to 2 panes" while it got nothing, the mismatch sendSummary exists to prevent.
+export function afterOpening(plan: SendPlan, unopened: readonly { path: string; name: string }[]): SendPlan {
+  const paths = new Set(unopened.map((project) => project.path));
+  return {
+    ...plan,
+    sends: plan.sends.filter((send) => !paths.has(send.path)),
+    skipped: unopened.map((project) => project.name),
+  };
+}
+
 // What the status bar says a run did. The projects it missed are named rather than counted: "2
 // skipped" only tells you to go looking, and there are a handful of projects open, not a hundred.
 // Without this line a project that was marked and got nothing looks exactly like one that ran and

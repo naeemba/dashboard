@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freePaneIndex, planSend, sendSummary, type ProjectPanes } from './free-pane';
+import { afterOpening, freePaneIndex, planSend, sendSummary, type ProjectPanes } from './free-pane';
 import type { PaneUse } from './pane-reading';
 
 // A shell sitting at its own prompt, which is what a pane nobody is using reads as.
@@ -91,5 +91,15 @@ describe('sendSummary', () => {
     const plan = { sends: [], skipped: ['web'], gone: ['api', 'cli'] };
     expect(sendSummary(plan)).toBe('no new worker in web · api, cli are gone');
     expect(sendSummary({ sends: [], skipped: [], gone: ['api'] })).toBe('api is gone');
+  });
+});
+
+describe('afterOpening', () => {
+  it('takes a project whose worker could not be opened out of the sends and names it as skipped', () => {
+    const plan = { sends: [{ path: '/work/api', paneIndex: null }, { path: '/work/web', paneIndex: 1 }], skipped: [], gone: ['cli'] };
+    expect(afterOpening(plan, [{ path: '/work/api', name: 'api' }])).toEqual({
+      sends: [{ path: '/work/web', paneIndex: 1 }], skipped: ['api'], gone: ['cli'],
+    });
+    expect(afterOpening(plan, [])).toEqual(plan);
   });
 });
