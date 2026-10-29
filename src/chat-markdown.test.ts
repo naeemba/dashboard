@@ -28,6 +28,12 @@ describe('renderMarkdown', () => {
     expect(html).toContain('click');
   });
 
+  it('draws a web image as a link rather than fetching it', () => {
+    const html = renderMarkdown('![status](https://example.com/p.png?d=secret)');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('<a href="https://example.com/p.png?d=secret">status</a>');
+  });
+
   it('keeps a web link', () => {
     expect(renderMarkdown('[docs](https://example.com/a)')).toContain('<a href="https://example.com/a">docs</a>');
   });
@@ -45,5 +51,8 @@ describe('safeImage', () => {
     expect(safeImage('data:image/svg+xml;base64,PHN2Zz4=')).toBeNull();
   });
   it('refuses a plain http image', () => expect(safeImage('http://example.com/a.png')).toBeNull());
+  it('refuses a web image, which would be fetched unasked', () => {
+    expect(safeImage('https://example.com/a.png?d=secret')).toBeNull();
+  });
   it('refuses the disk', () => expect(safeImage('file:///Users/me/a.png')).toBeNull());
 });

