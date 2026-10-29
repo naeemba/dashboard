@@ -1,21 +1,35 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { toolBody } from './chat-entries';
-import { permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
+import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
 import { clampIndex } from './clamp-index';
 import { isModified } from './shortcuts';
 
 // The box over the prompt that holds what Claude is waiting on: a tool call to allow or decline, or
 // AskUserQuestion's questions, one at a time. Rows the arrows walk and Enter answers; what each row
 // answers with is chat-permission.ts's. Escape is not read here: it is the screen's interrupt, which
-// declines whatever is asked as it stops the turn.
+// declines whatever is asked as it stops the turn. The same box holds a list the screen asks you to
+// pick from, such as the conversations /resume offers.
+
+export type PickRow = { label: string; detail: string; act(): void };
 
 export type AskPanel = {
   element: HTMLElement;
   show(ask: PermissionAsk | null): void;
+  pick(title: string, rows: PickRow[]): void;
   focus(): void;
 };
 
 type Row = { element: HTMLElement; act(): void; input?: HTMLInputElement };
+
+// A row with a box to type into, which the arrows land on and Enter answers from.
+function typedRow(made: Row, placeholder: string): Row {
+  const input = document.createElement('input');
+  input.className = 'chat-ask-other';
+  input.placeholder = placeholder;
+  input.dir = 'auto';
+  made.element.append(input);
+  return { ...made, input };
+}
 
 export function createAskPanel(onAnswer: (id: string, result: PermissionResult) => void): AskPanel {
   const element = document.createElement('div');
@@ -28,6 +42,7 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
   function select(index: number): void {
     selected = clampIndex(index, rows.length - 1);
     rows.forEach((row, at) => row.element.classList.toggle('selected', at === selected));
+    rows[selected]?.element.scrollIntoView({ block: 'nearest' });
     const input = rows[selected]?.input;
     if (input) input.focus();
     else element.focus();
@@ -63,8 +78,11 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
   function permission(ask: PermissionAsk): void {
     const { choices, start } = permissionChoices(ask);
     const about = ask.description ? [Object.assign(document.createElement('p'), { textContent: ask.description })] : [];
-    draw(permissionTitle(ask), [...about, ...toolBody(ask.toolName, ask.input, null)],
-      choices.map((choice) => row(choice.label, '', () => onAnswer(ask.id, choice.result))), start);
+    draw(permissionTitle(ask), [...about, ...toolBody(ask.toolName, ask.input, null)], choices.map((choice) => {
+      if (!choice.typed) return row(choice.label, '', () => onAnswer(ask.id, choice.result));
+      const made: Row = typedRow(row(choice.label, '', () => onAnswer(ask.id, declined(made.input?.value ?? ''))), 'Type it and press Enter');
+      return made;
+    }), start);
   }
 
   function questions(ask: PermissionAsk): void {
@@ -87,17 +105,13 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
           select(keep);
         },
       ));
-      const other = document.createElement('input');
-      other.className = 'chat-ask-other';
-      other.placeholder = 'Something else — type it and press Enter';
-      other.dir = 'auto';
-      const otherRow = row('Other', '', () => {
-        if (!other.value.trim()) return;
-        picked[at] = multiSelect ? [...picked[at], other.value.trim()] : [other.value.trim()];
+      const otherRow: Row = typedRow(row('Other', '', () => {
+        const typed = otherRow.input?.value.trim();
+        if (!typed) return;
+        picked[at] = multiSelect ? [...picked[at], typed] : [typed];
         advance(at);
-      });
-      otherRow.element.append(other);
-      next.push({ ...otherRow, input: other });
+      }), 'Something else — type it and press Enter');
+      next.push(otherRow);
       if (multiSelect) next.push(row('Done', '', () => advance(at)));
       draw(`${header ? `${header} · ` : ''}${text}`, [], next, 0);
     }
@@ -123,6 +137,10 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
       if (ask === null) element.replaceChildren();
       else if (ask.toolName === 'AskUserQuestion') questions(ask);
       else permission(ask);
+    },
+    pick(title, picks) {
+      element.hidden = false;
+      draw(title, [], picks.map((each) => row(each.label, each.detail, each.act)), 0);
     },
     focus: () => select(selected),
   };
