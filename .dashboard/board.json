@@ -28,6 +28,15 @@
           "parent": null,
           "createdAt": "2026-10-29T11:38:06.653Z",
           "updatedAt": "2026-10-29T11:38:06.653Z"
+        },
+        {
+          "id": "a376c035-8d4d-4642-9441-44762b0b87a9",
+          "title": "Left drawer listing the project's docs and Claude sessions",
+          "notes": "A drawer on the left of the project page. One key opens it, Esc closes it. It overlays the grid and never resizes it. Two lists, arrow keys walk rows, Enter acts; a filter input with dir = 'auto'.\n\nDocs: the docs/ tree (card 7ade5b82). Enter opens the file in a document pane: the markdown renderer from the SDK pane (card 2b2f2cfe) showing one file instead of a stream, so tables, code and images render. The nvim pane does not render docs; the document pane lands with the SDK pane card, so this card waits on it.\n\nSessions: the app owns session ids. Every Claude launch gets a uuid the app chose (--session-id on the CLI, the SDK equivalent on the SDK pane) and a row in the app's own index: id, project, cwd or worktree, card, label like dashboard-14, started, last used. The index lives in the app's user data keyed by repo path, never in .dashboard/, since sessions are personal and board.json is tracked. No crawling of ~/.claude/projects/: worktree sessions land in other slugs there and would be missed. Labels can be renamed from the drawer.\n\nVolume: newest 50 rows, then a Load more row at the bottom the arrows reach; Enter loads 50 more.\n\nResume: Enter on a session spawns a new worker pane (card a639736a) with --resume <id>. Never into a busy pane.\n\nScope: the drawer is navigation, rows that jump somewhere, never content. Board has cards, Notes has notes.\n\nUsual tax: an ACTIONS row, a help blurb in src/help.ts, [hidden] rule for the drawer class.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-29T11:44:11.602Z",
+          "updatedAt": "2026-10-29T11:44:11.602Z"
         }
       ]
     },
