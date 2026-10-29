@@ -405,11 +405,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       page.focused = index;
       options.onChanged();
     });
+    // buildPane appended it last; a worker numbered below one already open goes ahead of it.
     if (index === MAIN_INDEX) terminals.prepend(pane.element);
-    else {
-      const next = page.panes.find((other) => other.index > index)?.element;
-      page.workers.insertBefore(pane.element, next ?? null);
-    }
+    else page.panes.find((other) => other.index > index)?.element.before(pane.element);
     page.panes.push(pane);
     page.panes.sort((first, second) => first.index - second.index);
     panesById.set(id, pane);

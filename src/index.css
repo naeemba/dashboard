@@ -50,7 +50,10 @@ body *:not(.pane, .pane *) {
   position: relative;
 }
 
-/* One project is on screen at a time, and within it one view. Both stack in the same place. */
+/* One project is on screen at a time, and within it one view. Both stack in the same place. A view
+   rule that sets its own `position` wins over this one and swaps the box the page's size for one as
+   tall as its contents: the page scrolls and paints over the status bar. The view is already
+   positioned, so anything inside it anchors to it as it is. */
 .page, .view {
   display: block;
   position: absolute;
@@ -71,9 +74,7 @@ body *:not(.pane, .pane *) {
 }
 
 /* The main session on the left, full height, and the workers in a list down the right. Each placed by
-   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. The view
-   is already positioned by .view, which is what the zoomed pane covers; a `position` here would replace
-   that absolute box with one as tall as its panes, and the page would scroll over the status bar. */
+   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. */
 .view-terminals {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -85,23 +86,23 @@ body *:not(.pane, .pane *) {
   grid-column: 1;
 }
 
-/* The right column: the new-pane button on top, the list under it taking what is left. */
-.worker-column {
-  grid-column: 2;
+/* The right column: the new-pane button on top, the list under it taking what is left. Neither is
+   positioned, so a zoomed worker escapes both to cover the whole view. */
+.worker-column, .workers {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-height: 0;
 }
 
+.worker-column {
+  grid-column: 2;
+}
+
 /* Three to a screen: one or two workers share the height between them, and a fourth starts the
-   scroll. Not positioned, so a zoomed worker escapes it to cover the whole view. */
+   scroll. */
 .workers {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 0;
   overflow-y: auto;
 }
 
@@ -109,12 +110,7 @@ body *:not(.pane, .pane *) {
   flex: 1 0 calc((100% - 4px) / 3);
 }
 
-/* The app's thumb is drawn for a page of prose; beside a column of terminals it is too faint to find. */
-.workers::-webkit-scrollbar-thumb {
-  background-color: var(--muted);
-}
-
-/* The new-pane key's twin, at the top right above the list. */
+/* The new-pane key's twin. */
 .add-pane {
   flex: none;
   align-self: flex-end;
