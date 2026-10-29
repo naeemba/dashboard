@@ -20,6 +20,9 @@ export type SessionPorts = {
   // What is running in the pane when something is (pane-reading.ts's paneIsBusy), or null.
   busyWith(id: string): string | null;
   directoryOf(id: string): string | undefined;
+  // A pane main resumed a conversation in at launch, until something else takes the pane. A worker main
+  // dispatched before a restart comes back this way, and the `started` set below has never heard of it.
+  resumedIn(id: string): boolean;
   shellCommand(): string;
   // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
   openWorker(slot: number): number;
@@ -59,6 +62,15 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   // The workers this session started. Any other pane with something running in it is somebody else's —
   // a dev server, a card a ship gave an agent — and release would kill it.
   const started = new Set<string>();
+
+  // Whether what is running in a busy pane is main's worker, so release may kill it. Only while that
+  // worker is still there: once its Claude Code exits the pane is a plain shell again, and a dev server
+  // started in it afterwards is yours. A conversation resumed at launch is the one that was in the pane,
+  // either as an agent or typed into the shell, where it reads as `claude`.
+  function mainsWorker(id: string, program: string): boolean {
+    if (ports.agentIn(id)) return started.has(id) || ports.resumedIn(id);
+    return ports.resumedIn(id) && program === 'claude';
+  }
 
   // A worker of the asking project that is open, or why it is not one. Main and the editor are never a
   // worker: one is where the asking happens, the other holds nvim.
@@ -110,7 +122,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     const program = ports.busyWith(id);
-    if (program !== null && !started.has(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
+    if (program !== null && !mainsWorker(id, program)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
     started.delete(id);

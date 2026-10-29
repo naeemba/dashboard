@@ -16,6 +16,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     agentIn: (id) => agents.has(id),
     busyWith: (id) => (agents.has(id) ? 'an agent' : null),
     directoryOf: () => '/work/api',
+    resumedIn: () => false,
     shellCommand: () => '/bin/zsh',
     openWorker: () => {
       const index = open.length;
@@ -153,6 +154,32 @@ describe('sessionRequests', () => {
       .toMatchObject({ ok: false, output: expect.stringContaining('which no session run started') });
     expect(closed).toEqual([]);
     expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2]).toBe('busy npm');
+  });
+
+  // Main's worker finished and its Claude Code exited; a dev server you then started in that shell is yours.
+  it('refuses to release a pane whose worker has gone and that now runs something else', async () => {
+    const { ports, closed } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    ports.agentIn = () => false;
+    ports.busyWith = () => 'npm';
+    expect(await answer({ directory: '/work/api', args: ['release', '2:1'] }))
+      .toMatchObject({ ok: false, output: expect.stringContaining('which no session run started') });
+    expect(closed).toEqual([]);
+  });
+
+  // After a restart nothing is in `started`, but the workers main had come back, as an agent or typed in.
+  it('releases a worker resumed at launch while its conversation is still running', async () => {
+    const programs = new Map([['2:1', 'claude'], ['2:2', 'an agent'], ['2:3', 'npm']]);
+    const { ports, open, closed } = project({ resumedIn: () => true, busyWith: (id) => programs.get(id) ?? null });
+    open.push(1, 2, 3);
+    ports.agentIn = (id) => id === '2:2';
+    const answer = sessionRequests(ports);
+    expect(await answer({ directory: '/work/api', args: ['release', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
+    expect(await answer({ directory: '/work/api', args: ['release', '2:2'] })).toEqual({ ok: true, output: 'released 2:2' });
+    expect(await answer({ directory: '/work/api', args: ['release', '2:3'] })).toMatchObject({ ok: false });
+    expect(closed).toEqual(['2:1', '2:2']);
   });
 
   // The first worker has exited, so the pane is free; a second throwaway would make release forget it.

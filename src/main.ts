@@ -17,7 +17,7 @@ import { EDITOR_INDEX, MAIN_INDEX, paneFromId, sizeOfPane, terminalId } from './
 import { nextPaneIndex } from './pane-layout';
 import { mainArguments } from './dispatch';
 import { projectOfFolder, sessionRequests } from './session-requests';
-import { listenForSessions, sessionSocketPath } from './session-socket';
+import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
 import { unfinishedWork } from './finished-work';
 import { makeThrowawayWorktree } from './branch-worktree';
 import { LOCAL_SCREEN, screens, windowHears } from './screens';
@@ -523,12 +523,18 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
   if (card !== undefined) {
     recordWorktree({ ...card, pane: paneFromId(id).index });
     startAgent(id, card.worktreePath, agentResumeArguments(shellCommand, resume.session));
-    return;
+  } else {
+    terminalCommands.set(id, { args: [], directory: resume.directory });
+    spawnTerminal(id);
+    shells.get(id)?.write(resumeLine(resume));
   }
-  terminalCommands.set(id, { args: [], directory: resume.directory });
-  spawnTerminal(id);
-  shells.get(id)?.write(resumeLine(resume));
+  resumedPanes.add(id);
 }
+
+// The panes resumeIn put a conversation back in, which the `session` command may release: a worker main
+// dispatched before the restart is one of them. A pane leaves the set when anything else starts in it or
+// it closes, so release never kills an agent a ship put there later.
+const resumedPanes = new Set<string>();
 
 // Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
 // 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
@@ -538,6 +544,7 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
 // What it runs is the caller's, because there are three agents now: the one that works a card, the one
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
 function startAgent(id: string, worktreePath: string, args: string[]): void {
+  resumedPanes.delete(id);
   setPaneCommand(id, { args, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
@@ -697,6 +704,7 @@ function setPaneCommand(id: string, command: PaneCommand): void {
 // One pane let go of for good. Out of the map before the kill: the exit arrives afterwards and is
 // dropped by the check in spawnTerminal, so no pty:exit goes out for a pane already off the screen.
 function dropPane(id: string): void {
+  resumedPanes.delete(id);
   const terminalProcess = shells.get(id);
   shells.delete(id);
   terminalProcess?.kill();
@@ -924,6 +932,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
   },
   directoryOf: (id) => terminalCommands.get(id)?.directory,
+  resumedIn: (id) => resumedPanes.has(id),
   shellCommand: () => shellCommand,
   openWorker,
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
@@ -993,8 +1002,9 @@ app.on('ready', () => {
 app.on('will-quit', () => {
   remoteHost?.close();
   sessions.close();
-  // The socket's own folder, which session-socket.ts made for this run; Windows has a pipe and no folder.
-  if (process.platform !== 'win32') rmSync(path.dirname(sessionSocket), { recursive: true, force: true });
+  // The socket's own folder, which session-socket.ts made for this run.
+  const socketFolder = sessionSocketFolder(process.platform, sessionSocket);
+  if (socketFolder !== null) rmSync(socketFolder, { recursive: true, force: true });
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   for (const shellProcess of shells.values()) shellProcess.kill();
   chats.stopAll();
