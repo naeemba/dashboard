@@ -36,6 +36,8 @@ export type ChatViewOptions = {
   paneId: string;
   onError(message: string): void;
   onNotice(message: string): void;
+  // A question arrived or the last one went, so whatever marks a project that wants you redraws.
+  onWaiting(): void;
 };
 
 export type ChatView = {
@@ -44,13 +46,17 @@ export type ChatView = {
   focus(): void;
   receive(event: ChatEvent): void;
   runCommand(command: ChatCommand): void;
+  // The title of the question the session is waiting on, or null. Having one is main's bell, and the
+  // title is what the manager's row prints under main, as a worker's row prints its last line.
+  question(): string | null;
 };
 
 // What the model key walks. Null is whatever the session's own settings choose.
 const MODELS: (string | null)[] = [null, 'opus', 'sonnet', 'haiku'];
-// What the edits key walks, in the Claude Code terminal's order. A mode the session's settings start
-// it in that is not here — auto, or skipping permissions — is shown, and the key walks on from the top.
-const MODES: PermissionMode[] = ['default', 'acceptEdits', 'plan'];
+// What the edits key walks, in the Claude Code terminal's order. Auto is on it because main starts in
+// it, and a walk that could not come back would leave main asking before every edit and dispatch. A
+// mode that is not here, skipping permissions, is shown, and the key walks on from the top.
+const MODES: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto'];
 const MODE_LABELS: Record<PermissionMode, string> = {
   default: 'asking before edits', acceptEdits: 'accepting edits', plan: 'planning',
   auto: 'auto mode', bypassPermissions: 'skipping permissions', dontAsk: 'refusing what is not allowed',
@@ -99,7 +105,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
   let model: string | null = null;
-  let mode: PermissionMode = 'default';
+  // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
+  let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
@@ -235,6 +242,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawFoot();
     // A question hides the working line and its going brings it back, still counting from the turn's start.
     drawWorking();
+    options.onWaiting();
   }
 
   // An ask answered here or given up on in main. Only the first is ever on screen, so only its going
@@ -243,12 +251,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const wasFirst = asks[0]?.id === id;
     asks = asks.filter((each) => each.id !== id);
     if (!wasFirst) return;
+    // Asked before the panel hides, which drops the keyboard out of the screen.
+    const hadKeyboard = holdsKeyboard();
     showAsk();
-    if (asks.length === 0 && seen()) prompt.focus();
+    if (asks.length === 0 && hadKeyboard) prompt.focus();
   }
 
   // On screen and in front: the screen is not under a hidden view or page, and the window has focus.
+  // Decides the banner only: main sits beside the workers, so it is seen while a worker has the keyboard.
   const seen = () => document.hasFocus() && element.closest('[hidden]') === null;
+  // Whether main has the keyboard. Only then does a question take it, so a line half-typed into a
+  // worker never ends in an Enter that answers main's question for you.
+  const holdsKeyboard = () => element.contains(document.activeElement);
 
   function emptyBox(): void {
     prompt.value = '';
@@ -484,7 +498,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     asks = [...asks, waiting];
     if (asks.length === 1) {
       showAsk();
-      if (seen()) ask.focus();
+      if (holdsKeyboard()) ask.focus();
     }
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
@@ -552,10 +566,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   return {
     element,
+    question: () => (asks.length > 0 ? permissionTitle(asks[0]) : null),
+    // Reads the conversation in and measures it; the page calls it once, when it is built.
     open() {
       readEarlier();
       measure();
-      focus();
     },
     focus,
     receive(event) {

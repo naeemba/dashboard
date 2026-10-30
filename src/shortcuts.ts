@@ -1,4 +1,4 @@
-import { ACTIONS, type Action, type ActionEntry, type ActionScope } from './actions';
+import { ACTIONS, actionByName, type Action, type ActionEntry, type ActionScope } from './actions';
 import { matchesBinding, type KeyInput } from './binding';
 import { isSection } from './manager-sections';
 import type { Mode } from './modes';
@@ -58,10 +58,34 @@ export function isBareCharacter(input: KeyInput): boolean {
 // sees. `manager-page` is the exception that needs more than the mode: the manager shows four views
 // and two of them — board and notes — are modes every project also has, so the page has to say
 // whether it is the manager. The renderer knows — the manager is the page holding MANAGER_SLOT.
-export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): boolean {
+//
+// `claude` is not a mode either: it is the main session's Claude screen, in the terminals view's left
+// column, and its keys are heard while it holds the keyboard there, alongside the terminals keys.
+export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean, chatFocused = false): boolean {
   if (scope === 'global') return true;
   if (scope === 'manager-page') return onManagerPage && isSection(mode);
+  if (scope === 'claude') return chatFocused && mode === 'terminals';
   return scope === mode;
+}
+
+// The Claude screen key that hides this terminals key while the screen has the keyboard: the two are
+// heard together then, and where they share a key (Alt+O, Alt+N, Alt+J/K ship that way) the screen
+// answers it. scopesOverlap says the two scopes never meet on purpose, or bindKey would unbind those
+// shipped pairs. This is the one place the shadow is decided: the lookup skips the hidden key, the
+// which-key strip leaves its row out, and the settings screen warns when a rebind makes a new one.
+export function chatShadow(entry: ActionEntry, keys: Settings['keys']): ActionEntry | undefined {
+  const binding = keys[entry.name] ?? null;
+  if (entry.scope !== 'terminals' || binding === null) return undefined;
+  return ACTIONS.find((other) => other.scope === 'claude' && keys[other.name] === binding);
+}
+
+// The other half of a shadow the named action is in: the Claude key hiding it, or the terminals key
+// it hides. What the settings screen names after a rebind.
+export function chatShadowPartner(name: string, keys: Settings['keys']): ActionEntry | undefined {
+  const entry = actionByName(name);
+  if (entry === undefined) return undefined;
+  if (entry.scope === 'claude') return ACTIONS.find((other) => chatShadow(other, keys) === entry);
+  return chatShadow(entry, keys);
 }
 
 // The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a word
@@ -80,9 +104,11 @@ export function mapShortcut(
   keys: Settings['keys'],
   mode: Mode = 'terminals',
   onManagerPage = false,
+  chatFocused = false,
 ): Action | null {
   for (const entry of ACTIONS) {
-    if (!hears(entry.scope, mode, onManagerPage)) continue;
+    if (!hears(entry.scope, mode, onManagerPage, chatFocused)) continue;
+    if (chatFocused && chatShadow(entry, keys) !== undefined) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
     if (passesThrough(entry, mode)) return null;
     return entry.action;

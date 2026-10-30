@@ -53,13 +53,20 @@ describe('withClaude', () => {
 
   // The live reading carries the pid; only the two fields a resume needs are written.
   it('writes only the session and the folder', () => {
-    const held = new Map([['0:0', { pid: 900, ...conversation(ID) }]]);
-    expect(withClaude(layout, slotOf, held, none).pages[0].claude[0]).toEqual(conversation(ID));
+    const held = new Map([['0:1', { pid: 900, ...conversation(ID) }]]);
+    expect(withClaude(layout, slotOf, held, none).pages[0].claude[1]).toEqual(conversation(ID));
   });
 
   // The editor runs nvim, never a conversation to resume, and its number is below the terminals'.
   it('leaves out a reading that is not a terminal', () => {
     const held = new Map([['0:-1', conversation(ID)]]);
+    expect(withClaude(layout, slotOf, held, none).pages[0].claude).toEqual([]);
+  });
+
+  // Main is the Claude screen. Pane 0's conversation, taken on the launch that handed it over, would
+  // otherwise be written back and handed over again, over the one main has moved on to.
+  it('leaves out main', () => {
+    const held = new Map([['0:0', conversation(ID)]]);
     expect(withClaude(layout, slotOf, held, none).pages[0].claude).toEqual([]);
   });
 

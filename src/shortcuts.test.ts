@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hears, isBareCharacter, mapShortcut } from './shortcuts';
+import { chatShadowPartner, hears, isBareCharacter, mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
@@ -176,9 +176,10 @@ describe('every shipped default reaches its own action', () => {
         });
         // manager-page is not a mode: it is every section of the manager. Driven from its first section,
         // with the flag the renderer passes when the page you are on is the manager.
-        const mode = entry.scope === 'manager-page' ? 'manager' : entry.scope;
+        // claude is the main session's screen inside the terminals view, heard while it has the keyboard.
+        const mode = entry.scope === 'manager-page' ? 'manager' : entry.scope === 'claude' ? 'terminals' : entry.scope;
         const onManagerPage = entry.scope === 'manager-page';
-        expect(mapShortcut(pressed, keys, mode, onManagerPage), entry.name).toEqual(entry.action);
+        expect(mapShortcut(pressed, keys, mode, onManagerPage, entry.scope === 'claude'), entry.name).toEqual(entry.action);
       }
     }
   });
@@ -207,5 +208,31 @@ describe('isBareCharacter', () => {
   // Shift is how a capital is typed, so `Continue? [Y/n]` can be answered the way it asks.
   it('is the capital a prompt asks for', () => {
     expect(isBareCharacter(key({ key: 'Y', code: 'KeyY', shiftKey: true }))).toBe(true);
+  });
+});
+
+describe('the Claude screen in the terminals view', () => {
+  const keys = defaultSettings(false).keys;
+  const alt = (code: string) => key({ code, altKey: true });
+
+  it('answers a key it shares with the terminals while it has the keyboard, and leaves it to them otherwise', () => {
+    expect(mapShortcut(alt('KeyN'), keys, 'terminals', false, true)).toEqual({ kind: 'chat', command: 'new' });
+    expect(mapShortcut(alt('KeyN'), keys, 'terminals', false, false)).toEqual({ kind: 'terminal-name' });
+  });
+
+  it('still moves to the workers from it', () => {
+    expect(mapShortcut(alt('KeyL'), keys, 'terminals', false, true)).toEqual({ kind: 'terminal-move', direction: 'right' });
+  });
+
+  it('names the other half of a shadow from either side, and nothing where there is none', () => {
+    expect(chatShadowPartner('terminal-name', keys)?.name).toBe('claude-new');
+    expect(chatShadowPartner('claude-new', keys)?.name).toBe('terminal-name');
+    expect(chatShadowPartner('claude-model', keys)).toBeUndefined();
+  });
+
+  it('finds the shadow a rebind makes', () => {
+    const rebound = bindKey(defaultSettings(false), 'terminal-add', 'Alt+M').keys;
+    expect(chatShadowPartner('terminal-add', rebound)?.name).toBe('claude-model');
+    expect(mapShortcut(alt('KeyM'), rebound, 'terminals', false, true)).toEqual({ kind: 'chat', command: 'model' });
   });
 });

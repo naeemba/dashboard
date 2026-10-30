@@ -25,6 +25,9 @@ type ResumeLedger = {
   // The panes of this project that still have one to take, in order. Workers are opened for them at
   // launch: a project opens with main alone, and a worker that was running Claude comes back with it.
   owed(projectPath: string): number[];
+  // A taken session that lands in another pane than the one it was taken for: main's saved first pane
+  // that mainResume hands to a worker. Its grace follows it, so it is held under the pane running it.
+  move(fromId: string, toId: string): void;
   place(placement: SessionPlacement): void;
   // What each pane is running, by terminal id, for the next write.
   held(): ReadonlyMap<string, PaneConversation>;
@@ -55,6 +58,12 @@ export function resumeLedger(
       return (pending.get(projectPath) ?? []).flatMap((conversation, index) => (
         resumable(conversation, exists) ? [index] : []
       ));
+    },
+    move(fromId, toId) {
+      const entry = resumed.get(fromId);
+      if (entry === undefined) return;
+      resumed.delete(fromId);
+      resumed.set(toId, entry);
     },
     place(placement) {
       // A sweep that looked before Quit can finish after it, and what it saw is older than what Quit saw.

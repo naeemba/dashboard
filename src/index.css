@@ -87,10 +87,6 @@ body *:not(.pane, .pane *) {
   gap: 2px;
 }
 
-.view-terminals > .pane {
-  grid-column: 1;
-}
-
 /* The right column: the new-pane button on top, the list under it taking what is left. Neither is
    positioned, so a zoomed worker escapes both to cover the whole view. */
 .worker-column, .workers {
@@ -98,6 +94,10 @@ body *:not(.pane, .pane *) {
   flex-direction: column;
   gap: 2px;
   min-height: 0;
+}
+
+.main-chat {
+  grid-column: 1;
 }
 
 .worker-column {
@@ -492,7 +492,8 @@ body *:not(.pane, .pane *) {
    keyboard and you can never be typing into a pane hidden under another one. Main and the list keep
    their columns underneath, so zooming main resizes one shell; zooming a worker lets the others in the
    list share its share. */
-.view-terminals.zoom .pane:focus-within {
+.view-terminals.zoom .pane:focus-within,
+.view-terminals.zoom .main-chat:focus-within {
   position: absolute;
   inset: 0;
   z-index: 1;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  mainArguments, mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
+  mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
 } from './dispatch';
 import { quoteForShell } from './shell';
 
@@ -15,18 +15,7 @@ describe('session names', () => {
   });
 });
 
-describe('mainArguments', () => {
-  it('starts Claude named, in auto mode, with the dispatch rule appended', () => {
-    const args = mainArguments('/bin/zsh', '/work/api');
-    expect(args[0]).toBe('-lic');
-    expect(args[1]).toMatch(/^exec claude --name main-api --permission-mode auto --append-system-prompt '/);
-    expect(args[1]).not.toContain('--resume');
-  });
-
-  it('resumes the conversation main was in when it is given one', () => {
-    expect(mainArguments('/bin/zsh', '/work/api', 'abc')[1]).toMatch(/ --resume abc$/);
-  });
-
+describe('mainPrompt', () => {
   it('carries the card\'s dispatch rule word for word', () => {
     expect(mainPrompt('/work/api')).toContain(
       'a pane is for a task I asked for (do X, review X, research X), never for a lookup you need mid-task;'

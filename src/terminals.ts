@@ -1,24 +1,20 @@
 import type { Mode } from './modes';
 
 // A project's terminals are its main session and the worker panes beside it. The main session is
-// always pane 0, full height on the left; workers are numbered from 1 and come and go, so a project has
+// always place 0, the Claude screen full height on the left, and never a pty; workers are numbered from 1 and come and go, so a project has
 // as many as it has been given and the numbers of the ones still open never move. A worker that closes
 // leaves its number free for the next one, which is what keeps the labels short.
 export const MAIN_INDEX = 0;
 
-// A worker rather than main, the editor or the Claude screen: the panes that come and go.
+// A worker rather than main or the editor: the panes that come and go.
 export function isWorker(index: number): boolean {
   return index > MAIN_INDEX;
 }
 
-// The editor and the Claude screen are numbered below the terminals rather than after them: workers
-// have no last number, so anything counted from the end of them would one day be a worker's. The one
-// place that says so: move either and every caller follows.
+// The editor is numbered below the terminals rather than after them: workers have no last number, so
+// anything counted from the end of them would one day be a worker's. The one place that says so: move
+// it and every caller follows.
 export const EDITOR_INDEX = -1;
-
-// The Claude screen. It is not a pty, so main never spawns or kills anything by it; it is a number
-// only so a notification it raises can name it.
-export const CHAT_INDEX = -2;
 
 export type Direction = 'left' | 'right' | 'up' | 'down';
 
@@ -117,7 +113,6 @@ export function sizeOfPane(sizes: { sizeOf(id: string): PaneSize | undefined }, 
 // switching the page to nvim first — otherwise you arrive at a project showing five shells with the
 // pane you were sent to nowhere on screen.
 export function modeOfPane(index: number): Mode {
-  if (index === CHAT_INDEX) return 'claude';
   return index === EDITOR_INDEX ? 'nvim' : 'terminals';
 }
 

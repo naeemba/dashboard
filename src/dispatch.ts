@@ -50,15 +50,6 @@ export function mainPrompt(projectPath: string): string {
   ].join('\n');
 }
 
-export function mainArguments(shellCommand: string, projectPath: string, resume?: string): string[] {
-  return claudeArguments(shellCommand, [
-    '--name', mainSessionName(projectPath),
-    '--permission-mode', 'auto',
-    '--append-system-prompt', mainPrompt(projectPath),
-    ...(resume === undefined ? [] : ['--resume', resume]),
-  ]);
-}
-
 // The hooks a worker runs under, beside whatever the user's own settings hold. Stop is the end of the
 // worker's turn, which for a worker given one task is the task finished or given up on — so main
 // hears about a worker that crashed or forgot to write. permission_prompt is the one Notification

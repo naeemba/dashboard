@@ -93,7 +93,7 @@ export function labelled(
 // Complete on purpose, so a new mode does not compile until it has one.
 export const MODE_GLYPHS: Record<Mode, IconName> = {
   terminals: 'terminal', nvim: 'editor', board: 'board', notes: 'notes', manager: 'general', command: 'command',
-  log: 'log', claude: 'claude',
+  log: 'log',
 };
 
 // A button holding an icon and a name, the shape every bar of tabs in the app is built from.

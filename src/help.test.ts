@@ -84,7 +84,9 @@ describe('helpSections', () => {
               altKey: stroke.alt,
               shiftKey: stroke.shift,
             });
-            expect(mapShortcut(pressed, mac, mode, onManagerPage), `${mode}: ${text}`).not.toBeNull();
+            // The Claude section's keys are heard while main, the Claude screen, has the keyboard.
+            const chatFocused = section.title === 'Claude';
+            expect(mapShortcut(pressed, mac, mode, onManagerPage, chatFocused), `${mode}: ${text}`).not.toBeNull();
           }
         }
       }

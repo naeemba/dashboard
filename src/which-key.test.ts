@@ -39,6 +39,13 @@ describe('heldPrefix', () => {
 });
 
 describe('whichKeyRows', () => {
+  it('lists a key the Claude screen shares with the terminals once, as the screen\'s, while it has the keyboard', () => {
+    const rows = whichKeyRows(alt, mac, 'terminals', false, true, true);
+    expect(rows.some((row) => row.action === 'Start a new conversation')).toBe(true);
+    expect(rows.some((row) => row.action === 'Name this pane')).toBe(false);
+    expect(whichKeyRows(alt, mac, 'terminals', false, true).some((row) => row.action === 'Name this pane')).toBe(true);
+  });
+
   it('names only what is left to press', () => {
     expect(rowFor('Open the settings screen', ctrl)?.keys).toBe(',');
     expect(rowFor('Notes mode', ctrl)?.keys).toBe('Shift+N');

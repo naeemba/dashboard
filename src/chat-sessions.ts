@@ -1,4 +1,5 @@
 import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -12,14 +13,15 @@ import type { PermissionAsk } from './chat-permission';
 import { failureText } from './failure';
 import { isRecord } from './is-record';
 
-// The chat pane's half in main: one Agent SDK session per project page, started the first time a
-// prompt is sent and kept open in streaming input mode, so a second prompt goes into the same process
-// rather than starting another. The renderer draws; everything here is the session and the questions
-// it is waiting on.
+// The Claude screen's half in main: one Agent SDK session per project page, the project's main
+// session. It is started when the project opens and again after a new conversation or a /resume, and
+// kept open in streaming input mode, so every prompt goes into the same process and a worker's
+// SendMessage has somewhere to arrive. The renderer draws; everything here is the session and the
+// questions it is waiting on.
 //
 // A conversation outlives the app by its id. The app keeps the id the session reports per project in
-// chat-sessions.json; the next launch resumes that id on the first prompt and reads its history back
-// for the pane to draw. /resume lists the older ones.
+// chat-sessions.json; the next launch resumes that id when the project opens and reads its history
+// back for the screen to draw. /resume lists the older ones.
 
 export type ChatHost = {
   send(slot: number, event: ChatEvent): void;
@@ -131,7 +133,20 @@ export function rememberedSessions(file: string): Record<string, string> {
   }
 }
 
-export function registerChatSessions(table: Channels, host: ChatHost): { stop(slot: number): void; stopAll(): void } {
+// What a project's main session opens on. The conversation the terminal main left wins over one the
+// old Claude view remembered: it was the project's main, the one its workers report to, and `adopt`
+// only arrives on the first launch after main became the screen. Auto mode, as the terminal main ran
+// in, unless the screen has already chosen another.
+export function mainSessionStart(
+  remembered: string | undefined, adopt: string | undefined, kept: ChatPreferences | undefined,
+): { resume: string | undefined; preferences: ChatPreferences } {
+  return { resume: adopt ?? remembered, preferences: { ...kept, permissionMode: kept?.permissionMode ?? 'auto' } };
+}
+
+export function registerChatSessions(
+  table: Channels,
+  host: ChatHost,
+): { open(slot: number, adopt?: string): void; stop(slot: number): void; stopAll(): void } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -179,11 +194,14 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         cwd: projectPath,
         resume,
         model: preferences.get(slot)?.model ?? undefined,
+        // The project's main session, as the terminal one was: the mode open() seeded or the screen
+        // chose, the dispatch prompt, and the name its workers SendMessage it by.
         permissionMode: preferences.get(slot)?.permissionMode,
+        extraArgs: { name: mainSessionName(projectPath) },
         env: environment,
         includePartialMessages: true,
         pathToClaudeCodeExecutable: executable,
-        systemPrompt: { type: 'preset', preset: 'claude_code' },
+        systemPrompt: { type: 'preset', preset: 'claude_code', append: mainPrompt(projectPath) },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
           toolName,
           input: toolInput,
@@ -220,6 +238,8 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         if (resume && !started) remember(projectPath, undefined);
       }
       for (const { resolve } of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
+      // An end nobody asked for is not restarted here: a session that dies on start would die again
+      // in a loop. The screen says it ended, and the next prompt starts it.
       if (session.stopped) return;
       sessions.delete(slot);
       host.send(slot, { kind: 'ended', error });
@@ -253,10 +273,8 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     );
   });
 
-  // The slash commands the session would run, for the menu. Asked for when a slash is typed, which
-  // starts the session the way a prompt would: the list is the CLI's, and only a running one has it.
-  // Nothing is remembered until a prompt is sent, so a session started for the menu alone and
-  // closed with the app costs nothing on the next launch.
+  // The slash commands the session would run, for the menu. The list is the CLI's, and only a running
+  // session has it; one that has ended is started again by the asking, as a prompt would.
   table.handle('chat:commands', async (_screen, slot: number): Promise<SlashCommand[]> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
@@ -345,27 +363,41 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     }, () => undefined);
   }
 
-  // A new conversation: the running one is closed and the page forgets its id, so the next prompt
-  // starts fresh. The old transcript stays on disk for whatever lists sessions later. Every screen is
-  // told, so none keeps showing a conversation the next prompt would not continue.
+  // A new conversation: the running one is closed, the page forgets its id, and a fresh session starts
+  // at once, so a worker's report still has a main to arrive at. The old transcript stays on disk for
+  // whatever lists sessions later. Every screen is told, so none keeps showing the closed one.
   table.on('chat:reset', (_screen, slot: number) => {
     const projectPath = host.projectPath(slot);
     stop(slot);
-    if (projectPath !== undefined) remember(projectPath, undefined);
+    if (projectPath === undefined) return;
+    remember(projectPath, undefined);
     host.send(slot, { kind: 'reset' });
+    running(slot, projectPath).catch(() => undefined);
   });
 
-  // An earlier conversation picked in /resume: the running one is closed and the page remembers the
-  // picked one, so every screen reads it back and the next prompt carries it on.
+  // An earlier conversation picked in /resume: the running one is closed, the page remembers the picked
+  // one, and a session resuming it starts at once. Every screen reads it back.
   table.on('chat:resume', (_screen, slot: number, sessionId: string) => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
     stop(slot);
     remember(projectPath, sessionId);
     host.send(slot, { kind: 'reset' });
+    running(slot, projectPath).catch(() => undefined);
   });
 
   return {
+    // A project opening starts its main session at once, as the terminal one was, so a worker's
+    // SendMessage has somewhere to arrive. `adopt` is the conversation the terminal main left;
+    // mainSessionStart says what wins.
+    open(slot, adopt) {
+      const projectPath = host.projectPath(slot);
+      if (projectPath === undefined) return;
+      const opening = mainSessionStart(remembered[projectPath], adopt, preferences.get(slot));
+      if (opening.resume !== remembered[projectPath]) remember(projectPath, opening.resume);
+      preferences.set(slot, opening.preferences);
+      running(slot, projectPath).catch(() => undefined);
+    },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); },

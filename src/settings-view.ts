@@ -8,7 +8,7 @@ import {
   type Settings,
 } from './settings';
 import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
-import { isModified } from './shortcuts';
+import { chatShadowPartner, isModified } from './shortcuts';
 
 // Modifier keys pressed on their own are not a binding — you are still on your way to one. Without
 // this, arming a row and reaching for Ctrl+Shift+K binds Ctrl the moment your finger lands.
@@ -75,8 +75,12 @@ export function openSettings(
         dialog.focus();
         if (!yes) return say('');
       }
-      commit(bindKey(settings, name, binding));
-      say('');
+      const bound = bindKey(settings, name, binding);
+      commit(bound);
+      // Not a clash bindKey settles: the Claude screen's key and a terminals key may share one, and
+      // the screen answers it while it has the keyboard. Said, so the key that loses there is no surprise.
+      const partner = chatShadowPartner(name, bound.keys);
+      say(partner === undefined ? '' : `${binding} is also "${partner.description}". While the Claude screen has the keyboard, the Claude one answers it.`);
     }
 
     function render(): void {

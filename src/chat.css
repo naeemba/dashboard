@@ -1,7 +1,9 @@
-/* The Claude screen: a column of conversation over a prompt box. Read like a document rather than a
-   terminal, so prose is in the app's own face and a measure wide enough for code. */
-.view-claude {
+/* The Claude screen, the project's main session in the terminals view's left column: a column of
+   conversation over a prompt box. Read like a document rather than a terminal, so prose is in the
+   app's own face and a measure wide enough for code. */
+.main-chat {
   display: grid;
+  min-height: 0;
   /* An auto column grows to the widest line inside it, and a command list row with a long argument
      hint made it wider than the window: the whole window scrolled sideways, the Terminals view with
      it. The column is the view's width, whatever is in it. */

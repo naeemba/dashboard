@@ -185,8 +185,8 @@ The two projects the card pointed at were read first and neither is copied. opco
 `query()` per message and handles a refused tool by sending the message again with the tool added to
 `allowedTools`, which runs the turn twice. Both trade the question away; this screen exists to ask it.
 
-The session starts on the first prompt, not on opening the screen: the CLI is a process per project,
-and a screen glanced at once should not hold one open all day.
+The session starts when the project opens, as the terminal main did: the screen is the project's main
+session now (below), and a worker's SendMessage needs a running session to arrive at.
 
 The app keeps the conversation's id per project in `chat-sessions.json` in the app's data folder,
 never in `.dashboard/`, since a conversation is personal and the board is tracked. The id is the one
@@ -209,11 +209,8 @@ prints a usage line instead of Claude Code's picker, so the screen lists `suppor
 name the session offers, it goes through `chat:configure` like the model key, so the foot and the
 saved preference follow it; a name it does not offer is refused, not saved as the next start model.
 
-The list comes from `supportedCommands()`, which only a running session answers, so the first slash
-typed starts the session. That bends "the session starts on the first prompt" on purpose: a slash is
-somebody about to send one. Nothing is remembered until a prompt is sent and `init` names the
-conversation, so a session started for the list and closed with the app leaves the next launch as it
-was.
+The list comes from `supportedCommands()`, which only a running session answers; the session is
+started with the project, so the list is there by the first slash.
 
 `/resume` lists the folder's conversations with `includeWorktrees: false`. A project's workers run in
 its worktrees, and with them in the list the project's own conversations are lost among theirs.
@@ -225,9 +222,23 @@ answer goes on accepting edits.
 
 ## The main session and its workers
 
-A project's terminals are its main session, pane 0, full height on the left, and worker panes in a
-scrolling list on the right, as many as have been opened. The card asked for this; four things it said
-were changed on the way, each for a reason that is the card's own goal.
+A project's terminals are its main session, full height on the left, and worker panes in a
+scrolling list on the right, as many as have been opened. The card asked for this layout; four things it
+said were changed on the way, each for a reason that is the card's own goal, and they come after the
+two paragraphs on main.
+
+**Main is the Claude screen, not a pane.** It began as Claude Code in pane 0; it is now the Agent SDK
+session the Claude screen draws, started with the project in auto mode, named `main-<project>` and
+given the dispatch prompt, as the pane was. The separate Claude view went with it: two Claude sessions
+on one page was one too many. Its keys are heard on the terminals view while it has the keyboard, and
+where one shares a key with a terminals key (Alt+O, Alt+N, Alt+J/K) the screen answers it. The first
+launch after the change carries on the conversation the terminal main left, over one the old Claude
+view remembered: the terminal one was the project's main, the one its workers report to. Pane 0 keeps
+the number so a notification and the focus keys still name main; nothing is ever spawned in it.
+
+Main is started again at once after a new conversation or a /resume, so a worker's report never
+finds no main to arrive at. An end nobody asked for, a crash, is not restarted: a session that dies on
+start would die again in a loop. The screen says it ended, and the next prompt starts it.
 
 **The focus keys are not Ctrl+1..9.** Ctrl with a digit is the tab jump on every platform, and taking it
 would cost every tab key to reach a pane. The nine focus rows are where the five were: Cmd with a digit

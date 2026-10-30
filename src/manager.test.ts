@@ -427,6 +427,12 @@ describe('answerTarget', () => {
     expect(answerTarget(queued('review', { kind: 'card', cardId: 'a' }))).toBeNull();
     expect(answerTarget({ kind: 'pane', slot: 2, pane: summary('quiet') })).toBeNull();
   });
+
+  // Main is the Claude screen: a typed character has no terminal to go to, so Enter is the way in.
+  it('takes nothing on main\'s row or its queue item, asking or not', () => {
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }))).toBeNull();
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 0 } })).toBeNull();
+  });
 });
 
 describe('queueRefresh', () => {

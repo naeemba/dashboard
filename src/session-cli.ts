@@ -32,8 +32,8 @@ what a worker's hooks call.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 
-// A terminal id, `<slot>:<pane>`, the one claim prints. The editor and the Claude screen have negative
-// numbers and are left out here, since nothing this command does belongs in either.
+// A terminal id, `<slot>:<pane>`, the one claim prints. The editor has a negative number and is left
+// out here, since nothing this command does belongs in it.
 const PANE_ID = /^\d+:\d+$/;
 
 function refuse(message: string): Parsed {
