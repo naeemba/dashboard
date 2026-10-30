@@ -63,6 +63,9 @@ describe('relayed', () => {
   it('relays streamed text', () => {
     expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'a' } }))).toBe(true);
   });
+  it('relays streamed thinking, which the working line counts', () => {
+    expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: 'a' } }))).toBe(true);
+  });
   it('keeps a tool input streaming in, which for a Write is the whole file', () => {
     expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json: '{' } }))).toBe(false);
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -112,5 +112,36 @@ describe('modelRows', () => {
 
   it('keeps the default row as no model named, as the model key does', () => {
     expect([pickedModel('default'), pickedModel('opus')]).toEqual([null, 'opus']);
+  });
+});
+
+describe('fileMention', () => {
+  it('mentions a dropped file by its path, quoted when it has a space', () => {
+    expect(fileMention('/home/me/notes.md')).toBe('@/home/me/notes.md');
+    expect(fileMention('/home/me/my notes.md')).toBe('@"/home/me/my notes.md"');
+  });
+});
+
+describe('mentionInsertion', () => {
+  it('sets the mentions off from a word before them, and leaves a space after', () => {
+    expect(mentionInsertion('look at', ['@a', '@b'])).toBe(' @a @b ');
+    expect(mentionInsertion('look at ', ['@a'])).toBe('@a ');
+    expect(mentionInsertion('', ['@a'])).toBe('@a ');
+  });
+});
+
+describe('droppedFiles', () => {
+  const png = { type: 'image/png', path: '/a.png' };
+  const text = { type: 'text/plain', path: '/notes.txt' };
+  const pageSvg = { type: 'image/svg+xml', path: '' };
+  it('attaches pictures and mentions every other file on disk', () => {
+    expect(droppedFiles([png, text])).toEqual({ pictures: [png], paths: ['/notes.txt'], refused: false });
+  });
+  it('leaves out a file with no path, and refuses a drop that leaves nothing', () => {
+    expect(droppedFiles([pageSvg, text])).toEqual({ pictures: [], paths: ['/notes.txt'], refused: false });
+    expect(droppedFiles([pageSvg])).toEqual({ pictures: [], paths: [], refused: true });
+  });
+  it('does not refuse a drop of pictures alone', () => {
+    expect(droppedFiles([png, pageSvg])).toEqual({ pictures: [png], paths: [], refused: false });
   });
 });

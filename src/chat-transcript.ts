@@ -25,8 +25,7 @@ export type ChatEvent =
 // The images the API takes, and so the only ones a pasted image is sent as.
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export type ImageType = typeof IMAGE_TYPES[number];
-// The same list as a person reads it, for the notice that refuses any other file: PNG, JPEG, GIF, WEBP.
-export const IMAGE_TYPE_NAMES = IMAGE_TYPES.map((type) => type.slice('image/'.length).toUpperCase()).join(', ');
+export const isImageType = (type: string): boolean => (IMAGE_TYPES as readonly string[]).includes(type);
 
 // The API refuses an image whose base64 is over 5 MB, so a bigger paste would only end the turn in an
 // error. The cap is on all of a prompt's images together, which also keeps a prompt sent from the
@@ -67,9 +66,24 @@ export type Transcript = {
   model: string | null;
   // The Claude Code version the session runs, for the status line.
   version: string | null;
+  // What the running turn has streamed so far, text and thinking alike, in characters: the
+  // working line's token count, as Claude Code's estimates it while a response streams. And whether
+  // the block streaming now is thinking.
+  streamed: number;
+  thinking: boolean;
+  // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
+  // than in the view, so a question mid-turn does not start the clock over.
+  started: number | null;
 };
 
-export const EMPTY_TRANSCRIPT: Transcript = { entries: [], live: '', busy: false, model: null, version: null };
+export const EMPTY_TRANSCRIPT: Transcript = {
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null,
+};
+
+// No turn running: nothing streaming, nothing counted.
+const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null } as const;
+
+const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -138,12 +152,17 @@ function user(transcript: Transcript, content: unknown): Transcript {
 
 function streamed(transcript: Transcript, event: unknown): Transcript {
   if (!isRecord(event)) return transcript;
-  if (event.type === 'content_block_start') return { ...transcript, live: '' };
-  const delta = event.delta;
-  if (event.type === 'content_block_delta' && isRecord(delta) && delta.type === 'text_delta') {
-    return { ...transcript, live: transcript.live + text(delta.text) };
+  if (event.type === 'content_block_start') {
+    const block = isRecord(event.content_block) ? event.content_block : {};
+    return { ...transcript, live: '', thinking: block.type === 'thinking' || block.type === 'redacted_thinking' };
   }
-  return transcript;
+  const delta = event.delta;
+  if (event.type !== 'content_block_delta' || !isRecord(delta) || typeof delta.type !== 'string') return transcript;
+  const field = STREAMED_DELTAS[delta.type];
+  if (!field) return transcript;
+  const piece = text(delta[field]);
+  const live = delta.type === 'text_delta' ? transcript.live + piece : transcript.live;
+  return { ...transcript, live, streamed: transcript.streamed + piece.length };
 }
 
 // A stopped turn says so once: the session has usually written its own stop into the conversation
@@ -168,7 +187,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     case 'result': {
       const notice = resultNotice(message, transcript.entries.at(-1));
       const entries = notice ? [...transcript.entries, { kind: 'notice', text: notice } as const] : transcript.entries;
-      return { ...transcript, entries, live: '', busy: false };
+      return { ...transcript, ...IDLE, entries };
     }
     case 'system':
       if (message.subtype === 'init') {
@@ -184,10 +203,14 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
 
 export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript {
   if (event.kind === 'message') return applyMessage(transcript, event.message);
-  if (event.kind === 'prompt') return { ...user(transcript, event.content), busy: true };
+  // A prompt sent while a turn runs joins that turn, so its count goes on.
+  if (event.kind === 'prompt') {
+    const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
+    return { ...user(transcript, event.content), busy: true, ...fresh };
+  }
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
-    return { ...transcript, busy: false, live: '', entries: [...transcript.entries, { kind: 'notice', text: said }] };
+    return { ...transcript, ...IDLE, entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
 }

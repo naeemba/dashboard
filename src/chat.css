@@ -242,31 +242,95 @@
   border-color: var(--blue);
 }
 
+/* One row under the box: the model, mode and state on the left, the meters and version on the right.
+   It wraps onto a second row on a narrow screen rather than squeezing. */
 .chat-foot {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding: 2px 2px 0;
   color: var(--muted);
   font-size: 12px;
 }
 
-/* How full the context is, as a bar that fills from the left in the colour its percentage takes. */
-.chat-context {
-  display: inline-block;
-  width: 80px;
-  height: 4px;
-  margin-right: 8px;
-  vertical-align: middle;
-  border-radius: 2px;
-  background: linear-gradient(to right, currentColor var(--used), var(--line) var(--used));
+.chat-foot-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
 }
 
-.chat-status-green { color: var(--green); }
-.chat-status-yellow { color: var(--yellow); }
-.chat-status-red { color: var(--red); }
-.chat-status-blue { color: var(--blue); }
-.chat-status-plain { color: var(--white); }
-.chat-status-muted { color: var(--muted); }
+/* The model with a dot in its family's colour, as the terminal colours its name. */
+.chat-foot-model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--white);
+}
+
+.chat-foot-model::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+}
+
+.chat-foot-state[data-state='working'] { color: var(--blue); }
+.chat-foot-state[data-state='waiting'] { color: var(--yellow); }
+
+/* A meter: its name, a short bar filled to how much is used, the percentage in the same colour, then
+   anything else worth saying, quieter. */
+.chat-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chat-meter-bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--tone) var(--used), var(--line) var(--used));
+}
+
+.chat-meter-value {
+  color: var(--tone);
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-meter-detail, .chat-foot-version {
+  opacity: 0.75;
+}
+
+/* Over the box while a turn runs: a turning mark, what Claude is doing, how long and how much. */
+.chat-working {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.chat-working[hidden] {
+  display: none;
+}
+
+.chat-spinner {
+  display: inline-block;
+  color: var(--yellow);
+  animation: chat-spin 1.6s linear infinite;
+}
+
+@keyframes chat-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-spinner { animation: none; }
+}
 
 /* highlight.js, drawn from the theme's own colours rather than a stylesheet of its own. */
 .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: var(--magenta); }

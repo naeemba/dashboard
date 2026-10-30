@@ -16,8 +16,7 @@ export type ChatMeasure = {
   sevenDay: UsageWindow | null;
 };
 
-export type StatusTone = 'green' | 'yellow' | 'red' | 'blue' | 'muted' | 'plain';
-type StatusPiece = { text: string; tone: StatusTone };
+export type StatusTone = 'green' | 'yellow' | 'red' | 'blue' | 'plain';
 
 type ContextUsage = Pick<SDKControlGetContextUsageResponse, 'totalTokens' | 'maxTokens' | 'percentage' | 'model'>;
 type PlanUsage = Pick<SDKControlGetUsageResponse, 'rate_limits'> | null;
@@ -50,9 +49,37 @@ export function toneOf(percentage: number): StatusTone {
   return percentage >= 90 ? 'red' : percentage >= 70 ? 'yellow' : 'green';
 }
 
+// A meter on the status line: how much of something is used, in the colour that amount takes, and
+// what else is worth saying about it.
+export type StatusMeter = { label: string; percentage: number; tone: StatusTone; detail: string | null };
+
+// The context window and the plan's two limits, as Claude Code's status line orders them. The
+// seven-day reset is days off and Claude Code leaves it out; only the five-hour one is said.
+export function statusMeters(measure: ChatMeasure): StatusMeter[] {
+  const meter = (label: string, percentage: number, detail: string | null): StatusMeter => ({ label, percentage, tone: toneOf(percentage), detail });
+  const { percentage, used, size } = measure.context;
+  const meters = [meter('context', percentage, `${formatTokens(used)} / ${formatTokens(size)}`)];
+  const { fiveHour, sevenDay } = measure;
+  if (fiveHour) {
+    const reset = fiveHour.resetsAt ? clockTime(fiveHour.resetsAt) : null;
+    meters.push(meter('5h', fiveHour.percentage, reset ? `resets ${reset}` : null));
+  }
+  if (sevenDay) meters.push(meter('7d', sevenDay.percentage, null));
+  return meters;
+}
+
+// The working line under the conversation while a turn runs, as Claude Code draws it over its prompt:
+// whether Claude is thinking, how long, and roughly how many tokens have come down. A token is taken
+// as four characters, the estimate Claude Code itself shows while a response streams.
+export function workingLine(seconds: number, streamed: number, thinking: boolean): string {
+  const parts = [`${seconds}s`];
+  if (streamed > 0) parts.push(`↓ ${formatTokens(Math.round(streamed / 4))} tokens`);
+  return `${thinking ? 'Thinking' : 'Working'}… (${parts.join(' · ')})`;
+}
+
 const MODEL_TONES: [string, StatusTone][] = [['fable', 'red'], ['opus', 'yellow'], ['sonnet', 'green'], ['haiku', 'blue']];
 
-function modelTone(name: string): StatusTone {
+export function modelTone(name: string): StatusTone {
   return MODEL_TONES.find(([family]) => name.toLowerCase().includes(family))?.[1] ?? 'plain';
 }
 
@@ -62,30 +89,4 @@ export function clockTime(iso: string): string | null {
   if (Number.isNaN(at.getTime())) return null;
   const hours = at.getHours();
   return `${hours % 12 || 12}:${String(at.getMinutes()).padStart(2, '0')}${hours < 12 ? 'am' : 'pm'}`;
-}
-
-// A plan limit: its label, with the time it resets when there is one, then how much is used.
-function windowGroup(label: string, window: UsageWindow): StatusPiece[] {
-  const reset = window.resetsAt ? clockTime(window.resetsAt) : null;
-  return [
-    { text: reset ? `${label} (${reset})` : label, tone: 'muted' },
-    { text: `${Math.floor(window.percentage)}%`, tone: toneOf(window.percentage) },
-  ];
-}
-
-// The line's groups, each one or more coloured pieces, in Claude Code's order. Before the session has
-// been measured only the model and version are known; a picked model shows until the next measure.
-export function statusGroups(measure: ChatMeasure | null, model: string, version: string | null): StatusPiece[][] {
-  const groups: StatusPiece[][] = [];
-  if (measure) {
-    const { percentage, used, size } = measure.context;
-    groups.push([{ text: `${Math.floor(percentage)}%`, tone: toneOf(percentage) }]);
-    groups.push([{ text: `${formatTokens(used)}/${formatTokens(size)}`, tone: 'muted' }]);
-    // The seven-day reset is days off and Claude Code leaves it out; only the five-hour one is shown.
-    if (measure.fiveHour) groups.push(windowGroup('5h:', measure.fiveHour));
-    if (measure.sevenDay) groups.push(windowGroup('7d:', { ...measure.sevenDay, resetsAt: null }));
-  }
-  groups.push([{ text: model, tone: modelTone(model) }]);
-  if (version) groups.push([{ text: `v${version}`, tone: 'muted' }]);
-  return groups;
 }

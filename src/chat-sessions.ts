@@ -107,10 +107,11 @@ function loginShellPath(fallback: string): Promise<string> {
 }
 
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
-// streamed events everything but a block starting and text arriving — are left on this side of the
-// wire rather than sent to every screen on every token. A Write streams the whole file as its input.
+// streamed events everything but a block starting and text or thinking arriving — are left on this
+// side of the wire rather than sent to every screen on every token. A Write streams the whole file as
+// its input, so the working line's count leaves tool input out.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system']);
-const RELAYED_STREAM = new Set(['content_block_start', 'text_delta']);
+const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: { type: string; event?: unknown }): boolean {
   if (message.type !== 'stream_event') return RELAYED.has(message.type);

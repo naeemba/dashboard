@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
@@ -173,4 +173,30 @@ describe('conversationChange', () => {
     expect(conversationChange({ type: 'conversation_reset' }, 'a')).toEqual({ remember: null, reset: true });
   });
   it('changes nothing for any other message', () => expect(conversationChange({ type: 'assistant' }, 'a')).toEqual({ reset: false }));
+});
+
+describe('the working line\'s count', () => {
+  const block = (type: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_start', content_block: { type } } });
+  const thought = (thinking: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking } } });
+
+  it('counts thinking and text as they stream, says which is streaming, and starts over with the next turn', () => {
+    const streaming = fold([block('thinking'), thought('abcd'), block('text'), delta('hello')], prompted('hi'));
+    expect([streaming.streamed, streaming.thinking, streaming.live]).toEqual([9, false, 'hello']);
+    expect(fold([block('thinking')], prompted('hi')).thinking).toBe(true);
+    const ended = applyMessage(streaming, { type: 'result', subtype: 'success' });
+    expect([ended.streamed, ended.thinking, ended.started]).toEqual([0, false, null]);
+  });
+
+  it('goes on counting, from the same start, when a prompt is sent while the turn runs', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1_000);
+      const first = fold([delta('abcd')], prompted('hi'));
+      vi.setSystemTime(5_000);
+      const joined = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }] });
+      expect([first.started, fold([delta('ef')], joined).streamed, joined.started]).toEqual([1_000, 6, 1_000]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -2,6 +2,7 @@ import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
 import { isModel } from './chat-status';
+import { isImageType } from './chat-transcript';
 import { fuzzyScore } from './fuzzy';
 import type { SearchRow } from './overlay';
 
@@ -113,4 +114,27 @@ export function typedCommand(text: string): string | null {
   const args = /<command-args>([\s\S]*?)<\/command-args>/.exec(text)?.[1]?.trim();
   const command = name.startsWith('/') ? name : `/${name}`;
   return args ? `${command} ${args}` : command;
+}
+
+// A file dropped on the screen that is not an image to attach, as the box takes it: an @ mention, the
+// way Claude Code takes a dropped file, so Claude reads it. A path with a space is quoted, which is
+// how Claude Code writes one.
+export function fileMention(path: string): string {
+  return /\s/.test(path) ? `@"${path}"` : `@${path}`;
+}
+
+// What goes in at the caret for the dropped files: their mentions, set off from a word just before
+// them by a space, and a space after so typing carries on as a new word.
+export function mentionInsertion(before: string, mentions: string[]): string {
+  const gap = before === '' || /\s$/.test(before) ? '' : ' ';
+  return `${gap}${mentions.join(' ')} `;
+}
+
+// What a drop does with each file: a picture is attached, anything else with a path on disk (another
+// kind of file, a folder) goes in the box as an @ mention. A file with no path, such as an SVG dragged
+// out of a web page, has nothing to mention; a drop that leaves nothing at all is refused.
+export function droppedFiles<T extends { type: string; path: string }>(files: T[]): { pictures: T[]; paths: string[]; refused: boolean } {
+  const pictures = files.filter((file) => isImageType(file.type));
+  const paths = files.filter((file) => !isImageType(file.type)).map((file) => file.path).filter(Boolean);
+  return { pictures, paths, refused: files.length > 0 && pictures.length === 0 && paths.length === 0 };
 }
