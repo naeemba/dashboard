@@ -174,3 +174,16 @@ describe('conversationChange', () => {
   });
   it('changes nothing for any other message', () => expect(conversationChange({ type: 'assistant' }, 'a')).toEqual({ reset: false }));
 });
+
+describe('the working line\'s count', () => {
+  const block = (type: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_start', content_block: { type } } });
+  const thought = (thinking: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking } } });
+
+  it('counts thinking and text as they stream, says which is streaming, and starts over with the next turn', () => {
+    const streaming = fold([block('thinking'), thought('abcd'), block('text'), delta('hello')], prompted('hi'));
+    expect([streaming.streamed, streaming.thinking, streaming.live]).toEqual([9, false, 'hello']);
+    expect(fold([block('thinking')], prompted('hi')).thinking).toBe(true);
+    const ended = applyMessage(streaming, { type: 'result', subtype: 'success' });
+    expect([ended.streamed, ended.thinking]).toEqual([0, false]);
+  });
+});
