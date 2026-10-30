@@ -45,6 +45,16 @@ describe('resumeLedger', () => {
     expect(ledger.held()).toEqual(new Map());
   });
 
+  // Main's saved first pane that ran in a worktree is taken as pane 0 and resumed in a worker. Pane 0
+  // is never written back, so held under it the conversation would be saved nowhere until a sweep.
+  it('holds a moved session under the pane it moved to', () => {
+    const ledger = resumeLedger(pages, everywhere);
+    ledger.take('/work/api', 1, '0:0', LAUNCH);
+    ledger.move('0:0', '0:2');
+    ledger.move('0:5', '0:6');
+    expect(ledger.held()).toEqual(new Map([['0:2', conversation(ID)]]));
+  });
+
   it('holds a resumed pane before any reading has come in', () => {
     const ledger = resumeLedger(pages, everywhere);
     ledger.take('/work/api', 1, '0:1', LAUNCH);

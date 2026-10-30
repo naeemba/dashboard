@@ -510,6 +510,7 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (first.worker) {
     const id = terminalId(projectIndex, nextPaneIndex(openPanes(projectIndex)));
     terminalCommands.set(id, { args: [], directory: project.path });
+    claudeSessions.moveResume(mainId, id);
     resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
