@@ -109,7 +109,7 @@ export function pickedModel(value: string): string | null {
 }
 
 // What a saved session wrote between `<tag>` and `</tag>`, or undefined when the tag is not there.
-function tagged(text: string, tag: string): string | undefined {
+export function tagged(text: string, tag: string): string | undefined {
   return new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1];
 }
 
@@ -154,7 +154,7 @@ export type ShellExchange = { kind: 'input'; text: string } | { kind: 'output'; 
 
 const ENTITIES: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
 
-function unescaped(text: string): string {
+export function unescaped(text: string): string {
   return text.replace(/&(?:lt|gt|amp|quot|#39);/g, (entity) => ENTITIES[entity]);
 }
 
