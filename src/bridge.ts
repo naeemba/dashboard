@@ -1,6 +1,7 @@
 import type { ModelInfo, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
+import type { ChatMeasure } from './chat-status';
 import type { ChatEvent, ImageType } from './chat-transcript';
 import type { ScannedWorktree } from './git-worktrees';
 import type { Project } from './projects';
@@ -180,8 +181,8 @@ export type DashboardBridge = {
   // The answer to an ask, by the id it arrived with.
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
-  // How full the context window is; null before the session has started.
-  chatMeasure(slot: number): Promise<number | null>;
+  // What the status line shows; null before the session has started.
+  chatMeasure(slot: number): Promise<ChatMeasure | null>;
   // What a screen opening the page catches up on: the conversation it would resume, the questions
   // waiting, and the model and mode chosen.
   chatRead(slot: number): Promise<ChatState>;

@@ -59,9 +59,11 @@ export type Transcript = {
   busy: boolean;
   // The model the session says it is on, for the foot line until a model is picked there.
   model: string | null;
+  // The Claude Code version the session runs, for the status line.
+  version: string | null;
 };
 
-export const EMPTY_TRANSCRIPT: Transcript = { entries: [], live: '', busy: false, model: null };
+export const EMPTY_TRANSCRIPT: Transcript = { entries: [], live: '', busy: false, model: null, version: null };
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -164,7 +166,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     }
     case 'system':
       if (message.subtype === 'init') {
-        return { ...transcript, model: text(message.model) || transcript.model };
+        return { ...transcript, model: text(message.model) || transcript.model, version: text(message.claude_code_version) || transcript.version };
       }
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };

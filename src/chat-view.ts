@@ -9,6 +9,7 @@ import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
+import { statusGroups, toneOf, type ChatMeasure } from './chat-status';
 import {
   applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
@@ -92,7 +93,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let images: ChatImage[] = [];
   let model: string | null = null;
   let mode: PermissionMode = 'default';
-  let context: number | null = null;
+  let measured: ChatMeasure | null = null;
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
@@ -118,15 +119,35 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
 
+  // Two lines, as under Claude Code's prompt: its status line, then the mode and what Claude is doing.
+  let drawnFoot = '';
   function drawFoot(): void {
-    const shown = model ?? transcript.model ?? 'default model';
-    const parts = [shown, MODE_LABELS[mode]];
-    if (context !== null) parts.push(`context ${Math.round(context)}%`);
-    parts.push(asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready');
-    const bar = document.createElement('span');
-    bar.className = 'chat-context';
-    bar.style.setProperty('--used', `${context ?? 0}%`);
-    foot.replaceChildren(bar, parts.join(' · '));
+    const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
+    const state = [MODE_LABELS[mode], asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready'].join(' · ');
+    // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
+    const key = JSON.stringify([measured, shown, transcript.version, state]);
+    if (key === drawnFoot) return;
+    drawnFoot = key;
+    const status = document.createElement('div');
+    status.className = 'chat-status';
+    if (measured) {
+      const bar = document.createElement('span');
+      bar.className = `chat-context chat-status-${toneOf(measured.context.percentage)}`;
+      bar.style.setProperty('--used', `${measured.context.percentage}%`);
+      status.append(bar);
+    }
+    statusGroups(measured, shown, transcript.version).forEach((group, index) => {
+      if (index > 0) status.append(' · ');
+      group.forEach((piece, at) => {
+        const span = document.createElement('span');
+        span.className = `chat-status-${piece.tone}`;
+        span.textContent = at > 0 ? ` ${piece.text}` : piece.text;
+        status.append(span);
+      });
+    });
+    const line = document.createElement('div');
+    line.textContent = state;
+    foot.replaceChildren(status, line);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
@@ -175,9 +196,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
     });
   }
 
+  // Open, a turn ending and a model picked each measure, and the answers can come back out of order:
+  // only the latest one asked is kept.
+  let measures = 0;
   function measure(): void {
-    bridge.chatMeasure(slot).then((percentage) => {
-      if (percentage !== null) context = percentage;
+    const asked = ++measures;
+    bridge.chatMeasure(slot).then((reading) => {
+      if (asked !== measures) return;
+      if (reading !== null) measured = reading;
       drawFoot();
     }, () => undefined);
   }
@@ -361,7 +387,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function configure(change: ChatPreferences): void {
     drawFoot();
-    bridge.chatConfigure(slot, change).catch((error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
+    // A model picked is measured again, so the status line names it.
+    bridge.chatConfigure(slot, change).then(() => {
+      if ('model' in change) measure();
+    }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
   function choose(change: ChatPreferences): void {
@@ -443,7 +472,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawnEntries = [];
     selected = null;
     asks = [];
-    context = null;
+    measured = null;
+    measures++;
     recalled = null;
     draft = '';
     showAsk();
@@ -459,6 +489,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     element,
     open() {
       readEarlier();
+      measure();
       focus();
     },
     focus,

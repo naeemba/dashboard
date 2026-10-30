@@ -231,19 +231,29 @@
 
 .chat-foot {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
   color: var(--muted);
   font-size: 12px;
 }
 
-/* How full the context is, as a bar that fills from the left. */
+/* How full the context is, as a bar that fills from the left in the colour its percentage takes. */
 .chat-context {
+  display: inline-block;
   width: 80px;
   height: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
   border-radius: 2px;
-  background: linear-gradient(to right, var(--blue) var(--used), var(--line) var(--used));
+  background: linear-gradient(to right, currentColor var(--used), var(--line) var(--used));
 }
+
+.chat-status-green { color: var(--green); }
+.chat-status-yellow { color: var(--yellow); }
+.chat-status-red { color: var(--red); }
+.chat-status-blue { color: var(--blue); }
+.chat-status-plain { color: var(--white); }
+.chat-status-muted { color: var(--muted); }
 
 /* highlight.js, drawn from the theme's own colours rather than a stylesheet of its own. */
 .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: var(--magenta); }
