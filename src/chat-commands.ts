@@ -2,7 +2,7 @@ import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
 import { isModel } from './chat-status';
-import { tagged, unescaped } from './chat-tags';
+import { tagged, unescaped, withoutTag } from './chat-tags';
 import { isImageType } from './chat-transcript';
 import { fuzzyScore } from './fuzzy';
 import type { SearchRow } from './overlay';
@@ -163,7 +163,7 @@ export function shellExchange(text: string): ShellExchange | null {
 // `<local-command-caveat>` is the note to Claude that rides along with one and reads as '', shown as
 // nothing. Null for a message that is neither.
 export function localCommandOutput(text: string): string | null {
-  if (/^\s*<local-command-caveat>[\s\S]*<\/local-command-caveat>\s*$/.test(text)) return '';
+  if (text.includes('<local-command-caveat>') && withoutTag(text, 'local-command-caveat').trim() === '') return '';
   const output = /^\s*<local-command-(?:stdout|stderr)>([\s\S]*?)<\/local-command-(?:stdout|stderr)>\s*$/.exec(text);
   return output ? unescaped(output[1]).trim() : null;
 }

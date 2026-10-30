@@ -7,6 +7,11 @@ export function tagged(text: string, tag: string): string | undefined {
   return new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`).exec(text)?.[1];
 }
 
+// The text with every `<tag>...</tag>` taken out.
+export function withoutTag(text: string, tag: string): string {
+  return text.replace(new RegExp(`<${tag}(?:\\s[^>]*)?>[\\s\\S]*?</${tag}>`, 'g'), '');
+}
+
 const ENTITIES: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
 
 // Text a saved session wrote inside a tag, where &, <, >, " and ' are escaped, as it was before.

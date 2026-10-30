@@ -1,4 +1,5 @@
-import { tagged, unescaped } from './chat-tags';
+import { baseName } from './base-name';
+import { tagged, unescaped, withoutTag } from './chat-tags';
 import { isRecord } from './is-record';
 
 // A message the session's user turn holds that nobody typed: Claude Code injects them — a background
@@ -51,15 +52,27 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
   return { title: origin.kind ? `${named(origin.kind)} message` : 'A message', body: text.trim() };
 }
 
+// What Claude Code adds to a message for its own use and nobody reads: reminders, the caveat a local
+// command leaves, a pasted image's source path. Taken out before deciding whether anything is left.
+const PLUMBING_TAGS = ['system-reminder', 'local-command-caveat'];
+const IMAGE_SOURCE = /\[Image: source: [^\]]*\]/g;
+
 // Text Claude Code wrote into the conversation as instructions to Claude rather than as anything said:
-// a skill's body once it loads, or the prompt a slash command expands to. A saved session marks it
-// `isMeta`, a live one `isSynthetic`. Folded under the skill's name, or as the command's prompt, so a
-// page of instructions never reads as something you typed. Null for what is only plumbing — a pasted
-// image's source path, a reminder, the caveat a local command leaves — which shows nothing.
-export function instructionsMessage(text: string, skill: string | undefined): InjectedMessage | null {
-  const body = text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim();
-  if (body === '' || /^(?:\[Image: source: [^\]]*\]\s*)+$/.test(body) || /^<local-command-caveat>/.test(body)) return null;
+// a skill's body once it loads, or the prompt a slash command expands to. Folded under the skill's
+// name, or as the command's prompt, so a page of instructions never reads as something you typed.
+// 'hidden' when nothing but plumbing is left.
+function instructionsMessage(text: string, skill: string | undefined): InjectedMessage | 'hidden' {
+  const body = PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_SOURCE, '').trim();
+  if (body === '') return 'hidden';
   const directory = /^Base directory for this skill: (\S+)/.exec(body)?.[1];
-  const name = skill ?? directory?.split('/').filter(Boolean).at(-1);
+  const name = skill ?? (directory ? baseName(directory) : undefined);
   return { title: name ? `${name} skill` : 'Command prompt', body };
+}
+
+// A user message nobody typed, as the one line it folds to, 'hidden' for one with nothing to read, or
+// null for a person's own. Two markers say Claude Code wrote it: an `origin` (injectedMessage), and
+// `meta` — marked isMeta in a saved session, isSynthetic in a live one — for instructions it wrote
+// for Claude. `skill` is the skill a Skill call loaded, when the message answers one.
+export function notTypedMessage(origin: unknown, meta: boolean, text: string, skill: string | undefined): InjectedMessage | 'hidden' | null {
+  return injectedMessage(origin, text) ?? (meta ? instructionsMessage(text, skill) : null);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { injectedMessage, instructionsMessage } from './chat-events';
+import { injectedMessage, notTypedMessage } from './chat-events';
 
 describe('injectedMessage', () => {
   it('leaves a typed message, and one with no origin, as the person\'s own', () => {
@@ -53,19 +53,25 @@ describe('injectedMessage', () => {
   });
 });
 
-describe('instructionsMessage', () => {
+describe('notTypedMessage', () => {
+  const meta = (text: string, skill?: string) => notTypedMessage(undefined, true, text, skill);
+
+  it('leaves an unmarked message as the person\'s own', () => {
+    expect(notTypedMessage(undefined, false, 'Review the diff.', undefined)).toBeNull();
+  });
+
   it('folds a loaded skill under its name, from the call or from its directory', () => {
-    expect(instructionsMessage('`/simplify` review the diff', 'simplify')).toEqual({ title: 'simplify skill', body: '`/simplify` review the diff' });
-    expect(instructionsMessage('Base directory for this skill: /plugins/x/skills/model-product\n\n# Model', undefined)?.title).toBe('model-product skill');
+    expect(meta('`/simplify` review the diff', 'simplify')).toEqual({ title: 'simplify skill', body: '`/simplify` review the diff' });
+    expect(meta('Base directory for this skill: C:\\plugins\\skills\\model-product\n\n# Model')).toMatchObject({ title: 'model-product skill' });
   });
 
   it('folds a slash command\'s expanded prompt as the command\'s', () => {
-    expect(instructionsMessage('Capture this as a card on the board.', undefined)).toEqual({ title: 'Command prompt', body: 'Capture this as a card on the board.' });
+    expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Command prompt', body: 'Capture this as a card on the board.' });
   });
 
-  it('shows nothing for a pasted image\'s source, a lone reminder or a local command\'s caveat', () => {
-    expect(instructionsMessage('[Image: source: /tmp/1.png]\n[Image: source: /tmp/2.png]', undefined)).toBeNull();
-    expect(instructionsMessage('<system-reminder>x</system-reminder>', undefined)).toBeNull();
-    expect(instructionsMessage('<local-command-caveat>Run directly.</local-command-caveat>', undefined)).toBeNull();
+  it('hides what is only plumbing: pasted image sources, a reminder, a local command\'s caveat', () => {
+    expect(meta('[Image: source: /tmp/1.png]\n[Image: source: /tmp/2.png]')).toBe('hidden');
+    expect(meta('<system-reminder>x</system-reminder>')).toBe('hidden');
+    expect(meta('<local-command-caveat>Run directly.</local-command-caveat>')).toBe('hidden');
   });
 });

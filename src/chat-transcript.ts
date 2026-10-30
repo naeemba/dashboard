@@ -1,7 +1,7 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
-import { injectedMessage, instructionsMessage } from './chat-events';
+import { notTypedMessage } from './chat-events';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -203,16 +203,9 @@ function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefi
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';
 }
 
-// Text Claude Code wrote for Claude, not a person's turn: marked meta or synthetic, and holding no tool
-// result, which a synthetic message can carry and which must still reach its call.
-function isInstructions(message: Record<string, unknown>, content: unknown): boolean {
-  if (message.isMeta !== true && message.isSynthetic !== true) return false;
-  return !blocksOf(content).some((block) => block.type === 'tool_result');
-}
-
-// The skill a Skill call loaded, read off the call the instructions answer.
+// The skill a Skill call loaded, read off the call the instructions answer, which is a recent one.
 function skillOf(entries: ChatEntry[], id: unknown): string | undefined {
-  const call = entries.find((entry) => entry.kind === 'tool' && entry.id === id);
+  const call = entries.findLast((entry) => entry.kind === 'tool' && entry.id === id);
   return call?.kind === 'tool' && typeof call.input.skill === 'string' ? call.input.skill : undefined;
 }
 
@@ -224,12 +217,13 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   switch (message.type) {
     case 'assistant': return assistant(transcript, inner.content);
     case 'user': {
-      const injected = injectedMessage(message.origin, textOf(inner.content));
-      if (injected) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...injected }] };
-      if (isInstructions(message, inner.content)) {
-        const folded = instructionsMessage(textOf(inner.content), skillOf(transcript.entries, message.sourceToolUseID));
-        return folded ? { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] } : transcript;
-      }
+      // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
+      // still reach its call.
+      const meta = (message.isMeta === true || message.isSynthetic === true)
+        && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
+      const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
+      if (folded === 'hidden') return transcript;
+      if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
       return user(transcript, inner.content);
     }
     case 'stream_event': return streamed(transcript, message.event);
