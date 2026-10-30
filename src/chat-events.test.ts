@@ -22,8 +22,18 @@ describe('injectedMessage', () => {
       + '<summary>Background command "wait" completed (exit code 0)</summary>\n</task-notification>\n<system-reminder>{"a":1}</system-reminder>';
     expect(injectedMessage({ kind: 'task-notification' }, text)).toEqual({
       title: 'Background command "wait" completed (exit code 0)',
-      body: 'Status: completed\nOutput file: /tmp/x.output',
+      body: 'Output file: /tmp/x.output\nStatus: completed',
     });
+  });
+
+  it('unfolds a notification with only a summary to nothing, and a Monitor event or stopped workflow to every tag but its plumbing', () => {
+    const review = '<task-notification>\n<summary>Commit security review found: X</summary>\n</task-notification>';
+    expect(injectedMessage({ kind: 'task-notification' }, review)).toEqual({ title: 'Commit security review found: X', body: '' });
+    const monitor = '<task-notification>\n<task-id>m1</task-id>\n<summary>Monitor event: "cancel CI runs"</summary>\n'
+      + '<event>cancelled run 394 (PR #907): conflicting</event>\n</task-notification>';
+    expect(injectedMessage({ kind: 'task-notification' }, monitor)?.body).toBe('Event: cancelled run 394 (PR #907): conflicting');
+    const stopped = '<task-notification>\n<status>stopped</status>\n<note>No completion record was found</note>\n</task-notification>';
+    expect(injectedMessage({ kind: 'task-notification' }, stopped)?.body).toBe('Status: stopped\nNote: No completion record was found');
   });
 
   it('unfolds a peer message with no body to what its envelope holds, keeping its own indentation', () => {
@@ -33,8 +43,8 @@ describe('injectedMessage', () => {
   });
 
   it('folds an empty kind rather than throwing', () => {
-    expect(injectedMessage({ kind: '' }, 'hi')?.body).toBe('hi');
-    expect(injectedMessage({ kind: 'task-notification', subkind: '' }, 'hi')?.title).toBe('');
+    expect(injectedMessage({ kind: '' }, 'hi')).toEqual({ title: 'A message', body: 'hi' });
+    expect(injectedMessage({ kind: 'task-notification', subkind: '' }, 'hi')?.title).toBe('A background task finished');
   });
 
   it('folds a kind it does not know under its own name', () => {

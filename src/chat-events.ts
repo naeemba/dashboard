@@ -7,6 +7,9 @@ import { isRecord } from './is-record';
 // than as the person's own words in raw tags. A kind this list does not know still folds, under its
 // own name, so a new one reads as an event the day it appears.
 
+// Tags a notification carries that are its title or its plumbing, not something to read.
+const HIDDEN_TAGS = new Set(['summary', 'task-id', 'tool-use-id']);
+
 export type InjectedMessage = { title: string; body: string };
 
 // What a user message is when Claude Code injected it, or null when a person typed it. A message with
@@ -22,16 +25,17 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
     // subkind, and carries no summary of a task that finished.
     const summary = tagged(text, 'summary');
     const result = tagged(text, 'result');
-    const fallback = typeof origin.subkind === 'string' ? named(origin.subkind) : 'A background task finished';
-    // A background command that finished carries no result: its status and output file stand in. A
-    // reminder the harness appends after the closing tag is not part of the message.
-    const fields = [['Status', tagged(text, 'status')], ['Output file', tagged(text, 'output-file')]]
-      .filter((field): field is [string, string] => Boolean(field[1]?.trim()))
-      .map(([name, value]) => `${name}: ${value.trim()}`);
-    const rest = text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '');
+    const fallback = origin.subkind ? named(String(origin.subkind)) : 'A background task finished';
+    // With no result, every other tag inside the notification stands in, one per line — a command's
+    // status and output file, a Monitor event, the note on why a workflow stopped. The envelope itself,
+    // and a reminder the harness appends after it, are never shown: an empty body beats raw tags.
+    const inside = tagged(text, 'task-notification');
+    const fields = [...(inside ?? '').matchAll(/<([a-z-]+)>([\s\S]*?)<\/\1>/g)]
+      .filter(([, tag, value]) => !HIDDEN_TAGS.has(tag) && value.trim())
+      .map(([, tag, value]) => `${named(tag)}: ${value.trim()}`);
     return {
       title: summary ? unescaped(summary.trim()) : fallback,
-      body: unescaped((result ?? (fields.length > 0 ? fields.join('\n') : rest)).trim()),
+      body: unescaped((result ?? (inside === undefined ? text : fields.join('\n'))).trim()),
     };
   }
   if (origin.kind === 'peer') {
@@ -43,5 +47,5 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
     const report = /The report follows:\n([\s\S]*)$/.exec(body);
     return { title: `Message from ${sender}`, body: (report ? report[1].replace(/^ {2}/gm, '') : body).trim() };
   }
-  return { title: `${named(origin.kind)} message`, body: text.trim() };
+  return { title: origin.kind ? `${named(origin.kind)} message` : 'A message', body: text.trim() };
 }
