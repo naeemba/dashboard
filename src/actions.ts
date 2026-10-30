@@ -60,7 +60,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'interrupt' | 'model' | 'permission-mode' | 'new';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'interrupt' | 'model' | 'permission-mode' | 'new';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -535,6 +535,10 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-unfold', description: 'Unfold the selected tool call, or fold it again',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'unfold' }, mac: 'Alt+O', other: 'Alt+O',
+  },
+  {
+    name: 'claude-image', description: 'Show the selected entry\'s image full size, or the first one attached',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'image' }, mac: 'Alt+I', other: 'Alt+I',
   },
   {
     name: 'claude-interrupt', description: 'Stop Claude, declining anything it is asking',

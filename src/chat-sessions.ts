@@ -1,4 +1,5 @@
-import type { PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -261,6 +262,13 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     return (await running(slot, projectPath)).query.supportedCommands();
   });
 
+  // The models /model lists, as the session offers them; asking starts it, as the command list does.
+  table.handle('chat-models:read', async (_screen, slot: number): Promise<ModelInfo[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return (await running(slot, projectPath)).query.supportedModels();
+  });
+
   // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:
   // a worktree's are its own, so a worker's conversations do not crowd the project's.
   table.handle('chat:sessions', async (_screen, slot: number): Promise<ChatSessions> => {
@@ -298,11 +306,18 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
   });
 
-  // How full the context window is, read from the last response rather than counted again.
-  table.handle('chat:measure', async (_screen, slot: number) => {
+  // What the status line shows: how full the context window is, read from the last response rather
+  // than counted again, the model by its shown name, and the plan's limits. The limits come from an
+  // experimental call; a release that drops it leaves the line without them and nothing else.
+  table.handle('chat:measure', async (_screen, slot: number): Promise<ChatMeasure | null> => {
     const session = await sessions.get(slot);
     if (!session) return null;
-    return (await session.query.getContextUsage({ detail: 'summary' })).percentage;
+    const [context, models, usage] = await Promise.all([
+      session.query.getContextUsage({ detail: 'summary' }),
+      session.query.supportedModels(),
+      session.query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }).catch(() => null),
+    ]);
+    return measureOf(context, models, usage);
   });
 
   // What a screen opening this page needs to catch up: the conversation it would resume, read back

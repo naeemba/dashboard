@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -8,6 +8,8 @@ describe('screenCommand', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
+    expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
+    expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();
@@ -81,5 +83,34 @@ describe('completion', () => {
   it('holds one on Tab, ready for more', () => expect(completion(row('compact'), false)).toEqual({ text: '/compact ', runs: false }));
   it('holds one that takes arguments even on Enter', () => {
     expect(completion(row('plan', { argumentHint: '[what]' }), true)).toEqual({ text: '/plan ', runs: false });
+  });
+});
+
+describe('modelRows', () => {
+  const models = [
+    { value: 'default', resolvedModel: 'claude-opus-5-5', displayName: 'Default', description: 'recommended' },
+    { value: 'opus', resolvedModel: 'claude-opus-5-5', displayName: 'Opus', description: 'most capable' },
+    { value: 'haiku', displayName: 'Haiku', description: 'fastest' },
+  ];
+
+  it('lists the session\'s models in its order and marks the one on, by alias or full id', () => {
+    expect(modelRows(models, 'claude-opus-5-5', '').map((each) => each.name)).toEqual(['Default', '● Opus', 'Haiku']);
+    expect(modelRows(models, 'haiku', '').map((each) => each.name)).toEqual(['Default', 'Opus', '● Haiku']);
+    expect(modelRows(models, null, '').some((each) => each.name.startsWith('●'))).toBe(false);
+  });
+
+  it('keeps only what matches what is typed, and picks by value', () => {
+    expect(modelRows(models, null, 'hai').map((each) => each.choice)).toEqual(['haiku']);
+  });
+
+  it('finds a typed name by alias, full id or shown name, and nothing for a misspelling', () => {
+    expect(namedModel(models, 'opus')).toBe('opus');
+    expect(namedModel(models, 'claude-opus-5-5')).toBe('opus');
+    expect(namedModel(models, 'Haiku')).toBe('haiku');
+    expect(namedModel(models, 'opsu')).toBeNull();
+  });
+
+  it('keeps the default row as no model named, as the model key does', () => {
+    expect([pickedModel('default'), pickedModel('opus')]).toEqual([null, 'opus']);
   });
 });

@@ -1,6 +1,6 @@
 import { renderMarkdown, safeImage } from './chat-markdown';
 import { toolDiff, toolSummary } from './chat-tools';
-import type { ChatEntry, ChatImage, ToolResult } from './chat-transcript';
+import { imageDataUrl, type ChatEntry, type ChatImage, type ToolResult } from './chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
 // and chat-markdown.ts; this only builds the elements.
@@ -13,10 +13,11 @@ export type DrawnEntry = { entry: ChatEntry; element: HTMLElement; fill: (() => 
 
 function images(list: ChatImage[]): HTMLImageElement[] {
   return list.flatMap((picture) => {
-    const source = safeImage(`data:${picture.mediaType};base64,${picture.data}`);
+    const source = safeImage(imageDataUrl(picture));
     if (!source) return [];
     const image = document.createElement('img');
     image.className = 'chat-image';
+    image.decoding = 'async';
     image.src = source;
     return [image];
   });

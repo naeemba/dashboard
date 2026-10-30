@@ -2,6 +2,10 @@
    terminal, so prose is in the app's own face and a measure wide enough for code. */
 .view-claude {
   display: grid;
+  /* An auto column grows to the widest line inside it, and a command list row with a long argument
+     hint made it wider than the window: the whole window scrolled sideways, the Terminals view with
+     it. The column is the view's width, whatever is in it. */
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   background: var(--background);
 }
@@ -93,11 +97,15 @@
   color: var(--blue);
 }
 
-.chat-image {
+/* An image in the conversation, a markdown one included, is a thumbnail of a fixed size; a click
+   shows it full size in the app. */
+.chat-image, .chat-log img {
   display: block;
-  max-width: 100%;
-  max-height: 480px;
+  max-width: min(100%, 360px);
+  max-height: 240px;
   margin: 6px 0;
+  border-radius: 5px;
+  cursor: zoom-in;
 }
 
 .chat-tool summary {
@@ -203,10 +211,19 @@
   font-size: 12px;
 }
 
-.chat-attached span {
-  padding: 0 6px;
+.chat-attached img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
   border: 1px solid var(--line);
   border-radius: 5px;
+  cursor: zoom-in;
+}
+
+/* An image dragged over the screen: the box it will land in says so. */
+.chat.dropping .chat-prompt {
+  border-color: var(--blue);
+  background: var(--tint);
 }
 
 .chat-prompt {
@@ -227,19 +244,29 @@
 
 .chat-foot {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
   color: var(--muted);
   font-size: 12px;
 }
 
-/* How full the context is, as a bar that fills from the left. */
+/* How full the context is, as a bar that fills from the left in the colour its percentage takes. */
 .chat-context {
+  display: inline-block;
   width: 80px;
   height: 4px;
+  margin-right: 8px;
+  vertical-align: middle;
   border-radius: 2px;
-  background: linear-gradient(to right, var(--blue) var(--used), var(--line) var(--used));
+  background: linear-gradient(to right, currentColor var(--used), var(--line) var(--used));
 }
+
+.chat-status-green { color: var(--green); }
+.chat-status-yellow { color: var(--yellow); }
+.chat-status-red { color: var(--red); }
+.chat-status-blue { color: var(--blue); }
+.chat-status-plain { color: var(--white); }
+.chat-status-muted { color: var(--muted); }
 
 /* highlight.js, drawn from the theme's own colours rather than a stylesheet of its own. */
 .hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: var(--magenta); }
@@ -256,6 +283,7 @@
   display: flex;
   flex-direction: column;
   max-height: 40%;
+  overflow-x: hidden;
   overflow-y: auto;
   margin: 0 0 8px;
   padding: 6px;
@@ -278,7 +306,16 @@
   white-space: nowrap;
 }
 
+/* A name with a long argument hint is cut short too, rather than scrolling the list sideways. */
+.chat-menu-row b {
+  flex-shrink: 0;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .chat-menu-row span {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--muted);

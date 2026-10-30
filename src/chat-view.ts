@@ -3,20 +3,21 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
+import { statusGroups, toneOf, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPE_NAMES, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { searchOverlay } from './overlay';
+import { imageOverlay, searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -77,7 +78,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
-  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste an image to attach it.';
+  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
   prompt.rows = 3;
   prompt.dir = 'auto';
   const menu = createCommandMenu();
@@ -92,7 +93,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let images: ChatImage[] = [];
   let model: string | null = null;
   let mode: PermissionMode = 'default';
-  let context: number | null = null;
+  let measured: ChatMeasure | null = null;
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
@@ -118,15 +119,35 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
 
+  // Two lines, as under Claude Code's prompt: its status line, then the mode and what Claude is doing.
+  let drawnFoot = '';
   function drawFoot(): void {
-    const shown = model ?? transcript.model ?? 'default model';
-    const parts = [shown, MODE_LABELS[mode]];
-    if (context !== null) parts.push(`context ${Math.round(context)}%`);
-    parts.push(asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready');
-    const bar = document.createElement('span');
-    bar.className = 'chat-context';
-    bar.style.setProperty('--used', `${context ?? 0}%`);
-    foot.replaceChildren(bar, parts.join(' · '));
+    const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
+    const state = [MODE_LABELS[mode], asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready'].join(' · ');
+    // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
+    const key = JSON.stringify([measured, shown, transcript.version, state]);
+    if (key === drawnFoot) return;
+    drawnFoot = key;
+    const status = document.createElement('div');
+    status.className = 'chat-status';
+    if (measured) {
+      const bar = document.createElement('span');
+      bar.className = `chat-context chat-status-${toneOf(measured.context.percentage)}`;
+      bar.style.setProperty('--used', `${measured.context.percentage}%`);
+      status.append(bar);
+    }
+    statusGroups(measured, shown, transcript.version).forEach((group, index) => {
+      if (index > 0) status.append(' · ');
+      group.forEach((piece, at) => {
+        const span = document.createElement('span');
+        span.className = `chat-status-${piece.tone}`;
+        span.textContent = at > 0 ? ` ${piece.text}` : piece.text;
+        status.append(span);
+      });
+    });
+    const line = document.createElement('div');
+    line.textContent = state;
+    foot.replaceChildren(status, line);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
@@ -175,9 +196,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
     });
   }
 
+  // Open, a turn ending and a model picked each measure, and the answers can come back out of order:
+  // only the latest one asked is kept.
+  let measures = 0;
   function measure(): void {
-    bridge.chatMeasure(slot).then((percentage) => {
-      if (percentage !== null) context = percentage;
+    const asked = ++measures;
+    bridge.chatMeasure(slot).then((reading) => {
+      if (asked !== measures) return;
+      if (reading !== null) measured = reading;
       drawFoot();
     }, () => undefined);
   }
@@ -212,6 +238,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -236,10 +263,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function drawAttached(): void {
-    attached.replaceChildren(...images.map((_picture, index) => {
-      const chip = document.createElement('span');
-      chip.textContent = `image ${index + 1}`;
-      return chip;
+    attached.replaceChildren(...images.map((picture, index) => {
+      const thumbnail = document.createElement('img');
+      thumbnail.src = imageDataUrl(picture);
+      thumbnail.alt = `image ${index + 1}`;
+      return thumbnail;
     }));
   }
 
@@ -312,10 +340,39 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   });
 
+  // Images pasted into the box or dropped anywhere on the screen are attached to the next prompt. The
+  // window cancels every drop's default, so a file dropped here never replaces the page.
+  function imageFiles(list: FileList | undefined): File[] {
+    return [...list ?? []].filter((file) => (IMAGE_TYPES as readonly string[]).includes(file.type));
+  }
+
   prompt.addEventListener('paste', (event) => {
-    const files = [...event.clipboardData?.files ?? []].filter((file) => (IMAGE_TYPES as readonly string[]).includes(file.type));
+    const files = imageFiles(event.clipboardData?.files);
     if (files.length === 0) return;
     event.preventDefault();
+    attach(files);
+  });
+
+  // Only a drag carrying files lights the box; text dragged out of the log is not something it takes.
+  element.addEventListener('dragover', (event) => {
+    if (event.dataTransfer?.types.includes('Files')) element.classList.add('dropping');
+  });
+  element.addEventListener('dragleave', (event) => {
+    if (!(event.relatedTarget instanceof Node && element.contains(event.relatedTarget))) element.classList.remove('dropping');
+  });
+  element.addEventListener('drop', (event) => {
+    element.classList.remove('dropping');
+    const dropped = event.dataTransfer?.files;
+    const files = imageFiles(dropped);
+    if (files.length === 0) {
+      if (dropped?.length) options.onNotice(`Only ${IMAGE_TYPE_NAMES} images can be attached.`);
+      return;
+    }
+    attach(files);
+    prompt.focus();
+  });
+
+  function attach(files: File[]): void {
     for (const file of files) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -329,11 +386,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
       };
       reader.readAsDataURL(file);
     }
-  });
+  }
 
   // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
   // decides what is safe to hand the system, never in this window.
+  // An image, in the log or attached, opens full size over the app.
   element.addEventListener('click', (event) => {
+    if (event.target instanceof HTMLImageElement) {
+      event.preventDefault();
+      imageOverlay(event.target.src);
+      return;
+    }
     const link = event.target instanceof Element ? event.target.closest('a') : null;
     if (!link) return;
     event.preventDefault();
@@ -359,12 +422,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function configure(change: ChatPreferences): void {
+    choose(change);
     drawFoot();
-    bridge.chatConfigure(slot, change).catch((error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
+    // A model picked is measured again, so the status line names it.
+    bridge.chatConfigure(slot, change).then(() => {
+      if ('model' in change) measure();
+    }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
   function choose(change: ChatPreferences): void {
-    if ('model' in change) model = change.model ?? null;
+    // A model picked here or on another screen shows over the measured name until the next measure.
+    if ('model' in change && (change.model ?? null) !== model) {
+      model = change.model ?? null;
+      if (measured) measured = { ...measured, model: null };
+    }
     if (change.permissionMode) mode = change.permissionMode;
   }
 
@@ -412,6 +483,25 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
   }
 
+  // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one
+  // named after the command; the one chosen is what the next turn runs on, on every screen.
+  function showModels(name: string): void {
+    bridge.chatModels(slot).then(async (models) => {
+      if (name) {
+        const named = namedModel(models, name);
+        if (named) configure({ model: pickedModel(named) });
+        else options.onNotice(`Claude has no model named ${name}. /model lists the ones it has.`);
+        return;
+      }
+      const picked = await searchOverlay({
+        name: 'chat-model', placeholder: 'Search models', rows: (query) => modelRows(models, model ?? transcript.model, query),
+        empty: 'No model matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined) configure({ model: pickedModel(picked) });
+      focus();
+    }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
+  }
+
   // A new conversation, started on this screen or another: the old one leaves the screen.
   function clear(): void {
     resets++;
@@ -423,7 +513,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawnEntries = [];
     selected = null;
     asks = [];
-    context = null;
+    measured = null;
+    measures++;
     recalled = null;
     draft = '';
     showAsk();
@@ -439,6 +530,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     element,
     open() {
       readEarlier();
+      measure();
       focus();
     },
     focus,
@@ -472,8 +564,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       // may not know of a turn another one started, and interrupting an idle session does nothing.
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
-      if (command === 'model') configure({ model: (model = next(MODELS, model)) });
-      if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
+      if (command === 'image') {
+        const source = (selected === null ? attached : drawn[selected].element).querySelector('img')?.src;
+        if (source) imageOverlay(source);
+      }
+      if (command === 'model') configure({ model: next(MODELS, model) });
+      if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through
       // doing would stop with nothing on screen saying so.
       if (command === 'new' && working(transcript, asks.length)) {

@@ -30,6 +30,18 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
   return { dialog, remove: () => overlay.remove() };
 }
 
+// Enter and Escape answer every small dialog here, and a modified one answers none: Cmd+Enter is not
+// an answer to a question about deleting a card and its whole family, and a capital typed with Shift
+// still reaches a box to type in. One copy, so a dialog cannot forget the guard.
+function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape') => void): void {
+  dialog.addEventListener('keydown', (event) => {
+    if (isModified(event)) return;
+    if (event.key !== 'Enter' && event.key !== 'Escape') return;
+    event.preventDefault();
+    answer(event.key);
+  });
+}
+
 // Built on the same sheet as the picker and the help dialog. Enter confirms, Escape cancels, and
 // clicking the dark margin cancels — a dialog that appears under your hand must not treat a stray
 // click as yes. The keys line is the caller's to write: this file knows nothing about what is being
@@ -52,20 +64,29 @@ export function confirmOverlay(message: string, keysLine: string): Promise<boole
     dialog.append(question, keys);
     dialog.focus();
 
-    dialog.addEventListener('keydown', (event) => {
-      // Cmd+Enter is not an answer to a question about deleting a card and its whole family.
-      if (isModified(event)) return;
-      if (event.key !== 'Enter' && event.key !== 'Escape') return;
-      event.preventDefault();
-      close(event.key === 'Enter');
-    });
+    answerKeys(dialog, (key) => close(key === 'Enter'));
   });
 }
 
+// An image at its full size, or as much of it as the window holds, on the same sheet. Escape, Enter
+// or a click anywhere puts it away; the focus goes back to whatever had it.
+export function imageOverlay(source: string): void {
+  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  function close(): void {
+    remove();
+    previous?.focus();
+  }
+  const { dialog, remove } = openOverlay('image-viewer', close);
+  const image = document.createElement('img');
+  image.src = source;
+  dialog.append(image);
+  dialog.addEventListener('click', close);
+  answerKeys(dialog, close);
+  dialog.focus();
+}
+
 // The same sheet with a box to type in instead of a question to answer. Enter takes what you typed,
-// Escape and a click on the dark margin leave it alone. Kept beside confirmOverlay because the two are
-// one dialog with a different middle: the same Enter-or-Escape guard, which is a rule CLAUDE.md keeps a
-// list of by hand, so a third copy of it somewhere else is a line on that list nobody adds.
+// Escape and a click on the dark margin leave it alone, through the same answerKeys as confirmOverlay.
 //
 // Empty and cancelled are different answers. Empty is a thing you typed — for the caller to read as
 // "none of mine" — where null is you never meant to open this.
@@ -105,15 +126,7 @@ export function promptOverlay(
     input.focus();
     input.select();
 
-    dialog.addEventListener('keydown', (event) => {
-      // A capital is typed with Shift, and this guard is why that still works: it stops the dialog
-      // acting on the keystroke, and the input takes the character like any other. Without it a stray
-      // Cmd+Enter answers a question you were still typing into.
-      if (isModified(event)) return;
-      if (event.key !== 'Enter' && event.key !== 'Escape') return;
-      event.preventDefault();
-      close(event.key === 'Enter' ? input.value : null);
-    });
+    answerKeys(dialog, (key) => close(key === 'Enter' ? input.value : null));
   });
 }
 

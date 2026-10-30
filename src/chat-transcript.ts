@@ -25,6 +25,8 @@ export type ChatEvent =
 // The images the API takes, and so the only ones a pasted image is sent as.
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export type ImageType = typeof IMAGE_TYPES[number];
+// The same list as a person reads it, for the notice that refuses any other file: PNG, JPEG, GIF, WEBP.
+export const IMAGE_TYPE_NAMES = IMAGE_TYPES.map((type) => type.slice('image/'.length).toUpperCase()).join(', ');
 
 // The API refuses an image whose base64 is over 5 MB, so a bigger paste would only end the turn in an
 // error. The cap is on all of a prompt's images together, which also keeps a prompt sent from the
@@ -35,6 +37,10 @@ export function imagesFit(base64Lengths: number[]): boolean {
 }
 
 export type ChatImage = { mediaType: string; data: string };
+
+export function imageDataUrl(picture: ChatImage): string {
+  return `data:${picture.mediaType};base64,${picture.data}`;
+}
 
 // A tool's output past this is cut when it arrives. A `cat` of a lockfile is a hundred thousand
 // lines nobody reads in a chat, and the transcript would hold every one for the whole session.
@@ -59,9 +65,11 @@ export type Transcript = {
   busy: boolean;
   // The model the session says it is on, for the foot line until a model is picked there.
   model: string | null;
+  // The Claude Code version the session runs, for the status line.
+  version: string | null;
 };
 
-export const EMPTY_TRANSCRIPT: Transcript = { entries: [], live: '', busy: false, model: null };
+export const EMPTY_TRANSCRIPT: Transcript = { entries: [], live: '', busy: false, model: null, version: null };
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -164,7 +172,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     }
     case 'system':
       if (message.subtype === 'init') {
-        return { ...transcript, model: text(message.model) || transcript.model };
+        return { ...transcript, model: text(message.model) || transcript.model, version: text(message.claude_code_version) || transcript.version };
       }
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
