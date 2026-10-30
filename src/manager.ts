@@ -3,7 +3,7 @@ import { baseName } from './base-name';
 import { clampIndex } from './clamp-index';
 import type { GitWorktree, ScannedWorktree, WorktreeSize } from './git-worktrees';
 import type { Project } from './projects';
-import { terminalId } from './terminals';
+import { MAIN_INDEX, terminalId } from './terminals';
 import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
 import { isRinging, type Bell } from './waiting';
@@ -156,17 +156,20 @@ export type ManagerRow = {
   days: readonly number[]; worktrees: WorktreeEntry[];
 };
 
+// A pane as the page needs it. `tail` and `lastPrinted` are functions because the answer comes off a
+// live terminal: the row asks for it at the moment it draws, so no copy of a pane's screen is kept
+// anywhere to go stale.
+export type ManagerPane = {
+  index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+  tail(): string[]; lastPrinted(): string;
+};
+
 // The shape the page needs from a project. Structural rather than the renderer's Page, so this file
 // stays testable without building a terminal.
 type ManagerPage = {
   project: { name: string; path: string };
   slot: number;
-  // `tail` and `lastPrinted` are functions because the answer comes off a live terminal: the row asks
-  // for it at the moment it draws, so no copy of a pane's screen is kept anywhere to go stale.
-  panes: readonly {
-    index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
-    tail(): string[]; lastPrinted(): string;
-  }[];
+  panes: readonly ManagerPane[];
 };
 
 // Dead beats asking. A shell that exits after a failed command often rings on the way out, and going
@@ -338,12 +341,14 @@ export function lineKey(line: ManagerLine): string {
 
 // The pane a typed character on this line goes to, or null when the line is not a question. A queue
 // item asking a question is the same pane as its row under the project, so it answers the same way.
+// Main is never one: it is the Claude screen, not a terminal, and its question is answered in its
+// own ask box, so the key falls through and Enter takes you there.
 export function answerTarget(line: ManagerLine): { slot: number; index: number } | null {
-  if (line.kind === 'pane') return takesAnswer(line.pane) ? { slot: line.slot, index: line.pane.index } : null;
-  if (line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane') {
-    return { slot: line.need.slot, index: line.need.target.index };
-  }
-  return null;
+  const target = line.kind === 'pane' && takesAnswer(line.pane) ? { slot: line.slot, index: line.pane.index }
+    : line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane'
+      ? { slot: line.need.slot, index: line.need.target.index }
+      : null;
+  return target !== null && target.index !== MAIN_INDEX ? target : null;
 }
 
 // How many lines at the front are the queue's. They always come first, so a count is enough.

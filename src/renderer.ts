@@ -36,9 +36,9 @@ import { NO_USAGE, type UsageSnapshot } from './usage';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
-import { anyWaiting, questionBell, waitingNames, type Bell } from './waiting';
+import { anyWaiting, questionBell, waitingNames } from './waiting';
 import {
-  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerRow,
+  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerPane, type ManagerRow,
 } from './manager';
 import { createManagerPage } from './manager-page';
 import { closeRefusal, closingPanes } from './close-project';
@@ -192,12 +192,18 @@ function namedPanes(page: Page): (Pane & { name: string })[] {
 
 // Main as the lists of panes read it. It is the Claude screen, not a pane, and rings by having a
 // question open, so a project whose main is asking is marked on the tab strip, named on the status
-// bar and listed on the manager like one whose pane rang. Nothing printed: its screen is not a terminal.
-function mainEntry(page: Page): { index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number; tail(): string[]; lastPrinted(): string }[] {
-  if (page.chat === null) return [];
+// bar and listed on the manager like one whose pane rang. What it prints is the question's title, the
+// one line that says what it wants: its screen is not a terminal with a last line of its own.
+function mainEntry(page: Page): ManagerPane[] {
+  const chat = page.chat;
+  if (chat === null) return [];
   return [{
-    index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(page.chat.waiting()), exited: false,
-    lastPrintedAt: 0, tail: () => [], lastPrinted: () => '',
+    index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(chat.question() !== null), exited: false,
+    lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
+    tail: () => {
+      const question = chat.question();
+      return question === null ? [] : [question];
+    },
   }];
 }
 

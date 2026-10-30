@@ -46,8 +46,9 @@ export type ChatView = {
   focus(): void;
   receive(event: ChatEvent): void;
   runCommand(command: ChatCommand): void;
-  // Whether the session is waiting on a question, which is main's bell.
-  waiting(): boolean;
+  // The title of the question the session is waiting on, or null. Having one is main's bell, and the
+  // title is what the manager's row prints under main, as a worker's row prints its last line.
+  question(): string | null;
 };
 
 // What the model key walks. Null is whatever the session's own settings choose.
@@ -565,7 +566,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   return {
     element,
-    waiting: () => asks.length > 0,
+    question: () => (asks.length > 0 ? permissionTitle(asks[0]) : null),
     // Reads the conversation in and measures it; the page calls it once, when it is built.
     open() {
       readEarlier();
