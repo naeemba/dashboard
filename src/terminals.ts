@@ -127,3 +127,9 @@ export function modeOfPane(index: number): Mode {
 export function startsEditor(editor: { started: boolean; exited: boolean }): boolean {
   return !editor.started || editor.exited;
 }
+
+// What closing a worker asks first: nothing for one whose shell has exited, since nothing is lost, and
+// whether to stop what runs in it otherwise.
+export function closeQuestion(label: string, exited: boolean): string | null {
+  return exited ? null : `Close ${label}? What runs in it stops.`;
+}

@@ -94,6 +94,8 @@ export type DashboardBridge = {
   // A new worker pane on this page: a shell in the project. Answers like openProject, with the list
   // that has it on, or null for a page with no folder.
   addPane(slot: number): Promise<{ index: number; open: OpenProjects } | null>;
+  // A worker pane closed for good: its shell, or whatever runs in it, is killed.
+  closePane(slot: number, index: number): Promise<void>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
   onPaneMark(listener: (id: string, state: WorkerState) => void): void;
   onData(listener: (id: string, data: string) => void): void;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_PANE_SIZE, EDITOR_INDEX, MAIN_INDEX, branchOfPane, isWorker, modeOfPane, paneFromId,
+  DEFAULT_PANE_SIZE, closeQuestion, EDITOR_INDEX, MAIN_INDEX, branchOfPane, isWorker, modeOfPane, paneFromId,
   paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
 } from './terminals';
 
@@ -163,5 +163,12 @@ describe('sizeOfPane', () => {
   it('gives an unmeasured pane the size a fresh terminal already is', () => {
     expect(sizeOfPane({ sizeOf: () => undefined }, '0:2')).toBe(DEFAULT_PANE_SIZE);
     expect(DEFAULT_PANE_SIZE).toEqual({ cols: 80, rows: 24 });
+  });
+});
+
+describe('closeQuestion', () => {
+  it('asks before stopping what runs in a worker, and closes an exited one without asking', () => {
+    expect(closeQuestion('terminal 3', false)).toBe('Close terminal 3? What runs in it stops.');
+    expect(closeQuestion('terminal 3', true)).toBeNull();
   });
 });

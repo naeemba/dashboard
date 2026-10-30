@@ -18,7 +18,8 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, terminalId } from './terminals';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from './terminals';
+import { icon, type IconName } from './icons';
 import type { WorkerState } from './session-cli';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
@@ -55,6 +56,8 @@ export type PageOptions = {
   openFile(page: Page, index: number, link: FileLink): void;
   // The button above the worker list, which does what the new-pane key does.
   addPane(page: Page): void;
+  // A worker's close button, which does what the close key does.
+  closePane(page: Page, index: number): void;
 };
 
 // Every pane in the window by its terminal id, filled as pages are built. The bytes from a pty, an
@@ -136,6 +139,22 @@ export function mainHasKeyboard(page: Page): boolean {
   return page.focused === MAIN_INDEX && page.chat !== null;
 }
 
+// A worker folded to its name, or opened again. The workers left open share the room, so every pane
+// is measured again. A folded pane takes no keyboard: if it had it, by key or by its button, the
+// keyboard goes to main.
+export function toggleFold(page: Page, index: number): void {
+  const pane = page.panes.find((each) => each.index === index);
+  if (!pane || !isWorker(index)) return;
+  pane.folded = !pane.folded;
+  pane.element.classList.toggle('folded', pane.folded);
+  pane.element.dataset.label = paneLabel(index, undefined, paneName(pane));
+  fitPanes(page);
+  if (pane.folded && pane.element.contains(document.activeElement)) {
+    page.focused = MAIN_INDEX;
+    focusTerminals(page);
+  }
+}
+
 // The keyboard back on whichever of main and the workers last had it.
 export function focusTerminals(page: Page): void {
   if (mainHasKeyboard(page)) page.chat?.focus();
@@ -187,8 +206,10 @@ export function restylePanes(settings: Settings): void {
 
 // Measures the page's terminals again. xterm only tells a pty a new size when it is measured, so a
 // pane that changed shape keeps drawing at the old size until this runs.
+// A folded worker is left at its last size: measured in its 26px bar it would tell its shell, and
+// whatever full-screen program runs there, it has one row.
 export function fitPanes(page: Page): void {
-  for (const pane of page.panes) pane.fit.fit();
+  for (const pane of page.panes) if (!pane.folded) pane.fit.fit();
 }
 
 // Every pty of one page: its terminals and the editor. What a page needs the moment it reaches the
@@ -234,6 +255,32 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     const container = document.createElement('div');
     container.className = 'pane';
     parent.append(container);
+    // A worker's two buttons in its top right corner, the twins of the fold and close keys.
+    if (isWorker(index)) {
+      const controls = document.createElement('div');
+      controls.className = 'pane-controls';
+      const button = (glyph: IconName, title: string, act: () => void) => {
+        const made = document.createElement('button');
+        made.type = 'button';
+        made.title = title;
+        made.append(icon(glyph));
+        made.addEventListener('mousedown', (event) => event.preventDefault());
+        made.addEventListener('click', (event) => {
+          event.stopPropagation();
+          act();
+        });
+        return made;
+      };
+      controls.append(
+        button('collapse', 'Fold', () => toggleFold(page, index)),
+        button('reset', 'Close', () => options.closePane(page, index)),
+      );
+      container.append(controls);
+      // A folded worker opens again on a click anywhere on its bar.
+      container.addEventListener('click', () => {
+        if (container.classList.contains('folded')) toggleFold(page, index);
+      });
+    }
 
     const terminal = new Terminal({
       cursorBlink: true,
@@ -376,6 +423,8 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
     // before it would save a session naming the pane you just left.
     terminal.textarea?.addEventListener('focus', () => {
+      // Arriving at a folded worker opens it: the keyboard never types into a pane you cannot see.
+      if (pane.folded) toggleFold(page, index);
       const wasRinging = isRinging(pane.bell);
       pane.bell = 'quiet';
       delete container.dataset.mark;

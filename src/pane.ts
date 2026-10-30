@@ -39,6 +39,8 @@ export type Pane = {
   terminal: Terminal;
   fit: FitAddon;
   exited: boolean;
+  // A worker folded to its name in the list, giving its room to the others.
+  folded?: boolean;
   typedName?: string;
   title?: string;
   bell: Bell;

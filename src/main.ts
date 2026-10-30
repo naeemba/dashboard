@@ -739,6 +739,13 @@ table.handle('pane:add', (_screen, slot: number) => {
   return { index: openWorker(slot), open: openProjects() };
 });
 
+// The close key and a worker's close button. Only a worker, and only one that is open: main is the Claude
+// screen and the editor is not in the list.
+table.handle('pane:close', (_screen, slot: number, index: number) => {
+  const id = terminalId(slot, index);
+  if (isWorker(index) && terminalCommands.has(id)) closeWorker(id);
+});
+
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
   setWorktrees(withEntry(worktrees, entry));
   return entry;
