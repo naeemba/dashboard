@@ -26,16 +26,17 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
     const summary = tagged(text, 'summary');
     const result = tagged(text, 'result');
     const fallback = origin.subkind ? named(String(origin.subkind)) : 'A background task finished';
-    // With no result, every other tag inside the notification stands in, one per line — a command's
-    // status and output file, a Monitor event, the note on why a workflow stopped. The envelope itself,
-    // and a reminder the harness appends after it, are never shown: an empty body beats raw tags.
+    // With no result, every other tag inside the notification stands in, one paragraph each, since
+    // markdown folds a single newline into a space — a command's status and output file, a Monitor
+    // event, the note on why a workflow stopped. The envelope itself, and a reminder the harness
+    // appends after it, are never shown: an empty body beats raw tags.
     const inside = tagged(text, 'task-notification');
     const fields = [...(inside ?? '').matchAll(/<([a-z-]+)>([\s\S]*?)<\/\1>/g)]
       .filter(([, tag, value]) => !HIDDEN_TAGS.has(tag) && value.trim())
       .map(([, tag, value]) => `${named(tag)}: ${value.trim()}`);
     return {
       title: summary ? unescaped(summary.trim()) : fallback,
-      body: unescaped((result ?? (inside === undefined ? text : fields.join('\n'))).trim()),
+      body: unescaped((result ?? (inside === undefined ? text : fields.join('\n\n'))).trim()),
     };
   }
   if (origin.kind === 'peer') {

@@ -22,7 +22,7 @@ describe('injectedMessage', () => {
       + '<summary>Background command "wait" completed (exit code 0)</summary>\n</task-notification>\n<system-reminder>{"a":1}</system-reminder>';
     expect(injectedMessage({ kind: 'task-notification' }, text)).toEqual({
       title: 'Background command "wait" completed (exit code 0)',
-      body: 'Output file: /tmp/x.output\nStatus: completed',
+      body: 'Output file: /tmp/x.output\n\nStatus: completed',
     });
   });
 
@@ -33,7 +33,7 @@ describe('injectedMessage', () => {
       + '<event>cancelled run 394 (PR #907): conflicting</event>\n</task-notification>';
     expect(injectedMessage({ kind: 'task-notification' }, monitor)?.body).toBe('Event: cancelled run 394 (PR #907): conflicting');
     const stopped = '<task-notification>\n<status>stopped</status>\n<note>No completion record was found</note>\n</task-notification>';
-    expect(injectedMessage({ kind: 'task-notification' }, stopped)?.body).toBe('Status: stopped\nNote: No completion record was found');
+    expect(injectedMessage({ kind: 'task-notification' }, stopped)?.body).toBe('Status: stopped\n\nNote: No completion record was found');
   });
 
   it('unfolds a peer message with no body to what its envelope holds, keeping its own indentation', () => {
