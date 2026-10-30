@@ -25,6 +25,12 @@
           "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
           "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
           "priority": "low"
+        },
+        {
+          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
+          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
+          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
+          "priority": "low"
         }
       ]
     },
