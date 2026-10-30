@@ -74,10 +74,14 @@ body *:not(.pane, .pane *) {
 }
 
 /* The main session on the left, full height, and the workers in a list down the right. Each placed by
-   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else. */
+   column rather than auto-placed, so a zoomed pane leaving the flow below moves nothing else.
+   Each column is half, whatever is in it. A bare 1fr never shrinks below its widest content, and a
+   worker zoomed to the whole view keeps its full-width terminal until the next fit: on the way out
+   of zoom the worker column held that width, the main pane was squeezed to a sliver, and the fit
+   then measured both at those sizes and kept them. */
 .view-terminals {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 2px;
 }
