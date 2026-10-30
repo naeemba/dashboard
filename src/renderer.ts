@@ -45,7 +45,7 @@ import { closeRefusal, closingPanes } from './close-project';
 import { paneSends } from './pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, showMode, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, typedNames, type Page,
 } from './page';
 import { neighborPane, paneAtPosition, stepPane } from './pane-layout';
 import { closePane, runPaneAction, type PanePorts } from './pane-actions';
@@ -881,7 +881,7 @@ bridge.onExit((id, exitCode) => {
   // The title dies with the program that set it, which is here. Left standing, the bar names a file
   // nothing has open: quit nvim and the pane still reads `nvim · board.json` until you press Enter and
   // the next nvim prints its own. A typed name is untouched — that one is yours and survives a restart.
-  pane.title = undefined;
+  setPaneTitle(pane, undefined);
   pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
   // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
   // find out about a pane on a project you are not on.

@@ -150,10 +150,21 @@ export function toggleFold(page: Page, index: number): void {
   pane.element.classList.toggle('folded', pane.folded);
   pane.element.dataset.label = paneLabel(index, undefined, paneName(pane));
   fitPanes(page);
+  // Main is focused without setting page.focused first: its focusin is what records the arrival and
+  // redraws the status bar, and it skips both when the page already names main.
   if (pane.folded && page.focused === index) {
-    page.focused = MAIN_INDEX;
-    focusTerminals(page);
+    if (page.chat) page.chat.focus();
+    else page.focused = MAIN_INDEX;
   }
+}
+
+// A program's title for the pane, set or cleared. A folded worker's bar shows the pane's name, so it is
+// rewritten here, the one place a title changes, rather than by each writer. Says whether the name moved.
+export function setPaneTitle(pane: Pane, title: string | undefined): boolean {
+  const before = paneName(pane);
+  pane.title = title;
+  pane.element.dataset.label = paneLabel(pane.index, undefined, paneName(pane));
+  return paneName(pane) !== before;
 }
 
 // The keyboard back on whichever of main and the workers last had it. A folded worker is opened on the
@@ -284,8 +295,10 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       // A click anywhere on a folded worker's bar goes to it, which opens it.
       container.addEventListener('click', () => {
         if (!pane.folded) return;
-        page.focused = index;
-        focusTerminals(page);
+        // Opened first, since a hidden terminal cannot take the keyboard; its focus listener then records
+        // the arrival and redraws the status bar.
+        toggleFold(page, index);
+        terminal.focus();
       });
     }
 
@@ -380,12 +393,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // prompt and again when the command starts, and most of those say what it already said; without this
     // the status bar and the manager's list rebuild on every keystroke that ends in Enter.
     terminal.onTitleChange((title) => {
-      const before = paneName(pane);
-      pane.title = title;
-      if (paneName(pane) === before) return;
-      // A folded worker's bar shows its name, so it follows the title the way the status bar does.
-      container.dataset.label = paneLabel(index, undefined, paneName(pane));
-      options.onChanged();
+      if (setPaneTitle(pane, title)) options.onChanged();
     });
     // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
     // to listen for: no reading the output, no guessing from how long it has been quiet.
