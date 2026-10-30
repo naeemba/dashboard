@@ -263,7 +263,7 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   });
 
   // The models /model lists, as the session offers them; asking starts it, as the command list does.
-  table.handle('chat:models', async (_screen, slot: number): Promise<ModelInfo[]> => {
+  table.handle('chat-models:read', async (_screen, slot: number): Promise<ModelInfo[]> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     return (await running(slot, projectPath)).query.supportedModels();

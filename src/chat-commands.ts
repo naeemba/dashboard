@@ -1,6 +1,7 @@
 import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
+import { isModel } from './chat-status';
 import { fuzzyScore } from './fuzzy';
 import type { SearchRow } from './overlay';
 
@@ -85,7 +86,7 @@ export function modelRows(models: ModelInfo[], current: string | null, query: st
     .filter((each): each is { model: ModelInfo; score: number } => each.score !== null)
     .sort((one, other) => one.score - other.score)
     .map(({ model }) => {
-      const mark = current !== null && [model.value, model.resolvedModel].includes(current) ? '● ' : '';
+      const mark = current !== null && isModel(model, current) ? '● ' : '';
       return { name: `${mark}${model.displayName}`, detail: model.description, choice: model.value };
     });
 }
@@ -94,8 +95,14 @@ export function modelRows(models: ModelInfo[], current: string | null, query: st
 // offer, which is refused rather than saved as the model every later session starts on.
 export function namedModel(models: ModelInfo[], name: string): string | null {
   const wanted = name.toLowerCase();
-  const found = models.find((model) => [model.value, model.resolvedModel, model.displayName].some((each) => each?.toLowerCase() === wanted));
+  const found = models.find((model) => isModel(model, wanted) || [model.value, model.displayName].some((each) => each.toLowerCase() === wanted));
   return found?.value ?? null;
+}
+
+// The model a row of the list is picked by, as the screen keeps it: the "default" row is no model
+// named at all, which is how the model key spells the default too.
+export function pickedModel(value: string): string | null {
+  return value === 'default' ? null : value;
 }
 
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags

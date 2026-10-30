@@ -20,6 +20,10 @@ describe('measureOf', () => {
     });
   });
 
+  it('names the default model by its own row, not the default row that resolves to it', () => {
+    expect(measureOf({ ...context, model: 'claude-opus-5-5' }, models, null).model).toBe('Opus 5.5');
+  });
+
   it('shows a model the list lacks by its id, and no limits when the plan has none', () => {
     const measure = measureOf({ ...context, model: 'claude-x' }, models, null);
     expect([measure.model, measure.fiveHour, measure.sevenDay]).toEqual(['claude-x', null, null]);

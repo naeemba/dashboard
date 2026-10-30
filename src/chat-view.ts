@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, modelRows, namedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -353,14 +353,21 @@ export function createChatView(options: ChatViewOptions): ChatView {
     attach(files);
   });
 
-  element.addEventListener('dragover', () => element.classList.add('dropping'));
+  // Only a drag carrying files lights the box; text dragged out of the log is not something it takes.
+  element.addEventListener('dragover', (event) => {
+    if (event.dataTransfer?.types.includes('Files')) element.classList.add('dropping');
+  });
   element.addEventListener('dragleave', (event) => {
     if (!(event.relatedTarget instanceof Node && element.contains(event.relatedTarget))) element.classList.remove('dropping');
   });
   element.addEventListener('drop', (event) => {
     element.classList.remove('dropping');
-    const files = imageFiles(event.dataTransfer?.files);
-    if (files.length === 0) return;
+    const dropped = event.dataTransfer?.files;
+    const files = imageFiles(dropped);
+    if (files.length === 0) {
+      if (dropped?.length) options.onNotice('Only PNG, JPEG, GIF and WebP images can be attached.');
+      return;
+    }
     attach(files);
     prompt.focus();
   });
@@ -415,6 +422,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function configure(change: ChatPreferences): void {
+    choose(change);
     drawFoot();
     // A model picked is measured again, so the status line names it.
     bridge.chatConfigure(slot, change).then(() => {
@@ -423,7 +431,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function choose(change: ChatPreferences): void {
-    if ('model' in change) model = change.model ?? null;
+    // A model picked here or on another screen shows over the measured name until the next measure.
+    if ('model' in change && (change.model ?? null) !== model) {
+      model = change.model ?? null;
+      if (measured) measured = { ...measured, model: null };
+    }
     if (change.permissionMode) mode = change.permissionMode;
   }
 
@@ -477,7 +489,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     bridge.chatModels(slot).then(async (models) => {
       if (name) {
         const named = namedModel(models, name);
-        if (named) configure({ model: (model = named) });
+        if (named) configure({ model: pickedModel(named) });
         else options.onNotice(`Claude has no model named ${name}. /model lists the ones it has.`);
         return;
       }
@@ -485,7 +497,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
         name: 'chat-model', placeholder: 'Search models', rows: (query) => modelRows(models, model ?? transcript.model, query),
         empty: 'No model matches.', glyph: () => 'claude',
       });
-      if (picked !== undefined) configure({ model: (model = picked) });
+      if (picked !== undefined) configure({ model: pickedModel(picked) });
       focus();
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
   }
@@ -552,8 +564,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       // may not know of a turn another one started, and interrupting an idle session does nothing.
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
-      if (command === 'model') configure({ model: (model = next(MODELS, model)) });
-      if (command === 'permission-mode') configure({ permissionMode: (mode = next(MODES, mode)) });
+      if (command === 'image') {
+        const source = (selected === null ? attached : drawn[selected].element).querySelector('img')?.src;
+        if (source) imageOverlay(source);
+      }
+      if (command === 'model') configure({ model: next(MODELS, model) });
+      if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through
       // doing would stop with nothing on screen saying so.
       if (command === 'new' && working(transcript, asks.length)) {

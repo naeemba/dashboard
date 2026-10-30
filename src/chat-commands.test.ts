@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, modelRows, namedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -88,7 +88,7 @@ describe('completion', () => {
 
 describe('modelRows', () => {
   const models = [
-    { value: 'default', displayName: 'Default', description: 'recommended' },
+    { value: 'default', resolvedModel: 'claude-opus-5-5', displayName: 'Default', description: 'recommended' },
     { value: 'opus', resolvedModel: 'claude-opus-5-5', displayName: 'Opus', description: 'most capable' },
     { value: 'haiku', displayName: 'Haiku', description: 'fastest' },
   ];
@@ -108,5 +108,9 @@ describe('modelRows', () => {
     expect(namedModel(models, 'claude-opus-5-5')).toBe('opus');
     expect(namedModel(models, 'Haiku')).toBe('haiku');
     expect(namedModel(models, 'opsu')).toBeNull();
+  });
+
+  it('keeps the default row as no model named, as the model key does', () => {
+    expect([pickedModel('default'), pickedModel('opus')]).toEqual([null, 'opus']);
   });
 });
