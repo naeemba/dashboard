@@ -11,7 +11,7 @@ import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { statusGroups, toneOf, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPE_NAMES, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
@@ -365,7 +365,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const dropped = event.dataTransfer?.files;
     const files = imageFiles(dropped);
     if (files.length === 0) {
-      if (dropped?.length) options.onNotice('Only PNG, JPEG, GIF and WebP images can be attached.');
+      if (dropped?.length) options.onNotice(`Only ${IMAGE_TYPE_NAMES} images can be attached.`);
       return;
     }
     attach(files);
