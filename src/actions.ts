@@ -527,7 +527,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     mac: `Alt+${key}`, other: `Alt+${key}`,
   })),
   {
-    name: 'claude-unfold', description: 'Unfold the selected tool call, or fold it again',
+    name: 'claude-unfold', description: 'Unfold the selected tool call or message, or fold it again',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'unfold' }, mac: 'Alt+O', other: 'Alt+O',
   },
   {

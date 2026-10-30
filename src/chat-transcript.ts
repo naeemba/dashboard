@@ -1,6 +1,7 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
 import { shellExchange, typedCommand } from './chat-commands';
+import { injectedMessage } from './chat-events';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -57,7 +58,9 @@ export type ChatEntry =
   | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null }
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
-  | { kind: 'shell'; text: string };
+  | { kind: 'shell'; text: string }
+  // A message Claude Code put in the conversation rather than a person (chat-events.ts), folded to its title.
+  | { kind: 'event'; title: string; body: string };
 
 export type Transcript = {
   entries: ChatEntry[];
@@ -104,9 +107,14 @@ function blocksOf(content: unknown): Record<string, unknown>[] {
   return Array.isArray(content) ? content.filter(isRecord) : [];
 }
 
+// A message's text blocks, joined.
+function textOf(content: unknown): string {
+  return blocksOf(content).filter((part) => part.type === 'text').map((part) => text(part.text)).join('\n');
+}
+
 function toolResult(block: Record<string, unknown>): ToolResult {
   const blocks = blocksOf(block.content);
-  const said = blocks.filter((part) => part.type === 'text').map((part) => text(part.text)).join('\n');
+  const said = textOf(block.content);
   return {
     text: said.length > RESULT_LIMIT ? `${said.slice(0, RESULT_LIMIT)}\n… ${said.length - RESULT_LIMIT} more characters` : said,
     images: blocks.filter((part) => part.type === 'image').map(image).filter((part) => part !== null),
@@ -192,7 +200,11 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   const inner = isRecord(message.message) ? message.message : {};
   switch (message.type) {
     case 'assistant': return assistant(transcript, inner.content);
-    case 'user': return user(transcript, inner.content);
+    case 'user': {
+      const injected = injectedMessage(message.origin, textOf(inner.content));
+      if (injected) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...injected }] };
+      return user(transcript, inner.content);
+    }
     case 'stream_event': return streamed(transcript, message.event);
     case 'result': {
       const notice = resultNotice(message, transcript.entries.at(-1));

@@ -209,3 +209,13 @@ describe('a command run with !', () => {
     expect(transcript.entries).toEqual([{ kind: 'user', text: '! ls', images: [], ran: true }, { kind: 'shell', text: 'a.txt' }]);
   });
 });
+
+describe('a message Claude Code injected', () => {
+  it('is one folded event, not the person\'s words', () => {
+    const notification = {
+      type: 'user', parent_tool_use_id: null, origin: { kind: 'task-notification' },
+      message: { content: '<task-notification><summary>Agent "Review" finished</summary><result>done</result></task-notification>' },
+    };
+    expect(fold([notification]).entries).toEqual([{ kind: 'event', title: 'Agent "Review" finished', body: 'done' }]);
+  });
+});

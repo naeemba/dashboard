@@ -61,6 +61,17 @@
   white-space: pre-wrap;
 }
 
+/* A message Claude Code injected — an agent finished, a subagent's report — folded to one quiet line. */
+.chat-event summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.chat-event summary::marker {
+  color: var(--blue);
+}
+
 .chat-notice {
   color: var(--muted);
   font-style: italic;

@@ -50,6 +50,12 @@ function withCopy(pre: HTMLElement): HTMLElement {
   return wrapper;
 }
 
+// Markdown drawn into an element, each code block with its copy button.
+function markdownInto(element: HTMLElement, text: string): void {
+  element.innerHTML = renderMarkdown(text);
+  element.querySelectorAll('pre').forEach(withCopy);
+}
+
 function preformatted(className: string, text: string): HTMLPreElement {
   const pre = document.createElement('pre');
   pre.className = className;
@@ -66,8 +72,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
     const plan = document.createElement('div');
     plan.className = 'chat-plan chat-text';
-    plan.innerHTML = renderMarkdown(input.plan);
-    plan.querySelectorAll('pre').forEach(withCopy);
+    markdownInto(plan, input.plan);
     parts.push(plan);
   } else if (diff) {
     const pre = document.createElement('pre');
@@ -114,8 +119,25 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
   return { entry, element, fill: null };
 }
 
+// A message Claude Code injected: one line with its title, unfolding to what it said in markdown.
+function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
+  const element = document.createElement('details');
+  element.className = 'chat-entry chat-event';
+  const summary = document.createElement('summary');
+  summary.textContent = entry.title;
+  const body = document.createElement('div');
+  body.className = 'chat-text';
+  element.append(summary, body);
+  element.addEventListener('toggle', () => {
+    if (!element.open || body.childElementCount > 0) return;
+    markdownInto(body, entry.body);
+  });
+  return { entry, element, fill: null };
+}
+
 export function drawEntry(entry: ChatEntry): DrawnEntry {
   if (entry.kind === 'tool') return toolEntry(entry);
+  if (entry.kind === 'event') return eventEntry(entry);
   const element = document.createElement('div');
   element.className = `chat-entry chat-${entry.kind}`;
   if (entry.kind === 'notice') {
@@ -137,8 +159,7 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   element.textContent = entry.text;
   return {
     entry, element, fill: () => {
-      element.innerHTML = renderMarkdown(entry.text);
-      element.querySelectorAll('pre').forEach(withCopy);
+      markdownInto(element, entry.text);
     },
   };
 }

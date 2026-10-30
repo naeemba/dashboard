@@ -610,7 +610,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'copy' && selected !== null) {
         const buttons = drawn[selected].element.querySelectorAll<HTMLButtonElement>('.chat-copy');
         const block = nextCopyBlock(copied, selected, buttons.length);
-        if (block === null) options.onNotice('This entry has no block to copy. A tool call shows its blocks once unfolded.');
+        if (block === null) options.onNotice('This entry has no block to copy. A tool call or message shows its blocks once unfolded.');
         else {
           buttons[block].click();
           copied = { entry: selected, block };
