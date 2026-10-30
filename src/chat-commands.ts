@@ -114,3 +114,17 @@ export function typedCommand(text: string): string | null {
   const command = name.startsWith('/') ? name : `/${name}`;
   return args ? `${command} ${args}` : command;
 }
+
+// A file dropped on the screen that is not an image to attach, as the box takes it: an @ mention, the
+// way Claude Code takes a dropped file, so Claude reads it. A path with a space is quoted, which is
+// how Claude Code writes one.
+export function fileMention(path: string): string {
+  return /\s/.test(path) ? `@"${path}"` : `@${path}`;
+}
+
+// What goes in at the caret for the dropped files: their mentions, set off from a word just before
+// them by a space, and a space after so typing carries on as a new word.
+export function mentionInsertion(before: string, mentions: string[]): string {
+  const gap = before === '' || /\s$/.test(before) ? '' : ' ';
+  return `${gap}${mentions.join(' ')} `;
+}

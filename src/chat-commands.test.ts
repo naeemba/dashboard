@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -112,5 +112,20 @@ describe('modelRows', () => {
 
   it('keeps the default row as no model named, as the model key does', () => {
     expect([pickedModel('default'), pickedModel('opus')]).toEqual([null, 'opus']);
+  });
+});
+
+describe('fileMention', () => {
+  it('mentions a dropped file by its path, quoted when it has a space', () => {
+    expect(fileMention('/home/me/notes.md')).toBe('@/home/me/notes.md');
+    expect(fileMention('/home/me/my notes.md')).toBe('@"/home/me/my notes.md"');
+  });
+});
+
+describe('mentionInsertion', () => {
+  it('sets the mentions off from a word before them, and leaves a space after', () => {
+    expect(mentionInsertion('look at', ['@a', '@b'])).toBe(' @a @b ');
+    expect(mentionInsertion('look at ', ['@a'])).toBe('@a ');
+    expect(mentionInsertion('', ['@a'])).toBe('@a ');
   });
 });

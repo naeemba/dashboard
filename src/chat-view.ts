@@ -3,15 +3,17 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
-import { statusGroups, toneOf, type ChatMeasure } from './chat-status';
+import { revealed } from './chat-reveal';
+import { footSides, piece, type FootState } from './chat-foot-view';
+import { workingLine, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPE_NAMES, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
@@ -82,9 +84,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
   prompt.rows = 3;
   prompt.dir = 'auto';
   const menu = createCommandMenu();
+  const activity = document.createElement('div');
+  activity.className = 'chat-working';
+  activity.hidden = true;
+  const activityText = document.createElement('span');
+  activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  element.append(log, ask.element, menu.element, attached, prompt, foot);
+  element.append(log, activity, ask.element, menu.element, attached, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
@@ -119,35 +126,36 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
 
-  // Two lines, as under Claude Code's prompt: its status line, then the mode and what Claude is doing.
+  // One row under the box: on the left the model, the mode and what Claude is doing; on the right
+  // the meters Claude Code's status line carries, then the version.
+  const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
   let drawnFoot = '';
   function drawFoot(): void {
     const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
-    const state = [MODE_LABELS[mode], asks.length > 0 ? 'waiting on you' : transcript.busy ? 'working…' : 'ready'].join(' · ');
+    const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
-    const key = JSON.stringify([measured, shown, transcript.version, state]);
+    const key = JSON.stringify([measured, shown, transcript.version, mode, state]);
     if (key === drawnFoot) return;
     drawnFoot = key;
-    const status = document.createElement('div');
-    status.className = 'chat-status';
-    if (measured) {
-      const bar = document.createElement('span');
-      bar.className = `chat-context chat-status-${toneOf(measured.context.percentage)}`;
-      bar.style.setProperty('--used', `${measured.context.percentage}%`);
-      status.append(bar);
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], state, measured, transcript.version));
+  }
+
+  // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
+  // It ticks once a second on its own, since a long tool call streams nothing to paint by.
+  let turnStarted: number | null = null;
+  let ticking = 0;
+  function drawWorking(): void {
+    if (turnState() !== 'working') {
+      turnStarted = null;
+      window.clearInterval(ticking);
+      ticking = 0;
+      activity.hidden = true;
+      return;
     }
-    statusGroups(measured, shown, transcript.version).forEach((group, index) => {
-      if (index > 0) status.append(' · ');
-      group.forEach((piece, at) => {
-        const span = document.createElement('span');
-        span.className = `chat-status-${piece.tone}`;
-        span.textContent = at > 0 ? ` ${piece.text}` : piece.text;
-        status.append(span);
-      });
-    });
-    const line = document.createElement('div');
-    line.textContent = state;
-    foot.replaceChildren(status, line);
+    turnStarted ??= Date.now();
+    if (!ticking) ticking = window.setInterval(drawWorking, 1000);
+    activity.hidden = false;
+    activityText.textContent = workingLine(Math.floor((Date.now() - turnStarted) / 1000), transcript.streamed, transcript.thinking);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
@@ -164,13 +172,28 @@ export function createChatView(options: ChatViewOptions): ChatView {
     painting = 0;
     const stick = atBottom();
     if (transcript.entries !== drawnEntries) drawEntries();
-    if (transcript.live !== paintedLive) {
-      paintedLive = transcript.live;
-      live.hidden = paintedLive === '';
-      live.innerHTML = paintedLive ? renderMarkdown(paintedLive) : '';
-    }
+    if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
+    drawWorking();
     if (stick) log.scrollTop = log.scrollHeight;
+  }
+
+  // The streaming block catches up with what has arrived a few characters a frame (chat-reveal.ts),
+  // so a burst flows in rather than landing at once.
+  // Whether the log sits at its end is kept from its scroll events rather than read each frame, which
+  // would force a layout right after the last frame's write.
+  // ponytail: markdown runs over the whole streaming block each frame; render only the tail past the
+  // last finished paragraph if a long answer ever stutters.
+  let revealing = 0;
+  let pinned = true;
+  log.addEventListener('scroll', () => { pinned = atBottom(); }, { passive: true });
+  function reveal(): void {
+    revealing = 0;
+    paintedLive = revealed(paintedLive, transcript.live);
+    live.hidden = paintedLive === '';
+    live.innerHTML = paintedLive ? renderMarkdown(paintedLive) : '';
+    if (pinned) log.scrollTop = log.scrollHeight;
+    if (paintedLive !== transcript.live) revealing = requestAnimationFrame(reveal);
   }
 
   function drawEntries(): void {
@@ -342,12 +365,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   // Images pasted into the box or dropped anywhere on the screen are attached to the next prompt. The
   // window cancels every drop's default, so a file dropped here never replaces the page.
-  function imageFiles(list: FileList | undefined): File[] {
-    return [...list ?? []].filter((file) => (IMAGE_TYPES as readonly string[]).includes(file.type));
-  }
+  const isPicture = (file: File) => (IMAGE_TYPES as readonly string[]).includes(file.type);
 
   prompt.addEventListener('paste', (event) => {
-    const files = imageFiles(event.clipboardData?.files);
+    const files = [...event.clipboardData?.files ?? []].filter(isPicture);
     if (files.length === 0) return;
     event.preventDefault();
     attach(files);
@@ -362,13 +383,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
   });
   element.addEventListener('drop', (event) => {
     element.classList.remove('dropping');
-    const dropped = event.dataTransfer?.files;
-    const files = imageFiles(dropped);
-    if (files.length === 0) {
-      if (dropped?.length) options.onNotice(`Only ${IMAGE_TYPE_NAMES} images can be attached.`);
-      return;
+    const dropped = [...event.dataTransfer?.files ?? []];
+    if (dropped.length === 0) return;
+    const pictures = dropped.filter(isPicture);
+    if (pictures.length > 0) attach(pictures);
+    // Anything else, another kind of file or a folder, goes in the box as an @ mention at the caret.
+    const mentions = dropped.filter((file) => !isPicture(file)).map((file) => fileMention(bridge.getPathForFile(file)));
+    if (mentions.length > 0) {
+      const insertion = mentionInsertion(prompt.value.slice(0, prompt.selectionStart), mentions);
+      prompt.setRangeText(insertion, prompt.selectionStart, prompt.selectionEnd, 'end');
     }
-    attach(files);
     prompt.focus();
   });
 
