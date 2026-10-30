@@ -201,7 +201,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   switch (message.type) {
     case 'assistant': return assistant(transcript, inner.content);
     case 'user': {
-      const injected = injectedMessage(message.origin, () => textOf(inner.content));
+      const injected = injectedMessage(message.origin, textOf(inner.content));
       if (injected) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...injected }] };
       return user(transcript, inner.content);
     }

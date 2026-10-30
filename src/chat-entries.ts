@@ -72,8 +72,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
     const plan = document.createElement('div');
     plan.className = 'chat-plan chat-text';
-    plan.innerHTML = renderMarkdown(input.plan);
-    plan.querySelectorAll('pre').forEach(withCopy);
+    markdownInto(plan, input.plan);
     parts.push(plan);
   } else if (diff) {
     const pre = document.createElement('pre');

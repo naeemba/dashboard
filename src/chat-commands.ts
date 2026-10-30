@@ -2,6 +2,7 @@ import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
 import { isModel } from './chat-status';
+import { tagged, unescaped } from './chat-tags';
 import { isImageType } from './chat-transcript';
 import { fuzzyScore } from './fuzzy';
 import type { SearchRow } from './overlay';
@@ -108,11 +109,6 @@ export function pickedModel(value: string): string | null {
   return value === 'default' ? null : value;
 }
 
-// What a saved session wrote between `<tag>` and `</tag>`, or undefined when the tag is not there.
-export function tagged(text: string, tag: string): string | undefined {
-  return new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1];
-}
-
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags
 // of their own, read back as what was typed. Null for a message that is not one.
 export function typedCommand(text: string): string | null {
@@ -151,12 +147,6 @@ export function droppedFiles<T extends { type: string; path: string }>(files: T[
 // are escaped. Read back as the line typed, `! git push`, or as the output, stdout then stderr. Each is
 // the whole message, so a prompt that quotes the tags stays a prompt. Null for anything else.
 export type ShellExchange = { kind: 'input'; text: string } | { kind: 'output'; text: string };
-
-const ENTITIES: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
-
-export function unescaped(text: string): string {
-  return text.replace(/&(?:lt|gt|amp|quot|#39);/g, (entity) => ENTITIES[entity]);
-}
 
 export function shellExchange(text: string): ShellExchange | null {
   if (!text.includes('<bash-')) return null;
