@@ -607,6 +607,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
         const source = (selected === null ? attached : drawn[selected].element).querySelector('img')?.src;
         if (source) imageOverlay(source);
       }
+      // The same button a click on the block presses, so the tick shows either way.
+      if (command === 'copy') drawn[selected ?? -1]?.element.querySelector<HTMLButtonElement>('.chat-copy')?.click();
       if (command === 'model') configure({ model: next(MODELS, model) });
       if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through

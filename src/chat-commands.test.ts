@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -143,5 +143,21 @@ describe('droppedFiles', () => {
   });
   it('does not refuse a drop of pictures alone', () => {
     expect(droppedFiles([png, pageSvg])).toEqual({ pictures: [png], paths: [], refused: false });
+  });
+});
+
+describe('shellExchange', () => {
+  it('reads a command run with ! back as the line typed', () => {
+    expect(shellExchange('<bash-input>git push gitlab HEAD</bash-input>')).toEqual({ kind: 'input', text: '! git push gitlab HEAD' });
+  });
+
+  it('reads what it printed as stdout then stderr, with the escapes undone', () => {
+    expect(shellExchange('<bash-stdout>a  HEAD -&gt; main\n</bash-stdout><bash-stderr>warned</bash-stderr>'))
+      .toEqual({ kind: 'output', text: 'a  HEAD -> main\nwarned' });
+    expect(shellExchange('<bash-stdout>done</bash-stdout><bash-stderr></bash-stderr>')).toEqual({ kind: 'output', text: 'done' });
+  });
+
+  it('leaves any other message alone', () => {
+    expect(shellExchange('push it')).toBeNull();
   });
 });

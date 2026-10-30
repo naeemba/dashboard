@@ -106,12 +106,17 @@ export function pickedModel(value: string): string | null {
   return value === 'default' ? null : value;
 }
 
+// What a saved session wrote between `<tag>` and `</tag>`, or undefined when the tag is not there.
+function tagged(text: string, tag: string): string | undefined {
+  return new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1];
+}
+
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags
 // of their own, read back as what was typed. Null for a message that is not one.
 export function typedCommand(text: string): string | null {
-  const name = /<command-name>([\s\S]*?)<\/command-name>/.exec(text)?.[1]?.trim();
+  const name = tagged(text, 'command-name')?.trim();
   if (!name) return null;
-  const args = /<command-args>([\s\S]*?)<\/command-args>/.exec(text)?.[1]?.trim();
+  const args = tagged(text, 'command-args')?.trim();
   const command = name.startsWith('/') ? name : `/${name}`;
   return args ? `${command} ${args}` : command;
 }
@@ -137,4 +142,26 @@ export function droppedFiles<T extends { type: string; path: string }>(files: T[
   const pictures = files.filter((file) => isImageType(file.type));
   const paths = files.filter((file) => !isImageType(file.type)).map((file) => file.path).filter(Boolean);
   return { pictures, paths, refused: files.length > 0 && pictures.length === 0 && paths.length === 0 };
+}
+
+// A command run with `!` in Claude Code, as a saved session writes it: what was typed in
+// `<bash-input>`, and what it printed in `<bash-stdout>` and `<bash-stderr>` with &, < and > escaped.
+// Read back as the line typed, `! git push`, or as the output, stdout then stderr. Null for anything else.
+export type ShellExchange = { kind: 'input'; text: string } | { kind: 'output'; text: string };
+
+const ENTITIES: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
+
+function unescaped(text: string): string {
+  return text.replace(/&(?:lt|gt|amp|quot|#39);/g, (entity) => ENTITIES[entity]);
+}
+
+export function shellExchange(text: string): ShellExchange | null {
+  if (!text.includes('<bash-')) return null;
+  const input = /^\s*<bash-input>([\s\S]*?)<\/bash-input>\s*$/.exec(text);
+  if (input) return { kind: 'input', text: `! ${unescaped(input[1].trim())}` };
+  const stdout = tagged(text, 'bash-stdout');
+  const stderr = tagged(text, 'bash-stderr');
+  if (stdout === undefined && stderr === undefined) return null;
+  const printed = [stdout, stderr].map((part) => unescaped(part ?? '').trimEnd()).filter(Boolean);
+  return { kind: 'output', text: printed.join('\n') };
 }

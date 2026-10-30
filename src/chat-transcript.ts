@@ -1,6 +1,6 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
-import { typedCommand } from './chat-commands';
+import { shellExchange, typedCommand } from './chat-commands';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -53,7 +53,9 @@ export type ChatEntry =
   | { kind: 'user'; text: string; images: ChatImage[] }
   | { kind: 'text'; text: string }
   | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null }
-  | { kind: 'notice'; text: string };
+  | { kind: 'notice'; text: string }
+  // What a command run with `!` printed. The command itself is a user entry, `! git push`.
+  | { kind: 'shell'; text: string };
 
 export type Transcript = {
   entries: ChatEntry[];
@@ -140,7 +142,11 @@ function user(transcript: Transcript, content: unknown): Transcript {
   for (const block of blocksOf(content)) {
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
-    else if (block.type === 'text') said.push(typedCommand(text(block.text)) ?? text(block.text));
+    else if (block.type === 'text') {
+      const shell = shellExchange(text(block.text));
+      if (shell?.kind === 'output') entries = [...entries, { kind: 'shell', text: shell.text }];
+      else said.push(shell?.text ?? typedCommand(text(block.text)) ?? text(block.text));
+    }
     if (block.type === 'image') {
       const picture = image(block);
       if (picture) images.push(picture);

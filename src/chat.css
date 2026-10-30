@@ -95,6 +95,36 @@
   border-radius: var(--radius);
 }
 
+/* A copy button in a code block's top right corner, shown while the pointer is over the block. */
+.chat-entry pre {
+  position: relative;
+}
+
+.chat-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.chat-entry pre:hover .chat-copy,
+.chat-copy:focus-visible {
+  opacity: 1;
+}
+
+.chat-copy:hover {
+  color: var(--white);
+}
+
 .chat-text a {
   color: var(--blue);
 }
@@ -118,7 +148,10 @@
   font: 12.5px/1.6 var(--mono-font);
 }
 
+/* The mark and the tool's name do not shrink: the entry breaks long words anywhere, and a name
+   squeezed by a long summary beside it broke into "Ba" over "sh". */
 .chat-tool summary b {
+  flex-shrink: 0;
   color: var(--white);
   font-weight: 500;
 }
@@ -130,6 +163,7 @@
 }
 
 .chat-tool-state {
+  flex-shrink: 0;
   color: var(--green);
 }
 

@@ -1,3 +1,4 @@
+import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
 import { toolDiff, toolSummary } from './chat-tools';
 import { imageDataUrl, type ChatEntry, type ChatImage, type ToolResult } from './chat-transcript';
@@ -21,6 +22,28 @@ function images(list: ChatImage[]): HTMLImageElement[] {
     image.src = source;
     return [image];
   });
+}
+
+// A copy button in a code block's corner, for what the block holds. It shows a tick for a moment once
+// the text is on the clipboard.
+function withCopy(pre: HTMLPreElement): HTMLPreElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'chat-copy';
+  button.title = 'Copy';
+  button.append(icon('copy'));
+  let reverting = 0;
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const text = (pre.querySelector('code') ?? pre).textContent ?? '';
+    void navigator.clipboard.writeText(text.replace(/\n$/, '')).then(() => {
+      button.replaceChildren(icon('copied'));
+      window.clearTimeout(reverting);
+      reverting = window.setTimeout(() => button.replaceChildren(icon('copy')), 1200);
+    });
+  });
+  pre.append(button);
+  return pre;
 }
 
 function preformatted(className: string, text: string): HTMLPreElement {
@@ -94,6 +117,10 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
     element.textContent = entry.text;
     return { entry, element, fill: null };
   }
+  if (entry.kind === 'shell') {
+    element.append(withCopy(preformatted('chat-output', entry.text || '(no output)')));
+    return { entry, element, fill: null };
+  }
   if (entry.kind === 'user') {
     const said = document.createElement('p');
     said.textContent = entry.text;
@@ -102,5 +129,10 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   }
   // Until it is filled the box holds the raw text, so a conversation scrolled fast still reads.
   element.textContent = entry.text;
-  return { entry, element, fill: () => { element.innerHTML = renderMarkdown(entry.text); } };
+  return {
+    entry, element, fill: () => {
+      element.innerHTML = renderMarkdown(entry.text);
+      element.querySelectorAll('pre').forEach(withCopy);
+    },
+  };
 }

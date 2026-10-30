@@ -3,10 +3,10 @@
 // library drew it. Each one is stroked in currentColor and takes the colour of the text around it.
 import {
   ArrowDownWideNarrow, Bitcoin, Bot, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
-  CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
+  CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, Copy, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, Plug, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
-  Terminal, Trees, X,
+  Check, Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
 import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from './board';
@@ -25,6 +25,8 @@ const ICONS = {
   coins: Coins,
   command: SquareTerminal,
   comments: MessageSquare,
+  copied: Check,
+  copy: Copy,
   doing: CircleDot,
   dollar: DollarSign,
   done: CircleCheck,
