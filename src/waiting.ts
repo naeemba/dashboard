@@ -73,6 +73,12 @@ export function anyWaiting(panes: readonly { bell: Bell }[]): boolean {
   return panes.some((pane) => isRinging(pane.bell));
 }
 
+// Main's bell. It is the Claude screen, not a terminal, so it never rings: a question it is waiting on
+// is the same news a pane's bell is, and its answer, on any screen, is the bell going quiet.
+export function questionBell(asking: boolean): Bell {
+  return asking ? 'waiting' : 'quiet';
+}
+
 // What a worker's hooks report, read as a bell. Blocked is a permission prompt, which only you can
 // answer, so it rings; done is for the main session, which hears about it on its own, and a banner per
 // finished worker would bury the ones that are asking.

@@ -1,4 +1,4 @@
-import { ACTIONS, type Action, type ActionEntry, type ActionScope } from './actions';
+import { ACTIONS, actionByName, type Action, type ActionEntry, type ActionScope } from './actions';
 import { matchesBinding, type KeyInput } from './binding';
 import { isSection } from './manager-sections';
 import type { Mode } from './modes';
@@ -68,10 +68,25 @@ export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean, ch
   return scope === mode;
 }
 
-// The Claude screen's keys ahead of the rest, so where one shares a key with a terminals key — Alt+O,
-// Alt+N, Alt+J/K — the screen holding the keyboard is the one that answers it. They are heard only
-// while it holds it, so the order changes nothing anywhere else.
-const CHAT_FIRST = [...ACTIONS.filter((entry) => entry.scope === 'claude'), ...ACTIONS.filter((entry) => entry.scope !== 'claude')];
+// The Claude screen key that hides this terminals key while the screen has the keyboard: the two are
+// heard together then, and where they share a key (Alt+O, Alt+N, Alt+J/K ship that way) the screen
+// answers it. scopesOverlap says the two scopes never meet on purpose, or bindKey would unbind those
+// shipped pairs. This is the one place the shadow is decided: the lookup skips the hidden key, the
+// which-key strip leaves its row out, and the settings screen warns when a rebind makes a new one.
+export function chatShadow(entry: ActionEntry, keys: Settings['keys']): ActionEntry | undefined {
+  const binding = keys[entry.name] ?? null;
+  if (entry.scope !== 'terminals' || binding === null) return undefined;
+  return ACTIONS.find((other) => other.scope === 'claude' && keys[other.name] === binding);
+}
+
+// The other half of a shadow the named action is in: the Claude key hiding it, or the terminals key
+// it hides. What the settings screen names after a rebind.
+export function chatShadowPartner(name: string, keys: Settings['keys']): ActionEntry | undefined {
+  const entry = actionByName(name);
+  if (entry === undefined) return undefined;
+  if (entry.scope === 'claude') return ACTIONS.find((other) => chatShadow(other, keys) === entry);
+  return chatShadow(entry, keys);
+}
 
 // The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a word
 // in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different one.
@@ -91,8 +106,9 @@ export function mapShortcut(
   onManagerPage = false,
   chatFocused = false,
 ): Action | null {
-  for (const entry of CHAT_FIRST) {
+  for (const entry of ACTIONS) {
     if (!hears(entry.scope, mode, onManagerPage, chatFocused)) continue;
+    if (chatFocused && chatShadow(entry, keys) !== undefined) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
     if (passesThrough(entry, mode)) return null;
     return entry.action;

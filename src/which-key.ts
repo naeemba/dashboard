@@ -3,7 +3,7 @@ import { formatBinding, parseBinding, type KeyInput, type Keystroke } from './bi
 import type { Mode } from './modes';
 import type { Settings } from './settings';
 import { shortcutRows, type Shortcut } from './shortcut-rows';
-import { hears, isModifierKey, stopsTyping } from './shortcuts';
+import { chatShadow, hears, isModifierKey, stopsTyping } from './shortcuts';
 
 // The modifiers under your fingers with no key pressed yet. A binding is a Keystroke — these four and
 // the key — so this is that same thing half-typed, which is what lets one comparison answer "could the
@@ -64,7 +64,8 @@ export function whichKeyRows(
   held: Held, keys: Settings['keys'], mode: Mode, onManagerPage: boolean, isMac: boolean, chatFocused = false,
 ): Shortcut[] {
   return shortcutRows({
-    wants: (entry) => hears(entry.scope, mode, onManagerPage, chatFocused),
+    // A terminals key the Claude screen has taken is left out, so no key is offered twice.
+    wants: (entry) => hears(entry.scope, mode, onManagerPage, chatFocused) && !(chatFocused && chatShadow(entry, keys) !== undefined),
     label: (entry) => remainingKeys(entry, held, keys),
     mode,
     keys,

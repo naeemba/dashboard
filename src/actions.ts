@@ -543,7 +543,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'model' }, mac: 'Alt+M', other: 'Alt+M',
   },
   {
-    name: 'claude-permission-mode', description: 'Ask before edits, accept them, or plan first',
+    name: 'claude-permission-mode', description: 'Ask before edits, accept them, plan first, or auto mode',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'permission-mode' },
     mac: 'Shift+Tab', other: 'Shift+Tab',
   },

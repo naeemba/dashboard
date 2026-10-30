@@ -1,7 +1,7 @@
 {
   "name": "dashboard",
   "productName": "Dashboard",
-  "version": "1.23.0",
+  "version": "2.0.0",
   "description": "Keyboard-first terminal dashboard",
   "main": ".vite/build/main.cjs",
   "private": true,

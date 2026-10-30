@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hears, isBareCharacter, mapShortcut } from './shortcuts';
+import { chatShadowPartner, hears, isBareCharacter, mapShortcut } from './shortcuts';
 import { ACTIONS } from './actions';
 import { parseBinding } from './binding';
 import { bindKey, defaultSettings } from './settings';
@@ -222,5 +222,17 @@ describe('the Claude screen in the terminals view', () => {
 
   it('still moves to the workers from it', () => {
     expect(mapShortcut(alt('KeyL'), keys, 'terminals', false, true)).toEqual({ kind: 'terminal-move', direction: 'right' });
+  });
+
+  it('names the other half of a shadow from either side, and nothing where there is none', () => {
+    expect(chatShadowPartner('terminal-name', keys)?.name).toBe('claude-new');
+    expect(chatShadowPartner('claude-new', keys)?.name).toBe('terminal-name');
+    expect(chatShadowPartner('claude-model', keys)).toBeUndefined();
+  });
+
+  it('finds the shadow a rebind makes', () => {
+    const rebound = bindKey(defaultSettings(false), 'terminal-add', 'Alt+M').keys;
+    expect(chatShadowPartner('terminal-add', rebound)?.name).toBe('claude-model');
+    expect(mapShortcut(alt('KeyM'), rebound, 'terminals', false, true)).toEqual({ kind: 'chat', command: 'model' });
   });
 });

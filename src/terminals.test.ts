@@ -130,7 +130,6 @@ describe('modeOfPane', () => {
     expect(modeOfPane(EDITOR_INDEX)).toBe('nvim');
   });
 
-  // A Claude screen's notification carries this index back, and the click has to land on that screen.
 });
 
 describe('startsEditor', () => {

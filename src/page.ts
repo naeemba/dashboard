@@ -98,8 +98,9 @@ export type Page = {
   // that was never built.
   views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
-  // The open terminals in the order they are drawn: main, then the workers by number. `focused` is the
-  // number of the one with the keyboard, never a place in this list.
+  // The open workers in the order they are drawn, by number. Main is the Claude screen, `chat`, not one
+  // of these. `focused` is the number of the one with the keyboard, MAIN_INDEX for main, never a place
+  // in this list.
   panes: Pane[];
   focused: number;
   // The scrolling list on the right that the workers are drawn in. Null on a page with no terminals.
@@ -228,7 +229,7 @@ export type PageBuilder = {
 export function createPageBuilder(options: PageOptions): PageBuilder {
   options.bridge.onChat((slot, event) => chatsBySlot.get(slot)?.receive(event));
   options.bridge.onPaneMark((id, state) => markersById.get(id)?.(state));
-  // `parent` is where the box goes: the view for main and the editor, the worker list for a worker.
+  // `parent` is where the box goes: the nvim view for the editor, the worker list for a worker.
   function buildPane(parent: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');
     container.className = 'pane';
@@ -518,6 +519,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       paneId: terminalId(slot, MAIN_INDEX),
       onError: (message) => options.onError(`chat:${slot}`, message),
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
+      onWaiting: options.onChanged,
     });
     page.chat = chat;
     const main = document.createElement('div');

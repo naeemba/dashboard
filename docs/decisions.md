@@ -223,16 +223,22 @@ answer goes on accepting edits.
 ## The main session and its workers
 
 A project's terminals are its main session, full height on the left, and worker panes in a
-scrolling list on the right, as many as have been opened.
+scrolling list on the right, as many as have been opened. The card asked for this layout; four things it
+said were changed on the way, each for a reason that is the card's own goal, and they come after the
+two paragraphs on main.
 
 **Main is the Claude screen, not a pane.** It began as Claude Code in pane 0; it is now the Agent SDK
 session the Claude screen draws, started with the project in auto mode, named `main-<project>` and
 given the dispatch prompt, as the pane was. The separate Claude view went with it: two Claude sessions
 on one page was one too many. Its keys are heard on the terminals view while it has the keyboard, and
 where one shares a key with a terminals key (Alt+O, Alt+N, Alt+J/K) the screen answers it. The first
-launch after the change carries on the conversation the terminal main left. Pane 0 keeps the number
-so a notification and the focus keys still name main; nothing is ever spawned in it. The card asked for this; four things it said
-were changed on the way, each for a reason that is the card's own goal.
+launch after the change carries on the conversation the terminal main left, over one the old Claude
+view remembered: the terminal one was the project's main, the one its workers report to. Pane 0 keeps
+the number so a notification and the focus keys still name main; nothing is ever spawned in it.
+
+Main is started again at once after a new conversation or a /resume, so a worker's report never
+finds no main to arrive at. An end nobody asked for, a crash, is not restarted: a session that dies on
+start would die again in a loop. The screen says it ended, and the next prompt starts it.
 
 **The focus keys are not Ctrl+1..9.** Ctrl with a digit is the tab jump on every platform, and taking it
 would cost every tab key to reach a pane. The nine focus rows are where the five were: Cmd with a digit

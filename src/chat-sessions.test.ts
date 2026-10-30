@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { inputQueue, pathFromShell, relayed, rememberedSessions } from './chat-sessions';
+import { inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -71,4 +71,21 @@ describe('relayed', () => {
   });
   it('keeps rate limit events', () => expect(relayed({ type: 'rate_limit_event' })).toBe(false));
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
+});
+
+describe('mainSessionStart', () => {
+  it('carries on the conversation the terminal main left over one the Claude view remembered', () => {
+    expect(mainSessionStart('view', 'terminal', undefined).resume).toBe('terminal');
+  });
+
+  it('resumes what is remembered when the terminal main left nothing', () => {
+    expect(mainSessionStart('view', undefined, undefined).resume).toBe('view');
+    expect(mainSessionStart(undefined, undefined, undefined).resume).toBeUndefined();
+  });
+
+  it('starts in auto mode unless the screen chose another, and keeps the model chosen', () => {
+    expect(mainSessionStart(undefined, undefined, undefined).preferences).toEqual({ permissionMode: 'auto' });
+    expect(mainSessionStart(undefined, undefined, { model: 'opus', permissionMode: 'plan' }).preferences)
+      .toEqual({ model: 'opus', permissionMode: 'plan' });
+  });
 });

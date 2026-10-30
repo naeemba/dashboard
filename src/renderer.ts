@@ -23,7 +23,7 @@ import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './connec
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
-  EDITOR_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
+  EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
@@ -36,7 +36,7 @@ import { NO_USAGE, type UsageSnapshot } from './usage';
 import { defaultSettings, type Settings } from './settings';
 import { openSettings } from './settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
-import { anyWaiting, waitingNames } from './waiting';
+import { anyWaiting, questionBell, waitingNames, type Bell } from './waiting';
 import {
   isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerRow,
 } from './manager';
@@ -158,7 +158,8 @@ function statusPage(page: Page): StatusPage {
   return {
     mode: page.mode,
     focused: page.focused,
-    paneCount: page.panes.length,
+    // Main counted, so the bar names it on a project with no workers yet, as it does beside them.
+    paneCount: openIndices(page).length,
     boardLabel: page.board?.statusLabel() ?? '',
     hasProjects: projectPages().length > 0,
     managerStatusLabel: page.manager?.statusLabel() ?? '',
@@ -189,17 +190,28 @@ function namedPanes(page: Page): (Pane & { name: string })[] {
   return allPanes(page).map((pane) => ({ ...pane, name: paneLabel(pane.index, undefined, paneName(pane)) }));
 }
 
+// Main as the lists of panes read it. It is the Claude screen, not a pane, and rings by having a
+// question open, so a project whose main is asking is marked on the tab strip, named on the status
+// bar and listed on the manager like one whose pane rang. Nothing printed: its screen is not a terminal.
+function mainEntry(page: Page): { index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number; tail(): string[]; lastPrinted(): string }[] {
+  if (page.chat === null) return [];
+  return [{
+    index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(page.chat.waiting()), exited: false,
+    lastPrintedAt: 0, tail: () => [], lastPrinted: () => '',
+  }];
+}
+
 // Every open project as the manager lists it. Asked by its redraws and by the key that goes to the
 // next thing waiting, which works from any page.
 function currentManagerRows(): ManagerRow[] {
   return managerRows(projectPages().map((entry) => ({
     project: entry.project,
     slot: entry.slot,
-    panes: namedPanes(entry).map((pane) => ({
+    panes: [...mainEntry(entry), ...namedPanes(entry).map((pane) => ({
       ...pane,
       tail: () => paneTail(pane.terminal),
       lastPrinted: () => paneLastLine(pane.terminal),
-    })),
+    }))],
   })), usage, worktrees);
 }
 
@@ -222,11 +234,11 @@ function renderStatus(rowsOnly = false): void {
   // The open project is marked the way a tab strip marks one, and a project with a pane ringing its
   // bell is marked again so you can see it from another page.
   tabStrip.render(pages.map((entry, index) => ({
-    name: entry.project.name, active: index === activeIndex, waiting: anyWaiting(allPanes(entry)),
+    name: entry.project.name, active: index === activeIndex, waiting: anyWaiting([...mainEntry(entry), ...allPanes(entry)]),
     manager: entry.manager !== null,
   })));
   modeSwitch.render(page.mode, page.manager === null && !page.project.missing);
-  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames(namedPanes(page)));
+  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames([...mainEntry(page), ...namedPanes(page)]));
   saveSession();
 }
 
