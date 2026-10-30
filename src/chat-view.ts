@@ -141,21 +141,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
-  // It ticks once a second on its own, since a long tool call streams nothing to paint by.
-  let turnStarted: number | null = null;
+  // It ticks once a second on its own, since a long tool call streams nothing to paint by. A question
+  // hides it without stopping the turn's clock, which the transcript keeps.
   let ticking = 0;
   function drawWorking(): void {
-    if (turnState() !== 'working') {
-      turnStarted = null;
+    const started = transcript.started;
+    if (turnState() !== 'working' || started === null) {
       window.clearInterval(ticking);
       ticking = 0;
       activity.hidden = true;
       return;
     }
-    turnStarted ??= Date.now();
     if (!ticking) ticking = window.setInterval(drawWorking, 1000);
     activity.hidden = false;
-    activityText.textContent = workingLine(Math.floor((Date.now() - turnStarted) / 1000), transcript.streamed, transcript.thinking);
+    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), transcript.streamed, transcript.thinking);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
@@ -170,7 +169,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function paint(): void {
     painting = 0;
-    const stick = atBottom();
+    const stick = pinned;
     if (transcript.entries !== drawnEntries) drawEntries();
     if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
@@ -388,10 +387,15 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const pictures = dropped.filter(isPicture);
     if (pictures.length > 0) attach(pictures);
     // Anything else, another kind of file or a folder, goes in the box as an @ mention at the caret.
-    const mentions = dropped.filter((file) => !isPicture(file)).map((file) => fileMention(bridge.getPathForFile(file)));
-    if (mentions.length > 0) {
-      const insertion = mentionInsertion(prompt.value.slice(0, prompt.selectionStart), mentions);
+    // A file with no path on disk, such as an SVG dragged out of a web page, has nothing to mention.
+    const paths = dropped.filter((file) => !isPicture(file)).map((file) => bridge.getPathForFile(file)).filter(Boolean);
+    if (paths.length > 0) {
+      const insertion = mentionInsertion(prompt.value.slice(0, prompt.selectionStart), paths.map(fileMention));
       prompt.setRangeText(insertion, prompt.selectionStart, prompt.selectionEnd, 'end');
+      // setRangeText fires no input event; the box's own handler forgets a recalled prompt and refreshes the command list.
+      prompt.dispatchEvent(new Event('input'));
+    } else if (pictures.length === 0) {
+      options.onNotice('Only PNG, JPEG, GIF, WEBP images or files on disk can be dropped here.');
     }
     prompt.focus();
   });

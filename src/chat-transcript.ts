@@ -65,21 +65,24 @@ export type Transcript = {
   model: string | null;
   // The Claude Code version the session runs, for the status line.
   version: string | null;
-  // What the running turn has streamed so far, text, thinking and tool input alike, in characters: the
+  // What the running turn has streamed so far, text and thinking alike, in characters: the
   // working line's token count, as Claude Code's estimates it while a response streams. And whether
   // the block streaming now is thinking.
   streamed: number;
   thinking: boolean;
+  // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
+  // than in the view, so a question mid-turn does not start the clock over.
+  started: number | null;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false,
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
-const IDLE = { live: '', busy: false, streamed: 0, thinking: false } as const;
+const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null } as const;
 
-const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking', input_json_delta: 'partial_json' };
+const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -201,7 +204,7 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   if (event.kind === 'message') return applyMessage(transcript, event.message);
   // A prompt sent while a turn runs joins that turn, so its count goes on.
   if (event.kind === 'prompt') {
-    const fresh = transcript.busy ? {} : { streamed: 0, thinking: false };
+    const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
     return { ...user(transcript, event.content), busy: true, ...fresh };
   }
   if (event.kind === 'ended') {

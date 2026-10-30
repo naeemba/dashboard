@@ -184,6 +184,12 @@ describe('the working line\'s count', () => {
     expect([streaming.streamed, streaming.thinking, streaming.live]).toEqual([9, false, 'hello']);
     expect(fold([block('thinking')], prompted('hi')).thinking).toBe(true);
     const ended = applyMessage(streaming, { type: 'result', subtype: 'success' });
-    expect([ended.streamed, ended.thinking]).toEqual([0, false]);
+    expect([ended.streamed, ended.thinking, ended.started]).toEqual([0, false, null]);
+  });
+
+  it('goes on counting, from the same start, when a prompt is sent while the turn runs', () => {
+    const first = fold([delta('abcd')], prompted('hi'));
+    const joined = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }] });
+    expect([fold([delta('ef')], joined).streamed, joined.started]).toEqual([6, first.started]);
   });
 });
