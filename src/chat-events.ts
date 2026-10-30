@@ -50,3 +50,16 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
   }
   return { title: origin.kind ? `${named(origin.kind)} message` : 'A message', body: text.trim() };
 }
+
+// Text Claude Code wrote into the conversation as instructions to Claude rather than as anything said:
+// a skill's body once it loads, or the prompt a slash command expands to. A saved session marks it
+// `isMeta`, a live one `isSynthetic`. Folded under the skill's name, or as the command's prompt, so a
+// page of instructions never reads as something you typed. Null for what is only plumbing — a pasted
+// image's source path, a reminder, the caveat a local command leaves — which shows nothing.
+export function instructionsMessage(text: string, skill: string | undefined): InjectedMessage | null {
+  const body = text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim();
+  if (body === '' || /^(?:\[Image: source: [^\]]*\]\s*)+$/.test(body) || /^<local-command-caveat>/.test(body)) return null;
+  const directory = /^Base directory for this skill: (\S+)/.exec(body)?.[1];
+  const name = skill ?? directory?.split('/').filter(Boolean).at(-1);
+  return { title: name ? `${name} skill` : 'Command prompt', body };
+}

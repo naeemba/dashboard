@@ -78,6 +78,19 @@ describe('applyMessage', () => {
     expect(ran.entries).toEqual([{ kind: 'notice', text: 'Set model to `opus`' }]);
   });
 
+  it('folds a skill\'s instructions under the call that loaded it, never as something you said', () => {
+    const call = { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 't1', name: 'Skill', input: { skill: 'simplify' } }] } };
+    const body = { type: 'user', parent_tool_use_id: null, isMeta: true, sourceToolUseID: 't1', message: { content: [{ type: 'text', text: 'Review the diff.' }] } };
+    expect(fold([call, body]).entries.at(-1)).toEqual({ kind: 'event', title: 'simplify skill', body: 'Review the diff.' });
+  });
+
+  it('still hands a synthetic message\'s tool result to its call', () => {
+    const call = { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }] } };
+    const result = { type: 'user', parent_tool_use_id: null, isSynthetic: true, message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] } };
+    expect(fold([call, result]).entries).toHaveLength(1);
+    expect(fold([call, result]).entries[0]).toMatchObject({ kind: 'tool', result: { text: 'ok' } });
+  });
+
   it('says a turn stopped by Escape was stopped', () => {
     expect(applyMessage(prompted('hi'), { type: 'result', subtype: 'error_during_execution', is_error: true }).entries.at(-1))
       .toEqual({ kind: 'notice', text: 'Stopped.' });

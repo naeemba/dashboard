@@ -1,7 +1,7 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
-import { injectedMessage } from './chat-events';
+import { injectedMessage, instructionsMessage } from './chat-events';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -203,6 +203,19 @@ function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefi
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';
 }
 
+// Text Claude Code wrote for Claude, not a person's turn: marked meta or synthetic, and holding no tool
+// result, which a synthetic message can carry and which must still reach its call.
+function isInstructions(message: Record<string, unknown>, content: unknown): boolean {
+  if (message.isMeta !== true && message.isSynthetic !== true) return false;
+  return !blocksOf(content).some((block) => block.type === 'tool_result');
+}
+
+// The skill a Skill call loaded, read off the call the instructions answer.
+function skillOf(entries: ChatEntry[], id: unknown): string | undefined {
+  const call = entries.find((entry) => entry.kind === 'tool' && entry.id === id);
+  return call?.kind === 'tool' && typeof call.input.skill === 'string' ? call.input.skill : undefined;
+}
+
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call
 // that started it and are left out: the call's folded line and its result say what it did.
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
@@ -213,6 +226,10 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     case 'user': {
       const injected = injectedMessage(message.origin, textOf(inner.content));
       if (injected) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...injected }] };
+      if (isInstructions(message, inner.content)) {
+        const folded = instructionsMessage(textOf(inner.content), skillOf(transcript.entries, message.sourceToolUseID));
+        return folded ? { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] } : transcript;
+      }
       return user(transcript, inner.content);
     }
     case 'stream_event': return streamed(transcript, message.event);
