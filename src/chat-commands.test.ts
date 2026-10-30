@@ -159,6 +159,7 @@ describe('localCommandOutput', () => {
 
   it('leaves any other message alone', () => {
     expect(localCommandOutput('set the model')).toBeNull();
+    expect(localCommandOutput('<system-reminder>x</system-reminder>')).toBeNull();
   });
 });
 

@@ -65,7 +65,7 @@ describe('notTypedMessage', () => {
     expect(meta('Base directory for this skill: C:\\plugins\\skills\\model-product\n\n# Model')).toMatchObject({ title: 'model-product skill' });
   });
 
-  it('folds a slash command\'s expanded prompt as the command\'s', () => {
+  it('folds plain instructions, a command prompt or a wake-up, as Instructions', () => {
     expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Instructions', body: 'Capture this as a card on the board.' });
   });
 

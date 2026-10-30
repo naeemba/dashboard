@@ -57,20 +57,20 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
 const PLUMBING_TAGS = ['system-reminder', 'local-command-caveat'];
 const IMAGE_SOURCE = /\[Image: source: [^\]]*\]/g;
 
+function withoutPlumbing(text: string): string {
+  return PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_SOURCE, '').trim();
+}
+
+// Whether a message is nothing but plumbing. Hidden as written only when Claude Code marked it as its own.
+export function onlyPlumbing(text: string): boolean {
+  return text.trim() !== '' && withoutPlumbing(text) === '';
+}
+
 // Text Claude Code wrote into the conversation as instructions to Claude rather than as anything said:
 // a skill's body once it loads, or the prompt a slash command expands to. Folded under the skill's
 // name, or as plain instructions, so a page of them never reads as something you typed. Not every one
 // is a command's prompt: a scheduled wake-up or a usage-limit note arrives the same way.
 // 'hidden' when nothing but plumbing is left.
-function withoutPlumbing(text: string): string {
-  return PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_SOURCE, '').trim();
-}
-
-// Whether a message is nothing but plumbing, and so shows nothing wherever it arrives.
-export function onlyPlumbing(text: string): boolean {
-  return text.trim() !== '' && withoutPlumbing(text) === '';
-}
-
 function instructionsMessage(text: string, skill: string | undefined): InjectedMessage | 'hidden' {
   const body = withoutPlumbing(text);
   if (body === '') return 'hidden';
