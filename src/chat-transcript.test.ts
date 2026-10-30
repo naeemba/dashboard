@@ -206,6 +206,6 @@ describe('a command run with !', () => {
 
   it('is the line typed, then a block of what it printed', () => {
     const transcript = fold([said('<bash-input>ls</bash-input>'), said('<bash-stdout>a.txt</bash-stdout><bash-stderr></bash-stderr>')]);
-    expect(transcript.entries).toEqual([{ kind: 'user', text: '! ls', images: [] }, { kind: 'shell', text: 'a.txt' }]);
+    expect(transcript.entries).toEqual([{ kind: 'user', text: '! ls', images: [], ran: true }, { kind: 'shell', text: 'a.txt' }]);
   });
 });

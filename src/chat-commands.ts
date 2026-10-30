@@ -145,8 +145,9 @@ export function droppedFiles<T extends { type: string; path: string }>(files: T[
 }
 
 // A command run with `!` in Claude Code, as a saved session writes it: what was typed in
-// `<bash-input>`, and what it printed in `<bash-stdout>` and `<bash-stderr>` with &, < and > escaped.
-// Read back as the line typed, `! git push`, or as the output, stdout then stderr. Null for anything else.
+// `<bash-input>`, as typed, and what it printed in `<bash-stdout>` and `<bash-stderr>`, where &, < and >
+// are escaped. Read back as the line typed, `! git push`, or as the output, stdout then stderr. Each is
+// the whole message, so a prompt that quotes the tags stays a prompt. Null for anything else.
 export type ShellExchange = { kind: 'input'; text: string } | { kind: 'output'; text: string };
 
 const ENTITIES: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
@@ -158,10 +159,16 @@ function unescaped(text: string): string {
 export function shellExchange(text: string): ShellExchange | null {
   if (!text.includes('<bash-')) return null;
   const input = /^\s*<bash-input>([\s\S]*?)<\/bash-input>\s*$/.exec(text);
-  if (input) return { kind: 'input', text: `! ${unescaped(input[1].trim())}` };
-  const stdout = tagged(text, 'bash-stdout');
-  const stderr = tagged(text, 'bash-stderr');
-  if (stdout === undefined && stderr === undefined) return null;
-  const printed = [stdout, stderr].map((part) => unescaped(part ?? '').trimEnd()).filter(Boolean);
+  if (input) return { kind: 'input', text: `! ${input[1].trim()}` };
+  const output = /^\s*<bash-stdout>([\s\S]*?)<\/bash-stdout>\s*(?:<bash-stderr>([\s\S]*?)<\/bash-stderr>)?\s*$/.exec(text);
+  if (!output) return null;
+  const printed = [output[1], output[2]].map((part) => unescaped(part ?? '').trimEnd()).filter(Boolean);
   return { kind: 'output', text: printed.join('\n') };
+}
+
+// Which of an entry's blocks the copy key copies: the first, then the next on each press while the
+// same entry stays selected, round to the first again. Null when the entry has none.
+export function nextCopyBlock(previous: { entry: number; block: number } | null, entry: number, count: number): number | null {
+  if (count === 0) return null;
+  return previous?.entry === entry ? (previous.block + 1) % count : 0;
 }

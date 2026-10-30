@@ -25,16 +25,20 @@ function images(list: ChatImage[]): HTMLImageElement[] {
 }
 
 // A copy button in a code block's corner, for what the block holds. It shows a tick for a moment once
-// the text is on the clipboard.
-function withCopy(pre: HTMLPreElement): HTMLPreElement {
+// the text is on the clipboard. The button sits in a wrapper around the block, not in it: the block
+// scrolls sideways, and a button inside would scroll away with a long line. A block already in the
+// page is swapped for its wrapper in place.
+function withCopy(pre: HTMLElement): HTMLElement {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'chat-block';
+  pre.replaceWith(wrapper);
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'chat-copy';
   button.title = 'Copy';
   button.append(icon('copy'));
   let reverting = 0;
-  button.addEventListener('click', (event) => {
-    event.stopPropagation();
+  button.addEventListener('click', () => {
     const text = (pre.querySelector('code') ?? pre).textContent ?? '';
     void navigator.clipboard.writeText(text.replace(/\n$/, '')).then(() => {
       button.replaceChildren(icon('copied'));
@@ -42,8 +46,8 @@ function withCopy(pre: HTMLPreElement): HTMLPreElement {
       reverting = window.setTimeout(() => button.replaceChildren(icon('copy')), 1200);
     });
   });
-  pre.append(button);
-  return pre;
+  wrapper.append(pre, button);
+  return wrapper;
 }
 
 function preformatted(className: string, text: string): HTMLPreElement {
@@ -63,6 +67,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     const plan = document.createElement('div');
     plan.className = 'chat-plan chat-text';
     plan.innerHTML = renderMarkdown(input.plan);
+    plan.querySelectorAll('pre').forEach(withCopy);
     parts.push(plan);
   } else if (diff) {
     const pre = document.createElement('pre');
@@ -73,12 +78,12 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
       row.textContent = `${line.sign} ${line.text}\n`;
       return row;
     }));
-    parts.push(pre);
+    parts.push(withCopy(pre));
   } else {
-    parts.push(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2)));
+    parts.push(withCopy(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2))));
   }
   if (result) {
-    if (result.text) parts.push(preformatted(result.isError ? 'chat-output chat-error' : 'chat-output', result.text));
+    if (result.text) parts.push(withCopy(preformatted(result.isError ? 'chat-output chat-error' : 'chat-output', result.text)));
     parts.push(...images(result.images));
   }
   return parts;
@@ -118,7 +123,8 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
     return { entry, element, fill: null };
   }
   if (entry.kind === 'shell') {
-    element.append(withCopy(preformatted('chat-output', entry.text || '(no output)')));
+    // Nothing to copy when it printed nothing, so the placeholder gets no button.
+    element.append(entry.text ? withCopy(preformatted('chat-output', entry.text)) : preformatted('chat-output', '(no output)'));
     return { entry, element, fill: null };
   }
   if (entry.kind === 'user') {

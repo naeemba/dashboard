@@ -95,8 +95,9 @@
   border-radius: var(--radius);
 }
 
-/* A copy button in a code block's top right corner, shown while the pointer is over the block. */
-.chat-entry pre {
+/* A copy button in a code block's top right corner, shown while the pointer is over the block. It sits
+   in a wrapper around the block, so it stays put when the block scrolls sideways. */
+.chat-block {
   position: relative;
 }
 
@@ -116,7 +117,7 @@
   transition: opacity 120ms;
 }
 
-.chat-entry pre:hover .chat-copy,
+.chat-block:hover .chat-copy,
 .chat-copy:focus-visible {
   opacity: 1;
 }

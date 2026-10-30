@@ -535,7 +535,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'image' }, mac: 'Alt+I', other: 'Alt+I',
   },
   {
-    name: 'claude-copy', description: 'Copy the selected entry\'s code block',
+    name: 'claude-copy', description: 'Copy the selected entry\'s next code block',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'copy' }, mac: 'Alt+C', other: 'Alt+C',
   },
   {

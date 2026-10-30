@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -159,5 +159,24 @@ describe('shellExchange', () => {
 
   it('leaves any other message alone', () => {
     expect(shellExchange('push it')).toBeNull();
+    expect(shellExchange("Why does `shellExchange('<bash-stdout>done</bash-stdout>')` fail here?")).toBeNull();
+    expect(shellExchange('see <bash-input>ls</bash-input> above')).toBeNull();
+  });
+
+  it('keeps the line typed as it was typed', () => {
+    expect(shellExchange("<bash-input>echo '&amp;' > x</bash-input>")).toEqual({ kind: 'input', text: "! echo '&amp;' > x" });
+  });
+});
+
+describe('nextCopyBlock', () => {
+  it('starts at the first block and walks on while the same entry is selected', () => {
+    expect(nextCopyBlock(null, 3, 2)).toBe(0);
+    expect(nextCopyBlock({ entry: 3, block: 0 }, 3, 2)).toBe(1);
+    expect(nextCopyBlock({ entry: 3, block: 1 }, 3, 2)).toBe(0);
+    expect(nextCopyBlock({ entry: 5, block: 1 }, 3, 2)).toBe(0);
+  });
+
+  it('has nothing to copy in an entry with no block', () => {
+    expect(nextCopyBlock(null, 3, 0)).toBeNull();
   });
 });
