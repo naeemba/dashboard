@@ -36,6 +36,10 @@ export function imagesFit(base64Lengths: number[]): boolean {
 
 export type ChatImage = { mediaType: string; data: string };
 
+export function imageDataUrl(picture: ChatImage): string {
+  return `data:${picture.mediaType};base64,${picture.data}`;
+}
+
 // A tool's output past this is cut when it arrives. A `cat` of a lockfile is a hundred thousand
 // lines nobody reads in a chat, and the transcript would hold every one for the whole session.
 const RESULT_LIMIT = 20_000;

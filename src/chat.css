@@ -97,11 +97,15 @@
   color: var(--blue);
 }
 
-.chat-image {
+/* An image in the conversation, a markdown one included, is a thumbnail of a fixed size; a click
+   shows it full size in the app. */
+.chat-image, .chat-log img {
   display: block;
-  max-width: 100%;
-  max-height: 480px;
+  max-width: min(100%, 360px);
+  max-height: 240px;
   margin: 6px 0;
+  border-radius: 5px;
+  cursor: zoom-in;
 }
 
 .chat-tool summary {
@@ -207,10 +211,19 @@
   font-size: 12px;
 }
 
-.chat-attached span {
-  padding: 0 6px;
+.chat-attached img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
   border: 1px solid var(--line);
   border-radius: 5px;
+  cursor: zoom-in;
+}
+
+/* An image dragged over the screen: the box it will land in says so. */
+.chat.dropping .chat-prompt {
+  border-color: var(--blue);
+  background: var(--tint);
 }
 
 .chat-prompt {

@@ -475,3 +475,23 @@
   background: var(--yellow);
   border-radius: 2px;
 }
+
+/* An image shown full size: the box is the image, as large as the window lets it be, on the sheet's
+   centre rather than near its top like a question. */
+.image-viewer {
+  padding-top: 0;
+}
+
+.image-viewer-dialog {
+  align-self: center;
+  width: auto;
+  max-height: 90vh;
+  cursor: zoom-out;
+}
+
+.image-viewer-dialog img {
+  display: block;
+  max-width: 92vw;
+  max-height: 90vh;
+  object-fit: contain;
+}

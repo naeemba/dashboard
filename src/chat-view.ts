@@ -11,13 +11,13 @@ import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { statusGroups, toneOf, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { searchOverlay } from './overlay';
+import { imageOverlay, searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -78,7 +78,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
-  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste an image to attach it.';
+  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
   prompt.rows = 3;
   prompt.dir = 'auto';
   const menu = createCommandMenu();
@@ -263,10 +263,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function drawAttached(): void {
-    attached.replaceChildren(...images.map((_picture, index) => {
-      const chip = document.createElement('span');
-      chip.textContent = `image ${index + 1}`;
-      return chip;
+    attached.replaceChildren(...images.map((picture, index) => {
+      const thumbnail = document.createElement('img');
+      thumbnail.src = imageDataUrl(picture);
+      thumbnail.alt = `image ${index + 1}`;
+      return thumbnail;
     }));
   }
 
@@ -339,10 +340,32 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   });
 
+  // Images pasted into the box or dropped anywhere on the screen are attached to the next prompt. The
+  // window cancels every drop's default, so a file dropped here never replaces the page.
+  function imageFiles(list: FileList | undefined): File[] {
+    return [...list ?? []].filter((file) => (IMAGE_TYPES as readonly string[]).includes(file.type));
+  }
+
   prompt.addEventListener('paste', (event) => {
-    const files = [...event.clipboardData?.files ?? []].filter((file) => (IMAGE_TYPES as readonly string[]).includes(file.type));
+    const files = imageFiles(event.clipboardData?.files);
     if (files.length === 0) return;
     event.preventDefault();
+    attach(files);
+  });
+
+  element.addEventListener('dragover', () => element.classList.add('dropping'));
+  element.addEventListener('dragleave', (event) => {
+    if (!(event.relatedTarget instanceof Node && element.contains(event.relatedTarget))) element.classList.remove('dropping');
+  });
+  element.addEventListener('drop', (event) => {
+    element.classList.remove('dropping');
+    const files = imageFiles(event.dataTransfer?.files);
+    if (files.length === 0) return;
+    attach(files);
+    prompt.focus();
+  });
+
+  function attach(files: File[]): void {
     for (const file of files) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -356,11 +379,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
       };
       reader.readAsDataURL(file);
     }
-  });
+  }
 
   // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
   // decides what is safe to hand the system, never in this window.
+  // An image, in the log or attached, opens full size over the app.
   element.addEventListener('click', (event) => {
+    if (event.target instanceof HTMLImageElement) {
+      event.preventDefault();
+      imageOverlay(event.target.src);
+      return;
+    }
     const link = event.target instanceof Element ? event.target.closest('a') : null;
     if (!link) return;
     event.preventDefault();
