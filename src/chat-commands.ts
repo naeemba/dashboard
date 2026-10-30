@@ -10,7 +10,9 @@ import type { SearchRow } from './overlay';
 // as a prompt, skills and the project's own commands included; what the screen adds is the menu that
 // lists them as you type, and the few commands that are a terminal dialog in Claude Code and that the
 // session answers with "isn't available in this environment". Those are the screen's own and never
-// reach the session.
+// reach the session. The file also holds the screen's other small decisions about what was typed or
+// pressed there: reading a `!` command's exchange back out of the transcript, and which block the copy
+// key copies.
 
 export type CommandRow = SlashCommand;
 
@@ -106,12 +108,17 @@ export function pickedModel(value: string): string | null {
   return value === 'default' ? null : value;
 }
 
+// What a saved session wrote between `<tag>` and `</tag>`, or undefined when the tag is not there.
+function tagged(text: string, tag: string): string | undefined {
+  return new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1];
+}
+
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags
 // of their own, read back as what was typed. Null for a message that is not one.
 export function typedCommand(text: string): string | null {
-  const name = /<command-name>([\s\S]*?)<\/command-name>/.exec(text)?.[1]?.trim();
+  const name = tagged(text, 'command-name')?.trim();
   if (!name) return null;
-  const args = /<command-args>([\s\S]*?)<\/command-args>/.exec(text)?.[1]?.trim();
+  const args = tagged(text, 'command-args')?.trim();
   const command = name.startsWith('/') ? name : `/${name}`;
   return args ? `${command} ${args}` : command;
 }
@@ -137,4 +144,33 @@ export function droppedFiles<T extends { type: string; path: string }>(files: T[
   const pictures = files.filter((file) => isImageType(file.type));
   const paths = files.filter((file) => !isImageType(file.type)).map((file) => file.path).filter(Boolean);
   return { pictures, paths, refused: files.length > 0 && pictures.length === 0 && paths.length === 0 };
+}
+
+// A command run with `!` in Claude Code, as a saved session writes it: what was typed in
+// `<bash-input>`, as typed, and what it printed in `<bash-stdout>` and `<bash-stderr>`, where &, < and >
+// are escaped. Read back as the line typed, `! git push`, or as the output, stdout then stderr. Each is
+// the whole message, so a prompt that quotes the tags stays a prompt. Null for anything else.
+export type ShellExchange = { kind: 'input'; text: string } | { kind: 'output'; text: string };
+
+const ENTITIES: Record<string, string> = { '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" };
+
+function unescaped(text: string): string {
+  return text.replace(/&(?:lt|gt|amp|quot|#39);/g, (entity) => ENTITIES[entity]);
+}
+
+export function shellExchange(text: string): ShellExchange | null {
+  if (!text.includes('<bash-')) return null;
+  const input = /^\s*<bash-input>([\s\S]*?)<\/bash-input>\s*$/.exec(text);
+  if (input) return { kind: 'input', text: `! ${input[1].trim()}` };
+  const output = /^\s*<bash-stdout>([\s\S]*?)<\/bash-stdout>\s*(?:<bash-stderr>([\s\S]*?)<\/bash-stderr>)?\s*$/.exec(text);
+  if (!output) return null;
+  const printed = [output[1], output[2]].map((part) => unescaped(part ?? '').trimEnd()).filter(Boolean);
+  return { kind: 'output', text: printed.join('\n') };
+}
+
+// Which of an entry's blocks the copy key copies: the first, then the next on each press while the
+// same entry stays selected, round to the first again. Null when the entry has none.
+export function nextCopyBlock(previous: { entry: number; block: number } | null, entry: number, count: number): number | null {
+  if (count === 0) return null;
+  return previous?.entry === entry ? (previous.block + 1) % count : 0;
 }

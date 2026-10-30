@@ -1,6 +1,6 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
-import { typedCommand } from './chat-commands';
+import { shellExchange, typedCommand } from './chat-commands';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -50,10 +50,14 @@ export type ToolResult = { text: string; images: ChatImage[]; isError: boolean }
 // changes — a tool call getting its result — so the view can tell what to redraw by asking whether the
 // object at a position is still the one it drew.
 export type ChatEntry =
-  | { kind: 'user'; text: string; images: ChatImage[] }
+  // `ran` marks the line of a command run with `!`: drawn as typed, but never recalled by Up, since this
+  // screen would send it to Claude as a prompt.
+  | { kind: 'user'; text: string; images: ChatImage[]; ran?: true }
   | { kind: 'text'; text: string }
   | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null }
-  | { kind: 'notice'; text: string };
+  | { kind: 'notice'; text: string }
+  // What a command run with `!` printed. The command itself is a user entry, `! git push`.
+  | { kind: 'shell'; text: string };
 
 export type Transcript = {
   entries: ChatEntry[];
@@ -137,16 +141,22 @@ function user(transcript: Transcript, content: unknown): Transcript {
   let entries = transcript.entries;
   const said: string[] = [];
   const images: ChatImage[] = [];
+  let ran = false;
   for (const block of blocksOf(content)) {
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
-    else if (block.type === 'text') said.push(typedCommand(text(block.text)) ?? text(block.text));
+    else if (block.type === 'text') {
+      const shell = shellExchange(text(block.text));
+      if (shell?.kind === 'output') entries = [...entries, { kind: 'shell', text: shell.text }];
+      if (shell?.kind === 'input') ran = true;
+      if (shell?.kind !== 'output') said.push(shell?.text ?? typedCommand(text(block.text)) ?? text(block.text));
+    }
     if (block.type === 'image') {
       const picture = image(block);
       if (picture) images.push(picture);
     }
   }
-  if (said.length > 0 || images.length > 0) entries = [...entries, { kind: 'user', text: said.join('\n'), images }];
+  if (said.length > 0 || images.length > 0) entries = [...entries, { kind: 'user', text: said.join('\n'), images, ...(ran ? { ran: true as const } : {}) }];
   return { ...transcript, entries };
 }
 

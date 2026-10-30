@@ -288,7 +288,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'The command you typed lasts while the app is running and is gone on restart, and so are the '
     + 'results: a run answers a question you are asking now, and is not a record of anything.',
   claude: 'A Claude Code conversation drawn as a page rather than a terminal: tables as tables, '
-    + 'code highlighted, an image Claude carried inline drawn inline (one from the web is a link, so '
+    + 'code highlighted with a copy button in each block\'s corner (the copy key copies the selected entry\'s first block, then the next on each press; a tool call\'s blocks once it is unfolded), a command run with ! as the line '
+    + 'typed and a block of what it printed, an image Claude carried inline drawn inline (one from the web is a link, so '
     + 'nothing is fetched until you click it), an edit as a diff. It runs in the project\'s folder with the '
     + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
     + 'a pane, as the project\'s main session. It starts when the project opens. '

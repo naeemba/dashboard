@@ -3,9 +3,9 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
-import { onEdgeLine, recall } from './chat-history';
+import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
@@ -102,6 +102,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
   let selected: number | null = null;
+  // The block the copy key copied last, so the next press on the same entry copies the one after it.
+  let copied: { entry: number; block: number } | null = null;
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
   let model: string | null = null;
@@ -333,14 +335,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
   menu.onClick((row) => complete(row, true));
 
-  // The prompts sent in this conversation, oldest first, what Up walks back through.
-  function sentPrompts(): string[] {
-    return transcript.entries.flatMap((entry) => (entry.kind === 'user' && entry.text.trim() ? [entry.text] : []));
-  }
-
   function walkHistory(direction: -1 | 1): boolean {
     if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
-    const sent = sentPrompts();
+    const sent = sentPrompts(transcript.entries);
     const moved = recall(sent.length, recalled, direction);
     if (!moved) return false;
     if (recalled === null) draft = prompt.value;
@@ -451,6 +448,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   });
 
   function select(index: number | null): void {
+    // Only a move resets the copy walk: the copy key's own click bubbles here and selects the same entry.
+    if (index !== selected) copied = null;
     drawn[selected ?? -1]?.element.classList.remove('selected');
     selected = index === null || drawn.length === 0 ? null : clampIndex(index, drawn.length - 1);
     if (selected === null) return;
@@ -606,6 +605,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'image') {
         const source = (selected === null ? attached : drawn[selected].element).querySelector('img')?.src;
         if (source) imageOverlay(source);
+      }
+      // The same button a click on the block presses, so the tick shows which block was copied.
+      if (command === 'copy' && selected !== null) {
+        const buttons = drawn[selected].element.querySelectorAll<HTMLButtonElement>('.chat-copy');
+        const block = nextCopyBlock(copied, selected, buttons.length);
+        if (block === null) options.onNotice('This entry has no block to copy. A tool call shows its blocks once unfolded.');
+        else {
+          buttons[block].click();
+          copied = { entry: selected, block };
+        }
       }
       if (command === 'model') configure({ model: next(MODELS, model) });
       if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });

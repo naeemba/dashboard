@@ -2,8 +2,8 @@
 // whole set is one list to read, and so a screen asks for `icon('rocket')` without knowing which
 // library drew it. Each one is stroked in currentColor and takes the colour of the text around it.
 import {
-  ArrowDownWideNarrow, Bitcoin, Bot, Calendar, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
-  CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, CornerLeftUp, createElement,
+  ArrowDownWideNarrow, Bitcoin, Bot, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
+  CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, Copy, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, Plug, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees, X,
@@ -25,6 +25,8 @@ const ICONS = {
   coins: Coins,
   command: SquareTerminal,
   comments: MessageSquare,
+  copied: Check,
+  copy: Copy,
   doing: CircleDot,
   dollar: DollarSign,
   done: CircleCheck,
