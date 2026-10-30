@@ -495,7 +495,8 @@ function spawnTerminal(id: string): void {
 // with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
-  const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, terminalId(projectIndex, MAIN_INDEX)), project.path, realPath);
+  const mainId = terminalId(projectIndex, MAIN_INDEX);
+  const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, mainId), project.path, realPath);
   // Main is the Claude screen in the terminals view's left column, run through the Agent SDK, not a pane.
   chats.open(projectIndex, first.session);
   for (const index of claudeSessions.owedResumes(project.path)) {
@@ -507,6 +508,7 @@ function spawnProject(project: Project, projectIndex: number): void {
   if (first.worker) {
     const id = terminalId(projectIndex, nextPaneIndex(openPanes(projectIndex)));
     terminalCommands.set(id, { args: [], directory: project.path });
+    claudeSessions.moveResume(mainId, id);
     resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });

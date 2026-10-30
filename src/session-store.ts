@@ -20,6 +20,8 @@ type ClaudeSessions = {
   takeResume(projectPath: string, index: number, id: string): PaneConversation | null;
   // The panes of this project with a conversation still to resume; resume-ledger.ts says what for.
   owedResumes(projectPath: string): number[];
+  // A taken conversation that resumes in another pane than the one it was taken for.
+  moveResume(fromId: string, toId: string): void;
   // Where every live session is, from a sweep or from Quit.
   placed(placement: SessionPlacement): void;
 };
@@ -54,6 +56,7 @@ export function sessionStore(
   return {
     takeResume: (projectPath, index, id) => ledger.take(projectPath, index, id, Date.now()),
     owedResumes: (projectPath) => ledger.owed(projectPath),
+    moveResume: (fromId, toId) => ledger.move(fromId, toId),
     placed(placement) {
       ledger.place(placement);
       write();
