@@ -25,6 +25,7 @@ export type ChatEvent =
 // The images the API takes, and so the only ones a pasted image is sent as.
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export type ImageType = typeof IMAGE_TYPES[number];
+export const isImageType = (type: string): boolean => (IMAGE_TYPES as readonly string[]).includes(type);
 
 // The API refuses an image whose base64 is over 5 MB, so a bigger paste would only end the turn in an
 // error. The cap is on all of a prompt's images together, which also keeps a prompt sent from the

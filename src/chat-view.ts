@@ -13,7 +13,7 @@ import { revealed } from './chat-reveal';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, IMAGE_TYPES, imageDataUrl, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  applyEvent, EMPTY_TRANSCRIPT, imageDataUrl, isImageType, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
@@ -366,10 +366,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   // Images pasted into the box or dropped anywhere on the screen are attached to the next prompt. The
   // window cancels every drop's default, so a file dropped here never replaces the page.
-  const isPicture = (file: File) => (IMAGE_TYPES as readonly string[]).includes(file.type);
-
   prompt.addEventListener('paste', (event) => {
-    const files = [...event.clipboardData?.files ?? []].filter(isPicture);
+    const files = [...event.clipboardData?.files ?? []].filter((file) => isImageType(file.type));
     if (files.length === 0) return;
     event.preventDefault();
     attach(files);
