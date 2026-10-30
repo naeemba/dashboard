@@ -366,6 +366,34 @@
   display: none;
 }
 
+.chat-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 30%;
+  overflow-y: auto;
+  padding: 4px 2px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.chat-tasks[hidden] {
+  display: none;
+}
+
+.chat-task-name {
+  color: var(--white);
+}
+
+.chat-task-detail {
+  margin-left: 8px;
+  color: var(--muted);
+}
+
+.chat-task-summary {
+  color: var(--muted);
+}
+
 .chat-spinner {
   display: inline-block;
   color: var(--yellow);

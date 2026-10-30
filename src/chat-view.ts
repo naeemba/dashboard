@@ -17,6 +17,7 @@ import {
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
+import { createTaskStrip } from './chat-task-strip';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { imageOverlay, searchOverlay } from './overlay';
@@ -97,7 +98,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  element.append(log, activity, ask.element, menu.element, attached, prompt, foot);
+  const tasks = createTaskStrip();
+  element.append(log, tasks.element, activity, ask.element, menu.element, attached, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
@@ -183,6 +185,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
     drawWorking();
+    tasks.render(transcript.tasks);
     if (stick) log.scrollTop = log.scrollHeight;
   }
 

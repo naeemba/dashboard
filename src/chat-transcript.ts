@@ -2,6 +2,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
+import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
@@ -81,10 +82,12 @@ export type Transcript = {
   // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
   // than in the view, so a question mid-turn does not start the clock over.
   started: number | null;
+  // The agents, workflows and background commands running now (chat-tasks.ts).
+  tasks: ChatTasks;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null,
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [],
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -239,7 +242,10 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
       }
-      return transcript;
+      {
+        const tasks = applyTaskMessage(transcript.tasks, message);
+        return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
+      }
     default: return transcript;
   }
 }
