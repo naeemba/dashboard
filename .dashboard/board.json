@@ -31,6 +31,12 @@
           "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
           "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
           "priority": "low"
+        },
+        {
+          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+          "title": "Terminal drop types '' for a file with no path on disk",
+          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+          "priority": "medium"
         }
       ]
     },
