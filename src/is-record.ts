@@ -3,3 +3,8 @@
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+// A value read off a message that should be a string, or '' when it is missing or something else.
+export function stringOrEmpty(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}

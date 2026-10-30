@@ -3,7 +3,7 @@ import type { ChatContent } from './bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
-import { isRecord } from './is-record';
+import { isRecord, stringOrEmpty } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
 
@@ -95,9 +95,7 @@ const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: nul
 
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
-function text(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
+const text = stringOrEmpty;
 
 function image(block: Record<string, unknown>): ChatImage | null {
   const source = block.source;
@@ -212,6 +210,13 @@ function skillOf(entries: ChatEntry[], id: unknown): string | undefined {
   return call?.kind === 'tool' && typeof call.input.skill === 'string' ? call.input.skill : undefined;
 }
 
+// A system message about the running tasks, folded into them; the same transcript for any other, so
+// nothing redraws.
+function withTasks(transcript: Transcript, message: Record<string, unknown>): Transcript {
+  const tasks = applyTaskMessage(transcript.tasks, message);
+  return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
+}
+
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call
 // that started it and are left out: the call's folded line and its result say what it did.
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
@@ -242,10 +247,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
       }
-      {
-        const tasks = applyTaskMessage(transcript.tasks, message);
-        return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
-      }
+      return withTasks(transcript, message);
     default: return transcript;
   }
 }

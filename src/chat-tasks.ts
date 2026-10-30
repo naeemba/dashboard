@@ -1,5 +1,5 @@
+import { isRecord, stringOrEmpty as text } from './is-record';
 import { formatTokens } from './usage';
-import { isRecord } from './is-record';
 
 // The agents, workflows and background commands Claude has running, as the strip over the box lists
 // them. The session streams them as system messages — task_started, task_progress, task_updated,
@@ -11,8 +11,7 @@ export type ChatTask = {
   description: string;
   // An agent's type, "general-purpose" or a custom agent's name; a workflow's name; or the kind of task.
   kind: string;
-  // How deep the task sits under the agent that started it, 0 for one the main thread started.
-  depth: number;
+  // The task that started it, or null for one the main thread started.
   parent: string | null;
   backgrounded: boolean;
   tools: number;
@@ -26,10 +25,6 @@ export type ChatTasks = readonly ChatTask[];
 
 const ENDED = new Set(['completed', 'failed', 'killed', 'stopped']);
 
-function text(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
 // A task the strip leaves out: Claude Code's own housekeeping, which it marks as not being activity.
 function quiet(message: Record<string, unknown>): boolean {
   return message.ambient === true || message.skip_transcript === true;
@@ -42,11 +37,8 @@ function kindOf(message: Record<string, unknown>): string {
 function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
   const id = text(message.task_id);
   if (!id || quiet(message) || tasks.some((task) => task.id === id)) return tasks;
-  const parent = text(message.parent_task_id) || null;
-  const depth = typeof message.spawn_depth === 'number' ? Math.max(0, message.spawn_depth - 1)
-    : (tasks.find((task) => task.id === parent)?.depth ?? -1) + 1;
   return [...tasks, {
-    id, description: text(message.description), kind: kindOf(message), depth, parent,
+    id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
     backgrounded: message.is_backgrounded === true, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
   }];
 }
@@ -72,7 +64,7 @@ function ended(tasks: ChatTasks, id: unknown): ChatTasks {
 // background_tasks_changed is the whole set of live background tasks, so a background task missing
 // from it has ended, and one there that the strip never saw start (a resumed one) is added.
 function replaced(tasks: ChatTasks, listed: unknown): ChatTasks {
-  const live = (Array.isArray(listed) ? listed.filter(isRecord) : []).filter((entry) => !quiet(entry));
+  const live = Array.isArray(listed) ? listed.filter(isRecord) : [];
   const ids = new Set(live.map((entry) => text(entry.task_id)));
   let next: ChatTasks = tasks.filter((task) => !task.backgrounded || ids.has(task.id));
   for (const entry of live) next = started(next, { ...entry, is_backgrounded: true });
@@ -97,13 +89,14 @@ export function applyTaskMessage(tasks: ChatTasks, message: Record<string, unkno
   }
 }
 
-// The tasks in the order the strip draws them: each under the one that started it.
-export function taskOrder(tasks: ChatTasks): ChatTask[] {
+// The tasks in the order the strip draws them, each under the one that started it with how deep it
+// sits, 0 for one the main thread started. A task whose starter is not listed sits at the top.
+export function taskOrder(tasks: ChatTasks): { task: ChatTask; depth: number }[] {
   const ids = new Set(tasks.map((task) => task.id));
-  const under = (parent: string | null): ChatTask[] => tasks
+  const under = (parent: string | null, depth: number): { task: ChatTask; depth: number }[] => tasks
     .filter((task) => (task.parent !== null && ids.has(task.parent) ? task.parent : null) === parent)
-    .flatMap((task) => [task, ...under(task.id)]);
-  return under(null);
+    .flatMap((task) => [{ task, depth }, ...under(task.id, depth + 1)]);
+  return under(null, 0);
 }
 
 // One row's text after its description: what kind of task, then what it has done so far.

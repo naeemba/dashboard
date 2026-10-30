@@ -391,6 +391,7 @@
 }
 
 .chat-task-summary {
+  display: block;
   color: var(--muted);
 }
 

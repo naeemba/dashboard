@@ -41,6 +41,6 @@ describe('applyTaskMessage', () => {
 describe('taskOrder', () => {
   it('puts each task under the one that started it, a level deeper', () => {
     const tasks = fold([startedTask('lead'), startedTask('other'), startedTask('helper', { parent_task_id: 'lead' })]);
-    expect(taskOrder(tasks).map((task) => [task.id, task.depth])).toEqual([['lead', 0], ['helper', 1], ['other', 0]]);
+    expect(taskOrder(tasks).map(({ task, depth }) => [task.id, depth])).toEqual([['lead', 0], ['helper', 1], ['other', 0]]);
   });
 });
