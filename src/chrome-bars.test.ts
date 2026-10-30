@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tabShape, type Tab } from './chrome-bars';
+import { showsAddPane, tabShape, type Tab } from './chrome-bars';
 
 const tab = (name: string, marks: Partial<Tab> = {}): Tab =>
   ({ name, active: false, waiting: false, manager: false, ...marks });
@@ -12,5 +12,16 @@ describe('tabShape', () => {
   it('stays the same when only the marks change, so the buttons are kept', () => {
     expect(tabShape([tab('web'), tab('api')]))
       .toBe(tabShape([tab('web', { active: true }), tab('api', { waiting: true })]));
+  });
+});
+
+describe('showsAddPane', () => {
+  it('shows on a project\'s terminals view, where its workers are', () => {
+    expect(showsAddPane('terminals', true)).toBe(true);
+  });
+
+  it('hides on any other view, and on a page with no worker list', () => {
+    expect(showsAddPane('board', true)).toBe(false);
+    expect(showsAddPane('terminals', false)).toBe(false);
   });
 });

@@ -59,3 +59,27 @@ export function createModeSwitch(onPick: (mode: ProjectMode) => void): {
     },
   };
 }
+
+// Whether the new-pane button is in the title row. It acts on the project in front, so it is there only
+// while that project's workers are: on its terminals view, and never on the manager or a project whose
+// folder has gone, which have no worker list.
+export function showsAddPane(mode: string, hasWorkers: boolean): boolean {
+  return mode === 'terminals' && hasWorkers;
+}
+
+// The new-pane key's twin, at the right end of the title row: in the worker list it would cost the list a
+// row of its own. It takes no keyboard, so a click leaves it where it was.
+export function createAddPaneButton(onClick: () => void): { element: HTMLElement; render(shown: boolean): void } {
+  const element = document.createElement('button');
+  element.type = 'button';
+  element.className = 'add-pane';
+  element.textContent = '+ New pane';
+  element.addEventListener('mousedown', (event) => event.preventDefault());
+  element.addEventListener('click', onClick);
+  return {
+    element,
+    render(shown) {
+      element.hidden = !shown;
+    },
+  };
+}

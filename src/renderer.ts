@@ -12,7 +12,7 @@ import './worktrees.css';
 import './usage.css';
 import './manager.css';
 import { openHelp } from './help';
-import { createModeSwitch, createTabStrip } from './chrome-bars';
+import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './chrome-bars';
 import { mapShortcut, type Action } from './shortcuts';
 import { failureText } from './failure';
 import { createStatusError } from './status-error';
@@ -101,7 +101,8 @@ const showError = statusError.show;
 const showNotice = statusError.notice;
 statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
-document.getElementById('title')?.append(tabStrip.element);
+const addPaneButton = createAddPaneButton(() => addPane(pages[activeIndex]));
+document.getElementById('title')?.append(tabStrip.element, addPaneButton.element);
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 let activeIndex = 0;
@@ -245,6 +246,7 @@ function renderStatus(rowsOnly = false): void {
     manager: entry.manager !== null,
   })));
   modeSwitch.render(page.mode, page.manager === null && !page.project.missing);
+  addPaneButton.render(showsAddPane(page.mode, page.workers !== null));
   statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames([...mainEntry(page), ...namedPanes(page)]));
   saveSession();
 }
@@ -428,11 +430,10 @@ const builder = createPageBuilder({
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
-  addPane: (page) => addPane(page),
   closePane: (page, index) => closePane(page, index, panePorts),
 });
 
-// The new-pane key and the button above the list. Main opens it and answers with the list that has it
+// The new-pane key and its button in the title row. Main opens it and answers with the list that has it
 // on, the way an open does, so the pane is on this page before it is given the keyboard.
 function addPane(page: Page): void {
   void openWorker(page.slot).then((index) => {

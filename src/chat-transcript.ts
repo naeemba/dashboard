@@ -1,6 +1,6 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
-import { shellExchange, typedCommand } from './chat-commands';
+import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { injectedMessage } from './chat-events';
 import { isRecord } from './is-record';
 import type { PermissionAsk } from './chat-permission';
@@ -154,6 +154,12 @@ function user(transcript: Transcript, content: unknown): Transcript {
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
     else if (block.type === 'text') {
+      // A slash command's output is the notice it is, not something you said.
+      const printed = localCommandOutput(text(block.text));
+      if (printed !== null) {
+        if (printed) entries = [...entries, { kind: 'notice', text: printed }];
+        continue;
+      }
       const shell = shellExchange(text(block.text));
       if (shell?.kind === 'output') entries = [...entries, { kind: 'shell', text: shell.text }];
       if (shell?.kind === 'input') ran = true;
@@ -185,9 +191,13 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
 
 // A stopped turn says so once: the session has usually written its own stop into the conversation
 // already, just before the result.
+// The SDK's own diagnostic in a result's errors, `[ede_diagnostic] result_type=...`, says how the turn
+// ended for whoever debugs the SDK, not what went wrong for you, and is left out.
+const DIAGNOSTIC = /^\[ede_diagnostic\]/;
+
 function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefined): string | null {
   if (message.subtype === 'success' && message.is_error !== true) return null;
-  const errors = Array.isArray(message.errors) ? message.errors.map(String) : [];
+  const errors = Array.isArray(message.errors) ? message.errors.map(String).filter((error) => !DIAGNOSTIC.test(error)) : [];
   if (errors.length > 0) return errors.join('\n');
   if (message.subtype === 'error_during_execution') return last?.kind === 'notice' && last.text === STOPPED.text ? null : STOPPED.text;
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';

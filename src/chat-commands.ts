@@ -158,6 +158,16 @@ export function shellExchange(text: string): ShellExchange | null {
   return { kind: 'output', text: printed.join('\n') };
 }
 
+// What a slash command Claude Code ran itself printed, as a saved session writes it: its output in
+// `<local-command-stdout>` or `<local-command-stderr>`, with the escapes undone. A
+// `<local-command-caveat>` is the note to Claude that rides along with one and reads as '', shown as
+// nothing. Null for a message that is neither.
+export function localCommandOutput(text: string): string | null {
+  if (/^\s*<local-command-caveat>[\s\S]*<\/local-command-caveat>\s*$/.test(text)) return '';
+  const output = /^\s*<local-command-(?:stdout|stderr)>([\s\S]*?)<\/local-command-(?:stdout|stderr)>\s*$/.exec(text);
+  return output ? unescaped(output[1]).trim() : null;
+}
+
 // Which of an entry's blocks the copy key copies: the first, then the next on each press while the
 // same entry stays selected, round to the first again. Null when the entry has none.
 export function nextCopyBlock(previous: { entry: number; block: number } | null, entry: number, count: number): number | null {

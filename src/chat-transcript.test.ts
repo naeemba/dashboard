@@ -66,6 +66,18 @@ describe('applyMessage', () => {
     expect(transcript.entries).toEqual([{ kind: 'notice', text: 'too many' }]);
   });
 
+  it('leaves the SDK\'s diagnostic out of why a turn ended', () => {
+    const ended = { type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null'] };
+    expect(applyMessage(prompted('hi'), ended).entries.at(-1)).toEqual({ kind: 'notice', text: 'Stopped.' });
+  });
+
+  it('draws what a slash command printed as a notice, and its caveat as nothing', () => {
+    const said = (content: string) => ({ type: 'user', parent_tool_use_id: null, message: { content } });
+    const ran = fold([said('<local-command-caveat>Run directly in Claude Code.</local-command-caveat>'),
+      said('<local-command-stdout>Set model to `opus`</local-command-stdout>')], EMPTY_TRANSCRIPT);
+    expect(ran.entries).toEqual([{ kind: 'notice', text: 'Set model to `opus`' }]);
+  });
+
   it('says a turn stopped by Escape was stopped', () => {
     expect(applyMessage(prompted('hi'), { type: 'result', subtype: 'error_during_execution', is_error: true }).entries.at(-1))
       .toEqual({ kind: 'notice', text: 'Stopped.' });

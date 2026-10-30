@@ -31,7 +31,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'sending main a message, and says so on its pane either way: a yellow edge while it waits on a '
     + 'permission, which rings like a bell and raises a notification, and a green one when its turn is '
     + 'over. Going to the pane clears the edge, and so does the worker getting back to work. Main only '
-    + 'runs a worker in, or closes, a pane it started or one with nothing running in it. The new-pane key, or the button above the list, opens '
+    + 'runs a worker in, or closes, a pane it started or one with nothing running in it. The new-pane key, or the button at the right end of the title row, opens '
     + 'a plain shell at the bottom of it. The close key, or the cross in a worker\'s corner, closes it, '
     + 'asking first if something still runs in it; the fold key, or the arrow beside the cross, folds it '
     + 'to its name so the others share its room, and a click on the name or moving to it opens it again. The first focus key is main and the next eight count down the '

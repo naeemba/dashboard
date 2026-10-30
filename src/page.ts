@@ -54,8 +54,6 @@ export type PageOptions = {
   worktrees(): readonly WorktreeEntry[];
   // A file path clicked in one of the page's panes, which the renderer opens in the page's nvim.
   openFile(page: Page, index: number, link: FileLink): void;
-  // The button above the worker list, which does what the new-pane key does.
-  addPane(page: Page): void;
   // A worker's close button, which does what the close key does.
   closePane(page: Page, index: number): void;
 };
@@ -539,19 +537,11 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       return page;
     }
     element.append(...Object.values(views));
-    // Main on the left, full height; down the right, the button that opens another worker and under it
-    // the workers in a list that scrolls once there are more than fit. The button sits outside the list,
-    // so scrolling never takes it off the screen.
-    const column = document.createElement('div');
-    column.className = 'worker-column';
-    const add = document.createElement('button');
-    add.className = 'add-pane';
-    add.textContent = '+ New pane';
-    add.addEventListener('click', () => options.addPane(page));
+    // Main on the left, full height; down the right, the workers in a list that scrolls once there are
+    // more than fit. The button that opens another one is in the title row, so it costs the list no row.
     page.workers = document.createElement('div');
     page.workers.className = 'workers';
-    column.append(add, page.workers);
-    views.terminals.append(column);
+    views.terminals.append(page.workers);
     for (const index of open) addPane(page, index);
     const editorId = terminalId(slot, EDITOR_INDEX);
     page.editor = buildPane(views.nvim, editorId, page, EDITOR_INDEX);
