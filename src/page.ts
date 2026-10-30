@@ -140,8 +140,9 @@ export function mainHasKeyboard(page: Page): boolean {
 }
 
 // A worker folded to its name, or opened again. The workers left open share the room, so every pane
-// is measured again. A folded pane takes no keyboard: if it had it, by key or by its button, the
-// keyboard goes to main.
+// is measured again. A folded pane takes no keyboard: if the page named it, by key or by its button,
+// the keyboard goes to main. Asked of page.focused rather than document.activeElement, which the
+// browser may already have blurred, and which is the body after a click on the status bar.
 export function toggleFold(page: Page, index: number): void {
   const pane = page.panes.find((each) => each.index === index);
   if (!pane || !isWorker(index)) return;
@@ -149,16 +150,20 @@ export function toggleFold(page: Page, index: number): void {
   pane.element.classList.toggle('folded', pane.folded);
   pane.element.dataset.label = paneLabel(index, undefined, paneName(pane));
   fitPanes(page);
-  if (pane.folded && pane.element.contains(document.activeElement)) {
+  if (pane.folded && page.focused === index) {
     page.focused = MAIN_INDEX;
     focusTerminals(page);
   }
 }
 
-// The keyboard back on whichever of main and the workers last had it.
+// The keyboard back on whichever of main and the workers last had it. A folded worker is opened on the
+// way in: its terminal is hidden, and a hidden textarea cannot take the keyboard, so focusing it alone
+// would leave the keys going wherever they went before while the status bar names this pane.
 export function focusTerminals(page: Page): void {
+  const pane = focusedPane(page);
+  if (pane?.folded) toggleFold(page, pane.index);
   if (mainHasKeyboard(page)) page.chat?.focus();
-  else focusedPane(page)?.terminal.focus();
+  else pane?.terminal.focus();
 }
 
 // The numbers of the terminals view's places in drawn order, main first, which is what pane-layout.ts
@@ -276,9 +281,11 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
         button('reset', 'Close', () => options.closePane(page, index)),
       );
       container.append(controls);
-      // A folded worker opens again on a click anywhere on its bar.
+      // A click anywhere on a folded worker's bar goes to it, which opens it.
       container.addEventListener('click', () => {
-        if (container.classList.contains('folded')) toggleFold(page, index);
+        if (!pane.folded) return;
+        page.focused = index;
+        focusTerminals(page);
       });
     }
 
@@ -375,7 +382,10 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     terminal.onTitleChange((title) => {
       const before = paneName(pane);
       pane.title = title;
-      if (paneName(pane) !== before) options.onChanged();
+      if (paneName(pane) === before) return;
+      // A folded worker's bar shows its name, so it follows the title the way the status bar does.
+      container.dataset.label = paneLabel(index, undefined, paneName(pane));
+      options.onChanged();
     });
     // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
     // to listen for: no reading the output, no guessing from how long it has been quiet.
@@ -423,8 +433,6 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
     // before it would save a session naming the pane you just left.
     terminal.textarea?.addEventListener('focus', () => {
-      // Arriving at a folded worker opens it: the keyboard never types into a pane you cannot see.
-      if (pane.folded) toggleFold(page, index);
       const wasRinging = isRinging(pane.bell);
       pane.bell = 'quiet';
       delete container.dataset.mark;

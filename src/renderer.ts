@@ -23,7 +23,7 @@ import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './connec
 import { openWorktrees, type WorktreeDialog } from './worktree-view';
 import { TITLE_BAR_HEIGHT } from './theme';
 import {
-  EDITOR_INDEX, MAIN_INDEX, closeQuestion, paneFromId, paneLabel, paneName, startsEditor, terminalId,
+  EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from './terminals';
 import { terminalStatus, type StatusPage } from './status';
 import type { Project } from './projects';
@@ -45,9 +45,10 @@ import { closeRefusal, closingPanes } from './close-project';
 import { paneSends } from './pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, fitPage, focusTerminals, toggleFold, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, showMode, toggleZoom, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, showMode, typedNames, type Page,
 } from './page';
 import { neighborPane, paneAtPosition, stepPane } from './pane-layout';
+import { closePane, runPaneAction, type PanePorts } from './pane-actions';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
@@ -428,7 +429,7 @@ const builder = createPageBuilder({
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
   addPane: (page) => addPane(page),
-  closePane: (page, index) => closePane(page, index),
+  closePane: (page, index) => closePane(page, index, panePorts),
 });
 
 // The new-pane key and the button above the list. Main opens it and answers with the list that has it
@@ -439,17 +440,7 @@ function addPane(page: Page): void {
   }, (error: unknown) => showError('pane', `No new pane: ${failureText(error)}`));
 }
 
-// The close key and a worker's close button. A pane whose shell is still alive asks first, since closing
-// stops whatever runs there; one whose shell has exited just goes. Main takes it off the list and every page's
-// list follows; the keyboard goes back to main if it was there.
-function closePane(page: Page, index: number): void {
-  const pane = page.panes.find((each) => each.index === index);
-  if (!pane) return;
-  const close = () => bridge.closePane(page.slot, index).catch((error: unknown) => showError('pane', `Pane not closed: ${failureText(error)}`));
-  const question = closeQuestion(paneLabel(index, undefined, paneName(pane)), pane.exited);
-  if (question === null) return void close();
-  void confirmOverlay(question, 'Enter closes it · Escape keeps it').then((yes) => (yes ? close() : focusTerminals(page)));
-}
+const panePorts: PanePorts = { closePane: (slot, index) => bridge.closePane(slot, index), onError: showError };
 
 // Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
 // live one once the folder exists. A replacement keeps the old page's position in the list.
@@ -723,29 +714,16 @@ function apply(action: Action): void {
     case 'terminal-previous': return focusTerminal(stepPane(openIndices(page), page.focused, -1));
     case 'terminal-move': return focusTerminal(neighborPane(openIndices(page), page.focused, action.direction));
     case 'terminal-add': return addPane(page);
-    case 'terminal-zoom': return toggleZoom(page);
-    case 'terminal-close': return closePane(page, page.focused);
-    case 'terminal-fold': return toggleFold(page, page.focused);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
     case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return focusedPane(page)?.terminal.input(action.data);
-    // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
-    // Wiring, not a decision: getSelection() returning '' is the whole rule, so it has no module or test.
-    case 'terminal-copy': {
-      const selection = focusedPane(page)?.terminal.getSelection();
-      if (selection) void navigator.clipboard.writeText(selection);
-      return;
-    }
-    // paste() rather than input(): it wraps the text in bracketed-paste markers when the shell asked
-    // for them, so a pasted line with a newline in it is not run on arrival.
-    // The pane is taken at the keystroke, so a focus move before the clipboard answers cannot send
-    // the paste to another shell.
-    case 'terminal-paste': {
-      const pane = focusedPane(page);
-      return void navigator.clipboard.readText().then((text) => pane?.terminal.paste(text));
-    }
+    case 'terminal-zoom':
+    case 'terminal-close':
+    case 'terminal-fold':
+    case 'terminal-copy':
+    case 'terminal-paste': return runPaneAction(page, action.kind, panePorts);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
     case 'command-select':
     case 'command-open':
