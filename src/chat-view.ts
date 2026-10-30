@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -233,6 +233,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function showAsk(): void {
     ask.show(asks[0] ?? null);
     drawFoot();
+    // A question hides the working line and its going brings it back, still counting from the turn's start.
+    drawWorking();
   }
 
   // An ask answered here or given up on in main. Only the first is ever on screen, so only its going
@@ -384,19 +386,15 @@ export function createChatView(options: ChatViewOptions): ChatView {
     element.classList.remove('dropping');
     const dropped = [...event.dataTransfer?.files ?? []];
     if (dropped.length === 0) return;
-    const pictures = dropped.filter(isPicture);
-    if (pictures.length > 0) attach(pictures);
-    // Anything else, another kind of file or a folder, goes in the box as an @ mention at the caret.
-    // A file with no path on disk, such as an SVG dragged out of a web page, has nothing to mention.
-    const paths = dropped.filter((file) => !isPicture(file)).map((file) => bridge.getPathForFile(file)).filter(Boolean);
+    const { pictures, paths, refused } = droppedFiles(dropped.map((file) => ({ file, type: file.type, path: bridge.getPathForFile(file) })));
+    if (pictures.length > 0) attach(pictures.map((each) => each.file));
     if (paths.length > 0) {
       const insertion = mentionInsertion(prompt.value.slice(0, prompt.selectionStart), paths.map(fileMention));
       prompt.setRangeText(insertion, prompt.selectionStart, prompt.selectionEnd, 'end');
       // setRangeText fires no input event; the box's own handler forgets a recalled prompt and refreshes the command list.
       prompt.dispatchEvent(new Event('input'));
-    } else if (pictures.length === 0) {
-      options.onNotice('Only PNG, JPEG, GIF, WEBP images or files on disk can be dropped here.');
     }
+    if (refused) options.onNotice('Only PNG, JPEG, GIF, WEBP images or files on disk can be dropped here.');
     prompt.focus();
   });
 

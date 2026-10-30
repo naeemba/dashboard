@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
@@ -188,8 +188,15 @@ describe('the working line\'s count', () => {
   });
 
   it('goes on counting, from the same start, when a prompt is sent while the turn runs', () => {
-    const first = fold([delta('abcd')], prompted('hi'));
-    const joined = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }] });
-    expect([fold([delta('ef')], joined).streamed, joined.started]).toEqual([6, first.started]);
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1_000);
+      const first = fold([delta('abcd')], prompted('hi'));
+      vi.setSystemTime(5_000);
+      const joined = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }] });
+      expect([first.started, fold([delta('ef')], joined).streamed, joined.started]).toEqual([1_000, 6, 1_000]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

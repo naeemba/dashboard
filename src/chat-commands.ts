@@ -2,6 +2,7 @@ import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
 import { isModel } from './chat-status';
+import { IMAGE_TYPES } from './chat-transcript';
 import { fuzzyScore } from './fuzzy';
 import type { SearchRow } from './overlay';
 
@@ -127,4 +128,14 @@ export function fileMention(path: string): string {
 export function mentionInsertion(before: string, mentions: string[]): string {
   const gap = before === '' || /\s$/.test(before) ? '' : ' ';
   return `${gap}${mentions.join(' ')} `;
+}
+
+// What a drop does with each file: a picture is attached, anything else with a path on disk (another
+// kind of file, a folder) goes in the box as an @ mention. A file with no path, such as an SVG dragged
+// out of a web page, has nothing to mention; a drop that leaves nothing at all is refused.
+export function droppedFiles<T extends { type: string; path: string }>(files: T[]): { pictures: T[]; paths: string[]; refused: boolean } {
+  const isPicture = (file: T) => (IMAGE_TYPES as readonly string[]).includes(file.type);
+  const pictures = files.filter(isPicture);
+  const paths = files.filter((file) => !isPicture(file)).map((file) => file.path).filter(Boolean);
+  return { pictures, paths, refused: files.length > 0 && pictures.length === 0 && paths.length === 0 };
 }
