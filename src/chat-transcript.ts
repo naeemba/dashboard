@@ -261,7 +261,8 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   }
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
-    return { ...transcript, ...IDLE, entries: [...transcript.entries, { kind: 'notice', text: said }] };
+    // The tasks went with the process that ran them, and the next one never reports their end.
+    return { ...transcript, ...IDLE, tasks: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
 }

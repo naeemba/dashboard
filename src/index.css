@@ -162,27 +162,6 @@ body *:not(.pane, .pane *) {
   transform: rotate(-90deg);
 }
 
-/* The new-pane key's twin, at the right end of the title row and out of its drag region. No display
-   of its own, so hidden still hides it. */
-.add-pane {
-  flex: none;
-  margin: 0 8px 0 auto;
-  height: 22px;
-  -webkit-app-region: no-drag;
-  padding: 0 12px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.add-pane:hover {
-  background: var(--hover);
-  color: var(--brightWhite);
-}
-
 /* One pane, the whole page. Splits are nvim's business, not the dashboard's. */
 .view-nvim {
   display: grid;

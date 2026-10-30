@@ -34,9 +34,24 @@ function kindOf(message: Record<string, unknown>): string {
   return text(message.subagent_type) || text(message.workflow_name) || text(message.task_type).replace(/_/g, ' ') || 'task';
 }
 
+// A later message about a listed task fills in what it names. A task started in the background joins
+// background_tasks_changed before its task_started, so the row first carries only the task_type, and
+// the task_started's workflow or agent name, or a new parent, has to reach it afterwards.
+function merged(task: ChatTask, message: Record<string, unknown>): ChatTask {
+  const description = text(message.description) || task.description;
+  const kind = text(message.subagent_type) || text(message.workflow_name) || task.kind;
+  const parent = text(message.parent_task_id) || task.parent;
+  if (description === task.description && kind === task.kind && parent === task.parent) return task;
+  return { ...task, description, kind, parent };
+}
+
 function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
   const id = text(message.task_id);
-  if (!id || quiet(message) || tasks.some((task) => task.id === id)) return tasks;
+  if (!id || quiet(message)) return tasks;
+  if (tasks.some((task) => task.id === id)) {
+    const next = tasks.map((task) => (task.id === id ? merged(task, message) : task));
+    return next.every((task, index) => task === tasks[index]) ? tasks : next;
+  }
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
     backgrounded: message.is_backgrounded === true, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,

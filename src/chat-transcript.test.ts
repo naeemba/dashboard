@@ -137,6 +137,12 @@ describe('applyEvent', () => {
     expect(transcript.busy).toBe(false);
     expect(transcript.entries.at(-1)).toEqual({ kind: 'notice', text: 'The session ended: spawn ENOENT' });
   });
+
+  it('drops the tasks the ended session was running', () => {
+    const running = applyMessage(prompted('hi'), { type: 'system', subtype: 'task_started', task_id: 'a', description: 'Review a' });
+    expect(running.tasks).toHaveLength(1);
+    expect(applyEvent(running, { kind: 'ended', error: null }).tasks).toEqual([]);
+  });
 });
 
 describe('imagesFit', () => {

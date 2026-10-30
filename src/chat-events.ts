@@ -59,14 +59,24 @@ const IMAGE_SOURCE = /\[Image: source: [^\]]*\]/g;
 
 // Text Claude Code wrote into the conversation as instructions to Claude rather than as anything said:
 // a skill's body once it loads, or the prompt a slash command expands to. Folded under the skill's
-// name, or as the command's prompt, so a page of instructions never reads as something you typed.
+// name, or as plain instructions, so a page of them never reads as something you typed. Not every one
+// is a command's prompt: a scheduled wake-up or a usage-limit note arrives the same way.
 // 'hidden' when nothing but plumbing is left.
+function withoutPlumbing(text: string): string {
+  return PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_SOURCE, '').trim();
+}
+
+// Whether a message is nothing but plumbing, and so shows nothing wherever it arrives.
+export function onlyPlumbing(text: string): boolean {
+  return text.trim() !== '' && withoutPlumbing(text) === '';
+}
+
 function instructionsMessage(text: string, skill: string | undefined): InjectedMessage | 'hidden' {
-  const body = PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_SOURCE, '').trim();
+  const body = withoutPlumbing(text);
   if (body === '') return 'hidden';
   const directory = /^Base directory for this skill: (\S+)/.exec(body)?.[1];
   const name = skill ?? (directory ? baseName(directory) : undefined);
-  return { title: name ? `${name} skill` : 'Command prompt', body };
+  return { title: name ? `${name} skill` : 'Instructions', body };
 }
 
 // A user message nobody typed, as the one line it folds to, 'hidden' for one with nothing to read, or

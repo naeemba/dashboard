@@ -32,6 +32,22 @@ describe('applyTaskMessage', () => {
     expect(tasks.map((task) => task.id)).toEqual(['fore', 'resumed']);
   });
 
+  it('drops a foreground task moved to the background once the background set no longer lists it', () => {
+    const tasks = fold([startedTask('a'), { type: 'system', subtype: 'task_updated', task_id: 'a', patch: { is_backgrounded: true } },
+      { type: 'system', subtype: 'background_tasks_changed', tasks: [] }]);
+    expect(tasks).toEqual([]);
+  });
+
+  it('takes a workflow\'s name and parent from the task_started that follows its background entry', () => {
+    const tasks = fold([
+      { type: 'system', subtype: 'background_tasks_changed', tasks: [{ task_id: 'w', task_type: 'local_workflow', description: 'Spec' }] },
+      { type: 'system', subtype: 'task_started', task_id: 'w', description: 'Spec', workflow_name: 'spec', parent_task_id: 'p', is_backgrounded: true },
+      { type: 'system', subtype: 'background_tasks_changed', tasks: [{ task_id: 'w', task_type: 'local_workflow', description: 'Spec' }] },
+    ]);
+    expect(taskDetail(tasks[0])).toBe('spec');
+    expect(tasks[0].parent).toBe('p');
+  });
+
   it('keeps the same list for a message that is not about tasks, so nothing redraws', () => {
     const tasks = fold([startedTask('a')]);
     expect(applyTaskMessage(tasks, { type: 'system', subtype: 'status' })).toBe(tasks);

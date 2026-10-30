@@ -66,7 +66,7 @@ describe('notTypedMessage', () => {
   });
 
   it('folds a slash command\'s expanded prompt as the command\'s', () => {
-    expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Command prompt', body: 'Capture this as a card on the board.' });
+    expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Instructions', body: 'Capture this as a card on the board.' });
   });
 
   it('hides what is only plumbing: pasted image sources, a reminder, a local command\'s caveat', () => {

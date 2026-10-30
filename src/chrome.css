@@ -78,6 +78,27 @@
   white-space: nowrap;
 }
 
+/* The new-pane key's twin, at the right end of the title row and out of its drag region. No display
+   of its own, so hidden still hides it. */
+.add-pane {
+  flex: none;
+  margin: 0 8px 0 auto;
+  height: 22px;
+  -webkit-app-region: no-drag;
+  padding: 0 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.add-pane:hover {
+  background: var(--hover);
+  color: var(--brightWhite);
+}
+
 /* A project's views, along the left of the status bar. inline-flex beats the browser's own [hidden],
    so the manager's page, which has no such views, needs the rule beside it. */
 .mode-switch {
