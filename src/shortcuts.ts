@@ -58,11 +58,20 @@ export function isBareCharacter(input: KeyInput): boolean {
 // sees. `manager-page` is the exception that needs more than the mode: the manager shows four views
 // and two of them — board and notes — are modes every project also has, so the page has to say
 // whether it is the manager. The renderer knows — the manager is the page holding MANAGER_SLOT.
-export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean): boolean {
+//
+// `claude` is not a mode either: it is the main session's Claude screen, in the terminals view's left
+// column, and its keys are heard while it holds the keyboard there, alongside the terminals keys.
+export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean, chatFocused = false): boolean {
   if (scope === 'global') return true;
   if (scope === 'manager-page') return onManagerPage && isSection(mode);
+  if (scope === 'claude') return chatFocused && mode === 'terminals';
   return scope === mode;
 }
+
+// The Claude screen's keys ahead of the rest, so where one shares a key with a terminals key — Alt+O,
+// Alt+N, Alt+J/K — the screen holding the keyboard is the one that answers it. They are heard only
+// while it holds it, so the order changes nothing anywhere else.
+const CHAT_FIRST = [...ACTIONS.filter((entry) => entry.scope === 'claude'), ...ACTIONS.filter((entry) => entry.scope !== 'claude')];
 
 // The key naming the mode you are already in belongs to whatever runs there: Ctrl+N completes a word
 // in nvim, Ctrl+T transposes characters in the shell. You leave a mode by naming a different one.
@@ -80,9 +89,10 @@ export function mapShortcut(
   keys: Settings['keys'],
   mode: Mode = 'terminals',
   onManagerPage = false,
+  chatFocused = false,
 ): Action | null {
-  for (const entry of ACTIONS) {
-    if (!hears(entry.scope, mode, onManagerPage)) continue;
+  for (const entry of CHAT_FIRST) {
+    if (!hears(entry.scope, mode, onManagerPage, chatFocused)) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
     if (passesThrough(entry, mode)) return null;
     return entry.action;

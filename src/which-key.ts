@@ -61,10 +61,10 @@ function remainingKeys(entry: ActionEntry, held: Held, keys: Settings['keys']): 
 // The rows themselves are built where the help dialog's are, so the two lists cannot come to disagree
 // about when a numbered run may print as a range, or about what a passed-through key says.
 export function whichKeyRows(
-  held: Held, keys: Settings['keys'], mode: Mode, onManagerPage: boolean, isMac: boolean,
+  held: Held, keys: Settings['keys'], mode: Mode, onManagerPage: boolean, isMac: boolean, chatFocused = false,
 ): Shortcut[] {
   return shortcutRows({
-    wants: (entry) => hears(entry.scope, mode, onManagerPage),
+    wants: (entry) => hears(entry.scope, mode, onManagerPage, chatFocused),
     label: (entry) => remainingKeys(entry, held, keys),
     mode,
     keys,

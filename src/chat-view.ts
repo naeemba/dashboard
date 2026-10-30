@@ -552,10 +552,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   return {
     element,
+    // Reads the conversation in and measures it; the page calls it once, when it is built.
     open() {
       readEarlier();
       measure();
-      focus();
     },
     focus,
     receive(event) {

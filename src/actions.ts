@@ -244,12 +244,6 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'mode-notes', description: 'Notes mode', group: 'modes', scope: 'global',
     action: { kind: 'mode-set', mode: 'notes' }, mac: 'Ctrl+Shift+N', other: 'Ctrl+Shift+N',
   },
-  // Shift for the reason mode-notes gives. A for agent: C is the copy key off a mac, and Ctrl+Shift+C
-  // would be heard on the terminals screen by both.
-  {
-    name: 'mode-claude', description: 'Claude mode', group: 'modes', scope: 'global',
-    action: { kind: 'mode-set', mode: 'claude' }, mac: 'Ctrl+Shift+A', other: 'Ctrl+Shift+A',
-  },
   // The first is main and the rest count down the worker list, so 2 is the top worker whatever its
   // number; pane-layout.ts says why a position rather than a pane number. Past the eighth worker,
   // Alt+J/K walks the list.

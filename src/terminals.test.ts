@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CHAT_INDEX, DEFAULT_PANE_SIZE, EDITOR_INDEX, MAIN_INDEX, branchOfPane, isWorker, modeOfPane, paneFromId,
+  DEFAULT_PANE_SIZE, EDITOR_INDEX, MAIN_INDEX, branchOfPane, isWorker, modeOfPane, paneFromId,
   paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
 } from './terminals';
 
@@ -42,7 +42,6 @@ describe('isWorker', () => {
     expect(isWorker(3)).toBe(true);
     expect(isWorker(MAIN_INDEX)).toBe(false);
     expect(isWorker(EDITOR_INDEX)).toBe(false);
-    expect(isWorker(CHAT_INDEX)).toBe(false);
   });
 });
 
@@ -132,9 +131,6 @@ describe('modeOfPane', () => {
   });
 
   // A Claude screen's notification carries this index back, and the click has to land on that screen.
-  it('puts the Claude screen on claude', () => {
-    expect(modeOfPane(CHAT_INDEX)).toBe('claude');
-  });
 });
 
 describe('startsEditor', () => {

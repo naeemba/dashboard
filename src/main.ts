@@ -13,9 +13,9 @@ import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
 import { registerTasks } from './task-runner';
 import { openAppWindow } from './app-window';
-import { EDITOR_INDEX, MAIN_INDEX, paneFromId, sizeOfPane, terminalId } from './terminals';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, sizeOfPane, terminalId } from './terminals';
 import { nextPaneIndex } from './pane-layout';
-import { mainArguments, workerResumeArguments } from './dispatch';
+import { workerResumeArguments } from './dispatch';
 import { projectOfFolder, sessionRequests } from './session-requests';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
 import { unfinishedWork } from './finished-work';
@@ -313,12 +313,10 @@ function agentWorksIn(slot: number, pane: number | null): boolean {
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
-//
-// Main is the exception: it is the project's session, so Enter there starts it again.
 function releaseAgentPane(id: string): void {
   mainsWorkers.delete(id);
   const command = terminalCommands.get(id);
-  if (!runsAnAgent(command) || paneFromId(id).index === MAIN_INDEX) return;
+  if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
   // The record goes on naming the pane: the worktree list's Enter takes you to the pane its card was
   // shipped into, and the pane is still there. The claim ends where the pane is taken, in attachPane.
@@ -491,16 +489,15 @@ function spawnTerminal(id: string): void {
 }
 
 // A project starts with its main session, plus a worker for each pane that was running Claude Code when
-// the app last quit — session-store.ts says when it was. Which of the first pane's comes back as main
-// is mainResume's; one that was not main's comes back in a worker after the rest.
+// the app last quit — session-store.ts says when it was. Whether the conversation saved for pane 0 is
+// main's to carry on is mainResume's; one that was not main's comes back in a worker after the rest.
 // The editor is registered but not started: opening nine projects should not launch nine editors, each
 // with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
-  const mainId = terminalId(projectIndex, MAIN_INDEX);
-  const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, mainId), project.path, realPath);
-  terminalCommands.set(mainId, { args: mainArguments(shellCommand, project.path, first.session), directory: project.path });
-  spawnTerminal(mainId);
+  const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, terminalId(projectIndex, MAIN_INDEX)), project.path, realPath);
+  // Main is the Claude screen in the terminals view's left column, run through the Agent SDK, not a pane.
+  chats.open(projectIndex, first.session);
   for (const index of claudeSessions.owedResumes(project.path)) {
     const id = terminalId(projectIndex, index);
     const owed = claudeSessions.takeResume(project.path, index, id);
@@ -678,11 +675,10 @@ const openProjects = (): OpenProjects => ({
 // Every screen redraws its pages from the list, so a worker opening or closing is the list again.
 const panesChanged = (): void => sendToRenderer('projects:change', openProjects());
 
-// The terminals a project has open, ascending: every pane main holds a command for, less the editor,
-// whose number is below them.
+// The workers a project has open, ascending: every pane main holds a command for, less the editor.
 function openPanes(slot: number): number[] {
   return [...terminalCommands.keys()].map(paneFromId)
-    .filter((pane) => pane.slot === slot && pane.index >= MAIN_INDEX)
+    .filter((pane) => pane.slot === slot && isWorker(pane.index))
     .map((pane) => pane.index)
     .sort((first, second) => first - second);
 }

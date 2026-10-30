@@ -15,7 +15,7 @@ export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 export const MODE_NAMES: Record<Mode, string> = {
   terminals: 'Terminals', nvim: 'nvim', board: 'Board', notes: 'Notes',
-  manager: 'Manager', command: 'Command', log: 'Log', claude: 'Claude',
+  manager: 'Manager', command: 'Command', log: 'Log',
 };
 
 // What each screen and each group is, for the person who has not been told. The things worth knowing
@@ -23,7 +23,8 @@ export const MODE_NAMES: Record<Mode, string> = {
 // yet, that the board has no save key, that settings are a file you can also edit by hand.
 const BLURBS: Record<Mode | ActionGroup, string> = {
   terminals: 'The project\'s main session on the left, full height, and its worker panes in a list '
-    + 'down the right. Main is Claude Code, started as soon as the project opens and told to dispatch '
+    + 'down the right. Main is Claude Code drawn as a page rather than a terminal (the Claude keys '
+    + 'below are its own), started as soon as the project opens and told to dispatch '
     + 'the tasks you give it — do this, review that, research the other — into workers rather than run '
     + 'them itself. It does that with DASHBOARD_SESSION, a command every pane carries: run `node '
     + '"$DASHBOARD_SESSION"` to see what it takes. A worker it starts runs in auto mode, ends by '
@@ -290,7 +291,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'code highlighted, an image Claude carried inline drawn inline (one from the web is a link, so '
     + 'nothing is fetched until you click it), an edit as a diff. It runs in the project\'s folder with the '
     + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
-    + 'a pane. Nothing starts until you send the first prompt. '
+    + 'a pane, as the project\'s main session. It starts when the project opens. '
     + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
     + 'working and it is read when the turn gets to it. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
     + 'a thumbnail of each sits over the box, up to 5 MB of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
@@ -454,8 +455,12 @@ export function helpSections(
     blurb: BLURBS[mode],
     shortcuts: screenShortcuts(mode, onManagerPage, keys, isMac),
   };
+  // Main on a project's terminals view is the Claude screen, whose keys answer while it has the keyboard.
+  const main: Section[] = mode === 'terminals' && !onManagerPage
+    ? [{ title: 'Claude', blurb: BLURBS.claude, shortcuts: groupShortcuts('claude', mode, keys, isMac) }]
+    : [];
   const rest: readonly ('modes' | 'projects' | 'app')[] = ['modes', 'projects', 'app'];
-  return [screen, ...rest.map((group) => ({
+  return [screen, ...main, ...rest.map((group) => ({
     title: { modes: 'Modes', projects: 'Projects', app: 'Dashboard' }[group],
     blurb: BLURBS[group],
     shortcuts: groupShortcuts(group, mode, keys, isMac),

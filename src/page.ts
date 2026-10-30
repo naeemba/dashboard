@@ -18,7 +18,7 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { CHAT_INDEX, EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, terminalId } from './terminals';
+import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, terminalId } from './terminals';
 import type { WorkerState } from './session-cli';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
@@ -124,14 +124,27 @@ export type Page = {
   chat: ChatView | null;
 };
 
-// The pane with the keyboard, or the one that last had it. Undefined only on a page with no terminals.
+// The pane with the keyboard, or the one that last had it. Undefined on a page with no terminals, and
+// while main has it: main is the Claude screen, not a pane.
 export function focusedPane(page: Page): Pane | undefined {
   return page.panes.find((pane) => pane.index === page.focused);
 }
 
-// The numbers of the open terminals in drawn order, which is what pane-layout.ts moves the keyboard by.
+// Whether main, the Claude screen, is where the terminals view's keyboard is.
+export function mainHasKeyboard(page: Page): boolean {
+  return page.focused === MAIN_INDEX && page.chat !== null;
+}
+
+// The keyboard back on whichever of main and the workers last had it.
+export function focusTerminals(page: Page): void {
+  if (mainHasKeyboard(page)) page.chat?.focus();
+  else focusedPane(page)?.terminal.focus();
+}
+
+// The numbers of the terminals view's places in drawn order, main first, which is what pane-layout.ts
+// moves the keyboard by.
 export function openIndices(page: Page): number[] {
-  return page.panes.map((pane) => pane.index);
+  return [...(page.chat ? [MAIN_INDEX] : []), ...page.panes.map((pane) => pane.index)];
 }
 
 // The names typed on the terminals, by pane number, which is what session.ts keeps: `null` for a pane
@@ -198,7 +211,7 @@ export function toggleZoom(page: Page): void {
   // on purpose: such a click still drops the zoom off the screen until you press something, because the
   // zoomed pane is read from focus rather than remembered.
   page.views.terminals?.classList.toggle('zoom');
-  focusedPane(page)?.terminal.focus();
+  focusTerminals(page);
   fitPanes(page);
 }
 
@@ -393,21 +406,20 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     return pane;
   }
 
-  // One terminal onto the page, in its place: main in the view's left column, a worker in the list in
-  // number order.
+  // The keyboard landing on main or a worker: the page remembers where, and the status bar follows.
+  function arrived(page: Page, index: number): void {
+    if (page.focused === index) return;
+    page.focused = index;
+    options.onChanged();
+  }
+
+  // One worker onto the page, in the list in number order. Main is the Claude screen, built with the page.
   function addPane(page: Page, index: number): void {
-    const terminals = page.views.terminals;
-    if (!terminals || !page.workers) return;
+    if (!page.workers) return;
     const id = terminalId(page.slot, index);
-    const parent = index === MAIN_INDEX ? terminals : page.workers;
-    const pane = buildPane(parent, id, page, index, () => {
-      if (page.focused === index) return;
-      page.focused = index;
-      options.onChanged();
-    });
+    const pane = buildPane(page.workers, id, page, index, () => arrived(page, index));
     // buildPane appended it last; a worker numbered below one already open goes ahead of it.
-    if (index === MAIN_INDEX) terminals.prepend(pane.element);
-    else page.panes.find((other) => other.index > index)?.element.before(pane.element);
+    page.panes.find((other) => other.index > index)?.element.before(pane.element);
     page.panes.push(pane);
     page.panes.sort((first, second) => first.index - second.index);
     panesById.set(id, pane);
@@ -417,7 +429,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
   // Closing the pane that had the keyboard hands it to main, since there is nowhere else it is sure to
   // be; the page with the keyboard is in front, so the move is one you can see.
   function syncPanes(page: Page, open: readonly number[]): void {
-    const have = openIndices(page);
+    const have = page.panes.map((pane) => pane.index);
     if (have.length === open.length && open.every((index) => have.includes(index))) return;
     let lostFocus = false;
     for (const pane of [...page.panes]) {
@@ -428,7 +440,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     }
     for (const index of open) if (!page.panes.some((pane) => pane.index === index)) addPane(page, index);
     if (!page.panes.some((pane) => pane.index === page.focused)) page.focused = MAIN_INDEX;
-    if (lostFocus) focusedPane(page)?.terminal.focus();
+    if (lostFocus) focusTerminals(page);
     fitPanes(page);
   }
 
@@ -440,7 +452,6 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       nvim: document.createElement('div'),
       board: document.createElement('div'),
       notes: document.createElement('div'),
-      claude: document.createElement('div'),
     };
     for (const [mode, view] of Object.entries(views)) {
       view.className = `view view-${mode}`;
@@ -498,16 +509,24 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onError: (message) => options.onError(`notes:${slot}`, message),
     });
     views.notes.append(page.notes.element);
-    page.chat = createChatView({
+    // Main, the project's Claude session, in the terminals view's left column. Its history is read
+    // now, so it is there the first time you look.
+    const chat = createChatView({
       bridge: options.bridge,
       slot,
       projectName: project.name,
-      paneId: terminalId(slot, CHAT_INDEX),
+      paneId: terminalId(slot, MAIN_INDEX),
       onError: (message) => options.onError(`chat:${slot}`, message),
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
     });
-    views.claude.append(page.chat.element);
-    chatsBySlot.set(slot, page.chat);
+    page.chat = chat;
+    const main = document.createElement('div');
+    main.className = 'main-chat';
+    main.append(chat.element);
+    main.addEventListener('focusin', () => arrived(page, MAIN_INDEX));
+    views.terminals.prepend(main);
+    chatsBySlot.set(slot, chat);
+    chat.open();
     return page;
   }
 

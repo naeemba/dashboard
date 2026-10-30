@@ -193,8 +193,8 @@ export function panesAtLaunch(recorded: readonly WorktreeEntry[]): {
 // numbers are per project — terminalId scopes them and freePane counts within one slot — so a match
 // on the number alone hands one project's ship the record of a card working in another.
 //
-// What that costs, with `api` at slot 0 and `web` at slot 1: you ship in `web`, it takes pane 0, and
-// the card running in `api`'s pane 0 loses its record. Its agent is still going, but Enter on the
+// What that costs, with `api` at slot 0 and `web` at slot 1: you ship in `web`, it takes terminal 2,
+// and the card running in `api`'s terminal 2 loses its record. Its agent is still going, but Enter on the
 // card's row in the worktree list says nothing of it is running, and the already-shipped refusal
 // stops refusing — so moving the card back into Ship starts a second agent beside the first.
 export function claimsPane(

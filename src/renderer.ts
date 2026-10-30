@@ -45,7 +45,7 @@ import { closeRefusal, closingPanes } from './close-project';
 import { paneSends } from './pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, fitPage, focusedPane, openIndices, panesById, restylePanes, showMode, toggleZoom, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, showMode, toggleZoom, typedNames, type Page,
 } from './page';
 import { neighborPane, paneAtPosition, stepPane } from './pane-layout';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
@@ -285,12 +285,14 @@ function applyAppearance(): void {
 // counted to that is not open, or one that closed while you were away.
 function focusTerminal(index: number | undefined): void {
   const page = pages[activeIndex];
-  const pane = page.panes.find((candidate) => candidate.index === index) ?? focusedPane(page) ?? page.panes[0];
-  if (pane) {
-    page.focused = pane.index;
-    pane.terminal.focus();
-  }
+  if (index !== undefined && openIndices(page).includes(index)) page.focused = index;
+  focusTerminals(page);
   renderStatus();
+}
+
+// Main, the Claude screen, holds the keyboard on the terminals view: its keys are heard there.
+function chatFocused(page: Page): boolean {
+  return page.mode === 'terminals' && mainHasKeyboard(page);
 }
 
 function setMode(mode: Mode): void {
@@ -347,10 +349,6 @@ function focusMode(page: Page, entering: boolean): void {
     // working in a project's worktree, since you were last here. open() takes the keyboard itself.
     if (entering) void page.notes.open();
     else page.notes.element.focus();
-  }
-  if (page.mode === 'claude' && page.chat) {
-    if (entering) page.chat.open();
-    else page.chat.focus();
   }
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
@@ -759,7 +757,7 @@ function trackWhichKey(event: KeyboardEvent): void {
 function refreshWhichKey(): void {
   if (!whichKeyHeld) return;
   const page = pages[activeIndex];
-  whichKey.show(whichKeyRows(whichKeyHeld, settings.keys, page.mode, !isProjectPage(page), isMac));
+  whichKey.show(whichKeyRows(whichKeyHeld, settings.keys, page.mode, !isProjectPage(page), isMac, chatFocused(page)));
 }
 
 // A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
@@ -774,7 +772,7 @@ window.addEventListener('keydown', (event) => {
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
   const page = pages[activeIndex];
-  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page));
+  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page), chatFocused(page));
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();

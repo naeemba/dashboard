@@ -1,4 +1,5 @@
 import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -131,7 +132,10 @@ export function rememberedSessions(file: string): Record<string, string> {
   }
 }
 
-export function registerChatSessions(table: Channels, host: ChatHost): { stop(slot: number): void; stopAll(): void } {
+export function registerChatSessions(
+  table: Channels,
+  host: ChatHost,
+): { open(slot: number, adopt?: string): void; stop(slot: number): void; stopAll(): void } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -179,11 +183,14 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
         cwd: projectPath,
         resume,
         model: preferences.get(slot)?.model ?? undefined,
-        permissionMode: preferences.get(slot)?.permissionMode,
+        // The project's main session, as the terminal one was: auto mode unless changed on the
+        // screen, the dispatch prompt, and the name its workers SendMessage it by.
+        permissionMode: preferences.get(slot)?.permissionMode ?? 'auto',
+        extraArgs: { name: mainSessionName(projectPath) },
         env: environment,
         includePartialMessages: true,
         pathToClaudeCodeExecutable: executable,
-        systemPrompt: { type: 'preset', preset: 'claude_code' },
+        systemPrompt: { type: 'preset', preset: 'claude_code', append: mainPrompt(projectPath) },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
           toolName,
           input: toolInput,
@@ -366,6 +373,15 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
   });
 
   return {
+    // A project opening starts its main session at once, as the terminal one was, so a worker's
+    // SendMessage has somewhere to arrive. `adopt` is the conversation the terminal main left, taken
+    // up the first time this project's main is the screen and nothing else is remembered for it.
+    open(slot, adopt) {
+      const projectPath = host.projectPath(slot);
+      if (projectPath === undefined) return;
+      if (adopt !== undefined && remembered[projectPath] === undefined) remember(projectPath, adopt);
+      running(slot, projectPath).catch(() => undefined);
+    },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); },
