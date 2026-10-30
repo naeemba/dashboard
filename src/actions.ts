@@ -26,6 +26,8 @@ export type Action =
   | { kind: 'terminal-paste' }
   | { kind: 'terminal-zoom' }
   | { kind: 'terminal-add' }
+  | { kind: 'terminal-close' }
+  | { kind: 'terminal-fold' }
   | { kind: 'terminal-scrollback' }
   | { kind: 'terminal-name' }
   | { kind: 'terminal-file-hints' }
@@ -265,6 +267,17 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'terminal-add', description: 'Open a new worker pane', group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-add' }, mac: 'Ctrl+Shift+T', other: 'Ctrl+Shift+T',
+  },
+  {
+    name: 'terminal-close', description: 'Close this worker pane', group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-close' }, mac: 'Ctrl+Shift+X', other: 'Ctrl+Shift+X',
+  },
+  // Folded to its name, so the workers left open share its room. Alt+Z, in the Alt family with the
+  // other pane keys; the cost in the pane is whatever the shell does with Esc Z, the same cost Alt+F,
+  // Alt+N and Alt+O already pay.
+  {
+    name: 'terminal-fold', description: 'Fold this worker pane to its name, or open it again', group: 'terminals',
+    scope: 'terminals', action: { kind: 'terminal-fold' }, mac: 'Alt+Z', other: 'Alt+Z',
   },
   {
     name: 'terminal-next', description: 'Next terminal', group: 'terminals', scope: 'terminals',

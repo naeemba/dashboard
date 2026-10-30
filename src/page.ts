@@ -18,7 +18,8 @@ import type { Project } from './projects';
 import type { SectionStrip } from './section-strip';
 import type { Settings } from './settings';
 import { quoteForShell } from './shell';
-import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, terminalId } from './terminals';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from './terminals';
+import { icon, type IconName } from './icons';
 import type { WorkerState } from './session-cli';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from './waiting';
 import type { WorktreeEntry } from './worktree-store';
@@ -55,6 +56,8 @@ export type PageOptions = {
   openFile(page: Page, index: number, link: FileLink): void;
   // The button above the worker list, which does what the new-pane key does.
   addPane(page: Page): void;
+  // A worker's close button, which does what the close key does.
+  closePane(page: Page, index: number): void;
 };
 
 // Every pane in the window by its terminal id, filled as pages are built. The bytes from a pty, an
@@ -136,10 +139,42 @@ export function mainHasKeyboard(page: Page): boolean {
   return page.focused === MAIN_INDEX && page.chat !== null;
 }
 
-// The keyboard back on whichever of main and the workers last had it.
+// A worker folded to its name, or opened again. The workers left open share the room, so every pane
+// is measured again. A folded pane takes no keyboard: if the page named it, by key or by its button,
+// the keyboard goes to main. Asked of page.focused rather than document.activeElement, which the
+// browser may already have blurred, and which is the body after a click on the status bar.
+export function toggleFold(page: Page, index: number): void {
+  const pane = page.panes.find((each) => each.index === index);
+  if (!pane || !isWorker(index)) return;
+  pane.folded = !pane.folded;
+  pane.element.classList.toggle('folded', pane.folded);
+  pane.element.dataset.label = paneLabel(index, undefined, paneName(pane));
+  fitPanes(page);
+  // Main is focused without setting page.focused first: its focusin is what records the arrival and
+  // redraws the status bar, and it skips both when the page already names main.
+  if (pane.folded && page.focused === index) {
+    if (page.chat) page.chat.focus();
+    else page.focused = MAIN_INDEX;
+  }
+}
+
+// A program's title for the pane, set or cleared. A folded worker's bar shows the pane's name, so it is
+// rewritten here, the one place a title changes, rather than by each writer. Says whether the name moved.
+export function setPaneTitle(pane: Pane, title: string | undefined): boolean {
+  const before = paneName(pane);
+  pane.title = title;
+  pane.element.dataset.label = paneLabel(pane.index, undefined, paneName(pane));
+  return paneName(pane) !== before;
+}
+
+// The keyboard back on whichever of main and the workers last had it. A folded worker is opened on the
+// way in: its terminal is hidden, and a hidden textarea cannot take the keyboard, so focusing it alone
+// would leave the keys going wherever they went before while the status bar names this pane.
 export function focusTerminals(page: Page): void {
+  const pane = focusedPane(page);
+  if (pane?.folded) toggleFold(page, pane.index);
   if (mainHasKeyboard(page)) page.chat?.focus();
-  else focusedPane(page)?.terminal.focus();
+  else pane?.terminal.focus();
 }
 
 // The numbers of the terminals view's places in drawn order, main first, which is what pane-layout.ts
@@ -187,8 +222,10 @@ export function restylePanes(settings: Settings): void {
 
 // Measures the page's terminals again. xterm only tells a pty a new size when it is measured, so a
 // pane that changed shape keeps drawing at the old size until this runs.
+// A folded worker is left at its last size: measured in its 26px bar it would tell its shell, and
+// whatever full-screen program runs there, it has one row.
 export function fitPanes(page: Page): void {
-  for (const pane of page.panes) pane.fit.fit();
+  for (const pane of page.panes) if (!pane.folded) pane.fit.fit();
 }
 
 // Every pty of one page: its terminals and the editor. What a page needs the moment it reaches the
@@ -234,6 +271,36 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     const container = document.createElement('div');
     container.className = 'pane';
     parent.append(container);
+    // A worker's two buttons in its top right corner, the twins of the fold and close keys.
+    if (isWorker(index)) {
+      const controls = document.createElement('div');
+      controls.className = 'pane-controls';
+      const button = (glyph: IconName, title: string, act: () => void) => {
+        const made = document.createElement('button');
+        made.type = 'button';
+        made.title = title;
+        made.append(icon(glyph));
+        made.addEventListener('mousedown', (event) => event.preventDefault());
+        made.addEventListener('click', (event) => {
+          event.stopPropagation();
+          act();
+        });
+        return made;
+      };
+      controls.append(
+        button('collapse', 'Fold', () => toggleFold(page, index)),
+        button('reset', 'Close', () => options.closePane(page, index)),
+      );
+      container.append(controls);
+      // A click anywhere on a folded worker's bar goes to it, which opens it.
+      container.addEventListener('click', () => {
+        if (!pane.folded) return;
+        // Opened first, since a hidden terminal cannot take the keyboard; its focus listener then records
+        // the arrival and redraws the status bar.
+        toggleFold(page, index);
+        terminal.focus();
+      });
+    }
 
     const terminal = new Terminal({
       cursorBlink: true,
@@ -326,9 +393,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // prompt and again when the command starts, and most of those say what it already said; without this
     // the status bar and the manager's list rebuild on every keystroke that ends in Enter.
     terminal.onTitleChange((title) => {
-      const before = paneName(pane);
-      pane.title = title;
-      if (paneName(pane) !== before) options.onChanged();
+      if (setPaneTitle(pane, title)) options.onChanged();
     });
     // The bell is the only thing a program in a pane can ring to say it wants you, and it costs nothing
     // to listen for: no reading the output, no guessing from how long it has been quiet.

@@ -112,7 +112,62 @@ body *:not(.pane, .pane *) {
 }
 
 .workers > .pane {
+  position: relative;
   flex: 1 0 calc((100% - 4px) / 3);
+}
+
+/* A worker folded to its name: one bar, its terminal hidden, and its room shared by the workers left
+   open, which grow into it. A click on the bar opens it again. */
+.workers > .pane.folded {
+  flex: 0 0 26px;
+  cursor: pointer;
+}
+
+.workers > .pane.folded .xterm {
+  display: none;
+}
+
+.workers > .pane.folded::before {
+  content: attr(data-label);
+  display: block;
+  padding: 3px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* A worker's fold and close buttons, in its top right corner while the pointer is over it. */
+.pane-controls {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.pane:hover > .pane-controls {
+  opacity: 1;
+}
+
+.pane-controls button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.pane-controls button:hover {
+  color: var(--white);
+}
+
+.pane.folded .pane-controls button:first-child {
+  transform: rotate(-90deg);
 }
 
 /* The new-pane key's twin. */

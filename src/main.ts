@@ -32,6 +32,7 @@ import { registerChatSessions } from './chat-sessions';
 import { startHost, type HeldByMain } from './host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-ipc';
 import { registerPaneOpeners } from './pane-openers';
+import { registerWorkerChannels } from './worker-channels';
 import { channels, registerWithIpc } from './channels';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
 import { registerLog } from './log-ipc';
@@ -733,10 +734,8 @@ function takePane(projectPath: string, index: number, cardId: string): void {
   if (claimed) recordWorktree(withoutPane(claimed));
 }
 
-// The key and the button above the worker list. A project with no folder has no panes to add to.
-table.handle('pane:add', (_screen, slot: number) => {
-  if (projects[slot] === undefined || projects[slot].missing) return null;
-  return { index: openWorker(slot), open: openProjects() };
+registerWorkerChannels(table, {
+  project: (slot) => projects[slot], openPanes, openWorker, closeWorker, openProjects,
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {

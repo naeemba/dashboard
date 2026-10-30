@@ -45,9 +45,10 @@ import { closeRefusal, closingPanes } from './close-project';
 import { paneSends } from './pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
 import {
-  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, showMode, toggleZoom, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, typedNames, type Page,
 } from './page';
 import { neighborPane, paneAtPosition, stepPane } from './pane-layout';
+import { closePane, runPaneAction, type PanePorts } from './pane-actions';
 import { whichKeyRows, whichKeyStep, type Held } from './which-key';
 import { createWhichKey } from './which-key-view';
 import { nextSectionMode } from './manager-sections';
@@ -428,6 +429,7 @@ const builder = createPageBuilder({
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
   addPane: (page) => addPane(page),
+  closePane: (page, index) => closePane(page, index, panePorts),
 });
 
 // The new-pane key and the button above the list. Main opens it and answers with the list that has it
@@ -437,6 +439,8 @@ function addPane(page: Page): void {
     if (index !== null && pages[activeIndex] === page) focusTerminal(index);
   }, (error: unknown) => showError('pane', `No new pane: ${failureText(error)}`));
 }
+
+const panePorts: PanePorts = { closePane: (slot, index) => bridge.closePane(slot, index), onError: showError };
 
 // Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
 // live one once the folder exists. A replacement keeps the old page's position in the list.
@@ -710,27 +714,16 @@ function apply(action: Action): void {
     case 'terminal-previous': return focusTerminal(stepPane(openIndices(page), page.focused, -1));
     case 'terminal-move': return focusTerminal(neighborPane(openIndices(page), page.focused, action.direction));
     case 'terminal-add': return addPane(page);
-    case 'terminal-zoom': return toggleZoom(page);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
     case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));
     // Straight to the focused shell: onData already routes it to the pty.
     case 'terminal-input': return focusedPane(page)?.terminal.input(action.data);
-    // Nothing selected copies nothing, rather than emptying the clipboard you were about to paste from.
-    // Wiring, not a decision: getSelection() returning '' is the whole rule, so it has no module or test.
-    case 'terminal-copy': {
-      const selection = focusedPane(page)?.terminal.getSelection();
-      if (selection) void navigator.clipboard.writeText(selection);
-      return;
-    }
-    // paste() rather than input(): it wraps the text in bracketed-paste markers when the shell asked
-    // for them, so a pasted line with a newline in it is not run on arrival.
-    // The pane is taken at the keystroke, so a focus move before the clipboard answers cannot send
-    // the paste to another shell.
-    case 'terminal-paste': {
-      const pane = focusedPane(page);
-      return void navigator.clipboard.readText().then((text) => pane?.terminal.paste(text));
-    }
+    case 'terminal-zoom':
+    case 'terminal-close':
+    case 'terminal-fold':
+    case 'terminal-copy':
+    case 'terminal-paste': return runPaneAction(page, action.kind, panePorts);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
     case 'command-select':
     case 'command-open':
@@ -888,7 +881,7 @@ bridge.onExit((id, exitCode) => {
   // The title dies with the program that set it, which is here. Left standing, the bar names a file
   // nothing has open: quit nvim and the pane still reads `nvim · board.json` until you press Enter and
   // the next nvim prints its own. A typed name is untouched — that one is yours and survives a restart.
-  pane.title = undefined;
+  setPaneTitle(pane, undefined);
   pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
   // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
   // find out about a pane on a project you are not on.
