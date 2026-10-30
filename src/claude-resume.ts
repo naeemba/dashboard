@@ -1,5 +1,5 @@
 import type { SavedSession, Session } from './session';
-import { paneFromId } from './terminals';
+import { isWorker, paneFromId } from './terminals';
 import type { WorktreeEntry } from './worktree-store';
 
 // Which Claude Code conversation each pane was running, and how a launch gets it back.
@@ -27,7 +27,10 @@ export function isPaneConversation(value: unknown): value is PaneConversation {
 // way the restore matches them, and a page with no open slot gets no sessions rather than another
 // project's. Only the fields a resume needs are copied: the live reading carries the pid as well.
 // The list runs to the highest-numbered terminal holding one, since workers have no fixed count.
-// `dispatched` says which panes hold main's worker now, which only main knows.
+// `dispatched` says which panes hold main's worker now, which only main knows. Workers only: the
+// editor runs nvim, and main is the Claude screen, which keeps its own conversation. Pane 0's saved one
+// is taken once, on the launch that hands the terminal main over, and written back it would be handed
+// over again on the next, over whatever main has moved on to.
 export function withClaude(
   layout: Session,
   slotOf: (projectPath: string) => number,
@@ -42,7 +45,7 @@ export function withClaude(
       const claude: (PaneConversation | null)[] = [];
       for (const [id, found] of held) {
         const pane = paneFromId(id);
-        if (pane.slot !== slot || pane.index < 0) continue;
+        if (pane.slot !== slot || !isWorker(pane.index)) continue;
         while (claude.length <= pane.index) claude.push(null);
         claude[pane.index] = { session: found.session, directory: found.directory, ...(dispatched(id) ? { dispatched: true } : {}) };
       }
