@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { injectedMessage } from './chat-events';
+import { injectedMessage, notTypedMessage } from './chat-events';
 
 describe('injectedMessage', () => {
   it('leaves a typed message, and one with no origin, as the person\'s own', () => {
@@ -50,5 +50,28 @@ describe('injectedMessage', () => {
   it('folds a kind it does not know under its own name', () => {
     expect(injectedMessage({ kind: 'auto-continuation' }, ' go on ')).toEqual({ title: 'Auto continuation message', body: 'go on' });
     expect(injectedMessage({ kind: 'task-notification', subkind: 'scheduled-trigger' }, 'run it')?.title).toBe('Scheduled trigger');
+  });
+});
+
+describe('notTypedMessage', () => {
+  const meta = (text: string, skill?: string) => notTypedMessage(undefined, true, text, skill);
+
+  it('leaves an unmarked message as the person\'s own', () => {
+    expect(notTypedMessage(undefined, false, 'Review the diff.', undefined)).toBeNull();
+  });
+
+  it('folds a loaded skill under its name, from the call or from its directory', () => {
+    expect(meta('`/simplify` review the diff', 'simplify')).toEqual({ title: 'simplify skill', body: '`/simplify` review the diff' });
+    expect(meta('Base directory for this skill: C:\\plugins\\skills\\model-product\n\n# Model')).toMatchObject({ title: 'model-product skill' });
+  });
+
+  it('folds plain instructions, a command prompt or a wake-up, as Instructions', () => {
+    expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Instructions', body: 'Capture this as a card on the board.' });
+  });
+
+  it('hides what is only plumbing: pasted image sources, a reminder, a local command\'s caveat', () => {
+    expect(meta('[Image: source: /tmp/1.png]\n[Image: source: /tmp/2.png]')).toBe('hidden');
+    expect(meta('<system-reminder>x</system-reminder>')).toBe('hidden');
+    expect(meta('<local-command-caveat>Run directly.</local-command-caveat>')).toBe('hidden');
   });
 });

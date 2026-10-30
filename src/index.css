@@ -87,27 +87,19 @@ body *:not(.pane, .pane *) {
   gap: 2px;
 }
 
-/* The right column: the new-pane button on top, the list under it taking what is left. Neither is
-   positioned, so a zoomed worker escapes both to cover the whole view. */
-.worker-column, .workers {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 0;
-}
-
 .main-chat {
   grid-column: 1;
 }
 
-.worker-column {
-  grid-column: 2;
-}
-
-/* Three to a screen: one or two workers share the height between them, and a fourth starts the
-   scroll. */
+/* The right column, the worker list: three to a screen, one or two workers share the height between
+   them, and a fourth starts the scroll. It is not positioned, so a zoomed worker escapes it to cover
+   the whole view. */
 .workers {
-  flex: 1;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -168,25 +160,6 @@ body *:not(.pane, .pane *) {
 
 .pane.folded .pane-controls button:first-child {
   transform: rotate(-90deg);
-}
-
-/* The new-pane key's twin. */
-.add-pane {
-  flex: none;
-  align-self: flex-end;
-  height: 26px;
-  padding: 0 12px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  cursor: pointer;
-}
-
-.add-pane:hover {
-  background: var(--hover);
-  color: var(--brightWhite);
 }
 
 /* One pane, the whole page. Splits are nvim's business, not the dashboard's. */

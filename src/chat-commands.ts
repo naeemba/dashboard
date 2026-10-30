@@ -1,5 +1,6 @@
 import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
+import { onlyPlumbing } from './chat-events';
 import type { ChatSessions } from './chat-sessions';
 import { isModel } from './chat-status';
 import { tagged, unescaped } from './chat-tags';
@@ -156,6 +157,17 @@ export function shellExchange(text: string): ShellExchange | null {
   if (!output) return null;
   const printed = [output[1], output[2]].map((part) => unescaped(part ?? '').trimEnd()).filter(Boolean);
   return { kind: 'output', text: printed.join('\n') };
+}
+
+// What a slash command Claude Code ran itself printed, as a saved session writes it: its output in
+// `<local-command-stdout>` or `<local-command-stderr>`, with the escapes undone. The caveat that rides
+// along with one is plumbing (chat-events.ts) and reads as '', shown as nothing: a saved session marks
+// it isMeta, but one arriving unmarked still reaches here. Other plumbing arriving unmarked, such as a
+// reminder pasted on its own, is the person's and stays. Null for a message that is neither.
+export function localCommandOutput(text: string): string | null {
+  if (text.includes('<local-command-caveat>') && onlyPlumbing(text)) return '';
+  const output = /^\s*<local-command-(?:stdout|stderr)>([\s\S]*?)<\/local-command-(?:stdout|stderr)>\s*$/.exec(text);
+  return output ? unescaped(output[1]).trim() : null;
 }
 
 // Which of an entry's blocks the copy key copies: the first, then the next on each press while the

@@ -1,8 +1,9 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
-import { shellExchange, typedCommand } from './chat-commands';
-import { injectedMessage } from './chat-events';
-import { isRecord } from './is-record';
+import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
+import { notTypedMessage } from './chat-events';
+import { applyTaskMessage, type ChatTasks } from './chat-tasks';
+import { isRecord, stringOrEmpty } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
 
@@ -81,10 +82,12 @@ export type Transcript = {
   // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
   // than in the view, so a question mid-turn does not start the clock over.
   started: number | null;
+  // The agents, workflows and background commands running now (chat-tasks.ts).
+  tasks: ChatTasks;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null,
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [],
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -92,9 +95,7 @@ const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: nul
 
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
-function text(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
+const text = stringOrEmpty;
 
 function image(block: Record<string, unknown>): ChatImage | null {
   const source = block.source;
@@ -154,6 +155,12 @@ function user(transcript: Transcript, content: unknown): Transcript {
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
     else if (block.type === 'text') {
+      // A slash command's output is the notice it is, not something you said.
+      const printed = localCommandOutput(text(block.text));
+      if (printed !== null) {
+        if (printed) entries = [...entries, { kind: 'notice', text: printed }];
+        continue;
+      }
       const shell = shellExchange(text(block.text));
       if (shell?.kind === 'output') entries = [...entries, { kind: 'shell', text: shell.text }];
       if (shell?.kind === 'input') ran = true;
@@ -185,12 +192,29 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
 
 // A stopped turn says so once: the session has usually written its own stop into the conversation
 // already, just before the result.
+// The SDK's own diagnostic in a result's errors, `[ede_diagnostic] result_type=...`, says how the turn
+// ended for whoever debugs the SDK, not what went wrong for you, and is left out.
+const DIAGNOSTIC = /^\[ede_diagnostic\]/;
+
 function resultNotice(message: Record<string, unknown>, last: ChatEntry | undefined): string | null {
   if (message.subtype === 'success' && message.is_error !== true) return null;
-  const errors = Array.isArray(message.errors) ? message.errors.map(String) : [];
+  const errors = Array.isArray(message.errors) ? message.errors.map(String).filter((error) => !DIAGNOSTIC.test(error)) : [];
   if (errors.length > 0) return errors.join('\n');
   if (message.subtype === 'error_during_execution') return last?.kind === 'notice' && last.text === STOPPED.text ? null : STOPPED.text;
   return text(message.result) || text(message.subtype) || 'The turn ended with an error.';
+}
+
+// The skill a Skill call loaded, read off the call the instructions answer, which is a recent one.
+function skillOf(entries: ChatEntry[], id: unknown): string | undefined {
+  const call = entries.findLast((entry) => entry.kind === 'tool' && entry.id === id);
+  return call?.kind === 'tool' && typeof call.input.skill === 'string' ? call.input.skill : undefined;
+}
+
+// A system message about the running tasks, folded into them; the same transcript for any other, so
+// nothing redraws.
+function withTasks(transcript: Transcript, message: Record<string, unknown>): Transcript {
+  const tasks = applyTaskMessage(transcript.tasks, message);
+  return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
 }
 
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call
@@ -201,8 +225,13 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   switch (message.type) {
     case 'assistant': return assistant(transcript, inner.content);
     case 'user': {
-      const injected = injectedMessage(message.origin, textOf(inner.content));
-      if (injected) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...injected }] };
+      // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
+      // still reach its call.
+      const meta = (message.isMeta === true || message.isSynthetic === true)
+        && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
+      const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
+      if (folded === 'hidden') return transcript;
+      if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
       return user(transcript, inner.content);
     }
     case 'stream_event': return streamed(transcript, message.event);
@@ -218,7 +247,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
       }
-      return transcript;
+      return withTasks(transcript, message);
     default: return transcript;
   }
 }
@@ -232,7 +261,8 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   }
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
-    return { ...transcript, ...IDLE, entries: [...transcript.entries, { kind: 'notice', text: said }] };
+    // The tasks went with the process that ran them, and the next one never reports their end.
+    return { ...transcript, ...IDLE, tasks: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
 }

@@ -66,6 +66,31 @@ describe('applyMessage', () => {
     expect(transcript.entries).toEqual([{ kind: 'notice', text: 'too many' }]);
   });
 
+  it('leaves the SDK\'s diagnostic out of why a turn ended', () => {
+    const ended = { type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null'] };
+    expect(applyMessage(prompted('hi'), ended).entries.at(-1)).toEqual({ kind: 'notice', text: 'Stopped.' });
+  });
+
+  it('draws what a slash command printed as a notice, and its caveat as nothing', () => {
+    const said = (content: string) => ({ type: 'user', parent_tool_use_id: null, message: { content } });
+    const ran = fold([said('<local-command-caveat>Run directly in Claude Code.</local-command-caveat>'),
+      said('<local-command-stdout>Set model to `opus`</local-command-stdout>')], EMPTY_TRANSCRIPT);
+    expect(ran.entries).toEqual([{ kind: 'notice', text: 'Set model to `opus`' }]);
+  });
+
+  it('folds a skill\'s instructions under the call that loaded it, never as something you said', () => {
+    const call = { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 't1', name: 'Skill', input: { skill: 'simplify' } }] } };
+    const body = { type: 'user', parent_tool_use_id: null, isMeta: true, sourceToolUseID: 't1', message: { content: [{ type: 'text', text: 'Review the diff.' }] } };
+    expect(fold([call, body]).entries.at(-1)).toEqual({ kind: 'event', title: 'simplify skill', body: 'Review the diff.' });
+  });
+
+  it('still hands a synthetic message\'s tool result to its call', () => {
+    const call = { type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 't1', name: 'Bash', input: {} }] } };
+    const result = { type: 'user', parent_tool_use_id: null, isSynthetic: true, message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] } };
+    expect(fold([call, result]).entries).toHaveLength(1);
+    expect(fold([call, result]).entries[0]).toMatchObject({ kind: 'tool', result: { text: 'ok' } });
+  });
+
   it('says a turn stopped by Escape was stopped', () => {
     expect(applyMessage(prompted('hi'), { type: 'result', subtype: 'error_during_execution', is_error: true }).entries.at(-1))
       .toEqual({ kind: 'notice', text: 'Stopped.' });
@@ -111,6 +136,12 @@ describe('applyEvent', () => {
     const transcript = applyEvent(prompted('hi'), { kind: 'ended', error: 'spawn ENOENT' });
     expect(transcript.busy).toBe(false);
     expect(transcript.entries.at(-1)).toEqual({ kind: 'notice', text: 'The session ended: spawn ENOENT' });
+  });
+
+  it('drops the tasks the ended session was running', () => {
+    const running = applyMessage(prompted('hi'), { type: 'system', subtype: 'task_started', task_id: 'a', description: 'Review a' });
+    expect(running.tasks).toHaveLength(1);
+    expect(applyEvent(running, { kind: 'ended', error: null }).tasks).toEqual([]);
   });
 });
 

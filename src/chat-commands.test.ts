@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -143,6 +143,23 @@ describe('droppedFiles', () => {
   });
   it('does not refuse a drop of pictures alone', () => {
     expect(droppedFiles([png, pageSvg])).toEqual({ pictures: [png], paths: [], refused: false });
+  });
+});
+
+describe('localCommandOutput', () => {
+  it('reads what a slash command printed back as its output, with the escapes undone', () => {
+    expect(localCommandOutput('<local-command-stdout>Set model to `opus (claude-opus-5-5)`</local-command-stdout>'))
+      .toBe('Set model to `opus (claude-opus-5-5)`');
+    expect(localCommandOutput('<local-command-stderr>no such model: &lt;x&gt;</local-command-stderr>')).toBe('no such model: <x>');
+  });
+
+  it('reads the caveat that rides along as nothing to show', () => {
+    expect(localCommandOutput('<local-command-caveat>The command below was run directly in Claude Code.</local-command-caveat>')).toBe('');
+  });
+
+  it('leaves any other message alone', () => {
+    expect(localCommandOutput('set the model')).toBeNull();
+    expect(localCommandOutput('<system-reminder>x</system-reminder>')).toBeNull();
   });
 });
 
