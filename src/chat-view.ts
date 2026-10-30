@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
-import { onEdgeLine, recall } from './chat-history';
+import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
@@ -335,15 +335,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
   menu.onClick((row) => complete(row, true));
 
-  // The prompts sent in this conversation, oldest first, what Up walks back through. A command run with
-  // `!` is left out: sent from here it would reach Claude as a prompt, not run.
-  function sentPrompts(): string[] {
-    return transcript.entries.flatMap((entry) => (entry.kind === 'user' && !entry.ran && entry.text.trim() ? [entry.text] : []));
-  }
-
   function walkHistory(direction: -1 | 1): boolean {
     if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
-    const sent = sentPrompts();
+    const sent = sentPrompts(transcript.entries);
     const moved = recall(sent.length, recalled, direction);
     if (!moved) return false;
     if (recalled === null) draft = prompt.value;
@@ -454,7 +448,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   });
 
   function select(index: number | null): void {
-    copied = null;
+    // Only a move resets the copy walk: the copy key's own click bubbles here and selects the same entry.
+    if (index !== selected) copied = null;
     drawn[selected ?? -1]?.element.classList.remove('selected');
     selected = index === null || drawn.length === 0 ? null : clampIndex(index, drawn.length - 1);
     if (selected === null) return;

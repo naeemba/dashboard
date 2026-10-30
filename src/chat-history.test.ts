@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onEdgeLine, recall } from './chat-history';
+import { onEdgeLine, recall, sentPrompts } from './chat-history';
 
 describe('recall', () => {
   it('walks back from the draft to the oldest prompt and stops there', () => {
@@ -21,5 +21,12 @@ describe('onEdgeLine', () => {
     expect(onEdgeLine('one\ntwo', 5, -1)).toBe(false);
     expect(onEdgeLine('one\ntwo', 5, 1)).toBe(true);
     expect(onEdgeLine('one\ntwo', 2, 1)).toBe(false);
+  });
+});
+
+describe('sentPrompts', () => {
+  it('leaves out a command run with ! and blank prompts', () => {
+    const user = (text: string, ran?: true) => ({ kind: 'user' as const, text, images: [], ...(ran ? { ran } : {}) });
+    expect(sentPrompts([user('first'), user('! git push', true), user('  '), user('second')])).toEqual(['first', 'second']);
   });
 });

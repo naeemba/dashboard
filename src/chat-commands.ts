@@ -10,7 +10,9 @@ import type { SearchRow } from './overlay';
 // as a prompt, skills and the project's own commands included; what the screen adds is the menu that
 // lists them as you type, and the few commands that are a terminal dialog in Claude Code and that the
 // session answers with "isn't available in this environment". Those are the screen's own and never
-// reach the session.
+// reach the session. The file also holds the screen's other small decisions about what was typed or
+// pressed there: reading a `!` command's exchange back out of the transcript, and which block the copy
+// key copies.
 
 export type CommandRow = SlashCommand;
 
