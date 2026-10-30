@@ -1,4 +1,4 @@
-import type { SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import type { ChatSessions } from './chat-sessions';
 import { fuzzyScore } from './fuzzy';
@@ -12,11 +12,13 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string };
+export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
+  // No hint, so Enter opens the list; Tab still leaves room to type a name.
+  { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -25,6 +27,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   const match = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(text.trim());
   if (match?.[1] === 'resume') return { kind: 'resume' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
   return null;
 }
 
@@ -71,6 +74,28 @@ export function resumeRows(found: ChatSessions, query: string, now = Date.now())
     detail: [relativeAge(session.lastModified, now), session.gitBranch].filter(Boolean).join(' · '),
     choice: session.sessionId,
   }));
+}
+
+// What /model lists: the session's models in its own order, or the ones matching what is typed, best
+// first. The one the screen is on is marked, whether it was picked by its alias or the session named
+// it by its full id.
+export function modelRows(models: ModelInfo[], current: string | null, query: string): SearchRow<string>[] {
+  return models
+    .map((model) => ({ model, score: query ? fuzzyScore(`${model.displayName} ${model.value}`, query) : 0 }))
+    .filter((each): each is { model: ModelInfo; score: number } => each.score !== null)
+    .sort((one, other) => one.score - other.score)
+    .map(({ model }) => {
+      const mark = current !== null && [model.value, model.resolvedModel].includes(current) ? '● ' : '';
+      return { name: `${mark}${model.displayName}`, detail: model.description, choice: model.value };
+    });
+}
+
+// The model `/model x` names, by its alias, full id or shown name; null for one the session does not
+// offer, which is refused rather than saved as the model every later session starts on.
+export function namedModel(models: ModelInfo[], name: string): string | null {
+  const wanted = name.toLowerCase();
+  const found = models.find((model) => [model.value, model.resolvedModel, model.displayName].some((each) => each?.toLowerCase() === wanted));
+  return found?.value ?? null;
 }
 
 // A command as a saved session writes it, `<command-name>/x</command-name>` and its arguments in tags

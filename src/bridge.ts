@@ -1,4 +1,4 @@
-import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
 import type { ChatEvent, ImageType } from './chat-transcript';
@@ -188,6 +188,8 @@ export type DashboardBridge = {
   chatReset(slot: number): void;
   // The slash commands the session runs; asking starts the session if it is not running.
   chatCommands(slot: number): Promise<CommandRow[]>;
+  // The models the session offers, for /model; asking starts it the same way.
+  chatModels(slot: number): Promise<ModelInfo[]>;
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;

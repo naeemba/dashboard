@@ -1,4 +1,4 @@
-import type { PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -259,6 +259,13 @@ export function registerChatSessions(table: Channels, host: ChatHost): { stop(sl
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     return (await running(slot, projectPath)).query.supportedCommands();
+  });
+
+  // The models /model lists, as the session offers them; asking starts it, as the command list does.
+  table.handle('chat:models', async (_screen, slot: number): Promise<ModelInfo[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return (await running(slot, projectPath)).query.supportedModels();
   });
 
   // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:

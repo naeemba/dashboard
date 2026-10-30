@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, modelRows, namedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -212,6 +212,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -410,6 +411,25 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
       focus();
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  }
+
+  // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one
+  // named after the command; the one chosen is what the next turn runs on, on every screen.
+  function showModels(name: string): void {
+    bridge.chatModels(slot).then(async (models) => {
+      if (name) {
+        const named = namedModel(models, name);
+        if (named) configure({ model: (model = named) });
+        else options.onNotice(`Claude has no model named ${name}. /model lists the ones it has.`);
+        return;
+      }
+      const picked = await searchOverlay({
+        name: 'chat-model', placeholder: 'Search models', rows: (query) => modelRows(models, model ?? transcript.model, query),
+        empty: 'No model matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined) configure({ model: (model = picked) });
+      focus();
+    }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.

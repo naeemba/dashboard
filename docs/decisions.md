@@ -198,13 +198,16 @@ prompt after it starts fresh instead of failing the same way again.
 `@path` is passed through as typed: the CLI expands it into the file's contents the way it does in a
 terminal, checked against the pinned SDK by asking for `@package.json`'s version with no tools used.
 
-## Slash commands are the session's; the screen adds the list and two of its own
+## Slash commands are the session's; the screen adds the list and three of its own
 
 Every command typed into the box goes to the session as a prompt, and the CLI runs it the way it does in
-a terminal: skills, the project's commands and its own (`/compact`, `/context`, `/clear`, `/model x`).
+a terminal: skills, the project's commands and its own (`/compact`, `/context`, `/clear`).
 Checked against the pinned SDK by sending them through `query()`. What a terminal draws as a dialog
 the session answers with "isn't available in this environment"; of those, `/resume` and `/plan` are
-answered by the screen itself (chat-commands.ts) and never sent.
+answered by the screen itself (chat-commands.ts) and never sent. So is `/model`: bare, the session
+prints a usage line instead of Claude Code's picker, so the screen lists `supportedModels()`; with a
+name the session offers, it goes through `chat:configure` like the model key, so the foot and the
+saved preference follow it; a name it does not offer is refused, not saved as the next start model.
 
 The list comes from `supportedCommands()`, which only a running session answers, so the first slash
 typed starts the session. That bends "the session starts on the first prompt" on purpose: a slash is
