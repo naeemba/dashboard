@@ -200,6 +200,12 @@
           "title": "Draw TodoWrite as a checklist in the Claude pane",
           "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
           "priority": "low"
+        },
+        {
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low"
         }
       ]
     },
