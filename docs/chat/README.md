@@ -14,7 +14,8 @@ Claude has running.
   `chat-stamp.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
-  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`, `chat-btw-view.ts`
+  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
+  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-btw-view.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -41,4 +42,5 @@ Claude has running.
 - Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
+- Given an MCP server failed to connect, when you type /mcp and pick it, then Reconnect tries it again and Disable turns it off; a disabled one offers only Enable.
 - Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.

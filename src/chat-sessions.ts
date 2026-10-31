@@ -13,6 +13,7 @@ import type { Channels } from './channels';
 import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
+import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
@@ -345,7 +346,7 @@ export function registerChatSessions(
     };
   });
 
-  // /btw: a question answered from the conversation so far and never added to it (chat-decision-6).
+  // /btw: a question answered from the conversation so far and never added to it (chat-decision-7).
   // Null for no answer.
   table.handle('chat-side-question:ask', async (_screen, slot: number, question: string): Promise<string | null> => {
     const projectPath = host.projectPath(slot);
@@ -533,6 +534,20 @@ export function registerChatSessions(
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
     return restored;
+  });
+
+  // The session's MCP servers for /mcp, and the one picked reconnected, disabled or enabled. Both start
+  // a session that has ended, as the slash list does, since only a running one has servers.
+  table.handle('chat-mcp:read', async (_screen, slot: number): Promise<McpServer[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return mcpServers(await (await running(slot, projectPath)).query.mcpServerStatus());
+  });
+
+  table.handle('chat-mcp:change', async (_screen, slot: number, name: string, action: McpAction): Promise<void> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return;
+    await changeMcpServer((await running(slot, projectPath)).query, name, action);
   });
 
   return {

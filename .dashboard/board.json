@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -93,20 +86,6 @@
           "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
           "title": "Export the Claude pane's conversation to clipboard or file",
           "notes": "Claude Code: /export. Pane: none. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
-          "title": "Readline editing keys in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
-          "title": "Copy a whole Claude reply as markdown from the Claude pane",
-          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
           "priority": "low",
           "parent": null
         },
@@ -324,6 +303,22 @@
           ]
         },
         {
+          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
+          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
+          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:50:51.462Z",
+          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
+          "pullRequest": 118,
+          "comments": [
+            {
+              "at": "2026-10-31T22:50:51.462Z",
+              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            }
+          ]
+        },
+        {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
@@ -364,6 +359,26 @@
           "updatedAt": "2026-10-31T23:08:20.947Z",
           "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
           "pullRequest": 126
+        },
+        {
+          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
+          "title": "Readline editing keys in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:49.584Z",
+          "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
+          "pullRequest": 127
+        },
+        {
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:12:15.674Z",
+          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+          "pullRequest": 128
         }
       ]
     },
@@ -1461,22 +1476,18 @@
           ]
         },
         {
-          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
-          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
-          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "low",
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T23:10:31.694Z",
-          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
-          "pullRequest": 118,
+          "updatedAt": "2026-10-31T23:09:44.713Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
           "comments": [
             {
-              "at": "2026-10-31T22:50:51.462Z",
-              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
-            },
-            {
-              "at": "2026-10-31T23:10:31.694Z",
-              "body": "Shipped in PR #118: /btw asks a side question beside the running turn, answered from the conversation so far without tools and kept out of it. Version 2.20.0."
+              "at": "2026-10-31T23:09:44.713Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.20.0. Needs a hand check in the rebuilt app."
             }
           ]
         }

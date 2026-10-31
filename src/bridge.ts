@@ -1,6 +1,7 @@
 import type { ModelInfo, PermissionResult, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
+import type { McpAction, McpServer } from './chat-mcp';
 import type { PdfRead } from './chat-pdf';
 import type { RewindChoice, RewindPoint } from './chat-rewind';
 import type { ChatMeasure } from './chat-status';
@@ -214,6 +215,9 @@ export type DashboardBridge = {
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;
   chatRewind(slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null>;
+  // The session's MCP servers for /mcp, and reconnecting, disabling or enabling one of them.
+  chatMcpServers(slot: number): Promise<McpServer[]>;
+  chatChangeMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
   // /btw's answer, kept out of the conversation; null when there is none.
   chatSideQuestion(slot: number, question: string): Promise<string | null>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
