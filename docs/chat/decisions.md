@@ -68,3 +68,15 @@ conversation.
 
 Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too: Escape
 is the interrupt key, and a double press would need a timing rule beside it.
+
+## chat-decision-4: /mcp is the screen's own, on the session's MCP calls
+
+Sent as a prompt, `/mcp` gets back a count ("2 MCP server(s): 1 connected, 1 connecting, …") and a
+pointer to the terminal, so the screen answers it itself, as it does `/resume`. The list is
+`mcpServerStatus()`; Reconnect is `reconnectMcpServer`, Disable and Enable are `toggleMcpServer`.
+Checked against the pinned SDK: a connected server went to `disabled` and back to `connected`, and a
+name the session does not have throws "Server not found". A failure is printed as the error line.
+
+It is not refused under a running turn, as `/resume` and `/rewind` are: neither call touches the
+conversation. Claude Code's dialog also lists each server's tools and signs in to one that needs it;
+the sheet shows the tool count and the status only.

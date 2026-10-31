@@ -11,6 +11,7 @@ import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
+import { mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
@@ -447,6 +448,22 @@ export function registerChatSessions(
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
     return restored;
+  });
+
+  // The session's MCP servers for /mcp, and the one picked reconnected, disabled or enabled. Both start
+  // a session that has ended, as the slash list does, since only a running one has servers.
+  table.handle('chat-mcp:read', async (_screen, slot: number): Promise<McpServer[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return mcpServers(await (await running(slot, projectPath)).query.mcpServerStatus());
+  });
+
+  table.handle('chat-mcp:change', async (_screen, slot: number, name: string, action: McpAction): Promise<void> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return;
+    const { query } = await running(slot, projectPath);
+    if (action === 'reconnect') await query.reconnectMcpServer(name);
+    else await query.toggleMcpServer(name, action === 'enable');
   });
 
   return {

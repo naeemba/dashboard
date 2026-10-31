@@ -14,3 +14,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #102 — Fold long messages you send to their first lines
 - 2026-11-01 #104 — Show Claude's thinking as a folded line
 - 2026-11-01 #106 — Rewind to an earlier prompt: code, conversation or both (chat-decision-3)
+- 2026-11-01 #PR — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-4)

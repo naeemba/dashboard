@@ -18,11 +18,12 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
+export type ScreenCommand = { kind: 'resume' } | { kind: 'rewind' } | { kind: 'mcp' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
   { name: 'rewind', description: 'Put the code, the conversation or both back to just before an earlier prompt', argumentHint: '' },
+  { name: 'mcp', description: 'List the session\'s MCP servers and reconnect, disable or enable one', argumentHint: '' },
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
@@ -34,6 +35,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   const match = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(text.trim());
   if (match?.[1] === 'resume') return { kind: 'resume' };
   if (match?.[1] === 'rewind') return { kind: 'rewind' };
+  if (match?.[1] === 'mcp') return { kind: 'mcp' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
   return null;
