@@ -77,6 +77,7 @@ const bridge: DashboardBridge = {
   chatCommands: (slot) => ipcRenderer.invoke('chat:commands', slot),
   chatFiles: (slot) => ipcRenderer.invoke('chat-files:read', slot),
   chatModels: (slot) => ipcRenderer.invoke('chat-models:read', slot),
+  chatHistory: (slot) => ipcRenderer.invoke('chat-history:read', slot),
   chatSessions: (slot) => ipcRenderer.invoke('chat:sessions', slot),
   readPdf: (slot, file) => ipcRenderer.invoke('pdf:read', slot, file),
   onViewerDismiss: (listener) => ipcRenderer.on('viewer:dismiss', () => listener()),

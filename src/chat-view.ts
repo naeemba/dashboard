@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { onEdgeLine, recall, sentPrompts } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
@@ -644,6 +644,25 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
   }
 
+  // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
+  // picked goes in the box to edit or send, over whatever was there. This screen's own conversation
+  // comes first, from what it holds rather than read off disk again.
+  function showHistory(): void {
+    bridge.chatHistory(slot).then(async (earlier) => {
+      const prompts = promptHistory([sentPrompts(transcript.entries), ...earlier]);
+      if (prompts.length === 0) return options.onNotice('This project has no prompts sent yet.');
+      const picked = await searchOverlay({
+        name: 'chat-history', placeholder: 'Search prompts', rows: (query) => historyRows(prompts, query),
+        empty: 'No prompt matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined) {
+        prompt.value = picked;
+        prompt.dispatchEvent(new Event('input'));
+      }
+      focus();
+    }, (error: unknown) => options.onError(`Earlier prompts not listed: ${failureText(error)}`));
+  }
+
   // The effort levels in a search sheet, as Claude Code's /effort offers them, or straight to the one
   // named after the command; the next turn runs at it, on every screen.
   function showEfforts(name: string): void {
@@ -727,6 +746,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'history') showHistory();
       if (command === 'task-select') tasks.step();
       if (command === 'task-stop') stopTask();
       if (command === 'task-background') backgroundTask();

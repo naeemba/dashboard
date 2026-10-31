@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
-          "title": "Real line diffs for edits in the Claude pane",
-          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
@@ -55,32 +48,32 @@
           "parent": null
         },
         {
-          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
-          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
-          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
           "priority": "low",
-          "parent": null
+          "parent": null,
+          "updatedAt": "2026-10-31T22:51:28.176Z",
+          "comments": [
+            {
+              "at": "2026-10-31T22:51:28.176Z",
+              "body": "Skipped, SDK 0.3.312 cannot do it. View: the public Query type has no listPermissionRules; list_permission_rules is only an undeclared control request (sdk.d.ts:4872, not in the exported union's surface) and the runtime method listPermissionRules exists only in sdk.mjs, untyped. Edit: updateSettings accepts only localSettings.outputStyle and userSettings.effortLevel, no permissions, no deletion (sdk.d.ts:3038-3049). applyFlagSettings({permissions}) only writes the session flag layer (sdk.d.ts:3007-3013): rules added there list as source flagSettings, editability readonly (sdk.d.ts:5834-5845), and it cannot remove a rule saved in a settings file. PermissionUpdate removeRules/replaceRules exist only as a canUseTool answer during a prompt (sdk.d.ts:2604-2618). Revisit when Query exposes listPermissionRules and a rule-editing call."
+            }
+          ]
         },
         {
           "id": "b70e7641-48fb-4a5f-a0b8-de8c1c6650ac",
           "title": "Add a note to a permission Yes in the Claude pane",
           "notes": "Claude Code: Tab adds a note to a yes. Pane: a typed reason exists only on No (chat-permission.ts:55). Whether PermissionResult carries an allow note is unverified; if not, comment on the card and stop without a PR. Size S.",
           "priority": "low",
-          "parent": null
+          "parent": null,
+          "updatedAt": "2026-10-31T22:51:43.326Z",
+          "comments": [
+            {
+              "at": "2026-10-31T22:51:43.326Z",
+              "body": "Skipped: the SDK cannot carry a note on an allow. In @anthropic-ai/claude-agent-sdk 0.3.312, sdk.d.ts:2585 types PermissionResult allow as {behavior, updatedInput?, updatedPermissions?, toolUseID?, decisionClassification?}; only deny has message. The bundled CLI (claude-agent-sdk-linux-x64/claude) parses the SDK host answer with the same zod object (behavior: literal allow, updatedInput, updatedPermissions, toolUseID, decisionClassification), so an extra field is dropped. Claude Code's own Tab note on a yes is acceptFeedback, read only by its built-in permission dialog, not reachable from canUseTool. No PR opened. Revisit if a later SDK adds a message or feedback field to the allow result."
+            }
+          ]
         },
         {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
@@ -135,6 +128,13 @@
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
           "title": "Copy a whole Claude reply as markdown from the Claude pane",
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
+          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
+          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
           "priority": "low",
           "parent": null
         }
@@ -313,16 +313,6 @@
           ]
         },
         {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:27:25.984Z",
-          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
-          "pullRequest": 108
-        },
-        {
           "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
           "title": "Review all of a session's edits in the Claude pane, like /diff",
           "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
@@ -387,18 +377,34 @@
           ]
         },
         {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
+          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
+          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
+          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T22:48:56.764Z",
-          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
-          "pullRequest": 117,
+          "updatedAt": "2026-10-31T22:50:51.462Z",
+          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
+          "pullRequest": 118,
           "comments": [
             {
-              "at": "2026-10-31T22:48:56.764Z",
-              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.13.0. Needs a hand check in the rebuilt app."
+              "at": "2026-10-31T22:50:51.462Z",
+              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:56:12.260Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
             }
           ]
         }
@@ -1386,6 +1392,54 @@
             {
               "at": "2026-10-31T22:47:41.965Z",
               "body": "Shipped in PR #107: unfolding an Agent call lists the subagent's own text and tool calls, a skill it loaded as one line, a nested subagent indented under its line. Thinking stays out of a subagent's steps."
+            }
+          ]
+        },
+        {
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:51:14.324Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108,
+          "comments": [
+            {
+              "at": "2026-10-31T22:51:14.324Z",
+              "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.14.0."
+            }
+          ]
+        },
+        {
+          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
+          "title": "Real line diffs for edits in the Claude pane",
+          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:53:44.987Z",
+          "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
+          "pullRequest": 110,
+          "comments": [
+            {
+              "at": "2026-10-31T22:53:44.987Z",
+              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.15.0."
+            }
+          ]
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:59:04.397Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
+          "comments": [
+            {
+              "at": "2026-10-31T22:59:04.397Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.16.0. Needs a hand check in the rebuilt app."
             }
           ]
         }
