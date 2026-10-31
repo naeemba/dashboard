@@ -1,6 +1,7 @@
 import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
+import { rateLimitNotice } from './chat-notices';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -9,11 +10,12 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
+import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
+import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
 import { elicitationAsk, elicitationResult } from './chat-elicitation';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
-import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
+import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
@@ -115,15 +117,19 @@ function loginShellPath(fallback: string): Promise<string> {
   });
 }
 
-// The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
+// The messages the pane reads. The rest — hook progress, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out.
+// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
+// the pane draws its steps once each arrives whole. A rate limit event goes only when it says a limit
+// is near or hit: most say the plan is fine, one each time its percentage moves.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
-export function relayed(message: { type: string; event?: unknown }): boolean {
-  if (message.type !== 'stream_event') return RELAYED.has(message.type);
+export function relayed(message: Record<string, unknown>): boolean {
+  if (message.type === 'rate_limit_event') return rateLimitNotice(message) !== null;
+  if (message.type !== 'stream_event') return RELAYED.has(String(message.type));
+  if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
   return RELAYED_STREAM.has(String(event.type)) || RELAYED_STREAM.has(String(delta));
@@ -217,6 +223,8 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // A subagent's text as well as its tool calls, so a call that started one can show its steps.
+        forwardSubagentText: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
         // the first turn, in plan mode, after an API error, near the usage limit, and when settings.json
         // has promptSuggestionEnabled: false.
@@ -257,7 +265,7 @@ export function registerChatSessions(
           if (change.reset) host.send(slot, { kind: 'reset' });
           const mode = modeOf(record);
           if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
-          if (relayed(message)) host.send(slot, { kind: 'message', message: record });
+          if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
         error = failureText(thrown);
@@ -336,6 +344,31 @@ export function registerChatSessions(
       current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
+  });
+
+  // The prompts sent in the project's recent conversations, newest conversation first, for the history
+  // search. Read from their transcripts as the screen reads its own back, so the terminal's
+  // conversations in the folder count too. The page's own conversation is left out: it moves with
+  // every message, so it would be read whole on every Ctrl+R, and the screen already holds it. Any
+  // other is read again only once it has changed, and only what this call listed is kept, per project.
+  const promptsRead = new Map<string, Map<string, PromptsRead>>();
+  table.handle('chat-history:read', async (_screen, slot: number): Promise<string[][]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    const { getSessionMessages, listSessions } = await import('@anthropic-ai/claude-agent-sdk');
+    const live = remembered[projectPath];
+    const found = (await listSessions({ dir: projectPath, includeWorktrees: false, limit: HISTORY_CONVERSATIONS }))
+      .filter(({ sessionId }) => sessionId !== live);
+    const kept = promptsRead.get(projectPath) ?? new Map<string, PromptsRead>();
+    const stale = new Set(staleConversations(found, kept));
+    const read = new Map(await Promise.all(found.map(async ({ sessionId, lastModified }): Promise<[string, PromptsRead]> => {
+      const prompts = stale.has(sessionId)
+        ? sentPrompts(withEarlier(EMPTY_TRANSCRIPT, await getSessionMessages(sessionId, { dir: projectPath })).entries)
+        : kept.get(sessionId)?.prompts ?? [];
+      return [sessionId, { lastModified, prompts }];
+    })));
+    promptsRead.set(projectPath, read);
+    return [...read.values()].map(({ prompts }) => prompts);
   });
 
   table.on('chat:interrupt', (_screen, slot: number) => {
@@ -445,11 +478,27 @@ export function registerChatSessions(
   // one, and a session resuming it starts at once. Every screen reads it back.
   table.on('chat:resume', (_screen, slot: number, sessionId: string) => {
     const projectPath = host.projectPath(slot);
-    if (projectPath === undefined) return;
+    if (projectPath !== undefined) carryOnIn(slot, projectPath, sessionId);
+  });
+
+  function carryOnIn(slot: number, projectPath: string, sessionId: string): void {
     stop(slot);
     remember(projectPath, sessionId);
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
+  }
+
+  // /branch: the conversation is copied into a new one and the page goes on in the copy the way
+  // /resume goes on in a picked one, so the original is left as it was and stays in /resume's list. A
+  // rewind not yet carried on is kept: the copy stops at its cut.
+  table.handle('chat:branch', async (_screen, slot: number, title: string): Promise<boolean> => {
+    const projectPath = host.projectPath(slot);
+    const current = projectPath === undefined ? undefined : remembered[projectPath];
+    if (projectPath === undefined || current === undefined) return false;
+    const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
+    const { sessionId } = await forkSession(current, forkFrom(projectPath, rewound.get(projectPath), title));
+    carryOnIn(slot, projectPath, sessionId);
+    return true;
   });
 
   // The prompts /rewind lists.

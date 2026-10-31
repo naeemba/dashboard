@@ -201,9 +201,15 @@ export type DashboardBridge = {
   chatFiles(slot: number): Promise<string[]>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
+  // The prompts sent in the project's other recent conversations, one list per conversation, newest
+  // conversation first; the page's own is left to the screen, which holds it.
+  chatHistory(slot: number): Promise<string[][]>;
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
+  // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
+  // False when there is no conversation yet to copy.
+  chatBranch(slot: number, title: string): Promise<boolean>;
   // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;

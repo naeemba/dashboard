@@ -44,6 +44,10 @@ one is picked the foot says `default effort` and no row is marked, because the s
 the level in the settings file, which the screen does not read. Auto is not that: it clears the flag
 layer, which puts the session on the model's default over the settings level, and a restart after it
 sends the same clear, since the start option cannot say null.
+`/diff` is the screen's too: the SDK has no review of a session's edits, so the screen builds one from
+the conversation's own Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so
+it shows what Claude changed and nothing else in the folder. The transcript is all it reads, so a
+code-only `/rewind`, which leaves the conversation alone, leaves the edits it put back on the sheet.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.
@@ -68,7 +72,8 @@ call worked on a resumed session before any prompt was sent.
 Restoring the conversation closes the session and starts one with `resume`, `resumeSessionAt` set to
 the message before the prompt, and `forkSession`, so the old conversation stays whole in `/resume`.
 The fork names its new conversation only in the next turn's `init`, so until then main reads the
-remembered one cut at that message; any change of conversation drops the cut. While the cut waits,
+remembered one cut at that message; any change of conversation drops the cut, but `/branch` keeps
+it: the copy is forked with `upToMessageId` at the cut, so it holds only what the rewind left. While the cut waits,
 `/resume` marks no conversation as current, so picking the one just cut goes through `chat:resume`
 and puts it back whole. Before the first prompt there is nothing to resume, and it is a new
 conversation.

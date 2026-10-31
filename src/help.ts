@@ -1,5 +1,6 @@
 import { type ActionGroup } from './actions';
 import { PDF_LIMIT_SHOWN } from './chat-pdf';
+import { HISTORY_CONVERSATIONS } from './chat-history';
 import { FOLD_SHOWN_LINES } from './chat-fold';
 import { labelled } from './icons';
 import { keycaps } from './keycaps';
@@ -301,13 +302,14 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'working and it is read when the turn gets to it. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
     + 'a thumbnail of each sits over the box, up to 5 MB of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
     + 'point Claude at a file; @ opens a list of the project\'s files that narrows as you type, and Tab or Enter puts the one picked in the box. A PDF mentioned that way shows as a [PDF File] tile with its name, and so does one Claude reads, once its Read call is unfolded; a click or the image key opens it in the built-in PDF viewer, Escape puts it away, and one missing or over ' + PDF_LIMIT_SHOWN + ' says so on the tile. Up and Down on the box\'s first or last line bring back the prompts sent '
-    + 'before. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
+    + 'before, and the history key searches every prompt sent in the project\'s ' + HISTORY_CONVERSATIONS + ' most recent conversations, the terminal\'s too, and puts the one picked in the box. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
     + 'there to edit or send, and typing anything else replaces it. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
-    + 'runs it, or fills the box when it takes arguments. Five are this screen\'s own: /model lists the session\'s models '
+    + 'runs it, or fills the box when it takes arguments. Seven are this screen\'s own: /diff shows every change Claude made to a file in this conversation, file by file, on a sheet the arrows scroll and Escape puts away; /model lists the session\'s models '
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /effort lists auto and low to max the same way, for how hard Claude thinks from the next turn on; /resume lists the project\'s earlier '
-    + 'conversations to carry on from, newest first with the one you are on marked and a box to search them, /rewind lists the prompts sent, newest first, and puts the code, the '
-    + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; and /plan switches '
+    + 'conversations to carry on from, newest first with the one you are on marked and a box to search them; /rewind lists the prompts sent, newest first, and puts the code, the '
+    + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; /branch carries on in a copy of '
+    + 'this conversation, called whatever follows it, if anything, and leaves the original in /resume; and /plan switches '
     + 'to plan mode, sending anything after it as the prompt. /clear starts over like the new '
     + 'conversation key. The word ultrathink anywhere in a prompt asks for deeper thinking on that turn alone. '
     + 'Every tool call is folded to one line: a mark saying whether it is still running, worked or '

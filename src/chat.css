@@ -56,6 +56,14 @@
   border-radius: var(--radius);
 }
 
+/* When a message was written and by which model (chat-stamp.ts). */
+.chat-entry[data-stamp]::before {
+  content: attr(data-stamp);
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
 .chat-user p {
   margin: 6px 0;
   white-space: pre-wrap;
@@ -193,17 +201,29 @@
   color: var(--muted);
 }
 
-.chat-tool summary {
+.chat-tool summary,
+.chat-step-tool {
   display: flex;
   gap: 8px;
-  cursor: pointer;
   color: var(--muted);
   font: 12.5px/1.6 var(--mono-font);
 }
 
+.chat-tool summary {
+  cursor: pointer;
+}
+
+/* A subagent's steps, set in under the call that started it. */
+.chat-steps {
+  margin: 6px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+
 /* The mark and the tool's name do not shrink: the entry breaks long words anywhere, and a name
    squeezed by a long summary beside it broke into "Ba" over "sh". */
-.chat-tool summary b {
+.chat-tool summary b,
+.chat-step-tool b {
   flex-shrink: 0;
   color: var(--white);
   font-weight: 500;
@@ -239,6 +259,11 @@
 
 .diff-same {
   color: var(--muted);
+}
+
+.diff-gap {
+  color: var(--muted);
+  opacity: 0.6;
 }
 
 /* The question over the prompt. Hidden with the attribute, and the display below would beat it. */
@@ -515,4 +540,9 @@
 .chat-plan {
   padding: 4px 10px;
   border-left: 3px solid var(--yellow);
+}
+
+.chat-diff-file {
+  margin-top: 10px;
+  font: 600 12.5px/1.5 var(--mono-font);
 }
