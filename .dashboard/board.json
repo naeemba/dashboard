@@ -90,13 +90,6 @@
           "parent": null
         },
         {
-          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
-          "title": "Copy a whole Claude reply as markdown from the Claude pane",
-          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
@@ -376,6 +369,16 @@
           "updatedAt": "2026-10-31T23:09:49.584Z",
           "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
           "pullRequest": 127
+        },
+        {
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:12:15.674Z",
+          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+          "pullRequest": 128
         }
       ]
     },
