@@ -10,6 +10,8 @@ describe('screenCommand', () => {
     expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
+    expect(screenCommand('/branch')).toEqual({ kind: 'branch', rest: '' });
+    expect(screenCommand('/branch  try the other fix ')).toEqual({ kind: 'branch', rest: 'try the other fix' });
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
