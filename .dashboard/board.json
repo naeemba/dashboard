@@ -98,6 +98,12 @@
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
           "priority": "medium"
+        },
+        {
+          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
+          "title": "Real line diffs for edits in the Claude pane",
+          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
+          "priority": "medium"
         }
       ]
     },
