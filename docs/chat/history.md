@@ -13,5 +13,10 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #101 — Claude's suggested next prompt in the empty box, Tab accepts it
 - 2026-11-01 #102 — Fold long messages you send to their first lines
 - 2026-11-01 #104 — Show Claude's thinking as a folded line
+- 2026-11-01 #105 — /effort, the effort level in the foot, and ultrathink shown while its turn runs
 - 2026-11-01 #106 — Rewind to an earlier prompt: code, conversation or both (chat-decision-3)
-- 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-4)
+- 2026-11-01 #103 — @ file autocomplete in the box
+- 2026-11-01 #108 — Ctrl+R searches the prompts of the project's recent conversations
+- 2026-11-01 #109 — Stop or background a running task from the strip (chat-decision-5)
+- 2026-11-01 #107 — Unfold an Agent call to see the subagent's own steps
+- 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-6)

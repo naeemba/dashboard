@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, commandMenu, effortRows, footEffort, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -11,6 +11,7 @@ describe('screenCommand', () => {
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
+    expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
     expect(screenCommand('/btw  what was that flag called? ')).toEqual({ kind: 'btw', rest: 'what was that flag called?' });
     expect(screenCommand('/btw')).toEqual({ kind: 'btw', rest: '' });
   });
@@ -209,5 +210,57 @@ describe('nextCopyBlock', () => {
 
   it('has nothing to copy in an entry with no block', () => {
     expect(nextCopyBlock(null, 3, 0)).toBeNull();
+  });
+});
+
+describe('namedEffort', () => {
+  it('reads a level or auto, and refuses any other word', () => {
+    expect(namedEffort('XHigh')).toBe('xhigh');
+    expect(namedEffort('auto')).toBeNull();
+    expect(namedEffort('ultra')).toBeUndefined();
+  });
+});
+
+describe('effortRows', () => {
+  it('lists auto then the levels, marking the one the screen is on', () => {
+    expect(effortRows('high', '').map((row) => row.name)).toEqual(['auto', 'low', 'medium', '● high', 'xhigh', 'max']);
+    expect(effortRows(null, '')[0]).toMatchObject({ name: '● auto', choice: null });
+  });
+
+  it('marks no row before a level is picked', () => {
+    expect(effortRows(undefined, '').some((row) => row.name.startsWith('● '))).toBe(false);
+  });
+
+  it('keeps the levels holding what is typed', () => {
+    expect(effortRows(null, 'HI').map((row) => row.choice)).toEqual(['high', 'xhigh']);
+  });
+});
+
+describe('asksUltrathink', () => {
+  it('finds the keyword as a word in any case', () => {
+    expect(asksUltrathink('Ultrathink about the cache')).toBe(true);
+    expect(asksUltrathink('ultrathinking is not it')).toBe(false);
+  });
+});
+
+describe('footEffort', () => {
+  const asked = (text: string) => ({ kind: 'user' as const, text, images: [] });
+
+  it('names the level chosen, auto, or the default before any pick', () => {
+    expect(footEffort('high', 'ready', [])).toEqual({ label: 'high effort', ultrathink: false });
+    expect(footEffort(null, 'working', [])).toEqual({ label: 'auto effort', ultrathink: false });
+    expect(footEffort(undefined, 'ready', [])).toEqual({ label: 'default effort', ultrathink: false });
+  });
+
+  it('says ultrathink only while the turn of a prompt asking for it runs or waits', () => {
+    const entries = [asked('ultrathink about the cache')];
+    expect(footEffort('low', 'working', entries)).toEqual({ label: 'ultrathink', ultrathink: true });
+    expect(footEffort('low', 'waiting', entries).ultrathink).toBe(true);
+    expect(footEffort('low', 'ready', entries).label).toBe('low effort');
+  });
+
+  it('goes by the newest prompt, one sent while the turn runs included', () => {
+    expect(footEffort('high', 'working', [asked('ultrathink first'), asked('then this')]).label).toBe('high effort');
+    expect(footEffort('high', 'working', [asked('plain first'), asked('ultrathink this')]).label).toBe('ultrathink');
   });
 });
