@@ -34,23 +34,9 @@
           "parent": null
         },
         {
-          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
-          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
-          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
           "title": "Open a subagent in the Claude pane to see its own steps",
           "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
-          "title": "Stop or background a running task from the Claude pane's task strip",
-          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
           "priority": "medium",
           "parent": null
         },
@@ -348,22 +334,6 @@
           ]
         },
         {
-          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
-          "title": "@ file autocomplete in the Claude pane's box",
-          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:13:11.552Z",
-          "branch": "work-board-card-ef5acba4-2913-41f2-b16b-d51",
-          "pullRequest": 103,
-          "comments": [
-            {
-              "at": "2026-10-31T22:13:11.552Z",
-              "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
-            }
-          ]
-        },
-        {
           "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
           "title": "Effort level and ultrathink in the Claude pane",
           "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
@@ -412,6 +382,22 @@
             {
               "at": "2026-10-31T22:39:49.154Z",
               "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
+            }
+          ]
+        },
+        {
+          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
+          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
+          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:40:56.689Z",
+          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
+          "pullRequest": 114,
+          "comments": [
+            {
+              "at": "2026-10-31T22:40:56.632Z",
+              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
             }
           ]
         }
@@ -1331,6 +1317,42 @@
             {
               "at": "2026-10-31T22:35:28.992Z",
               "body": "Merged in PR #106: /rewind lists prompts, restores code (rewindFiles with checkpointing on), conversation (forked resumeSessionAt) or both. Left out: summarize, Esc Esc."
+            }
+          ]
+        },
+        {
+          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
+          "title": "@ file autocomplete in the Claude pane's box",
+          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:38:35.367Z",
+          "branch": "work-board-card-ef5acba4-2913-41f2-b16b-d51",
+          "pullRequest": 103,
+          "comments": [
+            {
+              "at": "2026-10-31T22:13:11.552Z",
+              "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
+            },
+            {
+              "at": "2026-10-31T22:38:35.367Z",
+              "body": "Shipped in PR #103: @ opens a list of the project's files in the Claude pane's box, narrowing as you type; Tab or Enter puts the pick in as an @ mention. Version 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
+          "title": "Stop or background a running task from the Claude pane's task strip",
+          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:41:42.824Z",
+          "branch": "work-board-card-402cf14c-e128-4f04-bc92-39a",
+          "pullRequest": 109,
+          "comments": [
+            {
+              "at": "2026-10-31T22:41:42.824Z",
+              "body": "Shipped in PR #109: the task strip picks a task with Alt+T, stops it with Alt+X and backgrounds it with Alt+B (chat-decision-5). Version 2.11.0."
             }
           ]
         }
