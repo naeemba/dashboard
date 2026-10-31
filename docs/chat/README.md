@@ -15,7 +15,7 @@ Claude has running.
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
-  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`
+  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -25,6 +25,7 @@ Claude has running.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
 - Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
+- Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you type `/effort high`, when you send it, then the next turn runs at high and the foot says `high effort`; `ultrathink` in a prompt shows in the foot while its turn runs.
 - Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.

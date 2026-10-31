@@ -187,6 +187,8 @@ export type DashboardBridge = {
   // what main does with each. A prompt is the content of one user message: text and pasted images.
   chatSend(slot: number, content: ChatContent): void;
   chatInterrupt(slot: number): void;
+  // A prompt sent while Claude was busy, taken back before the session reads it; false if it already has.
+  chatWithdraw(slot: number, id: string): Promise<boolean>;
   // A task in the strip, by its task id; backgrounding takes the tool call that started one, or none
   // for every foreground task, and says whether one matched.
   chatStopTask(slot: number, taskId: string): Promise<void>;
