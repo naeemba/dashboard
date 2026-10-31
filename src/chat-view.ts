@@ -738,9 +738,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'task-stop') stopTask();
       if (command === 'task-background') backgroundTask();
       if (command === 'stash') {
-        stashed = stashDraft(stashed, prompt.value);
+        // While Up shows an earlier entry, the box holds something Up can already reach; the draft
+        // held aside is what would be lost.
+        stashed = stashDraft(stashed, recalled === null ? prompt.value : draft);
         emptyBox();
-        prompt.focus();
+        focus();
       }
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
