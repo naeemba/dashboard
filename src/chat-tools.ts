@@ -67,23 +67,23 @@ function middleDiff(old: string[], next: string[]): DiffLine[] {
     ];
   }
   const common = Array.from({ length: old.length + 1 }, () => new Array<number>(next.length + 1).fill(0));
-  for (let i = old.length - 1; i >= 0; i--) {
-    for (let j = next.length - 1; j >= 0; j--) {
-      common[i][j] = old[i] === next[j] ? common[i + 1][j + 1] + 1 : Math.max(common[i + 1][j], common[i][j + 1]);
+  for (let oldIndex = old.length - 1; oldIndex >= 0; oldIndex--) {
+    for (let nextIndex = next.length - 1; nextIndex >= 0; nextIndex--) {
+      common[oldIndex][nextIndex] = old[oldIndex] === next[nextIndex] ? common[oldIndex + 1][nextIndex + 1] + 1 : Math.max(common[oldIndex + 1][nextIndex], common[oldIndex][nextIndex + 1]);
     }
   }
   const lines: DiffLine[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < old.length || j < next.length) {
-    if (i < old.length && j < next.length && old[i] === next[j]) {
-      lines.push({ sign: ' ', text: old[i] });
-      i++;
-      j++;
-    } else if (j === next.length || (i < old.length && common[i + 1][j] >= common[i][j + 1])) {
-      lines.push({ sign: '-', text: old[i++] });
+  let oldIndex = 0;
+  let nextIndex = 0;
+  while (oldIndex < old.length || nextIndex < next.length) {
+    if (oldIndex < old.length && nextIndex < next.length && old[oldIndex] === next[nextIndex]) {
+      lines.push({ sign: ' ', text: old[oldIndex] });
+      oldIndex++;
+      nextIndex++;
+    } else if (nextIndex === next.length || (oldIndex < old.length && common[oldIndex + 1][nextIndex] >= common[oldIndex][nextIndex + 1])) {
+      lines.push({ sign: '-', text: old[oldIndex++] });
     } else {
-      lines.push({ sign: '+', text: next[j++] });
+      lines.push({ sign: '+', text: next[nextIndex++] });
     }
   }
   return lines;
