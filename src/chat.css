@@ -561,3 +561,28 @@
   margin-top: 10px;
   font: 600 12.5px/1.5 var(--mono-font);
 }
+
+/* Prompts sent while Claude was busy, grey until the session takes them. */
+.chat-queued {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 30%;
+  overflow-y: auto;
+  padding: 4px 8px;
+  color: var(--muted);
+}
+
+.chat-queued[hidden] {
+  display: none;
+}
+
+.chat-queued-prompt {
+  white-space: pre-wrap;
+}
+
+/* /btw's answer: as long as Claude makes it; the sheet around it scrolls (dialogs.css). */
+.chat-btw-answer {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
