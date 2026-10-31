@@ -1,5 +1,5 @@
 import { piece } from './chat-foot-view';
-import { nextTaskSelection, taskDetail, taskOrder, type ChatTask, type ChatTasks } from './chat-tasks';
+import { keptSelection, nextTaskSelection, pickedTask, taskDetail, taskOrder, type ChatTask, type ChatTasks } from './chat-tasks';
 
 // The strip over the box listing what Claude has running: one row per agent, workflow or background
 // command, each under the one that started it, with what it has done so far and, when the session
@@ -9,8 +9,7 @@ export type TaskStrip = {
   element: HTMLElement;
   render(tasks: ChatTasks): void;
   step(): void;
-  // The picked task; 'ended' once it has left the strip, so a key meant for it never falls back to
-  // acting on every task; null with none picked. The task key walks on from an ended one.
+  // The picked task, as pickedTask in chat-tasks.ts decides it.
   picked(): ChatTask | 'ended' | null;
 };
 
@@ -56,12 +55,13 @@ export function createTaskStrip(): TaskStrip {
       // Every paint asks, a streamed token included; the rows are only rebuilt when a task changed.
       if (tasks === drawn) return;
       drawn = tasks;
+      selected = keptSelection(tasks, selected);
       draw();
     },
     step() {
       selected = nextTaskSelection(drawn, selected);
       mark();
     },
-    picked: () => (selected === null ? null : drawn.find((task) => task.id === selected) ?? 'ended'),
+    picked: () => pickedTask(drawn, selected),
   };
 }

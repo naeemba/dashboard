@@ -48,3 +48,14 @@ Plan mode is on the edits key, after accepting, the terminal's order. The plan a
 `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with
 it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
+
+## chat-decision-3: The task strip's background key is Alt+B, and an ended pick is refused
+
+The terminal backgrounds tasks with Ctrl+B, but Ctrl+B is the board's mode key here, and a mode key
+passes through to the pane only in its own mode (keys-rule-1). So the strip's keys are Alt+T to pick,
+Alt+X to stop and Alt+B to background.
+
+A key pressed for a picked task whose row has since left the strip is refused with a notice, not
+turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling back
+would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
+lasts while other tasks still run, never across later turns.

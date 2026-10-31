@@ -569,7 +569,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'claude-accept-suggestion', description: 'Fill the empty box with the prompt Claude suggests, or with the command picked in the list',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'suggestion' }, mac: 'Tab', other: 'Tab',
   },
-  // The task strip's keys. Ctrl+B, the terminal's background key, is the board's mode key here.
+  // The task strip's keys. Ctrl+B, the terminal's background key, is the board's mode key here (chat-decision-3).
   {
     name: 'claude-task-select', description: 'Pick the next running task in the strip, or none after the last',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-select' }, mac: 'Alt+T', other: 'Alt+T',

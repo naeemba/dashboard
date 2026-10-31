@@ -134,12 +134,35 @@ export function nextTaskSelection(tasks: ChatTasks, selected: string | null): st
   return ids[at + 1] ?? null;
 }
 
-// What the background key does: with no row picked, every foreground task, as Ctrl+B in the terminal;
-// with one picked, that one, which only a foreground task started by a tool call can be.
+// The pick kept when the strip gets new tasks: let go once nothing is running, so a pick whose task
+// ended refuses only while other tasks still run, never for the rest of the pane's life.
+export function keptSelection(tasks: ChatTasks, selected: string | null): string | null {
+  return tasks.length === 0 ? null : selected;
+}
+
+// The picked task; 'ended' once it has left the strip, so a key meant for it never falls back to
+// acting on every task; null with none picked. The task key walks on from an ended one.
+export function pickedTask(tasks: ChatTasks, selected: string | null): ChatTask | 'ended' | null {
+  if (selected === null) return null;
+  return tasks.find((task) => task.id === selected) ?? 'ended';
+}
+
+// What the stop and background keys both say when the picked task has left the strip.
 export const TASK_ENDED = 'The picked task has ended. The task key picks another, or none after the last.';
+
+export type StopTarget = { kind: 'one'; taskId: string } | { kind: 'refused'; reason: string };
+
+// What the stop key does: stops the picked task, and nothing with none picked.
+export function stopTarget(task: ChatTask | 'ended' | null): StopTarget {
+  if (task === null) return { kind: 'refused', reason: 'No task picked. The task key picks one in the strip over the box.' };
+  if (task === 'ended') return { kind: 'refused', reason: TASK_ENDED };
+  return { kind: 'one', taskId: task.id };
+}
 
 export type BackgroundTarget = { kind: 'all' } | { kind: 'one'; toolUseId: string } | { kind: 'refused'; reason: string };
 
+// What the background key does: with no row picked, every foreground task, as Ctrl+B in the terminal;
+// with one picked, that one, which only a foreground task started by a tool call can be.
 export function backgroundTarget(task: ChatTask | 'ended' | null): BackgroundTarget {
   if (task === null) return { kind: 'all' };
   if (task === 'ended') return { kind: 'refused', reason: TASK_ENDED };

@@ -18,7 +18,7 @@ import {
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
-import { backgroundTarget, TASK_ENDED } from './chat-tasks';
+import { backgroundTarget, stopTarget } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
@@ -504,17 +504,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function stopTask(): void {
-    const task = tasks.picked();
-    if (task === null) return options.onNotice('No task picked. The task key picks one in the strip over the box.');
-    if (task === 'ended') return options.onNotice(TASK_ENDED);
-    bridge.chatStopTask(slot, task.id).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
+    const target = stopTarget(tasks.picked());
+    if (target.kind === 'refused') return options.onNotice(target.reason);
+    bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
   }
 
   function backgroundTask(): void {
     const target = backgroundTarget(tasks.picked());
     if (target.kind === 'refused') return options.onNotice(target.reason);
     bridge.chatBackgroundTasks(slot, target.kind === 'one' ? target.toolUseId : undefined).then((matched) => {
-      if (!matched) options.onNotice('That task is no longer in the foreground.');
+      if (!matched) options.onNotice(target.kind === 'one' ? 'That task is no longer in the foreground.' : 'Claude has no task running.');
     }, (error: unknown) => options.onError(`Not sent to the background: ${failureText(error)}`));
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTaskMessage, backgroundTarget, nextTaskSelection, taskDetail, taskOrder, type ChatTasks } from './chat-tasks';
+import { applyTaskMessage, backgroundTarget, keptSelection, nextTaskSelection, pickedTask, stopTarget, taskDetail, taskOrder, type ChatTasks } from './chat-tasks';
 
 const fold = (messages: Record<string, unknown>[], start: ChatTasks = []): ChatTasks =>
   messages.reduce(applyTaskMessage, start);
@@ -85,5 +85,30 @@ describe('backgroundTarget', () => {
     expect(backgroundTarget(background).kind).toBe('refused');
     expect(backgroundTarget(nameless).kind).toBe('refused');
     expect(backgroundTarget('ended').kind).toBe('refused');
+  });
+});
+
+describe('pickedTask', () => {
+  it('answers the picked task, ended once it left the strip, and null with none picked', () => {
+    const tasks = fold([startedTask('a')]);
+    expect(pickedTask(tasks, null)).toBeNull();
+    expect(pickedTask(tasks, 'a')).toBe(tasks[0]);
+    expect(pickedTask(tasks, 'gone')).toBe('ended');
+  });
+});
+
+describe('keptSelection', () => {
+  it('keeps an ended pick while other tasks run, and lets go once nothing does', () => {
+    expect(keptSelection(fold([startedTask('b')]), 'a')).toBe('a');
+    expect(keptSelection([], 'a')).toBeNull();
+  });
+});
+
+describe('stopTarget', () => {
+  it('stops the picked task and refuses with none picked or an ended one', () => {
+    const [task] = fold([startedTask('a')]);
+    expect(stopTarget(task)).toEqual({ kind: 'one', taskId: 'a' });
+    expect(stopTarget(null).kind).toBe('refused');
+    expect(stopTarget('ended').kind).toBe('refused');
   });
 });
