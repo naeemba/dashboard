@@ -38,6 +38,12 @@
           "title": "Show Claude's suggested next prompt in the Claude pane's box",
           "notes": "Turn on promptSuggestions: true in the chat session's query options (chat-sessions.ts). The session then emits a prompt_suggestion message (SDKPromptSuggestionMessage, sdk.d.ts:5898) after each turn's result. Hold the suggestion in the transcript; clear it on a new turn, a sent prompt or a reset (decision module plus test). Draw it as grey placeholder text in the empty box, like Claude Code; Tab accepts it into the box, typing replaces it. New key goes in actions.ts and help.ts. None arrives on the first turn, in plan mode, after an API error, near the usage limit, or with promptSuggestionEnabled: false in settings.json.",
           "priority": "medium"
+        },
+        {
+          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
+          "title": "Fold long user messages in the Claude pane's thread",
+          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
+          "priority": "high"
         }
       ]
     },
