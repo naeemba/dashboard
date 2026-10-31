@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
-          "title": "Readline editing keys in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
           "title": "Copy a whole Claude reply as markdown from the Claude pane",
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
@@ -340,22 +333,6 @@
           ]
         },
         {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:56:12.260Z",
-          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
-          "pullRequest": 120,
-          "comments": [
-            {
-              "at": "2026-10-31T22:56:12.225Z",
-              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
-            }
-          ]
-        },
-        {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
@@ -396,6 +373,16 @@
           "updatedAt": "2026-10-31T23:08:20.947Z",
           "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
           "pullRequest": 126
+        },
+        {
+          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
+          "title": "Readline editing keys in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:49.584Z",
+          "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
+          "pullRequest": 127
         }
       ]
     },
@@ -1469,6 +1456,26 @@
             {
               "at": "2026-10-31T23:03:31.722Z",
               "body": "Shipped in PR #111: /diff reviews every file changed in the conversation. Merged after 3 review rounds."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:06:20.043Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
+            },
+            {
+              "at": "2026-10-31T23:06:20.043Z",
+              "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.19.0."
             }
           ]
         }
