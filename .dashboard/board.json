@@ -338,22 +338,6 @@
           ]
         },
         {
-          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
-          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
-          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:40:56.689Z",
-          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
-          "pullRequest": 114,
-          "comments": [
-            {
-              "at": "2026-10-31T22:40:56.632Z",
-              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
-            }
-          ]
-        },
-        {
           "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
           "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
           "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
@@ -1449,6 +1433,26 @@
             {
               "at": "2026-10-31T22:57:24.083Z",
               "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
+            }
+          ]
+        },
+        {
+          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
+          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
+          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:01:55.011Z",
+          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
+          "pullRequest": 114,
+          "comments": [
+            {
+              "at": "2026-10-31T22:40:56.632Z",
+              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            },
+            {
+              "at": "2026-10-31T23:01:55.011Z",
+              "body": "Shipped in PR #114: a message sent while Claude is busy waits grey in the session's queue until taken, Up in the empty box withdraws the last one, and the queue survives the session's own /clear. Merged with main at 2.17.0."
             }
           ]
         }
