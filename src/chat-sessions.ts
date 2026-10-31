@@ -118,9 +118,8 @@ function loginShellPath(fallback: string): Promise<string> {
 // The messages the pane reads. The rest — a hook's progress lines (it is named when it starts), rate
 // limit events, task updates, and of the streamed events everything but a block starting and text or
 // thinking arriving — are left on this side of the wire rather than sent to every screen on every
-// token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
-// the pane draws its steps once each arrives whole.
+// token. A Write streams the whole file as its input, so the working line's count leaves tool input
+// out. A subagent's stream is left out too: the pane draws its steps once each arrives whole.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
