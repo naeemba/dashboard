@@ -140,6 +140,12 @@
           "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
           "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
           "priority": "medium"
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium"
         }
       ]
     },
