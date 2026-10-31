@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, shownPreferences } from './chat-sessions';
+import { afterReport, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, shownPreferences } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -113,9 +113,11 @@ describe('replayedFlagSettings', () => {
   });
 
   it('does not replay a fast mode the session only reported', () => {
-    const chosen = { permissionMode: 'auto' as const };
-    expect(shownPreferences(chosen, true)).toEqual({ permissionMode: 'auto', fast: true });
-    expect(replayedFlagSettings(chosen)).toEqual({});
+    const after = afterReport({ fast: true }, { fast: false, permissionMode: 'plan' });
+    expect(after).toEqual({ chosen: { fast: true, permissionMode: 'plan' }, reportedFast: false });
+    expect(replayedFlagSettings(after.chosen)).toEqual({ fastMode: true });
+    expect(replayedFlagSettings(afterReport(undefined, { fast: true }).chosen)).toEqual({});
+    expect(shownPreferences(after.chosen, after.reportedFast)).toEqual({ fast: false, permissionMode: 'plan' });
   });
 });
 

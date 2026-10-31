@@ -158,6 +158,13 @@ export function replayedFlagSettings(chosen: ChatPreferences | undefined): Retur
   return flagSettingsOf({ ...(chosen?.effort === null && { effort: null }), fast: chosen?.fast });
 }
 
+// What a report from the session changes. Its permission mode becomes the choice, since the session
+// is on it now and a restart should stay there. Its fast mode is kept apart, so a restart does not
+// replay it over the settings file as if it had been chosen.
+export function afterReport(chosen: ChatPreferences | undefined, reported: ChatPreferences): { chosen: ChatPreferences; reportedFast?: boolean } {
+  return { chosen: { ...chosen, ...(reported.permissionMode && { permissionMode: reported.permissionMode }) }, ...(reported.fast !== undefined && { reportedFast: reported.fast }) };
+}
+
 // What a screen opening the page starts from: the choices made, with the fast mode the session last
 // reported over them, since that is what it is on now.
 export function shownPreferences(chosen: ChatPreferences | undefined, reportedFast: boolean | undefined): ChatPreferences {
@@ -282,8 +289,11 @@ export function registerChatSessions(
           if (change.reset) host.send(slot, { kind: 'reset' });
           // What the session reports it is on, so a screen opened later starts from it.
           const reported = reportedPreferences(record);
-          if (reported?.permissionMode) preferences.set(slot, { ...preferences.get(slot), permissionMode: reported.permissionMode });
-          if (reported?.fast !== undefined) reportedFast.set(slot, reported.fast);
+          if (reported) {
+            const after = afterReport(preferences.get(slot), reported);
+            preferences.set(slot, after.chosen);
+            if (after.reportedFast !== undefined) reportedFast.set(slot, after.reportedFast);
+          }
           if (relayed(message)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
