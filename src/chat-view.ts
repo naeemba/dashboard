@@ -8,6 +8,7 @@ import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './ch
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
+import { askAside } from './chat-btw-view';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { rewind } from './chat-rewind-view';
@@ -288,6 +289,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'btw') return showAside(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -568,6 +570,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (text !== undefined && !prompt.value.trim()) prompt.value = text;
       focus();
     });
+  }
+
+  // Asked beside a running turn too: the answer comes from the conversation so far and stays out of it.
+  function showAside(question: string): void {
+    if (!question) return options.onNotice('/btw needs a question after it.');
+    void askAside(bridge, slot, question, options).then(focus);
   }
 
   // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one

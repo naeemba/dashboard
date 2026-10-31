@@ -33,7 +33,7 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
 // Enter and Escape answer every small dialog here, and a modified one answers none: Cmd+Enter is not
 // an answer to a question about deleting a card and its whole family, and a capital typed with Shift
 // still reaches a box to type in. One copy, so a dialog cannot forget the guard.
-function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape') => void): void {
+export function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape') => void): void {
   dialog.addEventListener('keydown', (event) => {
     if (isModified(event)) return;
     if (event.key !== 'Enter' && event.key !== 'Escape') return;

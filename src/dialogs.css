@@ -35,7 +35,8 @@
    two-line question sits in a box most of the window tall. The outline is the browser's focus ring:
    the box holds focus so Enter and Escape reach it, and every other dialog turns the ring off too. */
 .confirm-dialog,
-.prompt-dialog {
+.prompt-dialog,
+.chat-btw-dialog {
   align-self: flex-start;
   max-width: 420px;
   padding: 20px 24px;

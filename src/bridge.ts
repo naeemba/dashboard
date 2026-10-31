@@ -202,6 +202,8 @@ export type DashboardBridge = {
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;
   chatRewind(slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null>;
+  // /btw's answer, kept out of the conversation; null when there is none.
+  chatSideQuestion(slot: number, question: string): Promise<string | null>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

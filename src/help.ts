@@ -304,7 +304,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'before. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
     + 'there to edit or send, and typing anything else replaces it. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
-    + 'runs it, or fills the box when it takes arguments. Four are this screen\'s own: /model lists the session\'s models '
+    + 'runs it, or fills the box when it takes arguments. Five are this screen\'s own: /btw asks a side question, answered at once even mid-turn, from the conversation so far and without tools, in a sheet that Escape or Enter puts away and that never joins the conversation; /model lists the session\'s models '
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /resume lists the project\'s earlier '
     + 'conversations to carry on from, newest first with the one you are on marked and a box to search them, /rewind lists the prompts sent, newest first, and puts the code, the '
     + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; and /plan switches '

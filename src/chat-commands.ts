@@ -18,7 +18,7 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
+export type ScreenCommand = { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'btw'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -26,6 +26,7 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
+  { name: 'btw', description: 'Ask a side question about the conversation, answered without tools and kept out of it', argumentHint: '<question>' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -36,6 +37,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'rewind') return { kind: 'rewind' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'btw') return { kind: 'btw', rest: (match[2] ?? '').trim() };
   return null;
 }
 
