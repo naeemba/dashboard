@@ -24,4 +24,9 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #112 — /branch carries on in a copy of the conversation, keeping the original
 - 2026-11-01 #111 — /diff reviews every file Claude changed in the conversation
 - 2026-11-01 #120 — API retry and rate-limit notices in the thread
+- 2026-11-01 #117 — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-6)
+- 2026-11-01 #122 — /rename names the conversation; /resume lists it by that name
+- 2026-11-01 #114 — Queue a message sent while Claude is busy, grey until taken, Up withdraws it (chat-decision-7)
+- 2026-11-01 #113 — Ctrl+G edits the prompt in the project's nvim
+- 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-8)
 - 2026-11-01 #116 — Answer an MCP server's forms and sign-in links in the ask box
