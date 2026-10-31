@@ -8,7 +8,7 @@ import { searchOverlay } from './overlay';
 // the way /rewind is in chat-rewind-view.ts. Each one says what went wrong itself and resolves once it
 // is done, for the view to put the keyboard back.
 
-type Say = Pick<ChatViewOptions, 'onError' | 'onNotice'>;
+export type Say = Pick<ChatViewOptions, 'onError' | 'onNotice'>;
 
 // /resume: the project's earlier conversations in a search sheet; the one picked is read back on every
 // screen and carried on by the next prompt.
