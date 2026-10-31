@@ -56,6 +56,14 @@
   border-radius: var(--radius);
 }
 
+/* When a message was written and by which model (chat-stamp.ts). */
+.chat-entry[data-stamp]::before {
+  content: attr(data-stamp);
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
 .chat-user p {
   margin: 6px 0;
   white-space: pre-wrap;
