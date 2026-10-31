@@ -9,7 +9,8 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
+import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
+import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
@@ -117,12 +118,14 @@ function loginShellPath(fallback: string): Promise<string> {
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out.
+// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
+// the pane draws its steps once each arrives whole.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
-export function relayed(message: { type: string; event?: unknown }): boolean {
+export function relayed(message: { type: string; event?: unknown; parent_tool_use_id?: string | null }): boolean {
   if (message.type !== 'stream_event') return RELAYED.has(message.type);
+  if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
   return RELAYED_STREAM.has(String(event.type)) || RELAYED_STREAM.has(String(delta));
@@ -216,6 +219,8 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // A subagent's text as well as its tool calls, so a call that started one can show its steps.
+        forwardSubagentText: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
         // the first turn, in plan mode, after an API error, near the usage limit, and when settings.json
         // has promptSuggestionEnabled: false.
@@ -332,6 +337,31 @@ export function registerChatSessions(
       current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
+  });
+
+  // The prompts sent in the project's recent conversations, newest conversation first, for the history
+  // search. Read from their transcripts as the screen reads its own back, so the terminal's
+  // conversations in the folder count too. The page's own conversation is left out: it moves with
+  // every message, so it would be read whole on every Ctrl+R, and the screen already holds it. Any
+  // other is read again only once it has changed, and only what this call listed is kept, per project.
+  const promptsRead = new Map<string, Map<string, PromptsRead>>();
+  table.handle('chat-history:read', async (_screen, slot: number): Promise<string[][]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    const { getSessionMessages, listSessions } = await import('@anthropic-ai/claude-agent-sdk');
+    const live = remembered[projectPath];
+    const found = (await listSessions({ dir: projectPath, includeWorktrees: false, limit: HISTORY_CONVERSATIONS }))
+      .filter(({ sessionId }) => sessionId !== live);
+    const kept = promptsRead.get(projectPath) ?? new Map<string, PromptsRead>();
+    const stale = new Set(staleConversations(found, kept));
+    const read = new Map(await Promise.all(found.map(async ({ sessionId, lastModified }): Promise<[string, PromptsRead]> => {
+      const prompts = stale.has(sessionId)
+        ? sentPrompts(withEarlier(EMPTY_TRANSCRIPT, await getSessionMessages(sessionId, { dir: projectPath })).entries)
+        : kept.get(sessionId)?.prompts ?? [];
+      return [sessionId, { lastModified, prompts }];
+    })));
+    promptsRead.set(projectPath, read);
+    return [...read.values()].map(({ prompts }) => prompts);
   });
 
   table.on('chat:interrupt', (_screen, slot: number) => {
