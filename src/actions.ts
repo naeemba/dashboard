@@ -62,7 +62,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -563,6 +563,11 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'claude-permission-mode', description: 'Ask before edits, accept them, plan first, or auto mode',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'permission-mode' },
     mac: 'Shift+Tab', other: 'Shift+Tab',
+  },
+  // Tab, as in Claude Code. It also fills the box from the open command list, so the list keeps the key.
+  {
+    name: 'claude-accept-suggestion', description: 'Fill the empty box with the prompt Claude suggests, or with the command picked in the list',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'suggestion' }, mac: 'Tab', other: 'Tab',
   },
   {
     name: 'claude-new', description: 'Start a new conversation',
