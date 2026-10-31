@@ -34,24 +34,10 @@
           "parent": null
         },
         {
-          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
-          "title": "Real line diffs for edits in the Claude pane",
-          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
           "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
-          "title": "Timestamp and model on each message in the Claude pane",
-          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
-          "priority": "low",
           "parent": null
         },
         {
@@ -88,13 +74,6 @@
               "body": "Skipped: the SDK cannot carry a note on an allow. In @anthropic-ai/claude-agent-sdk 0.3.312, sdk.d.ts:2585 types PermissionResult allow as {behavior, updatedInput?, updatedPermissions?, toolUseID?, decisionClassification?}; only deny has message. The bundled CLI (claude-agent-sdk-linux-x64/claude) parses the SDK host answer with the same zod object (behavior: literal allow, updatedInput, updatedPermissions, toolUseID, decisionClassification), so an extra field is dropped. Claude Code's own Tab note on a yes is acceptFeedback, read only by its built-in permission dialog, not reachable from canUseTool. No PR opened. Revisit if a later SDK adds a message or feedback field to the allow result."
             }
           ]
-        },
-        {
-          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
-          "title": "Fast mode toggle in the Claude pane",
-          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
-          "priority": "low",
-          "parent": null
         },
         {
           "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
@@ -142,6 +121,13 @@
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
           "title": "Copy a whole Claude reply as markdown from the Claude pane",
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
+          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
+          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
           "priority": "low",
           "parent": null
         }
@@ -230,16 +216,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:50:40.941Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -329,16 +306,6 @@
           ]
         },
         {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:27:25.984Z",
-          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
-          "pullRequest": 108
-        },
-        {
           "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
           "title": "Review all of a session's edits in the Claude pane, like /diff",
           "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
@@ -415,6 +382,38 @@
             {
               "at": "2026-10-31T22:50:51.462Z",
               "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:56:12.260Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
+            }
+          ]
+        },
+        {
+          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
+          "title": "Fast mode toggle in the Claude pane",
+          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:58:57.860Z",
+          "branch": "work-board-card-098a7fef-37c6-47ee-954e-6ff",
+          "pullRequest": 121,
+          "comments": [
+            {
+              "at": "2026-10-31T22:58:57.781Z",
+              "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
             }
           ]
         }
@@ -1402,6 +1401,54 @@
             {
               "at": "2026-10-31T22:47:41.965Z",
               "body": "Shipped in PR #107: unfolding an Agent call lists the subagent's own text and tool calls, a skill it loaded as one line, a nested subagent indented under its line. Thinking stays out of a subagent's steps."
+            }
+          ]
+        },
+        {
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:51:14.324Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108,
+          "comments": [
+            {
+              "at": "2026-10-31T22:51:14.324Z",
+              "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.14.0."
+            }
+          ]
+        },
+        {
+          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
+          "title": "Real line diffs for edits in the Claude pane",
+          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:53:44.987Z",
+          "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
+          "pullRequest": 110,
+          "comments": [
+            {
+              "at": "2026-10-31T22:53:44.987Z",
+              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.15.0."
+            }
+          ]
+        },
+        {
+          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
+          "title": "Timestamp and model on each message in the Claude pane",
+          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:57:24.083Z",
+          "branch": "work-board-card-5ab46333-ccde-4921-b84a-1e8",
+          "pullRequest": 115,
+          "comments": [
+            {
+              "at": "2026-10-31T22:57:24.083Z",
+              "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
             }
           ]
         }

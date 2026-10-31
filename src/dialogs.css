@@ -288,6 +288,14 @@
   white-space: nowrap;
 }
 
+/* A prompt in the history search is one line however long it is; the box gets it whole. */
+.chat-history .search-name {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .search-list li.highlighted .search-detail {
   color: var(--white);
 }
