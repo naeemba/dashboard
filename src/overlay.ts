@@ -78,25 +78,45 @@ export function imageOverlay(source: string): void {
 
 // A PDF in Chromium's own viewer, on the same sheet and with the same keys; the window turns plugins
 // on for it. A click inside the viewer is the viewer's: it never reaches this page, so only the dark
-// margin puts the PDF away once the viewer has the pointer. The blob's URL lives as long as the sheet.
+// margin puts the PDF away once the viewer has the pointer, and Escape once it has the keyboard. The blob's URL lives as long as the sheet.
 export function pdfOverlay(pdf: Blob): void {
   const frame = document.createElement('iframe');
   frame.src = URL.createObjectURL(pdf);
   viewerOverlay('pdf-viewer', frame, () => URL.revokeObjectURL(frame.src));
 }
 
+// The viewer on screen, if any, for the Escape main hands over from the PDF's frame.
+let closeViewer: (() => void) | null = null;
+
 function viewerOverlay(name: string, shown: HTMLElement, closed: () => void): void {
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
+    closeViewer = null;
+    document.removeEventListener('focusin', hold);
     remove();
     closed();
     previous?.focus();
+  }
+  // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks
+  // back out past the sheet to whatever is behind it. Focus that leaves the sheet comes back to it,
+  // so the next keys never reach the page under the overlay.
+  function hold(event: FocusEvent): void {
+    if (!(event.target instanceof Node && dialog.contains(event.target))) dialog.focus();
   }
   const { dialog, remove } = openOverlay(name, close);
   dialog.append(shown);
   dialog.addEventListener('click', close);
   answerKeys(dialog, close);
+  document.addEventListener('focusin', hold);
+  closeViewer = close;
   dialog.focus();
+}
+
+// An Escape pressed while the PDF viewer has the keyboard. Its keys stay in its own frame and never
+// reach this page, so main, which sees every key first, sends each Escape here; it counts only while
+// a frame has the keyboard, since every other Escape reached a listener of its own.
+export function dismissViewerFromFrame(): void {
+  if (document.activeElement instanceof HTMLIFrameElement) closeViewer?.();
 }
 
 // The same sheet with a box to type in instead of a question to answer. Enter takes what you typed,

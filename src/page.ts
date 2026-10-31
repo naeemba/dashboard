@@ -1,3 +1,4 @@
+import { dismissViewerFromFrame } from './overlay';
 import { Terminal } from '@xterm/xterm';
 import type { ILink, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -264,6 +265,8 @@ export type PageBuilder = {
 export function createPageBuilder(options: PageOptions): PageBuilder {
   options.bridge.onChat((slot, event) => chatsBySlot.get(slot)?.receive(event));
   options.bridge.onPaneMark((id, state) => markersById.get(id)?.(state));
+  // Once, for every Claude screen: a PDF opened on any of them is the one viewer on screen.
+  options.bridge.onViewerDismiss(dismissViewerFromFrame);
   // `parent` is where the box goes: the nvim view for the editor, the worker list for a worker.
   function buildPane(parent: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');

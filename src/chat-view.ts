@@ -4,8 +4,7 @@ import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
-import { drawEntry, PDF_TILE, type DrawnEntry } from './chat-entries';
-import { baseName } from './base-name';
+import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
@@ -458,14 +457,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
   });
 
   // Main reads the file each time, so a PDF written since the tile was drawn opens as it is now. One
-  // it will not hand over says why on the tile, which stays.
+  // it will not hand over says why on the tile, which stays, until a later click opens it.
   function openPdf(tile: HTMLElement): void {
-    const file = tile.dataset.path ?? '';
-    bridge.readPdf(slot, file).then(async (answer) => {
-      if ('refused' in answer) {
-        tile.querySelector('.chat-pdf-name')?.replaceChildren(`${baseName(file)} — ${answer.refused}`);
-        return;
-      }
+    bridge.readPdf(slot, tile.dataset.path ?? '').then(async (answer) => {
+      pdfTileState(tile, 'refused' in answer ? answer.refused : null);
+      if ('refused' in answer) return;
       // Decoded by the browser rather than a character at a time.
       pdfOverlay(await (await fetch(`data:application/pdf;base64,${answer.data}`)).blob());
     }, (error: unknown) => options.onError(`PDF not opened: ${failureText(error)}`));

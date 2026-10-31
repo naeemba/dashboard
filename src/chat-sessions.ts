@@ -362,9 +362,10 @@ export function registerChatSessions(
   // mention could be.
   table.handle('pdf:read', async (_screen, slot: number, file: string): Promise<PdfRead> => {
     const [absolute] = fileCandidates(file, [host.projectPath(slot)], homedir());
-    const found = absolute === undefined ? null : await stat(absolute).then((info) => (info.isFile() ? info.size : null), () => null);
-    const refused = pdfRefusal(file, found);
-    if (refused !== null || absolute === undefined) return { refused: refused ?? 'not found' };
+    if (absolute === undefined) return { refused: pdfRefusal(file, null) };
+    const size = await stat(absolute).then((info) => (info.isFile() ? info.size : null), () => null);
+    const refused = pdfRefusal(file, size);
+    if (refused !== null) return { refused };
     return { data: (await readFile(absolute)).toString('base64') };
   });
 

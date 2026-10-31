@@ -6,6 +6,8 @@
 // The largest PDF main reads. Its bytes go back to the screen as base64, a third bigger, and a
 // second screen gets them in one frame under the host's 8 MB limit (MAX_FRAME_BYTES).
 export const PDF_LIMIT = 5 * 1024 * 1024;
+// The limit as the tile and the help dialog say it.
+export const PDF_LIMIT_SHOWN = `${PDF_LIMIT / 1024 / 1024} MB`;
 
 function isPdfPath(file: string): boolean {
   return /\.pdf$/i.test(file);
@@ -29,10 +31,13 @@ export function pdfOfTool(name: string, input: Record<string, unknown>): string 
 
 // Why main will not hand a file back, or null when it will. `size` is null for a file that is not
 // there. Main asks this before it reads a byte, and the tile shows what it says.
+// A file that is not there is always refused, and the overload says so to a caller holding no size.
+export function pdfRefusal(file: string, size: null): string;
+export function pdfRefusal(file: string, size: number | null): string | null;
 export function pdfRefusal(file: string, size: number | null): string | null {
   if (!isPdfPath(file)) return 'not a PDF';
   if (size === null) return 'not found';
-  if (size > PDF_LIMIT) return `over ${PDF_LIMIT / 1024 / 1024} MB`;
+  if (size > PDF_LIMIT) return `over ${PDF_LIMIT_SHOWN}`;
   return null;
 }
 

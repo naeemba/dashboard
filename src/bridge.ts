@@ -199,6 +199,8 @@ export type DashboardBridge = {
   chatResume(slot: number, sessionId: string): void;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
+  // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).
+  onViewerDismiss(listener: () => void): void;
   onChat(listener: (slot: number, event: ChatEvent) => void): void;
 };
 

@@ -38,10 +38,19 @@ function pdfTile(file: string): HTMLElement {
   const kind = document.createElement('b');
   kind.textContent = '[PDF File]';
   const name = document.createElement('span');
-  name.className = 'chat-pdf-name';
-  name.textContent = baseName(file);
+  name.className = PDF_TILE_NAME;
   tile.append(kind, name);
+  pdfTileState(tile, null);
   return tile;
+}
+
+const PDF_TILE_NAME = 'chat-pdf-name';
+
+// What a tile says after main was asked for its file: the name alone once the file opened, or the
+// name and why main would not hand it over. A file that turns up later clears the reason.
+export function pdfTileState(tile: HTMLElement, refused: string | null): void {
+  const name = baseName(tile.dataset.path ?? '');
+  tile.querySelector(`.${PDF_TILE_NAME}`)?.replaceChildren(refused === null ? name : `${name} — ${refused}`);
 }
 
 // A copy button in a code block's corner, for what the block holds. It shows a tick for a moment once
