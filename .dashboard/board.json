@@ -55,13 +55,6 @@
           "parent": null
         },
         {
-          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
-          "title": "Effort level and ultrathink in the Claude pane",
-          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "938570a0-e098-4918-9d58-96b0266f0952",
           "title": "Show Claude's thinking in the Claude pane",
           "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
@@ -411,6 +404,16 @@
               "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
             }
           ]
+        },
+        {
+          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+          "title": "Effort level and ultrathink in the Claude pane",
+          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:19:49.243Z",
+          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
+          "pullRequest": 105
         }
       ]
     },
