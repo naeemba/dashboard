@@ -116,6 +116,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let images: ChatImage[] = [];
   let model: string | null = null;
   let effort: ChosenEffort;
+  let fast = false;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
@@ -152,7 +153,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
   let drawnFoot = '';
   function drawFoot(): void {
-    const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
+    const shown = `${measured?.model ?? model ?? transcript.model ?? 'default model'}${fast ? ' · fast' : ''}`;
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
     const effortShown = footEffort(effort, state, transcript.entries);
@@ -296,6 +297,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'fast') return configure({ fast: !fast });
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -564,6 +566,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
     if (change.permissionMode) mode = change.permissionMode;
     if ('effort' in change) effort = change.effort ?? null;
+    if (change.fast !== undefined) fast = change.fast;
   }
 
   function readEarlier(): void {
@@ -748,6 +751,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       if (command === 'model') configure({ model: next(MODELS, model) });
       if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });
+      if (command === 'fast') configure({ fast: !fast });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through
       // doing would stop with nothing on screen saying so.
       if (command === 'new' && working(transcript, asks.length)) {

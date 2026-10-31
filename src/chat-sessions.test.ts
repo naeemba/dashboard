@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions } from './chat-sessions';
+import { flagSettingsOf, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -92,5 +92,14 @@ describe('mainSessionStart', () => {
     expect(mainSessionStart(undefined, undefined, undefined).preferences).toEqual({ permissionMode: 'auto' });
     expect(mainSessionStart(undefined, undefined, { model: 'opus', permissionMode: 'plan' }).preferences)
       .toEqual({ model: 'opus', permissionMode: 'plan' });
+  });
+});
+
+describe('flagSettingsOf', () => {
+  it('sends only the flag-layer keys the change names, auto as null', () => {
+    expect(flagSettingsOf({ model: 'opus' })).toEqual({});
+    expect(flagSettingsOf({ effort: null })).toEqual({ effortLevel: null });
+    expect(flagSettingsOf({ effort: 'high', fast: false })).toEqual({ effortLevel: 'high', fastMode: false });
+    expect(flagSettingsOf({ fast: undefined })).toEqual({});
   });
 });

@@ -18,3 +18,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #103 — @ file autocomplete in the box
 - 2026-11-01 #109 — Stop or background a running task from the strip (chat-decision-5)
 - 2026-11-01 #107 — Unfold an Agent call to see the subagent's own steps
+- 2026-11-01 #PR — Fast mode toggle: /fast and Alt+F
