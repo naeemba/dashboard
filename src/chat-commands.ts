@@ -20,7 +20,8 @@ import type { SearchRow } from './overlay';
 export type CommandRow = SlashCommand;
 
 export type ScreenCommand =
-  | { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string } | { kind: 'rename'; rest: string };
+  | { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
+  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -29,6 +30,8 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
   { name: 'effort', description: 'Pick how hard Claude thinks, low to max, from a list, or set the level named after it', argumentHint: '' },
+  // No hint either: the name is optional, so Enter branches now.
+  { name: 'branch', description: 'Carry on in a copy of this conversation, called whatever follows, if anything; the original stays in /resume', argumentHint: '' },
   { name: 'rename', description: 'Name this conversation; /resume lists it by that name', argumentHint: '<name>' },
 ];
 
@@ -41,6 +44,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'rename') return { kind: 'rename', rest: (match[2] ?? '').trim() };
   return null;
 }
