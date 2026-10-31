@@ -529,15 +529,8 @@
   border-left: 3px solid var(--yellow);
 }
 
-/* /btw's answer: as long as Claude makes it, so it scrolls inside the sheet's cap. The box is the
-   confirm box (dialogs.css), wider; the sheet's class outranks that rule wherever it loads. */
-.overlay .chat-btw-dialog {
-  max-width: 640px;
-}
-
+/* /btw's answer: as long as Claude makes it; the sheet around it scrolls (dialogs.css). */
 .chat-btw-answer {
-  min-height: 0;
   margin-bottom: 12px;
-  overflow-y: auto;
   line-height: 1.5;
 }

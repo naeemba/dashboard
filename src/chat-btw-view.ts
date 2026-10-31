@@ -27,6 +27,13 @@ export function askAside(
     const keys = document.createElement('p');
     keys.className = 'confirm-keys';
     keys.textContent = 'Escape or Enter puts it away · not added to the conversation';
+    // The sheet hangs off document.body, outside the screen's own link handler, so it opens its own.
+    answer.addEventListener('click', (event) => {
+      const link = (event.target as Element | null)?.closest('a');
+      if (!link) return;
+      event.preventDefault();
+      bridge.openExternal(link.href);
+    });
     dialog.append(asked, answer, keys);
     dialog.focus();
     answerKeys(dialog, close);
