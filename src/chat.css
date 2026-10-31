@@ -366,6 +366,7 @@
   background: var(--tone);
 }
 
+.chat-foot-effort.ultrathink { color: var(--magenta); }
 .chat-foot-state[data-state='working'] { color: var(--blue); }
 .chat-foot-state[data-state='waiting'] { color: var(--yellow); }
 
@@ -420,6 +421,10 @@
 
 .chat-tasks[hidden] {
   display: none;
+}
+
+.chat-task.selected {
+  background: var(--tint);
 }
 
 .chat-task-name {

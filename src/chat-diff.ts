@@ -4,7 +4,8 @@ import type { ChatEntry } from './chat-transcript';
 // What /diff shows: every file Claude changed in the conversation, in the order it first touched
 // them, with each change it made there one after another. Built from the session's own Edit, Write and
 // MultiEdit calls rather than git, so it is what Claude did and nothing else in the folder. A call
-// still running, refused or failed changed nothing and is left out.
+// still running, refused or failed changed nothing and is left out. A code-only /rewind keeps the
+// conversation, so the edits it put back stay listed here though the files no longer hold them.
 
 export type FileEdits = { path: string; edits: number; lines: DiffLine[] };
 
@@ -24,7 +25,8 @@ export function sessionEdits(entries: ChatEntry[]): FileEdits[] {
   return [...byPath.values()];
 }
 
-// The line over one file's changes: the path, then how many lines went in and out over how many edits.
+// The line over one file's changes: the path, then the lines in and out across its edits, added up
+// edit by edit rather than the file's net change, which needs its original contents; then the edits.
 export function editsHeading(file: FileEdits): string {
   const count = (sign: DiffLine['sign']) => file.lines.filter((line) => line.sign === sign).length;
   return `${file.path}  +${count('+')} −${count('-')}  ${file.edits} ${file.edits === 1 ? 'edit' : 'edits'}`;

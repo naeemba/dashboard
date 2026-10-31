@@ -476,8 +476,8 @@
   border-radius: 2px;
 }
 
-/* An image shown full size: the box is the image, as large as the window lets it be, on the sheet's
-   centre rather than near its top like a question. */
+/* A thing shown on its own: an image, a PDF or /diff's changes, as large as the window lets it be, on
+   the sheet's centre rather than near its top like a question. */
 .image-viewer, .pdf-viewer, .diff-viewer {
   padding-top: 0;
 }
@@ -513,10 +513,17 @@
   border: 0;
 }
 
-/* /diff's changes on the Claude screen: wide enough for a line of code, scrolled by the keys. */
+/* /diff's changes on the Claude screen: wide enough for a line of code, scrolled by the keys. The
+   dialog has focus, not the blocks inside it, so a line wider than the sheet wraps rather than
+   scrolling sideways where no key reaches it. */
 .diff-viewer-dialog {
   display: block;
   width: 92vw;
   padding: 0 14px 4px;
   overflow-y: auto;
+}
+
+.diff-viewer-dialog .chat-diff {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

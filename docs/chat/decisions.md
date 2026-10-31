@@ -27,7 +27,7 @@ prompt after it starts fresh instead of failing the same way again.
 `@path` is passed through as typed: the CLI expands it into the file's contents the way it does in a
 terminal, checked against the pinned SDK by asking for `@package.json`'s version with no tools used.
 
-## chat-decision-2: Slash commands are the session's; the screen adds the list and three of its own
+## chat-decision-2: Slash commands are the session's; the screen adds the list and four of its own
 
 Every command typed into the box goes to the session as a prompt, and the CLI runs it the way it does in
 a terminal: skills, the project's commands and its own (`/compact`, `/context`, `/clear`).
@@ -37,9 +37,17 @@ answered by the screen itself (chat-commands.ts) and never sent. So is `/model`:
 prints a usage line instead of Claude Code's picker, so the screen lists `supportedModels()`; with a
 name the session offers, it goes through `chat:configure` like the model key, so the foot and the
 saved preference follow it; a name it does not offer is refused, not saved as the next start model.
+`/effort` is the screen's too: bare, the session has no picker to show here, so the screen lists auto
+and low to max; a named level goes through `chat:configure` like `/model`, which sends it to the
+session's flag layer with `applyFlagSettings`, so the foot and the saved preference follow it. Until
+one is picked the foot says `default effort` and no row is marked, because the session then runs at
+the level in the settings file, which the screen does not read. Auto is not that: it clears the flag
+layer, which puts the session on the model's default over the settings level, and a restart after it
+sends the same clear, since the start option cannot say null.
 `/diff` is the screen's too: the SDK has no review of a session's edits, so the screen builds one from
 the conversation's own Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so
-it shows what Claude changed and nothing else in the folder.
+it shows what Claude changed and nothing else in the folder. The transcript is all it reads, so a
+code-only `/rewind`, which leaves the conversation alone, leaves the edits it put back on the sheet.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.
@@ -78,3 +86,14 @@ The SDK has a `file_suggestions` request, but only as an internal type: the `Que
 send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
 --exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
 are not offered. A folder that is not a repository lists nothing rather than walking node_modules.
+
+## chat-decision-5: The task strip's background key is Alt+B, and an ended pick is refused
+
+The terminal backgrounds tasks with Ctrl+B, but Ctrl+B is the board's mode key here, and a mode key
+passes through to the pane only in its own mode (keys-rule-1). So the strip's keys are Alt+T to pick,
+Alt+X to stop and Alt+B to background.
+
+A key pressed for a picked task whose row has since left the strip is refused with a notice, not
+turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling back
+would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
+lasts while other tasks still run, which a background command can stretch across turns.
