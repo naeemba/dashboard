@@ -12,7 +12,8 @@ import { isRecord } from './is-record';
 const HIDDEN_TAGS = new Set(['summary', 'task-id', 'tool-use-id']);
 
 // `startsTurn` marks a message that opens a turn of its own, as a prompt does: anything with an origin,
-// never a skill's instructions, which sit inside the turn that loaded them.
+// and instructions answering no call, such as a scheduled wake-up. Never a skill's instructions, which
+// answer the Skill call and sit inside the turn that loaded them.
 export type InjectedMessage = { title: string; body: string; startsTurn?: true };
 
 // What a user message is when Claude Code injected it, or null when a person typed it. A message with
@@ -84,9 +85,13 @@ function instructionsMessage(text: string, skill: string | undefined): InjectedM
 // A user message nobody typed, as the one line it folds to, 'hidden' for one with nothing to read, or
 // null for a person's own. Two markers say Claude Code wrote it: an `origin` (injectedMessage), and
 // `meta` — marked isMeta in a saved session, isSynthetic in a live one — for instructions it wrote
-// for Claude. `skill` is the skill a Skill call loaded, when the message answers one.
-export function notTypedMessage(origin: unknown, meta: boolean, text: string, skill: string | undefined): InjectedMessage | 'hidden' | null {
+// for Claude. `call` is the tool call the message answers, with the skill it loaded when it is a Skill
+// call; undefined when it answers none. A slash command's expanded prompt answers none either, and so
+// starts a turn, but it follows the typed command's own entry, which already started one.
+export function notTypedMessage(origin: unknown, meta: boolean, text: string, call: { skill: string | undefined } | undefined): InjectedMessage | 'hidden' | null {
   const injected = injectedMessage(origin, text);
   if (injected) return { ...injected, startsTurn: true };
-  return meta ? instructionsMessage(text, skill) : null;
+  if (!meta) return null;
+  const instructions = instructionsMessage(text, call?.skill);
+  return instructions === 'hidden' || call ? instructions : { ...instructions, startsTurn: true };
 }

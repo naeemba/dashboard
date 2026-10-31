@@ -54,7 +54,7 @@ describe('injectedMessage', () => {
 });
 
 describe('notTypedMessage', () => {
-  const meta = (text: string, skill?: string) => notTypedMessage(undefined, true, text, skill);
+  const meta = (text: string, skill?: string) => notTypedMessage(undefined, true, text, { skill });
 
   it('leaves an unmarked message as the person\'s own', () => {
     expect(notTypedMessage(undefined, false, 'Review the diff.', undefined)).toBeNull();
@@ -67,6 +67,12 @@ describe('notTypedMessage', () => {
 
   it('folds plain instructions, a command prompt or a wake-up, as Instructions', () => {
     expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Instructions', body: 'Capture this as a card on the board.' });
+  });
+
+  it('starts a turn with instructions answering no call, such as a wake-up, but not with a skill\'s', () => {
+    expect(notTypedMessage(undefined, true, 'Check CI again.', undefined)).toEqual({ title: 'Instructions', body: 'Check CI again.', startsTurn: true });
+    expect(notTypedMessage(undefined, true, 'steps', { skill: 'simplify' })).not.toHaveProperty('startsTurn');
+    expect(notTypedMessage(undefined, true, '<system-reminder>x</system-reminder>', undefined)).toBe('hidden');
   });
 
   it('hides what is only plumbing: pasted image sources, a reminder, a local command\'s caveat', () => {

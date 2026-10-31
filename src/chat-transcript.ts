@@ -246,7 +246,8 @@ function userMessage(transcript: Transcript, message: Record<string, unknown>): 
   // still reach its call.
   const meta = (message.isMeta === true || message.isSynthetic === true)
     && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
-  const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
+  const call = meta && typeof message.sourceToolUseID === 'string' ? { skill: skillOf(transcript.entries, message.sourceToolUseID) } : undefined;
+  const folded = notTypedMessage(message.origin, meta, textOf(inner.content), call);
   if (folded === 'hidden') return transcript;
   if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
   return user(transcript, inner.content, stampOf(message, inner));
