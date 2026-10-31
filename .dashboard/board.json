@@ -24,25 +24,22 @@
           "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
           "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
           "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         },
         {
           "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
           "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
           "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         },
         {
           "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
           "title": "Terminal drop types '' for a file with no path on disk",
           "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
-          "priority": "medium"
-        },
-        {
-          "id": "4ab7008b-7c2b-43ef-965f-fe0fac0e1c3e",
-          "title": "Show PDF attachments in the chat pane as a tile that opens in the built-in viewer",
-          "notes": "A user message mentioning a PDF (@path.pdf, relative to the session folder), or a Read call on a .pdf, shows a small [PDF File] tile like an image thumbnail. Click, or the image key, opens the PDF full size in an overlay with Chromium's built-in PDF viewer (window needs plugins: true). Claude's behavior unchanged: the @mention is still sent as is. Main reads the file only if it exists, ends in .pdf and is under a size cap; a missing file shows the tile with 'not found'. No in-chat page preview.",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
@@ -1030,6 +1027,26 @@
             {
               "at": "2026-10-29T15:33:52.024Z",
               "body": "Shipped in PR #86 (1.20.0). Fixed: an interrupted turn drawn as your own prompt; /clear leaving the screen and the next launch on the old conversation; raw <command-name> tags in read-back; the foot not following mode changes the session made itself. Added: slash command list, /resume search sheet, /plan and plan mode on Shift+Tab with plan approval, decline with a reason, prompt history. Still missing (needs cards): @ completion, ! bash mode, Ctrl+R, thinking, todo panel, subagent progress, queued prompts, /rename, MCP status, image drop."
+            }
+          ]
+        },
+        {
+          "id": "4ab7008b-7c2b-43ef-965f-fe0fac0e1c3e",
+          "title": "Show PDF attachments in the chat pane as a tile that opens in the built-in viewer",
+          "notes": "A user message mentioning a PDF (@path.pdf, relative to the session folder), or a Read call on a .pdf, shows a small [PDF File] tile like an image thumbnail. Click, or the image key, opens the PDF full size in an overlay with Chromium's built-in PDF viewer (window needs plugins: true). Claude's behavior unchanged: the @mention is still sent as is. Main reads the file only if it exists, ends in .pdf and is under a size cap; a missing file shows the tile with 'not found'. No in-chat page preview.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T16:30:38.182Z",
+          "branch": "work-board-card-4ab7008b-7c2b-43ef-965f-fe0",
+          "pullRequest": 99,
+          "comments": [
+            {
+              "at": "2026-10-31T16:11:04.923Z",
+              "body": "Shipped in PR #99: [PDF File] tile for @mentioned and Read PDFs, pdf:read in main (.pdf, file, at most 5 MB), viewer overlay with plugins on, version 2.5.0. Needs a hand check that the viewer renders the blob URL."
+            },
+            {
+              "at": "2026-10-31T16:30:38.182Z",
+              "body": "Review loop: 2 rounds, 8 threads fixed in a59e6c7 and 3d338bc (Escape and focus stay with the viewer, PDF links go to the browser, frame navigation decided in links.ts with tests). Merged as PR #99."
             }
           ]
         }

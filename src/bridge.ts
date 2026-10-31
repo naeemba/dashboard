@@ -1,6 +1,7 @@
 import type { ModelInfo, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
+import type { PdfRead } from './chat-pdf';
 import type { ChatMeasure } from './chat-status';
 import type { ChatEvent, ImageType } from './chat-transcript';
 import type { ScannedWorktree } from './git-worktrees';
@@ -196,6 +197,10 @@ export type DashboardBridge = {
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
+  // A PDF the conversation names, read by main for the viewer, or why it was not.
+  readPdf(slot: number, file: string): Promise<PdfRead>;
+  // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).
+  onViewerDismiss(listener: () => void): void;
   onChat(listener: (slot: number, event: ChatEvent) => void): void;
 };
 

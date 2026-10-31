@@ -544,7 +544,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'unfold' }, mac: 'Alt+O', other: 'Alt+O',
   },
   {
-    name: 'claude-image', description: 'Show the selected entry\'s image full size, or the first one attached',
+    name: 'claude-image', description: 'Show the selected entry\'s image or PDF full size, or the first image attached',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'image' }, mac: 'Alt+I', other: 'Alt+I',
   },
   {

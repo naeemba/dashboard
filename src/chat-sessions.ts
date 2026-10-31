@@ -4,12 +4,16 @@ import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { readFile, stat } from 'node:fs/promises';
 import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
+import { pdfRefusal, type PdfRead } from './chat-pdf';
+import { fileCandidates } from './file-open';
+import { homedir } from 'node:os';
 import { failureText } from './failure';
 import { isRecord } from './is-record';
 
@@ -351,6 +355,18 @@ export function registerChatSessions(
     const running = await sessions.get(slot)?.catch(() => undefined);
     const asks = running ? [...running.asks.values()].map((pending) => pending.ask) : [];
     return { messages, asks, preferences: preferences.get(slot) ?? {} };
+  });
+
+  // A PDF the conversation names, for the tile that opens it. A mention is relative to the session's
+  // folder, as Claude Code reads it; a Read call's path is whole. A page with no folder has nowhere a
+  // mention could be.
+  table.handle('pdf:read', async (_screen, slot: number, file: string): Promise<PdfRead> => {
+    const [absolute] = fileCandidates(file, [host.projectPath(slot)], homedir());
+    if (absolute === undefined) return { refused: pdfRefusal(file, null) };
+    const size = await stat(absolute).then((info) => (info.isFile() ? info.size : null), () => null);
+    const refused = pdfRefusal(file, size);
+    if (refused !== null) return { refused };
+    return { data: (await readFile(absolute)).toString('base64') };
   });
 
   function stop(slot: number): void {

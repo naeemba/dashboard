@@ -1,6 +1,8 @@
 import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
 import { toolDiff, toolSummary } from './chat-tools';
+import { baseName } from './base-name';
+import { pdfMentions, pdfOfTool } from './chat-pdf';
 import { imageDataUrl, type ChatEntry, type ChatImage, type ToolResult } from './chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
@@ -22,6 +24,33 @@ function images(list: ChatImage[]): HTMLImageElement[] {
     image.src = source;
     return [image];
   });
+}
+
+// A PDF the conversation names, as a tile the size of a line. Its path is kept on it for the view,
+// which asks main for the file when the tile is clicked or the image key is pressed on its entry.
+export const PDF_TILE = 'chat-pdf';
+
+function pdfTile(file: string): HTMLElement {
+  const tile = document.createElement('div');
+  tile.className = PDF_TILE;
+  tile.dataset.path = file;
+  tile.title = file;
+  const kind = document.createElement('b');
+  kind.textContent = '[PDF File]';
+  const name = document.createElement('span');
+  name.className = PDF_TILE_NAME;
+  tile.append(kind, name);
+  pdfTileState(tile, null);
+  return tile;
+}
+
+const PDF_TILE_NAME = 'chat-pdf-name';
+
+// What a tile says after main was asked for its file: the name alone once the file opened, or the
+// name and why main would not hand it over. A file that turns up later clears the reason.
+export function pdfTileState(tile: HTMLElement, refused: string | null): void {
+  const name = baseName(tile.dataset.path ?? '');
+  tile.querySelector(`.${PDF_TILE_NAME}`)?.replaceChildren(refused === null ? name : `${name} — ${refused}`);
 }
 
 // A copy button in a code block's corner, for what the block holds. It shows a tick for a moment once
@@ -69,6 +98,8 @@ function preformatted(className: string, text: string): HTMLPreElement {
 export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
+  const pdf = pdfOfTool(name, input);
+  if (pdf) parts.push(pdfTile(pdf));
   if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
     const plan = document.createElement('div');
     plan.className = 'chat-plan chat-text';
@@ -152,7 +183,7 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   if (entry.kind === 'user') {
     const said = document.createElement('p');
     said.textContent = entry.text;
-    element.append(said, ...images(entry.images));
+    element.append(said, ...pdfMentions(entry.text).map(pdfTile), ...images(entry.images));
     return { entry, element, fill: null };
   }
   // Until it is filled the box holds the raw text, so a conversation scrolled fast still reads.

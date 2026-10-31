@@ -1,5 +1,6 @@
-import { BrowserWindow, dialog, Menu } from 'electron';
+import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
+import { dismissesViewer, frameNavigation, isOpenableLink } from './links';
 import { TITLE_BAR_HEIGHT } from './theme';
 
 // The window and the question its close asks. Main-process wiring, out of main.ts because main had
@@ -19,6 +20,30 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     { role: 'appMenu' },
     { role: 'editMenu' },
   ]));
+  // Every contents the app makes, the window's and any the PDF viewer gets of its own, so neither rule
+  // below depends on which of them the viewer's frame lives in.
+  app.on('web-contents-created', (_created, contents) => {
+    // A key pressed while the PDF viewer has the keyboard stays in the viewer, and the page never hears
+    // it. Main sees every key first, so Escape is passed on and the page puts the viewer away
+    // (dismissViewerFromFrame in overlay.ts).
+    contents.on('before-input-event', (_event, input) => {
+      if (!dismissesViewer(input) || window.isDestroyed()) return;
+      window.webContents.send('viewer:dismiss');
+    });
+    // The PDF viewer keeps its own blob and pages, and a link in the PDF opens in the browser rather
+    // than inside the overlay or in a bare window of its own. The window's main frame is also held by
+    // will-navigate below, so 'allow' never lets it leave the app's page.
+    contents.on('will-frame-navigate', (event) => {
+      const where = frameNavigation(event.url);
+      if (where === 'allow') return;
+      event.preventDefault();
+      if (where === 'browser') void shell.openExternal(event.url);
+    });
+    contents.setWindowOpenHandler(({ url }) => {
+      if (isOpenableLink(url)) void shell.openExternal(url);
+      return { action: 'deny' };
+    });
+  });
   const window = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -43,6 +68,10 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       // dies with the folder. A page of terminals is not a page that should stop ticking when it is
       // behind something.
       backgroundThrottling: false,
+      // Chromium's built-in PDF viewer, for every page in the window. Only the Claude screen uses it,
+      // for a PDF the conversation names. A link in that PDF is the one remote page the window could
+      // be asked to show, and the navigation handlers below send it to the browser instead.
+      plugins: true,
     },
   });
   // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q

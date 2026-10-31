@@ -12,6 +12,7 @@ import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
+import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from './print-widths';
 import { linksTouching } from './wrapped-links';
 import type { Project } from './projects';
@@ -264,6 +265,8 @@ export type PageBuilder = {
 export function createPageBuilder(options: PageOptions): PageBuilder {
   options.bridge.onChat((slot, event) => chatsBySlot.get(slot)?.receive(event));
   options.bridge.onPaneMark((id, state) => markersById.get(id)?.(state));
+  // Once, for every Claude screen: a PDF opened on any of them is the one viewer on screen.
+  options.bridge.onViewerDismiss(dismissViewerFromFrame);
   // `parent` is where the box goes: the nvim view for the editor, the worker list for a worker.
   function buildPane(parent: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');
