@@ -83,13 +83,6 @@
           ]
         },
         {
-          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
-          "title": "Fast mode toggle in the Claude pane",
-          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
           "title": "Stash and restore drafts in the Claude pane's box",
           "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
@@ -412,6 +405,22 @@
             {
               "at": "2026-10-31T22:56:12.225Z",
               "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
+            }
+          ]
+        },
+        {
+          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
+          "title": "Fast mode toggle in the Claude pane",
+          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:58:57.860Z",
+          "branch": "work-board-card-098a7fef-37c6-47ee-954e-6ff",
+          "pullRequest": 121,
+          "comments": [
+            {
+              "at": "2026-10-31T22:58:57.781Z",
+              "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
             }
           ]
         }
