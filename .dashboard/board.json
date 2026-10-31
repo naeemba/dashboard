@@ -86,6 +86,12 @@
           "title": "Stop or background a running task from the Claude pane's task strip",
           "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
           "priority": "medium"
+        },
+        {
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium"
         }
       ]
     },
