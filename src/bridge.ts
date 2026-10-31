@@ -1,7 +1,8 @@
-import type { ModelInfo, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, PermissionResult, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
 import type { PdfRead } from './chat-pdf';
+import type { RewindChoice, RewindPoint } from './chat-rewind';
 import type { ChatMeasure } from './chat-status';
 import type { ChatEvent, ImageType } from './chat-transcript';
 import type { ScannedWorktree } from './git-worktrees';
@@ -192,6 +193,8 @@ export type DashboardBridge = {
   chatReset(slot: number): void;
   // The slash commands the session runs; asking starts the session if it is not running.
   chatCommands(slot: number): Promise<CommandRow[]>;
+  // The project's files, for the list @ opens in the box.
+  chatFiles(slot: number): Promise<string[]>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
   // The project's earlier conversations for /resume, and picking one of them.
@@ -200,6 +203,10 @@ export type DashboardBridge = {
   // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
   // False when there is no conversation yet to copy.
   chatBranch(slot: number, title: string): Promise<boolean>;
+  // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
+  // null for a page with no project.
+  chatPrompts(slot: number): Promise<RewindPoint[]>;
+  chatRewind(slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

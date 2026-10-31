@@ -48,3 +48,30 @@ Plan mode is on the edits key, after accepting, the terminal's order. The plan a
 `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with
 it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
+
+## chat-decision-3: /rewind forks the conversation and keeps the code half in the session's checkpoints
+
+`/rewind` is the screen's own command, as `/resume` is: the session answers it with "isn't available
+in this environment". Every session starts with `enableFileCheckpointing`, so restoring code is
+`rewindFiles` with the picked prompt's id, the one its transcript gives it. A dry run first gives the
+count the notice prints; the real rewind reports only links it would not follow. Checked against the
+pinned SDK: a file written by the second prompt went back to the first prompt's text, and the same
+call worked on a resumed session before any prompt was sent.
+
+Restoring the conversation closes the session and starts one with `resume`, `resumeSessionAt` set to
+the message before the prompt, and `forkSession`, so the old conversation stays whole in `/resume`.
+The fork names its new conversation only in the next turn's `init`, so until then main reads the
+remembered one cut at that message; any change of conversation drops the cut. While the cut waits,
+`/resume` marks no conversation as current, so picking the one just cut goes through `chat:resume`
+and puts it back whole. Before the first prompt there is nothing to resume, and it is a new
+conversation.
+
+Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too: Escape
+is the interrupt key, and a double press would need a timing rule beside it.
+
+## chat-decision-4: The @ list is git's files, not the SDK's file suggestions
+
+The SDK has a `file_suggestions` request, but only as an internal type: the `Query` has no method to
+send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
+--exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
+are not offered. A folder that is not a repository lists nothing rather than walking node_modules.
