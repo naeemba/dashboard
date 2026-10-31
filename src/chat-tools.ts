@@ -24,25 +24,49 @@ export function toolSummary(name: string, input: Record<string, unknown>): strin
   return line.length > 160 ? `${line.slice(0, 159)}…` : line;
 }
 
-// The lines that changed, with the unchanged run at either end trimmed to the line it touches.
-// ponytail: prefix and suffix trimming, not a real diff — an edit that changes two lines far apart
-// shows everything between them as removed and added again. Swap for a line LCS if that reads badly.
+// The lines that changed, each run of them with the one unchanged line either side. A longest common
+// subsequence of lines decides what stayed, so two edits far apart show as two runs, with a "…" line
+// standing for the unchanged lines dropped between them.
+// ponytail: the LCS table is old × new lines, so past a million cells the edit shows as all removed
+// then all added rather than freeze the pane; Myers' diff if huge edits need reading.
 export function lineDiff(before: string, after: string): DiffLine[] {
   const old = before.split('\n');
   const next = after.split('\n');
-  let start = 0;
-  while (start < old.length && start < next.length && old[start] === next[start]) start++;
-  let end = 0;
-  while (
-    end < old.length - start && end < next.length - start
-    && old[old.length - 1 - end] === next[next.length - 1 - end]
-  ) end++;
-  return [
-    ...old.slice(Math.max(0, start - 1), start).map((text): DiffLine => ({ sign: ' ', text })),
-    ...old.slice(start, old.length - end).map((text): DiffLine => ({ sign: '-', text })),
-    ...next.slice(start, next.length - end).map((text): DiffLine => ({ sign: '+', text })),
-    ...old.slice(old.length - end, old.length - end + 1).map((text): DiffLine => ({ sign: ' ', text })),
-  ];
+  if (old.length * next.length > 1_000_000) {
+    return [
+      ...old.map((text): DiffLine => ({ sign: '-', text })),
+      ...next.map((text): DiffLine => ({ sign: '+', text })),
+    ];
+  }
+  const common = Array.from({ length: old.length + 1 }, () => new Array<number>(next.length + 1).fill(0));
+  for (let i = old.length - 1; i >= 0; i--) {
+    for (let j = next.length - 1; j >= 0; j--) {
+      common[i][j] = old[i] === next[j] ? common[i + 1][j + 1] + 1 : Math.max(common[i + 1][j], common[i][j + 1]);
+    }
+  }
+  const lines: DiffLine[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < old.length || j < next.length) {
+    if (i < old.length && j < next.length && old[i] === next[j]) {
+      lines.push({ sign: ' ', text: old[i] });
+      i++;
+      j++;
+    } else if (j === next.length || (i < old.length && common[i + 1][j] >= common[i][j + 1])) {
+      lines.push({ sign: '-', text: old[i++] });
+    } else {
+      lines.push({ sign: '+', text: next[j++] });
+    }
+  }
+  const changedAt = lines.map((line) => line.sign !== ' ');
+  const nearChange = (index: number) => changedAt[index - 1] || changedAt[index] || changedAt[index + 1];
+  const shown: DiffLine[] = [];
+  lines.forEach((line, index) => {
+    if (!nearChange(index)) return;
+    if (shown.length > 0 && !nearChange(index - 1)) shown.push({ sign: ' ', text: '…' });
+    shown.push(line);
+  });
+  return shown;
 }
 
 // The change a file tool asked for, or null for every other tool. Write is a whole new file, so all of

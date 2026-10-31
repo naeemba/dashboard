@@ -41,6 +41,28 @@ describe('lineDiff', () => {
     ]);
   });
 
+  it('shows two edits far apart as two runs, not everything between them', () => {
+    expect(lineDiff('a\nb\nc\nd\ne\nf\ng', 'A\nb\nc\nd\ne\nf\nG')).toEqual([
+      { sign: '-', text: 'a' },
+      { sign: '+', text: 'A' },
+      { sign: ' ', text: 'b' },
+      { sign: ' ', text: '…' },
+      { sign: ' ', text: 'f' },
+      { sign: '-', text: 'g' },
+      { sign: '+', text: 'G' },
+    ]);
+  });
+
+  it('shows an unchanged line between two changes once, with no gap', () => {
+    expect(lineDiff('a\nb\nc', 'A\nb\nC')).toEqual([
+      { sign: '-', text: 'a' },
+      { sign: '+', text: 'A' },
+      { sign: ' ', text: 'b' },
+      { sign: '-', text: 'c' },
+      { sign: '+', text: 'C' },
+    ]);
+  });
+
   it('shows a one-line replacement with no context', () => {
     expect(lineDiff('old', 'new')).toEqual([{ sign: '-', text: 'old' }, { sign: '+', text: 'new' }]);
   });
