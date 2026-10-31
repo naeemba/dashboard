@@ -55,6 +55,7 @@ import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 import { reportBoardWrites } from './board-writes';
 import { createJumps } from './jumps';
+import { editFocusedBox } from './chat-line-editing';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the
@@ -430,6 +431,7 @@ const builder = createPageBuilder({
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
+  showEditor: (page) => showEditor(page),
   closePane: (page, index) => closePane(page, index, panePorts),
 });
 
@@ -614,9 +616,8 @@ function openScrollback(page: Page): void {
 }
 
 // A file path in a pane, by click or by the hint key; file-link-open.ts holds the order of it.
-const openFileLink = fileLinkOpener(bridge, {
-  startEditor, showEditor: (page) => { if (pages[activeIndex] === page) setMode('nvim'); }, report: (message) => showError('file', message),
-});
+const showEditor = (page: Page): void => { if (pages[activeIndex] === page) setMode('nvim'); };
+const openFileLink = fileLinkOpener(bridge, { startEditor, showEditor, report: (message) => showError('file', message) });
 
 // Naming the focused pane. What you type wins over the title the program in it sets, and an empty box
 // clears it back to following the title — the overlay's two answers, kept apart here: null is a cancel
@@ -733,6 +734,7 @@ function apply(action: Action): void {
     case 'log-open':
     case 'log-filter-reset': return page.log?.runAction(action);
     case 'chat': return page.chat?.runCommand(action.command);
+    case 'chat-edit': return editFocusedBox(page.chat?.element, action.edit);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.

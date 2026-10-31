@@ -70,11 +70,13 @@ export function statusMeters(measure: ChatMeasure): StatusMeter[] {
 
 // The working line under the conversation while a turn runs, as Claude Code draws it over its prompt:
 // whether Claude is thinking, how long, and roughly how many tokens have come down. A token is taken
-// as four characters, the estimate Claude Code itself shows while a response streams.
-export function workingLine(seconds: number, streamed: number, thinking: boolean): string {
+// as four characters, the estimate Claude Code itself shows while a response streams. A hook running
+// is named instead, as Claude Code names it.
+export function workingLine(seconds: number, streamed: number, thinking: boolean, hook: string | null = null): string {
   const parts = [`${seconds}s`];
   if (streamed > 0) parts.push(`↓ ${formatTokens(Math.round(streamed / 4))} tokens`);
-  return `${thinking ? 'Thinking' : 'Working'}… (${parts.join(' · ')})`;
+  const doing = hook ? `Running ${hook} hook` : thinking ? 'Thinking' : 'Working';
+  return `${doing}… (${parts.join(' · ')})`;
 }
 
 const MODEL_TONES: [string, StatusTone][] = [['fable', 'red'], ['opus', 'yellow'], ['sonnet', 'green'], ['haiku', 'blue']];

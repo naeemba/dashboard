@@ -34,20 +34,6 @@
           "parent": null
         },
         {
-          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
-          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
-          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -76,30 +62,9 @@
           ]
         },
         {
-          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
-          "title": "Stash and restore drafts in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
-          "title": "Readline editing keys in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
-          "title": "Copy a whole Claude reply as markdown from the Claude pane",
-          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
+          "title": "Export the Claude pane's conversation to clipboard or file",
+          "notes": "Claude Code: /export. Pane: none. Size S.",
           "priority": "low",
           "parent": null
         },
@@ -107,6 +72,20 @@
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "66f14bdd-63d4-44ae-99ae-106bb597be4f",
+          "title": "projects:open refuses by throwing, so the remote screen reads Electron's invoke prefix",
+          "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "f54d7a16-3a49-40e2-bed1-454e80961c1c",
+          "title": "Split chat-view.ts under the 600-code-line limit",
+          "notes": "638 code lines now. Seam: move send()'s dispatch of the screen's own commands (the screenCommand branches) into a module beside chat-screen-commands.ts. Wait until the cards editing chat-view.ts in parallel have merged. Raised in review of PR #128: https://github.com/naeemba/dashboard/pull/128#discussion_r4433728620",
           "priority": "low",
           "parent": null
         }
@@ -285,70 +264,6 @@
           ]
         },
         {
-          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
-          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
-          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:40:56.689Z",
-          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
-          "pullRequest": 114,
-          "comments": [
-            {
-              "at": "2026-10-31T22:40:56.632Z",
-              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
-            }
-          ]
-        },
-        {
-          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
-          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
-          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:47:51.646Z",
-          "branch": "work-board-card-0bef254c-8d96-4bc7-80b6-d3c",
-          "pullRequest": 116,
-          "comments": [
-            {
-              "at": "2026-10-31T22:47:51.595Z",
-              "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
-            }
-          ]
-        },
-        {
-          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
-          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
-          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:50:51.462Z",
-          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
-          "pullRequest": 118,
-          "comments": [
-            {
-              "at": "2026-10-31T22:50:51.462Z",
-              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
-            }
-          ]
-        },
-        {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:56:12.260Z",
-          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
-          "pullRequest": 120,
-          "comments": [
-            {
-              "at": "2026-10-31T22:56:12.225Z",
-              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
-            }
-          ]
-        },
-        {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
@@ -365,46 +280,14 @@
           ]
         },
         {
-          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
-          "title": "Show hook progress in the Claude pane",
-          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T23:05:43.117Z",
-          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
-          "pullRequest": 124,
-          "comments": [
-            {
-              "at": "2026-10-31T23:05:43.117Z",
-              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
-            }
-          ]
-        },
-        {
-          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
-          "title": "Draw TodoWrite as a checklist in the Claude pane",
-          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:08:20.947Z",
-          "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
-          "pullRequest": 126
-        },
-        {
-          "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
-          "title": "Export the Claude pane's conversation to clipboard or file",
-          "notes": "Claude Code: /export. Pane: none. Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:07:22.786Z",
-          "branch": "work-board-card-75ebca95-a2d8-40cd-8eab-3fe",
-          "pullRequest": 125,
-          "comments": [
-            {
-              "at": "2026-10-31T23:07:22.786Z",
-              "body": "Shipped in #125: /export lists Copy to clipboard and Save to file; /export <name> saves straight to that file inside the project folder."
-            }
-          ]
+          "updatedAt": "2026-10-31T23:12:15.674Z",
+          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+          "pullRequest": 128
         }
       ]
     },
@@ -1442,6 +1325,22 @@
           ]
         },
         {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:19.774Z",
+          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
+          "pullRequest": 122,
+          "comments": [
+            {
+              "at": "2026-10-31T23:03:19.774Z",
+              "body": "Shipped in PR #122: /rename names the conversation and /resume lists it by that name; with no name or no conversation yet, it is refused."
+            }
+          ]
+        },
+        {
           "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
@@ -1478,6 +1377,190 @@
             {
               "at": "2026-10-31T23:03:31.722Z",
               "body": "Shipped in PR #111: /diff reviews every file changed in the conversation. Merged after 3 review rounds."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:06:20.043Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
+            },
+            {
+              "at": "2026-10-31T23:06:20.043Z",
+              "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.19.0."
+            }
+          ]
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:44.713Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
+          "comments": [
+            {
+              "at": "2026-10-31T23:09:44.713Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.20.0. Needs a hand check in the rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
+          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
+          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:14:50.091Z",
+          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
+          "pullRequest": 114,
+          "comments": [
+            {
+              "at": "2026-10-31T22:40:56.632Z",
+              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            },
+            {
+              "at": "2026-10-31T23:12:10.371Z",
+              "body": "Shipped in PR #114: a message sent while Claude is busy waits grey in the session's queue until taken, Up in the empty box withdraws the last one, and the queue survives the session's own /clear. Version 2.21.0."
+            },
+            {
+              "at": "2026-10-31T23:14:50.091Z",
+              "body": "Version 2.22.0 after merging main again."
+            }
+          ]
+        },
+        {
+          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
+          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
+          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:17:16.681Z",
+          "branch": "work-board-card-1df5422d-060b-45f9-a931-f89",
+          "pullRequest": 113,
+          "comments": [
+            {
+              "at": "2026-10-31T23:17:16.681Z",
+              "body": "Shipped in PR #113: Ctrl+G opens the chat prompt in the project's nvim; saving there puts the text back in the box."
+            }
+          ]
+        },
+        {
+          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
+          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
+          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:20:37.665Z",
+          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
+          "pullRequest": 118,
+          "comments": [
+            {
+              "at": "2026-10-31T22:50:51.462Z",
+              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            },
+            {
+              "at": "2026-10-31T23:20:37.665Z",
+              "body": "Shipped in PR #118: /btw asks a side question beside the running turn, answered from the conversation so far without tools and kept out of it. Version 2.24.0."
+            }
+          ]
+        },
+        {
+          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
+          "title": "Readline editing keys in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:22:36.341Z",
+          "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
+          "pullRequest": 127,
+          "comments": [
+            {
+              "at": "2026-10-31T23:22:36.341Z",
+              "body": "Shipped in PR #127: readline kill and yank keys in the chat box (Ctrl+W, Ctrl+U, Ctrl+K, Ctrl+Y, Alt+Y). Version 2.25.0."
+            }
+          ]
+        },
+        {
+          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
+          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
+          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:26:04.557Z",
+          "branch": "work-board-card-0bef254c-8d96-4bc7-80b6-d3c",
+          "pullRequest": 116,
+          "comments": [
+            {
+              "at": "2026-10-31T22:47:51.595Z",
+              "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
+            },
+            {
+              "at": "2026-10-31T23:26:04.557Z",
+              "body": "Shipped in PR #116: the ask box answers an MCP server's forms and sign-in links (elicitation). Version 2.26.0."
+            }
+          ]
+        },
+        {
+          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
+          "title": "Stash and restore drafts in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:34:31.521Z",
+          "branch": "work-board-card-3a33c1fb-da53-4dc7-b46a-299",
+          "pullRequest": 123,
+          "comments": [
+            {
+              "at": "2026-10-31T23:34:31.521Z",
+              "body": "Shipped in #123: Alt+S stashes the box's draft and empties it; Up walks the stash (newest first, last 10 kept) before the prompts sent. Released as 2.27.0. Needs app rebuild and a hand check."
+            }
+          ]
+        },
+        {
+          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
+          "title": "Show hook progress in the Claude pane",
+          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:45:32.491Z",
+          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
+          "pullRequest": 124,
+          "comments": [
+            {
+              "at": "2026-10-31T23:05:43.117Z",
+              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
+            },
+            {
+              "at": "2026-10-31T23:45:32.490Z",
+              "body": "Shipped in PR #124: the working line names a running hook, and a failed hook leaves a folded line with its output. Version 2.28.0."
+            }
+          ]
+        },
+        {
+          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
+          "title": "Draw TodoWrite as a checklist in the Claude pane",
+          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:50:18.680Z",
+          "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
+          "pullRequest": 126,
+          "comments": [
+            {
+              "at": "2026-10-31T23:50:18.680Z",
+              "body": "Shipped in PR #126: TodoWrite drawn as a checklist in the chat view. Version 2.29.0."
             }
           ]
         }

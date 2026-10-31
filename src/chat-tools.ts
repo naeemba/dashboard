@@ -1,4 +1,4 @@
-import { isRecord } from './is-record';
+import { isRecord, stringOrEmpty } from './is-record';
 
 // A tool call as the chat pane folds it: one line saying what it did, and, for the tools that change a
 // file, the change as a diff. The input is whatever the model sent, so every field is read as maybe
@@ -13,8 +13,11 @@ function field(input: Record<string, unknown>, name: string): string | undefined
 }
 
 // The one thing worth reading about each call without unfolding it. A tool not listed here says its
-// first string argument, which for most MCP tools is the thing they were asked about.
+// first string argument, which for most MCP tools is the thing they were asked about. A checklist says
+// how much of it is done.
 export function toolSummary(name: string, input: Record<string, unknown>): string {
+  const todos = todoChecklist(name, input);
+  if (todos) return `${todos.filter((todo) => todo.status === 'completed').length}/${todos.length} done`;
   const pick = {
     Bash: 'command', Read: 'file_path', Write: 'file_path', Edit: 'file_path', MultiEdit: 'file_path',
     NotebookEdit: 'notebook_path', Glob: 'pattern', Grep: 'pattern', WebFetch: 'url', WebSearch: 'query',
@@ -99,4 +102,17 @@ export function toolDiff(name: string, input: Record<string, unknown>): DiffLine
     .map((edit) => lineDiff(field(edit, 'old_string') ?? '', field(edit, 'new_string') ?? ''))
     .filter((diff) => diff.length > 0);
   return diffs.length > 0 ? diffs.flatMap((diff, index) => (index > 0 ? [gap, ...diff] : diff)) : null;
+}
+
+export type TodoItem = { text: string; status: 'pending' | 'in_progress' | 'completed' };
+
+// The list a TodoWrite call put up, each item with its state, or null for every other tool. The item
+// being worked on reads as its activeForm, the way Claude Code's own checklist says it.
+export function todoChecklist(name: string, input: Record<string, unknown>): TodoItem[] | null {
+  if (name !== 'TodoWrite' || !Array.isArray(input.todos)) return null;
+  return input.todos.filter(isRecord).map((todo) => {
+    const status = todo.status === 'in_progress' || todo.status === 'completed' ? todo.status : 'pending';
+    const text = (status === 'in_progress' && stringOrEmpty(todo.activeForm)) || stringOrEmpty(todo.content);
+    return { text, status };
+  });
 }

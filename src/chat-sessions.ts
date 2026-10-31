@@ -1,6 +1,7 @@
 import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
+import { rateLimitNotice } from './chat-notices';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -13,7 +14,10 @@ import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEve
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
 import { exportTarget, type ExportWrite } from './chat-export-target';
+import { elicitationAsk, elicitationResult } from './chat-elicitation';
+import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
+import { renameTarget } from './chat-rename';
 import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
@@ -49,6 +53,9 @@ export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionA
 
 // The conversations /resume offers, newest first, and the one this page is on.
 export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
+
+// The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
+type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };
 
 export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close(): void };
 
@@ -116,16 +123,19 @@ function loginShellPath(fallback: string): Promise<string> {
   });
 }
 
-// The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
-// streamed events everything but a block starting and text or thinking arriving — are left on this
-// side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
-// the pane draws its steps once each arrives whole.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
+// The messages the pane reads. The rest — a hook's progress lines (it is named when it starts), task
+// updates, and of the streamed events everything but a block starting and text or thinking arriving —
+// are left on this side of the wire rather than sent to every screen on every token. A Write streams
+// the whole file as its input, so the working line's count leaves tool input out. A prompt's lifecycle
+// says when one sent while Claude was busy is taken or withdrawn. A subagent's stream is left out too:
+// the pane draws its steps once each arrives whole. A rate limit event goes only when it says a limit
+// is near or hit: most say the plan is fine, one each time its percentage moves.
+const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
-export function relayed(message: { type: string; event?: unknown; parent_tool_use_id?: string | null }): boolean {
-  if (message.type !== 'stream_event') return RELAYED.has(message.type);
+export function relayed(message: Record<string, unknown>): boolean {
+  if (message.type === 'rate_limit_event') return rateLimitNotice(message) !== null;
+  if (message.type !== 'stream_event') return RELAYED.has(String(message.type)) && message.subtype !== 'hook_progress';
   if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
@@ -220,6 +230,9 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // Every hook's start and answer, not only SessionStart's: the working line names the one
+        // running and a failed one goes in the conversation (chat-hooks.ts).
+        includeHookEvents: true,
         // A subagent's text as well as its tool calls, so a call that started one can show its steps.
         forwardSubagentText: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
@@ -237,6 +250,9 @@ export function registerChatSessions(
           defaultToNo: options.defaultToNo === true,
           suppressAlwaysAllowRule: options.suppressAlwaysAllowRule === true,
         }, options.signal),
+        // An MCP server's form or sign-in link, asked in the same box. A server's dialogs
+        // (onUserDialog) are left undeclared, so the CLI never sends one and keeps its own fallback.
+        onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
     }) };
     // Auto picked before a restart: the effort option cannot say null, and a session started without
@@ -256,10 +272,10 @@ export function registerChatSessions(
           // then the cleared one is not what the next launch should resume.
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
-          if (change.reset) host.send(slot, { kind: 'reset' });
+          if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
           const mode = modeOf(record);
           if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
-          if (relayed(message)) host.send(slot, { kind: 'message', message: record });
+          if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
         error = failureText(thrown);
@@ -292,13 +308,14 @@ export function registerChatSessions(
     return session;
   }
 
-  // A prompt for this page's session.
+  // A prompt for this page's session, stamped with the uuid the session's queue reports it by.
   table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
-    host.send(slot, { kind: 'prompt', content });
+    const id = randomUUID();
+    host.send(slot, { kind: 'prompt', content, id });
     running(slot, projectPath).then(
-      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }),
+      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
   });
@@ -336,6 +353,13 @@ export function registerChatSessions(
     return (await running(slot, projectPath)).query.supportedModels();
   });
 
+  // The conversation the page is on. With a cut pending, the conversation on screen is not the
+  // remembered one, so picking that one in /resume goes through chat:resume and puts it back whole.
+  function onScreen(projectPath: string | undefined): string | null {
+    if (projectPath === undefined || rewound.has(projectPath)) return null;
+    return remembered[projectPath] ?? null;
+  }
+
   // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:
   // a worktree's are its own, so a worker's conversations do not crowd the project's.
   table.handle('chat:sessions', async (_screen, slot: number): Promise<ChatSessions> => {
@@ -344,11 +368,37 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      // With a cut pending, the conversation on screen is not the remembered one, so picking that one
-      // in /resume goes through chat:resume and puts it back whole.
-      current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
+      current: onScreen(projectPath),
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
+  });
+
+  // A prompt still waiting in the session's queue, taken back; false once the session has taken it.
+  // cancelAsyncMessage is on Query in the pinned SDK but missing from its types.
+  table.handle('chat:withdraw', async (_screen, slot: number, id: string): Promise<boolean> => {
+    const session = await sessions.get(slot)?.catch(() => undefined);
+    if (!session) return false;
+    return (session.query as Query & { cancelAsyncMessage(uuid: string): Promise<boolean> }).cancelAsyncMessage(id);
+  });
+
+  // /rename: the SDK writes the name into the conversation's file, where /resume's summary reads it
+  // first. The refusal, or null once renamed.
+  table.handle('chat:rename', async (_screen, slot: number, title: string): Promise<string | null> => {
+    const projectPath = host.projectPath(slot);
+    const target = renameTarget(onScreen(projectPath), title);
+    if ('refused' in target) return target.refused;
+    const { renameSession } = await import('@anthropic-ai/claude-agent-sdk');
+    await renameSession(target.sessionId, target.title, { dir: projectPath });
+    return null;
+  });
+
+  // /btw: a question answered from the conversation so far and never added to it (chat-decision-8).
+  // Null for no answer.
+  table.handle('chat-side-question:ask', async (_screen, slot: number, question: string): Promise<string | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    const { query } = await running(slot, projectPath);
+    return (await (query as unknown as SideQuestions).askSideQuestion(question))?.response ?? null;
   });
 
   // The prompts sent in the project's recent conversations, newest conversation first, for the history
@@ -530,6 +580,20 @@ export function registerChatSessions(
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
     return restored;
+  });
+
+  // The session's MCP servers for /mcp, and the one picked reconnected, disabled or enabled. Both start
+  // a session that has ended, as the slash list does, since only a running one has servers.
+  table.handle('chat-mcp:read', async (_screen, slot: number): Promise<McpServer[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return mcpServers(await (await running(slot, projectPath)).query.mcpServerStatus());
+  });
+
+  table.handle('chat-mcp:change', async (_screen, slot: number, name: string, action: McpAction): Promise<void> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return;
+    await changeMcpServer((await running(slot, projectPath)).query, name, action);
   });
 
   return {
