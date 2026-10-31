@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { promptAfterRewind, restoredNotice, rewindChoices, rewindPoints, rewindRows, rewoundTo } from './chat-rewind';
+import { conversationAfterRewind, promptAfterRewind, restoredNotice, resumeFrom, rewindChoices, rewindPoints, rewindRows, rewoundTo } from './chat-rewind';
 
 const said = (uuid: string, text: string) => ({ type: 'user', uuid, parent_tool_use_id: null, message: { content: [{ type: 'text', text }] } });
 const answered = (uuid: string) => ({ type: 'assistant', uuid, parent_tool_use_id: null, message: { content: [{ type: 'text', text: 'ok' }] } });
@@ -50,7 +50,7 @@ describe('rewindChoices', () => {
     expect(rewindChoices('').map((row) => row.choice)).toEqual([
       { code: true, conversation: true }, { code: false, conversation: true }, { code: true, conversation: false },
     ]);
-    expect(rewindChoices('code').map((row) => row.name)).toContain('Restore code');
+    expect(rewindChoices('code').map((row) => row.name)).toEqual(['Restore code and conversation', 'Restore code']);
   });
 });
 
@@ -75,5 +75,28 @@ describe('promptAfterRewind', () => {
   it('hands nothing back for code alone, or when the code could not go back', () => {
     expect(promptAfterRewind(point, { code: true, conversation: false }, { error: false })).toBeUndefined();
     expect(promptAfterRewind(point, { code: true, conversation: true }, { error: true })).toBeUndefined();
+  });
+});
+
+describe('conversationAfterRewind', () => {
+  const first = { id: 'p1', before: null, text: 'first' };
+  const later = { id: 'p2', before: 'a1', text: 'second' };
+  const both = { code: true, conversation: true };
+
+  it('leaves the conversation alone when the code could not go back, or only the code was picked', () => {
+    expect(conversationAfterRewind(later, both, { canRewind: false, error: 'No checkpoint' })).toBe('keep');
+    expect(conversationAfterRewind(later, { code: true, conversation: false }, { canRewind: true })).toBe('keep');
+  });
+
+  it('starts a new conversation before the first prompt, and cuts before any later one', () => {
+    expect(conversationAfterRewind(first, { code: false, conversation: true }, null)).toBe('forget');
+    expect(conversationAfterRewind(later, both, { canRewind: true })).toEqual({ cutAt: 'a1' });
+  });
+});
+
+describe('resumeFrom', () => {
+  it('forks at the cut when one is pending, and resumes the whole conversation otherwise', () => {
+    expect(resumeFrom('s1', 'a1')).toEqual({ resume: 's1', resumeSessionAt: 'a1', forkSession: true });
+    expect(resumeFrom('s1', undefined)).toEqual({ resume: 's1', resumeSessionAt: undefined, forkSession: false });
   });
 });

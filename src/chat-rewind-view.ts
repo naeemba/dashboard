@@ -1,5 +1,6 @@
 import type { DashboardBridge } from './bridge';
 import { promptAfterRewind, restoredNotice, rewindChoices, rewindRows } from './chat-rewind';
+import type { ChatViewOptions } from './chat-view';
 import { failureText } from './failure';
 import { searchOverlay } from './overlay';
 
@@ -7,7 +8,7 @@ import { searchOverlay } from './overlay';
 // before the one picked. Resolves with that prompt when the conversation went back, for the box to
 // hold again as Claude Code's does, and undefined otherwise.
 export async function rewind(
-  bridge: DashboardBridge, slot: number, say: { onError(message: string): void; onNotice(message: string): void },
+  bridge: DashboardBridge, slot: number, say: Pick<ChatViewOptions, 'onError' | 'onNotice'>,
 ): Promise<string | undefined> {
   try {
     const points = await bridge.chatPrompts(slot);

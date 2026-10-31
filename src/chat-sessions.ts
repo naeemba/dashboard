@@ -12,7 +12,7 @@ import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
-import { rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
+import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
@@ -196,16 +196,13 @@ export function registerChatSessions(
     const environment = { ...host.environment, PATH: await shellPath };
     const executable = claudeExecutable();
     const resume = remembered[projectPath];
-    const resumeAt = rewound.get(projectPath);
     const input = inputQueue<SDKUserMessage>();
     const asks: Session['asks'] = new Map();
     const session: Session = { input, asks, stopped: false, query: query({
       prompt: input,
       options: {
         cwd: projectPath,
-        resume,
-        resumeSessionAt: resumeAt,
-        forkSession: resumeAt !== undefined,
+        ...resumeFrom(resume, rewound.get(projectPath)),
         // What /rewind puts the code back from.
         enableFileCheckpointing: true,
         model: preferences.get(slot)?.model ?? undefined,
@@ -315,7 +312,9 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      current: remembered[projectPath] ?? null,
+      // With a cut pending, the conversation on screen is not the remembered one, so picking that one
+      // in /resume goes through chat:resume and puts it back whole.
+      current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
   });
@@ -437,15 +436,14 @@ export function registerChatSessions(
       const { query } = await running(slot, projectPath);
       const preview = await query.rewindFiles(point.id, { dryRun: true });
       restored = preview.canRewind ? { ...preview, ...(await query.rewindFiles(point.id)) } : preview;
-      if (!restored.canRewind) return restored;
     }
-    if (choice.conversation) {
-      stop(slot);
-      if (point.before === null) remember(projectPath, undefined);
-      else rewound.set(projectPath, point.before);
-      host.send(slot, { kind: 'reset' });
-      running(slot, projectPath).catch(() => undefined);
-    }
+    const conversation = conversationAfterRewind(point, choice, restored);
+    if (conversation === 'keep') return restored;
+    stop(slot);
+    if (conversation === 'forget') remember(projectPath, undefined);
+    else rewound.set(projectPath, conversation.cutAt);
+    host.send(slot, { kind: 'reset' });
+    running(slot, projectPath).catch(() => undefined);
     return restored;
   });
 

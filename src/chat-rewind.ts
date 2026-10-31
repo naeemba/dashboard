@@ -17,6 +17,13 @@ export type RewindPoint = { id: string; before: string | null; text: string };
 
 export type RewindChoice = { code: boolean; conversation: boolean };
 
+export type RewindNotice = { error: boolean; text: string };
+
+// What happens to the conversation once the code half of a /rewind is done: left alone when only the
+// code was picked or the code could not go back, forgotten before the first prompt (nothing to resume
+// up to, so a new conversation), and otherwise cut at the message before the prompt.
+export type ConversationRewind = 'keep' | 'forget' | { cutAt: string };
+
 const CHOICES: SearchRow<RewindChoice>[] = [
   { name: 'Restore code and conversation', detail: 'Files and the conversation go back to just before this prompt', choice: { code: true, conversation: true } },
   { name: 'Restore conversation', detail: 'The conversation goes back to just before this prompt; files stay as they are', choice: { code: false, conversation: true } },
@@ -63,15 +70,27 @@ export function rewindChoices(query: string): SearchRow<RewindChoice>[] {
 
 // The prompt the box holds again after a rewind, as Claude Code's does: only when the conversation
 // went back, which a code restore that failed stops it doing.
-export function promptAfterRewind(point: RewindPoint, choice: RewindChoice, notice: { error: boolean } | null): string | undefined {
+export function promptAfterRewind(point: RewindPoint, choice: RewindChoice, notice: Pick<RewindNotice, 'error'> | null): string | undefined {
   return choice.conversation && !notice?.error ? point.text : undefined;
 }
 
 // What the screen says after the code went back, or why it did not. The count is the dry run's: a
 // real rewind reports only the links it would not follow.
-export function restoredNotice(result: RewindFilesResult): { error: boolean; text: string } {
+export function restoredNotice(result: RewindFilesResult): RewindNotice {
   if (!result.canRewind) return { error: true, text: `Code not restored: ${result.error ?? 'there is no checkpoint for that prompt'}.` };
   const changed = result.filesChanged?.length ?? 0;
   const skipped = result.skippedLinks ? ` ${result.skippedLinks} behind a link left as they are.` : '';
   return { error: false, text: `Code restored: ${changed} ${changed === 1 ? 'file' : 'files'} put back.${skipped}` };
+}
+
+// The code goes back first; a code rewind refused leaves the conversation as it is.
+export function conversationAfterRewind(point: RewindPoint, choice: RewindChoice, restored: RewindFilesResult | null): ConversationRewind {
+  if (!choice.conversation || restored?.canRewind === false) return 'keep';
+  return point.before === null ? 'forget' : { cutAt: point.before };
+}
+
+// How a session resumes with a conversation cut pending: up to the cut, forked into a new
+// conversation so the old one stays whole in /resume.
+export function resumeFrom(resume: string | undefined, cutAt: string | undefined): { resume: string | undefined; resumeSessionAt: string | undefined; forkSession: boolean } {
+  return { resume, resumeSessionAt: cutAt, forkSession: cutAt !== undefined };
 }
