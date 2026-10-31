@@ -27,7 +27,7 @@ prompt after it starts fresh instead of failing the same way again.
 `@path` is passed through as typed: the CLI expands it into the file's contents the way it does in a
 terminal, checked against the pinned SDK by asking for `@package.json`'s version with no tools used.
 
-## chat-decision-2: Slash commands are the session's; the screen adds the list and three of its own
+## chat-decision-2: Slash commands are the session's; the screen adds the list and four of its own
 
 Every command typed into the box goes to the session as a prompt, and the CLI runs it the way it does in
 a terminal: skills, the project's commands and its own (`/compact`, `/context`, `/clear`).
@@ -37,6 +37,13 @@ answered by the screen itself (chat-commands.ts) and never sent. So is `/model`:
 prints a usage line instead of Claude Code's picker, so the screen lists `supportedModels()`; with a
 name the session offers, it goes through `chat:configure` like the model key, so the foot and the
 saved preference follow it; a name it does not offer is refused, not saved as the next start model.
+`/effort` is the screen's too: bare, the session has no picker to show here, so the screen lists auto
+and low to max; a named level goes through `chat:configure` like `/model`, which sends it to the
+session's flag layer with `applyFlagSettings`, so the foot and the saved preference follow it. Until
+one is picked the foot says `default effort` and no row is marked, because the session then runs at
+the level in the settings file, which the screen does not read. Auto is not that: it clears the flag
+layer, which puts the session on the model's default over the settings level, and a restart after it
+sends the same clear, since the start option cannot say null.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.
@@ -48,3 +55,30 @@ Plan mode is on the edits key, after accepting, the terminal's order. The plan a
 `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with
 it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
+
+## chat-decision-3: /rewind forks the conversation and keeps the code half in the session's checkpoints
+
+`/rewind` is the screen's own command, as `/resume` is: the session answers it with "isn't available
+in this environment". Every session starts with `enableFileCheckpointing`, so restoring code is
+`rewindFiles` with the picked prompt's id, the one its transcript gives it. A dry run first gives the
+count the notice prints; the real rewind reports only links it would not follow. Checked against the
+pinned SDK: a file written by the second prompt went back to the first prompt's text, and the same
+call worked on a resumed session before any prompt was sent.
+
+Restoring the conversation closes the session and starts one with `resume`, `resumeSessionAt` set to
+the message before the prompt, and `forkSession`, so the old conversation stays whole in `/resume`.
+The fork names its new conversation only in the next turn's `init`, so until then main reads the
+remembered one cut at that message; any change of conversation drops the cut. While the cut waits,
+`/resume` marks no conversation as current, so picking the one just cut goes through `chat:resume`
+and puts it back whole. Before the first prompt there is nothing to resume, and it is a new
+conversation.
+
+Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too: Escape
+is the interrupt key, and a double press would need a timing rule beside it.
+
+## chat-decision-4: The @ list is git's files, not the SDK's file suggestions
+
+The SDK has a `file_suggestions` request, but only as an internal type: the `Query` has no method to
+send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
+--exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
+are not offered. A folder that is not a repository lists nothing rather than walking node_modules.

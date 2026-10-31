@@ -1,4 +1,4 @@
-import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
@@ -12,9 +12,11 @@ import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
+import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
+import { projectFiles } from './git';
 import { isRecord } from './is-record';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
@@ -38,8 +40,8 @@ export type ChatHost = {
 // What the renderer may change on a running session. Held per slot so a choice made before the first
 // prompt is what the session starts with. The default model is null rather than undefined: the second
 // screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
-// as no change at all.
-export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode };
+// as no change at all. The effort is null for the same reason: auto, the model's own default.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
 
@@ -157,10 +159,15 @@ export function registerChatSessions(
   const preferences = new Map<number, ChatPreferences>();
   const file = path.join(host.userData, 'chat-sessions.json');
   const remembered = rememberedSessions(file);
+  // Per project, the message a /rewind of the conversation resumes up to, until the next prompt's
+  // turn names the forked conversation. Any change of conversation drops it.
+  // ponytail: kept in memory, so an app restart before that prompt resumes the whole conversation.
+  const rewound = new Map<string, string>();
   // Read once, the first time a session starts, rather than at launch for a screen that may never be used.
   let shellPath: Promise<string> | undefined;
 
   function remember(projectPath: string, id: string | undefined): void {
+    rewound.delete(projectPath);
     if (id === undefined) delete remembered[projectPath];
     else remembered[projectPath] = id;
     try {
@@ -196,8 +203,11 @@ export function registerChatSessions(
       prompt: input,
       options: {
         cwd: projectPath,
-        resume,
+        ...resumeFrom(resume, rewound.get(projectPath)),
+        // What /rewind puts the code back from.
+        enableFileCheckpointing: true,
         model: preferences.get(slot)?.model ?? undefined,
+        effort: preferences.get(slot)?.effort ?? undefined,
         // The project's main session, as the terminal one was: the mode open() seeded or the screen
         // chose, the dispatch prompt, and the name its workers SendMessage it by. Thinking is asked
         // for as a summary, the text the pane folds into the conversation; left to the default, a
@@ -223,6 +233,10 @@ export function registerChatSessions(
         }, options.signal),
       },
     }) };
+    // Auto picked before a restart: the effort option cannot say null, and a session started without
+    // it runs at the settings file's level, so the override goes through the flag layer as /effort
+    // sends it. Failing, the session stays on the settings level until the next pick.
+    if (preferences.get(slot)?.effort === null) session.query.applyFlagSettings({ effortLevel: null }).catch(() => undefined);
     void (async () => {
       let error: string | null = null;
       // Whether a turn ever began. After one, the conversation remembered may have moved on (/clear,
@@ -291,6 +305,13 @@ export function registerChatSessions(
     return (await running(slot, projectPath)).query.supportedCommands();
   });
 
+  // The project's files for the @ list.
+  table.handle('chat-files:read', async (_screen, slot: number): Promise<string[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return projectFiles(projectPath);
+  });
+
   // The models /model lists, as the session offers them; asking starts it, as the command list does.
   table.handle('chat-models:read', async (_screen, slot: number): Promise<ModelInfo[]> => {
     const projectPath = host.projectPath(slot);
@@ -306,7 +327,9 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      current: remembered[projectPath] ?? null,
+      // With a cut pending, the conversation on screen is not the remembered one, so picking that one
+      // in /resume goes through chat:resume and puts it back whole.
+      current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
   });
@@ -333,6 +356,8 @@ export function registerChatSessions(
     if (!session) return;
     if ('model' in change) await session.query.setModel(change.model ?? undefined);
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
+    // The session's flag layer, as /effort sets it: null goes back to the model's default.
+    if ('effort' in change) await session.query.applyFlagSettings({ effortLevel: change.effort ?? null });
   });
 
   // What the status line shows: how full the context window is, read from the last response rather
@@ -349,13 +374,18 @@ export function registerChatSessions(
     return measureOf(context, models, usage);
   });
 
-  // What a screen opening this page needs to catch up: the conversation it would resume, read back
-  // from its transcript, the questions the session is waiting on, and the choices made so far.
-  table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
-    const projectPath = host.projectPath(slot);
+  // The conversation this page would resume, read back from its transcript, as far as a /rewind left it.
+  async function conversation(projectPath: string | undefined): Promise<Record<string, unknown>[]> {
     const sessionId = projectPath === undefined ? undefined : remembered[projectPath];
+    if (projectPath === undefined || sessionId === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
-    const messages = projectPath === undefined || sessionId === undefined ? [] : await getSessionMessages(sessionId, { dir: projectPath });
+    return rewoundTo(await getSessionMessages(sessionId, { dir: projectPath }), rewound.get(projectPath));
+  }
+
+  // What a screen opening this page needs to catch up: the conversation it would resume, the
+  // questions the session is waiting on, and the choices made so far.
+  table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
+    const messages = await conversation(host.projectPath(slot));
     // Taken after the read, so a question answered on another screen while it ran is not handed back
     // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
@@ -406,6 +436,32 @@ export function registerChatSessions(
     remember(projectPath, sessionId);
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
+  });
+
+  // The prompts /rewind lists.
+  table.handle('chat-prompts:read', async (_screen, slot: number): Promise<RewindPoint[]> => rewindPoints(await conversation(host.projectPath(slot))));
+
+  // A prompt picked in /rewind. The code goes back first, counted by a dry run, and a rewind that
+  // cannot put it back leaves the conversation alone too. The conversation goes back by closing the
+  // session and starting one that resumes up to the message before the prompt; before the first one
+  // there is nothing to resume, which is a new conversation. Every screen reads it back.
+  table.handle('chat:rewind', async (_screen, slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    let restored: RewindFilesResult | null = null;
+    if (choice.code) {
+      const { query } = await running(slot, projectPath);
+      const preview = await query.rewindFiles(point.id, { dryRun: true });
+      restored = preview.canRewind ? { ...preview, ...(await query.rewindFiles(point.id)) } : preview;
+    }
+    const conversationRewind = conversationAfterRewind(point, choice, restored);
+    if (conversationRewind === 'keep') return restored;
+    stop(slot);
+    if (conversationRewind === 'forget') remember(projectPath, undefined);
+    else rewound.set(projectPath, conversationRewind.cutAt);
+    host.send(slot, { kind: 'reset' });
+    running(slot, projectPath).catch(() => undefined);
+    return restored;
   });
 
   return {
