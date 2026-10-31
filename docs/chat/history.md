@@ -27,3 +27,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #117 — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-6)
 - 2026-11-01 #122 — /rename names the conversation; /resume lists it by that name
 - 2026-11-01 #114 — Queue a message sent while Claude is busy, grey until taken, Up withdraws it (chat-decision-7)
+- 2026-11-01 #113 — Ctrl+G edits the prompt in the project's nvim

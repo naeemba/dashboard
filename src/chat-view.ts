@@ -48,6 +48,8 @@ export type ChatViewOptions = {
   onNotice(message: string): void;
   // A question arrived or the last one went, so whatever marks a project that wants you redraws.
   onWaiting(): void;
+  // Puts the page's nvim in front, starting it if it is not running: the editor key's last step.
+  showEditor(): void;
 };
 
 export type ChatView = {
@@ -727,9 +729,27 @@ export function createChatView(options: ChatViewOptions): ChatView {
     render();
   }
 
+  // Once the editor key has written the box out, every return here asks for what nvim saved since.
+  let edited = false;
+  // Main is asked before the editor is shown, as with the scrollback key, so a cold nvim gets the
+  // file the moment it listens.
+  function editPrompt(): void {
+    edited = true;
+    bridge.openPrompt(slot, prompt.value).then((answer) => {
+      options.onError(answer.ok ? '' : answer.message);
+    }, (error: unknown) => options.onError(`The prompt was not opened: ${failureText(error)}`));
+    options.showEditor();
+  }
+
   function focus(): void {
     if (asks.length > 0) ask.focus();
     else prompt.focus();
+    if (!edited) return;
+    bridge.readPrompt(slot).then((text) => {
+      if (text === null) return;
+      prompt.value = text;
+      prompt.dispatchEvent(new Event('input'));
+    }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
   return {
@@ -773,6 +793,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'editor') editPrompt();
       if (command === 'history') showHistory();
       if (command === 'task-select') tasks.step();
       if (command === 'task-stop') stopTask();

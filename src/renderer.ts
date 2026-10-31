@@ -430,6 +430,7 @@ const builder = createPageBuilder({
   managerInFront: () => pages[activeIndex].mode === 'manager',
   worktrees: () => worktrees,
   openFile: (page, index, link) => openFileLink(page, index, link),
+  showEditor: (page) => showEditor(page),
   closePane: (page, index) => closePane(page, index, panePorts),
 });
 
@@ -614,9 +615,8 @@ function openScrollback(page: Page): void {
 }
 
 // A file path in a pane, by click or by the hint key; file-link-open.ts holds the order of it.
-const openFileLink = fileLinkOpener(bridge, {
-  startEditor, showEditor: (page) => { if (pages[activeIndex] === page) setMode('nvim'); }, report: (message) => showError('file', message),
-});
+const showEditor = (page: Page): void => { if (pages[activeIndex] === page) setMode('nvim'); };
+const openFileLink = fileLinkOpener(bridge, { startEditor, showEditor, report: (message) => showError('file', message) });
 
 // Naming the focused pane. What you type wins over the title the program in it sets, and an empty box
 // clears it back to following the title — the overlay's two answers, kept apart here: null is a cancel
