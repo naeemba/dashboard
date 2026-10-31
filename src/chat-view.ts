@@ -1,9 +1,9 @@
 import './chat.css';
-import type { EffortLevel, PermissionMode } from '@anthropic-ai/claude-agent-sdk';
+import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { asksUltrathink, completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -112,7 +112,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
   let model: string | null = null;
-  let effort: EffortLevel | null = null;
+  let effort: ChosenEffort;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
@@ -149,13 +149,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
-    // A turn whose prompt asked for ultrathink says so while it runs, on every screen the prompt reached.
-    const ultrathink = state !== 'ready' && asksUltrathink(transcript.entries.findLast((entry) => entry.kind === 'user')?.text ?? '');
-    const effortShown = ultrathink ? 'ultrathink' : `${effort ?? 'auto'} effort`;
+    const effortShown = footEffort(effort, state, transcript.entries);
     const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state]);
     if (key === drawnFoot) return;
     drawnFoot = key;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown, ultrathink, state, measured, transcript.version));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version));
   }
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.

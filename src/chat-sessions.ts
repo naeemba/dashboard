@@ -222,6 +222,10 @@ export function registerChatSessions(
         }, options.signal),
       },
     }) };
+    // Auto picked before a restart: the effort option cannot say null, and a session started without
+    // it runs at the settings file's level, so the override goes through the flag layer as /effort
+    // sends it. Failing, the session stays on the settings level until the next pick.
+    if (preferences.get(slot)?.effort === null) session.query.applyFlagSettings({ effortLevel: null }).catch(() => undefined);
     void (async () => {
       let error: string | null = null;
       // Whether a turn ever began. After one, the conversation remembered may have moved on (/clear,

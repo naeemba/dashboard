@@ -328,7 +328,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'strip when it ends. It lists only what started while the screen was open, since a saved session '
     + 'keeps none of it. The row under '
     + 'the box holds what Claude Code\'s status line does: on the left the model, whether edits are '
-    + 'asked about or accepted, the effort level, or ultrathink while such a turn runs, and whether Claude is working; on the right meters for the context, '
+    + 'asked about or accepted, the effort level (default effort until one is picked: the level in your settings), or ultrathink while such a turn runs, and whether Claude is working; on the right meters for the context, '
     + 'the plan\'s five-hour limit and when it resets, and the seven-day limit, each green, then yellow '
     + 'from 70 and red from 90, and the version. The model key walks the models and the '
     + 'edits key walks asking, accepting, planning and auto, both for the next thing Claude does; the foot '
