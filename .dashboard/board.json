@@ -188,6 +188,12 @@
           "title": "Show hook progress in the Claude pane",
           "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
           "priority": "low"
+        },
+        {
+          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
+          "title": "Readline editing keys in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
+          "priority": "low"
         }
       ]
     },
