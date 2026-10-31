@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
@@ -738,9 +738,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'task-stop') stopTask();
       if (command === 'task-background') backgroundTask();
       if (command === 'stash') {
-        // While Up shows an earlier entry, the box holds something Up can already reach; the draft
-        // held aside is what would be lost.
-        stashed = stashDraft(stashed, recalled === null ? prompt.value : draft);
+        stashed = stashDraft(stashed, stashedText(prompt.value, draft, recalled));
         emptyBox();
         focus();
       }

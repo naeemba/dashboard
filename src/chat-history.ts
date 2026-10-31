@@ -79,3 +79,9 @@ export function stashDraft(stashed: string[], text: string): string[] {
   if (draft === '') return stashed;
   return [...stashed.filter((each) => each !== draft), draft].slice(-STASH_KEPT);
 }
+
+// What the stash key keeps: the box, or, while Up shows an earlier entry, the draft held aside. The
+// earlier entry is one Up can already reach; the draft is what would be lost.
+export function stashedText(box: string, held: string, recalled: number | null): string {
+  return recalled === null ? box : held;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, staleConversations, STASH_KEPT, stashDraft } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, staleConversations, STASH_KEPT, stashDraft, stashedText } from './chat-history';
 
 describe('recall', () => {
   it('walks back from the draft to the oldest prompt and stops there', () => {
@@ -69,5 +69,12 @@ describe('stashDraft', () => {
   it('drops the oldest past the limit', () => {
     const full = Array.from({ length: STASH_KEPT }, (_, index) => String(index));
     expect(stashDraft(full, 'new')).toEqual([...full.slice(1), 'new']);
+  });
+});
+
+describe('stashedText', () => {
+  it('stashes the box, or the draft held aside while Up shows an earlier entry', () => {
+    expect(stashedText('fix the login redirect', '', null)).toBe('fix the login redirect');
+    expect(stashedText('run the tests', 'fix the login redirect', 0)).toBe('fix the login redirect');
   });
 });

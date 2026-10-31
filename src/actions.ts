@@ -589,7 +589,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   },
   // Ctrl+S, the terminal's stash key, opens the project picker here (chat-decision-6).
   {
-    name: 'claude-stash', description: 'Stash what is in the box and empty it; Up brings it back',
+    name: 'claude-stash', description: 'Stash the draft in the box and empty it; Up brings it back',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'stash' }, mac: 'Alt+S', other: 'Alt+S',
   },
   {
