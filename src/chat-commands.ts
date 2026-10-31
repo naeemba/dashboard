@@ -52,10 +52,10 @@ export function completion(row: CommandRow, enter: boolean): { text: string; run
   return { text: `/${row.name}${runs ? '' : ' '}`, runs };
 }
 
-// What Tab fills the box with: the command picked in the open list, else the suggestion, and that only
+// What Tab fills the box with: the row picked in the open list (a command or an @ file), else the suggestion, and that only
 // into an empty box, so a half-typed prompt is never replaced.
-export function tabFill(picked: CommandRow | null, typed: string, suggestion: string | null):
-  { kind: 'command'; row: CommandRow } | { kind: 'suggestion'; text: string } | null {
+export function tabFill<Row>(picked: Row | null, typed: string, suggestion: string | null):
+  { kind: 'command'; row: Row } | { kind: 'suggestion'; text: string } | null {
   if (picked) return { kind: 'command', row: picked };
   return typed === '' && suggestion !== null ? { kind: 'suggestion', text: suggestion } : null;
 }
