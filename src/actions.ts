@@ -64,7 +64,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -588,6 +588,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-task-background', description: 'Send the picked task to the background, or every foreground task with none picked',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-background' }, mac: 'Alt+B', other: 'Alt+B',
+  },
+  // Ctrl+S, the terminal's stash key, opens the project picker here (chat-decision-9).
+  {
+    name: 'claude-stash', description: 'Stash the draft in the box and empty it; Up brings it back',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'stash' }, mac: 'Alt+S', other: 'Alt+S',
   },
   // The readline keys the Claude Code terminal's box has, on whichever of the screen's boxes has the
   // keyboard. Ctrl+Y was redo on Linux and Windows; Ctrl+Shift+Z still is.

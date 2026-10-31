@@ -31,3 +31,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-8)
 - 2026-11-01 #127 — Readline kill and yank keys in the box: Ctrl+W, U, K, Y and Alt+Y
 - 2026-11-01 #116 — Answer an MCP server's forms and sign-in links in the ask box
+- 2026-11-01 #123 — Stash the box's draft with Alt+S, Up brings it back (chat-decision-9)
