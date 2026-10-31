@@ -215,6 +215,8 @@ export type DashboardBridge = {
   // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
   // False when there is no conversation yet to copy.
   chatBranch(slot: number, title: string): Promise<boolean>;
+  // /rename: the refusal, or null once the conversation is renamed.
+  chatRename(slot: number, title: string): Promise<string | null>;
   // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;

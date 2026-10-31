@@ -85,6 +85,7 @@ const bridge: DashboardBridge = {
   onViewerDismiss: (listener) => ipcRenderer.on('viewer:dismiss', () => listener()),
   chatResume: (slot, sessionId) => ipcRenderer.send('chat:resume', slot, sessionId),
   chatBranch: (slot, title) => ipcRenderer.invoke('chat:branch', slot, title),
+  chatRename: (slot, title) => ipcRenderer.invoke('chat:rename', slot, title),
   chatPrompts: (slot) => ipcRenderer.invoke('chat-prompts:read', slot),
   chatRewind: (slot, point, choice) => ipcRenderer.invoke('chat:rewind', slot, point, choice),
   chatMcpServers: (slot) => ipcRenderer.invoke('chat-mcp:read', slot),
