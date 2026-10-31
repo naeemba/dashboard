@@ -152,6 +152,12 @@
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
           "priority": "low"
+        },
+        {
+          "id": "b70e7641-48fb-4a5f-a0b8-de8c1c6650ac",
+          "title": "Add a note to a permission Yes in the Claude pane",
+          "notes": "Claude Code: Tab adds a note to a yes. Pane: a typed reason exists only on No (chat-permission.ts:55). Whether PermissionResult carries an allow note is unverified; if not, comment on the card and stop without a PR. Size S.",
+          "priority": "low"
         }
       ]
     },
