@@ -182,6 +182,12 @@
           "title": "Export the Claude pane's conversation to clipboard or file",
           "notes": "Claude Code: /export. Pane: none. Size S.",
           "priority": "low"
+        },
+        {
+          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
+          "title": "Show hook progress in the Claude pane",
+          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "priority": "low"
         }
       ]
     },
