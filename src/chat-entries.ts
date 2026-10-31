@@ -93,10 +93,44 @@ function preformatted(className: string, text: string): HTMLPreElement {
   return pre;
 }
 
-// The call itself, then what came back. A file tool shows its change as a diff, a plan put up for
-// approval reads as the document it is; anything else shows its input, which for Bash is the whole
-// command rather than the first line the summary had room for.
-export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null): HTMLElement[] {
+// What a subagent did, under the call that started it: what it said, and each tool it called as its
+// one line. Nothing in it unfolds, since the selection keys walk only the main conversation; a
+// subagent's own subagent shows its steps under its line, indented. A subagent's every message redraws
+// its call, so a step already drawn is moved into the new body rather than rendered again; notices,
+// which can be one shared object, are drawn fresh.
+const drawnSteps = new WeakMap<ChatEntry, HTMLElement>();
+
+function stepsOf(steps: ChatEntry[]): HTMLElement {
+  const element = document.createElement('div');
+  element.className = 'chat-steps';
+  for (const step of steps) {
+    if (step.kind === 'tool') {
+      element.append(toolLine('div', step));
+      if (step.steps?.length) element.append(stepsOf(step.steps));
+      continue;
+    }
+    // A notice is cheap to draw and may be one shared object (every "Stopped." is), and a cached
+    // element can sit in only one place, so notices are drawn fresh each time.
+    if (step.kind === 'notice') {
+      element.append(drawEntry(step).element);
+      continue;
+    }
+    let drawn = drawnSteps.get(step);
+    if (!drawn) {
+      const fresh = drawEntry(step);
+      fresh.fill?.();
+      drawn = fresh.element;
+      drawnSteps.set(step, drawn);
+    }
+    element.append(drawn);
+  }
+  return element;
+}
+
+// The call itself, what a subagent it started did, then what came back. A file tool shows its change
+// as a diff, a plan put up for approval reads as the document it is; anything else shows its input,
+// which for Bash is the whole command rather than the first line the summary had room for.
+export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null, steps: ChatEntry[] = []): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
   const pdf = pdfOfTool(name, input);
@@ -111,14 +145,15 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     pre.className = 'chat-diff';
     pre.append(...diff.map((line) => {
       const row = document.createElement('span');
-      row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added' }[line.sign];
-      row.textContent = `${line.sign} ${line.text}\n`;
+      row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added', '…': 'diff-gap' }[line.sign];
+      row.textContent = line.sign === '…' ? '…\n' : `${line.sign} ${line.text}\n`;
       return row;
     }));
     parts.push(withCopy(pre));
   } else {
     parts.push(withCopy(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2))));
   }
+  if (steps.length > 0) parts.push(stepsOf(steps));
   if (result) {
     if (result.text) parts.push(withCopy(preformatted(result.isError ? 'chat-output chat-error' : 'chat-output', result.text)));
     parts.push(...images(result.images));
@@ -126,10 +161,10 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   return parts;
 }
 
-function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
-  const element = document.createElement('details');
-  element.className = 'chat-entry chat-tool';
-  const summary = document.createElement('summary');
+// A call's one line: whether it finished, its name, and what it was about.
+function toolLine(tag: 'summary' | 'div', entry: Extract<ChatEntry, { kind: 'tool' }>): HTMLElement {
+  const line = document.createElement(tag);
+  if (tag === 'div') line.className = 'chat-step-tool';
   const [look, mark] = entry.result === null ? ['running', '…'] : entry.result.isError ? ['failed', '✗'] : ['', '✓'];
   const state = document.createElement('span');
   state.className = `chat-tool-state ${look}`.trim();
@@ -139,14 +174,20 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
   const about = document.createElement('span');
   about.className = 'chat-tool-summary';
   about.textContent = toolSummary(entry.name, entry.input);
-  summary.append(state, name, about);
-  element.append(summary);
+  line.append(state, name, about);
+  return line;
+}
+
+function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
+  const element = document.createElement('details');
+  element.className = 'chat-entry chat-tool';
+  element.append(toolLine('summary', entry));
   // The body is built the first time the call is unfolded, not before: most never are.
   let built = false;
   element.addEventListener('toggle', () => {
     if (!element.open || built) return;
     built = true;
-    element.append(...toolBody(entry.name, entry.input, entry.result));
+    element.append(...toolBody(entry.name, entry.input, entry.result, entry.steps));
   });
   return { entry, element, fill: null };
 }

@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { onEdgeLine, recall, sentPrompts } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
@@ -20,6 +20,7 @@ import {
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
+import { backgroundTarget, stopTarget } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
@@ -541,6 +542,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
+  function stopTask(): void {
+    const target = stopTarget(tasks.picked());
+    if (target.kind === 'refused') return options.onNotice(target.reason);
+    bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
+  }
+
+  function backgroundTask(): void {
+    const target = backgroundTarget(tasks.picked());
+    if (target.kind === 'refused') return options.onNotice(target.reason);
+    bridge.chatBackgroundTasks(slot, target.kind === 'one' ? target.toolUseId : undefined).then((matched) => {
+      if (!matched) options.onNotice(target.kind === 'one' ? 'That task is no longer in the foreground.' : 'Claude has no task running.');
+    }, (error: unknown) => options.onError(`Not sent to the background: ${failureText(error)}`));
+  }
+
   function choose(change: ChatPreferences): void {
     // A model picked here or on another screen shows over the measured name until the next measure.
     if ('model' in change && (change.model ?? null) !== model) {
@@ -627,6 +642,25 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
   }
 
+  // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
+  // picked goes in the box to edit or send, over whatever was there. This screen's own conversation
+  // comes first, from what it holds rather than read off disk again.
+  function showHistory(): void {
+    bridge.chatHistory(slot).then(async (earlier) => {
+      const prompts = promptHistory([sentPrompts(transcript.entries), ...earlier]);
+      if (prompts.length === 0) return options.onNotice('This project has no prompts sent yet.');
+      const picked = await searchOverlay({
+        name: 'chat-history', placeholder: 'Search prompts', rows: (query) => historyRows(prompts, query),
+        empty: 'No prompt matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined) {
+        prompt.value = picked;
+        prompt.dispatchEvent(new Event('input'));
+      }
+      focus();
+    }, (error: unknown) => options.onError(`Earlier prompts not listed: ${failureText(error)}`));
+  }
+
   // The effort levels in a search sheet, as Claude Code's /effort offers them, or straight to the one
   // named after the command; the next turn runs at it, on every screen.
   function showEfforts(name: string): void {
@@ -710,6 +744,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'history') showHistory();
+      if (command === 'task-select') tasks.step();
+      if (command === 'task-stop') stopTask();
+      if (command === 'task-background') backgroundTask();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

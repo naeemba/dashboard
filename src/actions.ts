@@ -62,7 +62,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -568,6 +568,24 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-accept-suggestion', description: 'Fill the empty box with the prompt Claude suggests, or with the command picked in the list',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'suggestion' }, mac: 'Tab', other: 'Tab',
+  },
+  // Ctrl+R, as in Claude Code: reverse search through what was sent before.
+  {
+    name: 'claude-history', description: 'Search the prompts sent in this project\'s recent conversations',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'history' }, mac: 'Ctrl+R', other: 'Ctrl+R',
+  },
+  // The task strip's keys. Ctrl+B, the terminal's background key, is the board's mode key here (chat-decision-5).
+  {
+    name: 'claude-task-select', description: 'Pick the next running task in the strip, or none after the last',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-select' }, mac: 'Alt+T', other: 'Alt+T',
+  },
+  {
+    name: 'claude-task-stop', description: 'Stop the task picked in the strip',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-stop' }, mac: 'Alt+X', other: 'Alt+X',
+  },
+  {
+    name: 'claude-task-background', description: 'Send the picked task to the background, or every foreground task with none picked',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-background' }, mac: 'Alt+B', other: 'Alt+B',
   },
   {
     name: 'claude-new', description: 'Start a new conversation',
