@@ -14,6 +14,8 @@ export type ChatTask = {
   // The task that started it, or null for one the main thread started.
   parent: string | null;
   backgrounded: boolean;
+  // The tool call that started it, which backgrounding one task names; null when the session gave none.
+  toolUseId: string | null;
   tools: number;
   tokens: number;
   seconds: number;
@@ -54,7 +56,7 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   }
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
-    backgrounded: message.is_backgrounded === true, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
+    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
   }];
 }
 
@@ -122,4 +124,49 @@ export function taskDetail(task: ChatTask): string {
   if (task.seconds > 0) parts.push(`${task.seconds}s`);
   if (task.lastTool) parts.push(task.lastTool);
   return parts.join(' · ');
+}
+
+// The row the task key picks next, in the strip's order: the first with none picked, then each in
+// turn, then none again after the last, so the key also lets go of the strip.
+export function nextTaskSelection(tasks: ChatTasks, selected: string | null): string | null {
+  const ids = taskOrder(tasks).map(({ task }) => task.id);
+  const at = selected === null ? -1 : ids.indexOf(selected);
+  return ids[at + 1] ?? null;
+}
+
+// The pick kept when the strip gets new tasks: let go once nothing is running, so a pick whose task
+// ended refuses only while other tasks still run, never for the rest of the pane's life.
+export function keptSelection(tasks: ChatTasks, selected: string | null): string | null {
+  return tasks.length === 0 ? null : selected;
+}
+
+// The picked task; 'ended' once it has left the strip, so a key meant for it never falls back to
+// acting on every task; null with none picked. The task key walks on from an ended one.
+export function pickedTask(tasks: ChatTasks, selected: string | null): ChatTask | 'ended' | null {
+  if (selected === null) return null;
+  return tasks.find((task) => task.id === selected) ?? 'ended';
+}
+
+// What the stop and background keys both say when the picked task has left the strip.
+export const TASK_ENDED = 'The picked task has ended. The task key picks another, or none after the last.';
+
+export type StopTarget = { kind: 'one'; taskId: string } | { kind: 'refused'; reason: string };
+
+// What the stop key does: stops the picked task, and nothing with none picked.
+export function stopTarget(task: ChatTask | 'ended' | null): StopTarget {
+  if (task === null) return { kind: 'refused', reason: 'No task picked. The task key picks one in the strip over the box.' };
+  if (task === 'ended') return { kind: 'refused', reason: TASK_ENDED };
+  return { kind: 'one', taskId: task.id };
+}
+
+export type BackgroundTarget = { kind: 'all' } | { kind: 'one'; toolUseId: string } | { kind: 'refused'; reason: string };
+
+// What the background key does: with no row picked, every foreground task, as Ctrl+B in the terminal;
+// with one picked, that one, which only a foreground task started by a tool call can be.
+export function backgroundTarget(task: ChatTask | 'ended' | null): BackgroundTarget {
+  if (task === null) return { kind: 'all' };
+  if (task === 'ended') return { kind: 'refused', reason: TASK_ENDED };
+  if (task.backgrounded) return { kind: 'refused', reason: 'That task is already running in the background.' };
+  if (task.toolUseId === null) return { kind: 'refused', reason: 'That task names no tool call to background. With no task picked, the key backgrounds them all.' };
+  return { kind: 'one', toolUseId: task.toolUseId };
 }

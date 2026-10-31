@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTaskMessage, taskDetail, taskOrder, type ChatTasks } from './chat-tasks';
+import { applyTaskMessage, backgroundTarget, keptSelection, nextTaskSelection, pickedTask, stopTarget, taskDetail, taskOrder, type ChatTasks } from './chat-tasks';
 
 const fold = (messages: Record<string, unknown>[], start: ChatTasks = []): ChatTasks =>
   messages.reduce(applyTaskMessage, start);
@@ -58,5 +58,57 @@ describe('taskOrder', () => {
   it('puts each task under the one that started it, a level deeper', () => {
     const tasks = fold([startedTask('lead'), startedTask('other'), startedTask('helper', { parent_task_id: 'lead' })]);
     expect(taskOrder(tasks).map(({ task, depth }) => [task.id, depth])).toEqual([['lead', 0], ['helper', 1], ['other', 0]]);
+  });
+});
+
+describe('nextTaskSelection', () => {
+  it('walks the rows in the strip\'s order and lets go after the last', () => {
+    const tasks = fold([startedTask('lead'), startedTask('other'), startedTask('helper', { parent_task_id: 'lead' })]);
+    const walked = [null, 'lead', 'helper', 'other'].map((id) => nextTaskSelection(tasks, id));
+    expect(walked).toEqual(['lead', 'helper', 'other', null]);
+  });
+
+  it('starts over when the picked task has ended', () => {
+    expect(nextTaskSelection(fold([startedTask('a')]), 'gone')).toBe('a');
+  });
+});
+
+describe('backgroundTarget', () => {
+  it('backgrounds everything with no task picked, and a picked foreground task by its tool call', () => {
+    const [task] = fold([startedTask('a', { tool_use_id: 'toolu_1' })]);
+    expect(backgroundTarget(null)).toEqual({ kind: 'all' });
+    expect(backgroundTarget(task)).toEqual({ kind: 'one', toolUseId: 'toolu_1' });
+  });
+
+  it('refuses a task already in the background, or one with no tool call to name', () => {
+    const [background, nameless] = fold([startedTask('a', { tool_use_id: 'toolu_1', is_backgrounded: true }), startedTask('b')]);
+    expect(backgroundTarget(background).kind).toBe('refused');
+    expect(backgroundTarget(nameless).kind).toBe('refused');
+    expect(backgroundTarget('ended').kind).toBe('refused');
+  });
+});
+
+describe('pickedTask', () => {
+  it('answers the picked task, ended once it left the strip, and null with none picked', () => {
+    const tasks = fold([startedTask('a')]);
+    expect(pickedTask(tasks, null)).toBeNull();
+    expect(pickedTask(tasks, 'a')).toBe(tasks[0]);
+    expect(pickedTask(tasks, 'gone')).toBe('ended');
+  });
+});
+
+describe('keptSelection', () => {
+  it('keeps an ended pick while other tasks run, and lets go once nothing does', () => {
+    expect(keptSelection(fold([startedTask('b')]), 'a')).toBe('a');
+    expect(keptSelection([], 'a')).toBeNull();
+  });
+});
+
+describe('stopTarget', () => {
+  it('stops the picked task and refuses with none picked or an ended one', () => {
+    const [task] = fold([startedTask('a')]);
+    expect(stopTarget(task)).toEqual({ kind: 'one', taskId: 'a' });
+    expect(stopTarget(null).kind).toBe('refused');
+    expect(stopTarget('ended').kind).toBe('refused');
   });
 });
