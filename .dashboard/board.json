@@ -272,16 +272,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
-          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
-          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:34:00.917Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -405,6 +396,16 @@
           "updatedAt": "2026-10-31T22:27:25.984Z",
           "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
           "pullRequest": 108
+        },
+        {
+          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
+          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
+          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:40:16.601Z",
+          "branch": "work-board-card-1df5422d-060b-45f9-a931-f89",
+          "pullRequest": 113
         }
       ]
     },
