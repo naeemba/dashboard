@@ -272,22 +272,6 @@
           ]
         },
         {
-          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
-          "title": "Show hook progress in the Claude pane",
-          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:05:43.117Z",
-          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
-          "pullRequest": 124,
-          "comments": [
-            {
-              "at": "2026-10-31T23:05:43.117Z",
-              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
-            }
-          ]
-        },
-        {
           "id": "0640cf6c-2b69-4124-b1eb-844422424223",
           "title": "Draw TodoWrite as a checklist in the Claude pane",
           "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
@@ -1543,6 +1527,26 @@
             {
               "at": "2026-10-31T23:34:31.521Z",
               "body": "Shipped in #123: Alt+S stashes the box's draft and empties it; Up walks the stash (newest first, last 10 kept) before the prompts sent. Released as 2.27.0. Needs app rebuild and a hand check."
+            }
+          ]
+        },
+        {
+          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
+          "title": "Show hook progress in the Claude pane",
+          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:45:32.491Z",
+          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
+          "pullRequest": 124,
+          "comments": [
+            {
+              "at": "2026-10-31T23:05:43.117Z",
+              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
+            },
+            {
+              "at": "2026-10-31T23:45:32.490Z",
+              "body": "Shipped in PR #124: the working line names a running hook, and a failed hook leaves a folded line with its output. Version 2.28.0."
             }
           ]
         }
