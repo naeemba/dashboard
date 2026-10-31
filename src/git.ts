@@ -21,10 +21,16 @@ export async function runProgram(program: string, args: string[], cwd: string): 
   return stdout.trimEnd();
 }
 
-// The project's files: git's tracked ones and the untracked it does not ignore. A folder that is not
-// a repository lists none rather than walking node_modules.
+// The project's files: git's tracked ones and the untracked it does not ignore, less the tracked ones
+// deleted from the working tree but not yet staged as deleted. -z, so a path in any language comes back
+// as written rather than C-quoted. A folder that is not a repository lists none rather than walking
+// node_modules.
 export async function projectFiles(projectPath: string): Promise<string[]> {
-  return git(['ls-files', '--cached', '--others', '--exclude-standard'], projectPath).then((list) => list.split('\n').filter(Boolean), () => []);
+  const listed = (args: string[]) => git(['ls-files', '-z', ...args], projectPath).then((list) => list.split('\0').filter(Boolean));
+  return Promise.all([listed(['--cached', '--others', '--exclude-standard']), listed(['--deleted'])]).then(([files, deleted]) => {
+    const gone = new Set(deleted);
+    return files.filter((file) => !gone.has(file));
+  }, () => []);
 }
 
 // origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the

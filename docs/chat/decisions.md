@@ -48,3 +48,10 @@ Plan mode is on the edits key, after accepting, the terminal's order. The plan a
 `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with
 it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
+
+## chat-decision-3: The @ list is git's files, not the SDK's file suggestions
+
+The SDK has a `file_suggestions` request, but only as an internal type: the `Query` has no method to
+send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
+--exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
+are not offered. A folder that is not a repository lists nothing rather than walking node_modules.

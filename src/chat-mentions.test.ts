@@ -32,6 +32,9 @@ describe('pickMention', () => {
     expect(pickMention('read @ch', 8, 'src/chat-view.ts')).toEqual({ text: 'read @src/chat-view.ts ', caret: 23 });
     expect(pickMention('read @ch-x now', 8, 'a.ts')).toEqual({ text: 'read @a.ts now', caret: 11 });
   });
+  it('keeps the line break after the @ word', () => {
+    expect(pickMention('read @ch\nmore', 8, 'a.ts')).toEqual({ text: 'read @a.ts \nmore', caret: 11 });
+  });
   it('quotes a path with a space', () => {
     expect(pickMention('@my', 3, 'my file.ts')).toEqual({ text: '@"my file.ts" ', caret: 14 });
   });

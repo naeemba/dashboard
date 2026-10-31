@@ -2,8 +2,10 @@ import { commandMenu, type CommandRow } from './chat-commands';
 import { clampIndex, heldIndex } from './clamp-index';
 
 // The list of slash commands over the prompt box while what is typed there is a slash and a name, or
-// of files while the caret is in an @ word: a row is a command, or a file's path. The box keeps the keyboard: the view hands it Up and Down while the list is open, and asks it which
-// row is picked on Tab or Enter. Which rows match is chat-commands.ts's.
+// of files while the caret is in an @ word: a row is a command, or a file's path. CommandMenu keeps
+// its name for both. The box keeps the keyboard: the view hands it Up and Down while the list is
+// open, and asks it which row is picked on Tab or Enter. Which commands match is chat-commands.ts's,
+// which files match chat-mentions.ts's.
 
 export type MenuRow = CommandRow | string;
 

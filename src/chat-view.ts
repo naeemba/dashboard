@@ -376,6 +376,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
     recalled = null;
     updateMenu();
   });
+  // The @ list follows the caret, so moving it without typing redraws the list too.
+  prompt.addEventListener('click', () => updateMenu());
+  prompt.addEventListener('keyup', (event) => {
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) updateMenu();
+  });
 
   prompt.addEventListener('keydown', (event) => {
     if (isModified(event)) return;

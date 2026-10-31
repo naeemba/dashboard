@@ -1,9 +1,8 @@
 import { fileMention, mentionInsertion } from './chat-commands';
 import { fuzzyScore } from './fuzzy';
 
-// The list of the project's files that @ opens in the prompt box, as Claude Code's does. The SDK has a
-// file_suggestions request, but only as an internal type with no method on the query to send it, so
-// the screen lists the files itself (git's list, from main) and matches them here.
+// The list of the project's files that @ opens in the prompt box, as Claude Code's does. The files are
+// git's list, from main, not the SDK's file_suggestions: chat-decision-3 says why. Matched here.
 
 const SHOWN = 50;
 
@@ -26,10 +25,11 @@ export function fileRows(files: string[], query: string): string[] {
 }
 
 // The box after a file is picked: the @ word the caret is in, all of it, replaced by the file's mention
-// and one space, with the caret after the space so typing carries on as a new word.
+// and one space, with the caret after the space so typing carries on as a new word. Only a space after
+// the word is dropped, never a line break, so the line after it stays a line.
 export function pickMention(text: string, caret: number, file: string): { text: string; caret: number } {
   const mention = mentionAt(text, caret);
   if (!mention) return { text, caret };
   const inserted = mentionInsertion(text.slice(0, mention.start), [fileMention(file)]);
-  return { text: text.slice(0, mention.start) + inserted + text.slice(caret).replace(/^\S*\s?/, ''), caret: mention.start + inserted.length };
+  return { text: text.slice(0, mention.start) + inserted + text.slice(caret).replace(/^\S* ?/, ''), caret: mention.start + inserted.length };
 }
