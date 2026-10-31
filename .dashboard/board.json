@@ -209,16 +209,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
-          "title": "Stash and restore drafts in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:00:55.204Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -418,6 +409,16 @@
               "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
             }
           ]
+        },
+        {
+          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
+          "title": "Stash and restore drafts in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:15.326Z",
+          "branch": "work-board-card-3a33c1fb-da53-4dc7-b46a-299",
+          "pullRequest": 123
         }
       ]
     },
