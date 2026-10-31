@@ -14,7 +14,7 @@ Claude has running.
   `chat-stamp.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
-  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`
+  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-line-editing.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -38,3 +38,4 @@ Claude has running.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
+- Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both words come back as one; Alt+Y straight after swaps them for the kill before, and Ctrl+U and Ctrl+K kill to the line's start and end the same way.

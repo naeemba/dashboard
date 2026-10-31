@@ -2,6 +2,7 @@ import { projectPosition } from './manager';
 import { SECTIONS } from './manager-sections';
 import type { Mode } from './modes';
 import type { Direction } from './terminals';
+import type { LineEdit } from './chat-line-editing';
 
 // What a shortcut does once it has fired. The renderer answers the first three groups; the board view
 // answers the board kinds. Moved here from shortcuts.ts so the table can name the action beside its key.
@@ -58,7 +59,8 @@ export type Action =
   | { kind: 'log-select'; direction: 'up' | 'down' }
   | { kind: 'log-open' }
   | { kind: 'log-filter-reset' }
-  | { kind: 'chat'; command: ChatCommand };
+  | { kind: 'chat'; command: ChatCommand }
+  | { kind: 'chat-edit'; edit: LineEdit };
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
@@ -587,6 +589,17 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'claude-task-background', description: 'Send the picked task to the background, or every foreground task with none picked',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-background' }, mac: 'Alt+B', other: 'Alt+B',
   },
+  // The readline keys the Claude Code terminal's box has, on whichever of the screen's boxes has the
+  // keyboard. Ctrl+Y was redo on Linux and Windows; Ctrl+Shift+Z still is.
+  ...([
+    ['kill-word', 'Delete the word before the caret, keeping it for Ctrl+Y', 'Ctrl+W'],
+    ['kill-line-start', 'Delete back to the start of the line, keeping it for Ctrl+Y', 'Ctrl+U'],
+    ['kill-line-end', 'Delete on to the end of the line, keeping it for Ctrl+Y', 'Ctrl+K'],
+    ['yank', 'Put back the last text deleted with Ctrl+W, Ctrl+U or Ctrl+K', 'Ctrl+Y'],
+    ['yank-pop', 'Straight after Ctrl+Y, swap what it put back for the text deleted before that', 'Alt+Y'],
+  ] as const).map(([edit, description, key]): ActionEntry => ({
+    name: `claude-${edit}`, description, group: 'claude', scope: 'claude', action: { kind: 'chat-edit', edit }, mac: key, other: key,
+  })),
   {
     name: 'claude-new', description: 'Start a new conversation',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'new' }, mac: 'Alt+N', other: 'Alt+N',
