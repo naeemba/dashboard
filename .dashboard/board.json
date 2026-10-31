@@ -209,16 +209,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
-          "title": "Export the Claude pane's conversation to clipboard or file",
-          "notes": "Claude Code: /export. Pane: none. Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:56:58.381Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -400,6 +391,22 @@
             {
               "at": "2026-10-31T22:58:57.781Z",
               "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
+            }
+          ]
+        },
+        {
+          "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
+          "title": "Export the Claude pane's conversation to clipboard or file",
+          "notes": "Claude Code: /export. Pane: none. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:07:22.786Z",
+          "branch": "work-board-card-75ebca95-a2d8-40cd-8eab-3fe",
+          "pullRequest": 125,
+          "comments": [
+            {
+              "at": "2026-10-31T23:07:22.786Z",
+              "body": "Shipped in #125: /export lists Copy to clipboard and Save to file; /export <name> saves straight to that file inside the project folder."
             }
           ]
         }
