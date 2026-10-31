@@ -7,6 +7,7 @@ describe('screenCommand', () => {
   it('takes /resume and /plan for the screen', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
     expect(screenCommand('/diff')).toEqual({ kind: 'diff' });
+    expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });

@@ -22,5 +22,10 @@ export function onEdgeLine(text: string, caret: number, direction: -1 | 1): bool
 // The prompts sent in this conversation, oldest first, what Up walks back through. A command run with
 // `!` is left out: sent from here it would reach Claude as a prompt, not run.
 export function sentPrompts(entries: ChatEntry[]): string[] {
-  return entries.flatMap((entry) => (entry.kind === 'user' && !entry.ran && entry.text.trim() ? [entry.text] : []));
+  return entries.flatMap((entry) => (typedPrompt(entry) ? [entry.text] : []));
+}
+
+// An entry that is a prompt you typed: what Up walks and /rewind lists.
+export function typedPrompt(entry: ChatEntry | undefined): entry is Extract<ChatEntry, { kind: 'user' }> {
+  return entry?.kind === 'user' && !entry.ran && entry.text.trim() !== '';
 }
