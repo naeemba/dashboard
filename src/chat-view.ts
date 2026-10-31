@@ -4,7 +4,7 @@ import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
-import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
@@ -219,9 +219,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const fresh = drawEntry(entry);
       const old = drawn[index];
       if (old) {
-        if (old.element instanceof HTMLDetailsElement && fresh.element instanceof HTMLDetailsElement && old.element.open) {
-          fresh.element.open = true;
-        }
+        const freshFold = foldOf(fresh.element);
+        if (freshFold && foldOf(old.element)?.open) freshFold.open = true;
         old.element.replaceWith(fresh.element);
       } else {
         log.insertBefore(fresh.element, live);
@@ -632,7 +631,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'select-down') select(selected === null ? null : selected + 1);
       if (command === 'unfold') {
         const chosen = drawn[selected ?? -1]?.element;
-        if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
+        const fold = chosen ? foldOf(chosen) : null;
+        if (fold) fold.open = !fold.open;
       }
       // Escape closes an open command list first, as in Claude Code. Otherwise always sent: this screen
       // may not know of a turn another one started, and interrupting an idle session does nothing.
