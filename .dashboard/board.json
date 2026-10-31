@@ -244,16 +244,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
-          "title": "Timestamp and model on each message in the Claude pane",
-          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:39:24.624Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -397,6 +388,22 @@
             {
               "at": "2026-10-31T22:40:56.632Z",
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
+          "title": "Timestamp and model on each message in the Claude pane",
+          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:45:56.075Z",
+          "branch": "work-board-card-5ab46333-ccde-4921-b84a-1e8",
+          "pullRequest": 115,
+          "comments": [
+            {
+              "at": "2026-10-31T22:45:56.075Z",
+              "body": "Shipped in #115: grey line above each user and Claude text message with time (date when not today) and model, from the SDK message timestamp and message.model. Version 2.12.0. Not yet looked at in the running app."
             }
           ]
         }
