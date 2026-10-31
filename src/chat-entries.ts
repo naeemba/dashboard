@@ -1,6 +1,6 @@
 import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
-import { todoChecklist, toolDiff, toolSummary } from './chat-tools';
+import { todoChecklist, toolDiff, toolSummary, type DiffLine } from './chat-tools';
 import { baseName } from './base-name';
 import { pdfMentions, pdfOfTool } from './chat-pdf';
 import { foldedMessage } from './chat-fold';
@@ -94,6 +94,19 @@ function preformatted(className: string, text: string): HTMLPreElement {
   return pre;
 }
 
+// A change as a block of lines, each marked kept, removed or added.
+export function diffBlock(diff: DiffLine[]): HTMLElement {
+  const pre = document.createElement('pre');
+  pre.className = 'chat-diff';
+  pre.append(...diff.map((line) => {
+    const row = document.createElement('span');
+    row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added', '…': 'diff-gap' }[line.sign];
+    row.textContent = line.sign === '…' ? '…\n' : `${line.sign} ${line.text}\n`;
+    return row;
+  }));
+  return pre;
+}
+
 // What a subagent did, under the call that started it: what it said, and each tool it called as its
 // one line. Nothing in it unfolds, since the selection keys walk only the main conversation; a
 // subagent's own subagent shows its steps under its line, indented. A subagent's every message redraws
@@ -155,15 +168,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     }));
     parts.push(list);
   } else if (diff) {
-    const pre = document.createElement('pre');
-    pre.className = 'chat-diff';
-    pre.append(...diff.map((line) => {
-      const row = document.createElement('span');
-      row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added', '…': 'diff-gap' }[line.sign];
-      row.textContent = line.sign === '…' ? '…\n' : `${line.sign} ${line.text}\n`;
-      return row;
-    }));
-    parts.push(withCopy(pre));
+    parts.push(withCopy(diffBlock(diff)));
   } else {
     parts.push(withCopy(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2))));
   }
