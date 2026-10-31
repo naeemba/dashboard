@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
-          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
-          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
           "title": "Show API retry and rate-limit notices in the Claude pane",
           "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
@@ -388,6 +381,22 @@
             {
               "at": "2026-10-31T22:40:56.632Z",
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
+          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
+          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:47:51.646Z",
+          "branch": "work-board-card-0bef254c-8d96-4bc7-80b6-d3c",
+          "pullRequest": 116,
+          "comments": [
+            {
+              "at": "2026-10-31T22:47:51.595Z",
+              "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
             }
           ]
         }
