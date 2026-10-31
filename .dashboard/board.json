@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
-          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
-          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
@@ -48,23 +41,16 @@
           "parent": null
         },
         {
-          "id": "938570a0-e098-4918-9d58-96b0266f0952",
-          "title": "Show Claude's thinking in the Claude pane",
-          "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
-          "priority": "high",
+          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
+          "title": "Open a subagent in the Claude pane to see its own steps",
+          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
+          "priority": "medium",
           "parent": null
         },
         {
           "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
           "title": "Stop or background a running task from the Claude pane's task strip",
           "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
           "priority": "medium",
           "parent": null
         },
@@ -79,13 +65,6 @@
           "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
           "title": "Real line diffs for edits in the Claude pane",
           "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
-          "title": "Review all of a session's edits in the Claude pane, like /diff",
-          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
           "priority": "medium",
           "parent": null
         },
@@ -402,14 +381,30 @@
           "pullRequest": 105
         },
         {
-          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
-          "title": "Open a subagent in the Claude pane to see its own steps",
-          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:25:59.262Z",
-          "branch": "work-board-card-500744c0-85ce-42ef-9261-9fd",
-          "pullRequest": 107
+          "updatedAt": "2026-10-31T22:27:25.984Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108
+        },
+        {
+          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
+          "title": "Review all of a session's edits in the Claude pane, like /diff",
+          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:34:19.959Z",
+          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
+          "pullRequest": 111,
+          "comments": [
+            {
+              "at": "2026-10-31T22:34:19.924Z",
+              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
+            }
+          ]
         }
       ]
     },
@@ -1295,6 +1290,38 @@
             {
               "at": "2026-10-31T22:21:00.778Z",
               "body": "PR #102 merged: a message you send over 12 lines shows its first 6 lines and a \"… N more lines\" row that a click or the unfold key opens; Claude still gets the whole text. Images and PDF tiles of a folded message stay visible below the fold."
+            }
+          ]
+        },
+        {
+          "id": "938570a0-e098-4918-9d58-96b0266f0952",
+          "title": "Show Claude's thinking in the Claude pane",
+          "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:26:15.794Z",
+          "branch": "work-board-card-938570a0-e098-4918-9d58-96b",
+          "pullRequest": 104,
+          "comments": [
+            {
+              "at": "2026-10-31T22:26:15.794Z",
+              "body": "PR #104: Claude's thinking blocks show in the Claude pane as a folded entry; the help dialog and docs describe it."
+            }
+          ]
+        },
+        {
+          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
+          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
+          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:35:28.992Z",
+          "branch": "work-board-card-063fde4e-0348-4b14-9e0c-c90",
+          "pullRequest": 106,
+          "comments": [
+            {
+              "at": "2026-10-31T22:35:28.992Z",
+              "body": "Merged in PR #106: /rewind lists prompts, restores code (rewindFiles with checkpointing on), conversation (forked resumeSessionAt) or both. Left out: summarize, Esc Esc."
             }
           ]
         }

@@ -61,7 +61,8 @@ export type ChatEntry =
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
-  // A message Claude Code put in the conversation rather than a person (chat-events.ts), folded to its title.
+  // A message Claude Code put in the conversation rather than a person (chat-events.ts), or Claude's
+  // thinking, folded to its title.
   | { kind: 'event'; title: string; body: string };
 
 export type Transcript = {
@@ -135,6 +136,9 @@ function assistant(transcript: Transcript, content: unknown): Transcript {
   const entries = transcript.entries.slice();
   for (const block of blocksOf(content)) {
     if (block.type === 'text' && text(block.text).trim()) entries.push({ kind: 'text', text: text(block.text) });
+    // Thinking folds to one line, like a message Claude Code injected. A redacted block, or one whose
+    // display was omitted, has no text and draws nothing.
+    if (block.type === 'thinking' && text(block.thinking).trim()) entries.push({ kind: 'event', title: 'Thinking', body: text(block.thinking) });
     if (block.type === 'tool_use') {
       entries.push({
         kind: 'tool', id: text(block.id), name: text(block.name),
@@ -252,11 +256,13 @@ function withSteps(entries: ChatEntry[], id: string, message: Record<string, unk
 // A step's tool output is never drawn, only whether it failed, so it is not kept. Plain text in the
 // subagent's name is left out: its first is its prompt, which the call's input already shows. What
 // Claude Code wrote for it, such as a skill it loaded, is one line, as it is in the main conversation.
+// Its thinking is left out: folded to a step it would be a bare "Thinking" line with nothing under it.
 // The same steps when the message added or changed none, so the call does not redraw.
 function stepsAfter(steps: ChatEntry[], message: Record<string, unknown>): ChatEntry[] {
   const inner = isRecord(message.message) ? message.message : {};
   const subagent = { ...EMPTY_TRANSCRIPT, entries: steps };
-  const after = message.type === 'assistant' ? assistant(subagent, inner.content) : userMessage(subagent, message);
+  const said = blocksOf(inner.content).filter((block) => block.type !== 'thinking');
+  const after = message.type === 'assistant' ? assistant(subagent, said) : userMessage(subagent, message);
   const next = after.entries.filter((step) => step.kind !== 'user').map((step): ChatEntry => {
     if (step.kind === 'event') return { kind: 'notice', text: step.title };
     if (step.kind === 'tool' && step.result && (step.result.text || step.result.images.length > 0)) {

@@ -192,7 +192,8 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
   return { entry, element, fill: null };
 }
 
-// A message Claude Code injected: one line with its title, unfolding to what it said in markdown.
+// A message Claude Code injected, or Claude's thinking: one line with its title, unfolding to what it
+// said in markdown.
 function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   const element = document.createElement('details');
   element.className = 'chat-entry chat-event';

@@ -161,6 +161,15 @@ describe('applyMessage', () => {
     expect(transcript.live).toBe('');
   });
 
+  it('folds thinking to one line, and draws nothing for thinking with no text', () => {
+    const transcript = fold([assistant([
+      { type: 'thinking', thinking: 'Check the tests first.' },
+      { type: 'thinking', thinking: '' },
+      { type: 'redacted_thinking', data: 'x' },
+    ])]);
+    expect(transcript.entries).toEqual([{ kind: 'event', title: 'Thinking', body: 'Check the tests first.' }]);
+  });
+
   it('takes the model from init', () => {
     expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'init', model: 'opus' }).model).toBe('opus');
   });
