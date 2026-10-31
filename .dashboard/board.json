@@ -354,22 +354,6 @@
           ]
         },
         {
-          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
-          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
-          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:50:51.462Z",
-          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
-          "pullRequest": 118,
-          "comments": [
-            {
-              "at": "2026-10-31T22:50:51.462Z",
-              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
-            }
-          ]
-        },
-        {
           "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
           "title": "Show API retry and rate-limit notices in the Claude pane",
           "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
@@ -1453,6 +1437,26 @@
             {
               "at": "2026-10-31T23:00:30.789Z",
               "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+            }
+          ]
+        },
+        {
+          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
+          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
+          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:04:57.106Z",
+          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
+          "pullRequest": 118,
+          "comments": [
+            {
+              "at": "2026-10-31T22:50:51.462Z",
+              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            },
+            {
+              "at": "2026-10-31T23:04:57.106Z",
+              "body": "Shipped in PR #118: /btw asks a side question beside the running turn, answered from the conversation so far without tools and kept out of it. Version 2.18.0."
             }
           ]
         }
