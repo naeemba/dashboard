@@ -158,6 +158,12 @@
           "title": "Add a note to a permission Yes in the Claude pane",
           "notes": "Claude Code: Tab adds a note to a yes. Pane: a typed reason exists only on No (chat-permission.ts:55). Whether PermissionResult carries an allow note is unverified; if not, comment on the card and stop without a PR. Size S.",
           "priority": "low"
+        },
+        {
+          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
+          "title": "Fast mode toggle in the Claude pane",
+          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
+          "priority": "low"
         }
       ]
     },
