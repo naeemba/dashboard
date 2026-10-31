@@ -1,9 +1,9 @@
 import './chat.css';
-import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -109,6 +109,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
   let model: string | null = null;
+  let effort: EffortLevel | null = null;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
@@ -145,10 +146,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
-    const key = JSON.stringify([measured, shown, transcript.version, mode, state]);
+    // A turn whose prompt asked for ultrathink says so while it runs, on every screen the prompt reached.
+    const ultrathink = state !== 'ready' && asksUltrathink(transcript.entries.findLast((entry) => entry.kind === 'user')?.text ?? '');
+    const effortShown = ultrathink ? 'ultrathink' : `${effort ?? 'auto'} effort`;
+    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state]);
     if (key === drawnFoot) return;
     drawnFoot = key;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], state, measured, transcript.version));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown, ultrathink, state, measured, transcript.version));
   }
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
@@ -282,6 +286,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -494,6 +499,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (measured) measured = { ...measured, model: null };
     }
     if (change.permissionMode) mode = change.permissionMode;
+    if ('effort' in change) effort = change.effort ?? null;
   }
 
   function readEarlier(): void {
@@ -557,6 +563,24 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (picked !== undefined) configure({ model: pickedModel(picked) });
       focus();
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
+  }
+
+  // The effort levels in a search sheet, as Claude Code's /effort offers them, or straight to the one
+  // named after the command; the next turn runs at it, on every screen.
+  function showEfforts(name: string): void {
+    if (name) {
+      const named = namedEffort(name);
+      if (named === undefined) options.onNotice(`Claude has no effort ${name}. Try auto, ${EFFORT_LEVELS.join(', ')}.`);
+      else configure({ effort: named });
+      return;
+    }
+    void searchOverlay({
+      name: 'chat-effort', placeholder: 'Search effort levels', rows: (query) => effortRows(effort, query),
+      empty: 'No level matches.', glyph: () => 'claude',
+    }).then((picked) => {
+      if (picked !== undefined) configure({ effort: picked });
+      focus();
+    });
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.

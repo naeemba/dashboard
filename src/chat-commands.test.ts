@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, commandMenu, effortRows, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -10,6 +10,7 @@ describe('screenCommand', () => {
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
+    expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();
@@ -195,5 +196,31 @@ describe('nextCopyBlock', () => {
 
   it('has nothing to copy in an entry with no block', () => {
     expect(nextCopyBlock(null, 3, 0)).toBeNull();
+  });
+});
+
+describe('namedEffort', () => {
+  it('reads a level or auto, and refuses any other word', () => {
+    expect(namedEffort('XHigh')).toBe('xhigh');
+    expect(namedEffort('auto')).toBeNull();
+    expect(namedEffort('ultra')).toBeUndefined();
+  });
+});
+
+describe('effortRows', () => {
+  it('lists auto then the levels, marking the one the screen is on', () => {
+    expect(effortRows('high', '').map((row) => row.name)).toEqual(['auto', 'low', 'medium', '● high', 'xhigh', 'max']);
+    expect(effortRows(null, '')[0]).toMatchObject({ name: '● auto', choice: null });
+  });
+
+  it('keeps the levels holding what is typed', () => {
+    expect(effortRows(null, 'HI').map((row) => row.choice)).toEqual(['high', 'xhigh']);
+  });
+});
+
+describe('asksUltrathink', () => {
+  it('finds the keyword as a word in any case', () => {
+    expect(asksUltrathink('Ultrathink about the cache')).toBe(true);
+    expect(asksUltrathink('ultrathinking is not it')).toBe(false);
   });
 });

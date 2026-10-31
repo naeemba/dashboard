@@ -1,4 +1,4 @@
-import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
@@ -38,8 +38,8 @@ export type ChatHost = {
 // What the renderer may change on a running session. Held per slot so a choice made before the first
 // prompt is what the session starts with. The default model is null rather than undefined: the second
 // screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
-// as no change at all.
-export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode };
+// as no change at all. The effort is null for the same reason: auto, the model's own default.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
 
@@ -198,6 +198,7 @@ export function registerChatSessions(
         cwd: projectPath,
         resume,
         model: preferences.get(slot)?.model ?? undefined,
+        effort: preferences.get(slot)?.effort ?? undefined,
         // The project's main session, as the terminal one was: the mode open() seeded or the screen
         // chose, the dispatch prompt, and the name its workers SendMessage it by.
         permissionMode: preferences.get(slot)?.permissionMode,
@@ -327,6 +328,8 @@ export function registerChatSessions(
     if (!session) return;
     if ('model' in change) await session.query.setModel(change.model ?? undefined);
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
+    // The session's flag layer, as /effort sets it: null goes back to the model's default.
+    if ('effort' in change) await session.query.applyFlagSettings({ effortLevel: change.effort ?? null });
   });
 
   // What the status line shows: how full the context window is, read from the last response rather

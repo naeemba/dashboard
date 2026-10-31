@@ -341,6 +341,7 @@
   background: var(--tone);
 }
 
+.chat-foot-effort.ultrathink { color: var(--magenta); }
 .chat-foot-state[data-state='working'] { color: var(--blue); }
 .chat-foot-state[data-state='waiting'] { color: var(--yellow); }
 

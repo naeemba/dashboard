@@ -1,4 +1,4 @@
-import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import { onlyPlumbing } from './chat-events';
 import type { ChatSessions } from './chat-sessions';
@@ -18,13 +18,15 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
+export type ScreenCommand =
+  | { kind: 'resume' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
+  { name: 'effort', description: 'Pick how hard Claude thinks, low to max, from a list, or set the level named after it', argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -34,7 +36,41 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'resume') return { kind: 'resume' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
   return null;
+}
+
+// What /effort offers, lowest first. Auto is no level set, the model's own default, as /effort auto is
+// in Claude Code. A model without max runs it as high; the session decides that, not the screen.
+export const EFFORT_LEVELS: EffortLevel[] = ['low', 'medium', 'high', 'xhigh', 'max'];
+
+// The level `/effort x` names: null for auto, undefined for a word that is no level, which is refused.
+export function namedEffort(name: string): EffortLevel | null | undefined {
+  const wanted = name.toLowerCase();
+  if (wanted === 'auto') return null;
+  return EFFORT_LEVELS.find((level) => level === wanted);
+}
+
+const EFFORT_DETAILS: Record<string, string> = { auto: "The model's own default", max: 'This session only; high on a model without it' };
+
+// What /effort lists: auto, then the levels lowest first, or the ones matching what is typed, best
+// first. The one the screen is on is marked.
+export function effortRows(current: EffortLevel | null, query: string): SearchRow<EffortLevel | null>[] {
+  return [null, ...EFFORT_LEVELS]
+    .map((level) => ({ level, score: query ? fuzzyScore(level ?? 'auto', query) : 0 }))
+    .filter((each): each is { level: EffortLevel | null; score: number } => each.score !== null)
+    .sort((one, other) => one.score - other.score)
+    .map(({ level }) => ({
+      name: `${level === current ? '● ' : ''}${level ?? 'auto'}`,
+      detail: EFFORT_DETAILS[level ?? 'auto'] ?? '',
+      choice: level,
+    }));
+}
+
+// Whether a prompt asks for deeper thinking on its turn with the ultrathink keyword. The session acts on
+// the word itself; the screen only says so while that turn runs.
+export function asksUltrathink(text: string): boolean {
+  return /\bultrathink\b/i.test(text);
 }
 
 // /plan switches the mode; it also sends a prompt only when something came with it.
