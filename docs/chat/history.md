@@ -33,3 +33,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #116 — Answer an MCP server's forms and sign-in links in the ask box
 - 2026-11-01 #123 — Stash the box's draft with Alt+S, Up brings it back (chat-decision-9)
 - 2026-11-01 #124 — The working line names a running hook; a failed hook leaves a folded line
+- 2026-11-01 #126 — TodoWrite drawn as a checklist

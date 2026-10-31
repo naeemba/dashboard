@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineDiff, toolDiff, toolSummary } from './chat-tools';
+import { lineDiff, todoChecklist, toolDiff, toolSummary } from './chat-tools';
 
 describe('toolSummary', () => {
   it('says the command a Bash call ran, first line only', () => {
@@ -118,5 +118,36 @@ describe('toolDiff', () => {
 
   it('has nothing to show for a Bash call', () => {
     expect(toolDiff('Bash', { command: 'ls' })).toBeNull();
+  });
+});
+
+describe('todoChecklist', () => {
+  const input = {
+    todos: [
+      { content: 'Write the test', activeForm: 'Writing the test', status: 'completed' },
+      { content: 'Make it pass', activeForm: 'Making it pass', status: 'in_progress' },
+      { content: 'Open the PR', activeForm: 'Opening the PR', status: 'pending' },
+    ],
+  };
+
+  it('lists each item with its state, the one under way by its activeForm', () => {
+    expect(todoChecklist('TodoWrite', input)).toEqual([
+      { text: 'Write the test', status: 'completed' },
+      { text: 'Making it pass', status: 'in_progress' },
+      { text: 'Open the PR', status: 'pending' },
+    ]);
+  });
+
+  it('reads an unknown state as pending and skips what is not an item', () => {
+    expect(todoChecklist('TodoWrite', { todos: [{ content: 'a', status: 'odd' }, 'b'] })).toEqual([{ text: 'a', status: 'pending' }]);
+  });
+
+  it('is null for other tools and for a call with no list', () => {
+    expect(todoChecklist('Bash', input)).toBeNull();
+    expect(todoChecklist('TodoWrite', {})).toBeNull();
+  });
+
+  it('gives the summary as how much is done', () => {
+    expect(toolSummary('TodoWrite', input)).toBe('1/3 done');
   });
 });

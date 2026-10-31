@@ -79,13 +79,15 @@
           "id": "66f14bdd-63d4-44ae-99ae-106bb597be4f",
           "title": "projects:open refuses by throwing, so the remote screen reads Electron's invoke prefix",
           "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         },
         {
           "id": "f54d7a16-3a49-40e2-bed1-454e80961c1c",
           "title": "Split chat-view.ts under the 600-code-line limit",
           "notes": "638 code lines now. Seam: move send()'s dispatch of the screen's own commands (the screenCommand branches) into a module beside chat-screen-commands.ts. Wait until the cards editing chat-view.ts in parallel have merged. Raised in review of PR #128: https://github.com/naeemba/dashboard/pull/128#discussion_r4433728620",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -276,16 +278,6 @@
               "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
             }
           ]
-        },
-        {
-          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
-          "title": "Draw TodoWrite as a checklist in the Claude pane",
-          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:08:20.947Z",
-          "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
-          "pullRequest": 126
         },
         {
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
@@ -1553,6 +1545,22 @@
             {
               "at": "2026-10-31T23:45:32.490Z",
               "body": "Shipped in PR #124: the working line names a running hook, and a failed hook leaves a folded line with its output. Version 2.28.0."
+            }
+          ]
+        },
+        {
+          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
+          "title": "Draw TodoWrite as a checklist in the Claude pane",
+          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:50:18.680Z",
+          "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
+          "pullRequest": 126,
+          "comments": [
+            {
+              "at": "2026-10-31T23:50:18.680Z",
+              "body": "Shipped in PR #126: TodoWrite drawn as a checklist in the chat view. Version 2.29.0."
             }
           ]
         }
