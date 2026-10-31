@@ -13,5 +13,8 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #101 — Claude's suggested next prompt in the empty box, Tab accepts it
 - 2026-11-01 #102 — Fold long messages you send to their first lines
 - 2026-11-01 #104 — Show Claude's thinking as a folded line
+- 2026-11-01 #105 — /effort, the effort level in the foot, and ultrathink shown while its turn runs
 - 2026-11-01 #106 — Rewind to an earlier prompt: code, conversation or both (chat-decision-3)
-- 2026-11-01 #PR — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-4)
+- 2026-11-01 #103 — @ file autocomplete in the box
+- 2026-11-01 #109 — Stop or background a running task from the strip (chat-decision-5)
+- 2026-11-01 #PR — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-6)

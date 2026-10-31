@@ -183,6 +183,10 @@ export type DashboardBridge = {
   // what main does with each. A prompt is the content of one user message: text and pasted images.
   chatSend(slot: number, content: ChatContent): void;
   chatInterrupt(slot: number): void;
+  // A task in the strip, by its task id; backgrounding takes the tool call that started one, or none
+  // for every foreground task, and says whether one matched.
+  chatStopTask(slot: number, taskId: string): Promise<void>;
+  chatBackgroundTasks(slot: number, toolUseId?: string): Promise<boolean>;
   // The answer to an ask, by the id it arrived with.
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
@@ -194,6 +198,8 @@ export type DashboardBridge = {
   chatReset(slot: number): void;
   // The slash commands the session runs; asking starts the session if it is not running.
   chatCommands(slot: number): Promise<CommandRow[]>;
+  // The project's files, for the list @ opens in the box.
+  chatFiles(slot: number): Promise<string[]>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
   // The project's earlier conversations for /resume, and picking one of them.

@@ -1,4 +1,4 @@
-import type { ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
@@ -17,6 +17,7 @@ import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type Rewi
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
+import { projectFiles } from './git';
 import { isRecord } from './is-record';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
@@ -40,8 +41,8 @@ export type ChatHost = {
 // What the renderer may change on a running session. Held per slot so a choice made before the first
 // prompt is what the session starts with. The default model is null rather than undefined: the second
 // screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
-// as no change at all.
-export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode };
+// as no change at all. The effort is null for the same reason: auto, the model's own default.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
 
@@ -207,6 +208,7 @@ export function registerChatSessions(
         // What /rewind puts the code back from.
         enableFileCheckpointing: true,
         model: preferences.get(slot)?.model ?? undefined,
+        effort: preferences.get(slot)?.effort ?? undefined,
         // The project's main session, as the terminal one was: the mode open() seeded or the screen
         // chose, the dispatch prompt, and the name its workers SendMessage it by. Thinking is asked
         // for as a summary, the text the pane folds into the conversation; left to the default, a
@@ -232,6 +234,10 @@ export function registerChatSessions(
         }, options.signal),
       },
     }) };
+    // Auto picked before a restart: the effort option cannot say null, and a session started without
+    // it runs at the settings file's level, so the override goes through the flag layer as /effort
+    // sends it. Failing, the session stays on the settings level until the next pick.
+    if (preferences.get(slot)?.effort === null) session.query.applyFlagSettings({ effortLevel: null }).catch(() => undefined);
     void (async () => {
       let error: string | null = null;
       // Whether a turn ever began. After one, the conversation remembered may have moved on (/clear,
@@ -300,6 +306,13 @@ export function registerChatSessions(
     return (await running(slot, projectPath)).query.supportedCommands();
   });
 
+  // The project's files for the @ list.
+  table.handle('chat-files:read', async (_screen, slot: number): Promise<string[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return projectFiles(projectPath);
+  });
+
   // The models /model lists, as the session offers them; asking starts it, as the command list does.
   table.handle('chat-models:read', async (_screen, slot: number): Promise<ModelInfo[]> => {
     const projectPath = host.projectPath(slot);
@@ -326,6 +339,16 @@ export function registerChatSessions(
     sessions.get(slot)?.then((session) => session.query.interrupt()).catch(() => undefined);
   });
 
+  // Only a running session has tasks, so neither starts one. The session reports the change itself,
+  // as a task_notification or task_updated, and the strip follows that.
+  table.handle('chat-task:stop', async (_screen, slot: number, taskId: string) => {
+    await (await sessions.get(slot))?.query.stopTask(taskId);
+  });
+
+  table.handle('chat-task:background', async (_screen, slot: number, toolUseId?: string): Promise<boolean> => {
+    return (await sessions.get(slot))?.query.backgroundTasks(toolUseId) ?? false;
+  });
+
   // Every screen is told the question is gone, so the one it was not answered on stops showing it.
   table.on('chat:answer', (_screen, slot: number, id: string, result: PermissionResult) => {
     void sessions.get(slot)?.then((session) => {
@@ -344,6 +367,8 @@ export function registerChatSessions(
     if (!session) return;
     if ('model' in change) await session.query.setModel(change.model ?? undefined);
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
+    // The session's flag layer, as /effort sets it: null goes back to the model's default.
+    if ('effort' in change) await session.query.applyFlagSettings({ effortLevel: change.effort ?? null });
   });
 
   // What the status line shows: how full the context window is, read from the last response rather
