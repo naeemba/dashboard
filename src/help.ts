@@ -1,5 +1,6 @@
 import { type ActionGroup } from './actions';
 import { PDF_LIMIT_SHOWN } from './chat-pdf';
+import { FOLD_SHOWN_LINES } from './chat-fold';
 import { labelled } from './icons';
 import { keycaps } from './keycaps';
 import { isSection } from './manager-sections';
@@ -292,7 +293,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'results: a run answers a question you are asking now, and is not a record of anything.',
   claude: 'A Claude Code conversation drawn as a page rather than a terminal: tables as tables, '
     + 'code highlighted with a copy button in each block\'s corner (the copy key copies the selected entry\'s first block, then the next on each press; a tool call\'s or message\'s blocks once it is unfolded), a command run with ! as the line '
-    + 'typed and a block of what it printed, a message Claude Code put in the conversation itself — an agent finishing, a subagent\'s report — as one folded line that a click or the unfold key opens, an image Claude carried inline drawn inline (one from the web is a link, so '
+    + 'typed and a block of what it printed, a message Claude Code put in the conversation itself — an agent finishing, a subagent\'s report — as one folded line that a click or the unfold key opens, a long message you sent — a pasted log — as its first ' + FOLD_SHOWN_LINES + ' lines and a row counting the rest, opened the same way (Claude still gets all of it), an image Claude carried inline drawn inline (one from the web is a link, so '
     + 'nothing is fetched until you click it), an edit as a diff. It runs in the project\'s folder with the '
     + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
     + 'a pane, as the project\'s main session. It starts when the project opens. '

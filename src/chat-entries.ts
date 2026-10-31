@@ -3,6 +3,7 @@ import { renderMarkdown, safeImage } from './chat-markdown';
 import { toolDiff, toolSummary } from './chat-tools';
 import { baseName } from './base-name';
 import { pdfMentions, pdfOfTool } from './chat-pdf';
+import { foldedMessage } from './chat-fold';
 import { imageDataUrl, type ChatEntry, type ChatImage, type ToolResult } from './chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
@@ -166,9 +167,43 @@ function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   return { entry, element, fill: null };
 }
 
+function paragraph(text: string): HTMLParagraphElement {
+  const said = document.createElement('p');
+  said.textContent = text;
+  return said;
+}
+
+// What you sent. A long one is folded like a tool call: its first lines are the summary, with a row
+// counting the rest, and a click or the unfold key opens the whole of it.
+function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>): DrawnEntry {
+  const extras = [...pdfMentions(entry.text).map(pdfTile), ...images(entry.images)];
+  const folded = foldedMessage(entry.text);
+  if (!folded) {
+    const element = document.createElement('div');
+    element.className = 'chat-entry chat-user';
+    element.append(paragraph(entry.text), ...extras);
+    return { entry, element, fill: null };
+  }
+  const element = document.createElement('details');
+  element.className = 'chat-entry chat-user chat-folded';
+  const summary = document.createElement('summary');
+  const more = document.createElement('span');
+  more.className = 'chat-more';
+  more.textContent = `… ${folded.hidden} more lines`;
+  summary.append(paragraph(folded.head), more);
+  // The rest is built the first time it is unfolded: a pasted log is rarely read back.
+  const rest = paragraph('');
+  element.append(summary, rest, ...extras);
+  element.addEventListener('toggle', () => {
+    if (element.open && !rest.textContent) rest.textContent = folded.rest;
+  });
+  return { entry, element, fill: null };
+}
+
 export function drawEntry(entry: ChatEntry): DrawnEntry {
   if (entry.kind === 'tool') return toolEntry(entry);
   if (entry.kind === 'event') return eventEntry(entry);
+  if (entry.kind === 'user') return userEntry(entry);
   const element = document.createElement('div');
   element.className = `chat-entry chat-${entry.kind}`;
   if (entry.kind === 'notice') {
@@ -178,12 +213,6 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   if (entry.kind === 'shell') {
     // Nothing to copy when it printed nothing, so the placeholder gets no button.
     element.append(entry.text ? withCopy(preformatted('chat-output', entry.text)) : preformatted('chat-output', '(no output)'));
-    return { entry, element, fill: null };
-  }
-  if (entry.kind === 'user') {
-    const said = document.createElement('p');
-    said.textContent = entry.text;
-    element.append(said, ...pdfMentions(entry.text).map(pdfTile), ...images(entry.images));
     return { entry, element, fill: null };
   }
   // Until it is filled the box holds the raw text, so a conversation scrolled fast still reads.
