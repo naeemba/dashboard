@@ -184,8 +184,11 @@ function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>): DrawnEntry {
     element.append(paragraph(entry.text), ...extras);
     return { entry, element, fill: null };
   }
-  const element = document.createElement('details');
-  element.className = 'chat-entry chat-user chat-folded';
+  // The attachments sit beside the fold, not in it: a closed <details> draws only its summary.
+  const element = document.createElement('div');
+  element.className = 'chat-entry chat-user';
+  const fold = document.createElement('details');
+  fold.className = 'chat-folded';
   const summary = document.createElement('summary');
   const more = document.createElement('span');
   more.className = 'chat-more';
@@ -193,11 +196,18 @@ function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>): DrawnEntry {
   summary.append(paragraph(folded.head), more);
   // The rest is built the first time it is unfolded: a pasted log is rarely read back.
   const rest = paragraph('');
-  element.append(summary, rest, ...extras);
-  element.addEventListener('toggle', () => {
-    if (element.open && !rest.textContent) rest.textContent = folded.rest;
+  fold.append(summary, rest);
+  fold.addEventListener('toggle', () => {
+    if (fold.open && !rest.textContent) rest.textContent = folded.rest;
   });
+  element.append(fold, ...extras);
   return { entry, element, fill: null };
+}
+
+// The part of a drawn entry the unfold key opens: a tool call or event is one, a long message holds one.
+export function foldOf(element: HTMLElement): HTMLDetailsElement | null {
+  if (element instanceof HTMLDetailsElement) return element;
+  return element.querySelector<HTMLDetailsElement>(':scope > details.chat-folded');
 }
 
 export function drawEntry(entry: ChatEntry): DrawnEntry {

@@ -23,3 +23,4 @@ Claude has running.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
+- Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
