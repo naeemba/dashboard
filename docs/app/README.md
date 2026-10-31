@@ -27,5 +27,6 @@ project and wires every other feature into it.
 
 ## Open questions
 
-- `main.ts` and `renderer.ts` sit near the 600-line ceiling; the next feature
-  wired through them needs a seam split out first (workflow-decision-1).
+- `main.ts` is at the 600-line ceiling (599 code lines) and `renderer.ts` is past
+  it (606); the next feature wired through either needs a seam split out first
+  (workflow-decision-1).
