@@ -84,8 +84,8 @@ export function modelTone(name: string): StatusTone {
 }
 
 // "7:20am", in the machine's own time.
-export function clockTime(iso: string): string | null {
-  const at = new Date(iso);
+export function clockTime(when: string | number): string | null {
+  const at = new Date(when);
   if (Number.isNaN(at.getTime())) return null;
   const hours = at.getHours();
   return `${hours % 12 || 12}:${String(at.getMinutes()).padStart(2, '0')}${hours < 12 ? 'am' : 'pm'}`;
