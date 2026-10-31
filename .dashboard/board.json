@@ -81,6 +81,13 @@
           "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "f54d7a16-3a49-40e2-bed1-454e80961c1c",
+          "title": "Split chat-view.ts under the 600-code-line limit",
+          "notes": "638 code lines now. Seam: move send()'s dispatch of the screen's own commands (the screenCommand branches) into a module beside chat-screen-commands.ts. Wait until the cards editing chat-view.ts in parallel have merged. Raised in review of PR #128: https://github.com/naeemba/dashboard/pull/128#discussion_r4433728620",
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -1547,12 +1554,12 @@
           "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T23:48:53.306Z",
+          "updatedAt": "2026-10-31T23:50:18.680Z",
           "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
           "pullRequest": 126,
           "comments": [
             {
-              "at": "2026-10-31T23:48:53.306Z",
+              "at": "2026-10-31T23:50:18.680Z",
               "body": "Shipped in PR #126: TodoWrite drawn as a checklist in the chat view. Version 2.29.0."
             }
           ]
