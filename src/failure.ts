@@ -4,7 +4,7 @@
 // programs that is the right answer: nobody knows what state is left, so stop. Here it is the worst
 // outcome there is. Every pane is a shell that exists only inside this window — a test run, a deploy, an
 // agent halfway through a card — and none of it comes back. Closing the window on purpose asks first,
-// and CLAUDE.md calls Force Quit the one exit that takes the shells without asking. A stray rejection
+// and Force Quit is the one exit that takes the shells without asking. A stray rejection
 // from a five-second timer must not be a second one.
 //
 // So a failure that reaches here is said on the status bar and the app carries on. Something is broken,

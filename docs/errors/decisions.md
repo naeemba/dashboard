@@ -46,8 +46,8 @@ Node's own answer is to end the process, and for most programs that is right:
 nobody knows what state is left, so stop. Here it is the worst outcome there is.
 Every pane is a shell that exists only inside this window — an `npm test`
 halfway through, a deploy, an agent mid-card — and none of it comes back.
-Closing the window on purpose asks first, and CLAUDE.md calls Force Quit the one
-exit that takes the shells without asking. A rejected promise from a five-second
+Closing the window on purpose asks first, and Force Quit is the one exit that
+takes the shells without asking. A rejected promise from a five-second
 timer must not be a second one.
 
 That is the opposite of what the same failure costs at launch, and on purpose.
