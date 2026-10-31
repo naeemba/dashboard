@@ -306,7 +306,7 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
 
 // What a reset leaves on screen: nothing, unless the session goes on, when the prompts still waiting
 // in it stay grey until it takes them.
-export function afterReset(transcript: Transcript, event: { sessionGoesOn?: true }): Transcript {
+export function afterReset(transcript: Transcript, event: Extract<ChatEvent, { kind: 'reset' }>): Transcript {
   return event.sessionGoesOn ? { ...EMPTY_TRANSCRIPT, queued: transcript.queued } : EMPTY_TRANSCRIPT;
 }
 

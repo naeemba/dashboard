@@ -646,7 +646,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.
-  function clear(event: { sessionGoesOn?: true }): void {
+  function clear(event: Extract<ChatEvent, { kind: 'reset' }>): void {
     resets++;
     for (const entry of drawn) entry.element.remove();
     nearScreen.disconnect();

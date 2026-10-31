@@ -306,10 +306,10 @@ describe('a prompt sent while busy', () => {
   });
 
   it('stays through the session\'s own /clear, and goes with a reset that stops the session', () => {
-    const cleared = afterReset(waiting, { sessionGoesOn: true });
+    const cleared = afterReset(waiting, { kind: 'reset', sessionGoesOn: true });
     expect([cleared.entries, cleared.queued.map(({ id }) => id)]).toEqual([[], ['q']]);
     expect(applyMessage(cleared, lifecycle('q', 'started')).entries).toEqual([{ kind: 'user', text: 'second', images: [] }]);
-    expect(afterReset(waiting, {})).toBe(EMPTY_TRANSCRIPT);
+    expect(afterReset(waiting, { kind: 'reset' })).toBe(EMPTY_TRANSCRIPT);
   });
 });
 
