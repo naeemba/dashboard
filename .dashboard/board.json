@@ -37,6 +37,12 @@
           "title": "Terminal drop types '' for a file with no path on disk",
           "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
           "priority": "medium"
+        },
+        {
+          "id": "4ab7008b-7c2b-43ef-965f-fe0fac0e1c3e",
+          "title": "Show PDF attachments in the chat pane as a tile that opens in the built-in viewer",
+          "notes": "A user message mentioning a PDF (@path.pdf, relative to the session folder), or a Read call on a .pdf, shows a small [PDF File] tile like an image thumbnail. Click, or the image key, opens the PDF full size in an overlay with Chromium's built-in PDF viewer (window needs plugins: true). Claude's behavior unchanged: the @mention is still sent as is. Main reads the file only if it exists, ends in .pdf and is under a size cap; a missing file shows the tile with 'not found'. No in-chat page preview.",
+          "priority": "medium"
         }
       ]
     },
