@@ -40,3 +40,4 @@ Claude has running.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
+- Given Claude has replied, when you send `/copy`, then the reply's markdown, all Claude wrote since the prompt with its tool calls left out, is on the clipboard; `/copy 2` takes the reply before it, and a count past the first reply is refused.

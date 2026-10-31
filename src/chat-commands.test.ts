@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { asksUltrathink, commandMenu, effortRows, footEffort, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, commandMenu, copyCount, replyText, effortRows, footEffort, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import type { ChatEntry } from './chat-transcript';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -15,6 +16,8 @@ describe('screenCommand', () => {
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
+    expect(screenCommand('/copy')).toEqual({ kind: 'copy', rest: '' });
+    expect(screenCommand('/copy 2')).toEqual({ kind: 'copy', rest: '2' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();
@@ -34,7 +37,7 @@ describe('commandMenu', () => {
 
   it('puts names that start with what was typed before aliases, then names that hold it', () => {
     expect(commandMenu('/lo', session).map((each) => each.name)).toEqual(['loop', 'pr-loop']);
-    expect(commandMenu('/co', session).map((each) => each.name)).toEqual(['compact', 'usage']);
+    expect(commandMenu('/co', session).map((each) => each.name)).toEqual(['compact', 'copy', 'usage']);
   });
 
   it('shows a name listed twice once, as the session\'s own', () => {
@@ -263,5 +266,35 @@ describe('footEffort', () => {
   it('goes by the newest prompt, one sent while the turn runs included', () => {
     expect(footEffort('high', 'working', [asked('ultrathink first'), asked('then this')]).label).toBe('high effort');
     expect(footEffort('high', 'working', [asked('plain first'), asked('ultrathink this')]).label).toBe('ultrathink');
+  });
+});
+
+describe('copyCount', () => {
+  it('is 1 with nothing after it, and refuses anything but a whole number from 1', () => {
+    expect(copyCount('')).toBe(1);
+    expect(copyCount('3')).toBe(3);
+    expect(copyCount('0')).toBeNull();
+    expect(copyCount('-1')).toBeNull();
+    expect(copyCount('two')).toBeNull();
+  });
+});
+
+describe('replyText', () => {
+  const entries: ChatEntry[] = [
+    { kind: 'user', text: 'first', images: [] },
+    { kind: 'text', text: '# One' },
+    { kind: 'user', text: 'second', images: [] },
+    { kind: 'text', text: 'Looking.' },
+    { kind: 'tool', id: 't', name: 'Read', input: {}, result: null },
+    { kind: 'text', text: '```ts\nx\n```' },
+    { kind: 'user', text: '! ls', images: [], ran: true },
+    { kind: 'shell', text: 'a b' },
+  ];
+
+  it('joins all Claude wrote since the prompt, tool calls left out, counting back from the last reply', () => {
+    expect(replyText(entries, 1)).toBe('Looking.\n\n```ts\nx\n```');
+    expect(replyText(entries, 2)).toBe('# One');
+    expect(replyText(entries, 3)).toBeNull();
+    expect(replyText([], 1)).toBeNull();
   });
 });

@@ -13,7 +13,7 @@ import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { rewind } from './chat-rewind-view';
-import { branch as branchConversation, chooseModel, resume } from './chat-screen-commands';
+import { branch as branchConversation, chooseModel, copyReply, resume } from './chat-screen-commands';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
@@ -303,6 +303,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'copy') return void copyReply(transcript.entries, own.rest, options);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;

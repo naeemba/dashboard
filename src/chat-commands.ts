@@ -21,7 +21,7 @@ export type CommandRow = SlashCommand;
 
 export type ScreenCommand =
   | { kind: 'resume' } | { kind: 'diff' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
-  | { kind: 'branch'; rest: string };
+  | { kind: 'branch'; rest: string } | { kind: 'copy'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -33,6 +33,8 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'effort', description: 'Pick how hard Claude thinks, low to max, from a list, or set the level named after it', argumentHint: '' },
   // No hint either: the name is optional, so Enter branches now.
   { name: 'branch', description: 'Carry on in a copy of this conversation, called whatever follows, if anything; the original stays in /resume', argumentHint: '' },
+  // No hint: the count is optional, so Enter copies the last reply now.
+  { name: 'copy', description: "Copy Claude's last reply as markdown, or the one that many back named after it", argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -46,6 +48,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'copy') return { kind: 'copy', rest: (match[2] ?? '').trim() };
   return null;
 }
 
@@ -235,6 +238,29 @@ export function localCommandOutput(text: string): string | null {
   if (text.includes('<local-command-caveat>') && onlyPlumbing(text)) return '';
   const output = /^\s*<local-command-(?:stdout|stderr)>([\s\S]*?)<\/local-command-(?:stdout|stderr)>\s*$/.exec(text);
   return output ? unescaped(output[1]).trim() : null;
+}
+
+// How many replies back `/copy N` goes: 1, the last, when nothing follows; null for anything but a
+// whole number from 1, which is refused.
+export function copyCount(rest: string): number | null {
+  if (!rest) return 1;
+  return /^[1-9]\d*$/.test(rest) ? Number(rest) : null;
+}
+
+// What /copy copies: the markdown of Claude's reply that many back, 1 the last. A reply is all Claude
+// wrote between two prompts, its tool calls left out; null when there are not that many.
+export function replyText(entries: ChatEntry[], count: number): string | null {
+  const replies: string[] = [];
+  let open = false;
+  for (const entry of entries) {
+    if (entry.kind === 'user') open = false;
+    else if (entry.kind === 'text') {
+      if (open) replies[replies.length - 1] += `\n\n${entry.text}`;
+      else replies.push(entry.text);
+      open = true;
+    }
+  }
+  return replies.at(-count) ?? null;
 }
 
 // Which of an entry's blocks the copy key copies: the first, then the next on each press while the
