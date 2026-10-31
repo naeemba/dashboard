@@ -300,16 +300,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
-          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
-          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:18:48.861Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -411,6 +402,22 @@
             {
               "at": "2026-10-31T22:13:11.552Z",
               "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
+            }
+          ]
+        },
+        {
+          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
+          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
+          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:19:45.838Z",
+          "branch": "work-board-card-063fde4e-0348-4b14-9e0c-c90",
+          "pullRequest": 106,
+          "comments": [
+            {
+              "at": "2026-10-31T22:19:45.838Z",
+              "body": "Shipped in PR #106: /rewind lists prompts, restores code (rewindFiles with checkpointing on), conversation (forked resumeSessionAt) or both. Left out: summarize, Esc Esc."
             }
           ]
         }
