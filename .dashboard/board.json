@@ -104,13 +104,6 @@
           "parent": null
         },
         {
-          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
-          "title": "Draw TodoWrite as a checklist in the Claude pane",
-          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
           "title": "Copy a whole Claude reply as markdown from the Claude pane",
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
@@ -393,6 +386,16 @@
               "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
             }
           ]
+        },
+        {
+          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
+          "title": "Draw TodoWrite as a checklist in the Claude pane",
+          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:08:20.947Z",
+          "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
+          "pullRequest": 126
         }
       ]
     },
