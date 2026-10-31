@@ -357,10 +357,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   // The last prompt still queued goes back in the box, its images over it, once main has taken it out
   // of the session's queue; the session's cancelled lifecycle takes it off every screen.
+  // One at a time: an Up pressed again before main answers would ask to withdraw the same prompt.
+  let withdrawing = false;
   function withdraw(): boolean {
     const waiting = withdrawable(transcript.queued, prompt.value, images.length);
-    if (!waiting) return false;
-    bridge.chatWithdraw(slot, waiting.id).then((withdrawn) => {
+    if (!waiting || withdrawing) return waiting !== null;
+    withdrawing = true;
+    bridge.chatWithdraw(slot, waiting.id).finally(() => { withdrawing = false; }).then((withdrawn) => {
       if (!withdrawn) return options.onNotice('Claude has already read that message.');
       const parts = promptParts(waiting.content);
       prompt.value = prompt.value ? `${prompt.value}\n${parts.text}` : parts.text;

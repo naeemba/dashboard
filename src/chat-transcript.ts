@@ -265,20 +265,23 @@ function taken(transcript: Transcript, message: Record<string, unknown>): Transc
   if (!waiting || message.state === 'queued') return transcript;
   const queued = transcript.queued.filter((each) => each !== waiting);
   if (message.state === 'cancelled') return { ...transcript, queued };
-  return applyEvent({ ...transcript, queued }, { kind: 'prompt', content: waiting.content });
+  return joinTurn({ ...transcript, queued }, waiting.content);
+}
+
+// A prompt taken into a running turn joins it, so its count goes on.
+function joinTurn(transcript: Transcript, content: ChatContent): Transcript {
+  const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
+  return { ...user(transcript, content), busy: true, ...fresh };
 }
 
 export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript {
   if (event.kind === 'message') return applyMessage(transcript, event.message);
-  // Sent while a turn runs, it waits in the session's queue rather than joining the turn.
-  if (event.kind === 'prompt' && transcript.busy && event.id !== undefined) {
+  // Sent while a turn runs, it waits in the session's queue rather than joining the turn; so does one
+  // sent between a turn's result and the next queued prompt starting, which the session runs after it.
+  if (event.kind === 'prompt' && event.id !== undefined && (transcript.busy || transcript.queued.length > 0)) {
     return { ...transcript, queued: [...transcript.queued, { id: event.id, content: event.content }] };
   }
-  // A prompt taken into a running turn joins it, so its count goes on.
-  if (event.kind === 'prompt') {
-    const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
-    return { ...user(transcript, event.content), busy: true, ...fresh };
-  }
+  if (event.kind === 'prompt') return joinTurn(transcript, event.content);
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
     // The tasks and the queued prompts went with the process that held them, and the next one never

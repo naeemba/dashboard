@@ -17,7 +17,7 @@ export function createQueueStrip(): { element: HTMLElement; render(queued: Queue
       element.replaceChildren(...queued.map(({ content }) => {
         const { text, images } = promptParts(content);
         const row = piece('chat-queued-prompt', text);
-        if (images.length > 0) row.append(piece('chat-queued-images', ` + ${images.length} image${images.length === 1 ? '' : 's'}`));
+        if (images.length > 0) row.append(` + ${images.length} image${images.length === 1 ? '' : 's'}`);
         return row;
       }));
     },
