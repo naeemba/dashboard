@@ -272,16 +272,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
-          "title": "Real line diffs for edits in the Claude pane",
-          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:28:08.330Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -405,6 +396,16 @@
           "updatedAt": "2026-10-31T22:27:25.984Z",
           "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
           "pullRequest": 108
+        },
+        {
+          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
+          "title": "Real line diffs for edits in the Claude pane",
+          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:33:16.944Z",
+          "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
+          "pullRequest": 110
         }
       ]
     },
