@@ -208,6 +208,9 @@ export type DashboardBridge = {
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
+  // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
+  // False when there is no conversation yet to copy.
+  chatBranch(slot: number, title: string): Promise<boolean>;
   // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;

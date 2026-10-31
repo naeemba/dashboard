@@ -315,22 +315,6 @@
           ]
         },
         {
-          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
-          "title": "Branch the Claude pane's conversation, keeping the original",
-          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:39:49.154Z",
-          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
-          "pullRequest": 112,
-          "comments": [
-            {
-              "at": "2026-10-31T22:39:49.154Z",
-              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
-            }
-          ]
-        },
-        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
@@ -1446,18 +1430,38 @@
           ]
         },
         {
+          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
+          "title": "Branch the Claude pane's conversation, keeping the original",
+          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:00:30.789Z",
+          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
+          "pullRequest": 112,
+          "comments": [
+            {
+              "at": "2026-10-31T22:39:49.154Z",
+              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
+            },
+            {
+              "at": "2026-10-31T23:00:30.789Z",
+              "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+            }
+          ]
+        },
+        {
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T23:01:21.031Z",
+          "updatedAt": "2026-10-31T23:04:20.359Z",
           "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
           "pullRequest": 117,
           "comments": [
             {
-              "at": "2026-10-31T23:01:21.031Z",
-              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.17.0. Needs a hand check in the rebuilt app."
+              "at": "2026-10-31T23:04:20.359Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.18.0. Needs a hand check in the rebuilt app."
             }
           ]
         }
