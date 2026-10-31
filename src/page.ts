@@ -1,4 +1,3 @@
-import { dismissViewerFromFrame } from './overlay';
 import { Terminal } from '@xterm/xterm';
 import type { ILink, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -13,6 +12,7 @@ import type { Mode, ProjectMode } from './modes';
 import { createNotesView, type NotesView } from './notes-view';
 import type { Pane } from './pane';
 import { PANE_SCROLLBACK, paneScreen } from './pane';
+import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from './print-widths';
 import { linksTouching } from './wrapped-links';
 import type { Project } from './projects';

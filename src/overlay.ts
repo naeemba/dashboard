@@ -78,7 +78,8 @@ export function imageOverlay(source: string): void {
 
 // A PDF in Chromium's own viewer, on the same sheet and with the same keys; the window turns plugins
 // on for it. A click inside the viewer is the viewer's: it never reaches this page, so only the dark
-// margin puts the PDF away once the viewer has the pointer, and Escape once it has the keyboard. The blob's URL lives as long as the sheet.
+// margin puts the PDF away once the viewer has the pointer, and Escape once it has the keyboard. The
+// blob's URL lives as long as the sheet.
 export function pdfOverlay(pdf: Blob): void {
   const frame = document.createElement('iframe');
   frame.src = URL.createObjectURL(pdf);

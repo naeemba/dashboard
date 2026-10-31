@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
-import { isOpenableLink } from './links';
+import { dismissesViewer, frameNavigation, isOpenableLink } from './links';
 import { TITLE_BAR_HEIGHT } from './theme';
 
 // The window and the question its close asks. Main-process wiring, out of main.ts because main had
@@ -20,14 +20,28 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     { role: 'appMenu' },
     { role: 'editMenu' },
   ]));
-  // A key pressed while the PDF viewer has the keyboard stays in the viewer's frame, and the page never
-  // hears it. Main sees every key first, in this window's contents and in the viewer's own, so Escape
-  // is passed on and the page puts the viewer away (dismissViewerFromFrame in overlay.ts).
+  // Every contents the app makes, the window's and any the PDF viewer gets of its own, so neither rule
+  // below depends on which of them the viewer's frame lives in.
   app.on('web-contents-created', (_created, contents) => {
+    // A key pressed while the PDF viewer has the keyboard stays in the viewer, and the page never hears
+    // it. Main sees every key first, so Escape is passed on and the page puts the viewer away
+    // (dismissViewerFromFrame in overlay.ts).
     contents.on('before-input-event', (_event, input) => {
-      if (input.type !== 'keyDown' || input.key !== 'Escape') return;
-      if (input.shift || input.control || input.alt || input.meta || window.isDestroyed()) return;
+      if (!dismissesViewer(input) || window.isDestroyed()) return;
       window.webContents.send('viewer:dismiss');
+    });
+    // The PDF viewer keeps its own blob and pages, and a link in the PDF opens in the browser rather
+    // than inside the overlay or in a bare window of its own. The window's main frame is also held by
+    // will-navigate below, so 'allow' never lets it leave the app's page.
+    contents.on('will-frame-navigate', (event) => {
+      const where = frameNavigation(event.url);
+      if (where === 'allow') return;
+      event.preventDefault();
+      if (where === 'browser') void shell.openExternal(event.url);
+    });
+    contents.setWindowOpenHandler(({ url }) => {
+      if (isOpenableLink(url)) void shell.openExternal(url);
+      return { action: 'deny' };
     });
   });
   const window = new BrowserWindow({
@@ -96,18 +110,6 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   // The window never leaves the app's own page. A stray link followed in it would replace every page
   // and pane on screen, with no way back, and hand the preload's bridge to whatever site it named.
   window.webContents.on('will-navigate', (event) => event.preventDefault());
-  // The same for the PDF viewer's frame, the only frame below the page: it keeps the PDF's own blob
-  // and the viewer's pages, and a link in the PDF opens in the browser, where every other link on the
-  // screen goes, rather than inside the overlay or in a bare window of its own.
-  window.webContents.on('will-frame-navigate', (event) => {
-    if (event.isMainFrame || /^(blob|chrome-extension):/.test(event.url)) return;
-    event.preventDefault();
-    if (isOpenableLink(event.url)) void shell.openExternal(event.url);
-  });
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    if (isOpenableLink(url)) void shell.openExternal(url);
-    return { action: 'deny' };
-  });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
