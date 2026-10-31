@@ -4,7 +4,8 @@ import { isRecord } from './is-record';
 // file, the change as a diff. The input is whatever the model sent, so every field is read as maybe
 // missing — a call that was interrupted half-way can arrive with none of them.
 
-export type DiffLine = { sign: ' ' | '-' | '+'; text: string };
+// A gap row ('…') stands for unchanged lines left out, and has no text of its own.
+export type DiffLine = { sign: ' ' | '-' | '+' | '…'; text: string };
 
 function field(input: Record<string, unknown>, name: string): string | undefined {
   const value = input[name];
@@ -24,14 +25,41 @@ export function toolSummary(name: string, input: Record<string, unknown>): strin
   return line.length > 160 ? `${line.slice(0, 159)}…` : line;
 }
 
-// The lines that changed, each run of them with the one unchanged line either side. A longest common
-// subsequence of lines decides what stayed, so two edits far apart show as two runs, with a "…" line
-// standing for the unchanged lines dropped between them.
-// ponytail: the LCS table is old × new lines, so past a million cells the edit shows as all removed
-// then all added rather than freeze the pane; Myers' diff if huge edits need reading.
+// The lines that changed, each run of them with the one unchanged line either side. Lines the two
+// sides open and close with are kept as they are; a longest common subsequence of the lines between
+// decides what else stayed, so two edits far apart show as two runs, with a gap row standing for the
+// unchanged lines dropped between them. A gap of one line shows that line instead, at the same cost.
 export function lineDiff(before: string, after: string): DiffLine[] {
   const old = before.split('\n');
   const next = after.split('\n');
+  let start = 0;
+  while (start < old.length && start < next.length && old[start] === next[start]) start++;
+  let end = 0;
+  while (end < old.length - start && end < next.length - start && old[old.length - 1 - end] === next[next.length - 1 - end]) end++;
+  const same = (text: string): DiffLine => ({ sign: ' ', text });
+  const lines = [
+    ...old.slice(0, start).map(same),
+    ...middleDiff(old.slice(start, old.length - end), next.slice(start, next.length - end)),
+    ...old.slice(old.length - end).map(same),
+  ];
+  const changedAt = lines.map((line) => line.sign !== ' ');
+  const nearChange = (index: number) => changedAt[index - 1] || changedAt[index] || changedAt[index + 1];
+  const shownAt = (index: number) => nearChange(index) || (nearChange(index - 1) && nearChange(index + 1));
+  const shown: DiffLine[] = [];
+  lines.forEach((line, index) => {
+    if (!shownAt(index)) return;
+    if (shown.length > 0 && !shownAt(index - 1)) shown.push(gap);
+    shown.push(line);
+  });
+  return shown;
+}
+
+const gap: DiffLine = { sign: '…', text: '' };
+
+// The changed middle of an edit, line by line.
+// ponytail: the LCS table is old × new lines, so past a million cells the middle shows as all removed
+// then all added rather than freeze the pane; Myers' diff if huge edits need reading.
+function middleDiff(old: string[], next: string[]): DiffLine[] {
   if (old.length * next.length > 1_000_000) {
     return [
       ...old.map((text): DiffLine => ({ sign: '-', text })),
@@ -58,24 +86,17 @@ export function lineDiff(before: string, after: string): DiffLine[] {
       lines.push({ sign: '+', text: next[j++] });
     }
   }
-  const changedAt = lines.map((line) => line.sign !== ' ');
-  const nearChange = (index: number) => changedAt[index - 1] || changedAt[index] || changedAt[index + 1];
-  const shown: DiffLine[] = [];
-  lines.forEach((line, index) => {
-    if (!nearChange(index)) return;
-    if (shown.length > 0 && !nearChange(index - 1)) shown.push({ sign: ' ', text: '…' });
-    shown.push(line);
-  });
-  return shown;
+  return lines;
 }
 
-// The change a file tool asked for, or null for every other tool. Write is a whole new file, so all of
-// it is added; MultiEdit is its edits one after another.
+// The change a file tool asked for, or null for every other tool and for an edit that changes nothing,
+// so its input shows instead. Write is a whole new file, so all of it is added; MultiEdit is its edits
+// one after another, a gap row between each, since nothing says they sit next to each other.
 export function toolDiff(name: string, input: Record<string, unknown>): DiffLine[] | null {
-  if (name === 'Edit') return lineDiff(field(input, 'old_string') ?? '', field(input, 'new_string') ?? '');
   if (name === 'Write') return (field(input, 'content') ?? '').split('\n').map((text) => ({ sign: '+', text }));
-  if (name === 'MultiEdit' && Array.isArray(input.edits)) {
-    return input.edits.filter(isRecord).flatMap((edit) => lineDiff(field(edit, 'old_string') ?? '', field(edit, 'new_string') ?? ''));
-  }
-  return null;
+  const edits = name === 'Edit' ? [input] : name === 'MultiEdit' && Array.isArray(input.edits) ? input.edits.filter(isRecord) : [];
+  const diffs = edits
+    .map((edit) => lineDiff(field(edit, 'old_string') ?? '', field(edit, 'new_string') ?? ''))
+    .filter((diff) => diff.length > 0);
+  return diffs.length > 0 ? diffs.flatMap((diff, index) => (index > 0 ? [gap, ...diff] : diff)) : null;
 }

@@ -46,7 +46,7 @@ describe('lineDiff', () => {
       { sign: '-', text: 'a' },
       { sign: '+', text: 'A' },
       { sign: ' ', text: 'b' },
-      { sign: ' ', text: '…' },
+      { sign: '…', text: '' },
       { sign: ' ', text: 'f' },
       { sign: '-', text: 'g' },
       { sign: '+', text: 'G' },
@@ -63,6 +63,30 @@ describe('lineDiff', () => {
     ]);
   });
 
+  it('shows a lone unchanged line between two runs rather than a gap row in its place', () => {
+    expect(lineDiff('a\nb\nc\nd\ne', 'A\nb\nc\nd\nE').map((line) => line.sign)).toEqual(['-', '+', ' ', ' ', ' ', '-', '+']);
+  });
+
+  it('shows one changed line of a long edit as that line alone, with its context', () => {
+    const lines = Array.from({ length: 1001 }, (_, index) => `line ${index}`);
+    const changed = lines.map((line, index) => (index === 500 ? 'changed' : line));
+    expect(lineDiff(lines.join('\n'), changed.join('\n'))).toEqual([
+      { sign: ' ', text: 'line 499' },
+      { sign: '-', text: 'line 500' },
+      { sign: '+', text: 'changed' },
+      { sign: ' ', text: 'line 501' },
+    ]);
+  });
+
+  it('shows a changed middle too big to compare as all removed, then all added', () => {
+    const old = ['kept', ...Array.from({ length: 1000 }, (_, index) => `old ${index}`)];
+    const next = [...Array.from({ length: 1000 }, (_, index) => `new ${index}`), 'kept'];
+    expect(lineDiff(old.join('\n'), next.join('\n'))).toEqual([
+      ...old.map((text) => ({ sign: '-', text })),
+      ...next.map((text) => ({ sign: '+', text })),
+    ]);
+  });
+
   it('shows a one-line replacement with no context', () => {
     expect(lineDiff('old', 'new')).toEqual([{ sign: '-', text: 'old' }, { sign: '+', text: 'new' }]);
   });
@@ -76,6 +100,20 @@ describe('toolDiff', () => {
   it('skips a MultiEdit entry that is not an edit rather than throwing', () => {
     expect(toolDiff('MultiEdit', { edits: [null, { old_string: 'a', new_string: 'b' }] }))
       .toEqual([{ sign: '-', text: 'a' }, { sign: '+', text: 'b' }]);
+  });
+
+  it('puts a gap row between the edits of a MultiEdit', () => {
+    expect(toolDiff('MultiEdit', { edits: [{ old_string: 'a', new_string: 'A' }, { old_string: 'b', new_string: 'B' }] })).toEqual([
+      { sign: '-', text: 'a' },
+      { sign: '+', text: 'A' },
+      { sign: '…', text: '' },
+      { sign: '-', text: 'b' },
+      { sign: '+', text: 'B' },
+    ]);
+  });
+
+  it('has no diff for an edit that changes nothing, so its input shows instead', () => {
+    expect(toolDiff('Edit', { old_string: 'same', new_string: 'same' })).toBeNull();
   });
 
   it('has nothing to show for a Bash call', () => {
