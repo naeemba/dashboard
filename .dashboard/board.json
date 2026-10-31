@@ -257,22 +257,6 @@
           ]
         },
         {
-          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
-          "title": "Fast mode toggle in the Claude pane",
-          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:58:57.860Z",
-          "branch": "work-board-card-098a7fef-37c6-47ee-954e-6ff",
-          "pullRequest": 121,
-          "comments": [
-            {
-              "at": "2026-10-31T22:58:57.781Z",
-              "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
-            }
-          ]
-        },
-        {
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
           "title": "Copy a whole Claude reply as markdown from the Claude pane",
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
@@ -1570,6 +1554,26 @@
             {
               "at": "2026-10-31T23:54:44.488Z",
               "body": "Shipped in #125: /export lists Copy to clipboard and Save to file; /export <name> saves straight to that file inside the project folder, never over an existing file. Needs app rebuild and a hand check."
+            }
+          ]
+        },
+        {
+          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
+          "title": "Fast mode toggle in the Claude pane",
+          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:59:00.180Z",
+          "branch": "work-board-card-098a7fef-37c6-47ee-954e-6ff",
+          "pullRequest": 121,
+          "comments": [
+            {
+              "at": "2026-10-31T22:58:57.781Z",
+              "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
+            },
+            {
+              "at": "2026-10-31T23:59:00.180Z",
+              "body": "Shipped in PR #121: /fast and Alt+F toggle fast mode; the foot shows fast beside the model; the choice replays on a new session. Review loop: 3 rounds, 6 threads fixed."
             }
           ]
         }
