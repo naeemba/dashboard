@@ -58,4 +58,4 @@ Alt+X to stop and Alt+B to background.
 A key pressed for a picked task whose row has since left the strip is refused with a notice, not
 turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling back
 would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
-lasts while other tasks still run, never across later turns.
+lasts while other tasks still run, which a background command can stretch across turns.
