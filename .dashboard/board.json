@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
-          "title": "Stop or background a running task from the Claude pane's task strip",
-          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
           "title": "Real line diffs for edits in the Claude pane",
           "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
@@ -339,6 +332,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:27:25.984Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108
         },
         {
           "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
@@ -1344,18 +1347,18 @@
           ]
         },
         {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
+          "title": "Stop or background a running task from the Claude pane's task strip",
+          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:46:23.590Z",
-          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
-          "pullRequest": 108,
+          "updatedAt": "2026-10-31T22:44:37.912Z",
+          "branch": "work-board-card-402cf14c-e128-4f04-bc92-39a",
+          "pullRequest": 109,
           "comments": [
             {
-              "at": "2026-10-31T22:46:23.590Z",
-              "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.12.0."
+              "at": "2026-10-31T22:44:37.912Z",
+              "body": "Shipped in PR #109: the task strip picks a task with Alt+T, stops it with Alt+X and backgrounds it with Alt+B (chat-decision-5). Version 2.12.0."
             }
           ]
         }
