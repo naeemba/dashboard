@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "938570a0-e098-4918-9d58-96b0266f0952",
-          "title": "Show Claude's thinking in the Claude pane",
-          "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
           "title": "Open a subagent in the Claude pane to see its own steps",
           "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
@@ -314,7 +307,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "938570a0-e098-4918-9d58-96b0266f0952",
+          "title": "Show Claude's thinking in the Claude pane",
+          "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:14:09.227Z"
+        }
+      ]
     },
     {
       "name": "Review",
