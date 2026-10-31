@@ -48,13 +48,6 @@
           "parent": null
         },
         {
-          "id": "938570a0-e098-4918-9d58-96b0266f0952",
-          "title": "Show Claude's thinking in the Claude pane",
-          "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
           "title": "Open a subagent in the Claude pane to see its own steps",
           "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
@@ -1297,6 +1290,22 @@
             {
               "at": "2026-10-31T22:21:00.778Z",
               "body": "PR #102 merged: a message you send over 12 lines shows its first 6 lines and a \"… N more lines\" row that a click or the unfold key opens; Claude still gets the whole text. Images and PDF tiles of a folded message stay visible below the fold."
+            }
+          ]
+        },
+        {
+          "id": "938570a0-e098-4918-9d58-96b0266f0952",
+          "title": "Show Claude's thinking in the Claude pane",
+          "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:26:15.794Z",
+          "branch": "work-board-card-938570a0-e098-4918-9d58-96b",
+          "pullRequest": 104,
+          "comments": [
+            {
+              "at": "2026-10-31T22:26:15.794Z",
+              "body": "PR #104: Claude's thinking blocks show in the Claude pane as a folded entry; the help dialog and docs describe it."
             }
           ]
         }
