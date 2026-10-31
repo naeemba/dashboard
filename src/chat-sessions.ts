@@ -317,6 +317,16 @@ export function registerChatSessions(
     return projectFiles(projectPath);
   });
 
+  // /export saving the conversation: the file goes in the project's folder, a name typed with a folder
+  // in it relative to there, as Claude Code's /export writes it. Answers where it went.
+  table.handle('chat-export:write', async (_screen, slot: number, name: string, text: string): Promise<string> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) throw new Error('This page has no project folder to save into.');
+    const target = path.resolve(projectPath, name);
+    replaceFile(target, text);
+    return target;
+  });
+
   // The models /model lists, as the session offers them; asking starts it, as the command list does.
   table.handle('chat-models:read', async (_screen, slot: number): Promise<ModelInfo[]> => {
     const projectPath = host.projectPath(slot);

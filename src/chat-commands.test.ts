@@ -12,6 +12,7 @@ describe('screenCommand', () => {
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
+    expect(screenCommand('/export notes.md')).toEqual({ kind: 'export', rest: 'notes.md' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();

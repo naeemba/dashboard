@@ -199,6 +199,8 @@ export type DashboardBridge = {
   chatCommands(slot: number): Promise<CommandRow[]>;
   // The project's files, for the list @ opens in the box.
   chatFiles(slot: number): Promise<string[]>;
+  // /export saving the conversation's text under a name in the project's folder; answers the path.
+  chatExport(slot: number, name: string, text: string): Promise<string>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
   // The prompts sent in the project's other recent conversations, one list per conversation, newest

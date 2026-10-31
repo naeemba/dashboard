@@ -76,6 +76,7 @@ const bridge: DashboardBridge = {
   chatReset: (slot) => ipcRenderer.send('chat:reset', slot),
   chatCommands: (slot) => ipcRenderer.invoke('chat:commands', slot),
   chatFiles: (slot) => ipcRenderer.invoke('chat-files:read', slot),
+  chatExport: (slot, name, text) => ipcRenderer.invoke('chat-export:write', slot, name, text),
   chatModels: (slot) => ipcRenderer.invoke('chat-models:read', slot),
   chatHistory: (slot) => ipcRenderer.invoke('chat-history:read', slot),
   chatSessions: (slot) => ipcRenderer.invoke('chat:sessions', slot),

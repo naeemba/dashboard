@@ -4,6 +4,7 @@ import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { exportConversation } from './chat-export-view';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
@@ -296,6 +297,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'export') return void exportConversation(bridge, slot, options, transcript.entries, own.rest).then(focus);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
