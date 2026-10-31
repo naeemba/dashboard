@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
@@ -12,6 +12,7 @@ import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { rewind } from './chat-rewind-view';
+import { branch as branchConversation, chooseModel, resume } from './chat-screen-commands';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
@@ -300,6 +301,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
@@ -597,54 +599,36 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
-  // The project's earlier conversations in a search sheet; the one picked is read back on every
-  // screen and carried on by the next prompt.
-  function showResume(): void {
-    if (working(transcript, asks.length)) {
-      options.onNotice('Claude is still working. Escape stops it; then pick the conversation.');
-      return;
-    }
-    bridge.chatSessions(slot).then(async (found) => {
-      if (found.sessions.length === 0) return options.onNotice('This project has no earlier conversations.');
-      const picked = await searchOverlay({
-        name: 'chat-resume', placeholder: 'Search conversations', rows: (query) => resumeRows(found, query),
-        empty: 'No conversation matches.', glyph: () => 'claude',
-      });
-      if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
-      focus();
-    }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  // The screen's own commands, refused under a running turn but /model: a conversation changed then
+  // would end wherever the turn had got to. A conversation put back by /rewind holds its prompt in the
+  // box again, ready to edit and send, unless something was typed there meanwhile.
+  function refusedWhileWorking(then: string): boolean {
+    const busy = working(transcript, asks.length);
+    if (busy) options.onNotice(`Claude is still working. Escape stops it; then ${then}.`);
+    return busy;
   }
 
-  // Refused under a running turn, as /resume is. A conversation put back holds its prompt in the box
-  // again, ready to edit and send, unless something was typed there meanwhile.
+  function showResume(): void {
+    if (!refusedWhileWorking('pick the conversation')) void resume(bridge, slot, options).then(focus);
+  }
+
+  function branch(title: string): void {
+    if (!refusedWhileWorking('branch')) void branchConversation(bridge, slot, title, options).then(focus);
+  }
+
   function showRewind(): void {
-    if (working(transcript, asks.length)) {
-      options.onNotice('Claude is still working. Escape stops it; then rewind.');
-      return;
-    }
+    if (refusedWhileWorking('rewind')) return;
     void rewind(bridge, slot, options).then((text) => {
       if (text !== undefined && !prompt.value.trim()) prompt.value = text;
       focus();
     });
   }
 
-  // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one
-  // named after the command; the one chosen is what the next turn runs on, on every screen.
   function showModels(name: string): void {
-    bridge.chatModels(slot).then(async (models) => {
-      if (name) {
-        const named = namedModel(models, name);
-        if (named) configure({ model: pickedModel(named) });
-        else options.onNotice(`Claude has no model named ${name}. /model lists the ones it has.`);
-        return;
-      }
-      const picked = await searchOverlay({
-        name: 'chat-model', placeholder: 'Search models', rows: (query) => modelRows(models, model ?? transcript.model, query),
-        empty: 'No model matches.', glyph: () => 'claude',
-      });
+    void chooseModel(bridge, slot, name, model ?? transcript.model, options).then((picked) => {
       if (picked !== undefined) configure({ model: pickedModel(picked) });
       focus();
-    }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
+    });
   }
 
   // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
