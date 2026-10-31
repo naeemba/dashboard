@@ -128,6 +128,12 @@
           "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
           "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
           "priority": "low"
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium"
         }
       ]
     },
