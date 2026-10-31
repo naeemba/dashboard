@@ -1405,10 +1405,10 @@
             {
               "at": "2026-10-31T23:03:19.774Z",
               "body": "Shipped in PR #122: /rename names the conversation and /resume lists it by that name; with no name or no conversation yet, it is refused."
-              }
-            ]
-          },
-          {
+            }
+          ]
+        },
+        {
           "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
@@ -1490,7 +1490,7 @@
           "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T23:13:09.637Z",
+          "updatedAt": "2026-10-31T23:15:41.787Z",
           "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
           "pullRequest": 118,
           "comments": [
@@ -1501,6 +1501,10 @@
             {
               "at": "2026-10-31T23:13:09.637Z",
               "body": "Shipped in PR #118: /btw asks a side question beside the running turn, answered from the conversation so far without tools and kept out of it. Version 2.21.0."
+            },
+            {
+              "at": "2026-10-31T23:15:41.787Z",
+              "body": "Version now 2.22.0 after merging main again."
             }
           ]
         }
