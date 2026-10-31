@@ -266,6 +266,21 @@
   opacity: 0.6;
 }
 
+.chat-todos {
+  margin: 6px 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+}
+
+.todo-in_progress {
+  font-weight: 600;
+}
+
+.todo-completed {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 /* The question over the prompt. Hidden with the attribute, and the display below would beat it. */
 .chat-ask {
   display: flex;

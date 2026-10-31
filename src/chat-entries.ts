@@ -1,6 +1,6 @@
 import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
-import { toolDiff, toolSummary } from './chat-tools';
+import { todoChecklist, toolDiff, toolSummary } from './chat-tools';
 import { baseName } from './base-name';
 import { pdfMentions, pdfOfTool } from './chat-pdf';
 import { foldedMessage } from './chat-fold';
@@ -128,12 +128,15 @@ function stepsOf(steps: ChatEntry[]): HTMLElement {
   return element;
 }
 
+const todoMark = { pending: '☐', in_progress: '◐', completed: '☑' };
+
 // The call itself, what a subagent it started did, then what came back. A file tool shows its change
-// as a diff, a plan put up for approval reads as the document it is; anything else shows its input,
+// as a diff, a plan put up for approval reads as the document it is, a TodoWrite list as a checklist; anything else shows its input,
 // which for Bash is the whole command rather than the first line the summary had room for.
 export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null, steps: ChatEntry[] = []): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
+  const todos = todoChecklist(name, input);
   const pdf = pdfOfTool(name, input);
   if (pdf) parts.push(pdfTile(pdf));
   if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
@@ -141,6 +144,16 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     plan.className = 'chat-plan chat-text';
     markdownInto(plan, input.plan);
     parts.push(plan);
+  } else if (todos) {
+    const list = document.createElement('ul');
+    list.className = 'chat-todos';
+    list.append(...todos.map((todo) => {
+      const item = document.createElement('li');
+      item.className = `todo-${todo.status}`;
+      item.textContent = `${todoMark[todo.status]} ${todo.text}`;
+      return item;
+    }));
+    parts.push(list);
   } else if (diff) {
     const pre = document.createElement('pre');
     pre.className = 'chat-diff';

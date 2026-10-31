@@ -32,6 +32,7 @@ Claude has running.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.
 - Given a MultiEdit makes two edits, when its diff is drawn, then a dimmed "…" row sits between them, the same row that stands for skipped lines inside one edit.
+- Given Claude puts up a TodoWrite list, when its call is drawn, then the line says how many items are done and unfolds to a checklist: done items struck through, the one under way in bold by its "-ing" wording.
 - Given an Edit whose old and new text are the same, when it is drawn, then its input shows instead of an empty diff.
 - Given the project has earlier conversations, when you press Ctrl+R, then a search lists every prompt sent in the 20 most recent (`HISTORY_CONVERSATIONS`), newest first, this conversation's from the screen and the others read off disk only once they change, and the one picked goes in the box.
 - Given Claude has started a subagent, when you unfold its Agent call, then the subagent's own text and tool calls are listed under the call, a skill it loaded as one line and its prompt not repeated, a subagent of its own indented under its line; a conversation read back after a restart has none.
