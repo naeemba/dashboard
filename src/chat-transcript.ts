@@ -60,7 +60,8 @@ export type ChatEntry =
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
-  // A message Claude Code put in the conversation rather than a person (chat-events.ts), folded to its title.
+  // A message Claude Code put in the conversation rather than a person (chat-events.ts), or Claude's
+  // thinking, folded to its title.
   | { kind: 'event'; title: string; body: string };
 
 export type Transcript = {
@@ -131,6 +132,9 @@ function assistant(transcript: Transcript, content: unknown): Transcript {
   const entries = transcript.entries.slice();
   for (const block of blocksOf(content)) {
     if (block.type === 'text' && text(block.text).trim()) entries.push({ kind: 'text', text: text(block.text) });
+    // Thinking folds to one line, like a message Claude Code injected. A redacted block, or one whose
+    // display was omitted, has no text and draws nothing.
+    if (block.type === 'thinking' && text(block.thinking).trim()) entries.push({ kind: 'event', title: 'Thinking', body: text(block.thinking) });
     if (block.type === 'tool_use') {
       entries.push({
         kind: 'tool', id: text(block.id), name: text(block.name),

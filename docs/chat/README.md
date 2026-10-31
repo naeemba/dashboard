@@ -22,3 +22,4 @@ Claude has running.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
+- Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
