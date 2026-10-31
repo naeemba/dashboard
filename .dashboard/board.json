@@ -80,6 +80,12 @@
           "title": "Open a subagent in the Claude pane to see its own steps",
           "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
           "priority": "medium"
+        },
+        {
+          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
+          "title": "Stop or background a running task from the Claude pane's task strip",
+          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
+          "priority": "medium"
         }
       ]
     },
