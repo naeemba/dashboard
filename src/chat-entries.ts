@@ -4,7 +4,8 @@ import { toolDiff, toolSummary } from './chat-tools';
 import { baseName } from './base-name';
 import { pdfMentions, pdfOfTool } from './chat-pdf';
 import { foldedMessage } from './chat-fold';
-import { imageDataUrl, type ChatEntry, type ChatImage, type ToolResult } from './chat-transcript';
+import { stampText } from './chat-stamp';
+import { imageDataUrl, type ChatEntry, type ChatImage, type Stamp, type ToolResult } from './chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
 // and chat-markdown.ts; this only builds the elements.
@@ -168,6 +169,13 @@ function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   return { entry, element, fill: null };
 }
 
+// The time and model above a message, kept on the element for the stylesheet to draw: filling a text
+// entry replaces what is in it, and the attribute outlives that.
+function stamped(element: HTMLElement, stamp: Stamp): void {
+  const said = stampText(stamp, new Date());
+  if (said) element.dataset.stamp = said;
+}
+
 function paragraph(text: string): HTMLParagraphElement {
   const said = document.createElement('p');
   said.textContent = text;
@@ -179,15 +187,14 @@ function paragraph(text: string): HTMLParagraphElement {
 function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>): DrawnEntry {
   const extras = [...pdfMentions(entry.text).map(pdfTile), ...images(entry.images)];
   const folded = foldedMessage(entry.text);
+  const element = document.createElement('div');
+  element.className = 'chat-entry chat-user';
+  stamped(element, entry);
   if (!folded) {
-    const element = document.createElement('div');
-    element.className = 'chat-entry chat-user';
     element.append(paragraph(entry.text), ...extras);
     return { entry, element, fill: null };
   }
   // The attachments sit beside the fold, not in it: a closed <details> draws only its summary.
-  const element = document.createElement('div');
-  element.className = 'chat-entry chat-user';
   const fold = document.createElement('details');
   fold.className = 'chat-folded';
   const summary = document.createElement('summary');
@@ -228,6 +235,7 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   }
   // Until it is filled the box holds the raw text, so a conversation scrolled fast still reads.
   element.textContent = entry.text;
+  stamped(element, entry);
   return {
     entry, element, fill: () => {
       markdownInto(element, entry.text);

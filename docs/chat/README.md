@@ -10,7 +10,8 @@ Claude has running.
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
-  `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`
+  `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
+  `chat-stamp.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
   `chat-rewind.ts`, `chat-rewind-view.ts`
@@ -28,3 +29,4 @@ Claude has running.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given Claude edited files after a prompt, when you /rewind to it and restore code, then the files are as they were before it; restore conversation, and the conversation picks up from just before it with the prompt back in the box.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
+- Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date when not today, and for Claude's the model that wrote it.
