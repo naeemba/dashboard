@@ -12,4 +12,5 @@ One line per merged change: date, pull request, why.
 - 2026-10-31 #99 — PDF attachments as a tile that opens in the built-in viewer
 - 2026-11-01 #101 — Claude's suggested next prompt in the empty box, Tab accepts it
 - 2026-11-01 #102 — Fold long messages you send to their first lines
+- 2026-11-01 #104 — Show Claude's thinking as a folded line
 - 2026-11-01 #103 — @ file autocomplete in the box
