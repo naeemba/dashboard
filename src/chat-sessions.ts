@@ -16,6 +16,7 @@ import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type Rewi
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
+import { projectFiles } from './git';
 import { isRecord } from './is-record';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
@@ -297,6 +298,13 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     return (await running(slot, projectPath)).query.supportedCommands();
+  });
+
+  // The project's files for the @ list.
+  table.handle('chat-files:read', async (_screen, slot: number): Promise<string[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    return projectFiles(projectPath);
   });
 
   // The models /model lists, as the session offers them; asking starts it, as the command list does.
