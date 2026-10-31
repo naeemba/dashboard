@@ -376,10 +376,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
     recalled = null;
     updateMenu();
   });
-  // The @ list follows the caret, so moving it without typing redraws the list too.
-  prompt.addEventListener('click', () => updateMenu());
-  prompt.addEventListener('keyup', (event) => {
-    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) updateMenu();
+  // The @ list follows the caret, so moving it without typing redraws the list too: a
+  // click, or any key that moved the caret (macOS Ctrl+A, E and F included). A recalled
+  // prompt stays closed until it is edited, so the next Up keeps walking the history.
+  let caretAtKeydown: number | null = null;
+  prompt.addEventListener('click', () => {
+    if (recalled === null) updateMenu();
+  });
+  prompt.addEventListener('keydown', () => {
+    caretAtKeydown = prompt.selectionStart;
+  });
+  prompt.addEventListener('keyup', () => {
+    if (recalled === null && prompt.selectionStart !== caretAtKeydown) updateMenu();
   });
 
   prompt.addEventListener('keydown', (event) => {
