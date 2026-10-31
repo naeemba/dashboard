@@ -7,7 +7,7 @@ Claude has running.
 
 ## Files
 
-- Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`,
+- Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
@@ -22,7 +22,8 @@ Claude has running.
 ## Scenarios
 
 - Given a tool needs a yes, when the session asks, then a box over the prompt holds the question until you answer it.
-- Given a turn is running, when you press Escape, then the turn is interrupted and any pending question declined.
+- Given an MCP server asks for a form or a sign-in link, when the session passes it on, then the same box walks the form a field at a time, or opens the link, and every step can decline; a yes or no or a pick opens on the server's default, a typed answer outside the field's bounds keeps the box open saying what it takes, a required multi-select or a link that is not http(s) can only be declined, an optional multi-select can also be skipped, and Escape or the session ending reaches the server as a cancel, not a decline; the server's other dialogs are not declared, so Claude Code keeps its own fallback.
+- Given a turn is running, when you press Escape, then the turn is interrupted and any pending question is given up on: a tool call is declined, a server form cancelled.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
 - Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.

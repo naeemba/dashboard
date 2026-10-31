@@ -13,6 +13,7 @@ import type { Channels } from './channels';
 import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
+import { elicitationAsk, elicitationResult } from './chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { renameTarget } from './chat-rename';
@@ -245,6 +246,9 @@ export function registerChatSessions(
           defaultToNo: options.defaultToNo === true,
           suppressAlwaysAllowRule: options.suppressAlwaysAllowRule === true,
         }, options.signal),
+        // An MCP server's form or sign-in link, asked in the same box. A server's dialogs
+        // (onUserDialog) are left undeclared, so the CLI never sends one and keeps its own fallback.
+        onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
     }) };
     // Auto picked before a restart: the effort option cannot say null, and a session started without
