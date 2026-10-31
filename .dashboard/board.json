@@ -134,6 +134,12 @@
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
           "priority": "medium"
+        },
+        {
+          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
+          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
+          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
+          "priority": "medium"
         }
       ]
     },
