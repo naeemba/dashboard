@@ -44,6 +44,12 @@
           "title": "Fold long user messages in the Claude pane's thread",
           "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
           "priority": "high"
+        },
+        {
+          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
+          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
+          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
+          "priority": "high"
         }
       ]
     },
