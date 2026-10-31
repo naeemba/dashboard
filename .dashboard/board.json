@@ -66,7 +66,14 @@
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
           "priority": "low",
-          "parent": null
+          "parent": null,
+          "updatedAt": "2026-10-31T22:51:28.176Z",
+          "comments": [
+            {
+              "at": "2026-10-31T22:51:28.176Z",
+              "body": "Skipped, SDK 0.3.312 cannot do it. View: the public Query type has no listPermissionRules; list_permission_rules is only an undeclared control request (sdk.d.ts:4872, not in the exported union's surface) and the runtime method listPermissionRules exists only in sdk.mjs, untyped. Edit: updateSettings accepts only localSettings.outputStyle and userSettings.effortLevel, no permissions, no deletion (sdk.d.ts:3038-3049). applyFlagSettings({permissions}) only writes the session flag layer (sdk.d.ts:3007-3013): rules added there list as source flagSettings, editability readonly (sdk.d.ts:5834-5845), and it cannot remove a rule saved in a settings file. PermissionUpdate removeRules/replaceRules exist only as a canUseTool answer during a prompt (sdk.d.ts:2604-2618). Revisit when Query exposes listPermissionRules and a rule-editing call."
+            }
+          ]
         },
         {
           "id": "b70e7641-48fb-4a5f-a0b8-de8c1c6650ac",
