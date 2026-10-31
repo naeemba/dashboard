@@ -1,4 +1,4 @@
-import type { Options, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
+import type { ForkSessionOptions, Options, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import { typedPrompt } from './chat-history';
 import { applyMessage, EMPTY_TRANSCRIPT } from './chat-transcript';
 import { fuzzyScore } from './fuzzy';
@@ -93,4 +93,11 @@ export function conversationAfterRewind(point: RewindPoint, choice: RewindChoice
 // conversation so the old one stays whole in /resume.
 export function resumeFrom(resume: string | undefined, cutAt: string | undefined): Pick<Options, 'resume' | 'resumeSessionAt' | 'forkSession'> {
   return { resume, resumeSessionAt: cutAt, forkSession: cutAt !== undefined };
+}
+
+// How /branch copies a conversation with a cut pending: up to and including the message the cut stops
+// at, the same message resumeFrom stops at, so the copy does not bring back what the rewind took away.
+// No name typed leaves the title to the SDK, the original's with " (fork)".
+export function forkFrom(projectPath: string, cutAt: string | undefined, title: string): ForkSessionOptions {
+  return { dir: projectPath, upToMessageId: cutAt, title: title || undefined };
 }
