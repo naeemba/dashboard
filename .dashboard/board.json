@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
-          "title": "Open a subagent in the Claude pane to see its own steps",
-          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
@@ -65,20 +58,6 @@
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
-          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
-          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
           "priority": "medium",
           "parent": null
         },
@@ -237,7 +216,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:50:40.941Z"
+        }
+      ]
     },
     {
       "name": "Review",
@@ -381,6 +369,22 @@
             {
               "at": "2026-10-31T22:40:56.632Z",
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
+          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
+          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:47:51.646Z",
+          "branch": "work-board-card-0bef254c-8d96-4bc7-80b6-d3c",
+          "pullRequest": 116,
+          "comments": [
+            {
+              "at": "2026-10-31T22:47:51.595Z",
+              "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
             }
           ]
         }
@@ -1356,18 +1360,34 @@
           ]
         },
         {
+          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
+          "title": "Open a subagent in the Claude pane to see its own steps",
+          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:47:41.965Z",
+          "branch": "work-board-card-500744c0-85ce-42ef-9261-9fd",
+          "pullRequest": 107,
+          "comments": [
+            {
+              "at": "2026-10-31T22:47:41.965Z",
+              "body": "Shipped in PR #107: unfolding an Agent call lists the subagent's own text and tool calls, a skill it loaded as one line, a nested subagent indented under its line. Thinking stays out of a subagent's steps."
+            }
+          ]
+        },
+        {
           "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
           "title": "Real line diffs for edits in the Claude pane",
           "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:48:04.334Z",
+          "updatedAt": "2026-10-31T22:51:11.917Z",
           "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
           "pullRequest": 110,
           "comments": [
             {
-              "at": "2026-10-31T22:48:04.334Z",
-              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.13.0."
+              "at": "2026-10-31T22:51:11.917Z",
+              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.14.0."
             }
           ]
         }
