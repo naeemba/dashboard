@@ -10,6 +10,7 @@ import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
+import { rewind } from './chat-rewind-view';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
@@ -287,6 +288,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'plan') {
@@ -557,6 +559,19 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
       focus();
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  }
+
+  // Refused under a running turn, as /resume is. A conversation put back holds its prompt in the box
+  // again, ready to edit and send, unless something was typed there meanwhile.
+  function showRewind(): void {
+    if (working(transcript, asks.length)) {
+      options.onNotice('Claude is still working. Escape stops it; then rewind.');
+      return;
+    }
+    void rewind(bridge, slot, options).then((text) => {
+      if (text !== undefined && !prompt.value.trim()) prompt.value = text;
+      focus();
+    });
   }
 
   // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one
