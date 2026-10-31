@@ -77,6 +77,7 @@ describe('relayed', () => {
   it('relays a rate limit warning', () => expect(relayed({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed_warning' } })).toBe(true));
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
   it('relays the suggested next prompt', () => expect(relayed({ type: 'prompt_suggestion' })).toBe(true));
+  it('relays a prompt\'s lifecycle', () => expect(relayed({ type: 'command_lifecycle' })).toBe(true));
 });
 
 describe('mainSessionStart', () => {
