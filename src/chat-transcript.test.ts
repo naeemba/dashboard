@@ -250,3 +250,39 @@ describe('a message Claude Code injected', () => {
     expect(fold([notification]).entries).toEqual([{ kind: 'event', title: 'Agent "Review" finished', body: 'done' }]);
   });
 });
+
+describe('a prompt sent while busy', () => {
+  const lifecycle = (id: string, state: string) => ({ type: 'command_lifecycle', command_uuid: id, state });
+  const busy = prompted('first');
+  const waiting = applyEvent(busy, { kind: 'prompt', content: [{ type: 'text', text: 'second' }], id: 'q' });
+
+  it('waits in the queue instead of joining the turn', () => {
+    expect(waiting.queued).toEqual([{ id: 'q', content: [{ type: 'text', text: 'second' }] }]);
+    expect(waiting.entries).toHaveLength(1);
+  });
+
+  it('joins the conversation when the session takes it', () => {
+    const idle = fold([lifecycle('q', 'queued'), { type: 'result', subtype: 'success' }], waiting);
+    expect(idle.entries).toHaveLength(1);
+    const taken = applyMessage(idle, lifecycle('q', 'started'));
+    expect(taken.queued).toEqual([]);
+    expect(taken.busy).toBe(true);
+    expect(taken.entries.at(-1)).toEqual({ kind: 'user', text: 'second', images: [] });
+  });
+
+  it('leaves the screen when withdrawn', () => {
+    const withdrawn = applyMessage(waiting, lifecycle('q', 'cancelled'));
+    expect(withdrawn.queued).toEqual([]);
+    expect(withdrawn.entries).toHaveLength(1);
+  });
+
+  it('is drawn at once when sent while idle', () => {
+    const idle = applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }], id: 'i' });
+    expect(idle.queued).toEqual([]);
+    expect(applyMessage(idle, lifecycle('i', 'started'))).toBe(idle);
+  });
+
+  it('goes with a session that ends', () => {
+    expect(applyEvent(waiting, { kind: 'ended', error: null }).queued).toEqual([]);
+  });
+});

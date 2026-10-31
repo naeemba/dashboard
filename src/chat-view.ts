@@ -18,6 +18,8 @@ import {
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
+import { promptParts, withdrawable } from './chat-queue';
+import { createQueueStrip } from './chat-queue-view';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
@@ -99,7 +101,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
   const tasks = createTaskStrip();
-  element.append(log, tasks.element, activity, ask.element, menu.element, attached, prompt, foot);
+  const queue = createQueueStrip();
+  element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attached, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
@@ -186,6 +189,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawFoot();
     drawWorking();
     tasks.render(transcript.tasks);
+    queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
   }
 
@@ -351,6 +355,21 @@ export function createChatView(options: ChatViewOptions): ChatView {
     return true;
   }
 
+  // The last prompt still queued goes back in the box, its images over it, once main has taken it out
+  // of the session's queue; the session's cancelled lifecycle takes it off every screen.
+  function withdraw(): boolean {
+    const waiting = withdrawable(transcript.queued, prompt.value, images.length);
+    if (!waiting) return false;
+    bridge.chatWithdraw(slot, waiting.id).then((withdrawn) => {
+      if (!withdrawn) return options.onNotice('Claude has already read that message.');
+      const parts = promptParts(waiting.content);
+      prompt.value = prompt.value ? `${prompt.value}\n${parts.text}` : parts.text;
+      images = [...images, ...parts.images];
+      drawAttached();
+    }, (error: unknown) => options.onError(`Message not withdrawn: ${failureText(error)}`));
+    return true;
+  }
+
   prompt.addEventListener('input', () => {
     recalled = null;
     updateMenu();
@@ -368,7 +387,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const row = menu.picked();
       if (row) complete(row, event.key === 'Enter');
     } else if (arrow !== 0) {
-      if (walkHistory(arrow)) event.preventDefault();
+      if ((arrow === -1 && withdraw()) || walkHistory(arrow)) event.preventDefault();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       send();

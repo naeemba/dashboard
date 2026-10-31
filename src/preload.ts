@@ -67,6 +67,7 @@ const bridge: DashboardBridge = {
     ipcRenderer.on('log:appended', (_event, entry) => listener(entry)),
   chatSend: (slot, content) => ipcRenderer.send('chat:send', slot, content),
   chatInterrupt: (slot) => ipcRenderer.send('chat:interrupt', slot),
+  chatWithdraw: (slot, id) => ipcRenderer.invoke('chat:withdraw', slot, id),
   chatAnswer: (slot, id, result) => ipcRenderer.send('chat:answer', slot, id, result),
   chatConfigure: (slot, change) => ipcRenderer.invoke('chat:configure', slot, change),
   chatMeasure: (slot) => ipcRenderer.invoke('chat:measure', slot),

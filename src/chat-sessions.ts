@@ -115,8 +115,9 @@ function loginShellPath(fallback: string): Promise<string> {
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system']);
+// its input, so the working line's count leaves tool input out. A prompt's lifecycle says when one
+// sent while Claude was busy is taken or withdrawn.
+const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: { type: string; event?: unknown }): boolean {
@@ -266,13 +267,14 @@ export function registerChatSessions(
     return session;
   }
 
-  // A prompt for this page's session.
+  // A prompt for this page's session, stamped with the uuid the session's queue reports it by.
   table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
-    host.send(slot, { kind: 'prompt', content });
+    const id = randomUUID();
+    host.send(slot, { kind: 'prompt', content, id });
     running(slot, projectPath).then(
-      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }),
+      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
   });
@@ -303,6 +305,14 @@ export function registerChatSessions(
       current: remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
+  });
+
+  // A prompt still waiting in the session's queue, taken back; false once the session has taken it.
+  // cancelAsyncMessage is on Query in the pinned SDK but missing from its types.
+  table.handle('chat:withdraw', async (_screen, slot: number, id: string): Promise<boolean> => {
+    const session = await sessions.get(slot)?.catch(() => undefined);
+    if (!session) return false;
+    return (session.query as Query & { cancelAsyncMessage(uuid: string): Promise<boolean> }).cancelAsyncMessage(id);
   });
 
   table.on('chat:interrupt', (_screen, slot: number) => {

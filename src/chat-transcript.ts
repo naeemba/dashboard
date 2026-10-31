@@ -6,6 +6,7 @@ import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 import { isRecord, stringOrEmpty } from './is-record';
 import type { PermissionAsk } from './chat-permission';
 import type { ChatPreferences } from './chat-sessions';
+import type { QueuedPrompt } from './chat-queue';
 
 // What main sends the chat pane, one per thing that happened in its session. `message` is an
 // SDKMessage as the Agent SDK yields it, or a line of a saved session read back for a resume; the two
@@ -13,8 +14,9 @@ import type { ChatPreferences } from './chat-sessions';
 export type ChatEvent =
   | { kind: 'message'; message: Record<string, unknown> }
   // A prompt sent from any screen. The session does not echo one back, so main does, and every screen
-  // shows what was asked rather than only the one it was typed on.
-  | { kind: 'prompt'; content: ChatContent }
+  // shows what was asked rather than only the one it was typed on. `id` is the uuid main stamped it
+  // with, which the session's command_lifecycle messages name it by.
+  | { kind: 'prompt'; content: ChatContent; id?: string }
   // A model or permission mode a screen picked, so every screen's foot says the same.
   | { kind: 'configured'; change: ChatPreferences }
   | { kind: 'ask'; ask: PermissionAsk }
@@ -84,10 +86,12 @@ export type Transcript = {
   started: number | null;
   // The agents, workflows and background commands running now (chat-tasks.ts).
   tasks: ChatTasks;
+  // Prompts sent while a turn ran, drawn grey under the conversation until the session takes them.
+  queued: QueuedPrompt[];
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [],
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], queued: [],
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -235,6 +239,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       return user(transcript, inner.content);
     }
     case 'stream_event': return streamed(transcript, message.event);
+    case 'command_lifecycle': return taken(transcript, message);
     case 'result': {
       const notice = resultNotice(message, transcript.entries.at(-1));
       const entries = notice ? [...transcript.entries, { kind: 'notice', text: notice } as const] : transcript.entries;
@@ -252,17 +257,33 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   }
 }
 
+// A queued prompt joins the conversation where the session read it: started in the next turn, or
+// folded into the running one, which reports it done without a start of its own. One withdrawn
+// leaves the screen. A prompt this screen never queued, sent while idle, is already drawn.
+function taken(transcript: Transcript, message: Record<string, unknown>): Transcript {
+  const waiting = transcript.queued.find((each) => each.id === message.command_uuid);
+  if (!waiting || message.state === 'queued') return transcript;
+  const queued = transcript.queued.filter((each) => each !== waiting);
+  if (message.state === 'cancelled') return { ...transcript, queued };
+  return applyEvent({ ...transcript, queued }, { kind: 'prompt', content: waiting.content });
+}
+
 export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript {
   if (event.kind === 'message') return applyMessage(transcript, event.message);
-  // A prompt sent while a turn runs joins that turn, so its count goes on.
+  // Sent while a turn runs, it waits in the session's queue rather than joining the turn.
+  if (event.kind === 'prompt' && transcript.busy && event.id !== undefined) {
+    return { ...transcript, queued: [...transcript.queued, { id: event.id, content: event.content }] };
+  }
+  // A prompt taken into a running turn joins it, so its count goes on.
   if (event.kind === 'prompt') {
     const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
     return { ...user(transcript, event.content), busy: true, ...fresh };
   }
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
-    // The tasks went with the process that ran them, and the next one never reports their end.
-    return { ...transcript, ...IDLE, tasks: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
+    // The tasks and the queued prompts went with the process that held them, and the next one never
+    // reports their end.
+    return { ...transcript, ...IDLE, tasks: [], queued: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
 }

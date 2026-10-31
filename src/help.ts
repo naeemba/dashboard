@@ -297,7 +297,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
     + 'a pane, as the project\'s main session. It starts when the project opens. '
     + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
-    + 'working and it is read when the turn gets to it. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
+    + 'working: the message waits grey under the conversation until the turn gets to it, and Up in the empty box takes the last one waiting back to edit. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
     + 'a thumbnail of each sits over the box, up to 5 MB of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
     + 'point Claude at a file. A PDF mentioned that way shows as a [PDF File] tile with its name, and so does one Claude reads, once its Read call is unfolded; a click or the image key opens it in the built-in PDF viewer, Escape puts it away, and one missing or over ' + PDF_LIMIT_SHOWN + ' says so on the tile. Up and Down on the box\'s first or last line bring back the prompts sent '
     + 'before. A slash opens the list of commands, the same ones claude has in a pane: its own, your '

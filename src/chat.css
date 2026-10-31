@@ -486,3 +486,20 @@
   padding: 4px 10px;
   border-left: 3px solid var(--yellow);
 }
+
+/* Prompts sent while Claude was busy, grey until the session takes them. */
+.chat-queued {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px;
+  color: var(--muted);
+}
+
+.chat-queued[hidden] {
+  display: none;
+}
+
+.chat-queued-prompt {
+  white-space: pre-wrap;
+}

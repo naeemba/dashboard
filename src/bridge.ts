@@ -181,6 +181,8 @@ export type DashboardBridge = {
   // what main does with each. A prompt is the content of one user message: text and pasted images.
   chatSend(slot: number, content: ChatContent): void;
   chatInterrupt(slot: number): void;
+  // A prompt sent while Claude was busy, taken back before the session reads it; false if it already has.
+  chatWithdraw(slot: number, id: string): Promise<boolean>;
   // The answer to an ask, by the id it arrived with.
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;

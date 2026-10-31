@@ -48,3 +48,17 @@ Plan mode is on the edits key, after accepting, the terminal's order. The plan a
 `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with
 it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
+
+## chat-decision-3: A message sent while Claude is busy waits in the session's own queue
+
+Main stamps every prompt with a uuid. The CLI queues one that arrives mid-turn itself and reports it
+by that uuid in `command_lifecycle` messages: `queued`, then `started` and `completed`, or `cancelled`.
+The screen draws a prompt sent while busy grey under the conversation and moves it into the
+conversation on any state past `queued`, since one folded into the running turn may report `completed`
+without a `started`. Up in the empty box withdraws the last one through `cancelAsyncMessage`, which
+answers false once the session has taken it.
+
+Neither the message type nor the method is in the pinned SDK's types (0.3.312); both were checked
+against it by sending two prompts into a running turn and cancelling the second: it was reported
+`cancelled` and never ran, the first ran after the turn. A screen that opens while a prompt waits
+does not see it: the queue lives in the session, and `chat:read` only reads the transcript.
