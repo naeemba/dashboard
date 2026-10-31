@@ -124,10 +124,11 @@ function loginShellPath(fallback: string): Promise<string> {
 // The messages the pane reads. The rest — hook progress, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
-// the pane draws its steps once each arrives whole. A rate limit event goes only when it says a limit
-// is near or hit: most say the plan is fine, one each time its percentage moves.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
+// its input, so the working line's count leaves tool input out. A prompt's lifecycle says when one
+// sent while Claude was busy is taken or withdrawn. A subagent's stream is left out too: the pane
+// draws its steps once each arrives whole. A rate limit event goes only when it says a limit is near
+// or hit: most say the plan is fine, one each time its percentage moves.
+const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: Record<string, unknown>): boolean {
@@ -263,7 +264,7 @@ export function registerChatSessions(
           // then the cleared one is not what the next launch should resume.
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
-          if (change.reset) host.send(slot, { kind: 'reset' });
+          if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
           const mode = modeOf(record);
           if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
@@ -299,13 +300,14 @@ export function registerChatSessions(
     return session;
   }
 
-  // A prompt for this page's session.
+  // A prompt for this page's session, stamped with the uuid the session's queue reports it by.
   table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
-    host.send(slot, { kind: 'prompt', content });
+    const id = randomUUID();
+    host.send(slot, { kind: 'prompt', content, id });
     running(slot, projectPath).then(
-      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }),
+      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
   });
@@ -352,6 +354,14 @@ export function registerChatSessions(
     };
   });
 
+  // A prompt still waiting in the session's queue, taken back; false once the session has taken it.
+  // cancelAsyncMessage is on Query in the pinned SDK but missing from its types.
+  table.handle('chat:withdraw', async (_screen, slot: number, id: string): Promise<boolean> => {
+    const session = await sessions.get(slot)?.catch(() => undefined);
+    if (!session) return false;
+    return (session.query as Query & { cancelAsyncMessage(uuid: string): Promise<boolean> }).cancelAsyncMessage(id);
+  });
+
   // /rename: the SDK writes the name into the conversation's file, where /resume's summary reads it
   // first. The refusal, or null once renamed.
   table.handle('chat:rename', async (_screen, slot: number, title: string): Promise<string | null> => {
@@ -363,7 +373,7 @@ export function registerChatSessions(
     return null;
   });
 
-  // /btw: a question answered from the conversation so far and never added to it (chat-decision-7).
+  // /btw: a question answered from the conversation so far and never added to it (chat-decision-8).
   // Null for no answer.
   table.handle('chat-side-question:ask', async (_screen, slot: number, question: string): Promise<string | null> => {
     const projectPath = host.projectPath(slot);
