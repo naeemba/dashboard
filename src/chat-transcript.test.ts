@@ -117,6 +117,15 @@ describe('applyMessage', () => {
     expect(transcript.live).toBe('');
   });
 
+  it('folds thinking to one line, and draws nothing for thinking with no text', () => {
+    const transcript = fold([assistant([
+      { type: 'thinking', thinking: 'Check the tests first.' },
+      { type: 'thinking', thinking: '' },
+      { type: 'redacted_thinking', data: 'x' },
+    ])]);
+    expect(transcript.entries).toEqual([{ kind: 'event', title: 'Thinking', body: 'Check the tests first.' }]);
+  });
+
   it('takes the model from init', () => {
     expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'init', model: 'opus' }).model).toBe('opus');
   });
@@ -282,7 +291,42 @@ describe('a prompt sent while busy', () => {
     expect(applyMessage(idle, lifecycle('i', 'started'))).toBe(idle);
   });
 
+  it('queues behind one still waiting after the turn ends', () => {
+    const idle = fold([{ type: 'result', subtype: 'success' }], waiting);
+    const behind = applyEvent(idle, { kind: 'prompt', content: [{ type: 'text', text: 'third' }], id: 'r' });
+    expect(behind.queued.map(({ id }) => id)).toEqual(['q', 'r']);
+    expect(behind.entries).toHaveLength(1);
+  });
+
   it('goes with a session that ends', () => {
     expect(applyEvent(waiting, { kind: 'ended', error: null }).queued).toEqual([]);
+  });
+});
+
+describe('the suggested next prompt', () => {
+  const suggested = fold([{ type: 'result', subtype: 'success' }, { type: 'prompt_suggestion', suggestion: 'run the tests' }]);
+
+  it('is held after the turn\'s result', () => expect(suggested.suggestion).toBe('run the tests'));
+
+  it('is dropped when a prompt is sent', () => {
+    expect(applyEvent(suggested, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }] }).suggestion).toBeNull();
+  });
+
+  it('is dropped when a turn nobody typed here starts', () => {
+    expect(applyMessage(suggested, delta('On it')).suggestion).toBeNull();
+    expect(applyMessage(suggested, assistant([{ type: 'text', text: 'On it' }])).suggestion).toBeNull();
+  });
+
+  it('is dropped by the next result and when the session ends', () => {
+    expect(applyMessage(suggested, { type: 'result', subtype: 'success' }).suggestion).toBeNull();
+    expect(applyEvent(suggested, { kind: 'ended', error: null }).suggestion).toBeNull();
+  });
+
+  it('survives a task update between turns', () => {
+    expect(applyMessage(suggested, { type: 'system', subtype: 'task_started', task_id: 'a' }).suggestion).toBe('run the tests');
+  });
+
+  it('is not held when it is blank', () => {
+    expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'prompt_suggestion', suggestion: '  ' }).suggestion).toBeNull();
   });
 });

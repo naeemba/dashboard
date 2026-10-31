@@ -61,6 +61,31 @@
   white-space: pre-wrap;
 }
 
+/* A long message you sent, folded: its first lines are the summary, the rest follows on unfolding. */
+.chat-folded summary {
+  display: block;
+  cursor: pointer;
+}
+
+.chat-folded summary p {
+  margin-bottom: 0;
+}
+
+.chat-folded > p {
+  margin-top: 0;
+}
+
+.chat-more {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.chat-folded[open] .chat-more {
+  display: none;
+}
+
 /* A message Claude Code injected — an agent finished, a subagent's report — folded to one quiet line. */
 .chat-event summary {
   cursor: pointer;

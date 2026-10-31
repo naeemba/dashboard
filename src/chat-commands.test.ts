@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { commandMenu, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, typedCommand, type CommandRow } from './chat-commands';
+import { commandMenu, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
 describe('screenCommand', () => {
   it('takes /resume and /plan for the screen', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
+    expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
@@ -83,6 +84,17 @@ describe('completion', () => {
   it('holds one on Tab, ready for more', () => expect(completion(row('compact'), false)).toEqual({ text: '/compact ', runs: false }));
   it('holds one that takes arguments even on Enter', () => {
     expect(completion(row('plan', { argumentHint: '[what]' }), true)).toEqual({ text: '/plan ', runs: false });
+  });
+});
+
+describe('tabFill', () => {
+  it('takes the picked command over the suggestion', () => {
+    expect(tabFill(row('compact'), '', 'fix the test')).toEqual({ kind: 'command', row: row('compact') });
+  });
+  it('leaves a typed box alone', () => expect(tabFill(null, 'half a prompt', 'fix the test')).toBeNull());
+  it('does nothing without a suggestion', () => expect(tabFill(null, '', null)).toBeNull());
+  it('fills an empty box with the suggestion', () => {
+    expect(tabFill(null, '', 'fix the test')).toEqual({ kind: 'suggestion', text: 'fix the test' });
   });
 });
 

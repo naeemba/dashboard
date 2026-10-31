@@ -3,13 +3,14 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
-import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
+import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
+import { rewind } from './chat-rewind-view';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
@@ -71,6 +72,9 @@ function next<T>(list: readonly T[], current: T): T {
   return list[(list.indexOf(current) + 1) % list.length];
 }
 
+// Swapped for Claude's suggested next prompt while there is one (paint).
+const PLACEHOLDER = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
+
 export function createChatView(options: ChatViewOptions): ChatView {
   const { bridge, slot } = options;
   const element = document.createElement('div');
@@ -89,7 +93,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
-  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
+  prompt.placeholder = PLACEHOLDER;
   prompt.rows = 3;
   prompt.dir = 'auto';
   const menu = createCommandMenu();
@@ -188,6 +192,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
     drawWorking();
+    const placeholder = transcript.suggestion ?? PLACEHOLDER;
+    if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
     queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
@@ -218,9 +224,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const fresh = drawEntry(entry);
       const old = drawn[index];
       if (old) {
-        if (old.element instanceof HTMLDetailsElement && fresh.element instanceof HTMLDetailsElement && old.element.open) {
-          fresh.element.open = true;
-        }
+        const freshFold = foldOf(fresh.element);
+        if (freshFold && foldOf(old.element)?.open) freshFold.open = true;
         old.element.replaceWith(fresh.element);
       } else {
         log.insertBefore(fresh.element, live);
@@ -285,6 +290,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
@@ -341,6 +347,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
     prompt.focus();
   }
   menu.onClick((row) => complete(row, true));
+
+  // Tab. The window's lookup takes it before the box does, so the command list's Tab arrives here too;
+  // the box's own Tab branch is for when this key is bound elsewhere. Only the prompt box takes the
+  // suggestion, not a question's answer box that has the keyboard.
+  function acceptSuggestion(): void {
+    const fill = tabFill(menu.open() ? menu.picked() : null, prompt.value, transcript.suggestion);
+    if (fill?.kind === 'command') return complete(fill.row, false);
+    if (!fill || document.activeElement !== prompt) return;
+    prompt.value = fill.text;
+    prompt.dispatchEvent(new Event('input'));
+  }
 
   function walkHistory(direction: -1 | 1): boolean {
     if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
@@ -562,6 +579,19 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
   }
 
+  // Refused under a running turn, as /resume is. A conversation put back holds its prompt in the box
+  // again, ready to edit and send, unless something was typed there meanwhile.
+  function showRewind(): void {
+    if (working(transcript, asks.length)) {
+      options.onNotice('Claude is still working. Escape stops it; then rewind.');
+      return;
+    }
+    void rewind(bridge, slot, options).then((text) => {
+      if (text !== undefined && !prompt.value.trim()) prompt.value = text;
+      focus();
+    });
+  }
+
   // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one
   // named after the command; the one chosen is what the next turn runs on, on every screen.
   function showModels(name: string): void {
@@ -638,12 +668,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'select-down') select(selected === null ? null : selected + 1);
       if (command === 'unfold') {
         const chosen = drawn[selected ?? -1]?.element;
-        if (chosen instanceof HTMLDetailsElement) chosen.open = !chosen.open;
+        const fold = chosen ? foldOf(chosen) : null;
+        if (fold) fold.open = !fold.open;
       }
       // Escape closes an open command list first, as in Claude Code. Otherwise always sent: this screen
       // may not know of a turn another one started, and interrupting an idle session does nothing.
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
+      if (command === 'suggestion') acceptSuggestion();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

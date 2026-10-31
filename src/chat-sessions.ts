@@ -1,4 +1,4 @@
-import type { ModelInfo, PermissionMode, PermissionResult, Query, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
 import { execFile } from 'node:child_process';
@@ -12,6 +12,7 @@ import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
+import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
@@ -117,7 +118,7 @@ function loginShellPath(fallback: string): Promise<string> {
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
 // its input, so the working line's count leaves tool input out. A prompt's lifecycle says when one
 // sent while Claude was busy is taken or withdrawn.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'command_lifecycle']);
+const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: { type: string; event?: unknown }): boolean {
@@ -158,10 +159,15 @@ export function registerChatSessions(
   const preferences = new Map<number, ChatPreferences>();
   const file = path.join(host.userData, 'chat-sessions.json');
   const remembered = rememberedSessions(file);
+  // Per project, the message a /rewind of the conversation resumes up to, until the next prompt's
+  // turn names the forked conversation. Any change of conversation drops it.
+  // ponytail: kept in memory, so an app restart before that prompt resumes the whole conversation.
+  const rewound = new Map<string, string>();
   // Read once, the first time a session starts, rather than at launch for a screen that may never be used.
   let shellPath: Promise<string> | undefined;
 
   function remember(projectPath: string, id: string | undefined): void {
+    rewound.delete(projectPath);
     if (id === undefined) delete remembered[projectPath];
     else remembered[projectPath] = id;
     try {
@@ -197,14 +203,22 @@ export function registerChatSessions(
       prompt: input,
       options: {
         cwd: projectPath,
-        resume,
+        ...resumeFrom(resume, rewound.get(projectPath)),
+        // What /rewind puts the code back from.
+        enableFileCheckpointing: true,
         model: preferences.get(slot)?.model ?? undefined,
         // The project's main session, as the terminal one was: the mode open() seeded or the screen
-        // chose, the dispatch prompt, and the name its workers SendMessage it by.
+        // chose, the dispatch prompt, and the name its workers SendMessage it by. Thinking is asked
+        // for as a summary, the text the pane folds into the conversation; left to the default, a
+        // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
         permissionMode: preferences.get(slot)?.permissionMode,
-        extraArgs: { name: mainSessionName(projectPath) },
+        extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
+        // the first turn, in plan mode, after an API error, near the usage limit, and when settings.json
+        // has promptSuggestionEnabled: false.
+        promptSuggestions: true,
         pathToClaudeCodeExecutable: executable,
         systemPrompt: { type: 'preset', preset: 'claude_code', append: mainPrompt(projectPath) },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
@@ -302,7 +316,9 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      current: remembered[projectPath] ?? null,
+      // With a cut pending, the conversation on screen is not the remembered one, so picking that one
+      // in /resume goes through chat:resume and puts it back whole.
+      current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
   });
@@ -353,13 +369,18 @@ export function registerChatSessions(
     return measureOf(context, models, usage);
   });
 
-  // What a screen opening this page needs to catch up: the conversation it would resume, read back
-  // from its transcript, the questions the session is waiting on, and the choices made so far.
-  table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
-    const projectPath = host.projectPath(slot);
+  // The conversation this page would resume, read back from its transcript, as far as a /rewind left it.
+  async function conversation(projectPath: string | undefined): Promise<Record<string, unknown>[]> {
     const sessionId = projectPath === undefined ? undefined : remembered[projectPath];
+    if (projectPath === undefined || sessionId === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
-    const messages = projectPath === undefined || sessionId === undefined ? [] : await getSessionMessages(sessionId, { dir: projectPath });
+    return rewoundTo(await getSessionMessages(sessionId, { dir: projectPath }), rewound.get(projectPath));
+  }
+
+  // What a screen opening this page needs to catch up: the conversation it would resume, the
+  // questions the session is waiting on, and the choices made so far.
+  table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
+    const messages = await conversation(host.projectPath(slot));
     // Taken after the read, so a question answered on another screen while it ran is not handed back
     // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
@@ -410,6 +431,32 @@ export function registerChatSessions(
     remember(projectPath, sessionId);
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
+  });
+
+  // The prompts /rewind lists.
+  table.handle('chat-prompts:read', async (_screen, slot: number): Promise<RewindPoint[]> => rewindPoints(await conversation(host.projectPath(slot))));
+
+  // A prompt picked in /rewind. The code goes back first, counted by a dry run, and a rewind that
+  // cannot put it back leaves the conversation alone too. The conversation goes back by closing the
+  // session and starting one that resumes up to the message before the prompt; before the first one
+  // there is nothing to resume, which is a new conversation. Every screen reads it back.
+  table.handle('chat:rewind', async (_screen, slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    let restored: RewindFilesResult | null = null;
+    if (choice.code) {
+      const { query } = await running(slot, projectPath);
+      const preview = await query.rewindFiles(point.id, { dryRun: true });
+      restored = preview.canRewind ? { ...preview, ...(await query.rewindFiles(point.id)) } : preview;
+    }
+    const conversationRewind = conversationAfterRewind(point, choice, restored);
+    if (conversationRewind === 'keep') return restored;
+    stop(slot);
+    if (conversationRewind === 'forget') remember(projectPath, undefined);
+    else rewound.set(projectPath, conversationRewind.cutAt);
+    host.send(slot, { kind: 'reset' });
+    running(slot, projectPath).catch(() => undefined);
+    return restored;
   });
 
   return {

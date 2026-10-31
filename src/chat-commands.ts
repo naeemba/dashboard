@@ -18,10 +18,11 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
+export type ScreenCommand = { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
+  { name: 'rewind', description: 'Put the code, the conversation or both back to just before an earlier prompt', argumentHint: '' },
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
@@ -32,6 +33,7 @@ export const SCREEN_COMMANDS: CommandRow[] = [
 export function screenCommand(text: string): ScreenCommand | null {
   const match = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(text.trim());
   if (match?.[1] === 'resume') return { kind: 'resume' };
+  if (match?.[1] === 'rewind') return { kind: 'rewind' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
   return null;
@@ -48,6 +50,14 @@ export function planSends(rest: string, imageCount: number): boolean {
 export function completion(row: CommandRow, enter: boolean): { text: string; runs: boolean } {
   const runs = enter && !row.argumentHint;
   return { text: `/${row.name}${runs ? '' : ' '}`, runs };
+}
+
+// What Tab fills the box with: the command picked in the open list, else the suggestion, and that only
+// into an empty box, so a half-typed prompt is never replaced.
+export function tabFill(picked: CommandRow | null, typed: string, suggestion: string | null):
+  { kind: 'command'; row: CommandRow } | { kind: 'suggestion'; text: string } | null {
+  if (picked) return { kind: 'command', row: picked };
+  return typed === '' && suggestion !== null ? { kind: 'suggestion', text: suggestion } : null;
 }
 
 // The rows the menu offers for what is in the box: only while it is a slash and a name with nothing

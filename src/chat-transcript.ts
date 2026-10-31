@@ -62,7 +62,8 @@ export type ChatEntry =
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
-  // A message Claude Code put in the conversation rather than a person (chat-events.ts), folded to its title.
+  // A message Claude Code put in the conversation rather than a person (chat-events.ts), or Claude's
+  // thinking, folded to its title.
   | { kind: 'event'; title: string; body: string };
 
 export type Transcript = {
@@ -88,14 +89,17 @@ export type Transcript = {
   tasks: ChatTasks;
   // Prompts sent while a turn ran, drawn grey under the conversation until the session takes them.
   queued: QueuedPrompt[];
+  // What Claude guesses you will ask next, sent after a turn's result; null once anything starts the
+  // next turn. Drawn in the empty box, and Tab puts it there.
+  suggestion: string | null;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], queued: [],
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], suggestion: null, queued: [],
 };
 
 // No turn running: nothing streaming, nothing counted.
-const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null } as const;
+const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null, suggestion: null } as const;
 
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
@@ -135,6 +139,9 @@ function assistant(transcript: Transcript, content: unknown): Transcript {
   const entries = transcript.entries.slice();
   for (const block of blocksOf(content)) {
     if (block.type === 'text' && text(block.text).trim()) entries.push({ kind: 'text', text: text(block.text) });
+    // Thinking folds to one line, like a message Claude Code injected. A redacted block, or one whose
+    // display was omitted, has no text and draws nothing.
+    if (block.type === 'thinking' && text(block.thinking).trim()) entries.push({ kind: 'event', title: 'Thinking', body: text(block.thinking) });
     if (block.type === 'tool_use') {
       entries.push({
         kind: 'tool', id: text(block.id), name: text(block.name),
@@ -226,7 +233,12 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
   if (typeof message.parent_tool_use_id === 'string') return transcript;
   const inner = isRecord(message.message) ? message.message : {};
+  // A turn under way, whoever started it, is past what the last one suggested.
+  if (transcript.suggestion !== null && (message.type === 'assistant' || message.type === 'user' || message.type === 'stream_event')) {
+    transcript = { ...transcript, suggestion: null };
+  }
   switch (message.type) {
+    case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
     case 'assistant': return assistant(transcript, inner.content);
     case 'user': {
       // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
@@ -271,7 +283,7 @@ function taken(transcript: Transcript, message: Record<string, unknown>): Transc
 // A prompt taken into a running turn joins it, so its count goes on.
 function joinTurn(transcript: Transcript, content: ChatContent): Transcript {
   const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
-  return { ...user(transcript, content), busy: true, ...fresh };
+  return { ...user(transcript, content), busy: true, suggestion: null, ...fresh };
 }
 
 export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript {
@@ -279,7 +291,7 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   // Sent while a turn runs, it waits in the session's queue rather than joining the turn; so does one
   // sent between a turn's result and the next queued prompt starting, which the session runs after it.
   if (event.kind === 'prompt' && event.id !== undefined && (transcript.busy || transcript.queued.length > 0)) {
-    return { ...transcript, queued: [...transcript.queued, { id: event.id, content: event.content }] };
+    return { ...transcript, queued: [...transcript.queued, { id: event.id, content: event.content }], suggestion: null };
   }
   if (event.kind === 'prompt') return joinTurn(transcript, event.content);
   if (event.kind === 'ended') {
