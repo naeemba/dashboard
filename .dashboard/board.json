@@ -56,6 +56,12 @@
           "title": "@ file autocomplete in the Claude pane's box",
           "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
           "priority": "high"
+        },
+        {
+          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
+          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
+          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
+          "priority": "high"
         }
       ]
     },
