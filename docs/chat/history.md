@@ -23,3 +23,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #115 — Time and model above each message
 - 2026-11-01 #112 — /branch carries on in a copy of the conversation, keeping the original
 - 2026-11-01 #111 — /diff reviews every file Claude changed in the conversation
+- 2026-11-01 #127 — Readline kill and yank keys in the box: Ctrl+W, U, K, Y and Alt+Y
