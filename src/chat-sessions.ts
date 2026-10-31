@@ -11,7 +11,7 @@ import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
-import { mcpServers, type McpAction, type McpServer } from './chat-mcp';
+import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
@@ -490,9 +490,7 @@ export function registerChatSessions(
   table.handle('chat-mcp:change', async (_screen, slot: number, name: string, action: McpAction): Promise<void> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
-    const { query } = await running(slot, projectPath);
-    if (action === 'reconnect') await query.reconnectMcpServer(name);
-    else await query.toggleMcpServer(name, action === 'enable');
+    await changeMcpServer((await running(slot, projectPath)).query, name, action);
   });
 
   return {

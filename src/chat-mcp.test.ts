@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mcpActions, mcpNotice, mcpRows, mcpServers, type McpServer } from './chat-mcp';
+import { changeMcpServer, mcpActions, mcpNotice, mcpRows, mcpServers, type McpServer } from './chat-mcp';
 
 const server = (name: string, extra: Partial<McpServer> = {}): McpServer => ({ name, status: 'connected', tools: 0, ...extra });
 
@@ -22,12 +22,14 @@ describe('mcpRows', () => {
       server('figma', { status: 'failed', error: 'timed out' }),
       server('docs', { status: 'needs-auth' }),
       server('playwright', { status: 'pending' }),
+      server('github', { tools: 2 }),
     ], '');
     expect(rows.map((row) => [row.name, row.detail])).toEqual([
       ['codegraph', 'connected · 1 tool'],
       ['figma', 'failed: timed out'],
       ['docs', 'needs sign-in'],
       ['playwright', 'connecting'],
+      ['github', 'connected · 2 tools'],
     ]);
   });
 
@@ -54,5 +56,20 @@ describe('mcpNotice', () => {
   it('names the server and what was done', () => {
     expect(mcpNotice(server('figma'), 'reconnect')).toBe('MCP server figma reconnected.');
     expect(mcpNotice(server('figma'), 'enable')).toBe('MCP server figma enabled.');
+  });
+});
+
+describe('changeMcpServer', () => {
+  const calls: unknown[][] = [];
+  const query = {
+    reconnectMcpServer: async (name: string) => { calls.push(['reconnect', name]); },
+    toggleMcpServer: async (name: string, enabled: boolean) => { calls.push(['toggle', name, enabled]); },
+  };
+
+  it('reconnects, disables or enables through the matching call', async () => {
+    await changeMcpServer(query, 'figma', 'reconnect');
+    await changeMcpServer(query, 'figma', 'disable');
+    await changeMcpServer(query, 'figma', 'enable');
+    expect(calls).toEqual([['reconnect', 'figma'], ['toggle', 'figma', false], ['toggle', 'figma', true]]);
   });
 });

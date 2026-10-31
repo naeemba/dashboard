@@ -211,7 +211,7 @@ export type DashboardBridge = {
   chatRewind(slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null>;
   // The session's MCP servers for /mcp, and reconnecting, disabling or enabling one of them.
   chatMcpServers(slot: number): Promise<McpServer[]>;
-  chatMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
+  chatChangeMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

@@ -1,5 +1,5 @@
-import type { McpServerStatus } from '@anthropic-ai/claude-agent-sdk';
-import { fuzzyScore } from './fuzzy';
+import type { McpServerStatus, Query } from '@anthropic-ai/claude-agent-sdk';
+import { fuzzyScore, ranked } from './fuzzy';
 import type { SearchRow } from './overlay';
 
 // /mcp on the Claude screen, as Claude Code's dialog: the session's MCP servers with how each one
@@ -26,14 +26,8 @@ export function mcpServers(statuses: McpServerStatus[]): McpServer[] {
 
 // The servers /mcp lists, in the session's order, or the ones matching what is typed, best first.
 export function mcpRows(servers: McpServer[], query: string): SearchRow<McpServer>[] {
-  // The sort is stable, so servers that score the same keep the session's order.
-  return servers
-    .flatMap((server) => {
-      const score = fuzzyScore(server.name, query);
-      return score === null ? [] : [{ server, score }];
-    })
-    .sort((one, other) => one.score - other.score)
-    .map(({ server }) => ({ name: server.name, detail: serverDetail(server), choice: server }));
+  return ranked(servers, (server) => server.name, query)
+    .map((server) => ({ name: server.name, detail: serverDetail(server), choice: server }));
 }
 
 function serverDetail(server: McpServer): string {
@@ -57,4 +51,11 @@ export function mcpActions(server: McpServer, query: string): SearchRow<McpActio
 export function mcpNotice(server: McpServer, action: McpAction): string {
   const done: Record<McpAction, string> = { reconnect: 'reconnected', disable: 'disabled', enable: 'enabled' };
   return `MCP server ${server.name} ${done[action]}.`;
+}
+
+// Which of the session's two calls an action is: reconnect, or toggle with enable meaning on.
+export function changeMcpServer(
+  query: Pick<Query, 'reconnectMcpServer' | 'toggleMcpServer'>, name: string, action: McpAction,
+): Promise<void> {
+  return action === 'reconnect' ? query.reconnectMcpServer(name) : query.toggleMcpServer(name, action === 'enable');
 }

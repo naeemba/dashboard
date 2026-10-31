@@ -24,7 +24,7 @@ export async function manageMcp(
       empty: 'Nothing to do matches.', glyph: () => 'claude',
     });
     if (action === undefined) return;
-    await bridge.chatMcpServer(slot, server.name, action);
+    await bridge.chatChangeMcpServer(slot, server.name, action);
     say.onNotice(mcpNotice(server, action));
   } catch (error) {
     say.onError(`MCP: ${failureText(error)}`);

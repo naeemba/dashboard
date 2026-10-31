@@ -84,7 +84,7 @@ const bridge: DashboardBridge = {
   chatPrompts: (slot) => ipcRenderer.invoke('chat-prompts:read', slot),
   chatRewind: (slot, point, choice) => ipcRenderer.invoke('chat:rewind', slot, point, choice),
   chatMcpServers: (slot) => ipcRenderer.invoke('chat-mcp:read', slot),
-  chatMcpServer: (slot, name, action) => ipcRenderer.invoke('chat-mcp:change', slot, name, action),
+  chatChangeMcpServer: (slot, name, action) => ipcRenderer.invoke('chat-mcp:change', slot, name, action),
   onChat: (listener) => ipcRenderer.on('chat:receive', (_event, slot, chatEvent) => listener(slot, chatEvent)),
 };
 
