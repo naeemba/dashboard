@@ -223,16 +223,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:58:49.156Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -416,6 +407,16 @@
               "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
             }
           ]
+        },
+        {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:59:58.928Z",
+          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
+          "pullRequest": 122
         }
       ]
     },
