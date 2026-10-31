@@ -1,6 +1,6 @@
 import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
-import { toolDiff, toolSummary } from './chat-tools';
+import { todoChecklist, toolDiff, toolSummary, type DiffLine } from './chat-tools';
 import { baseName } from './base-name';
 import { pdfMentions, pdfOfTool } from './chat-pdf';
 import { foldedMessage } from './chat-fold';
@@ -94,6 +94,19 @@ function preformatted(className: string, text: string): HTMLPreElement {
   return pre;
 }
 
+// A change as a block of lines, each marked kept, removed or added.
+export function diffBlock(diff: DiffLine[]): HTMLElement {
+  const pre = document.createElement('pre');
+  pre.className = 'chat-diff';
+  pre.append(...diff.map((line) => {
+    const row = document.createElement('span');
+    row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added', '…': 'diff-gap' }[line.sign];
+    row.textContent = line.sign === '…' ? '…\n' : `${line.sign} ${line.text}\n`;
+    return row;
+  }));
+  return pre;
+}
+
 // What a subagent did, under the call that started it: what it said, and each tool it called as its
 // one line. Nothing in it unfolds, since the selection keys walk only the main conversation; a
 // subagent's own subagent shows its steps under its line, indented. A subagent's every message redraws
@@ -128,12 +141,15 @@ function stepsOf(steps: ChatEntry[]): HTMLElement {
   return element;
 }
 
+const todoMark = { pending: '☐', in_progress: '◐', completed: '☑' };
+
 // The call itself, what a subagent it started did, then what came back. A file tool shows its change
-// as a diff, a plan put up for approval reads as the document it is; anything else shows its input,
+// as a diff, a plan put up for approval reads as the document it is, a TodoWrite list as a checklist; anything else shows its input,
 // which for Bash is the whole command rather than the first line the summary had room for.
 export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null, steps: ChatEntry[] = []): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
+  const todos = todoChecklist(name, input);
   const pdf = pdfOfTool(name, input);
   if (pdf) parts.push(pdfTile(pdf));
   if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
@@ -141,16 +157,18 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     plan.className = 'chat-plan chat-text';
     markdownInto(plan, input.plan);
     parts.push(plan);
-  } else if (diff) {
-    const pre = document.createElement('pre');
-    pre.className = 'chat-diff';
-    pre.append(...diff.map((line) => {
-      const row = document.createElement('span');
-      row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added', '…': 'diff-gap' }[line.sign];
-      row.textContent = line.sign === '…' ? '…\n' : `${line.sign} ${line.text}\n`;
-      return row;
+  } else if (todos) {
+    const list = document.createElement('ul');
+    list.className = 'chat-todos';
+    list.append(...todos.map((todo) => {
+      const item = document.createElement('li');
+      item.className = `todo-${todo.status}`;
+      item.textContent = `${todoMark[todo.status]} ${todo.text}`;
+      return item;
     }));
-    parts.push(withCopy(pre));
+    parts.push(list);
+  } else if (diff) {
+    parts.push(withCopy(diffBlock(diff)));
   } else {
     parts.push(withCopy(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2))));
   }
@@ -194,7 +212,7 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
 }
 
 // A message Claude Code injected, or Claude's thinking: one line with its title, unfolding to what it
-// said in markdown.
+// said in markdown; a failed hook's output unfolds as the terminal text it is.
 function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   const element = document.createElement('details');
   element.className = 'chat-entry chat-event';
@@ -205,7 +223,8 @@ function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   element.append(summary, body);
   element.addEventListener('toggle', () => {
     if (!element.open || body.childElementCount > 0) return;
-    markdownInto(body, entry.body);
+    if (entry.verbatim) body.append(withCopy(preformatted('chat-output chat-error', entry.body)));
+    else markdownInto(body, entry.body);
   });
   return { entry, element, fill: null };
 }

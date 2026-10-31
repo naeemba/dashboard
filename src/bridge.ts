@@ -1,6 +1,8 @@
 import type { ModelInfo, PermissionResult, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
+import type { ExportWrite } from './chat-export-target';
+import type { McpAction, McpServer } from './chat-mcp';
 import type { PdfRead } from './chat-pdf';
 import type { RewindChoice, RewindPoint } from './chat-rewind';
 import type { ChatMeasure } from './chat-status';
@@ -75,6 +77,10 @@ export type DashboardBridge = {
   openScrollback(slot: number, index: number, text: string): Promise<Handover>;
   // A path a pane printed, opened in the project's nvim. Main finds the file; file-open.ts holds how.
   openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
+  // Ctrl+G: the Claude box written to a file and opened in the page's nvim, answering the way
+  // openScrollback does; and the text saved there since the box last read it, or null.
+  openPrompt(slot: number, text: string): Promise<Handover>;
+  readPrompt(slot: number): Promise<string | null>;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;
@@ -182,6 +188,8 @@ export type DashboardBridge = {
   // what main does with each. A prompt is the content of one user message: text and pasted images.
   chatSend(slot: number, content: ChatContent): void;
   chatInterrupt(slot: number): void;
+  // A prompt sent while Claude was busy, taken back before the session reads it; false if it already has.
+  chatWithdraw(slot: number, id: string): Promise<boolean>;
   // A task in the strip, by its task id; backgrounding takes the tool call that started one, or none
   // for every foreground task, and says whether one matched.
   chatStopTask(slot: number, taskId: string): Promise<void>;
@@ -199,6 +207,9 @@ export type DashboardBridge = {
   chatCommands(slot: number): Promise<CommandRow[]>;
   // The project's files, for the list @ opens in the box.
   chatFiles(slot: number): Promise<string[]>;
+  // /export saving the conversation's text under a name in the project's folder; answers the path,
+  // or why it was refused.
+  chatExport(slot: number, name: string, text: string): Promise<ExportWrite>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
   // The prompts sent in the project's other recent conversations, one list per conversation, newest
@@ -207,10 +218,20 @@ export type DashboardBridge = {
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
+  // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
+  // False when there is no conversation yet to copy.
+  chatBranch(slot: number, title: string): Promise<boolean>;
+  // /rename: the refusal, or null once the conversation is renamed.
+  chatRename(slot: number, title: string): Promise<string | null>;
   // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;
   chatRewind(slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null>;
+  // The session's MCP servers for /mcp, and reconnecting, disabling or enabling one of them.
+  chatMcpServers(slot: number): Promise<McpServer[]>;
+  chatChangeMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
+  // /btw's answer, kept out of the conversation; null when there is none.
+  chatSideQuestion(slot: number, question: string): Promise<string | null>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

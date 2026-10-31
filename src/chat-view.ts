@@ -3,27 +3,35 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedFast, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
-import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
+import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, namedFast, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { editsHeading, sessionEdits } from './chat-diff';
+import { exportConversation } from './chat-export-view';
+import { diffBlock, drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
+import { askAside } from './chat-btw-view';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
+import { manageMcp } from './chat-mcp-view';
+import { renameConversation } from './chat-rename';
 import { rewind } from './chat-rewind-view';
+import { branch as branchConversation, chooseModel, resume } from './chat-screen-commands';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, imageDataUrl, isImageType, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  afterReset, applyEvent, EMPTY_TRANSCRIPT, imageDataUrl, isImageType, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
+import { promptParts, withdrawable } from './chat-queue';
+import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
 import { backgroundTarget, stopTarget } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
+import { imageOverlay, pdfOverlay, searchOverlay, viewerOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -42,6 +50,8 @@ export type ChatViewOptions = {
   onNotice(message: string): void;
   // A question arrived or the last one went, so whatever marks a project that wants you redraws.
   onWaiting(): void;
+  // Puts the page's nvim in front, starting it if it is not running: the editor key's last step.
+  showEditor(): void;
 };
 
 export type ChatView = {
@@ -88,7 +98,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const ask = createAskPanel((id, result) => {
     bridge.chatAnswer(slot, id, result);
     dropAsk(id);
-  });
+  }, bridge.openExternal);
   const attached = document.createElement('div');
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
@@ -105,7 +115,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
   const tasks = createTaskStrip();
-  element.append(log, tasks.element, activity, ask.element, menu.element, attached, prompt, foot);
+  const queue = createQueueStrip();
+  element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attached, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
@@ -128,9 +139,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // The project's files for the @ list, and the @ they were asked for.
   let files: string[] = [];
   let filesFor: number | null = null;
-  // Which sent prompt Up has brought back, and what was in the box before it did.
+  // Which sent prompt Up has brought back, what was in the box before it did, and the stash key's drafts.
   let recalled: number | null = null;
   let draft = '';
+  let stashed: string[] = [];
   // Bumped by a new conversation, so a read of the earlier one that comes back after it is dropped.
   let resets = 0;
 
@@ -178,7 +190,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
     if (!ticking) ticking = window.setInterval(drawWorking, 1000);
     activity.hidden = false;
-    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), transcript.streamed, transcript.thinking);
+    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), transcript.streamed, transcript.thinking, transcript.hook);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
@@ -201,6 +213,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const placeholder = transcript.suggestion ?? PLACEHOLDER;
     if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
+    queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
   }
 
@@ -295,17 +308,24 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function send(): void {
     let text = prompt.value.trim();
     if (!text && images.length === 0) return;
+    stashed = stashed.filter((each) => each !== text);
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'diff') return showDiff();
     if (own?.kind === 'rewind') return showRewind();
+    if (own?.kind === 'mcp') return void manageMcp(bridge, slot, options).then(focus);
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'fast') {
       const named = namedFast(own.rest, fast);
       if (named === undefined) return options.onNotice(`Fast mode has no ${own.rest}. Try on or off.`);
       return configure({ fast: named });
     }
+    if (own?.kind === 'export') return void exportConversation(bridge, slot, options, transcript.entries, own.rest).then(focus);
+    if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
+    if (own?.kind === 'btw') return showAside(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -392,14 +412,32 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function walkHistory(direction: -1 | 1): boolean {
     if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
-    const sent = sentPrompts(transcript.entries);
-    const moved = recall(sent.length, recalled, direction);
+    const walked = [...sentPrompts(transcript.entries), ...stashed];
+    const moved = recall(walked.length, recalled, direction);
     if (!moved) return false;
     if (recalled === null) draft = prompt.value;
     recalled = moved.at;
-    prompt.value = recalled === null ? draft : sent[recalled];
+    prompt.value = recalled === null ? draft : walked[recalled];
     // Not opened for a recalled command, so the next Up keeps walking the history.
     menu.update('', []);
+    return true;
+  }
+
+  // The last prompt still queued goes back in the box, its images over it, once main has taken it out
+  // of the session's queue; the session's cancelled lifecycle takes it off every screen.
+  // One at a time: an Up pressed again before main answers would ask to withdraw the same prompt.
+  let withdrawing = false;
+  function withdraw(): boolean {
+    const waiting = withdrawable(transcript.queued, prompt.value, images.length);
+    if (!waiting || withdrawing) return waiting !== null;
+    withdrawing = true;
+    bridge.chatWithdraw(slot, waiting.id).finally(() => { withdrawing = false; }).then((withdrawn) => {
+      if (!withdrawn) return options.onNotice('Claude has already read that message.');
+      const parts = promptParts(waiting.content);
+      prompt.value = prompt.value ? `${prompt.value}\n${parts.text}` : parts.text;
+      images = [...images, ...parts.images];
+      drawAttached();
+    }, (error: unknown) => options.onError(`Message not withdrawn: ${failureText(error)}`));
     return true;
   }
 
@@ -433,7 +471,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const row = menu.picked();
       if (row) complete(row, event.key === 'Enter');
     } else if (arrow !== 0) {
-      if (walkHistory(arrow)) event.preventDefault();
+      if ((arrow === -1 && withdraw()) || walkHistory(arrow)) event.preventDefault();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       send();
@@ -603,54 +641,56 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
-  // The project's earlier conversations in a search sheet; the one picked is read back on every
-  // screen and carried on by the next prompt.
-  function showResume(): void {
-    if (working(transcript, asks.length)) {
-      options.onNotice('Claude is still working. Escape stops it; then pick the conversation.');
-      return;
-    }
-    bridge.chatSessions(slot).then(async (found) => {
-      if (found.sessions.length === 0) return options.onNotice('This project has no earlier conversations.');
-      const picked = await searchOverlay({
-        name: 'chat-resume', placeholder: 'Search conversations', rows: (query) => resumeRows(found, query),
-        empty: 'No conversation matches.', glyph: () => 'claude',
-      });
-      if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
-      focus();
-    }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  // The screen's own commands, refused under a running turn but /model: a conversation changed then
+  // would end wherever the turn had got to. A conversation put back by /rewind holds its prompt in the
+  // box again, ready to edit and send, unless something was typed there meanwhile.
+  function refusedWhileWorking(then: string): boolean {
+    const busy = working(transcript, asks.length);
+    if (busy) options.onNotice(`Claude is still working. Escape stops it; then ${then}.`);
+    return busy;
   }
 
-  // Refused under a running turn, as /resume is. A conversation put back holds its prompt in the box
-  // again, ready to edit and send, unless something was typed there meanwhile.
+  function showResume(): void {
+    if (!refusedWhileWorking('pick the conversation')) void resume(bridge, slot, options).then(focus);
+  }
+
+  function branch(title: string): void {
+    if (!refusedWhileWorking('branch')) void branchConversation(bridge, slot, title, options).then(focus);
+  }
+
+  // Every file Claude changed in the conversation, each under a line naming it, on a sheet to read.
+  function showDiff(): void {
+    const files = sessionEdits(transcript.entries);
+    if (files.length === 0) return options.onNotice('Claude has not changed a file in this conversation.');
+    const review = document.createElement('div');
+    review.append(...files.flatMap((file) => {
+      const heading = document.createElement('div');
+      heading.className = 'chat-diff-file';
+      heading.textContent = editsHeading(file);
+      return [heading, diffBlock(file.lines)];
+    }));
+    viewerOverlay('diff-viewer', review);
+  }
+
   function showRewind(): void {
-    if (working(transcript, asks.length)) {
-      options.onNotice('Claude is still working. Escape stops it; then rewind.');
-      return;
-    }
+    if (refusedWhileWorking('rewind')) return;
     void rewind(bridge, slot, options).then((text) => {
       if (text !== undefined && !prompt.value.trim()) prompt.value = text;
       focus();
     });
   }
 
-  // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one
-  // named after the command; the one chosen is what the next turn runs on, on every screen.
+  // Asked beside a running turn too: the answer comes from the conversation so far and stays out of it.
+  function showAside(question: string): void {
+    if (!question) return options.onNotice('/btw needs a question after it.');
+    void askAside(bridge, slot, question, options).then(focus);
+  }
+
   function showModels(name: string): void {
-    bridge.chatModels(slot).then(async (models) => {
-      if (name) {
-        const named = namedModel(models, name);
-        if (named) configure({ model: pickedModel(named) });
-        else options.onNotice(`Claude has no model named ${name}. /model lists the ones it has.`);
-        return;
-      }
-      const picked = await searchOverlay({
-        name: 'chat-model', placeholder: 'Search models', rows: (query) => modelRows(models, model ?? transcript.model, query),
-        empty: 'No model matches.', glyph: () => 'claude',
-      });
+    void chooseModel(bridge, slot, name, model ?? transcript.model, options).then((picked) => {
       if (picked !== undefined) configure({ model: pickedModel(picked) });
       focus();
-    }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
+    });
   }
 
   // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
@@ -691,12 +731,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.
-  function clear(): void {
+  function clear(event: Extract<ChatEvent, { kind: 'reset' }>): void {
     resets++;
     for (const entry of drawn) entry.element.remove();
     nearScreen.disconnect();
     unfilled.clear();
-    transcript = EMPTY_TRANSCRIPT;
+    transcript = afterReset(transcript, event);
     drawn = [];
     drawnEntries = [];
     selected = null;
@@ -709,9 +749,27 @@ export function createChatView(options: ChatViewOptions): ChatView {
     render();
   }
 
+  // Once the editor key has written the box out, every return here asks for what nvim saved since.
+  let edited = false;
+  // Main is asked before the editor is shown, as with the scrollback key, so a cold nvim gets the
+  // file the moment it listens.
+  function editPrompt(): void {
+    edited = true;
+    bridge.openPrompt(slot, prompt.value).then((answer) => {
+      options.onError(answer.ok ? '' : answer.message);
+    }, (error: unknown) => options.onError(`The prompt was not opened: ${failureText(error)}`));
+    options.showEditor();
+  }
+
   function focus(): void {
     if (asks.length > 0) ask.focus();
     else prompt.focus();
+    if (!edited) return;
+    bridge.readPrompt(slot).then((text) => {
+      if (text === null) return;
+      prompt.value = text;
+      prompt.dispatchEvent(new Event('input'));
+    }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
   return {
@@ -729,7 +787,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       // A new conversation or one picked in /resume, from any screen: whatever the page is on now is
       // read back, which for a new one is nothing.
       if (event.kind === 'reset') {
-        clear();
+        clear(event);
         earlierRead = false;
         return readEarlier();
       }
@@ -755,10 +813,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'editor') editPrompt();
       if (command === 'history') showHistory();
       if (command === 'task-select') tasks.step();
       if (command === 'task-stop') stopTask();
       if (command === 'task-background') backgroundTask();
+      if (command === 'stash') {
+        stashed = stashDraft(stashed, stashedText(prompt.value, draft, recalled));
+        emptyBox();
+        focus();
+      }
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

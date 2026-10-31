@@ -33,7 +33,7 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
 // Enter and Escape answer every small dialog here, and a modified one answers none: Cmd+Enter is not
 // an answer to a question about deleting a card and its whole family, and a capital typed with Shift
 // still reaches a box to type in. One copy, so a dialog cannot forget the guard.
-function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape') => void): void {
+export function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape') => void): void {
   dialog.addEventListener('keydown', (event) => {
     if (isModified(event)) return;
     if (event.key !== 'Enter' && event.key !== 'Escape') return;
@@ -73,7 +73,8 @@ export function confirmOverlay(message: string, keysLine: string): Promise<boole
 export function imageOverlay(source: string): void {
   const image = document.createElement('img');
   image.src = source;
-  viewerOverlay('image-viewer', image, () => undefined);
+  const close = viewerOverlay('image-viewer', image);
+  image.addEventListener('click', close);
 }
 
 // A PDF in Chromium's own viewer, on the same sheet and with the same keys; the window turns plugins
@@ -89,7 +90,10 @@ export function pdfOverlay(pdf: Blob): void {
 // The viewer on screen, if any, for the Escape main hands over from the PDF's frame.
 let closeViewer: (() => void) | null = null;
 
-function viewerOverlay(name: string, shown: HTMLElement, closed: () => void): void {
+// Something shown on the sheet: Escape or Enter puts it away, and so does the dark margin. A click
+// inside is the shown thing's own, so a long read such as /diff's can be selected and copied; the
+// image, which has nothing to select, closes on its own click. Returns the close.
+export function viewerOverlay(name: string, shown: HTMLElement, closed: () => void = () => undefined): () => void {
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
     closeViewer = null;
@@ -106,11 +110,11 @@ function viewerOverlay(name: string, shown: HTMLElement, closed: () => void): vo
   }
   const { dialog, remove } = openOverlay(name, close);
   dialog.append(shown);
-  dialog.addEventListener('click', close);
   answerKeys(dialog, close);
   document.addEventListener('focusin', hold);
   closeViewer = close;
   dialog.focus();
+  return close;
 }
 
 // An Escape pressed while the PDF viewer has the keyboard. Its keys stay in its own frame and never

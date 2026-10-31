@@ -266,6 +266,21 @@
   opacity: 0.6;
 }
 
+.chat-todos {
+  margin: 6px 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+}
+
+.todo-in_progress {
+  font-weight: 600;
+}
+
+.todo-completed {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 /* The question over the prompt. Hidden with the attribute, and the display below would beat it. */
 .chat-ask {
   display: flex;
@@ -540,4 +555,34 @@
 .chat-plan {
   padding: 4px 10px;
   border-left: 3px solid var(--yellow);
+}
+
+.chat-diff-file {
+  margin-top: 10px;
+  font: 600 12.5px/1.5 var(--mono-font);
+}
+
+/* Prompts sent while Claude was busy, grey until the session takes them. */
+.chat-queued {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 30%;
+  overflow-y: auto;
+  padding: 4px 8px;
+  color: var(--muted);
+}
+
+.chat-queued[hidden] {
+  display: none;
+}
+
+.chat-queued-prompt {
+  white-space: pre-wrap;
+}
+
+/* /btw's answer: as long as Claude makes it; the sheet around it scrolls (dialogs.css). */
+.chat-btw-answer {
+  margin-bottom: 12px;
+  line-height: 1.5;
 }

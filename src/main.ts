@@ -26,7 +26,7 @@ import { peekBoard, writeBoard } from './board-store';
 import { readMarkets } from './markets-fetch';
 import { boardWatchers } from './board-watch';
 import { failureReporter, failureText } from './failure';
-import { dropScrollbackFiles, editorSocket, removeSocket } from './nvim-remote';
+import { dropWrittenFiles, editorSocket, removeSocket } from './nvim-remote';
 import { registerPaneChannels } from './pane-channels';
 import { registerChatSessions } from './chat-sessions';
 import { startHost, type HeldByMain } from './host-wiring';
@@ -1011,7 +1011,7 @@ app.on('will-quit', () => {
   chats.stopAll();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.
-  dropScrollbackFiles();
+  dropWrittenFiles();
   // A task child is spawned detached, in a process group of its own, so it outlives the app unless it
   // is killed here as well — five `npm test` runs still burning CPU with no window naming them.
   tasks.stop();

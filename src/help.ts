@@ -1,6 +1,6 @@
 import { type ActionGroup } from './actions';
 import { PDF_LIMIT_SHOWN } from './chat-pdf';
-import { HISTORY_CONVERSATIONS } from './chat-history';
+import { HISTORY_CONVERSATIONS, STASH_KEPT } from './chat-history';
 import { FOLD_SHOWN_LINES } from './chat-fold';
 import { labelled } from './icons';
 import { keycaps } from './keycaps';
@@ -298,17 +298,20 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'nothing is fetched until you click it), an edit as a diff. It runs in the project\'s folder with the '
     + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
     + 'a pane, as the project\'s main session. It starts when the project opens. '
+    + 'The boxes take the terminal\'s readline keys: deleting the word before the caret, back to the start of the line or on to its end keeps what went, and the yank key puts it back; kills one straight after another join into one, the yank-pop key straight after a yank swaps it for the kill before, and undo takes any of them back. '
     + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
-    + 'working and it is read when the turn gets to it. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
+    + 'working: the message waits grey under the conversation until the turn gets to it, and Up in the empty box takes the last one waiting back to edit. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
     + 'a thumbnail of each sits over the box, up to 5 MB of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
     + 'point Claude at a file; @ opens a list of the project\'s files that narrows as you type, and Tab or Enter puts the one picked in the box. A PDF mentioned that way shows as a [PDF File] tile with its name, and so does one Claude reads, once its Read call is unfolded; a click or the image key opens it in the built-in PDF viewer, Escape puts it away, and one missing or over ' + PDF_LIMIT_SHOWN + ' says so on the tile. Up and Down on the box\'s first or last line bring back the prompts sent '
-    + 'before, and the history key searches every prompt sent in the project\'s ' + HISTORY_CONVERSATIONS + ' most recent conversations, the terminal\'s too, and puts the one picked in the box. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
-    + 'there to edit or send, and typing anything else replaces it. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
+    + 'before, the stash key empties the box and Up brings the draft back first (the last ' + STASH_KEPT + ' stashed), and the history key searches every prompt sent in the project\'s ' + HISTORY_CONVERSATIONS + ' most recent conversations, the terminal\'s too, and puts the one picked in the box. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
+    + 'there to edit or send, and typing anything else replaces it. The editor key opens what is in the box in the project\'s nvim; '
+    + 'save it there and come back, and the box holds what you saved. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
-    + 'runs it, or fills the box when it takes arguments. Six are this screen\'s own: /model lists the session\'s models '
+    + 'runs it, or fills the box when it takes arguments. Twelve are this screen\'s own: /diff shows every change Claude made to a file in this conversation, file by file, on a sheet the arrows scroll and Escape puts away; /btw asks a side question, answered at once even mid-turn, from the conversation so far and without tools, in a sheet that Escape or Enter puts away and that never joins the conversation; /model lists the session\'s models '
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /effort lists auto and low to max the same way, for how hard Claude thinks from the next turn on; /fast and the fast key turn fast mode on or off, /fast on and /fast off set it, faster output from the same model at a higher price, and the foot adds fast to the model while it is on; /resume lists the project\'s earlier '
-    + 'conversations to carry on from, newest first with the one you are on marked and a box to search them, /rewind lists the prompts sent, newest first, and puts the code, the '
-    + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; and /plan switches '
+    + 'conversations to carry on from, newest first with the one you are on marked and a box to search them; /rewind lists the prompts sent, newest first, and puts the code, the '
+    + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; /rename names the conversation you are on, the name /resume then lists it by; /mcp lists the session\'s MCP servers with how each stands and reconnects, disables or enables the one picked; /branch carries on in a copy of '
+    + 'this conversation, called whatever follows it, if anything, and leaves the original in /resume; /export copies the conversation as text to the clipboard or saves it to a .txt file in the project\'s folder, or to the file named after it, never over one already there; and /plan switches '
     + 'to plan mode, sending anything after it as the prompt. /clear starts over like the new '
     + 'conversation key. The word ultrathink anywhere in a prompt asks for deeper thinking on that turn alone. '
     + 'Every tool call is folded to one line: a mark saying whether it is still running, worked or '
@@ -321,9 +324,12 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'it, which Claude reads. In plan mode Claude works the plan out without changing anything and puts '
     + 'it up in the same box: go ahead accepting edits, go ahead asking before each one, or keep '
     + 'planning, with what to change typed in. A question Claude asks you comes the same way, one question '
-    + 'at a time, with a row to type an answer of your own. If the window is behind something else when '
+    + 'at a time, with a row to type an answer of your own. A form an MCP server sends comes the same '
+    + 'way too, a field at a time, and a sign-in link it sends has a row to open it; every step of '
+    + 'either has a row to decline, and a required pick of several or a link that is not a web page has only that. '
+    + 'If the window is behind something else when '
     + 'either arrives, a notification says so and clicking it lands here. Escape stops Claude where it '
-    + 'is and declines anything it was asking; with the command list open it only closes the list. '
+    + 'is and gives up on anything it was asking; with the command list open it only closes the list. '
     + 'While Claude works, a line over the box says whether it is thinking, for how long and roughly '
     + 'how many tokens have come down, and its answer flows in a few characters at a time. What it '
     + 'thought is folded to a Thinking line in the conversation, unfolding to a summary of it. Above the working line, '

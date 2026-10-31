@@ -7,22 +7,28 @@ Claude has running.
 
 ## Files
 
-- Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`,
-  `chat-transcript.ts`, `chat-pdf.ts`
+- Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
+  `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
-  `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
+  `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-stamp.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
-  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`
+  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
+  `chat-line-editing.ts`,
+  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
+  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`
 - Styles: `chat.css`
 
 ## Scenarios
 
 - Given a tool needs a yes, when the session asks, then a box over the prompt holds the question until you answer it.
-- Given a turn is running, when you press Escape, then the turn is interrupted and any pending question declined.
+- Given an MCP server asks for a form or a sign-in link, when the session passes it on, then the same box walks the form a field at a time, or opens the link, and every step can decline; a yes or no or a pick opens on the server's default, a typed answer outside the field's bounds keeps the box open saying what it takes, a required multi-select or a link that is not http(s) can only be declined, an optional multi-select can also be skipped, and Escape or the session ending reaches the server as a cancel, not a decline; the server's other dialogs are not declared, so Claude Code keeps its own fallback.
+- Given a turn is running, when you press Escape, then the turn is interrupted and any pending question is given up on: a tool call is declined, a server form cancelled.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
+- Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
+- Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you type `/effort high`, when you send it, then the next turn runs at high and the foot says `high effort`; `ultrathink` in a prompt shows in the foot while its turn runs.
 - Given you type `/fast` or press Alt+F, when fast mode was off, then the session turns it on and the foot shows `· fast` after the model; again turns it off. `/fast on` and `/fast off` set it rather than toggle, and the foot starts from what the session reports, so one already fast from the settings file shows `· fast` from the first turn.
@@ -32,10 +38,22 @@ Claude has running.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.
 - Given a MultiEdit makes two edits, when its diff is drawn, then a dimmed "…" row sits between them, the same row that stands for skipped lines inside one edit.
+- Given Claude puts up a TodoWrite list, when its call is drawn, then the line says how many items are done and unfolds to a checklist: done items struck through, the one under way in bold by its "-ing" wording.
 - Given an Edit whose old and new text are the same, when it is drawn, then its input shows instead of an empty diff.
 - Given the project has earlier conversations, when you press Ctrl+R, then a search lists every prompt sent in the 20 most recent (`HISTORY_CONVERSATIONS`), newest first, this conversation's from the screen and the others read off disk only once they change, and the one picked goes in the box.
 - Given Claude has started a subagent, when you unfold its Agent call, then the subagent's own text and tool calls are listed under the call, a skill it loaded as one line and its prompt not repeated, a subagent of its own indented under its line; a conversation read back after a restart has none.
+- Given Claude has edited files in the conversation, when you send `/diff`, then a sheet lists each file it changed, in the order first touched, with each edit's change in turn under a heading counting the lines in and out across them; a failed or refused edit is not in it. A code-only `/rewind` keeps the conversation, so the edits it put back are still listed.
 - Given Claude edited files after a prompt, when you /rewind to it and restore code, then the files are as they were before it; restore conversation, and the conversation picks up from just before it with the prompt back in the box.
+- Given text in the box, when you press Ctrl+G, then it opens in the project's nvim, and once saved there and you come back, the box holds what you saved.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
+- Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
+- Given a half-written prompt in the box, when you press Alt+S, then the box empties and Up from the empty box brings the draft back before any sent prompt; the last 10 stashed are kept until they are sent.
+- Given Up showing an earlier prompt over a half-written draft, when you press Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question keeps the keyboard.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
+- Given an MCP server failed to connect, when you type /mcp and pick it, then Reconnect tries it again and Disable turns it off; a disabled one offers only Enable.
+- Given a conversation is on the screen, when you send `/rename Board drag fix`, then it is renamed and `/resume` lists it by that name; with no name or no conversation yet, it is refused.
+- Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.
+- Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both words come back as one; Alt+Y straight after swaps them for the kill before, and Ctrl+U and Ctrl+K kill to the line's start and end the same way.
+- Given a hook runs during a turn, when it starts, then the working line says `Running PreToolUse:Bash hook…` until it answers; a hook that fails leaves a folded `PreToolUse:Bash hook failed (exit 2)` line that unfolds to what it printed as terminal text (not markdown), and one that succeeds leaves nothing. A SessionStart hook failing before a resumed conversation is read back goes under that conversation, not in place of it.
+- Given a conversation on the screen, when you send `/export` and pick Copy to clipboard, then its text is on the clipboard, prompts behind `>` and each tool call one line; Save to file writes it to a dated `.txt` in the project's folder, and `/export notes` writes `notes.txt` there; a name outside the folder or already taken is refused and nothing is written.

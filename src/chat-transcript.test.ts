@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+  afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
 
-const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }] });
+const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
 
 const fold = (messages: Record<string, unknown>[], start: Transcript = EMPTY_TRANSCRIPT): Transcript =>
   messages.reduce(applyMessage, start);
@@ -227,6 +227,7 @@ describe('the prompt event', () => {
     const transcript = applyEvent(EMPTY_TRANSCRIPT, {
       kind: 'prompt',
       content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAA' } }, { type: 'text', text: 'what is this' }],
+      id: 'p',
     });
     expect(transcript.busy).toBe(true);
     expect(transcript.entries).toEqual([{ kind: 'user', text: 'what is this', images: [{ mediaType: 'image/png', data: 'AAA' }], at: expect.any(Number) }]);
@@ -266,6 +267,13 @@ describe('withEarlier', () => {
   it('drops it once something newer is on screen', () => {
     expect(withEarlier(prompted('now'), earlier).entries).toEqual([{ kind: 'user', text: 'now', images: [], at: expect.any(Number) }]);
   });
+  it('still draws it under a hook that failed before the read came back', () => {
+    const failed = applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'hook_response', hook_name: 'SessionStart:resume', outcome: 'error', stderr: 'no' });
+    expect(withEarlier(failed, earlier).entries).toEqual([
+      { kind: 'user', text: 'before', images: [] },
+      { kind: 'event', title: 'SessionStart:resume hook failed', body: 'no', verbatim: true },
+    ]);
+  });
 });
 
 describe('working', () => {
@@ -296,13 +304,15 @@ describe('the working line\'s count', () => {
     expect([ended.streamed, ended.thinking, ended.started]).toEqual([0, false, null]);
   });
 
-  it('goes on counting, from the same start, when a prompt is sent while the turn runs', () => {
+  it('goes on counting, from the same start, when the running turn takes a queued prompt', () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(1_000);
       const first = fold([delta('abcd')], prompted('hi'));
       vi.setSystemTime(5_000);
-      const joined = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }] });
+      const waiting = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }], id: 'q' });
+      const joined = applyMessage(waiting, { type: 'command_lifecycle', command_uuid: 'q', state: 'started' });
+      expect(joined.queued).toEqual([]);
       expect([first.started, fold([delta('ef')], joined).streamed, joined.started]).toEqual([1_000, 6, 1_000]);
     } finally {
       vi.useRealTimers();
@@ -329,13 +339,63 @@ describe('a message Claude Code injected', () => {
   });
 });
 
+describe('a prompt sent while busy', () => {
+  const lifecycle = (id: string, state: string) => ({ type: 'command_lifecycle', command_uuid: id, state });
+  const busy = prompted('first');
+  const waiting = applyEvent(busy, { kind: 'prompt', content: [{ type: 'text', text: 'second' }], id: 'q' });
+
+  it('waits in the queue instead of joining the turn', () => {
+    expect(waiting.queued).toEqual([{ id: 'q', content: [{ type: 'text', text: 'second' }] }]);
+    expect(waiting.entries).toHaveLength(1);
+  });
+
+  it('joins the conversation when the session takes it', () => {
+    const idle = fold([lifecycle('q', 'queued'), { type: 'result', subtype: 'success' }], waiting);
+    expect(idle.entries).toHaveLength(1);
+    const taken = applyMessage(idle, lifecycle('q', 'started'));
+    expect(taken.queued).toEqual([]);
+    expect(taken.busy).toBe(true);
+    expect(taken.entries.at(-1)).toEqual({ kind: 'user', text: 'second', images: [], at: expect.any(Number) });
+  });
+
+  it('leaves the screen when withdrawn', () => {
+    const withdrawn = applyMessage(waiting, lifecycle('q', 'cancelled'));
+    expect(withdrawn.queued).toEqual([]);
+    expect(withdrawn.entries).toHaveLength(1);
+  });
+
+  it('is drawn at once when sent while idle', () => {
+    const idle = applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }], id: 'i' });
+    expect(idle.queued).toEqual([]);
+    expect(applyMessage(idle, lifecycle('i', 'started'))).toBe(idle);
+  });
+
+  it('queues behind one still waiting after the turn ends', () => {
+    const idle = fold([{ type: 'result', subtype: 'success' }], waiting);
+    const behind = applyEvent(idle, { kind: 'prompt', content: [{ type: 'text', text: 'third' }], id: 'r' });
+    expect(behind.queued.map(({ id }) => id)).toEqual(['q', 'r']);
+    expect(behind.entries).toHaveLength(1);
+  });
+
+  it('goes with a session that ends', () => {
+    expect(applyEvent(waiting, { kind: 'ended', error: null }).queued).toEqual([]);
+  });
+
+  it('stays through the session\'s own /clear, and goes with a reset that stops the session', () => {
+    const cleared = afterReset(waiting, { kind: 'reset', sessionGoesOn: true });
+    expect([cleared.entries, cleared.queued.map(({ id }) => id)]).toEqual([[], ['q']]);
+    expect(applyMessage(cleared, lifecycle('q', 'started')).entries).toEqual([{ kind: 'user', text: 'second', images: [], at: expect.any(Number) }]);
+    expect(afterReset(waiting, { kind: 'reset' })).toBe(EMPTY_TRANSCRIPT);
+  });
+});
+
 describe('the suggested next prompt', () => {
   const suggested = fold([{ type: 'result', subtype: 'success' }, { type: 'prompt_suggestion', suggestion: 'run the tests' }]);
 
   it('is held after the turn\'s result', () => expect(suggested.suggestion).toBe('run the tests'));
 
   it('is dropped when a prompt is sent', () => {
-    expect(applyEvent(suggested, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }] }).suggestion).toBeNull();
+    expect(applyEvent(suggested, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }], id: 'p' }).suggestion).toBeNull();
   });
 
   it('is dropped when a turn nobody typed here starts', () => {
