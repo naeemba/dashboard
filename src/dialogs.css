@@ -73,6 +73,15 @@
   overflow-y: auto;
 }
 
+/* /btw's sheet. The focused box is what scrolls, so the arrow keys and PageDown reach a long answer;
+   align-self keeps a short one from stretching the box to its max-height. */
+.chat-btw-dialog {
+  align-self: flex-start;
+  max-width: 640px;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
 .card-detail-meta,
 .card-detail-footer,
 .card-detail-empty {

@@ -17,6 +17,8 @@ describe('screenCommand', () => {
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
     expect(screenCommand('/rename  board drag fix ')).toEqual({ kind: 'rename', rest: 'board drag fix' });
+    expect(screenCommand('/btw  what was that flag called? ')).toEqual({ kind: 'btw', rest: 'what was that flag called?' });
+    expect(screenCommand('/btw')).toEqual({ kind: 'btw', rest: '' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();

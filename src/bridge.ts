@@ -226,6 +226,8 @@ export type DashboardBridge = {
   // The session's MCP servers for /mcp, and reconnecting, disabling or enabling one of them.
   chatMcpServers(slot: number): Promise<McpServer[]>;
   chatChangeMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
+  // /btw's answer, kept out of the conversation; null when there is none.
+  chatSideQuestion(slot: number, question: string): Promise<string | null>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

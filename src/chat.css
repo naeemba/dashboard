@@ -565,3 +565,9 @@
 .chat-queued-prompt {
   white-space: pre-wrap;
 }
+
+/* /btw's answer: as long as Claude makes it; the sheet around it scrolls (dialogs.css). */
+.chat-btw-answer {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}

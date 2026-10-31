@@ -21,7 +21,7 @@ export type CommandRow = SlashCommand;
 
 export type ScreenCommand =
   | { kind: 'resume' } | { kind: 'diff' } | { kind: 'rewind' } | { kind: 'mcp' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
-  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string };
+  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'btw'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -35,6 +35,7 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   // No hint either: the name is optional, so Enter branches now.
   { name: 'branch', description: 'Carry on in a copy of this conversation, called whatever follows, if anything; the original stays in /resume', argumentHint: '' },
   { name: 'rename', description: 'Name this conversation; /resume lists it by that name', argumentHint: '<name>' },
+  { name: 'btw', description: 'Ask a side question about the conversation, answered without tools and kept out of it', argumentHint: '<question>' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -50,6 +51,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'rename') return { kind: 'rename', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'btw') return { kind: 'btw', rest: (match[2] ?? '').trim() };
   return null;
 }
 

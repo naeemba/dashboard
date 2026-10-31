@@ -52,6 +52,9 @@ export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionA
 // The conversations /resume offers, newest first, and the one this page is on.
 export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
 
+// The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
+type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };
+
 export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close(): void };
 
 // `stopped` is a close the app asked for — a project closed, a new conversation — which ends the
@@ -368,6 +371,15 @@ export function registerChatSessions(
     const { renameSession } = await import('@anthropic-ai/claude-agent-sdk');
     await renameSession(target.sessionId, target.title, { dir: projectPath });
     return null;
+  });
+
+  // /btw: a question answered from the conversation so far and never added to it (chat-decision-8).
+  // Null for no answer.
+  table.handle('chat-side-question:ask', async (_screen, slot: number, question: string): Promise<string | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    const { query } = await running(slot, projectPath);
+    return (await (query as unknown as SideQuestions).askSideQuestion(question))?.response ?? null;
   });
 
   // The prompts sent in the project's recent conversations, newest conversation first, for the history
