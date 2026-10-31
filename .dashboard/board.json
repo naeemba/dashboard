@@ -194,6 +194,12 @@
           "title": "Readline editing keys in the Claude pane's box",
           "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
           "priority": "low"
+        },
+        {
+          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
+          "title": "Draw TodoWrite as a checklist in the Claude pane",
+          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
+          "priority": "low"
         }
       ]
     },
