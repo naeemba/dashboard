@@ -45,9 +45,29 @@ describe('applyMessage', () => {
     expect(entry.kind === 'tool' && entry.result?.images).toEqual([{ mediaType: 'image/png', data: 'AAA' }]);
   });
 
-  it('leaves a subagent\'s own messages out', () => {
+  it('leaves out a subagent\'s message whose call is not listed', () => {
     const transcript = applyMessage(EMPTY_TRANSCRIPT, { ...assistant([{ type: 'text', text: 'inner' }]), parent_tool_use_id: 't1' });
-    expect(transcript.entries).toEqual([]);
+    expect(transcript).toBe(EMPTY_TRANSCRIPT);
+  });
+
+  it('folds a subagent\'s own steps into the call that started it, and its subagent\'s into its call', () => {
+    const under = (id: string, message: Record<string, unknown>) => ({ ...message, parent_tool_use_id: id });
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: { description: 'look' } }]),
+      under('a1', assistant([{ type: 'text', text: 'Reading it.' }, { type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: 'x' } }])),
+      under('a1', { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'r1', content: 'ok' }] } }),
+      under('a1', assistant([{ type: 'tool_use', id: 'a2', name: 'Agent', input: {} }])),
+      under('a2', assistant([{ type: 'text', text: 'deeper' }])),
+      under('a1', { type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'x' } } }),
+    ]);
+    const call = transcript.entries[0];
+    expect(transcript.entries).toHaveLength(1);
+    expect(transcript.live).toBe('');
+    expect(call.kind === 'tool' && call.steps).toEqual([
+      { kind: 'text', text: 'Reading it.' },
+      { kind: 'tool', id: 'r1', name: 'Read', input: { file_path: 'x' }, result: { text: '', images: [], isError: false } },
+      { kind: 'tool', id: 'a2', name: 'Agent', input: {}, result: null, steps: [{ kind: 'text', text: 'deeper' }] },
+    ]);
   });
 
   it('reads a prompt from a saved session as what you said', () => {

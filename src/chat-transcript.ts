@@ -56,7 +56,8 @@ export type ChatEntry =
   // screen would send it to Claude as a prompt.
   | { kind: 'user'; text: string; images: ChatImage[]; ran?: true }
   | { kind: 'text'; text: string }
-  | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null }
+  // `steps` is what a subagent the call started has done so far, its own conversation folded the same way.
+  | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null; steps?: ChatEntry[] }
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
@@ -220,10 +221,38 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
   return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
 }
 
+// A subagent's own message, folded into the steps of the call that started it, wherever that call
+// sits: a subagent's subagent is a call in its starter's steps. The same entries when no call has the id.
+function withSteps(entries: ChatEntry[], id: string, message: Record<string, unknown>): ChatEntry[] {
+  let changed = false;
+  const next = entries.map((entry) => {
+    if (entry.kind !== 'tool' || (entry.id !== id && !entry.steps)) return entry;
+    const steps = entry.id === id ? stepsAfter(entry.steps ?? [], message) : withSteps(entry.steps ?? [], id, message);
+    if (steps === entry.steps) return entry;
+    changed = true;
+    return { ...entry, steps };
+  });
+  return changed ? next : entries;
+}
+
+// A step's tool output is never drawn, only whether it failed, so it is not kept.
+function stepsAfter(steps: ChatEntry[], message: Record<string, unknown>): ChatEntry[] {
+  const inner = isRecord(message.message) ? message.message : {};
+  const subagent = { ...EMPTY_TRANSCRIPT, entries: steps };
+  const next = message.type === 'assistant' ? assistant(subagent, inner.content).entries : user(subagent, inner.content).entries;
+  return next.map((step) => (step.kind === 'tool' && step.result && (step.result.text || step.result.images.length > 0)
+    ? { ...step, result: { text: '', images: [], isError: step.result.isError } }
+    : step));
+}
+
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call
-// that started it and are left out: the call's folded line and its result say what it did.
+// that started it and go into that call's steps; only what it said and the tools it called are kept.
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
-  if (typeof message.parent_tool_use_id === 'string') return transcript;
+  if (typeof message.parent_tool_use_id === 'string') {
+    if (message.type !== 'assistant' && message.type !== 'user') return transcript;
+    const entries = withSteps(transcript.entries, message.parent_tool_use_id, message);
+    return entries === transcript.entries ? transcript : { ...transcript, entries };
+  }
   const inner = isRecord(message.message) ? message.message : {};
   // A turn under way, whoever started it, is past what the last one suggested.
   if (transcript.suggestion !== null && (message.type === 'assistant' || message.type === 'user' || message.type === 'stream_event')) {

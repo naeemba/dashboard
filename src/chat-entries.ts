@@ -92,10 +92,29 @@ function preformatted(className: string, text: string): HTMLPreElement {
   return pre;
 }
 
-// The call itself, then what came back. A file tool shows its change as a diff, a plan put up for
-// approval reads as the document it is; anything else shows its input, which for Bash is the whole
-// command rather than the first line the summary had room for.
-export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null): HTMLElement[] {
+// What a subagent did, under the call that started it: what it said, and each tool it called as its
+// one line. Nothing in it unfolds, since the selection keys walk only the main conversation; a
+// subagent's own subagent shows its steps under its line, indented.
+function stepsOf(steps: ChatEntry[]): HTMLElement {
+  const element = document.createElement('div');
+  element.className = 'chat-steps';
+  for (const step of steps) {
+    if (step.kind === 'tool') {
+      element.append(toolLine('div', step));
+      if (step.steps?.length) element.append(stepsOf(step.steps));
+      continue;
+    }
+    const drawn = drawEntry(step);
+    drawn.fill?.();
+    element.append(drawn.element);
+  }
+  return element;
+}
+
+// The call itself, what a subagent it started did, then what came back. A file tool shows its change
+// as a diff, a plan put up for approval reads as the document it is; anything else shows its input,
+// which for Bash is the whole command rather than the first line the summary had room for.
+export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null, steps: ChatEntry[] = []): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
   const pdf = pdfOfTool(name, input);
@@ -118,6 +137,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   } else {
     parts.push(withCopy(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2))));
   }
+  if (steps.length > 0) parts.push(stepsOf(steps));
   if (result) {
     if (result.text) parts.push(withCopy(preformatted(result.isError ? 'chat-output chat-error' : 'chat-output', result.text)));
     parts.push(...images(result.images));
@@ -125,10 +145,10 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   return parts;
 }
 
-function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
-  const element = document.createElement('details');
-  element.className = 'chat-entry chat-tool';
-  const summary = document.createElement('summary');
+// A call's one line: whether it finished, its name, and what it was about.
+function toolLine(tag: 'summary' | 'div', entry: Extract<ChatEntry, { kind: 'tool' }>): HTMLElement {
+  const line = document.createElement(tag);
+  if (tag === 'div') line.className = 'chat-step-tool';
   const [look, mark] = entry.result === null ? ['running', '…'] : entry.result.isError ? ['failed', '✗'] : ['', '✓'];
   const state = document.createElement('span');
   state.className = `chat-tool-state ${look}`.trim();
@@ -138,14 +158,20 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
   const about = document.createElement('span');
   about.className = 'chat-tool-summary';
   about.textContent = toolSummary(entry.name, entry.input);
-  summary.append(state, name, about);
-  element.append(summary);
+  line.append(state, name, about);
+  return line;
+}
+
+function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
+  const element = document.createElement('details');
+  element.className = 'chat-entry chat-tool';
+  element.append(toolLine('summary', entry));
   // The body is built the first time the call is unfolded, not before: most never are.
   let built = false;
   element.addEventListener('toggle', () => {
     if (!element.open || built) return;
     built = true;
-    element.append(...toolBody(entry.name, entry.input, entry.result));
+    element.append(...toolBody(entry.name, entry.input, entry.result, entry.steps));
   });
   return { entry, element, fill: null };
 }
