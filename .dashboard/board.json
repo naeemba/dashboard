@@ -397,16 +397,6 @@
           ]
         },
         {
-          "id": "10c74f29-5a69-4e57-84aa-5ac7593c182b",
-          "title": "Show Claude's suggested next prompt in the Claude pane's box",
-          "notes": "Turn on promptSuggestions: true in the chat session's query options (chat-sessions.ts). The session then emits a prompt_suggestion message (SDKPromptSuggestionMessage, sdk.d.ts:5898) after each turn's result. Hold the suggestion in the transcript; clear it on a new turn, a sent prompt or a reset (decision module plus test). Draw it as grey placeholder text in the empty box, like Claude Code; Tab accepts it into the box, typing replaces it. New key goes in actions.ts and help.ts. None arrives on the first turn, in plan mode, after an API error, near the usage limit, or with promptSuggestionEnabled: false in settings.json.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T21:57:09.390Z",
-          "branch": "work-board-card-10c74f29-5a69-4e57-84aa-5ac",
-          "pullRequest": 101
-        },
-        {
           "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
           "title": "@ file autocomplete in the Claude pane's box",
           "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
@@ -1274,6 +1264,22 @@
             {
               "at": "2026-10-31T21:46:16.448Z",
               "body": "Shipped in PR #100: each feature gets a docs folder with its rules, decisions and history; CLAUDE.md rules point at their ids. Review loop: 1 round, 4 low/nit findings fixed."
+            }
+          ]
+        },
+        {
+          "id": "10c74f29-5a69-4e57-84aa-5ac7593c182b",
+          "title": "Show Claude's suggested next prompt in the Claude pane's box",
+          "notes": "Turn on promptSuggestions: true in the chat session's query options (chat-sessions.ts). The session then emits a prompt_suggestion message (SDKPromptSuggestionMessage, sdk.d.ts:5898) after each turn's result. Hold the suggestion in the transcript; clear it on a new turn, a sent prompt or a reset (decision module plus test). Draw it as grey placeholder text in the empty box, like Claude Code; Tab accepts it into the box, typing replaces it. New key goes in actions.ts and help.ts. None arrives on the first turn, in plan mode, after an API error, near the usage limit, or with promptSuggestionEnabled: false in settings.json.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:14:36.634Z",
+          "branch": "work-board-card-10c74f29-5a69-4e57-84aa-5ac",
+          "pullRequest": 101,
+          "comments": [
+            {
+              "at": "2026-10-31T22:14:36.634Z",
+              "body": "Shipped in PR #101: the session turns on prompt suggestions, the pane holds the latest one and draws it as grey placeholder text in an empty box; Tab accepts it, typing replaces it, a new turn or reset clears it."
             }
           ]
         }
