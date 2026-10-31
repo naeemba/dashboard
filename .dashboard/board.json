@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
-          "title": "Open a subagent in the Claude pane to see its own steps",
-          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
           "title": "Real line diffs for edits in the Claude pane",
           "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
@@ -72,13 +65,6 @@
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
-          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
-          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
           "priority": "medium",
           "parent": null
         },
@@ -334,6 +320,16 @@
           ]
         },
         {
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:27:25.984Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108
+        },
+        {
           "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
           "title": "Review all of a session's edits in the Claude pane, like /diff",
           "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
@@ -378,6 +374,22 @@
             {
               "at": "2026-10-31T22:40:56.632Z",
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
+          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
+          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:47:51.646Z",
+          "branch": "work-board-card-0bef254c-8d96-4bc7-80b6-d3c",
+          "pullRequest": 116,
+          "comments": [
+            {
+              "at": "2026-10-31T22:47:51.595Z",
+              "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
             }
           ]
         }
@@ -1353,18 +1365,18 @@
           ]
         },
         {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
+          "title": "Open a subagent in the Claude pane to see its own steps",
+          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:48:43.962Z",
-          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
-          "pullRequest": 108,
+          "updatedAt": "2026-10-31T22:47:41.965Z",
+          "branch": "work-board-card-500744c0-85ce-42ef-9261-9fd",
+          "pullRequest": 107,
           "comments": [
             {
-              "at": "2026-10-31T22:48:43.962Z",
-              "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.13.0."
+              "at": "2026-10-31T22:47:41.965Z",
+              "body": "Shipped in PR #107: unfolding an Agent call lists the subagent's own text and tool calls, a skill it loaded as one line, a nested subagent indented under its line. Thinking stays out of a subagent's steps."
             }
           ]
         }
