@@ -92,6 +92,12 @@
           "title": "Search prompt history in the Claude pane, across sessions",
           "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
           "priority": "medium"
+        },
+        {
+          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
+          "title": "Branch the Claude pane's conversation, keeping the original",
+          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
+          "priority": "medium"
         }
       ]
     },
