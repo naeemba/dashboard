@@ -309,7 +309,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /effort lists auto and low to max the same way, for how hard Claude thinks from the next turn on; /resume lists the project\'s earlier '
     + 'conversations to carry on from, newest first with the one you are on marked and a box to search them; /rewind lists the prompts sent, newest first, and puts the code, the '
     + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; /branch carries on in a copy of '
-    + 'this conversation, called whatever follows it, if anything, and leaves the original in /resume; /export copies the conversation as text to the clipboard or saves it to a .txt file in the project\'s folder, or to the file named after it; and /plan switches '
+    + 'this conversation, called whatever follows it, if anything, and leaves the original in /resume; /export copies the conversation as text to the clipboard or saves it to a .txt file in the project\'s folder, or to the file named after it, never over one already there; and /plan switches '
     + 'to plan mode, sending anything after it as the prompt. /clear starts over like the new '
     + 'conversation key. The word ultrathink anywhere in a prompt asks for deeper thinking on that turn alone. '
     + 'Every tool call is folded to one line: a mark saying whether it is still running, worked or '

@@ -30,6 +30,10 @@ describe('exportFileName', () => {
   it('names the file by the time and first prompt', () => {
     expect(exportFileName('', entries, now)).toBe('2026-11-01-140509-fix-the-foot-please.txt');
   });
+  it('cuts a long first prompt at 50 characters, never ending on a hyphen', () => {
+    const long: ChatEntry[] = [{ kind: 'user', text: 'Rename every helper in the board view module sort of well', images: [] }];
+    expect(exportFileName('', long, now)).toBe('2026-11-01-140509-rename-every-helper-in-the-board-view-module-sort.txt');
+  });
   it('is the time alone with no prompt', () => {
     expect(exportFileName('', [], now)).toBe('2026-11-01-140509.txt');
   });

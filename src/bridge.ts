@@ -1,6 +1,7 @@
 import type { ModelInfo, PermissionResult, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatPreferences, ChatSessions, ChatState } from './chat-sessions';
 import type { CommandRow } from './chat-commands';
+import type { ExportWrite } from './chat-export-target';
 import type { PdfRead } from './chat-pdf';
 import type { RewindChoice, RewindPoint } from './chat-rewind';
 import type { ChatMeasure } from './chat-status';
@@ -199,8 +200,9 @@ export type DashboardBridge = {
   chatCommands(slot: number): Promise<CommandRow[]>;
   // The project's files, for the list @ opens in the box.
   chatFiles(slot: number): Promise<string[]>;
-  // /export saving the conversation's text under a name in the project's folder; answers the path.
-  chatExport(slot: number, name: string, text: string): Promise<string>;
+  // /export saving the conversation's text under a name in the project's folder; answers the path,
+  // or why it was refused.
+  chatExport(slot: number, name: string, text: string): Promise<ExportWrite>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
   // The prompts sent in the project's other recent conversations, one list per conversation, newest

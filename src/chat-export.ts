@@ -1,3 +1,4 @@
+import { localDate, pad } from './chat-stamp';
 import type { ChatEntry } from './chat-transcript';
 import { toolSummary } from './chat-tools';
 import { ranked } from './fuzzy';
@@ -41,14 +42,11 @@ export function conversationText(entries: ChatEntry[]): string {
   return `${entries.map(entryText).filter((text) => text.trim() !== '').join('\n\n')}\n`;
 }
 
-const twoDigits = (value: number) => String(value).padStart(2, '0');
-
 // The name a file is saved under: the one typed after /export, given `.txt` when it has no extension,
 // else Claude Code's own, the time and the first prompt's words, `2026-11-01-142530-fix-the-foot.txt`.
 export function exportFileName(typed: string, entries: ChatEntry[], now: Date): string {
   if (typed !== '') return /\.[^./\\]+$/.test(typed) ? typed : `${typed}.txt`;
-  const stamp = [now.getFullYear(), twoDigits(now.getMonth() + 1), twoDigits(now.getDate())].join('-')
-    + `-${twoDigits(now.getHours())}${twoDigits(now.getMinutes())}${twoDigits(now.getSeconds())}`;
+  const stamp = `${localDate(now)}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const first = entries.find((entry) => entry.kind === 'user')?.text ?? '';
   const words = (first.toLowerCase().match(/[a-z0-9]+/g) ?? []).join('-').slice(0, 50).replace(/-+$/, '');
   return `${stamp}${words ? `-${words}` : ''}.txt`;
