@@ -1,0 +1,15 @@
+# App: history
+
+One line per merged change: date, pull request, why.
+
+- 2026-09-03 #1 — Terminal dashboard v1: one window, a page per project
+- 2026-09-05 #3 — Open projects from a searchable list instead of a config file
+- 2026-09-05 #5 — Give the window Ghostty's header
+- 2026-09-06 #8 — Ask before closing and reopen where you left off
+- 2026-09-07 #14 — Ask the quit question without stopping the main process
+- 2026-09-08 #20 — One clamp, in one file, for every list
+- 2026-09-14 #34 — Close the project you are on
+- 2026-10-05 #69 — Update dependencies to latest; Electron Forge 8
+- 2026-10-06 #71 — Sign with a local certificate so folder access survives rebuilds
+- 2026-10-25 #81 — An application log, five files of 5 MB
+- 2026-10-31 #98 — Screenshots in the README

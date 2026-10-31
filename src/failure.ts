@@ -4,7 +4,7 @@
 // programs that is the right answer: nobody knows what state is left, so stop. Here it is the worst
 // outcome there is. Every pane is a shell that exists only inside this window — a test run, a deploy, an
 // agent halfway through a card — and none of it comes back. Closing the window on purpose asks first,
-// and CLAUDE.md calls Force Quit the one exit that takes the shells without asking. A stray rejection
+// and Force Quit is the one exit that takes the shells without asking. A stray rejection
 // from a five-second timer must not be a second one.
 //
 // So a failure that reaches here is said on the status bar and the app carries on. Something is broken,
@@ -12,7 +12,8 @@
 //
 // One exception, and it is the launch. Before a window has ever opened there is nothing to carry on
 // with — no shell exists, no project is open, nothing is in flight — and nowhere to print. A box then,
-// and exit, which is what docs/decisions.md already settled for an unreadable worktree record.
+// and exit, which is what errors-decision-2 (docs/errors/decisions.md) settled for an unreadable
+// worktree record.
 //
 // This is not the answer for a failure somebody did catch. A caught one is caught where the cost is
 // known, so the launch can decide to go on without that part: a .env that will not load costs the

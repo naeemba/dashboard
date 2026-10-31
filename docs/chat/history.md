@@ -1,0 +1,12 @@
+# Chat: history
+
+One line per merged change: date, pull request, why.
+
+- 2026-10-29 #83 — An Agent SDK session drawn as HTML (chat-decision-1)
+- 2026-10-29 #86 — Fix what it got wrong; slash commands, plan mode and /resume (chat-decision-2)
+- 2026-10-30 #87 — Model picker, full status line, dropped and viewable images
+- 2026-10-30 #90 — Working line, flowing text, cleaner foot, any file dropped
+- 2026-10-30 #94 — Draw ! commands properly, keep tool names whole, copy code blocks
+- 2026-10-30 #95 — Fold messages Claude Code injects into one line each
+- 2026-10-30 #97 — List running agents and tidy Claude Code's own messages
+- 2026-10-31 #99 — PDF attachments as a tile that opens in the built-in viewer
