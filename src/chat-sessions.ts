@@ -4,7 +4,7 @@ import { measureOf, type ChatMeasure } from './chat-status';
 import { rateLimitNotice } from './chat-notices';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { replaceFile } from './board-store';
 import path from 'node:path';
@@ -13,6 +13,7 @@ import type { Channels } from './channels';
 import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
+import { exportTarget, type ExportWrite } from './chat-export-target';
 import { elicitationAsk, elicitationResult } from './chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
@@ -332,6 +333,17 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     return projectFiles(projectPath);
+  });
+
+  // /export saving the conversation: the file goes in the project's folder, a name typed with a folder
+  // in it relative to there, never outside it and never over a file (exportTarget). Answers where it
+  // went, or the refusal as a value; it throws only when the write fails.
+  table.handle('chat-export:write', async (_screen, slot: number, name: string, text: string): Promise<ExportWrite> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return { refused: 'This page has no project folder to save into.' };
+    const target = exportTarget(projectPath, name, existsSync);
+    if ('path' in target) replaceFile(target.path, text);
+    return target;
   });
 
   // The models /model lists, as the session offers them; asking starts it, as the command list does.

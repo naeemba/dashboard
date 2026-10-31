@@ -16,6 +16,7 @@ describe('screenCommand', () => {
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
+    expect(screenCommand('/export notes.md')).toEqual({ kind: 'export', rest: 'notes.md' });
     expect(screenCommand('/rename  board drag fix ')).toEqual({ kind: 'rename', rest: 'board drag fix' });
     expect(screenCommand('/btw  what was that flag called? ')).toEqual({ kind: 'btw', rest: 'what was that flag called?' });
     expect(screenCommand('/btw')).toEqual({ kind: 'btw', rest: '' });

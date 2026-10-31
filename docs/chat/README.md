@@ -8,7 +8,7 @@ Claude has running.
 ## Files
 
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
-  `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`
+  `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-stamp.ts`
@@ -17,7 +17,7 @@ Claude has running.
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
-  `chat-hooks.ts`
+  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -55,3 +55,4 @@ Claude has running.
 - Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.
 - Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both words come back as one; Alt+Y straight after swaps them for the kill before, and Ctrl+U and Ctrl+K kill to the line's start and end the same way.
 - Given a hook runs during a turn, when it starts, then the working line says `Running PreToolUse:Bash hook…` until it answers; a hook that fails leaves a folded `PreToolUse:Bash hook failed (exit 2)` line that unfolds to what it printed as terminal text (not markdown), and one that succeeds leaves nothing. A SessionStart hook failing before a resumed conversation is read back goes under that conversation, not in place of it.
+- Given a conversation on the screen, when you send `/export` and pick Copy to clipboard, then its text is on the clipboard, prompts behind `>` and each tool call one line; Save to file writes it to a dated `.txt` in the project's folder, and `/export notes` writes `notes.txt` there; a name outside the folder or already taken is refused and nothing is written.

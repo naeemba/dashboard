@@ -62,13 +62,6 @@
           ]
         },
         {
-          "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
-          "title": "Export the Claude pane's conversation to clipboard or file",
-          "notes": "Claude Code: /export. Pane: none. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
@@ -1561,6 +1554,22 @@
             {
               "at": "2026-10-31T23:50:18.680Z",
               "body": "Shipped in PR #126: TodoWrite drawn as a checklist in the chat view. Version 2.29.0."
+            }
+          ]
+        },
+        {
+          "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
+          "title": "Export the Claude pane's conversation to clipboard or file",
+          "notes": "Claude Code: /export. Pane: none. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:54:44.488Z",
+          "branch": "work-board-card-75ebca95-a2d8-40cd-8eab-3fe",
+          "pullRequest": 125,
+          "comments": [
+            {
+              "at": "2026-10-31T23:54:44.488Z",
+              "body": "Shipped in #125: /export lists Copy to clipboard and Save to file; /export <name> saves straight to that file inside the project folder, never over an existing file. Needs app rebuild and a hand check."
             }
           ]
         }

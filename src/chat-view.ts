@@ -5,6 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { editsHeading, sessionEdits } from './chat-diff';
+import { exportConversation } from './chat-export-view';
 import { diffBlock, drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
@@ -315,6 +316,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'export') return void exportConversation(bridge, slot, options, transcript.entries, own.rest).then(focus);
     if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
     if (own?.kind === 'btw') return showAside(own.rest);
     if (own?.kind === 'plan') {
