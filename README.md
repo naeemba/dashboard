@@ -4,6 +4,14 @@ Keyboard-first terminal dashboard. Each project gets a page, shown several ways:
 
 The main session dispatches with `node "$DASHBOARD_SESSION"` (`claim`, `run`, `list`, `release`); a worker's hooks report back with `notify`. Ctrl+H on the terminals screen says the rest.
 
+![The terminals view: the main Claude session on the left, three workers on the right](docs/screenshots/terminals.png)
+
+| Board | Notes |
+|---|---|
+| ![A project's kanban board](docs/screenshots/board.png) | ![A project's notes page](docs/screenshots/notes.png) |
+
+![The manager: token use, what needs you, every open project and the latest board activity](docs/screenshots/manager.png)
+
 ## Setup
 
     cp .env.example .env   # optional: SHELL_COMMAND
