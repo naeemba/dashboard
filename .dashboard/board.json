@@ -334,16 +334,6 @@
           ]
         },
         {
-          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
-          "title": "Effort level and ultrathink in the Claude pane",
-          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:19:49.243Z",
-          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
-          "pullRequest": 105
-        },
-        {
           "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
           "title": "Search prompt history in the Claude pane, across sessions",
           "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
@@ -1341,17 +1331,33 @@
           ]
         },
         {
+          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+          "title": "Effort level and ultrathink in the Claude pane",
+          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:41:21.986Z",
+          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
+          "pullRequest": 105,
+          "comments": [
+            {
+              "at": "2026-10-31T22:41:21.986Z",
+              "body": "Shipped in PR #105: /effort command, effort level in the foot, ultrathink shown while its turn runs. Version 2.11.0."
+            }
+          ]
+        },
+        {
           "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
           "title": "Open a subagent in the Claude pane to see its own steps",
           "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:42:32.891Z",
+          "updatedAt": "2026-10-31T22:45:18.649Z",
           "branch": "work-board-card-500744c0-85ce-42ef-9261-9fd",
           "pullRequest": 107,
           "comments": [
             {
-              "at": "2026-10-31T22:42:32.891Z",
+              "at": "2026-10-31T22:45:18.649Z",
               "body": "Shipped in PR #107: unfolding an Agent call lists the subagent's own text and tool calls, a skill it loaded as one line, a nested subagent indented under its line. Thinking stays out of a subagent's steps."
             }
           ]
