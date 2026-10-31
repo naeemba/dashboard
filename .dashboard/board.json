@@ -62,6 +62,12 @@
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
           "priority": "high"
+        },
+        {
+          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+          "title": "Effort level and ultrathink in the Claude pane",
+          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+          "priority": "high"
         }
       ]
     },
