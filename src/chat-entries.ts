@@ -96,7 +96,8 @@ function preformatted(className: string, text: string): HTMLPreElement {
 // What a subagent did, under the call that started it: what it said, and each tool it called as its
 // one line. Nothing in it unfolds, since the selection keys walk only the main conversation; a
 // subagent's own subagent shows its steps under its line, indented. A subagent's every message redraws
-// its call, so a step already drawn is moved into the new body rather than rendered again.
+// its call, so a step already drawn is moved into the new body rather than rendered again; notices,
+// which can be one shared object, are drawn fresh.
 const drawnSteps = new WeakMap<ChatEntry, HTMLElement>();
 
 function stepsOf(steps: ChatEntry[]): HTMLElement {
@@ -106,6 +107,12 @@ function stepsOf(steps: ChatEntry[]): HTMLElement {
     if (step.kind === 'tool') {
       element.append(toolLine('div', step));
       if (step.steps?.length) element.append(stepsOf(step.steps));
+      continue;
+    }
+    // A notice is cheap to draw and may be one shared object (every "Stopped." is), and a cached
+    // element can sit in only one place, so notices are drawn fresh each time.
+    if (step.kind === 'notice') {
+      element.append(drawEntry(step).element);
       continue;
     }
     let drawn = drawnSteps.get(step);
