@@ -55,13 +55,6 @@
           "parent": null
         },
         {
-          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
-          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
-          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
@@ -392,6 +385,22 @@
             {
               "at": "2026-10-31T22:47:51.595Z",
               "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
+            }
+          ]
+        },
+        {
+          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
+          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
+          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:50:51.462Z",
+          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
+          "pullRequest": 118,
+          "comments": [
+            {
+              "at": "2026-10-31T22:50:51.462Z",
+              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
             }
           ]
         }
