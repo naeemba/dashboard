@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
-          "title": "Review all of a session's edits in the Claude pane, like /diff",
-          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
@@ -403,6 +396,22 @@
           "updatedAt": "2026-10-31T22:27:25.984Z",
           "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
           "pullRequest": 108
+        },
+        {
+          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
+          "title": "Review all of a session's edits in the Claude pane, like /diff",
+          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:34:19.959Z",
+          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
+          "pullRequest": 111,
+          "comments": [
+            {
+              "at": "2026-10-31T22:34:19.924Z",
+              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
+            }
+          ]
         }
       ]
     },
