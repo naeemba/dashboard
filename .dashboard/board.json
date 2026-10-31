@@ -34,20 +34,6 @@
           "parent": null
         },
         {
-          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
-          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
-          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -83,23 +69,9 @@
           "parent": null
         },
         {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
           "title": "Export the Claude pane's conversation to clipboard or file",
           "notes": "Claude Code: /export. Pane: none. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
-          "title": "Copy a whole Claude reply as markdown from the Claude pane",
-          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
           "priority": "low",
           "parent": null
         },
@@ -285,22 +257,6 @@
           ]
         },
         {
-          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
-          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
-          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:40:56.689Z",
-          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
-          "pullRequest": 114,
-          "comments": [
-            {
-              "at": "2026-10-31T22:40:56.632Z",
-              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
-            }
-          ]
-        },
-        {
           "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
           "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
           "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
@@ -383,6 +339,16 @@
           "updatedAt": "2026-10-31T23:09:49.584Z",
           "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
           "pullRequest": 127
+        },
+        {
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:12:15.674Z",
+          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+          "pullRequest": 128
         }
       ]
     },
@@ -1420,6 +1386,22 @@
           ]
         },
         {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:19.774Z",
+          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
+          "pullRequest": 122,
+          "comments": [
+            {
+              "at": "2026-10-31T23:03:19.774Z",
+              "body": "Shipped in PR #122: /rename names the conversation and /resume lists it by that name; with no name or no conversation yet, it is refused."
+            }
+          ]
+        },
+        {
           "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
@@ -1476,6 +1458,62 @@
             {
               "at": "2026-10-31T23:06:20.043Z",
               "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.19.0."
+            }
+          ]
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:44.713Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
+          "comments": [
+            {
+              "at": "2026-10-31T23:09:44.713Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.20.0. Needs a hand check in the rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
+          "title": "Queue a message sent while Claude is busy, shown grey until picked up",
+          "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:14:50.091Z",
+          "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
+          "pullRequest": 114,
+          "comments": [
+            {
+              "at": "2026-10-31T22:40:56.632Z",
+              "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            },
+            {
+              "at": "2026-10-31T23:12:10.371Z",
+              "body": "Shipped in PR #114: a message sent while Claude is busy waits grey in the session's queue until taken, Up in the empty box withdraws the last one, and the queue survives the session's own /clear. Version 2.21.0."
+            },
+            {
+              "at": "2026-10-31T23:14:50.091Z",
+              "body": "Version 2.22.0 after merging main again."
+            }
+          ]
+        },
+        {
+          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
+          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
+          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:17:16.681Z",
+          "branch": "work-board-card-1df5422d-060b-45f9-a931-f89",
+          "pullRequest": 113,
+          "comments": [
+            {
+              "at": "2026-10-31T23:17:16.681Z",
+              "body": "Shipped in PR #113: Ctrl+G opens the chat prompt in the project's nvim; saving there puts the text back in the box."
             }
           ]
         }
