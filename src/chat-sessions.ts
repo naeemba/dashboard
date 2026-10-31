@@ -401,11 +401,26 @@ export function registerChatSessions(
   // one, and a session resuming it starts at once. Every screen reads it back.
   table.on('chat:resume', (_screen, slot: number, sessionId: string) => {
     const projectPath = host.projectPath(slot);
-    if (projectPath === undefined) return;
+    if (projectPath !== undefined) carryOnIn(slot, projectPath, sessionId);
+  });
+
+  function carryOnIn(slot: number, projectPath: string, sessionId: string): void {
     stop(slot);
     remember(projectPath, sessionId);
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
+  }
+
+  // /branch: the conversation is copied into a new one and the page goes on in the copy the way
+  // /resume goes on in a picked one, so the original is left as it was and stays in /resume's list.
+  table.handle('chat:branch', async (_screen, slot: number, title: string): Promise<boolean> => {
+    const projectPath = host.projectPath(slot);
+    const current = projectPath === undefined ? undefined : remembered[projectPath];
+    if (projectPath === undefined || current === undefined) return false;
+    const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
+    const { sessionId } = await forkSession(current, { dir: projectPath, title: title || undefined });
+    carryOnIn(slot, projectPath, sessionId);
+    return true;
   });
 
   return {

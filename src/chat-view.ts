@@ -286,6 +286,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -553,6 +554,19 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
       focus();
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  }
+
+  // /branch: the page carries on in a copy of the conversation, read back on every screen; the
+  // original stays in /resume. Not mid-turn, for the copy would end wherever the turn had got to.
+  function branch(title: string): void {
+    if (working(transcript, asks.length)) {
+      options.onNotice('Claude is still working. Escape stops it; then branch.');
+      return;
+    }
+    bridge.chatBranch(slot, title).then((branched) => {
+      if (!branched) options.onNotice('Nothing to branch yet: send a prompt first.');
+      focus();
+    }, (error: unknown) => options.onError(`Conversation not branched: ${failureText(error)}`));
   }
 
   // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one

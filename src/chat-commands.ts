@@ -18,13 +18,15 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string };
+export type ScreenCommand = { kind: 'resume' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'branch'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
+  // No hint either: the name is optional, so Enter branches now.
+  { name: 'branch', description: 'Carry on in a copy of this conversation, named after it if a name follows; the original stays in /resume', argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -34,6 +36,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'resume') return { kind: 'resume' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
   return null;
 }
 

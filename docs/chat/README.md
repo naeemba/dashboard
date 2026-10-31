@@ -20,6 +20,7 @@ Claude has running.
 - Given a tool needs a yes, when the session asks, then a box over the prompt holds the question until you answer it.
 - Given a turn is running, when you press Escape, then the turn is interrupted and any pending question declined.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
+- Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.

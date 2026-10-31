@@ -197,6 +197,9 @@ export type DashboardBridge = {
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
+  // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
+  // False when there is no conversation yet to copy.
+  chatBranch(slot: number, title: string): Promise<boolean>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).
