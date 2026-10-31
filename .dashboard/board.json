@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
-          "title": "Real line diffs for edits in the Claude pane",
-          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
@@ -137,6 +130,13 @@
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
+          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
+          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -223,16 +223,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:50:40.941Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -398,6 +389,22 @@
             {
               "at": "2026-10-31T22:50:51.462Z",
               "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:56:12.260Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
             }
           ]
         }
@@ -1405,18 +1412,34 @@
           ]
         },
         {
+          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
+          "title": "Real line diffs for edits in the Claude pane",
+          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:53:44.987Z",
+          "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
+          "pullRequest": 110,
+          "comments": [
+            {
+              "at": "2026-10-31T22:53:44.987Z",
+              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.15.0."
+            }
+          ]
+        },
+        {
           "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
           "title": "Timestamp and model on each message in the Claude pane",
           "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T22:56:29.422Z",
+          "updatedAt": "2026-10-31T22:57:24.083Z",
           "branch": "work-board-card-5ab46333-ccde-4921-b84a-1e8",
           "pullRequest": 115,
           "comments": [
             {
-              "at": "2026-10-31T22:56:29.422Z",
-              "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.15.0. Not yet looked at in the running app."
+              "at": "2026-10-31T22:57:24.083Z",
+              "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
             }
           ]
         }
