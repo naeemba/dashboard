@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
 import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -347,10 +347,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // the box's own Tab branch is for when this key is bound elsewhere. Only the prompt box takes the
   // suggestion, not a question's answer box that has the keyboard.
   function acceptSuggestion(): void {
-    const row = menu.open() ? menu.picked() : null;
-    if (row) return complete(row, false);
-    if (document.activeElement !== prompt || prompt.value !== '' || transcript.suggestion === null) return;
-    prompt.value = transcript.suggestion;
+    const fill = tabFill(menu.open() ? menu.picked() : null, prompt.value, transcript.suggestion);
+    if (fill?.kind === 'command') return complete(fill.row, false);
+    if (!fill || document.activeElement !== prompt) return;
+    prompt.value = fill.text;
     prompt.dispatchEvent(new Event('input'));
   }
 
