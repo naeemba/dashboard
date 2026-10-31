@@ -320,22 +320,6 @@
           ]
         },
         {
-          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
-          "title": "Review all of a session's edits in the Claude pane, like /diff",
-          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:34:19.959Z",
-          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
-          "pullRequest": 111,
-          "comments": [
-            {
-              "at": "2026-10-31T22:34:19.924Z",
-              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
-            }
-          ]
-        },
-        {
           "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
@@ -1431,6 +1415,26 @@
             {
               "at": "2026-10-31T22:53:44.987Z",
               "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.15.0."
+            }
+          ]
+        },
+        {
+          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
+          "title": "Review all of a session's edits in the Claude pane, like /diff",
+          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:58:38.930Z",
+          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
+          "pullRequest": 111,
+          "comments": [
+            {
+              "at": "2026-10-31T22:34:19.924Z",
+              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
+            },
+            {
+              "at": "2026-10-31T22:58:38.930Z",
+              "body": "Shipped in PR #111: /diff reviews every file changed in the conversation. Merged after 3 review rounds."
             }
           ]
         }
