@@ -341,16 +341,6 @@
           ]
         },
         {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:27:25.984Z",
-          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
-          "pullRequest": 108
-        },
-        {
           "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
           "title": "Review all of a session's edits in the Claude pane, like /diff",
           "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
@@ -1350,6 +1340,22 @@
             {
               "at": "2026-10-31T22:41:21.986Z",
               "body": "Shipped in PR #105: /effort command, effort level in the foot, ultrathink shown while its turn runs. Version 2.11.0."
+            }
+          ]
+        },
+        {
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:46:23.590Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108,
+          "comments": [
+            {
+              "at": "2026-10-31T22:46:23.590Z",
+              "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.12.0."
             }
           ]
         }
