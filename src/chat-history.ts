@@ -1,4 +1,5 @@
 import type { ChatEntry } from './chat-transcript';
+import type { SearchRow } from './overlay';
 
 // The prompt box's Up and Down through what was sent before, the way the Claude Code terminal walks
 // its history. `at` is the prompt being shown, counted from the oldest, or null for the draft that was
@@ -23,4 +24,21 @@ export function onEdgeLine(text: string, caret: number, direction: -1 | 1): bool
 // `!` is left out: sent from here it would reach Claude as a prompt, not run.
 export function sentPrompts(entries: ChatEntry[]): string[] {
   return entries.flatMap((entry) => (entry.kind === 'user' && !entry.ran && entry.text.trim() ? [entry.text] : []));
+}
+
+// The project's prompts across its conversations, newest first and each once: what Ctrl+R searches,
+// as Claude Code's own reverse search does. `conversations` is newest first, each one's prompts
+// oldest first, as sentPrompts gives them.
+export function promptHistory(conversations: string[][]): string[] {
+  return [...new Set(conversations.flatMap((sent) => [...sent].reverse()))];
+}
+
+// What the search lists for what is typed: every prompt newest first, or the ones holding the typed
+// text, still newest first. Plain containment rather than fuzzy: a long prompt holds the letters of
+// almost any query in order.
+export function historyRows(prompts: string[], query: string): SearchRow<string>[] {
+  const typed = query.trim().toLowerCase();
+  return prompts
+    .filter((text) => text.toLowerCase().includes(typed))
+    .map((text) => ({ name: text.replace(/\s+/g, ' ').trim(), detail: '', choice: text }));
 }

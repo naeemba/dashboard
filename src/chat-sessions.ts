@@ -9,7 +9,8 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
+import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
+import { promptHistory, sentPrompts } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { fileCandidates } from './file-open';
@@ -111,6 +112,10 @@ function loginShellPath(fallback: string): Promise<string> {
     });
   });
 }
+
+// How many of the project's most recent conversations the prompt history search reads. Each is a
+// whole transcript off disk, so the oldest are left to /resume.
+const HISTORY_CONVERSATIONS = 20;
 
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
@@ -307,6 +312,26 @@ export function registerChatSessions(
       current: remembered[projectPath] ?? null,
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
+  });
+
+  // The prompts sent in the project's recent conversations, newest first, for the history search. Read
+  // from their transcripts as the screen reads its own back, so the terminal's conversations in the
+  // folder count too. A transcript is read again only once it has changed, so a second Ctrl+R costs
+  // the list and the conversation that moved on.
+  const promptsRead = new Map<string, { lastModified: number; prompts: string[] }>();
+  table.handle('chat-prompts:read', async (_screen, slot: number): Promise<string[]> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
+    const { getSessionMessages, listSessions } = await import('@anthropic-ai/claude-agent-sdk');
+    const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: HISTORY_CONVERSATIONS });
+    const conversations = await Promise.all(found.map(async ({ sessionId, lastModified }) => {
+      const kept = promptsRead.get(sessionId);
+      if (kept?.lastModified === lastModified) return kept.prompts;
+      const prompts = sentPrompts(withEarlier(EMPTY_TRANSCRIPT, await getSessionMessages(sessionId, { dir: projectPath })).entries);
+      promptsRead.set(sessionId, { lastModified, prompts });
+      return prompts;
+    }));
+    return promptHistory(conversations);
   });
 
   table.on('chat:interrupt', (_screen, slot: number) => {

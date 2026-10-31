@@ -23,3 +23,4 @@ Claude has running.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
+- Given the project has earlier conversations, when you press Ctrl+R, then a search lists every prompt sent in the 20 most recent, newest first, and the one picked goes in the box.

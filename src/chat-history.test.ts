@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { onEdgeLine, recall, sentPrompts } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 
 describe('recall', () => {
   it('walks back from the draft to the oldest prompt and stops there', () => {
@@ -28,5 +28,20 @@ describe('sentPrompts', () => {
   it('leaves out a command run with ! and blank prompts', () => {
     const user = (text: string, ran?: true) => ({ kind: 'user' as const, text, images: [], ...(ran ? { ran } : {}) });
     expect(sentPrompts([user('first'), user('! git push', true), user('  '), user('second')])).toEqual(['first', 'second']);
+  });
+});
+
+describe('promptHistory', () => {
+  it('puts the newest conversation and its newest prompt first, each prompt once', () => {
+    expect(promptHistory([['fix it', 'ship it'], ['plan', 'fix it']])).toEqual(['ship it', 'fix it', 'plan']);
+  });
+});
+
+describe('historyRows', () => {
+  it('keeps the prompts holding what is typed, in any case, newest first', () => {
+    expect(historyRows(['Ship it', 'plan', 'ship the board'], 'SHIP').map((row) => row.choice)).toEqual(['Ship it', 'ship the board']);
+  });
+  it('shows a prompt of several lines on one and fills the box with it whole', () => {
+    expect(historyRows(['one\ntwo'], '')).toEqual([{ name: 'one two', detail: '', choice: 'one\ntwo' }]);
   });
 });

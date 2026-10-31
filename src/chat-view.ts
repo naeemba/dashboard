@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
 import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { onEdgeLine, recall, sentPrompts } from './chat-history';
+import { historyRows, onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
@@ -575,6 +575,23 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
   }
 
+  // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
+  // picked goes in the box to edit or send, over whatever was there.
+  function showHistory(): void {
+    bridge.chatPrompts(slot).then(async (prompts) => {
+      if (prompts.length === 0) return options.onNotice('This project has no prompts sent yet.');
+      const picked = await searchOverlay({
+        name: 'chat-history', placeholder: 'Search prompts', rows: (query) => historyRows(prompts, query),
+        empty: 'No prompt matches.', glyph: () => 'claude',
+      });
+      if (picked !== undefined) {
+        prompt.value = picked;
+        prompt.dispatchEvent(new Event('input'));
+      }
+      focus();
+    }, (error: unknown) => options.onError(`Earlier prompts not listed: ${failureText(error)}`));
+  }
+
   // A new conversation, started on this screen or another: the old one leaves the screen.
   function clear(): void {
     resets++;
@@ -639,6 +656,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'history') showHistory();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

@@ -194,6 +194,8 @@ export type DashboardBridge = {
   chatCommands(slot: number): Promise<CommandRow[]>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
+  // The prompts sent in the project's recent conversations, newest first, for the history search.
+  chatPrompts(slot: number): Promise<string[]>;
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
