@@ -11,6 +11,7 @@ import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
+import { renameConversation } from './chat-rename';
 import { rewind } from './chat-rewind-view';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
@@ -296,6 +297,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;

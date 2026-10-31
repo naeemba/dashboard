@@ -12,6 +12,7 @@ import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
+import { renameTarget } from './chat-rename';
 import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
@@ -323,6 +324,13 @@ export function registerChatSessions(
     return (await running(slot, projectPath)).query.supportedModels();
   });
 
+  // The conversation the page is on. With a cut pending, the conversation on screen is not the
+  // remembered one, so picking that one in /resume goes through chat:resume and puts it back whole.
+  function onScreen(projectPath: string | undefined): string | null {
+    if (projectPath === undefined || rewound.has(projectPath)) return null;
+    return remembered[projectPath] ?? null;
+  }
+
   // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:
   // a worktree's are its own, so a worker's conversations do not crowd the project's.
   table.handle('chat:sessions', async (_screen, slot: number): Promise<ChatSessions> => {
@@ -331,11 +339,20 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      // With a cut pending, the conversation on screen is not the remembered one, so picking that one
-      // in /resume goes through chat:resume and puts it back whole.
-      current: rewound.has(projectPath) ? null : remembered[projectPath] ?? null,
+      current: onScreen(projectPath),
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
+  });
+
+  // /rename: the SDK writes the name into the conversation's file, where /resume's summary reads it
+  // first. The refusal, or null once renamed.
+  table.handle('chat:rename', async (_screen, slot: number, title: string): Promise<string | null> => {
+    const projectPath = host.projectPath(slot);
+    const target = renameTarget(onScreen(projectPath), title);
+    if ('refused' in target) return target.refused;
+    const { renameSession } = await import('@anthropic-ai/claude-agent-sdk');
+    await renameSession(target.sessionId, target.title, { dir: projectPath });
+    return null;
   });
 
   table.on('chat:interrupt', (_screen, slot: number) => {

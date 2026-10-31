@@ -204,6 +204,8 @@ export type DashboardBridge = {
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): void;
+  // /rename: the refusal, or null once the conversation is renamed.
+  chatRename(slot: number, title: string): Promise<string | null>;
   // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
   // null for a page with no project.
   chatPrompts(slot: number): Promise<RewindPoint[]>;
