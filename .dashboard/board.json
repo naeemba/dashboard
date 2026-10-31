@@ -126,16 +126,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "4ab7008b-7c2b-43ef-965f-fe0fac0e1c3e",
-          "title": "Show PDF attachments in the chat pane as a tile that opens in the built-in viewer",
-          "notes": "A user message mentioning a PDF (@path.pdf, relative to the session folder), or a Read call on a .pdf, shows a small [PDF File] tile like an image thumbnail. Click, or the image key, opens the PDF full size in an overlay with Chromium's built-in PDF viewer (window needs plugins: true). Claude's behavior unchanged: the @mention is still sent as is. Main reads the file only if it exists, ends in .pdf and is under a size cap; a missing file shows the tile with 'not found'. No in-chat page preview.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T16:01:21.285Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -221,6 +212,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "4ab7008b-7c2b-43ef-965f-fe0fac0e1c3e",
+          "title": "Show PDF attachments in the chat pane as a tile that opens in the built-in viewer",
+          "notes": "A user message mentioning a PDF (@path.pdf, relative to the session folder), or a Read call on a .pdf, shows a small [PDF File] tile like an image thumbnail. Click, or the image key, opens the PDF full size in an overlay with Chromium's built-in PDF viewer (window needs plugins: true). Claude's behavior unchanged: the @mention is still sent as is. Main reads the file only if it exists, ends in .pdf and is under a size cap; a missing file shows the tile with 'not found'. No in-chat page preview.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T16:11:04.923Z",
+          "branch": "work-board-card-4ab7008b-7c2b-43ef-965f-fe0",
+          "pullRequest": 99,
+          "comments": [
+            {
+              "at": "2026-10-31T16:11:04.923Z",
+              "body": "Shipped in PR #99: [PDF File] tile for @mentioned and Read PDFs, pdf:read in main (.pdf, file, at most 5 MB), viewer overlay with plugins on, version 2.5.0. Needs a hand check that the viewer renders the blob URL."
             }
           ]
         }
