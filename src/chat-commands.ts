@@ -27,7 +27,7 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
   // No hint either: the name is optional, so Enter branches now.
-  { name: 'branch', description: 'Carry on in a copy of this conversation, named after it if a name follows; the original stays in /resume', argumentHint: '' },
+  { name: 'branch', description: 'Carry on in a copy of this conversation, called whatever follows, if anything; the original stays in /resume', argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to

@@ -12,7 +12,7 @@ import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
-import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
+import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
 import { homedir } from 'node:os';
 import { failureText } from './failure';
@@ -435,13 +435,14 @@ export function registerChatSessions(
   }
 
   // /branch: the conversation is copied into a new one and the page goes on in the copy the way
-  // /resume goes on in a picked one, so the original is left as it was and stays in /resume's list.
+  // /resume goes on in a picked one, so the original is left as it was and stays in /resume's list. A
+  // rewind not yet carried on is kept: the copy stops at its cut.
   table.handle('chat:branch', async (_screen, slot: number, title: string): Promise<boolean> => {
     const projectPath = host.projectPath(slot);
     const current = projectPath === undefined ? undefined : remembered[projectPath];
     if (projectPath === undefined || current === undefined) return false;
     const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
-    const { sessionId } = await forkSession(current, { dir: projectPath, title: title || undefined });
+    const { sessionId } = await forkSession(current, forkFrom(projectPath, rewound.get(projectPath), title));
     carryOnIn(slot, projectPath, sessionId);
     return true;
   });

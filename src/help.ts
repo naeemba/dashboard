@@ -308,7 +308,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /resume lists the project\'s earlier '
     + 'conversations to carry on from, newest first with the one you are on marked and a box to search them; /rewind lists the prompts sent, newest first, and puts the code, the '
     + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; /branch carries on in a copy of '
-    + 'this conversation, named after it if a name follows, and leaves the original in /resume; and /plan switches '
+    + 'this conversation, called whatever follows it, if anything, and leaves the original in /resume; and /plan switches '
     + 'to plan mode, sending anything after it as the prompt. /clear starts over like the new '
     + 'conversation key. '
     + 'Every tool call is folded to one line: a mark saying whether it is still running, worked or '

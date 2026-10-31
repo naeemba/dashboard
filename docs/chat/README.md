@@ -13,7 +13,7 @@ Claude has running.
   `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
-  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`
+  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`
 - Styles: `chat.css`
 
 ## Scenarios
