@@ -428,6 +428,10 @@
   display: none;
 }
 
+.chat-task.selected {
+  background: var(--tint);
+}
+
 .chat-task-name {
   color: var(--white);
 }

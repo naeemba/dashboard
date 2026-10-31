@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
-          "title": "Stop or background a running task from the Claude pane's task strip",
-          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
@@ -1347,18 +1340,34 @@
           ]
         },
         {
+          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
+          "title": "Stop or background a running task from the Claude pane's task strip",
+          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:44:37.912Z",
+          "branch": "work-board-card-402cf14c-e128-4f04-bc92-39a",
+          "pullRequest": 109,
+          "comments": [
+            {
+              "at": "2026-10-31T22:44:37.912Z",
+              "body": "Shipped in PR #109: the task strip picks a task with Alt+T, stops it with Alt+X and backgrounds it with Alt+B (chat-decision-5). Version 2.12.0."
+            }
+          ]
+        },
+        {
           "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
           "title": "Real line diffs for edits in the Claude pane",
           "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:45:14.546Z",
+          "updatedAt": "2026-10-31T22:48:04.334Z",
           "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
           "pullRequest": 110,
           "comments": [
             {
-              "at": "2026-10-31T22:45:14.546Z",
-              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.12.0."
+              "at": "2026-10-31T22:48:04.334Z",
+              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.13.0."
             }
           ]
         }
