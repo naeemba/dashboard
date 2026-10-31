@@ -22,6 +22,24 @@ describe('applyMessage', () => {
     expect(done.entries).toEqual([{ kind: 'text', text: 'Hello' }]);
   });
 
+  it('stamps a message with when it was written and the model that wrote it', () => {
+    const transcript = fold([
+      { type: 'user', parent_tool_use_id: null, timestamp: '2026-11-01T09:00:00.000Z', message: { content: 'hi' } },
+      { ...assistant([{ type: 'text', text: 'Hello' }]), timestamp: '2026-11-01T09:00:05.000Z', message: { model: 'claude-opus-5-5', content: [{ type: 'text', text: 'Hello' }] } },
+    ]);
+    expect(transcript.entries).toEqual([
+      { kind: 'user', text: 'hi', images: [], at: Date.parse('2026-11-01T09:00:00.000Z') },
+      { kind: 'text', text: 'Hello', at: Date.parse('2026-11-01T09:00:05.000Z'), model: 'claude-opus-5-5' },
+    ]);
+  });
+
+  it('keeps the time but drops the model on a notice Claude Code wrote itself', () => {
+    const transcript = fold([
+      { ...assistant([{ type: 'text', text: 'Limit hit' }]), timestamp: '2026-11-01T09:00:05.000Z', message: { model: '<synthetic>', content: [{ type: 'text', text: 'Limit hit' }] } },
+    ]);
+    expect(transcript.entries).toEqual([{ kind: 'text', text: 'Limit hit', at: Date.parse('2026-11-01T09:00:05.000Z') }]);
+  });
+
   it('pairs a tool result with its call', () => {
     const transcript = fold([
       assistant([{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }]),
@@ -211,7 +229,7 @@ describe('the prompt event', () => {
       content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAA' } }, { type: 'text', text: 'what is this' }],
     });
     expect(transcript.busy).toBe(true);
-    expect(transcript.entries).toEqual([{ kind: 'user', text: 'what is this', images: [{ mediaType: 'image/png', data: 'AAA' }] }]);
+    expect(transcript.entries).toEqual([{ kind: 'user', text: 'what is this', images: [{ mediaType: 'image/png', data: 'AAA' }], at: expect.any(Number) }]);
   });
 });
 
@@ -239,7 +257,7 @@ describe('withEarlier', () => {
     expect(withEarlier(EMPTY_TRANSCRIPT, earlier).entries).toEqual([{ kind: 'user', text: 'before', images: [] }]);
   });
   it('drops it once something newer is on screen', () => {
-    expect(withEarlier(prompted('now'), earlier).entries).toEqual([{ kind: 'user', text: 'now', images: [] }]);
+    expect(withEarlier(prompted('now'), earlier).entries).toEqual([{ kind: 'user', text: 'now', images: [], at: expect.any(Number) }]);
   });
 });
 
