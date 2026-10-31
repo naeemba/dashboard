@@ -55,6 +55,7 @@ import { nextSectionMode } from './manager-sections';
 import { actionByName } from './actions';
 import { reportBoardWrites } from './board-writes';
 import { createJumps } from './jumps';
+import { editFocusedBox } from './chat-line-editing';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the
@@ -733,6 +734,7 @@ function apply(action: Action): void {
     case 'log-open':
     case 'log-filter-reset': return page.log?.runAction(action);
     case 'chat': return page.chat?.runCommand(action.command);
+    case 'chat-edit': return editFocusedBox(page.chat?.element, action.edit);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.
