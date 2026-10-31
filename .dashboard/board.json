@@ -395,16 +395,6 @@
           ]
         },
         {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:59:58.928Z",
-          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
-          "pullRequest": 122
-          },
-          {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
@@ -1452,6 +1442,22 @@
             {
               "at": "2026-10-31T22:57:24.083Z",
               "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
+            }
+          ]
+        },
+        {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:19.774Z",
+          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
+          "pullRequest": 122,
+          "comments": [
+            {
+              "at": "2026-10-31T23:03:19.774Z",
+              "body": "Shipped in PR #122: /rename names the conversation and /resume lists it by that name; with no name or no conversation yet, it is refused."
             }
           ]
         }
