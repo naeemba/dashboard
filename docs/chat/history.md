@@ -19,4 +19,5 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #108 — Ctrl+R searches the prompts of the project's recent conversations
 - 2026-11-01 #109 — Stop or background a running task from the strip (chat-decision-5)
 - 2026-11-01 #107 — Unfold an Agent call to see the subagent's own steps
+- 2026-11-01 #110 — Real line diffs for edits, far-apart changes shown apart
 - 2026-11-01 #111 — /diff reviews every file Claude changed in the conversation

@@ -99,8 +99,8 @@ export function diffBlock(diff: DiffLine[]): HTMLElement {
   pre.className = 'chat-diff';
   pre.append(...diff.map((line) => {
     const row = document.createElement('span');
-    row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added' }[line.sign];
-    row.textContent = `${line.sign} ${line.text}\n`;
+    row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added', '…': 'diff-gap' }[line.sign];
+    row.textContent = line.sign === '…' ? '…\n' : `${line.sign} ${line.text}\n`;
     return row;
   }));
   return pre;
