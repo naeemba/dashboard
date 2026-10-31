@@ -74,6 +74,13 @@
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "66f14bdd-63d4-44ae-99ae-106bb597be4f",
+          "title": "projects:open refuses by throwing, so the remote screen reads Electron's invoke prefix",
+          "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -262,22 +269,6 @@
             {
               "at": "2026-10-31T22:58:57.781Z",
               "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
-            }
-          ]
-        },
-        {
-          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
-          "title": "Show hook progress in the Claude pane",
-          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:05:43.117Z",
-          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
-          "pullRequest": 124,
-          "comments": [
-            {
-              "at": "2026-10-31T23:05:43.117Z",
-              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
             }
           ]
         },
@@ -1531,18 +1522,38 @@
           ]
         },
         {
+          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
+          "title": "Show hook progress in the Claude pane",
+          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:45:32.491Z",
+          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
+          "pullRequest": 124,
+          "comments": [
+            {
+              "at": "2026-10-31T23:05:43.117Z",
+              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
+            },
+            {
+              "at": "2026-10-31T23:45:32.490Z",
+              "body": "Shipped in PR #124: the working line names a running hook, and a failed hook leaves a folded line with its output. Version 2.28.0."
+            }
+          ]
+        },
+        {
           "id": "0640cf6c-2b69-4124-b1eb-844422424223",
           "title": "Draw TodoWrite as a checklist in the Claude pane",
           "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T23:47:01.384Z",
+          "updatedAt": "2026-10-31T23:48:53.306Z",
           "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
           "pullRequest": 126,
           "comments": [
             {
-              "at": "2026-10-31T23:47:01.384Z",
-              "body": "Shipped in PR #126: TodoWrite drawn as a checklist in the chat view. Version 2.28.0."
+              "at": "2026-10-31T23:48:53.306Z",
+              "body": "Shipped in PR #126: TodoWrite drawn as a checklist in the chat view. Version 2.29.0."
             }
           ]
         }

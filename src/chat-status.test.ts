@@ -57,6 +57,10 @@ describe('workingLine', () => {
   it('says thinking while a thinking block streams, and no tokens before any came', () => {
     expect(workingLine(3, 0, true)).toBe('Thinking… (3s)');
   });
+
+  it('names the hook running in place of what Claude is doing', () => {
+    expect(workingLine(3, 0, true, 'PostToolUse:Edit')).toBe('Running PostToolUse:Edit hook… (3s)');
+  });
 });
 
 describe('modelTone', () => {

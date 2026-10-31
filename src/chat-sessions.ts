@@ -122,19 +122,19 @@ function loginShellPath(fallback: string): Promise<string> {
   });
 }
 
-// The messages the pane reads. The rest — hook progress, task updates, and of the
-// streamed events everything but a block starting and text or thinking arriving — are left on this
-// side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out. A prompt's lifecycle says when one
-// sent while Claude was busy is taken or withdrawn. A subagent's stream is left out too: the pane
-// draws its steps once each arrives whole. A rate limit event goes only when it says a limit is near
-// or hit: most say the plan is fine, one each time its percentage moves.
+// The messages the pane reads. The rest — a hook's progress lines (it is named when it starts), task
+// updates, and of the streamed events everything but a block starting and text or thinking arriving —
+// are left on this side of the wire rather than sent to every screen on every token. A Write streams
+// the whole file as its input, so the working line's count leaves tool input out. A prompt's lifecycle
+// says when one sent while Claude was busy is taken or withdrawn. A subagent's stream is left out too:
+// the pane draws its steps once each arrives whole. A rate limit event goes only when it says a limit
+// is near or hit: most say the plan is fine, one each time its percentage moves.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: Record<string, unknown>): boolean {
   if (message.type === 'rate_limit_event') return rateLimitNotice(message) !== null;
-  if (message.type !== 'stream_event') return RELAYED.has(String(message.type));
+  if (message.type !== 'stream_event') return RELAYED.has(String(message.type)) && message.subtype !== 'hook_progress';
   if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
@@ -229,6 +229,9 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // Every hook's start and answer, not only SessionStart's: the working line names the one
+        // running and a failed one goes in the conversation (chat-hooks.ts).
+        includeHookEvents: true,
         // A subagent's text as well as its tool calls, so a call that started one can show its steps.
         forwardSubagentText: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on

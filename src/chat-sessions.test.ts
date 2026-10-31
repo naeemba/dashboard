@@ -60,6 +60,11 @@ describe('pathFromShell', () => {
 
 describe('relayed', () => {
   const streamed = (event: unknown) => ({ type: 'stream_event', event });
+  it('relays a hook starting and answering, not the lines it prints between', () => {
+    expect(relayed({ type: 'system', subtype: 'hook_started' })).toBe(true);
+    expect(relayed({ type: 'system', subtype: 'hook_progress' })).toBe(false);
+  });
+
   it('relays streamed text', () => {
     expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'a' } }))).toBe(true);
   });

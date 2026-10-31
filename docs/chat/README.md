@@ -16,7 +16,8 @@ Claude has running.
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
   `chat-line-editing.ts`,
-  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`
+  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
+  `chat-hooks.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -53,3 +54,4 @@ Claude has running.
 - Given a conversation is on the screen, when you send `/rename Board drag fix`, then it is renamed and `/resume` lists it by that name; with no name or no conversation yet, it is refused.
 - Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.
 - Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both words come back as one; Alt+Y straight after swaps them for the kill before, and Ctrl+U and Ctrl+K kill to the line's start and end the same way.
+- Given a hook runs during a turn, when it starts, then the working line says `Running PreToolUse:Bash hook…` until it answers; a hook that fails leaves a folded `PreToolUse:Bash hook failed (exit 2)` line that unfolds to what it printed as terminal text (not markdown), and one that succeeds leaves nothing. A SessionStart hook failing before a resumed conversation is read back goes under that conversation, not in place of it.

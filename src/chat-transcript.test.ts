@@ -260,6 +260,13 @@ describe('withEarlier', () => {
   it('drops it once something newer is on screen', () => {
     expect(withEarlier(prompted('now'), earlier).entries).toEqual([{ kind: 'user', text: 'now', images: [], at: expect.any(Number) }]);
   });
+  it('still draws it under a hook that failed before the read came back', () => {
+    const failed = applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'hook_response', hook_name: 'SessionStart:resume', outcome: 'error', stderr: 'no' });
+    expect(withEarlier(failed, earlier).entries).toEqual([
+      { kind: 'user', text: 'before', images: [] },
+      { kind: 'event', title: 'SessionStart:resume hook failed', body: 'no', verbatim: true },
+    ]);
+  });
 });
 
 describe('working', () => {
