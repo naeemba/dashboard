@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
-          "title": "Fold long user messages in the Claude pane's thread",
-          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
           "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
           "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
@@ -51,13 +44,6 @@
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
-          "priority": "high",
-          "parent": null
-        },
-        {
-          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
-          "title": "Effort level and ultrathink in the Claude pane",
-          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
           "priority": "high",
           "parent": null
         },
@@ -413,6 +399,16 @@
               "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
             }
           ]
+        },
+        {
+          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+          "title": "Effort level and ultrathink in the Claude pane",
+          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:19:49.243Z",
+          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
+          "pullRequest": 105
         }
       ]
     },
@@ -1282,6 +1278,22 @@
             {
               "at": "2026-10-31T22:14:36.634Z",
               "body": "Shipped in PR #101: the session turns on prompt suggestions, the pane holds the latest one and draws it as grey placeholder text in an empty box; Tab accepts it, typing replaces it, a new turn or reset clears it."
+            }
+          ]
+        },
+        {
+          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
+          "title": "Fold long user messages in the Claude pane's thread",
+          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:21:00.778Z",
+          "branch": "work-board-card-7f0c9af1-6692-4a9f-9607-5a8",
+          "pullRequest": 102,
+          "comments": [
+            {
+              "at": "2026-10-31T22:21:00.778Z",
+              "body": "PR #102 merged: a message you send over 12 lines shows its first 6 lines and a \"… N more lines\" row that a click or the unfold key opens; Claude still gets the whole text. Images and PDF tiles of a folded message stay visible below the fold."
             }
           ]
         }
