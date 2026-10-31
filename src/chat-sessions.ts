@@ -149,12 +149,19 @@ export function flagSettingsOf(change: ChatPreferences): { effortLevel?: EffortL
   return { ...('effort' in change && { effortLevel: change.effort ?? null }), ...(change.fast !== undefined && { fastMode: change.fast }) };
 }
 
-// What a restarted session is told through the flag layer about what was kept before the restart.
+// What a restarted session is told through the flag layer about what was chosen before the restart.
 // Auto effort: the effort option cannot say null, and a session started without it runs at the
-// settings file's level. Fast mode, whenever kept: it has no query option at all. Any other effort
-// rides the query option already.
-export function replayedFlagSettings(kept: ChatPreferences | undefined): ReturnType<typeof flagSettingsOf> {
-  return flagSettingsOf({ ...(kept?.effort === null && { effort: null }), fast: kept?.fast });
+// settings file's level. Fast mode, whenever chosen: it has no query option at all. Any other effort
+// rides the query option already. A fast mode the session only reported is not in `chosen`, so a
+// restart leaves it to the settings file rather than pinning it over them.
+export function replayedFlagSettings(chosen: ChatPreferences | undefined): ReturnType<typeof flagSettingsOf> {
+  return flagSettingsOf({ ...(chosen?.effort === null && { effort: null }), fast: chosen?.fast });
+}
+
+// What a screen opening the page starts from: the choices made, with the fast mode the session last
+// reported over them, since that is what it is on now.
+export function shownPreferences(chosen: ChatPreferences | undefined, reportedFast: boolean | undefined): ChatPreferences {
+  return { ...chosen, ...(reportedFast !== undefined && { fast: reportedFast }) };
 }
 
 // What a project's main session opens on. The conversation the terminal main left wins over one the
@@ -175,6 +182,9 @@ export function registerChatSessions(
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
   const preferences = new Map<number, ChatPreferences>();
+  // Per slot, the fast mode the session last reported, kept apart from the choices so a restart does
+  // not replay it. A choice clears it until the next report.
+  const reportedFast = new Map<number, boolean>();
   const file = path.join(host.userData, 'chat-sessions.json');
   const remembered = rememberedSessions(file);
   // Per project, the message a /rewind of the conversation resumes up to, until the next prompt's
@@ -272,7 +282,8 @@ export function registerChatSessions(
           if (change.reset) host.send(slot, { kind: 'reset' });
           // What the session reports it is on, so a screen opened later starts from it.
           const reported = reportedPreferences(record);
-          if (reported) preferences.set(slot, { ...preferences.get(slot), ...reported });
+          if (reported?.permissionMode) preferences.set(slot, { ...preferences.get(slot), permissionMode: reported.permissionMode });
+          if (reported?.fast !== undefined) reportedFast.set(slot, reported.fast);
           if (relayed(message)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
@@ -406,6 +417,7 @@ export function registerChatSessions(
 
   table.handle('chat:configure', async (_screen, slot: number, change: ChatPreferences) => {
     preferences.set(slot, { ...preferences.get(slot), ...change });
+    if (change.fast !== undefined) reportedFast.delete(slot);
     host.send(slot, { kind: 'configured', change });
     const session = await sessions.get(slot);
     if (!session) return;
@@ -446,7 +458,7 @@ export function registerChatSessions(
     // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
     const asks = running ? [...running.asks.values()].map((pending) => pending.ask) : [];
-    return { messages, asks, preferences: preferences.get(slot) ?? {} };
+    return { messages, asks, preferences: shownPreferences(preferences.get(slot), reportedFast.get(slot)) };
   });
 
   // A PDF the conversation names, for the tile that opens it. A mention is relative to the session's
@@ -534,7 +546,7 @@ export function registerChatSessions(
     },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
-    stop: (slot) => { stop(slot); preferences.delete(slot); },
+    stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
     stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
   };
 }

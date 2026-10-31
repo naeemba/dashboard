@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions } from './chat-sessions';
+import { flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, shownPreferences } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -105,10 +105,24 @@ describe('flagSettingsOf', () => {
 });
 
 describe('replayedFlagSettings', () => {
-  it('replays auto effort and a kept fast mode, and leaves any other effort to the query option', () => {
+  it('replays auto effort and a chosen fast mode, and leaves any other effort to the query option', () => {
     expect(replayedFlagSettings(undefined)).toEqual({});
     expect(replayedFlagSettings({ effort: 'high' })).toEqual({});
     expect(replayedFlagSettings({ effort: null, fast: false })).toEqual({ effortLevel: null, fastMode: false });
     expect(replayedFlagSettings({ effort: 'high', fast: true })).toEqual({ fastMode: true });
+  });
+
+  it('does not replay a fast mode the session only reported', () => {
+    const chosen = { permissionMode: 'auto' as const };
+    expect(shownPreferences(chosen, true)).toEqual({ permissionMode: 'auto', fast: true });
+    expect(replayedFlagSettings(chosen)).toEqual({});
+  });
+});
+
+describe('shownPreferences', () => {
+  it('puts the reported fast mode over the chosen one, and leaves the choice alone without a report', () => {
+    expect(shownPreferences({ fast: true }, false)).toEqual({ fast: false });
+    expect(shownPreferences({ fast: true }, undefined)).toEqual({ fast: true });
+    expect(shownPreferences(undefined, undefined)).toEqual({});
   });
 });
