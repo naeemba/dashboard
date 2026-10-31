@@ -33,6 +33,13 @@ describe('applyMessage', () => {
     ]);
   });
 
+  it('keeps the time but drops the model on a notice Claude Code wrote itself', () => {
+    const transcript = fold([
+      { ...assistant([{ type: 'text', text: 'Limit hit' }]), timestamp: '2026-11-01T09:00:05.000Z', message: { model: '<synthetic>', content: [{ type: 'text', text: 'Limit hit' }] } },
+    ]);
+    expect(transcript.entries).toEqual([{ kind: 'text', text: 'Limit hit', at: Date.parse('2026-11-01T09:00:05.000Z') }]);
+  });
+
   it('pairs a tool result with its call', () => {
     const transcript = fold([
       assistant([{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'ls' } }]),

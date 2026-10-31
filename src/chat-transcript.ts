@@ -72,7 +72,8 @@ export type Stamp = { at?: number; model?: string };
 function stampOf(message: Record<string, unknown>, inner: Record<string, unknown>): Stamp {
   const at = timeOf(text(message.timestamp));
   const model = text(inner.model);
-  return { ...(at === undefined ? {} : { at }), ...(model ? { model } : {}) };
+  // Claude Code's own notices (a session limit, an API error) say `<synthetic>`: no model wrote them.
+  return { ...(at === undefined ? {} : { at }), ...(model && model !== '<synthetic>' ? { model } : {}) };
 }
 
 export type Transcript = {
