@@ -3,6 +3,7 @@ import type { ChatContent } from './bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
+import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from './is-record';
 import { timeOf } from './age';
 import type { PermissionAsk } from './chat-permission';
@@ -98,17 +99,19 @@ export type Transcript = {
   started: number | null;
   // The agents, workflows and background commands running now (chat-tasks.ts).
   tasks: ChatTasks;
+  // The hook running now, for the working line (chat-hooks.ts); null with none.
+  hook: string | null;
   // What Claude guesses you will ask next, sent after a turn's result; null once anything starts the
   // next turn. Drawn in the empty box, and Tab puts it there.
   suggestion: string | null;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], suggestion: null,
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], hook: null, suggestion: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
-const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null, suggestion: null } as const;
+const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null, hook: null, suggestion: null } as const;
 
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
@@ -237,6 +240,13 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
   return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
 }
 
+function withHook(transcript: Transcript, message: Record<string, unknown>, hook: string | null): Transcript {
+  const failure = hookFailure(message);
+  if (!failure && hook === transcript.hook) return transcript;
+  const entries = failure ? [...transcript.entries, { kind: 'event' as const, ...failure }] : transcript.entries;
+  return { ...transcript, hook, entries };
+}
+
 // A user message: its tool results reach their calls, and one Claude Code wrote rather than a person
 // folds to the one line it is, or to nothing.
 function userMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
@@ -314,6 +324,10 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       }
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
+      }
+      {
+        const hook = runningHook(message);
+        if (hook !== undefined) return withHook(transcript, message, hook);
       }
       return withTasks(transcript, message);
     default: return transcript;

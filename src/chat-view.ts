@@ -176,7 +176,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
     if (!ticking) ticking = window.setInterval(drawWorking, 1000);
     activity.hidden = false;
-    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), transcript.streamed, transcript.thinking);
+    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), transcript.streamed, transcript.thinking, transcript.hook);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
