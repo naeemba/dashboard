@@ -44,6 +44,10 @@ one is picked the foot says `default effort` and no row is marked, because the s
 the level in the settings file, which the screen does not read. Auto is not that: it clears the flag
 layer, which puts the session on the model's default over the settings level, and a restart after it
 sends the same clear, since the start option cannot say null.
+`/diff` is the screen's too: the SDK has no review of a session's edits, so the screen builds one from
+the conversation's own Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so
+it shows what Claude changed and nothing else in the folder. The transcript is all it reads, so a
+code-only `/rewind`, which leaves the conversation alone, leaves the edits it put back on the sheet.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.
