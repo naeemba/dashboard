@@ -52,6 +52,14 @@ export function completion(row: CommandRow, enter: boolean): { text: string; run
   return { text: `/${row.name}${runs ? '' : ' '}`, runs };
 }
 
+// What Tab fills the box with: the command picked in the open list, else the suggestion, and that only
+// into an empty box, so a half-typed prompt is never replaced.
+export function tabFill(picked: CommandRow | null, typed: string, suggestion: string | null):
+  { kind: 'command'; row: CommandRow } | { kind: 'suggestion'; text: string } | null {
+  if (picked) return { kind: 'command', row: picked };
+  return typed === '' && suggestion !== null ? { kind: 'suggestion', text: suggestion } : null;
+}
+
 // The rows the menu offers for what is in the box: only while it is a slash and a name with nothing
 // after it, names starting with what was typed first, then aliases, then names that hold it anywhere.
 // A name the session lists twice — its own and a user's — is shown once, its own; a name the screen
