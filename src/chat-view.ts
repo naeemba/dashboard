@@ -4,7 +4,8 @@ import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
-import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { editsHeading, sessionEdits } from './chat-diff';
+import { diffBlock, drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
@@ -20,7 +21,7 @@ import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
+import { imageOverlay, pdfOverlay, searchOverlay, viewerOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -285,6 +286,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'diff') return showDiff();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
@@ -553,6 +555,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
       focus();
     }, (error: unknown) => options.onError(`Earlier conversations not listed: ${failureText(error)}`));
+  }
+
+  // Every file Claude changed in the conversation, each under a line naming it, on a sheet to read.
+  function showDiff(): void {
+    const files = sessionEdits(transcript.entries);
+    if (files.length === 0) return options.onNotice('Claude has not changed a file in this conversation.');
+    const review = document.createElement('div');
+    review.append(...files.flatMap((file) => {
+      const heading = document.createElement('div');
+      heading.className = 'chat-diff-file';
+      heading.textContent = editsHeading(file);
+      return [heading, diffBlock(file.lines)];
+    }));
+    viewerOverlay('diff-viewer', review);
   }
 
   // The session's models in a search sheet, as Claude Code's /model lists them, or straight to the one

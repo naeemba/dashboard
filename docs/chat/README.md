@@ -10,7 +10,7 @@ Claude has running.
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
-  `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`
+  `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`
 - Styles: `chat.css`
@@ -25,3 +25,4 @@ Claude has running.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
 - Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
+- Given Claude has edited files in the conversation, when you send `/diff`, then a sheet lists each file it changed, in the order first touched, with its changes as one diff; a failed or refused edit is not in it.

@@ -37,6 +37,9 @@ answered by the screen itself (chat-commands.ts) and never sent. So is `/model`:
 prints a usage line instead of Claude Code's picker, so the screen lists `supportedModels()`; with a
 name the session offers, it goes through `chat:configure` like the model key, so the foot and the
 saved preference follow it; a name it does not offer is refused, not saved as the next start model.
+`/diff` is the screen's too: the SDK has no review of a session's edits, so the screen builds one from
+the conversation's own Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so
+it shows what Claude changed and nothing else in the folder.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.

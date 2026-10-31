@@ -1,6 +1,6 @@
 import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
-import { toolDiff, toolSummary } from './chat-tools';
+import { toolDiff, toolSummary, type DiffLine } from './chat-tools';
 import { baseName } from './base-name';
 import { pdfMentions, pdfOfTool } from './chat-pdf';
 import { foldedMessage } from './chat-fold';
@@ -93,6 +93,19 @@ function preformatted(className: string, text: string): HTMLPreElement {
   return pre;
 }
 
+// A change as a block of lines, each marked kept, removed or added.
+export function diffBlock(diff: DiffLine[]): HTMLElement {
+  const pre = document.createElement('pre');
+  pre.className = 'chat-diff';
+  pre.append(...diff.map((line) => {
+    const row = document.createElement('span');
+    row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added' }[line.sign];
+    row.textContent = `${line.sign} ${line.text}\n`;
+    return row;
+  }));
+  return pre;
+}
+
 // The call itself, then what came back. A file tool shows its change as a diff, a plan put up for
 // approval reads as the document it is; anything else shows its input, which for Bash is the whole
 // command rather than the first line the summary had room for.
@@ -107,15 +120,7 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
     markdownInto(plan, input.plan);
     parts.push(plan);
   } else if (diff) {
-    const pre = document.createElement('pre');
-    pre.className = 'chat-diff';
-    pre.append(...diff.map((line) => {
-      const row = document.createElement('span');
-      row.className = { ' ': 'diff-same', '-': 'diff-removed', '+': 'diff-added' }[line.sign];
-      row.textContent = `${line.sign} ${line.text}\n`;
-      return row;
-    }));
-    parts.push(withCopy(pre));
+    parts.push(withCopy(diffBlock(diff)));
   } else {
     parts.push(withCopy(preformatted('chat-input', typeof input.command === 'string' ? input.command : JSON.stringify(input, null, 2))));
   }

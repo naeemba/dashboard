@@ -304,7 +304,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'before. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
     + 'there to edit or send, and typing anything else replaces it. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
-    + 'runs it, or fills the box when it takes arguments. Three are this screen\'s own: /model lists the session\'s models '
+    + 'runs it, or fills the box when it takes arguments. Four are this screen\'s own: /diff shows every change Claude made to a file in this conversation, file by file, on a sheet the arrows scroll and Escape puts away; /model lists the session\'s models '
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /resume lists the project\'s earlier '
     + 'conversations to carry on from, newest first with the one you are on marked and a box to search them, and /plan switches '
     + 'to plan mode, sending anything after it as the prompt. /clear starts over like the new '
