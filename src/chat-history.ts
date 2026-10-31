@@ -1,6 +1,14 @@
 import type { ChatEntry } from './chat-transcript';
 import type { SearchRow } from './overlay';
 
+// How many of the project's most recent conversations the prompt history search reads. Each is a
+// whole transcript off disk, so the oldest are left to /resume.
+export const HISTORY_CONVERSATIONS = 20;
+
+// What a row shows of a prompt at most: a pasted log of fourteen thousand characters is one line,
+// cut by the sheet to its width, not laid out whole on every keystroke.
+const ROW_NAME_LIMIT = 200;
+
 // The prompt box's Up and Down through what was sent before, the way the Claude Code terminal walks
 // its history. `at` is the prompt being shown, counted from the oldest, or null for the draft that was
 // in the box before Up was first pressed. Null comes back when the key has nowhere to go and should be
@@ -33,6 +41,17 @@ export function promptHistory(conversations: string[][]): string[] {
   return [...new Set(conversations.flatMap((sent) => [...sent].reverse()))];
 }
 
+// A conversation's prompts as last read off disk, kept by the main process between searches.
+export type PromptsRead = { lastModified: number; prompts: string[] };
+
+// The conversations the search must read off disk again: those not read before and those changed
+// since. The rest come from what was kept.
+export function staleConversations(
+  found: { sessionId: string; lastModified: number }[], kept: ReadonlyMap<string, PromptsRead>,
+): string[] {
+  return found.filter(({ sessionId, lastModified }) => kept.get(sessionId)?.lastModified !== lastModified).map(({ sessionId }) => sessionId);
+}
+
 // What the search lists for what is typed: every prompt newest first, or the ones holding the typed
 // text, still newest first. Plain containment rather than fuzzy: a long prompt holds the letters of
 // almost any query in order.
@@ -40,5 +59,5 @@ export function historyRows(prompts: string[], query: string): SearchRow<string>
   const typed = query.trim().toLowerCase();
   return prompts
     .filter((text) => text.toLowerCase().includes(typed))
-    .map((text) => ({ name: text.replace(/\s+/g, ' ').trim(), detail: '', choice: text }));
+    .map((text) => ({ name: text.slice(0, ROW_NAME_LIMIT * 2).replace(/\s+/g, ' ').trim().slice(0, ROW_NAME_LIMIT), detail: '', choice: text }));
 }

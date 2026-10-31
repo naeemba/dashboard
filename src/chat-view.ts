@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { historyRows, onEdgeLine, recall, sentPrompts } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
@@ -575,9 +575,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
-  // picked goes in the box to edit or send, over whatever was there.
+  // picked goes in the box to edit or send, over whatever was there. This screen's own conversation
+  // comes first, from what it holds rather than read off disk again.
   function showHistory(): void {
-    bridge.chatPrompts(slot).then(async (prompts) => {
+    bridge.chatPrompts(slot).then(async (earlier) => {
+      const prompts = promptHistory([sentPrompts(transcript.entries), ...earlier]);
       if (prompts.length === 0) return options.onNotice('This project has no prompts sent yet.');
       const picked = await searchOverlay({
         name: 'chat-history', placeholder: 'Search prompts', rows: (query) => historyRows(prompts, query),
