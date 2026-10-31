@@ -221,9 +221,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function drawEntries(): void {
     drawnEntries = transcript.entries;
+    let previousAt: number | undefined;
     transcript.entries.forEach((entry, index) => {
+      const before = previousAt;
+      if ('at' in entry && entry.at !== undefined) previousAt = entry.at;
       if (drawn[index]?.entry === entry) return;
-      const fresh = drawEntry(entry);
+      const fresh = drawEntry(entry, before);
       const old = drawn[index];
       if (old) {
         const freshFold = foldOf(fresh.element);

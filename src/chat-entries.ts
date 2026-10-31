@@ -171,8 +171,8 @@ function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
 
 // The time and model above a message, kept on the element for the stylesheet to draw: filling a text
 // entry replaces what is in it, and the attribute outlives that.
-function stamped(element: HTMLElement, stamp: Stamp): void {
-  const said = stampText(stamp, new Date());
+function stamped(element: HTMLElement, stamp: Stamp, previousAt: number | undefined): void {
+  const said = stampText(stamp, previousAt);
   if (said) element.dataset.stamp = said;
 }
 
@@ -184,12 +184,12 @@ function paragraph(text: string): HTMLParagraphElement {
 
 // What you sent. A long one is folded like a tool call: its first lines are the summary, with a row
 // counting the rest, and a click or the unfold key opens the whole of it.
-function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>): DrawnEntry {
+function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>, previousAt: number | undefined): DrawnEntry {
   const extras = [...pdfMentions(entry.text).map(pdfTile), ...images(entry.images)];
   const folded = foldedMessage(entry.text);
   const element = document.createElement('div');
   element.className = 'chat-entry chat-user';
-  stamped(element, entry);
+  stamped(element, entry, previousAt);
   if (!folded) {
     element.append(paragraph(entry.text), ...extras);
     return { entry, element, fill: null };
@@ -218,10 +218,11 @@ export function foldOf(element: HTMLElement): HTMLDetailsElement | null {
   return element.querySelector<HTMLDetailsElement>(':scope > details.chat-folded');
 }
 
-export function drawEntry(entry: ChatEntry): DrawnEntry {
+// `previousAt` is the time of the last stamped entry above this one, for the date on its stamp.
+export function drawEntry(entry: ChatEntry, previousAt: number | undefined): DrawnEntry {
   if (entry.kind === 'tool') return toolEntry(entry);
   if (entry.kind === 'event') return eventEntry(entry);
-  if (entry.kind === 'user') return userEntry(entry);
+  if (entry.kind === 'user') return userEntry(entry, previousAt);
   const element = document.createElement('div');
   element.className = `chat-entry chat-${entry.kind}`;
   if (entry.kind === 'notice') {
@@ -235,7 +236,7 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   }
   // Until it is filled the box holds the raw text, so a conversation scrolled fast still reads.
   element.textContent = entry.text;
-  stamped(element, entry);
+  stamped(element, entry, previousAt);
   return {
     entry, element, fill: () => {
       markdownInto(element, entry.text);

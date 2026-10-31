@@ -31,4 +31,4 @@ Claude has running.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given Claude edited files after a prompt, when you /rewind to it and restore code, then the files are as they were before it; restore conversation, and the conversation picks up from just before it with the prompt back in the box.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
-- Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date when not today, and for Claude's the model that wrote it.
+- Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
