@@ -10,4 +10,4 @@ One line per merged change: date, pull request, why.
 - 2026-10-30 #95 — Fold messages Claude Code injects into one line each
 - 2026-10-30 #97 — List running agents and tidy Claude Code's own messages
 - 2026-10-31 #99 — PDF attachments as a tile that opens in the built-in viewer
-- 2026-11-01 #PR — Claude's suggested next prompt in the empty box, Tab accepts it
+- 2026-11-01 #101 — Claude's suggested next prompt in the empty box, Tab accepts it
