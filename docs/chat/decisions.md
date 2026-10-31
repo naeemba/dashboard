@@ -49,7 +49,27 @@ Plan mode is on the edits key, after accepting, the terminal's order. The plan a
 it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
 
-## chat-decision-3: The task strip's background key is Alt+B, and an ended pick is refused
+## chat-decision-3: /rewind forks the conversation and keeps the code half in the session's checkpoints
+
+`/rewind` is the screen's own command, as `/resume` is: the session answers it with "isn't available
+in this environment". Every session starts with `enableFileCheckpointing`, so restoring code is
+`rewindFiles` with the picked prompt's id, the one its transcript gives it. A dry run first gives the
+count the notice prints; the real rewind reports only links it would not follow. Checked against the
+pinned SDK: a file written by the second prompt went back to the first prompt's text, and the same
+call worked on a resumed session before any prompt was sent.
+
+Restoring the conversation closes the session and starts one with `resume`, `resumeSessionAt` set to
+the message before the prompt, and `forkSession`, so the old conversation stays whole in `/resume`.
+The fork names its new conversation only in the next turn's `init`, so until then main reads the
+remembered one cut at that message; any change of conversation drops the cut. While the cut waits,
+`/resume` marks no conversation as current, so picking the one just cut goes through `chat:resume`
+and puts it back whole. Before the first prompt there is nothing to resume, and it is a new
+conversation.
+
+Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too: Escape
+is the interrupt key, and a double press would need a timing rule beside it.
+
+## chat-decision-4: The task strip's background key is Alt+B, and an ended pick is refused
 
 The terminal backgrounds tasks with Ctrl+B, but Ctrl+B is the board's mode key here, and a mode key
 passes through to the pane only in its own mode (keys-rule-1). So the strip's keys are Alt+T to pick,

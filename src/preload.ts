@@ -80,6 +80,8 @@ const bridge: DashboardBridge = {
   readPdf: (slot, file) => ipcRenderer.invoke('pdf:read', slot, file),
   onViewerDismiss: (listener) => ipcRenderer.on('viewer:dismiss', () => listener()),
   chatResume: (slot, sessionId) => ipcRenderer.send('chat:resume', slot, sessionId),
+  chatPrompts: (slot) => ipcRenderer.invoke('chat-prompts:read', slot),
+  chatRewind: (slot, point, choice) => ipcRenderer.invoke('chat:rewind', slot, point, choice),
   onChat: (listener) => ipcRenderer.on('chat:receive', (_event, slot, chatEvent) => listener(slot, chatEvent)),
 };
 
