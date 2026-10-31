@@ -50,6 +50,12 @@
           "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
           "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
           "priority": "high"
+        },
+        {
+          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
+          "title": "@ file autocomplete in the Claude pane's box",
+          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
+          "priority": "high"
         }
       ]
     },
