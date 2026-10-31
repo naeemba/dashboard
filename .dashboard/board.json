@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
-          "title": "Fold long user messages in the Claude pane's thread",
-          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
           "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
           "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
@@ -1283,6 +1276,22 @@
             {
               "at": "2026-10-31T22:14:36.634Z",
               "body": "Shipped in PR #101: the session turns on prompt suggestions, the pane holds the latest one and draws it as grey placeholder text in an empty box; Tab accepts it, typing replaces it, a new turn or reset clears it."
+            }
+          ]
+        },
+        {
+          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
+          "title": "Fold long user messages in the Claude pane's thread",
+          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:21:00.778Z",
+          "branch": "work-board-card-7f0c9af1-6692-4a9f-9607-5a8",
+          "pullRequest": 102,
+          "comments": [
+            {
+              "at": "2026-10-31T22:21:00.778Z",
+              "body": "PR #102 merged: a message you send over 12 lines shows its first 6 lines and a \"… N more lines\" row that a click or the unfold key opens; Claude still gets the whole text. Images and PDF tiles of a folded message stay visible below the fold."
             }
           ]
         }
