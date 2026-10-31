@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
@@ -126,9 +126,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // The project's files for the @ list, and the @ they were asked for.
   let files: string[] = [];
   let filesFor: number | null = null;
-  // Which sent prompt Up has brought back, and what was in the box before it did.
+  // Which sent prompt Up has brought back, what was in the box before it did, and the stash key's drafts.
   let recalled: number | null = null;
   let draft = '';
+  let stashed: string[] = [];
   // Bumped by a new conversation, so a read of the earlier one that comes back after it is dropped.
   let resets = 0;
 
@@ -290,6 +291,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function send(): void {
     let text = prompt.value.trim();
     if (!text && images.length === 0) return;
+    stashed = stashed.filter((each) => each !== text);
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
@@ -382,12 +384,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function walkHistory(direction: -1 | 1): boolean {
     if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
-    const sent = sentPrompts(transcript.entries);
-    const moved = recall(sent.length, recalled, direction);
+    const walked = [...sentPrompts(transcript.entries), ...stashed];
+    const moved = recall(walked.length, recalled, direction);
     if (!moved) return false;
     if (recalled === null) draft = prompt.value;
     recalled = moved.at;
-    prompt.value = recalled === null ? draft : sent[recalled];
+    prompt.value = recalled === null ? draft : walked[recalled];
     // Not opened for a recalled command, so the next Up keeps walking the history.
     menu.update('', []);
     return true;
@@ -748,6 +750,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'task-select') tasks.step();
       if (command === 'task-stop') stopTask();
       if (command === 'task-background') backgroundTask();
+      if (command === 'stash') {
+        stashed = stashDraft(stashed, prompt.value);
+        emptyBox();
+        prompt.focus();
+      }
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

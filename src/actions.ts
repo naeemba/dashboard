@@ -62,7 +62,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'stash';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -586,6 +586,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-task-background', description: 'Send the picked task to the background, or every foreground task with none picked',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-background' }, mac: 'Alt+B', other: 'Alt+B',
+  },
+  // Ctrl+S, the terminal's stash key, opens the project picker here (chat-decision-6).
+  {
+    name: 'claude-stash', description: 'Stash what is in the box and empty it; Up brings it back',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'stash' }, mac: 'Alt+S', other: 'Alt+S',
   },
   {
     name: 'claude-new', description: 'Start a new conversation',

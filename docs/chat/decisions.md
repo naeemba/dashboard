@@ -93,3 +93,13 @@ A key pressed for a picked task whose row has since left the strip is refused wi
 turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling back
 would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
 lasts while other tasks still run, which a background command can stretch across turns.
+
+## chat-decision-6: The stash key is Alt+S, and Up walks the stash
+
+Claude Code stashes the box with Ctrl+S, but Ctrl+S opens the project picker here, before any
+screen sees it. So the stash key is Alt+S, beside the other Claude screen keys.
+
+The stash is a list Up walks rather than a slot a second press restores: Up from the box reaches
+the newest stashed draft first, then the older ones, then the prompts sent. The last 10 are kept,
+for as long as the app runs, across new conversations; a draft leaves the stash when it is sent.
+Images attached to the box are not stashed, and stay attached.
