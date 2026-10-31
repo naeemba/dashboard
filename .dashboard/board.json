@@ -306,22 +306,6 @@
           ]
         },
         {
-          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
-          "title": "Review all of a session's edits in the Claude pane, like /diff",
-          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:34:19.959Z",
-          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
-          "pullRequest": 111,
-          "comments": [
-            {
-              "at": "2026-10-31T22:34:19.924Z",
-              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
-            }
-          ]
-        },
-        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
@@ -1453,6 +1437,26 @@
             {
               "at": "2026-10-31T23:00:30.789Z",
               "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+            }
+          ]
+        },
+        {
+          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
+          "title": "Review all of a session's edits in the Claude pane, like /diff",
+          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:31.722Z",
+          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
+          "pullRequest": 111,
+          "comments": [
+            {
+              "at": "2026-10-31T22:34:19.924Z",
+              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
+            },
+            {
+              "at": "2026-10-31T23:03:31.722Z",
+              "body": "Shipped in PR #111: /diff reviews every file changed in the conversation. Merged after 3 review rounds."
             }
           ]
         }
