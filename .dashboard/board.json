@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
           "title": "Export the Claude pane's conversation to clipboard or file",
           "notes": "Claude Code: /export. Pane: none. Size S.",
@@ -1416,6 +1409,22 @@
           ]
         },
         {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:19.774Z",
+          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
+          "pullRequest": 122,
+          "comments": [
+            {
+              "at": "2026-10-31T23:03:19.774Z",
+              "body": "Shipped in PR #122: /rename names the conversation and /resume lists it by that name; with no name or no conversation yet, it is refused."
+              }
+            ]
+          },
+          {
           "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",

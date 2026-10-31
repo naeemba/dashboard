@@ -15,7 +15,7 @@ Claude has running.
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
-  `chat-mcp.ts`, `chat-mcp-view.ts`
+  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -43,3 +43,4 @@ Claude has running.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
 - Given an MCP server failed to connect, when you type /mcp and pick it, then Reconnect tries it again and Disable turns it off; a disabled one offers only Enable.
+- Given a conversation is on the screen, when you send `/rename Board drag fix`, then it is renamed and `/resume` lists it by that name; with no name or no conversation yet, it is refused.
