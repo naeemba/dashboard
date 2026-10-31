@@ -146,6 +146,12 @@
           "title": "Show API retry and rate-limit notices in the Claude pane",
           "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
           "priority": "medium"
+        },
+        {
+          "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
+          "title": "View and edit permission rules from the Claude pane",
+          "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
+          "priority": "low"
         }
       ]
     },
