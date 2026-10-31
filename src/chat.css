@@ -253,6 +253,11 @@
   color: var(--muted);
 }
 
+.diff-gap {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
 /* The question over the prompt. Hidden with the attribute, and the display below would beat it. */
 .chat-ask {
   display: flex;
