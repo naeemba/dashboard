@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -1476,6 +1469,22 @@
             {
               "at": "2026-10-31T23:06:20.043Z",
               "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.19.0."
+            }
+          ]
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:44.713Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
+          "comments": [
+            {
+              "at": "2026-10-31T23:09:44.713Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.20.0. Needs a hand check in the rebuilt app."
             }
           ]
         }
