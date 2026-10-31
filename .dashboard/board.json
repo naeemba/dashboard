@@ -4,14 +4,6 @@
       "name": "Backlog",
       "cards": [
         {
-          "id": "7ade5b82-4ab9-4cec-8dae-f4c4726ca610",
-          "title": "Add a per-project docs directory with one brief spec per change",
-          "notes": "Seed per-feature docs for this project and move the existing docs into them.\n\nLayout:\n\n    docs/\n      README.md              index: feature, one line, link\n      <feature>/\n        README.md            files the feature owns, what it does, acceptance scenarios, open questions\n        hard-rules.md        only when one exists\n        decisions.md         only when one exists\n        history.md           one line per merged change: date, PR, why\n\nOnly README.md is required per feature; the other three appear with their first entry. Each file stays under 80 lines, history.md exempt; over the cap means the feature is two features.\n\nThe feature README owns its file list; docs/README.md is the index only, so a file is claimed in one place.\n\nREADME.md carries 2 to 5 acceptance scenarios, Given/When/Then, one line each. A change that moves behaviour edits a scenario; the diff shows it.\n\nEvery entry in hard-rules.md and decisions.md has a stable id, <feature>-rule-N and <feature>-decision-N, never renumbered. history.md lines, PRs and commits cite the id, so the link survives rewording. Scenarios in README.md stay unnumbered.\n\nFor dashboard: about 7 features (panes, nvim, board, notes, remote host, settings, help). docs/decisions.md entries move into each feature's decisions.md; docs/hard-rules.md entries into each feature's hard-rules.md, cross-cutting ones stay in CLAUDE.md. Board card notes and superpowers session specs are the input for history.md lines; the session spec is not the record.\n\nCLAUDE.md gets one line: feature docs live in docs/; a change to a feature's files changes its docs in the same PR.\n\nOutside this card: the rule text goes in dotfiles/claude/rules/ as a global rule, and a hook fails a PR that touches owned files without touching the feature's docs.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-29T10:51:07.704Z"
-        },
-        {
           "id": "a376c035-8d4d-4642-9441-44762b0b87a9",
           "title": "Left drawer listing the project's docs and Claude sessions",
           "notes": "A drawer on the left of the project page. One key opens it, Esc closes it. It overlays the grid and never resizes it. Two lists, arrow keys walk rows, Enter acts; a filter input with dir = 'auto'.\n\nDocs: the docs/ tree (card 7ade5b82). Enter opens the file in a document pane: the markdown renderer from the SDK pane (card 2b2f2cfe) showing one file instead of a stream, so tables, code and images render. The nvim pane does not render docs; the document pane lands with the SDK pane card, so this card waits on it.\n\nSessions: the app owns session ids. Every Claude launch gets a uuid the app chose (--session-id on the CLI, the SDK equivalent on the SDK pane) and a row in the app's own index: id, project, cwd or worktree, card, label like dashboard-14, started, last used. The index lives in the app's user data keyed by repo path, never in .dashboard/, since sessions are personal and board.json is tracked. No crawling of ~/.claude/projects/: worktree sessions land in other slugs there and would be missed. Labels can be renamed from the drawer.\n\nVolume: newest 50 rows, then a Load more row at the bottom the arrows reach; Enter loads 50 more.\n\nResume: Enter on a session spawns a new worker pane (card a639736a) with --resume <id>. Never into a busy pane.\n\nScope: the drawer is navigation, rows that jump somewhere, never content. Board has cards, Notes has notes.\n\nUsual tax: an ACTIONS row, a help blurb in src/help.ts, [hidden] rule for the drawer class.",
@@ -126,7 +118,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "7ade5b82-4ab9-4cec-8dae-f4c4726ca610",
+          "title": "Add a per-project docs directory with one brief spec per change",
+          "notes": "Seed per-feature docs for this project and move the existing docs into them.\n\nLayout:\n\n    docs/\n      README.md              index: feature, one line, link\n      <feature>/\n        README.md            files the feature owns, what it does, acceptance scenarios, open questions\n        hard-rules.md        only when one exists\n        decisions.md         only when one exists\n        history.md           one line per merged change: date, PR, why\n\nOnly README.md is required per feature; the other three appear with their first entry. Each file stays under 80 lines, history.md exempt; over the cap means the feature is two features.\n\nThe feature README owns its file list; docs/README.md is the index only, so a file is claimed in one place.\n\nREADME.md carries 2 to 5 acceptance scenarios, Given/When/Then, one line each. A change that moves behaviour edits a scenario; the diff shows it.\n\nEvery entry in hard-rules.md and decisions.md has a stable id, <feature>-rule-N and <feature>-decision-N, never renumbered. history.md lines, PRs and commits cite the id, so the link survives rewording. Scenarios in README.md stay unnumbered.\n\nFor dashboard: about 7 features (panes, nvim, board, notes, remote host, settings, help). docs/decisions.md entries move into each feature's decisions.md; docs/hard-rules.md entries into each feature's hard-rules.md, cross-cutting ones stay in CLAUDE.md. Board card notes and superpowers session specs are the input for history.md lines; the session spec is not the record.\n\nCLAUDE.md gets one line: feature docs live in docs/; a change to a feature's files changes its docs in the same PR.\n\nOutside this card: the rule text goes in dotfiles/claude/rules/ as a global rule, and a hook fails a PR that touches owned files without touching the feature's docs.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T21:10:26.818Z"
+        }
+      ]
     },
     {
       "name": "Review",
