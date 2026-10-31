@@ -204,9 +204,11 @@ export function registerChatSessions(
         resume,
         model: preferences.get(slot)?.model ?? undefined,
         // The project's main session, as the terminal one was: the mode open() seeded or the screen
-        // chose, the dispatch prompt, and the name its workers SendMessage it by.
+        // chose, the dispatch prompt, and the name its workers SendMessage it by. Thinking is asked
+        // for as a summary, the text the pane folds into the conversation; left to the default, a
+        // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
         permissionMode: preferences.get(slot)?.permissionMode,
-        extraArgs: { name: mainSessionName(projectPath) },
+        extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
