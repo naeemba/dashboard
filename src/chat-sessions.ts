@@ -11,6 +11,7 @@ import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
+import { elicitationAsk, elicitationResult } from './chat-elicitation';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { conversationAfterRewind, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
@@ -230,6 +231,9 @@ export function registerChatSessions(
           defaultToNo: options.defaultToNo === true,
           suppressAlwaysAllowRule: options.suppressAlwaysAllowRule === true,
         }, options.signal),
+        // An MCP server's form or sign-in link, asked in the same box. A server's dialogs
+        // (onUserDialog) are left undeclared, so the CLI never sends one and keeps its own fallback.
+        onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
     }) };
     void (async () => {

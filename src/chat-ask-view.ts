@@ -1,11 +1,12 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { toolBody } from './chat-entries';
 import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
+import { ELICITATION, fieldsOf, typedValue } from './chat-elicitation';
 import { clampIndex } from './clamp-index';
 import { isModified } from './shortcuts';
 
 // The box over the prompt that holds what Claude is waiting on: a tool call to allow or decline, or
-// AskUserQuestion's questions, one at a time. Rows the arrows walk and Enter answers; what each row
+// AskUserQuestion's questions, or an MCP server's form, one at a time. Rows the arrows walk and Enter answers; what each row
 // answers with is chat-permission.ts's. Escape is not read here: it is the screen's interrupt, which
 // declines whatever is asked as it stops the turn.
 
@@ -17,7 +18,9 @@ export type AskPanel = {
 
 type Row = { element: HTMLElement; act(): void; input?: HTMLInputElement };
 
-export function createAskPanel(onAnswer: (id: string, result: PermissionResult) => void): AskPanel {
+const paragraph = (text: string) => Object.assign(document.createElement('p'), { textContent: text });
+
+export function createAskPanel(onAnswer: (id: string, result: PermissionResult) => void, openLink: (url: string) => void): AskPanel {
   const element = document.createElement('div');
   element.className = 'chat-ask';
   element.tabIndex = -1;
@@ -49,10 +52,11 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
   }
 
   // A row with a box to type into, which the arrows land on and Enter answers from.
-  function typedRow(label: string, placeholder: string, act: (typed: string) => void): Row {
+  function typedRow(label: string, placeholder: string, act: (typed: string) => void, initial = ''): Row {
     const input = document.createElement('input');
     input.className = 'chat-ask-other';
     input.placeholder = placeholder;
+    input.value = initial;
     input.dir = 'auto';
     const made = row(label, '', () => act(input.value.trim()));
     made.element.append(input);
@@ -74,7 +78,7 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
 
   function permission(ask: PermissionAsk): void {
     const { choices, start } = permissionChoices(ask);
-    const about = ask.description ? [Object.assign(document.createElement('p'), { textContent: ask.description })] : [];
+    const about = ask.description ? [paragraph(ask.description)] : [];
     draw(permissionTitle(ask), [...about, ...toolBody(ask.toolName, ask.input, null)], choices.map((choice) => {
       if ('result' in choice) return row(choice.label, '', () => onAnswer(ask.id, choice.result));
       return typedRow(choice.label, 'Type it and press Enter', (typed) => onAnswer(ask.id, declined(typed)));
@@ -113,6 +117,45 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
     else question(0);
   }
 
+  // A link is opened here and accepted; a form is asked a field at a time, a pick or a yes or no as
+  // rows and the rest typed, and accepted after the last. Decline is the last row of every step.
+  function elicitation(ask: PermissionAsk): void {
+    const title = ask.title ?? '';
+    const decline = row('Decline', '', () => onAnswer(ask.id, declined('')));
+    const accept = (updatedInput: Record<string, unknown>) => onAnswer(ask.id, { behavior: 'allow', updatedInput });
+    if (ask.input.mode === 'url') {
+      const url = String(ask.input.url ?? '');
+      draw(title, [paragraph(url)], [row('Open the link', '', () => {
+        openLink(url);
+        accept({});
+      }), decline], 0);
+      return;
+    }
+    const fields = fieldsOf(ask.input.requestedSchema);
+    const content: Record<string, unknown> = {};
+    const advance = (at: number) => (at + 1 < fields.length ? field(at + 1) : accept(content));
+    function field(at: number): void {
+      const asked = fields[at];
+      const store = (value: unknown) => {
+        content[asked.key] = value;
+        advance(at);
+      };
+      const next: Row[] = asked.kind === 'boolean' ? [row('Yes', '', () => store(true)), row('No', '', () => store(false))]
+        : asked.kind === 'choice' ? asked.options.map((option) => row(option.label, '', () => store(option.value)))
+          : [typedRow(asked.label, asked.required ? 'Type it and press Enter' : 'Type it, or leave it empty, and press Enter', (typed) => {
+            const value = typedValue(asked, typed);
+            if (value === 'skip') advance(at);
+            else if (value !== 'again') store(value.value);
+          }, asked.initial)];
+      if (!asked.required && (asked.kind === 'boolean' || asked.kind === 'choice')) next.push(row('Skip', '', () => advance(at)));
+      next.push(decline);
+      const about = `${asked.label}${asked.required ? '' : ' (optional)'}${asked.description ? ` — ${asked.description}` : ''}`;
+      draw(title, [paragraph(about)], next, 0);
+    }
+    if (fields.length === 0) draw(title, [], [row('Accept', '', () => accept({})), decline], 0);
+    else field(0);
+  }
+
   element.addEventListener('keydown', (event) => {
     if (isModified(event)) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -130,6 +173,7 @@ export function createAskPanel(onAnswer: (id: string, result: PermissionResult) 
       element.hidden = ask === null;
       if (ask === null) element.replaceChildren();
       else if (ask.toolName === 'AskUserQuestion') questions(ask);
+      else if (ask.toolName === ELICITATION) elicitation(ask);
       else permission(ask);
     },
     focus: () => select(selected),

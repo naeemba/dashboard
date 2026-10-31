@@ -15,3 +15,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #104 — Show Claude's thinking as a folded line
 - 2026-11-01 #106 — Rewind to an earlier prompt: code, conversation or both (chat-decision-3)
 - 2026-11-01 #103 — @ file autocomplete in the box
+- 2026-11-01 #PR — Answer an MCP server's forms and sign-in links in the ask box

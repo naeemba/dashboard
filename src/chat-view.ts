@@ -87,7 +87,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const ask = createAskPanel((id, result) => {
     bridge.chatAnswer(slot, id, result);
     dropAsk(id);
-  });
+  }, bridge.openExternal);
   const attached = document.createElement('div');
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
