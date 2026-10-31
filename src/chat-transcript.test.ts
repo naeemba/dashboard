@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+  afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
 
-const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }] });
+const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
 
 const fold = (messages: Record<string, unknown>[], start: Transcript = EMPTY_TRANSCRIPT): Transcript =>
   messages.reduce(applyMessage, start);
@@ -165,6 +165,7 @@ describe('the prompt event', () => {
     const transcript = applyEvent(EMPTY_TRANSCRIPT, {
       kind: 'prompt',
       content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAA' } }, { type: 'text', text: 'what is this' }],
+      id: 'p',
     });
     expect(transcript.busy).toBe(true);
     expect(transcript.entries).toEqual([{ kind: 'user', text: 'what is this', images: [{ mediaType: 'image/png', data: 'AAA' }] }]);
@@ -227,13 +228,15 @@ describe('the working line\'s count', () => {
     expect([ended.streamed, ended.thinking, ended.started]).toEqual([0, false, null]);
   });
 
-  it('goes on counting, from the same start, when a prompt is sent while the turn runs', () => {
+  it('goes on counting, from the same start, when the running turn takes a queued prompt', () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(1_000);
       const first = fold([delta('abcd')], prompted('hi'));
       vi.setSystemTime(5_000);
-      const joined = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }] });
+      const waiting = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }], id: 'q' });
+      const joined = applyMessage(waiting, { type: 'command_lifecycle', command_uuid: 'q', state: 'started' });
+      expect(joined.queued).toEqual([]);
       expect([first.started, fold([delta('ef')], joined).streamed, joined.started]).toEqual([1_000, 6, 1_000]);
     } finally {
       vi.useRealTimers();
@@ -301,6 +304,13 @@ describe('a prompt sent while busy', () => {
   it('goes with a session that ends', () => {
     expect(applyEvent(waiting, { kind: 'ended', error: null }).queued).toEqual([]);
   });
+
+  it('stays through the session\'s own /clear, and goes with a reset that stops the session', () => {
+    const cleared = afterReset(waiting, { sessionGoesOn: true });
+    expect([cleared.entries, cleared.queued.map(({ id }) => id)]).toEqual([[], ['q']]);
+    expect(applyMessage(cleared, lifecycle('q', 'started')).entries).toEqual([{ kind: 'user', text: 'second', images: [] }]);
+    expect(afterReset(waiting, {})).toBe(EMPTY_TRANSCRIPT);
+  });
 });
 
 describe('the suggested next prompt', () => {
@@ -309,7 +319,7 @@ describe('the suggested next prompt', () => {
   it('is held after the turn\'s result', () => expect(suggested.suggestion).toBe('run the tests'));
 
   it('is dropped when a prompt is sent', () => {
-    expect(applyEvent(suggested, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }] }).suggestion).toBeNull();
+    expect(applyEvent(suggested, { kind: 'prompt', content: [{ type: 'text', text: 'hi' }], id: 'p' }).suggestion).toBeNull();
   });
 
   it('is dropped when a turn nobody typed here starts', () => {

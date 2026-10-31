@@ -16,14 +16,15 @@ export type ChatEvent =
   // A prompt sent from any screen. The session does not echo one back, so main does, and every screen
   // shows what was asked rather than only the one it was typed on. `id` is the uuid main stamped it
   // with, which the session's command_lifecycle messages name it by.
-  | { kind: 'prompt'; content: ChatContent; id?: string }
+  | { kind: 'prompt'; content: ChatContent; id: string }
   // A model or permission mode a screen picked, so every screen's foot says the same.
   | { kind: 'configured'; change: ChatPreferences }
   | { kind: 'ask'; ask: PermissionAsk }
   // A question main stopped waiting on: the turn was interrupted, or the session ended under it.
   | { kind: 'ask-gone'; id: string }
-  // A new conversation started from any screen: every screen clears the old one.
-  | { kind: 'reset' }
+  // A new conversation started from any screen: every screen clears the old one. `sessionGoesOn` marks
+  // the session's own /clear, where the process, and the prompts queued in it, carry on.
+  | { kind: 'reset'; sessionGoesOn?: true }
   | { kind: 'ended'; error: string | null };
 
 // The images the API takes, and so the only ones a pasted image is sent as.
@@ -290,7 +291,7 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   if (event.kind === 'message') return applyMessage(transcript, event.message);
   // Sent while a turn runs, it waits in the session's queue rather than joining the turn; so does one
   // sent between a turn's result and the next queued prompt starting, which the session runs after it.
-  if (event.kind === 'prompt' && event.id !== undefined && (transcript.busy || transcript.queued.length > 0)) {
+  if (event.kind === 'prompt' && (transcript.busy || transcript.queued.length > 0)) {
     return { ...transcript, queued: [...transcript.queued, { id: event.id, content: event.content }], suggestion: null };
   }
   if (event.kind === 'prompt') return joinTurn(transcript, event.content);
@@ -301,6 +302,12 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
     return { ...transcript, ...IDLE, tasks: [], queued: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
+}
+
+// What a reset leaves on screen: nothing, unless the session goes on, when the prompts still waiting
+// in it stay grey until it takes them.
+export function afterReset(transcript: Transcript, event: { sessionGoesOn?: true }): Transcript {
+  return event.sessionGoesOn ? { ...EMPTY_TRANSCRIPT, queued: transcript.queued } : EMPTY_TRANSCRIPT;
 }
 
 // The permission mode a session message says the session is now in: the one it started in, which its

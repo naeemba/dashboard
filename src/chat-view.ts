@@ -15,7 +15,7 @@ import { rewind } from './chat-rewind-view';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
-  applyEvent, EMPTY_TRANSCRIPT, imageDataUrl, isImageType, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
+  afterReset, applyEvent, EMPTY_TRANSCRIPT, imageDataUrl, isImageType, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
   type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
@@ -646,12 +646,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.
-  function clear(): void {
+  function clear(event: { sessionGoesOn?: true }): void {
     resets++;
     for (const entry of drawn) entry.element.remove();
     nearScreen.disconnect();
     unfilled.clear();
-    transcript = EMPTY_TRANSCRIPT;
+    transcript = afterReset(transcript, event);
     drawn = [];
     drawnEntries = [];
     selected = null;
@@ -684,7 +684,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       // A new conversation or one picked in /resume, from any screen: whatever the page is on now is
       // read back, which for a new one is nothing.
       if (event.kind === 'reset') {
-        clear();
+        clear(event);
         earlierRead = false;
         return readEarlier();
       }

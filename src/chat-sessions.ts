@@ -246,7 +246,7 @@ export function registerChatSessions(
           // then the cleared one is not what the next launch should resume.
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
-          if (change.reset) host.send(slot, { kind: 'reset' });
+          if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
           const mode = modeOf(record);
           if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
           if (relayed(message)) host.send(slot, { kind: 'message', message: record });

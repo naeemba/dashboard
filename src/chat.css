@@ -517,6 +517,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: 30%;
+  overflow-y: auto;
   padding: 4px 8px;
   color: var(--muted);
 }

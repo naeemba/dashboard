@@ -14,12 +14,15 @@ export function createQueueStrip(): { element: HTMLElement; render(queued: Queue
       if (queued === drawn) return;
       drawn = queued;
       element.hidden = queued.length === 0;
+      // Rebuilt on every change, so the scroll is put back where it was.
+      const scrolled = element.scrollTop;
       element.replaceChildren(...queued.map(({ content }) => {
         const { text, images } = promptParts(content);
         const row = piece('chat-queued-prompt', text);
         if (images.length > 0) row.append(` + ${images.length} image${images.length === 1 ? '' : 's'}`);
         return row;
       }));
+      element.scrollTop = scrolled;
     },
   };
 }

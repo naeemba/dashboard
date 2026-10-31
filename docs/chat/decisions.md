@@ -83,7 +83,9 @@ by that uuid in `command_lifecycle` messages: `queued`, then `started` and `comp
 The screen draws a prompt sent while busy grey under the conversation and moves it into the
 conversation on any state past `queued`, since one folded into the running turn may report `completed`
 without a `started`. Up in the empty box withdraws the last one through `cancelAsyncMessage`, which
-answers false once the session has taken it.
+answers false once the session has taken it. A `/clear` the session runs itself clears the screen
+but keeps the grey prompts, since the process holding them goes on; a reset from the screen (a new
+conversation, `/resume`, a rewind) stops the session and drops them.
 
 Neither the message type nor the method is in the pinned SDK's types (0.3.312); both were checked
 against it by sending two prompts into a running turn and cancelling the second: it was reported
