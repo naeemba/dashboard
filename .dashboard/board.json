@@ -142,7 +142,8 @@
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -229,16 +230,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:50:40.941Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -404,6 +396,22 @@
             {
               "at": "2026-10-31T22:50:51.462Z",
               "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:56:12.260Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
             }
           ]
         }
