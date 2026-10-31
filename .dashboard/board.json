@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
-          "title": "Readline editing keys in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
           "title": "Copy a whole Claude reply as markdown from the Claude pane",
           "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
@@ -380,6 +373,16 @@
           "updatedAt": "2026-10-31T23:08:20.947Z",
           "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
           "pullRequest": 126
+        },
+        {
+          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
+          "title": "Readline editing keys in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:49.584Z",
+          "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
+          "pullRequest": 127
         }
       ]
     },
