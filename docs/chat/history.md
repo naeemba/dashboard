@@ -19,4 +19,7 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #108 — Ctrl+R searches the prompts of the project's recent conversations
 - 2026-11-01 #109 — Stop or background a running task from the strip (chat-decision-5)
 - 2026-11-01 #107 — Unfold an Agent call to see the subagent's own steps
+- 2026-11-01 #110 — Real line diffs for edits, far-apart changes shown apart
+- 2026-11-01 #115 — Time and model above each message
+- 2026-11-01 #112 — /branch carries on in a copy of the conversation, keeping the original
 - 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-6)

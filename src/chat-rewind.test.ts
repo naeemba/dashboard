@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conversationAfterRewind, promptAfterRewind, restoredNotice, resumeFrom, rewindChoices, rewindPoints, rewindRows, rewoundTo } from './chat-rewind';
+import { conversationAfterRewind, forkFrom, promptAfterRewind, restoredNotice, resumeFrom, rewindChoices, rewindPoints, rewindRows, rewoundTo } from './chat-rewind';
 
 const said = (uuid: string, text: string) => ({ type: 'user', uuid, parent_tool_use_id: null, message: { content: [{ type: 'text', text }] } });
 const answered = (uuid: string) => ({ type: 'assistant', uuid, parent_tool_use_id: null, message: { content: [{ type: 'text', text: 'ok' }] } });
@@ -98,5 +98,12 @@ describe('resumeFrom', () => {
   it('forks at the cut when one is pending, and resumes the whole conversation otherwise', () => {
     expect(resumeFrom('s1', 'a1')).toEqual({ resume: 's1', resumeSessionAt: 'a1', forkSession: true });
     expect(resumeFrom('s1', undefined)).toEqual({ resume: 's1', resumeSessionAt: undefined, forkSession: false });
+  });
+});
+
+describe('forkFrom', () => {
+  it('copies up to the cut when one is pending, the whole conversation otherwise, and names it only when a name was typed', () => {
+    expect(forkFrom('/p', 'a1', 'other fix')).toEqual({ dir: '/p', upToMessageId: 'a1', title: 'other fix' });
+    expect(forkFrom('/p', undefined, '')).toEqual({ dir: '/p', upToMessageId: undefined, title: undefined });
   });
 });
