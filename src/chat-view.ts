@@ -12,6 +12,8 @@ import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
+import { manageMcp } from './chat-mcp-view';
+import { renameConversation } from './chat-rename';
 import { rewind } from './chat-rewind-view';
 import { branch as branchConversation, chooseModel, copyReply, resume } from './chat-screen-commands';
 import { footSides, piece, type FootState } from './chat-foot-view';
@@ -300,10 +302,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'diff') return showDiff();
     if (own?.kind === 'rewind') return showRewind();
+    if (own?.kind === 'mcp') return void manageMcp(bridge, slot, options).then(focus);
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'copy') return void copyReply(transcript.entries, own.rest, options);
+    if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;

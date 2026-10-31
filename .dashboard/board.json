@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -83,37 +76,9 @@
           "parent": null
         },
         {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
           "title": "Export the Claude pane's conversation to clipboard or file",
           "notes": "Claude Code: /export. Pane: none. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
-          "title": "Readline editing keys in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
-          "title": "Draw TodoWrite as a checklist in the Claude pane",
-          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
-          "title": "Copy a whole Claude reply as markdown from the Claude pane",
-          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
           "priority": "low",
           "parent": null
         },
@@ -347,22 +312,6 @@
           ]
         },
         {
-          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
-          "title": "Show API retry and rate-limit notices in the Claude pane",
-          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:56:12.260Z",
-          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
-          "pullRequest": 120,
-          "comments": [
-            {
-              "at": "2026-10-31T22:56:12.225Z",
-              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
-            }
-          ]
-        },
-        {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
@@ -393,6 +342,36 @@
               "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
             }
           ]
+        },
+        {
+          "id": "0640cf6c-2b69-4124-b1eb-844422424223",
+          "title": "Draw TodoWrite as a checklist in the Claude pane",
+          "notes": "Claude Code: Ctrl+T checklist; per its docs it only fills on older models. Pane: TodoWrite drawn as a generic tool (chat-tools.ts:16). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:08:20.947Z",
+          "branch": "work-board-card-0640cf6c-2b69-4124-b1eb-844",
+          "pullRequest": 126
+        },
+        {
+          "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
+          "title": "Readline editing keys in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:49.584Z",
+          "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
+          "pullRequest": 127
+        },
+        {
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:12:15.674Z",
+          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+          "pullRequest": 128
         }
       ]
     },
@@ -1430,6 +1409,22 @@
           ]
         },
         {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:19.774Z",
+          "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
+          "pullRequest": 122,
+          "comments": [
+            {
+              "at": "2026-10-31T23:03:19.774Z",
+              "body": "Shipped in PR #122: /rename names the conversation and /resume lists it by that name; with no name or no conversation yet, it is refused."
+              }
+            ]
+          },
+          {
           "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
           "title": "Branch the Claude pane's conversation, keeping the original",
           "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
@@ -1466,6 +1461,42 @@
             {
               "at": "2026-10-31T23:03:31.722Z",
               "body": "Shipped in PR #111: /diff reviews every file changed in the conversation. Merged after 3 review rounds."
+            }
+          ]
+        },
+        {
+          "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
+          "title": "Show API retry and rate-limit notices in the Claude pane",
+          "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:06:20.043Z",
+          "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
+          "pullRequest": 120,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:12.225Z",
+              "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
+            },
+            {
+              "at": "2026-10-31T23:06:20.043Z",
+              "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.19.0."
+            }
+          ]
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:09:44.713Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
+          "comments": [
+            {
+              "at": "2026-10-31T23:09:44.713Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.20.0. Needs a hand check in the rebuilt app."
             }
           ]
         }

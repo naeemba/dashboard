@@ -9,6 +9,7 @@ describe('screenCommand', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
     expect(screenCommand('/diff')).toEqual({ kind: 'diff' });
     expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
+    expect(screenCommand('/mcp')).toEqual({ kind: 'mcp' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
     expect(screenCommand('/branch')).toEqual({ kind: 'branch', rest: '' });
@@ -18,6 +19,7 @@ describe('screenCommand', () => {
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
     expect(screenCommand('/copy')).toEqual({ kind: 'copy', rest: '' });
     expect(screenCommand('/copy 2')).toEqual({ kind: 'copy', rest: '2' });
+    expect(screenCommand('/rename  board drag fix ')).toEqual({ kind: 'rename', rest: 'board drag fix' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();
