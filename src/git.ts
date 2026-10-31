@@ -21,6 +21,12 @@ export async function runProgram(program: string, args: string[], cwd: string): 
   return stdout.trimEnd();
 }
 
+// The project's files: git's tracked ones and the untracked it does not ignore. A folder that is not
+// a repository lists none rather than walking node_modules.
+export async function projectFiles(projectPath: string): Promise<string[]> {
+  return git(['ls-files', '--cached', '--others', '--exclude-standard'], projectPath).then((list) => list.split('\n').filter(Boolean), () => []);
+}
+
 // origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
 // same reason: origin/HEAD is not set in every clone.
 export async function baseBranch(projectPath: string): Promise<string> {

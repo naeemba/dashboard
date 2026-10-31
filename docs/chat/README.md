@@ -12,7 +12,8 @@ Claude has running.
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-events.ts`, `chat-tags.ts`, `chat-reveal.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
-  `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`
+  `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
+  `chat-mentions.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -22,3 +23,4 @@ Claude has running.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
+- Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.

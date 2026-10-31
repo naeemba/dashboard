@@ -6,7 +6,8 @@ import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
-import { createCommandMenu } from './chat-menu-view';
+import { createCommandMenu, type MenuRow } from './chat-menu-view';
+import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
@@ -87,7 +88,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
-  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
+  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands, @ the files. Paste or drop an image to attach it.';
   prompt.rows = 3;
   prompt.dir = 'auto';
   const menu = createCommandMenu();
@@ -116,6 +117,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
   let commandsAsked = false;
+  // The project's files for the @ list, and the @ they were asked for.
+  let files: string[] = [];
+  let filesFor: number | null = null;
   // Which sent prompt Up has brought back, and what was in the box before it did.
   let recalled: number | null = null;
   let draft = '';
@@ -326,10 +330,27 @@ export function createChatView(options: ChatViewOptions): ChatView {
         updateMenu();
       }, () => undefined);
     }
-    menu.update(prompt.value, commands ?? []);
+    // Each new @ asks for the files again, so one made since the last is in the list.
+    const mention = mentionAt(prompt.value, prompt.selectionStart);
+    if (mention && mention.start !== filesFor) {
+      bridge.chatFiles(slot).then((list) => {
+        files = list;
+        updateMenu();
+      }, () => undefined);
+    }
+    filesFor = mention?.start ?? null;
+    menu.update(prompt.value, commands ?? [], mention ? fileRows(files, mention.query) : undefined);
   }
 
-  function complete(row: CommandRow, enter: boolean): void {
+  function complete(row: MenuRow, enter: boolean): void {
+    if (typeof row === 'string') {
+      const picked = pickMention(prompt.value, prompt.selectionStart, row);
+      prompt.value = picked.text;
+      prompt.setSelectionRange(picked.caret, picked.caret);
+      updateMenu();
+      prompt.focus();
+      return;
+    }
     const { text, runs } = completion(row, enter);
     prompt.value = text;
     if (runs) send();
