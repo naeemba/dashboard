@@ -314,16 +314,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
-          "title": "Fold long user messages in the Claude pane's thread",
-          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:06:16.245Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -411,6 +402,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
+          "title": "Fold long user messages in the Claude pane's thread",
+          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:11:11.092Z",
+          "branch": "work-board-card-7f0c9af1-6692-4a9f-9607-5a8",
+          "pullRequest": 102
         }
       ]
     },
