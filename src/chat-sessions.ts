@@ -116,7 +116,7 @@ function loginShellPath(fallback: string): Promise<string> {
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
 // its input, so the working line's count leaves tool input out.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system']);
+const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: { type: string; event?: unknown }): boolean {
@@ -204,6 +204,10 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath) },
         env: environment,
         includePartialMessages: true,
+        // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
+        // the first turn, in plan mode, after an API error, near the usage limit, and when settings.json
+        // has promptSuggestionEnabled: false.
+        promptSuggestions: true,
         pathToClaudeCodeExecutable: executable,
         systemPrompt: { type: 'preset', preset: 'claude_code', append: mainPrompt(projectPath) },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
