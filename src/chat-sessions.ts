@@ -338,6 +338,16 @@ export function registerChatSessions(
     sessions.get(slot)?.then((session) => session.query.interrupt()).catch(() => undefined);
   });
 
+  // Only a running session has tasks, so neither starts one. The session reports the change itself,
+  // as a task_notification or task_updated, and the strip follows that.
+  table.handle('chat-task:stop', async (_screen, slot: number, taskId: string) => {
+    await (await sessions.get(slot))?.query.stopTask(taskId);
+  });
+
+  table.handle('chat-task:background', async (_screen, slot: number, toolUseId?: string): Promise<boolean> => {
+    return (await sessions.get(slot))?.query.backgroundTasks(toolUseId) ?? false;
+  });
+
   // Every screen is told the question is gone, so the one it was not answered on stops showing it.
   table.on('chat:answer', (_screen, slot: number, id: string, result: PermissionResult) => {
     void sessions.get(slot)?.then((session) => {
