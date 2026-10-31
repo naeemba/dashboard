@@ -48,13 +48,6 @@
           "parent": null
         },
         {
-          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
-          "title": "Timestamp and model on each message in the Claude pane",
-          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
@@ -1408,6 +1401,22 @@
             {
               "at": "2026-10-31T22:51:14.324Z",
               "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.14.0."
+            }
+          ]
+        },
+        {
+          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
+          "title": "Timestamp and model on each message in the Claude pane",
+          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:56:29.422Z",
+          "branch": "work-board-card-5ab46333-ccde-4921-b84a-1e8",
+          "pullRequest": 115,
+          "comments": [
+            {
+              "at": "2026-10-31T22:56:29.422Z",
+              "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.15.0. Not yet looked at in the running app."
             }
           ]
         }
