@@ -3,10 +3,11 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
-import { createCommandMenu } from './chat-menu-view';
+import { createCommandMenu, type MenuRow } from './chat-menu-view';
+import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
@@ -71,7 +72,7 @@ function next<T>(list: readonly T[], current: T): T {
 }
 
 // Swapped for Claude's suggested next prompt while there is one (paint).
-const PLACEHOLDER = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
+const PLACEHOLDER = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands, @ the files. Paste or drop an image to attach it.';
 
 export function createChatView(options: ChatViewOptions): ChatView {
   const { bridge, slot } = options;
@@ -113,6 +114,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
   let model: string | null = null;
+  let effort: ChosenEffort;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
@@ -120,6 +122,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
   let commandsAsked = false;
+  // The project's files for the @ list, and the @ they were asked for.
+  let files: string[] = [];
+  let filesFor: number | null = null;
   // Which sent prompt Up has brought back, and what was in the box before it did.
   let recalled: number | null = null;
   let draft = '';
@@ -149,10 +154,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
-    const key = JSON.stringify([measured, shown, transcript.version, mode, state]);
+    const effortShown = footEffort(effort, state, transcript.entries);
+    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state]);
     if (key === drawnFoot) return;
     drawnFoot = key;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], state, measured, transcript.version));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version));
   }
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
@@ -288,6 +294,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -332,10 +339,27 @@ export function createChatView(options: ChatViewOptions): ChatView {
         updateMenu();
       }, () => undefined);
     }
-    menu.update(prompt.value, commands ?? []);
+    // Each new @ asks for the files again, so one made since the last is in the list.
+    const mention = mentionAt(prompt.value, prompt.selectionStart);
+    if (mention && mention.start !== filesFor) {
+      bridge.chatFiles(slot).then((list) => {
+        files = list;
+        updateMenu();
+      }, () => undefined);
+    }
+    filesFor = mention?.start ?? null;
+    menu.update(prompt.value, commands ?? [], mention ? fileRows(files, mention.query) : undefined);
   }
 
-  function complete(row: CommandRow, enter: boolean): void {
+  function complete(row: MenuRow, enter: boolean): void {
+    if (typeof row === 'string') {
+      const picked = pickMention(prompt.value, prompt.selectionStart, row);
+      prompt.value = picked.text;
+      prompt.setSelectionRange(picked.caret, picked.caret);
+      updateMenu();
+      prompt.focus();
+      return;
+    }
     const { text, runs } = completion(row, enter);
     prompt.value = text;
     if (runs) send();
@@ -371,6 +395,19 @@ export function createChatView(options: ChatViewOptions): ChatView {
   prompt.addEventListener('input', () => {
     recalled = null;
     updateMenu();
+  });
+  // The @ list follows the caret, so moving it without typing redraws the list too: a
+  // click, or any key that moved the caret (macOS Ctrl+A, E and F included). A recalled
+  // prompt stays closed until it is edited, so the next Up keeps walking the history.
+  let caretAtKeydown: number | null = null;
+  prompt.addEventListener('click', () => {
+    if (recalled === null) updateMenu();
+  });
+  prompt.addEventListener('keydown', () => {
+    caretAtKeydown = prompt.selectionStart;
+  });
+  prompt.addEventListener('keyup', () => {
+    if (recalled === null && prompt.selectionStart !== caretAtKeydown) updateMenu();
   });
 
   prompt.addEventListener('keydown', (event) => {
@@ -511,6 +548,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (measured) measured = { ...measured, model: null };
     }
     if (change.permissionMode) mode = change.permissionMode;
+    if ('effort' in change) effort = change.effort ?? null;
   }
 
   function readEarlier(): void {
@@ -587,6 +625,24 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (picked !== undefined) configure({ model: pickedModel(picked) });
       focus();
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
+  }
+
+  // The effort levels in a search sheet, as Claude Code's /effort offers them, or straight to the one
+  // named after the command; the next turn runs at it, on every screen.
+  function showEfforts(name: string): void {
+    if (name) {
+      const named = namedEffort(name);
+      if (named === undefined) options.onNotice(`Claude has no effort ${name}. Try auto, ${EFFORT_LEVELS.join(', ')}.`);
+      else configure({ effort: named });
+      return;
+    }
+    void searchOverlay({
+      name: 'chat-effort', placeholder: 'Search effort levels', rows: (query) => effortRows(effort, query),
+      empty: 'No level matches.', glyph: () => 'claude',
+    }).then((picked) => {
+      if (picked !== undefined) configure({ effort: picked });
+      focus();
+    });
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.
