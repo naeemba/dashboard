@@ -21,3 +21,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #107 — Unfold an Agent call to see the subagent's own steps
 - 2026-11-01 #110 — Real line diffs for edits, far-apart changes shown apart
 - 2026-11-01 #115 — Time and model above each message
+- 2026-11-01 #124 — The working line names a running hook; a failed hook leaves a folded line
