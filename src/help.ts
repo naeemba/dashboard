@@ -306,7 +306,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'there to edit or send, and typing anything else replaces it. The editor key opens what is in the box in the project\'s nvim; '
     + 'save it there and come back, and the box holds what you saved. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
-    + 'runs it, or fills the box when it takes arguments. Six are this screen\'s own: /model lists the session\'s models '
+    + 'runs it, or fills the box when it takes arguments. Seven are this screen\'s own: /diff shows every change Claude made to a file in this conversation, file by file, on a sheet the arrows scroll and Escape puts away; /model lists the session\'s models '
     + 'with the one it is on marked and switches to the one picked, or straight to the one named after it; /effort lists auto and low to max the same way, for how hard Claude thinks from the next turn on; /resume lists the project\'s earlier '
     + 'conversations to carry on from, newest first with the one you are on marked and a box to search them; /rewind lists the prompts sent, newest first, and puts the code, the '
     + 'conversation or both back to just before the one picked, with that prompt back in the box when the conversation went back; /branch carries on in a copy of '

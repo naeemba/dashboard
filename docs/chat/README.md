@@ -10,7 +10,7 @@ Claude has running.
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
-  `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
+  `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-stamp.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
@@ -35,6 +35,7 @@ Claude has running.
 - Given an Edit whose old and new text are the same, when it is drawn, then its input shows instead of an empty diff.
 - Given the project has earlier conversations, when you press Ctrl+R, then a search lists every prompt sent in the 20 most recent (`HISTORY_CONVERSATIONS`), newest first, this conversation's from the screen and the others read off disk only once they change, and the one picked goes in the box.
 - Given Claude has started a subagent, when you unfold its Agent call, then the subagent's own text and tool calls are listed under the call, a skill it loaded as one line and its prompt not repeated, a subagent of its own indented under its line; a conversation read back after a restart has none.
+- Given Claude has edited files in the conversation, when you send `/diff`, then a sheet lists each file it changed, in the order first touched, with each edit's change in turn under a heading counting the lines in and out across them; a failed or refused edit is not in it. A code-only `/rewind` keeps the conversation, so the edits it put back are still listed.
 - Given Claude edited files after a prompt, when you /rewind to it and restore code, then the files are as they were before it; restore conversation, and the conversation picks up from just before it with the prompt back in the box.
 - Given text in the box, when you press Ctrl+G, then it opens in the project's nvim, and once saved there and you come back, the box holds what you saved.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
