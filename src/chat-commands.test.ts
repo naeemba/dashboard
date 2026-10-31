@@ -6,6 +6,7 @@ const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ na
 describe('screenCommand', () => {
   it('takes /resume and /plan for the screen', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
+    expect(screenCommand('/diff')).toEqual({ kind: 'diff' });
     expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
     expect(screenCommand('/mcp')).toEqual({ kind: 'mcp' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
