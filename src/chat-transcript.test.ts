@@ -63,9 +63,53 @@ describe('applyMessage', () => {
     expect(entry.kind === 'tool' && entry.result?.images).toEqual([{ mediaType: 'image/png', data: 'AAA' }]);
   });
 
-  it('leaves a subagent\'s own messages out', () => {
+  it('leaves out a subagent\'s message whose call is not listed', () => {
     const transcript = applyMessage(EMPTY_TRANSCRIPT, { ...assistant([{ type: 'text', text: 'inner' }]), parent_tool_use_id: 't1' });
-    expect(transcript.entries).toEqual([]);
+    expect(transcript).toBe(EMPTY_TRANSCRIPT);
+  });
+
+  it('folds a subagent\'s own steps into the call that started it, and its subagent\'s into its call', () => {
+    const under = (id: string, message: Record<string, unknown>) => ({ ...message, parent_tool_use_id: id });
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: { description: 'look' } }]),
+      under('a1', assistant([{ type: 'text', text: 'Reading it.' }, { type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: 'x' } }])),
+      under('a1', { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'r1', content: 'ok' }] } }),
+      under('a1', assistant([{ type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'false' } }])),
+      under('a1', { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'b1', content: 'boom', is_error: true }] } }),
+      under('a1', assistant([{ type: 'tool_use', id: 'a2', name: 'Agent', input: {} }])),
+      under('a2', assistant([{ type: 'text', text: 'deeper' }])),
+      under('a1', { type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'x' } } }),
+    ]);
+    const call = transcript.entries[0];
+    expect(transcript.entries).toHaveLength(1);
+    expect(transcript.live).toBe('');
+    expect(call.kind === 'tool' && call.steps).toEqual([
+      { kind: 'text', text: 'Reading it.' },
+      { kind: 'tool', id: 'r1', name: 'Read', input: { file_path: 'x' }, result: { text: '', images: [], isError: false } },
+      { kind: 'tool', id: 'b1', name: 'Bash', input: { command: 'false' }, result: { text: '', images: [], isError: true } },
+      { kind: 'tool', id: 'a2', name: 'Agent', input: {}, result: null, steps: [{ kind: 'text', text: 'deeper' }] },
+    ]);
+  });
+
+  it('folds what Claude Code wrote for a subagent to its line, and leaves out its prompt', () => {
+    const under = (message: Record<string, unknown>) => ({ ...message, parent_tool_use_id: 'a1' });
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: { prompt: 'look' } }]),
+      under({ type: 'user', message: { content: [{ type: 'text', text: 'look' }] } }),
+      under(assistant([{ type: 'tool_use', id: 's1', name: 'Skill', input: { skill: 'review' } }])),
+      under({ type: 'user', isSynthetic: true, sourceToolUseID: 's1', message: { content: [{ type: 'text', text: '# Review\nsteps' }] } }),
+    ]);
+    const call = transcript.entries[0];
+    expect(call.kind === 'tool' && call.steps?.map((step) => step.kind)).toEqual(['tool', 'notice']);
+    expect(call.kind === 'tool' && call.steps?.[1]).toEqual({ kind: 'notice', text: 'review skill' });
+  });
+
+  it('keeps the transcript when a subagent\'s message adds no step', () => {
+    const start = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      { ...assistant([{ type: 'text', text: 'said' }]), parent_tool_use_id: 'a1' },
+    ]);
+    expect(applyMessage(start, { ...assistant([{ type: 'thinking', thinking: 'hm' }]), parent_tool_use_id: 'a1' })).toBe(start);
   });
 
   it('reads a prompt from a saved session as what you said', () => {

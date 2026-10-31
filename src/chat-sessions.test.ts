@@ -69,6 +69,10 @@ describe('relayed', () => {
   it('keeps a tool input streaming in, which for a Write is the whole file', () => {
     expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json: '{' } }))).toBe(false);
   });
+  it('keeps a subagent\'s stream, and relays its finished messages', () => {
+    expect(relayed({ ...streamed({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'a' } }), parent_tool_use_id: 't1' })).toBe(false);
+    expect(relayed({ type: 'assistant', parent_tool_use_id: 't1' })).toBe(true);
+  });
   it('keeps rate limit events', () => expect(relayed({ type: 'rate_limit_event' })).toBe(false));
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
   it('relays the suggested next prompt', () => expect(relayed({ type: 'prompt_suggestion' })).toBe(true));

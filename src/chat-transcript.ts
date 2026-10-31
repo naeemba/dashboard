@@ -57,7 +57,8 @@ export type ChatEntry =
   // screen would send it to Claude as a prompt.
   | { kind: 'user'; text: string; images: ChatImage[]; ran?: true } & Stamp
   | { kind: 'text'; text: string } & Stamp
-  | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null }
+  // `steps` is what a subagent the call started has done so far, its own conversation folded the same way.
+  | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null; steps?: ChatEntry[] }
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
@@ -236,10 +237,62 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
   return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
 }
 
+// A user message: its tool results reach their calls, and one Claude Code wrote rather than a person
+// folds to the one line it is, or to nothing.
+function userMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
+  const inner = isRecord(message.message) ? message.message : {};
+  // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
+  // still reach its call.
+  const meta = (message.isMeta === true || message.isSynthetic === true)
+    && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
+  const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
+  if (folded === 'hidden') return transcript;
+  if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
+  return user(transcript, inner.content, stampOf(message, inner));
+}
+
+// A subagent's own message, folded into the steps of the call that started it, wherever that call
+// sits: a subagent's subagent is a call in its starter's steps. The same entries when no call has the id.
+function withSteps(entries: ChatEntry[], id: string, message: Record<string, unknown>): ChatEntry[] {
+  let changed = false;
+  const next = entries.map((entry) => {
+    if (entry.kind !== 'tool' || (entry.id !== id && !entry.steps)) return entry;
+    const steps = entry.id === id ? stepsAfter(entry.steps ?? [], message) : withSteps(entry.steps ?? [], id, message);
+    if (steps === entry.steps || (steps.length === 0 && !entry.steps)) return entry;
+    changed = true;
+    return { ...entry, steps };
+  });
+  return changed ? next : entries;
+}
+
+// A step's tool output is never drawn, only whether it failed, so it is not kept. Plain text in the
+// subagent's name is left out: its first is its prompt, which the call's input already shows. What
+// Claude Code wrote for it, such as a skill it loaded, is one line, as it is in the main conversation.
+// Its thinking is left out: folded to a step it would be a bare "Thinking" line with nothing under it.
+// The same steps when the message added or changed none, so the call does not redraw.
+function stepsAfter(steps: ChatEntry[], message: Record<string, unknown>): ChatEntry[] {
+  const inner = isRecord(message.message) ? message.message : {};
+  const subagent = { ...EMPTY_TRANSCRIPT, entries: steps };
+  const said = blocksOf(inner.content).filter((block) => block.type !== 'thinking');
+  const after = message.type === 'assistant' ? assistant(subagent, said, {}) : userMessage(subagent, message);
+  const next = after.entries.filter((step) => step.kind !== 'user').map((step): ChatEntry => {
+    if (step.kind === 'event') return { kind: 'notice', text: step.title };
+    if (step.kind === 'tool' && step.result && (step.result.text || step.result.images.length > 0)) {
+      return { ...step, result: { text: '', images: [], isError: step.result.isError } };
+    }
+    return step;
+  });
+  return next.length === steps.length && next.every((step, index) => step === steps[index]) ? steps : next;
+}
+
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call
-// that started it and are left out: the call's folded line and its result say what it did.
+// that started it and go into that call's steps; only what it said and the tools it called are kept.
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
-  if (typeof message.parent_tool_use_id === 'string') return transcript;
+  if (typeof message.parent_tool_use_id === 'string') {
+    if (message.type !== 'assistant' && message.type !== 'user') return transcript;
+    const entries = withSteps(transcript.entries, message.parent_tool_use_id, message);
+    return entries === transcript.entries ? transcript : { ...transcript, entries };
+  }
   const inner = isRecord(message.message) ? message.message : {};
   // A turn under way, whoever started it, is past what the last one suggested.
   if (transcript.suggestion !== null && (message.type === 'assistant' || message.type === 'user' || message.type === 'stream_event')) {
@@ -248,16 +301,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   switch (message.type) {
     case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
     case 'assistant': return assistant(transcript, inner.content, stampOf(message, inner));
-    case 'user': {
-      // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
-      // still reach its call.
-      const meta = (message.isMeta === true || message.isSynthetic === true)
-        && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
-      const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
-      if (folded === 'hidden') return transcript;
-      if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
-      return user(transcript, inner.content, stampOf(message, inner));
-    }
+    case 'user': return userMessage(transcript, message);
     case 'stream_event': return streamed(transcript, message.event);
     case 'result': {
       const notice = resultNotice(message, transcript.entries.at(-1));
