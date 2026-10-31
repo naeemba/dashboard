@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { rmSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -137,7 +137,7 @@ export function openFileArguments(socket: string, file: string, line?: number, c
   return ['--server', socket, '--remote-expr', `execute([${commands.join(', ')}])`];
 }
 
-// Every scrollback file this run has written, so quitting takes them with it. A pane's scrollback is
+// Every scrollback and prompt file this run has written, so quitting takes them with it. A pane's scrollback is
 // whatever was on your screen — an agent's transcript, a .env someone catted — and the removal on the
 // write path below only runs the next time you press the key on that pane, which may be never.
 const written = new Set<string>();
@@ -145,6 +145,54 @@ const written = new Set<string>();
 export function dropScrollbackFiles(): void {
   for (const file of written) rmSync(file, { force: true });
   written.clear();
+}
+
+// Owner-only, and never written into a file that is already there. The temp folder is shared, and
+// the default mode would leave a transcript readable by every account on the machine. The
+// remove-then-`wx` pair is the other half: without it, a file planted at this path by someone else
+// is a file this writes your scrollback into, mode and all.
+async function writeOwnFile(file: string, text: string): Promise<void> {
+  rmSync(file, { force: true });
+  await writeFile(file, text, { mode: 0o600, flag: 'wx' });
+  written.add(file);
+}
+
+// Ctrl+G on the Claude screen: the prompt box as a file the page's nvim edits, read back when you
+// return. A new name every press, because the file opens through openFileArguments' `:drop`, and a
+// buffer nvim still holds under the old name would come back over the text just written.
+let promptWrites = 0;
+// Per slot, the file in nvim and the text the box last took from it.
+const prompts = new Map<number, { file: string; text: string }>();
+
+export async function writePrompt(temporaryDirectory: string, slot: number, text: string): Promise<string> {
+  const previous = prompts.get(slot);
+  if (previous) rmSync(previous.file, { force: true });
+  const file = path.join(temporaryDirectory, `dashboard-prompt-${process.pid}-${slot}-${++promptWrites}.md`);
+  await writeOwnFile(file, text);
+  prompts.set(slot, { file, text });
+  return file;
+}
+
+// What was saved since the box last took the file, or null when nothing new was.
+export async function readPrompt(slot: number): Promise<string | null> {
+  const prompt = prompts.get(slot);
+  if (!prompt) return null;
+  let contents: string;
+  try {
+    contents = await readFile(prompt.file, 'utf8');
+  } catch {
+    return null;
+  }
+  const text = savedPrompt(contents, prompt.text);
+  if (text !== null) prompt.text = text;
+  return text;
+}
+
+// nvim ends a file it writes with a newline the box never had. Without dropping it, every return to
+// the screen would read a change and put the last saved text back over what you typed since.
+export function savedPrompt(contents: string, seen: string): string | null {
+  const text = contents.replace(/\n$/, '');
+  return text === seen ? null : text;
 }
 
 // Which nvim a hand-over goes to: the project's slot, the temp folder its socket lives in, and the shell
@@ -195,13 +243,7 @@ export function openScrollback(
   const file = scrollbackFile(temporaryDirectory, slot, index);
   return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the scrollback', async () => {
     try {
-      // Owner-only, and never written into a file that is already there. The temp folder is shared, and
-      // the default mode would leave a transcript readable by every account on the machine. The
-      // remove-then-`wx` pair is the other half: without it, a file planted at this path by someone else
-      // is a file this writes your scrollback into, mode and all.
-      rmSync(file, { force: true });
-      await writeFile(file, text, { mode: 0o600, flag: 'wx' });
-      written.add(file);
+      await writeOwnFile(file, text);
       return null;
     } catch (error) {
       return `could not write the scrollback: ${(error as Error).message}`;

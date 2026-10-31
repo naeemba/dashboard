@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  editorSocket, nvimFromOutput, openFileArguments, scrollbackFile, tabArguments, wipeArguments,
+  editorSocket, nvimFromOutput, openFileArguments, savedPrompt, scrollbackFile, tabArguments, wipeArguments,
 } from './nvim-remote';
 
 describe('nvimFromOutput', () => {
@@ -79,5 +79,21 @@ describe('openFileArguments', () => {
   // The path sits inside a vimscript string, so a quote in it must not end the string early.
   it('doubles a quote in the path', () => {
     expect(openFileArguments('/s', "/it's.ts")[3]).toContain("fnameescape('/it''s.ts')");
+  });
+});
+
+describe('savedPrompt', () => {
+  // The newline nvim adds on write is not a change; read as one, every return would undo your typing.
+  it('reads the text it wrote, saved back with a newline, as nothing new', () => {
+    expect(savedPrompt('fix the bug\n', 'fix the bug')).toBeNull();
+    expect(savedPrompt('fix the bug', 'fix the bug')).toBeNull();
+  });
+
+  it('answers what was saved, without the newline nvim ends it with', () => {
+    expect(savedPrompt('fix the bug\nand test it\n', 'fix the bug')).toBe('fix the bug\nand test it');
+  });
+
+  it('keeps a blank line you ended it with on purpose', () => {
+    expect(savedPrompt('fix it\n\n', 'fix it')).toBe('fix it\n');
   });
 });

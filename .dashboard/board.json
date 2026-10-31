@@ -83,13 +83,6 @@
           "parent": null
         },
         {
-          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
-          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
-          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
           "title": "Timestamp and model on each message in the Claude pane",
           "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
@@ -279,7 +272,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
+          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
+          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:34:00.917Z"
+        }
+      ]
     },
     {
       "name": "Review",

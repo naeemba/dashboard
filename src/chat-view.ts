@@ -39,6 +39,8 @@ export type ChatViewOptions = {
   onNotice(message: string): void;
   // A question arrived or the last one went, so whatever marks a project that wants you redraws.
   onWaiting(): void;
+  // A file for the page's nvim to open: the box, written out by the editor key.
+  openEditor(file: string): void;
 };
 
 export type ChatView = {
@@ -593,9 +595,24 @@ export function createChatView(options: ChatViewOptions): ChatView {
     render();
   }
 
+  // Once the editor key has written the box out, every return here asks for what nvim saved since.
+  let edited = false;
+  function editPrompt(): void {
+    bridge.writePrompt(slot, prompt.value).then((file) => {
+      edited = true;
+      options.openEditor(file);
+    }, (error: unknown) => options.onError(`The prompt was not written out: ${failureText(error)}`));
+  }
+
   function focus(): void {
     if (asks.length > 0) ask.focus();
     else prompt.focus();
+    if (!edited) return;
+    bridge.readPrompt(slot).then((text) => {
+      if (text === null) return;
+      prompt.value = text;
+      prompt.dispatchEvent(new Event('input'));
+    }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
   return {
@@ -639,6 +656,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'editor') editPrompt();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

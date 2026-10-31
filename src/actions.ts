@@ -62,7 +62,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'editor';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -572,6 +572,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-new', description: 'Start a new conversation',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'new' }, mac: 'Alt+N', other: 'Alt+N',
+  },
+  // Ctrl+G, as in Claude Code, which opens the prompt in $EDITOR. Here the editor is the page's nvim.
+  {
+    name: 'claude-editor', description: 'Edit the prompt in nvim; save and come back to take it',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'editor' }, mac: 'Ctrl+G', other: 'Ctrl+G',
   },
 ];
 

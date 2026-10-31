@@ -578,6 +578,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onError: (message) => options.onError(`chat:${slot}`, message),
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
       onWaiting: options.onChanged,
+      openEditor: (file) => options.openFile(page, MAIN_INDEX, { path: file, start: 0, end: 0 }),
     });
     page.chat = chat;
     const main = document.createElement('div');
