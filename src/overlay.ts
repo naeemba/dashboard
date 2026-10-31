@@ -85,6 +85,24 @@ export function imageOverlay(source: string): void {
   dialog.focus();
 }
 
+// A PDF in Chromium's own viewer, on the same sheet; the window turns plugins on for it. Escape or
+// Enter puts it away while the sheet has the keyboard, and the dark margin does once the viewer has
+// taken it. A click inside the viewer is the viewer's, so the box does not close on one.
+export function pdfOverlay(source: string, closed: () => void): void {
+  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  function close(): void {
+    remove();
+    closed();
+    previous?.focus();
+  }
+  const { dialog, remove } = openOverlay('pdf-viewer', close);
+  const frame = document.createElement('iframe');
+  frame.src = source;
+  dialog.append(frame);
+  answerKeys(dialog, close);
+  dialog.focus();
+}
+
 // The same sheet with a box to type in instead of a question to answer. Enter takes what you typed,
 // Escape and a click on the dark margin leave it alone, through the same answerKeys as confirmOverlay.
 //

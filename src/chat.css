@@ -152,6 +152,22 @@
   cursor: zoom-in;
 }
 
+/* A PDF the conversation names: a small tile in place of a thumbnail; a click opens it in the app. */
+.chat-pdf {
+  display: inline-flex;
+  gap: 8px;
+  margin: 6px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--muted);
+  border-radius: 5px;
+  font: 12.5px/1.6 var(--mono-font);
+  cursor: zoom-in;
+}
+
+.chat-pdf-name {
+  color: var(--muted);
+}
+
 .chat-tool summary {
   display: flex;
   gap: 8px;

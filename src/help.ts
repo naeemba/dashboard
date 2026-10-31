@@ -298,7 +298,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
     + 'working and it is read when the turn gets to it. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
     + 'a thumbnail of each sits over the box, up to 5 MB of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
-    + 'point Claude at a file. Up and Down on the box\'s first or last line bring back the prompts sent '
+    + 'point Claude at a file. A PDF mentioned that way, or read by Claude, shows as a [PDF File] tile with its name; a click or the image key opens it in the built-in PDF viewer, Escape puts it away, and one missing or over 5 MB says so on the tile. Up and Down on the box\'s first or last line bring back the prompts sent '
     + 'before. A slash opens the list of commands, the same ones claude has in a pane: its own, your '
     + 'skills and the project\'s. The arrows walk it, Tab fills the box with the one picked, and Enter '
     + 'runs it, or fills the box when it takes arguments. Three are this screen\'s own: /model lists the session\'s models '

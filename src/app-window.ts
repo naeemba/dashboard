@@ -43,6 +43,8 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       // dies with the folder. A page of terminals is not a page that should stop ticking when it is
       // behind something.
       backgroundThrottling: false,
+      // Chromium's built-in PDF viewer, which the Claude screen opens a PDF the conversation names in.
+      plugins: true,
     },
   });
   // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q

@@ -1,6 +1,7 @@
 import { icon } from './icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
 import { toolDiff, toolSummary } from './chat-tools';
+import { pdfMentions, pdfName, pdfOfTool } from './chat-pdf';
 import { imageDataUrl, type ChatEntry, type ChatImage, type ToolResult } from './chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
@@ -21,6 +22,26 @@ function images(list: ChatImage[]): HTMLImageElement[] {
     image.decoding = 'async';
     image.src = source;
     return [image];
+  });
+}
+
+// A PDF the conversation names, as a tile the size of a line. Its path is kept on it for the view,
+// which asks main for the file when the tile is clicked or the image key is pressed on its entry.
+export const PDF_TILE = 'chat-pdf';
+
+function pdfTiles(files: string[]): HTMLElement[] {
+  return files.map((file) => {
+    const tile = document.createElement('div');
+    tile.className = PDF_TILE;
+    tile.dataset.path = file;
+    tile.title = file;
+    const kind = document.createElement('b');
+    kind.textContent = '[PDF File]';
+    const name = document.createElement('span');
+    name.className = 'chat-pdf-name';
+    name.textContent = pdfName(file);
+    tile.append(kind, name);
+    return tile;
   });
 }
 
@@ -69,6 +90,8 @@ function preformatted(className: string, text: string): HTMLPreElement {
 export function toolBody(name: string, input: Record<string, unknown>, result: ToolResult | null): HTMLElement[] {
   const diff = toolDiff(name, input);
   const parts: HTMLElement[] = [];
+  const pdf = pdfOfTool(name, input);
+  if (pdf) parts.push(...pdfTiles([pdf]));
   if (name === 'ExitPlanMode' && typeof input.plan === 'string') {
     const plan = document.createElement('div');
     plan.className = 'chat-plan chat-text';
@@ -152,7 +175,7 @@ export function drawEntry(entry: ChatEntry): DrawnEntry {
   if (entry.kind === 'user') {
     const said = document.createElement('p');
     said.textContent = entry.text;
-    element.append(said, ...images(entry.images));
+    element.append(said, ...pdfTiles(pdfMentions(entry.text)), ...images(entry.images));
     return { entry, element, fill: null };
   }
   // Until it is filled the box holds the raw text, so a conversation scrolled fast still reads.

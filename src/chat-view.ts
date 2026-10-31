@@ -4,7 +4,8 @@ import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
-import { drawEntry, type DrawnEntry } from './chat-entries';
+import { drawEntry, PDF_TILE, type DrawnEntry } from './chat-entries';
+import { pdfName } from './chat-pdf';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
@@ -20,7 +21,7 @@ import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { imageOverlay, searchOverlay } from './overlay';
+import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -428,11 +429,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
   // decides what is safe to hand the system, never in this window.
-  // An image, in the log or attached, opens full size over the app.
+  // An image, in the log or attached, opens full size over the app, and a PDF's tile in the viewer.
   element.addEventListener('click', (event) => {
     if (event.target instanceof HTMLImageElement) {
       event.preventDefault();
       imageOverlay(event.target.src);
+      return;
+    }
+    const tile = event.target instanceof Element ? event.target.closest<HTMLElement>(`.${PDF_TILE}`) : null;
+    if (tile) {
+      openPdf(tile);
       return;
     }
     const link = event.target instanceof Element ? event.target.closest('a') : null;
@@ -449,6 +455,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const index = drawn.findIndex((entry) => entry.element.contains(target));
     if (index !== -1) select(index);
   });
+
+  // Main reads the file each time, so a PDF written since the tile was drawn opens as it is now. One
+  // it will not hand over says why on the tile, which stays.
+  function openPdf(tile: HTMLElement): void {
+    bridge.readPdf(slot, tile.dataset.path ?? '').then((answer) => {
+      if ('refused' in answer) {
+        tile.querySelector('.chat-pdf-name')?.replaceChildren(`${pdfName(tile.dataset.path ?? '')} — ${answer.refused}`);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(answer.data), (character) => character.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      pdfOverlay(url, () => URL.revokeObjectURL(url));
+    }, (error: unknown) => options.onError(`PDF not opened: ${failureText(error)}`));
+  }
 
   function select(index: number | null): void {
     // Only a move resets the copy walk: the copy key's own click bubbles here and selects the same entry.
@@ -606,8 +626,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'image') {
-        const source = (selected === null ? attached : drawn[selected].element).querySelector('img')?.src;
-        if (source) imageOverlay(source);
+        const shown = (selected === null ? attached : drawn[selected].element).querySelector<HTMLElement>(`img, .${PDF_TILE}`);
+        if (shown instanceof HTMLImageElement) imageOverlay(shown.src);
+        else if (shown) openPdf(shown);
       }
       // The same button a click on the block presses, so the tick shows which block was copied.
       if (command === 'copy' && selected !== null) {
