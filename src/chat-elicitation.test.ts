@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { elicitationResult, elicitationTitle, fieldsOf, typedValue } from './chat-elicitation';
+import { DECLINED, elicitationAsk, elicitationResult, elicitationTitle, fieldAbout, fieldChoices, fieldsOf, takes, typedValue } from './chat-elicitation';
 
 const schema = {
   type: 'object',
@@ -9,6 +9,9 @@ const schema = {
     subscribe: { type: 'boolean', description: 'Weekly mail' },
     size: { type: 'string', enum: ['s', 'l'], enumNames: ['Small', 'Large'] },
     colour: { type: 'string', oneOf: [{ const: 'r', title: 'Red' }] },
+    labels: { type: 'array', items: { enum: ['bug', 'ui'] } },
+    count: { type: 'integer', minimum: 1, maximum: 9 },
+    code: { type: 'string', minLength: 3 },
   },
   required: ['name', 'age'],
 };
@@ -18,6 +21,7 @@ describe('fieldsOf', () => {
     const fields = fieldsOf(schema);
     expect(fields.map((field) => [field.key, field.kind, field.required])).toEqual([
       ['name', 'text', true], ['age', 'integer', true], ['subscribe', 'boolean', false], ['size', 'choice', false], ['colour', 'choice', false],
+      ['labels', 'list', false], ['count', 'integer', false], ['code', 'text', false],
     ]);
     expect(fields[0]).toMatchObject({ label: 'Your name', initial: 'Ada' });
     expect(fields[3].options).toEqual([{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }]);
@@ -30,8 +34,37 @@ describe('fieldsOf', () => {
   });
 });
 
+const [name, age, subscribe, size, , labels, count, code] = fieldsOf(schema);
+const labelsOf = (field: typeof name) => fieldChoices(field).choices.map((choice) => choice.label);
+
+describe('fieldChoices', () => {
+  it('asks a yes or no and a pick as rows, with Skip only where the field may be left out', () => {
+    expect(labelsOf(subscribe)).toEqual(['Yes', 'No', 'Skip', 'Decline']);
+    expect(labelsOf(size)).toEqual(['Small', 'Large', 'Skip', 'Decline']);
+    expect(labelsOf({ ...size, required: true })).toEqual(['Small', 'Large', 'Decline']);
+  });
+
+  it('opens on the default the server gave', () => {
+    expect(fieldChoices({ ...subscribe, initial: 'false' }).start).toBe(1);
+    expect(fieldChoices({ ...size, initial: 'l' }).start).toBe(1);
+    expect(fieldChoices(size).start).toBe(0);
+  });
+
+  it('types the rest, saying what it takes, and only declines a list', () => {
+    expect(fieldChoices(age).choices).toEqual([{ label: 'age', typed: 'A whole number, then Enter' }, { label: 'Decline', decline: true }]);
+    expect(fieldChoices(count).choices[0]).toEqual({ label: 'count', typed: 'A whole number of 1 to 9, or leave it empty, then Enter' });
+    expect(labelsOf(labels)).toEqual(['Decline']);
+    expect(fieldAbout(labels)).toContain('cannot be answered from here');
+    expect(fieldAbout(subscribe)).toBe('subscribe (optional) — Weekly mail');
+  });
+
+  it('says the bounds a typed field has', () => {
+    expect(takes(code)).toBe('Text of at least 3 characters');
+    expect(takes({ ...count, limits: { ...count.limits, minimum: -Infinity } })).toBe('A whole number of at most 9');
+  });
+});
+
 describe('typedValue', () => {
-  const [name, age] = fieldsOf(schema);
   const note = { ...name, required: false };
 
   it('keeps a required field open until something is typed', () => {
@@ -45,6 +78,13 @@ describe('typedValue', () => {
     expect(typedValue(age, 'old')).toBe('again');
     expect(typedValue(name, '41')).toEqual({ value: '41' });
   });
+
+  it('keeps the box open on an answer outside the bounds', () => {
+    expect(typedValue(count, '0')).toBe('again');
+    expect(typedValue(count, '9')).toEqual({ value: 9 });
+    expect(typedValue(code, 'ab')).toBe('again');
+    expect(typedValue(code, 'abc')).toEqual({ value: 'abc' });
+  });
 });
 
 describe('elicitationResult', () => {
@@ -52,7 +92,16 @@ describe('elicitationResult', () => {
 
   it('accepts a form with what was filled in, and declines on a no', () => {
     expect(elicitationResult(form, { behavior: 'allow', updatedInput: { name: 'Ada' } })).toEqual({ action: 'accept', content: { name: 'Ada' } });
-    expect(elicitationResult(form, { behavior: 'deny', message: 'no' })).toEqual({ action: 'decline' });
+    expect(elicitationResult(form, DECLINED)).toEqual({ action: 'decline' });
+  });
+
+  it('cancels when the ask is given up on rather than declined', () => {
+    expect(elicitationResult(form, { behavior: 'deny', message: 'Interrupted.' })).toEqual({ action: 'cancel' });
+    expect(elicitationResult(form, { behavior: 'deny', message: 'The session ended.' })).toEqual({ action: 'cancel' });
+  });
+
+  it('carries the server subtitle onto the ask', () => {
+    expect(elicitationAsk({ ...form, description: 'Signs you in' }).description).toBe('Signs you in');
   });
 
   it('accepts a link with no content', () => {
