@@ -99,7 +99,19 @@ turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that 
 would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
 lasts while other tasks still run, which a background command can stretch across turns.
 
-## chat-decision-6: A message sent while Claude is busy waits in the session's own queue
+## chat-decision-6: /mcp is the screen's own, on the session's MCP calls
+
+Sent as a prompt, `/mcp` gets back a count ("2 MCP server(s): 1 connected, 1 connecting, …") and a
+pointer to the terminal, so the screen answers it itself, as it does `/resume`. The list is
+`mcpServerStatus()`; Reconnect is `reconnectMcpServer`, Disable and Enable are `toggleMcpServer`.
+Checked against the pinned SDK: a connected server went to `disabled` and back to `connected`, and a
+name the session does not have throws "Server not found". A failure is printed as the error line.
+
+It is not refused under a running turn, as `/resume` and `/rewind` are: neither call touches the
+conversation. Claude Code's dialog also lists each server's tools and signs in to one that needs it;
+the sheet shows the tool count and the status only.
+
+## chat-decision-7: A message sent while Claude is busy waits in the session's own queue
 
 Main stamps every prompt with a uuid. The CLI queues one that arrives mid-turn itself and reports it
 by that uuid in `command_lifecycle` messages: `queued`, then `started` and `completed`, or `cancelled`.

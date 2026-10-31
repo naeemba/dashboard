@@ -12,6 +12,7 @@ import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
+import { manageMcp } from './chat-mcp-view';
 import { rewind } from './chat-rewind-view';
 import { branch as branchConversation, chooseModel, resume } from './chat-screen-commands';
 import { footSides, piece, type FootState } from './chat-foot-view';
@@ -304,6 +305,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'diff') return showDiff();
     if (own?.kind === 'rewind') return showRewind();
+    if (own?.kind === 'mcp') return void manageMcp(bridge, slot, options).then(focus);
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
