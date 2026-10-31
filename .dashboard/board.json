@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
-          "title": "Stop or background a running task from the Claude pane's task strip",
-          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
           "title": "Real line diffs for edits in the Claude pane",
           "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
@@ -79,13 +72,6 @@
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
-          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
-          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
           "priority": "medium",
           "parent": null
         },
@@ -341,16 +327,6 @@
           ]
         },
         {
-          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
-          "title": "Effort level and ultrathink in the Claude pane",
-          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:19:49.243Z",
-          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
-          "pullRequest": 105
-        },
-        {
           "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
           "title": "Search prompt history in the Claude pane, across sessions",
           "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
@@ -405,6 +381,22 @@
             {
               "at": "2026-10-31T22:40:56.632Z",
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
+          "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
+          "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:47:51.646Z",
+          "branch": "work-board-card-0bef254c-8d96-4bc7-80b6-d3c",
+          "pullRequest": 116,
+          "comments": [
+            {
+              "at": "2026-10-31T22:47:51.595Z",
+              "body": "PR #116: onElicitation wired (form walked a field at a time, URL opened and accepted, decline on every step). onUserDialog left undeclared: only documented kind refusal_fallback_prompt has no published payload/result shape (sdk.d.ts:1817-1839, 10280-10307); undeclared means CLI never emits, keeps classic fallback. Not hand-checked: needs an MCP server that elicits."
             }
           ]
         }
@@ -1344,6 +1336,38 @@
             {
               "at": "2026-10-31T22:38:35.367Z",
               "body": "Shipped in PR #103: @ opens a list of the project's files in the Claude pane's box, narrowing as you type; Tab or Enter puts the pick in as an @ mention. Version 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+          "title": "Effort level and ultrathink in the Claude pane",
+          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:41:21.986Z",
+          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
+          "pullRequest": 105,
+          "comments": [
+            {
+              "at": "2026-10-31T22:41:21.986Z",
+              "body": "Shipped in PR #105: /effort command, effort level in the foot, ultrathink shown while its turn runs. Version 2.11.0."
+            }
+          ]
+        },
+        {
+          "id": "402cf14c-e128-4f04-bc92-39af28bcf547",
+          "title": "Stop or background a running task from the Claude pane's task strip",
+          "notes": "Claude Code: Ctrl+B backgrounds Bash and agents, a key stops subagents, /tasks shows an output tail. SDK: backgroundTasks(id?) (sdk.d.ts:3324), stopTask (3309); get_task_output (4361) is control-only, unverified on Query. Pane: chat-task-strip.ts only lists. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:44:37.912Z",
+          "branch": "work-board-card-402cf14c-e128-4f04-bc92-39a",
+          "pullRequest": 109,
+          "comments": [
+            {
+              "at": "2026-10-31T22:44:37.912Z",
+              "body": "Shipped in PR #109: the task strip picks a task with Alt+T, stops it with Alt+X and backgrounds it with Alt+B (chat-decision-5). Version 2.12.0."
             }
           ]
         }

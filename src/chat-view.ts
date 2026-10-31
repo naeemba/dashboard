@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, modelRows, namedEffort, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
@@ -20,6 +20,7 @@ import {
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
+import { backgroundTarget, stopTarget } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
@@ -114,6 +115,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let asks: PermissionAsk[] = [];
   let images: ChatImage[] = [];
   let model: string | null = null;
+  let effort: ChosenEffort;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
@@ -153,10 +155,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
-    const key = JSON.stringify([measured, shown, transcript.version, mode, state]);
+    const effortShown = footEffort(effort, state, transcript.entries);
+    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state]);
     if (key === drawnFoot) return;
     drawnFoot = key;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], state, measured, transcript.version));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version));
   }
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
@@ -292,6 +295,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'resume') return showResume();
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
+    if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -538,6 +542,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
+  function stopTask(): void {
+    const target = stopTarget(tasks.picked());
+    if (target.kind === 'refused') return options.onNotice(target.reason);
+    bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
+  }
+
+  function backgroundTask(): void {
+    const target = backgroundTarget(tasks.picked());
+    if (target.kind === 'refused') return options.onNotice(target.reason);
+    bridge.chatBackgroundTasks(slot, target.kind === 'one' ? target.toolUseId : undefined).then((matched) => {
+      if (!matched) options.onNotice(target.kind === 'one' ? 'That task is no longer in the foreground.' : 'Claude has no task running.');
+    }, (error: unknown) => options.onError(`Not sent to the background: ${failureText(error)}`));
+  }
+
   function choose(change: ChatPreferences): void {
     // A model picked here or on another screen shows over the measured name until the next measure.
     if ('model' in change && (change.model ?? null) !== model) {
@@ -545,6 +563,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (measured) measured = { ...measured, model: null };
     }
     if (change.permissionMode) mode = change.permissionMode;
+    if ('effort' in change) effort = change.effort ?? null;
   }
 
   function readEarlier(): void {
@@ -623,6 +642,24 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Models not listed: ${failureText(error)}`));
   }
 
+  // The effort levels in a search sheet, as Claude Code's /effort offers them, or straight to the one
+  // named after the command; the next turn runs at it, on every screen.
+  function showEfforts(name: string): void {
+    if (name) {
+      const named = namedEffort(name);
+      if (named === undefined) options.onNotice(`Claude has no effort ${name}. Try auto, ${EFFORT_LEVELS.join(', ')}.`);
+      else configure({ effort: named });
+      return;
+    }
+    void searchOverlay({
+      name: 'chat-effort', placeholder: 'Search effort levels', rows: (query) => effortRows(effort, query),
+      empty: 'No level matches.', glyph: () => 'claude',
+    }).then((picked) => {
+      if (picked !== undefined) configure({ effort: picked });
+      focus();
+    });
+  }
+
   // A new conversation, started on this screen or another: the old one leaves the screen.
   function clear(): void {
     resets++;
@@ -688,6 +725,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'task-select') tasks.step();
+      if (command === 'task-stop') stopTask();
+      if (command === 'task-background') backgroundTask();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;
