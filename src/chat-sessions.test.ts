@@ -71,6 +71,7 @@ describe('relayed', () => {
   });
   it('keeps rate limit events', () => expect(relayed({ type: 'rate_limit_event' })).toBe(false));
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
+  it('relays the suggested next prompt', () => expect(relayed({ type: 'prompt_suggestion' })).toBe(true));
 });
 
 describe('mainSessionStart', () => {

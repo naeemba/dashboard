@@ -24,3 +24,4 @@ Claude has running.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
 - Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
+- Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.

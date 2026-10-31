@@ -34,23 +34,16 @@
           "parent": null
         },
         {
-          "id": "10c74f29-5a69-4e57-84aa-5ac7593c182b",
-          "title": "Show Claude's suggested next prompt in the Claude pane's box",
-          "notes": "Turn on promptSuggestions: true in the chat session's query options (chat-sessions.ts). The session then emits a prompt_suggestion message (SDKPromptSuggestionMessage, sdk.d.ts:5898) after each turn's result. Hold the suggestion in the transcript; clear it on a new turn, a sent prompt or a reset (decision module plus test). Draw it as grey placeholder text in the empty box, like Claude Code; Tab accepts it into the box, typing replaces it. New key goes in actions.ts and help.ts. None arrives on the first turn, in plan mode, after an API error, near the usage limit, or with promptSuggestionEnabled: false in settings.json.",
-          "priority": "medium",
+          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
+          "title": "Fold long user messages in the Claude pane's thread",
+          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
+          "priority": "high",
           "parent": null
         },
         {
           "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
           "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
           "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
-          "priority": "high",
-          "parent": null
-        },
-        {
-          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
-          "title": "@ file autocomplete in the Claude pane's box",
-          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
           "priority": "high",
           "parent": null
         },
@@ -404,14 +397,20 @@
           ]
         },
         {
-          "id": "7f0c9af1-6692-4a9f-9607-5a82fe565565",
-          "title": "Fold long user messages in the Claude pane's thread",
-          "notes": "A user message over about 12 lines (a pasted log) shows its first 6 lines and a \"… N more lines\" row; a click on it, or the unfold key on the selected entry, opens it, like a tool call. Claude still gets the full text. Only the thread; the box is unchanged. Today chat-entries.ts:152 draws the whole text. Rule in a small module with a test.",
+          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
+          "title": "@ file autocomplete in the Claude pane's box",
+          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-10-31T22:11:11.092Z",
-          "branch": "work-board-card-7f0c9af1-6692-4a9f-9607-5a8",
-          "pullRequest": 102
+          "updatedAt": "2026-10-31T22:13:11.552Z",
+          "branch": "work-board-card-ef5acba4-2913-41f2-b16b-d51",
+          "pullRequest": 103,
+          "comments": [
+            {
+              "at": "2026-10-31T22:13:11.552Z",
+              "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
+            }
+          ]
         }
       ]
     },
@@ -1265,6 +1264,22 @@
             {
               "at": "2026-10-31T21:46:16.448Z",
               "body": "Shipped in PR #100: each feature gets a docs folder with its rules, decisions and history; CLAUDE.md rules point at their ids. Review loop: 1 round, 4 low/nit findings fixed."
+            }
+          ]
+        },
+        {
+          "id": "10c74f29-5a69-4e57-84aa-5ac7593c182b",
+          "title": "Show Claude's suggested next prompt in the Claude pane's box",
+          "notes": "Turn on promptSuggestions: true in the chat session's query options (chat-sessions.ts). The session then emits a prompt_suggestion message (SDKPromptSuggestionMessage, sdk.d.ts:5898) after each turn's result. Hold the suggestion in the transcript; clear it on a new turn, a sent prompt or a reset (decision module plus test). Draw it as grey placeholder text in the empty box, like Claude Code; Tab accepts it into the box, typing replaces it. New key goes in actions.ts and help.ts. None arrives on the first turn, in plan mode, after an API error, near the usage limit, or with promptSuggestionEnabled: false in settings.json.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:14:36.634Z",
+          "branch": "work-board-card-10c74f29-5a69-4e57-84aa-5ac",
+          "pullRequest": 101,
+          "comments": [
+            {
+              "at": "2026-10-31T22:14:36.634Z",
+              "body": "Shipped in PR #101: the session turns on prompt suggestions, the pane holds the latest one and draws it as grey placeholder text in an empty box; Tab accepts it, typing replaces it, a new turn or reset clears it."
             }
           ]
         }

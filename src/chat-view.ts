@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, tabFill, type CommandRow } from './chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
@@ -69,6 +69,9 @@ function next<T>(list: readonly T[], current: T): T {
   return list[(list.indexOf(current) + 1) % list.length];
 }
 
+// Swapped for Claude's suggested next prompt while there is one (paint).
+const PLACEHOLDER = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
+
 export function createChatView(options: ChatViewOptions): ChatView {
   const { bridge, slot } = options;
   const element = document.createElement('div');
@@ -87,7 +90,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
-  prompt.placeholder = 'Ask Claude. Enter sends, Shift+Enter is a new line, / lists the commands. Paste or drop an image to attach it.';
+  prompt.placeholder = PLACEHOLDER;
   prompt.rows = 3;
   prompt.dir = 'auto';
   const menu = createCommandMenu();
@@ -185,6 +188,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
     drawWorking();
+    const placeholder = transcript.suggestion ?? PLACEHOLDER;
+    if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
     if (stick) log.scrollTop = log.scrollHeight;
   }
@@ -336,6 +341,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
     prompt.focus();
   }
   menu.onClick((row) => complete(row, true));
+
+  // Tab. The window's lookup takes it before the box does, so the command list's Tab arrives here too;
+  // the box's own Tab branch is for when this key is bound elsewhere. Only the prompt box takes the
+  // suggestion, not a question's answer box that has the keyboard.
+  function acceptSuggestion(): void {
+    const fill = tabFill(menu.open() ? menu.picked() : null, prompt.value, transcript.suggestion);
+    if (fill?.kind === 'command') return complete(fill.row, false);
+    if (!fill || document.activeElement !== prompt) return;
+    prompt.value = fill.text;
+    prompt.dispatchEvent(new Event('input'));
+  }
 
   function walkHistory(direction: -1 | 1): boolean {
     if (prompt.selectionStart !== prompt.selectionEnd || !onEdgeLine(prompt.value, prompt.selectionStart, direction)) return false;
@@ -622,6 +638,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       // may not know of a turn another one started, and interrupting an idle session does nothing.
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
+      if (command === 'suggestion') acceptSuggestion();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

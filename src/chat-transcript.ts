@@ -84,14 +84,17 @@ export type Transcript = {
   started: number | null;
   // The agents, workflows and background commands running now (chat-tasks.ts).
   tasks: ChatTasks;
+  // What Claude guesses you will ask next, sent after a turn's result; null once anything starts the
+  // next turn. Drawn in the empty box, and Tab puts it there.
+  suggestion: string | null;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [],
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], suggestion: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
-const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null } as const;
+const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null, suggestion: null } as const;
 
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
 
@@ -222,7 +225,12 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
   if (typeof message.parent_tool_use_id === 'string') return transcript;
   const inner = isRecord(message.message) ? message.message : {};
+  // A turn under way, whoever started it, is past what the last one suggested.
+  if (transcript.suggestion !== null && (message.type === 'assistant' || message.type === 'user' || message.type === 'stream_event')) {
+    transcript = { ...transcript, suggestion: null };
+  }
   switch (message.type) {
+    case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
     case 'assistant': return assistant(transcript, inner.content);
     case 'user': {
       // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
@@ -257,7 +265,7 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   // A prompt sent while a turn runs joins that turn, so its count goes on.
   if (event.kind === 'prompt') {
     const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: Date.now() };
-    return { ...user(transcript, event.content), busy: true, ...fresh };
+    return { ...user(transcript, event.content), busy: true, suggestion: null, ...fresh };
   }
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
