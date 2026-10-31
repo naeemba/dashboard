@@ -78,9 +78,11 @@ describe('relayed', () => {
     expect(relayed({ ...streamed({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'a' } }), parent_tool_use_id: 't1' })).toBe(false);
     expect(relayed({ type: 'assistant', parent_tool_use_id: 't1' })).toBe(true);
   });
-  it('keeps rate limit events', () => expect(relayed({ type: 'rate_limit_event' })).toBe(false));
+  it('keeps a rate limit event that says the plan is fine', () => expect(relayed({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed' } })).toBe(false));
+  it('relays a rate limit warning', () => expect(relayed({ type: 'rate_limit_event', rate_limit_info: { status: 'allowed_warning' } })).toBe(true));
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
   it('relays the suggested next prompt', () => expect(relayed({ type: 'prompt_suggestion' })).toBe(true));
+  it('relays a prompt\'s lifecycle', () => expect(relayed({ type: 'command_lifecycle' })).toBe(true));
 });
 
 describe('mainSessionStart', () => {
