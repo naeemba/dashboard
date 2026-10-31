@@ -50,10 +50,11 @@ describe('fieldChoices', () => {
     expect(fieldChoices(size).start).toBe(0);
   });
 
-  it('types the rest, saying what it takes, and only declines a list', () => {
+  it('types the rest, saying what it takes, and only skips or declines a list', () => {
     expect(fieldChoices(age).choices).toEqual([{ label: 'age', typed: 'A whole number, then Enter' }, { label: 'Decline', decline: true }]);
     expect(fieldChoices(count).choices[0]).toEqual({ label: 'count', typed: 'A whole number of 1 to 9, or leave it empty, then Enter' });
-    expect(labelsOf(labels)).toEqual(['Decline']);
+    expect(labelsOf(labels)).toEqual(['Skip', 'Decline']);
+    expect(labelsOf({ ...labels, required: true })).toEqual(['Decline']);
     expect(fieldAbout(labels)).toContain('cannot be answered from here');
     expect(fieldAbout(subscribe)).toBe('subscribe (optional) — Weekly mail');
   });
@@ -61,6 +62,8 @@ describe('fieldChoices', () => {
   it('says the bounds a typed field has', () => {
     expect(takes(code)).toBe('Text of at least 3 characters');
     expect(takes({ ...count, limits: { ...count.limits, minimum: -Infinity } })).toBe('A whole number of at most 9');
+    expect(takes({ ...count, limits: { ...count.limits, maximum: Infinity, minimum: 0 } })).toBe('A whole number of at least 0');
+    expect(takes({ ...code, limits: { ...code.limits, minLength: 0, maxLength: 9 } })).toBe('Text of at most 9 characters');
   });
 });
 

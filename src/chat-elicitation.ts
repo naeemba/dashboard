@@ -34,7 +34,7 @@ export function elicitationResult(request: ElicitationRequest, result: Permissio
 // One property of the form's schema. MCP keeps forms flat: text, numbers, a yes or no, and a pick
 // from a list. The server checks the answer against the same schema and fails the tool call on a
 // mismatch, so what cannot be answered here is not offered. ponytail: a multi-select (an array of
-// choices) is `list`, which can only be declined; walk it like AskUserQuestion's multi-select if a
+// choices) is `list`, which can only be skipped or declined; walk it like AskUserQuestion's multi-select if a
 // server needs one. `format` (email, uri, date) is not checked, so a bad one fails at the server.
 export type Field = {
   key: string;
@@ -87,12 +87,14 @@ export function fieldsOf(schema: unknown): Field[] {
 
 // The rows a field is asked with, and the one the box opens on. A yes or no and a pick are rows,
 // opened on the server's default; Skip only where the field may be left out, since a required key
-// missing fails at the server; a list cannot be answered here. Decline is always the last row.
+// missing fails at the server; a list cannot be answered here, only skipped where it is optional.
+// Decline is always the last row.
 export type FieldChoice = { label: string; value: unknown } | { label: string; typed: string } | { label: string; skip: true } | { label: string; decline: true };
 
 export function fieldChoices(field: Field): { choices: FieldChoice[]; start: number } {
   const decline: FieldChoice = { label: 'Decline', decline: true };
-  if (field.kind === 'list') return { choices: [decline], start: 0 };
+  const skip: FieldChoice[] = field.required ? [] : [{ label: 'Skip', skip: true }];
+  if (field.kind === 'list') return { choices: [...skip, decline], start: 0 };
   if (field.kind === 'text' || field.kind === 'number' || field.kind === 'integer') {
     const typed = `${takes(field)}${field.required ? '' : ', or leave it empty'}, then Enter`;
     return { choices: [{ label: field.label, typed }, decline], start: 0 };
@@ -101,18 +103,19 @@ export function fieldChoices(field: Field): { choices: FieldChoice[]; start: num
     ? [{ label: 'Yes', value: true }, { label: 'No', value: false }]
     : field.options.map((option) => ({ label: option.label, value: option.value }));
   const start = Math.max(0, picks.findIndex((pick) => 'value' in pick && String(pick.value) === field.initial));
-  return { choices: [...picks, ...(field.required ? [] : [{ label: 'Skip', skip: true } as const]), decline], start };
+  return { choices: [...picks, ...skip, decline], start };
 }
 
 // The line over a field's rows: its name, whether it may be left out, and what it is for.
 export function fieldAbout(field: Field): string {
   const about = `${field.label}${field.required ? '' : ' (optional)'}${field.description ? ` — ${field.description}` : ''}`;
-  return field.kind === 'list' ? `${about}. A pick of several cannot be answered from here.` : about;
+  if (field.kind !== 'list') return about;
+  return `${about}. A pick of several cannot be answered from here${field.required ? '' : '; skip it to leave it out'}.`;
 }
 
 function range(low: number, high: number, unit: string): string {
   if (Number.isFinite(low) && Number.isFinite(high)) return ` of ${low} to ${high}${unit}`;
-  if (Number.isFinite(low) && low > 0) return ` of at least ${low}${unit}`;
+  if (Number.isFinite(low)) return ` of at least ${low}${unit}`;
   if (Number.isFinite(high)) return ` of at most ${high}${unit}`;
   return '';
 }
@@ -120,7 +123,7 @@ function range(low: number, high: number, unit: string): string {
 // What a typed field takes, said in the box before anything is typed.
 export function takes(field: Field): string {
   const { minimum, maximum, minLength, maxLength } = field.limits;
-  if (field.kind === 'text') return `Text${range(minLength, maxLength, ' characters')}`;
+  if (field.kind === 'text') return `Text${range(minLength > 0 ? minLength : -Infinity, maxLength, ' characters')}`;
   return `${field.kind === 'integer' ? 'A whole number' : 'A number'}${range(minimum, maximum, '')}`;
 }
 

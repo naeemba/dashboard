@@ -9,7 +9,7 @@ import { isModified } from './shortcuts';
 // The box over the prompt that holds what Claude is waiting on: a tool call to allow or decline, or
 // AskUserQuestion's questions, or an MCP server's form, one at a time. Rows the arrows walk and Enter answers; what each row
 // answers with is chat-permission.ts's. Escape is not read here: it is the screen's interrupt, which
-// declines whatever is asked as it stops the turn.
+// gives up on whatever is asked as it stops the turn.
 
 export type AskPanel = {
   element: HTMLElement;
