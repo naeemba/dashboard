@@ -1,4 +1,4 @@
-import type { RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import { typedPrompt } from './chat-history';
 import { applyMessage, EMPTY_TRANSCRIPT } from './chat-transcript';
 import { fuzzyScore } from './fuzzy';
@@ -91,6 +91,6 @@ export function conversationAfterRewind(point: RewindPoint, choice: RewindChoice
 
 // How a session resumes with a conversation cut pending: up to the cut, forked into a new
 // conversation so the old one stays whole in /resume.
-export function resumeFrom(resume: string | undefined, cutAt: string | undefined): { resume: string | undefined; resumeSessionAt: string | undefined; forkSession: boolean } {
+export function resumeFrom(resume: string | undefined, cutAt: string | undefined): Pick<Options, 'resume' | 'resumeSessionAt' | 'forkSession'> {
   return { resume, resumeSessionAt: cutAt, forkSession: cutAt !== undefined };
 }

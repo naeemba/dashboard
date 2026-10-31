@@ -437,11 +437,11 @@ export function registerChatSessions(
       const preview = await query.rewindFiles(point.id, { dryRun: true });
       restored = preview.canRewind ? { ...preview, ...(await query.rewindFiles(point.id)) } : preview;
     }
-    const conversation = conversationAfterRewind(point, choice, restored);
-    if (conversation === 'keep') return restored;
+    const conversationRewind = conversationAfterRewind(point, choice, restored);
+    if (conversationRewind === 'keep') return restored;
     stop(slot);
-    if (conversation === 'forget') remember(projectPath, undefined);
-    else rewound.set(projectPath, conversation.cutAt);
+    if (conversationRewind === 'forget') remember(projectPath, undefined);
+    else rewound.set(projectPath, conversationRewind.cutAt);
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
     return restored;
