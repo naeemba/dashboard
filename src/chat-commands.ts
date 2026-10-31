@@ -1,11 +1,12 @@
-import type { ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from './age';
 import { onlyPlumbing } from './chat-events';
 import type { ChatSessions } from './chat-sessions';
 import { isModel } from './chat-status';
 import { tagged, unescaped } from './chat-tags';
-import { isImageType } from './chat-transcript';
-import { fuzzyScore } from './fuzzy';
+import { isImageType, type ChatEntry } from './chat-transcript';
+import type { FootState } from './chat-foot-view';
+import { fuzzyScore, ranked } from './fuzzy';
 import type { SearchRow } from './overlay';
 
 // Slash commands on the Claude screen. The session runs every command Claude Code has when it is sent
@@ -18,7 +19,9 @@ import type { SearchRow } from './overlay';
 
 export type CommandRow = SlashCommand;
 
-export type ScreenCommand = { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'branch'; rest: string };
+export type ScreenCommand =
+  | { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
+  | { kind: 'branch'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -26,6 +29,7 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'plan', description: 'Switch to plan mode; anything after it is sent as the prompt', argumentHint: '[what to plan]' },
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
+  { name: 'effort', description: 'Pick how hard Claude thinks, low to max, from a list, or set the level named after it', argumentHint: '' },
   // No hint either: the name is optional, so Enter branches now.
   { name: 'branch', description: 'Carry on in a copy of this conversation, called whatever follows, if anything; the original stays in /resume', argumentHint: '' },
 ];
@@ -38,8 +42,56 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'rewind') return { kind: 'rewind' };
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
   return null;
+}
+
+// What /effort offers, lowest first. Auto is the model's own default, as /effort auto is in Claude
+// Code. A model without max runs it as high; the session decides that, not the screen.
+export const EFFORT_LEVELS: EffortLevel[] = ['low', 'medium', 'high', 'xhigh', 'max'];
+
+// The effort the screen has chosen: undefined until anything is picked, when the session runs at the
+// level in the user's settings file, which the screen does not read; null for auto, which overrides
+// that settings level with the model's default.
+export type ChosenEffort = EffortLevel | null | undefined;
+
+// The level `/effort x` names: null for auto, undefined for a word that is no level, which is refused.
+export function namedEffort(name: string): EffortLevel | null | undefined {
+  const wanted = name.toLowerCase();
+  if (wanted === 'auto') return null;
+  return EFFORT_LEVELS.find((level) => level === wanted);
+}
+
+const EFFORT_DETAILS: Record<string, string> = {
+  auto: "The model's own default, over any level in your settings",
+  max: 'This session only; high on a model without it',
+};
+
+// What /effort lists: auto, then the levels lowest first, or the ones matching what is typed, best
+// first. The one the screen is on is marked; none is until one is picked.
+export function effortRows(current: ChosenEffort, query: string): SearchRow<EffortLevel | null>[] {
+  return ranked([null, ...EFFORT_LEVELS], (level) => level ?? 'auto', query).map((level) => ({
+    name: `${level === current ? '● ' : ''}${level ?? 'auto'}`,
+    detail: EFFORT_DETAILS[level ?? 'auto'] ?? '',
+    choice: level,
+  }));
+}
+
+// Whether a prompt asks for deeper thinking on its turn with the ultrathink keyword. The session acts on
+// the word itself; the screen only says so while that turn runs.
+export function asksUltrathink(text: string): boolean {
+  return /\bultrathink\b/i.test(text);
+}
+
+// What the foot says for effort. While a turn runs or waits on a question, ultrathink when the newest
+// prompt asks for it; a prompt sent while a turn runs counts too, since the screen knows what was asked
+// last, not which turn the session folds it into. Otherwise the level chosen, or `default effort`
+// before one is, as the session is then on the settings file's level.
+export function footEffort(effort: ChosenEffort, state: FootState, entries: ChatEntry[]): { label: string; ultrathink: boolean } {
+  const ultrathink = state !== 'ready' && asksUltrathink(entries.findLast((entry) => entry.kind === 'user')?.text ?? '');
+  if (ultrathink) return { label: 'ultrathink', ultrathink };
+  return { label: effort === undefined ? 'default effort' : `${effort ?? 'auto'} effort`, ultrathink };
 }
 
 // /plan switches the mode; it also sends a prompt only when something came with it.

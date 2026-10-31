@@ -193,17 +193,29 @@
   color: var(--muted);
 }
 
-.chat-tool summary {
+.chat-tool summary,
+.chat-step-tool {
   display: flex;
   gap: 8px;
-  cursor: pointer;
   color: var(--muted);
   font: 12.5px/1.6 var(--mono-font);
 }
 
+.chat-tool summary {
+  cursor: pointer;
+}
+
+/* A subagent's steps, set in under the call that started it. */
+.chat-steps {
+  margin: 6px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+}
+
 /* The mark and the tool's name do not shrink: the entry breaks long words anywhere, and a name
    squeezed by a long summary beside it broke into "Ba" over "sh". */
-.chat-tool summary b {
+.chat-tool summary b,
+.chat-step-tool b {
   flex-shrink: 0;
   color: var(--white);
   font-weight: 500;
@@ -366,6 +378,7 @@
   background: var(--tone);
 }
 
+.chat-foot-effort.ultrathink { color: var(--magenta); }
 .chat-foot-state[data-state='working'] { color: var(--blue); }
 .chat-foot-state[data-state='waiting'] { color: var(--yellow); }
 
@@ -420,6 +433,10 @@
 
 .chat-tasks[hidden] {
   display: none;
+}
+
+.chat-task.selected {
+  background: var(--tint);
 }
 
 .chat-task-name {
