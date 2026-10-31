@@ -4,8 +4,9 @@ import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { editsHeading, sessionEdits } from './chat-diff';
 import { exportConversation } from './chat-export-view';
-import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { diffBlock, drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
@@ -25,7 +26,7 @@ import { createTaskStrip } from './chat-task-strip';
 import { backgroundTarget, stopTarget } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
+import { imageOverlay, pdfOverlay, searchOverlay, viewerOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -298,6 +299,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const own = screenCommand(text);
     if (own) emptyBox();
     if (own?.kind === 'resume') return showResume();
+    if (own?.kind === 'diff') return showDiff();
     if (own?.kind === 'rewind') return showRewind();
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
@@ -614,6 +616,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function branch(title: string): void {
     if (!refusedWhileWorking('branch')) void branchConversation(bridge, slot, title, options).then(focus);
+  }
+
+  // Every file Claude changed in the conversation, each under a line naming it, on a sheet to read.
+  function showDiff(): void {
+    const files = sessionEdits(transcript.entries);
+    if (files.length === 0) return options.onNotice('Claude has not changed a file in this conversation.');
+    const review = document.createElement('div');
+    review.append(...files.flatMap((file) => {
+      const heading = document.createElement('div');
+      heading.className = 'chat-diff-file';
+      heading.textContent = editsHeading(file);
+      return [heading, diffBlock(file.lines)];
+    }));
+    viewerOverlay('diff-viewer', review);
   }
 
   function showRewind(): void {
