@@ -286,16 +286,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
-          "title": "Open a subagent in the Claude pane to see its own steps",
-          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:19:21.238Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -409,6 +400,16 @@
           "updatedAt": "2026-10-31T22:19:49.243Z",
           "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
           "pullRequest": 105
+        },
+        {
+          "id": "500744c0-85ce-42ef-9261-9fdd87430e69",
+          "title": "Open a subagent in the Claude pane to see its own steps",
+          "notes": "Claude Code: the transcript and agent view show a subagent's own steps. SDK: getSubagentMessages (sdk.d.ts:963), forwardSubagentText (1921), agentProgressSummaries (2134). Pane: subagent messages are dropped (chat-transcript.ts:223); the task strip shows a summary only. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:25:59.262Z",
+          "branch": "work-board-card-500744c0-85ce-42ef-9261-9fd",
+          "pullRequest": 107
         }
       ]
     },
