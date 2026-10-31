@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
-          "title": "Show hook progress in the Claude pane",
-          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
           "title": "Readline editing keys in the Claude pane's box",
           "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
@@ -306,38 +299,6 @@
           ]
         },
         {
-          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
-          "title": "Review all of a session's edits in the Claude pane, like /diff",
-          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:34:19.959Z",
-          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
-          "pullRequest": 111,
-          "comments": [
-            {
-              "at": "2026-10-31T22:34:19.924Z",
-              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
-            }
-          ]
-        },
-        {
-          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
-          "title": "Branch the Claude pane's conversation, keeping the original",
-          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:39:49.154Z",
-          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
-          "pullRequest": 112,
-          "comments": [
-            {
-              "at": "2026-10-31T22:39:49.154Z",
-              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
-            }
-          ]
-        },
-        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
@@ -414,6 +375,22 @@
             {
               "at": "2026-10-31T22:58:57.781Z",
               "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
+            }
+          ]
+        },
+        {
+          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
+          "title": "Show hook progress in the Claude pane",
+          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:05:43.117Z",
+          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
+          "pullRequest": 124,
+          "comments": [
+            {
+              "at": "2026-10-31T23:05:43.117Z",
+              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
             }
           ]
         }
@@ -1449,6 +1426,46 @@
             {
               "at": "2026-10-31T22:57:24.083Z",
               "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
+            }
+          ]
+        },
+        {
+          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
+          "title": "Branch the Claude pane's conversation, keeping the original",
+          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:00:30.789Z",
+          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
+          "pullRequest": 112,
+          "comments": [
+            {
+              "at": "2026-10-31T22:39:49.154Z",
+              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
+            },
+            {
+              "at": "2026-10-31T23:00:30.789Z",
+              "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+            }
+          ]
+        },
+        {
+          "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
+          "title": "Review all of a session's edits in the Claude pane, like /diff",
+          "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:03:31.722Z",
+          "branch": "work-board-card-8f5787fa-cfbc-4044-84f2-faa",
+          "pullRequest": 111,
+          "comments": [
+            {
+              "at": "2026-10-31T22:34:19.924Z",
+              "body": "Shipped /diff as the screen's own command, built from the session's Edit/Write/MultiEdit calls that worked (src/chat-diff.ts), grouped by file. PR #111."
+            },
+            {
+              "at": "2026-10-31T23:03:31.722Z",
+              "body": "Shipped in PR #111: /diff reviews every file changed in the conversation. Merged after 3 review rounds."
             }
           ]
         }
