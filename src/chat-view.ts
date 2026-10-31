@@ -18,6 +18,7 @@ import {
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { createTaskStrip } from './chat-task-strip';
+import { backgroundTarget, TASK_ENDED } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
@@ -503,6 +504,21 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
+  function stopTask(): void {
+    const task = tasks.picked();
+    if (task === null) return options.onNotice('No task picked. The task key picks one in the strip over the box.');
+    if (task === 'ended') return options.onNotice(TASK_ENDED);
+    bridge.chatStopTask(slot, task.id).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
+  }
+
+  function backgroundTask(): void {
+    const target = backgroundTarget(tasks.picked());
+    if (target.kind === 'refused') return options.onNotice(target.reason);
+    bridge.chatBackgroundTasks(slot, target.kind === 'one' ? target.toolUseId : undefined).then((matched) => {
+      if (!matched) options.onNotice('That task is no longer in the foreground.');
+    }, (error: unknown) => options.onError(`Not sent to the background: ${failureText(error)}`));
+  }
+
   function choose(change: ChatPreferences): void {
     // A model picked here or on another screen shows over the measured name until the next measure.
     if ('model' in change && (change.model ?? null) !== model) {
@@ -639,6 +655,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'suggestion') acceptSuggestion();
+      if (command === 'task-select') tasks.step();
+      if (command === 'task-stop') stopTask();
+      if (command === 'task-background') backgroundTask();
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
         const chosen = selected === null ? attached : drawn[selected].element;

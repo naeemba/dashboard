@@ -14,6 +14,8 @@ export type ChatTask = {
   // The task that started it, or null for one the main thread started.
   parent: string | null;
   backgrounded: boolean;
+  // The tool call that started it, which backgrounding one task names; null when the session gave none.
+  toolUseId: string | null;
   tools: number;
   tokens: number;
   seconds: number;
@@ -54,7 +56,7 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   }
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
-    backgrounded: message.is_backgrounded === true, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
+    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
   }];
 }
 
@@ -122,4 +124,26 @@ export function taskDetail(task: ChatTask): string {
   if (task.seconds > 0) parts.push(`${task.seconds}s`);
   if (task.lastTool) parts.push(task.lastTool);
   return parts.join(' · ');
+}
+
+// The row the task key picks next, in the strip's order: the first with none picked, then each in
+// turn, then none again after the last, so the key also lets go of the strip.
+export function nextTaskSelection(tasks: ChatTasks, selected: string | null): string | null {
+  const ids = taskOrder(tasks).map(({ task }) => task.id);
+  const at = selected === null ? -1 : ids.indexOf(selected);
+  return ids[at + 1] ?? null;
+}
+
+// What the background key does: with no row picked, every foreground task, as Ctrl+B in the terminal;
+// with one picked, that one, which only a foreground task started by a tool call can be.
+export const TASK_ENDED = 'The picked task has ended. The task key picks another, or none after the last.';
+
+export type BackgroundTarget = { kind: 'all' } | { kind: 'one'; toolUseId: string } | { kind: 'refused'; reason: string };
+
+export function backgroundTarget(task: ChatTask | 'ended' | null): BackgroundTarget {
+  if (task === null) return { kind: 'all' };
+  if (task === 'ended') return { kind: 'refused', reason: TASK_ENDED };
+  if (task.backgrounded) return { kind: 'refused', reason: 'That task is already running in the background.' };
+  if (task.toolUseId === null) return { kind: 'refused', reason: 'That task names no tool call to background. With no task picked, the key backgrounds them all.' };
+  return { kind: 'one', toolUseId: task.toolUseId };
 }
