@@ -8,7 +8,7 @@ Claude has running.
 ## Files
 
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`,
-  `chat-transcript.ts`, `chat-pdf.ts`
+  `chat-transcript.ts`, `chat-pdf.ts`, `chat-export-target.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-stamp.ts`

@@ -12,6 +12,7 @@ import type { Channels } from './channels';
 import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
+import { exportTarget } from './chat-export-target';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
 import { fileCandidates } from './file-open';
@@ -318,11 +319,12 @@ export function registerChatSessions(
   });
 
   // /export saving the conversation: the file goes in the project's folder, a name typed with a folder
-  // in it relative to there, as Claude Code's /export writes it. Answers where it went.
+  // in it relative to there, and never outside it (exportTarget). Answers where it went.
   table.handle('chat-export:write', async (_screen, slot: number, name: string, text: string): Promise<string> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) throw new Error('This page has no project folder to save into.');
-    const target = path.resolve(projectPath, name);
+    const target = exportTarget(projectPath, name);
+    if (target === null) throw new Error(`${name} is outside the project's folder.`);
     replaceFile(target, text);
     return target;
   });
