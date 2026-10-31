@@ -206,22 +206,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "7ade5b82-4ab9-4cec-8dae-f4c4726ca610",
-          "title": "Add a per-project docs directory with one brief spec per change",
-          "notes": "Seed per-feature docs for this project and move the existing docs into them.\n\nLayout:\n\n    docs/\n      README.md              index: feature, one line, link\n      <feature>/\n        README.md            files the feature owns, what it does, acceptance scenarios, open questions\n        hard-rules.md        only when one exists\n        decisions.md         only when one exists\n        history.md           one line per merged change: date, PR, why\n\nOnly README.md is required per feature; the other three appear with their first entry. Each file stays under 80 lines, history.md exempt; over the cap means the feature is two features.\n\nThe feature README owns its file list; docs/README.md is the index only, so a file is claimed in one place.\n\nREADME.md carries 2 to 5 acceptance scenarios, Given/When/Then, one line each. A change that moves behaviour edits a scenario; the diff shows it.\n\nEvery entry in hard-rules.md and decisions.md has a stable id, <feature>-rule-N and <feature>-decision-N, never renumbered. history.md lines, PRs and commits cite the id, so the link survives rewording. Scenarios in README.md stay unnumbered.\n\nFor dashboard: about 7 features (panes, nvim, board, notes, remote host, settings, help). docs/decisions.md entries move into each feature's decisions.md; docs/hard-rules.md entries into each feature's hard-rules.md, cross-cutting ones stay in CLAUDE.md. Board card notes and superpowers session specs are the input for history.md lines; the session spec is not the record.\n\nCLAUDE.md gets one line: feature docs live in docs/; a change to a feature's files changes its docs in the same PR.\n\nOutside this card: the rule text goes in dotfiles/claude/rules/ as a global rule, and a hook fails a PR that touches owned files without touching the feature's docs.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T21:29:00.940Z",
-          "branch": "work-board-card-7ade5b82-4ab9-4cec-8dae-f4c",
-          "pullRequest": 100,
-          "comments": [
-            {
-              "at": "2026-10-31T21:29:00.940Z",
-              "body": "Shipped in #100: docs/README.md index, 15 feature folders plus conventions and workflow, every old rule and decision moved under a stable id, history.md seeded from 88 merged PRs, CLAUDE.md points at ids. Version 2.5.1."
-            }
-          ]
         }
       ]
     },
@@ -1055,6 +1039,26 @@
             {
               "at": "2026-10-31T16:30:38.182Z",
               "body": "Review loop: 2 rounds, 8 threads fixed in a59e6c7 and 3d338bc (Escape and focus stay with the viewer, PDF links go to the browser, frame navigation decided in links.ts with tests). Merged as PR #99."
+            }
+          ]
+        },
+        {
+          "id": "7ade5b82-4ab9-4cec-8dae-f4c4726ca610",
+          "title": "Add a per-project docs directory with one brief spec per change",
+          "notes": "Seed per-feature docs for this project and move the existing docs into them.\n\nLayout:\n\n    docs/\n      README.md              index: feature, one line, link\n      <feature>/\n        README.md            files the feature owns, what it does, acceptance scenarios, open questions\n        hard-rules.md        only when one exists\n        decisions.md         only when one exists\n        history.md           one line per merged change: date, PR, why\n\nOnly README.md is required per feature; the other three appear with their first entry. Each file stays under 80 lines, history.md exempt; over the cap means the feature is two features.\n\nThe feature README owns its file list; docs/README.md is the index only, so a file is claimed in one place.\n\nREADME.md carries 2 to 5 acceptance scenarios, Given/When/Then, one line each. A change that moves behaviour edits a scenario; the diff shows it.\n\nEvery entry in hard-rules.md and decisions.md has a stable id, <feature>-rule-N and <feature>-decision-N, never renumbered. history.md lines, PRs and commits cite the id, so the link survives rewording. Scenarios in README.md stay unnumbered.\n\nFor dashboard: about 7 features (panes, nvim, board, notes, remote host, settings, help). docs/decisions.md entries move into each feature's decisions.md; docs/hard-rules.md entries into each feature's hard-rules.md, cross-cutting ones stay in CLAUDE.md. Board card notes and superpowers session specs are the input for history.md lines; the session spec is not the record.\n\nCLAUDE.md gets one line: feature docs live in docs/; a change to a feature's files changes its docs in the same PR.\n\nOutside this card: the rule text goes in dotfiles/claude/rules/ as a global rule, and a hook fails a PR that touches owned files without touching the feature's docs.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T21:46:16.448Z",
+          "branch": "work-board-card-7ade5b82-4ab9-4cec-8dae-f4c",
+          "pullRequest": 100,
+          "comments": [
+            {
+              "at": "2026-10-31T21:29:00.940Z",
+              "body": "Shipped in #100: docs/README.md index, 15 feature folders plus conventions and workflow, every old rule and decision moved under a stable id, history.md seeded from 88 merged PRs, CLAUDE.md points at ids. Version 2.5.1."
+            },
+            {
+              "at": "2026-10-31T21:46:16.448Z",
+              "body": "Shipped in PR #100: each feature gets a docs folder with its rules, decisions and history; CLAUDE.md rules point at their ids. Review loop: 1 round, 4 low/nit findings fixed."
             }
           ]
         }
