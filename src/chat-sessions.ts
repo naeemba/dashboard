@@ -9,7 +9,7 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
+import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
@@ -143,16 +143,24 @@ export function rememberedSessions(file: string): Record<string, string> {
   }
 }
 
-// What a project's main session opens on. The conversation the terminal main left wins over one the
-// old Claude view remembered: it was the project's main, the one its workers report to, and `adopt`
-// only arrives on the first launch after main became the screen. Auto mode, as the terminal main ran
-// in, unless the screen has already chosen another.
 // The part of a change that goes through the session's flag layer, only the keys it names. An effort
 // of null goes back to the model's default.
 export function flagSettingsOf(change: ChatPreferences): { effortLevel?: EffortLevel | null; fastMode?: boolean } {
   return { ...('effort' in change && { effortLevel: change.effort ?? null }), ...(change.fast !== undefined && { fastMode: change.fast }) };
 }
 
+// What a restarted session is told through the flag layer about what was kept before the restart.
+// Auto effort: the effort option cannot say null, and a session started without it runs at the
+// settings file's level. Fast mode, whenever kept: it has no query option at all. Any other effort
+// rides the query option already.
+export function replayedFlagSettings(kept: ChatPreferences | undefined): ReturnType<typeof flagSettingsOf> {
+  return flagSettingsOf({ ...(kept?.effort === null && { effort: null }), fast: kept?.fast });
+}
+
+// What a project's main session opens on. The conversation the terminal main left wins over one the
+// old Claude view remembered: it was the project's main, the one its workers report to, and `adopt`
+// only arrives on the first launch after main became the screen. Auto mode, as the terminal main ran
+// in, unless the screen has already chosen another.
 export function mainSessionStart(
   remembered: string | undefined, adopt: string | undefined, kept: ChatPreferences | undefined,
 ): { resume: string | undefined; preferences: ChatPreferences } {
@@ -245,12 +253,8 @@ export function registerChatSessions(
         }, options.signal),
       },
     }) };
-    // Auto picked before a restart: the effort option cannot say null, and a session started without
-    // it runs at the settings file's level, so the override goes through the flag layer as /effort
-    // sends it. Failing, the session stays on the settings level until the next pick.
-    // Fast mode has no query option either, so a choice made before a restart goes the same way.
-    const kept = preferences.get(slot);
-    const replayed = flagSettingsOf({ ...(kept?.effort === null && { effort: null }), fast: kept?.fast });
+    // Failing, the session stays on the settings file's level and fast mode until the next pick.
+    const replayed = replayedFlagSettings(preferences.get(slot));
     if (Object.keys(replayed).length > 0) session.query.applyFlagSettings(replayed).catch(() => undefined);
     void (async () => {
       let error: string | null = null;
@@ -266,8 +270,9 @@ export function registerChatSessions(
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
           if (change.reset) host.send(slot, { kind: 'reset' });
-          const mode = modeOf(record);
-          if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
+          // What the session reports it is on, so a screen opened later starts from it.
+          const reported = reportedPreferences(record);
+          if (reported) preferences.set(slot, { ...preferences.get(slot), ...reported });
           if (relayed(message)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {

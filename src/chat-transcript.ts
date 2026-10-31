@@ -344,6 +344,14 @@ export function modeOf(message: Record<string, unknown>): PermissionMode | null 
   return typeof message.permissionMode === 'string' ? message.permissionMode as PermissionMode : null;
 }
 
+// Whether a session message says fast mode is on: `init` and every `result` carry it, which covers a
+// session already running fast from the settings file, and a model or plan without it reporting off.
+// Cooldown, paused after a rate limit, is still on: the choice stands and comes back by itself.
+export function fastOf(message: Record<string, unknown>): boolean | null {
+  const reports = message.type === 'result' || (message.type === 'system' && message.subtype === 'init');
+  return reports && typeof message.fast_mode_state === 'string' ? message.fast_mode_state !== 'off' : null;
+}
+
 // What a session message changes about which conversation the page is on: `init` names the one the
 // session is in, remembered when it differs; /clear's reset leaves none remembered until the next
 // init, and every screen clears.
@@ -355,12 +363,20 @@ export function conversationChange(message: Record<string, unknown>, rememberedI
   return { reset: false };
 }
 
-// What an event says about the model or permission mode the session is on: a choice made on some
-// screen, or a mode the session reports.
+// What an event says about the model, permission mode or fast mode the session is on: a choice made
+// on some screen, or what the session reports.
 export function preferencesOf(event: ChatEvent): ChatPreferences | null {
   if (event.kind === 'configured') return event.change;
-  const mode = event.kind === 'message' ? modeOf(event.message) : null;
-  return mode ? { permissionMode: mode } : null;
+  if (event.kind !== 'message') return null;
+  return reportedPreferences(event.message);
+}
+
+// The permission mode and fast mode a session message reports, only the ones it names; null for none.
+export function reportedPreferences(message: Record<string, unknown>): ChatPreferences | null {
+  const mode = modeOf(message);
+  const fast = fastOf(message);
+  if (!mode && fast === null) return null;
+  return { ...(mode && { permissionMode: mode }), ...(fast !== null && { fast }) };
 }
 
 // The conversation read back from disk, unless something has already been drawn: a prompt sent or a

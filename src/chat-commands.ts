@@ -20,7 +20,7 @@ import type { SearchRow } from './overlay';
 export type CommandRow = SlashCommand;
 
 export type ScreenCommand =
-  | { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string } | { kind: 'fast' };
+  | { kind: 'resume' } | { kind: 'rewind' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string } | { kind: 'fast'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -29,7 +29,7 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   // No hint, so Enter opens the list; Tab still leaves room to type a name.
   { name: 'model', description: 'Pick the model from a list, or switch straight to the one named after it', argumentHint: '' },
   { name: 'effort', description: 'Pick how hard Claude thinks, low to max, from a list, or set the level named after it', argumentHint: '' },
-  { name: 'fast', description: 'Turn fast mode on or off: faster output from the same model, billed higher', argumentHint: '' },
+  { name: 'fast', description: 'Turn fast mode on or off, or to the one named after it: faster output from the same model, billed higher', argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -41,7 +41,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'plan') return { kind: 'plan', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'model') return { kind: 'model', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
-  if (match?.[1] === 'fast') return { kind: 'fast' };
+  if (match?.[1] === 'fast') return { kind: 'fast', rest: (match[2] ?? '').trim() };
   return null;
 }
 
@@ -74,6 +74,14 @@ export function effortRows(current: ChosenEffort, query: string): SearchRow<Effo
     detail: EFFORT_DETAILS[level ?? 'auto'] ?? '',
     choice: level,
   }));
+}
+
+// What `/fast x` turns fast mode to: the other of what it is on when nothing is named, on or off when
+// that is named, undefined for any other word, which is refused.
+export function namedFast(name: string, current: boolean): boolean | undefined {
+  const wanted = name.toLowerCase();
+  if (wanted === '') return !current;
+  return wanted === 'on' ? true : wanted === 'off' ? false : undefined;
 }
 
 // Whether a prompt asks for deeper thinking on its turn with the ultrathink keyword. The session acts on
