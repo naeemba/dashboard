@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
-          "title": "Stash and restore drafts in the Claude pane's box",
-          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
           "title": "Rename a Claude session from the Claude pane",
           "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
@@ -238,6 +231,14 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-10-31T22:50:40.941Z"
+        },
+        {
+          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
+          "title": "Stash and restore drafts in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:52:23.036Z"
         }
       ]
     },
