@@ -322,22 +322,6 @@
           ]
         },
         {
-          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
-          "title": "Branch the Claude pane's conversation, keeping the original",
-          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:39:49.154Z",
-          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
-          "pullRequest": 112,
-          "comments": [
-            {
-              "at": "2026-10-31T22:39:49.154Z",
-              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
-            }
-          ]
-        },
-        {
           "id": "0bef254c-8d96-4bc7-80b6-d3c202ae7f7c",
           "title": "Answer MCP elicitation forms and tool dialogs in the Claude pane",
           "notes": "Claude Code renders a server's form or dialog. SDK: onElicitation (sdk.d.ts:1803), onUserDialog (1817), supportedDialogKinds (1839). Pane: not wired; what happens to an elicitation now is unverified. Size M.",
@@ -1437,12 +1421,32 @@
           ]
         },
         {
+          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
+          "title": "Branch the Claude pane's conversation, keeping the original",
+          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:00:30.789Z",
+          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
+          "pullRequest": 112,
+          "comments": [
+            {
+              "at": "2026-10-31T22:39:49.154Z",
+              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
+            },
+            {
+              "at": "2026-10-31T23:00:30.789Z",
+              "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+            }
+          ]
+        },
+        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-10-31T23:01:55.011Z",
+          "updatedAt": "2026-10-31T23:04:27.348Z",
           "branch": "work-board-card-c98fa0a6-0d0d-456a-a3a9-cf5",
           "pullRequest": 114,
           "comments": [
@@ -1451,8 +1455,8 @@
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
             },
             {
-              "at": "2026-10-31T23:01:55.011Z",
-              "body": "Shipped in PR #114: a message sent while Claude is busy waits grey in the session's queue until taken, Up in the empty box withdraws the last one, and the queue survives the session's own /clear. Merged with main at 2.17.0."
+              "at": "2026-10-31T23:04:27.348Z",
+              "body": "Shipped in PR #114: a message sent while Claude is busy waits grey in the session's queue until taken, Up in the empty box withdraws the last one, and the queue survives the session's own /clear. Version 2.18.0."
             }
           ]
         }
