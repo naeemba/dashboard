@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
-          "title": "Real line diffs for edits in the Claude pane",
-          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
           "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
           "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
@@ -1408,6 +1401,22 @@
             {
               "at": "2026-10-31T22:51:14.324Z",
               "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.14.0."
+            }
+          ]
+        },
+        {
+          "id": "c2c1ff75-000d-4670-b34b-6bfdcb457fe0",
+          "title": "Real line diffs for edits in the Claude pane",
+          "notes": "Pane: chat-tools.ts:28 trims a common prefix and suffix, so two far-apart edits in one call show everything between them as changed. Use a proper line diff (no new dependency if a small LCS does it). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:53:44.987Z",
+          "branch": "work-board-card-c2c1ff75-000d-4670-b34b-6bf",
+          "pullRequest": 110,
+          "comments": [
+            {
+              "at": "2026-10-31T22:53:44.987Z",
+              "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.15.0."
             }
           ]
         }
