@@ -651,7 +651,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function editPrompt(): void {
     edited = true;
     bridge.openPrompt(slot, prompt.value).then((answer) => {
-      if (!answer.ok) options.onError(answer.message);
+      options.onError(answer.ok ? '' : answer.message);
     }, (error: unknown) => options.onError(`The prompt was not opened: ${failureText(error)}`));
     options.showEditor();
   }

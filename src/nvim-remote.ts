@@ -8,9 +8,9 @@ import { locateCommand, taskArguments } from './shell';
 
 const runCommand = promisify(execFile);
 
-// Reaching a running nvim: where it listens, where the scrollback file goes, and how one is handed to
-// the other. Main keeps the channel and hands over the temp folder; every decision is here. The pieces
-// below are exported for the test beside this file as much as for main — the rules with a branch in
+// Reaching a running nvim: where it listens, where the scrollback and prompt files go, and how one is
+// handed to the other. Main keeps the channel and hands over the temp folder; every decision is here. The
+// pieces below are exported for the test beside this file as much as for main — the rules with a branch in
 // them are the last line, the pid in a name and the vimscript quoting, and none of those is pinned by
 // anything else.
 
@@ -204,8 +204,8 @@ export type EditorTarget = { temporaryDirectory: string; shellCommand: string; s
 // What a hand-over answers: whether the file is in front of you, and what the status bar says.
 export type Handover = { ok: boolean; message: string };
 
-// The hand-over both the scrollback key and a path in a pane go through: find nvim, get ready, wait for
-// the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
+// The hand-over the scrollback key, Ctrl+G's prompt and a path in a pane all go through: find nvim, get
+// ready, wait for the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
 // ok-or-why-not rather than throwing, because every one of these has something to put in the status bar
 // and nothing to put in the editor. `prepare` answers a message when it could not get ready.
 async function handToEditor(
