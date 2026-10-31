@@ -44,6 +44,10 @@ one is picked the foot says `default effort` and no row is marked, because the s
 the level in the settings file, which the screen does not read. Auto is not that: it clears the flag
 layer, which puts the session on the model's default over the settings level, and a restart after it
 sends the same clear, since the start option cannot say null.
+`/diff` is the screen's too: the SDK has no review of a session's edits, so the screen builds one from
+the conversation's own Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so
+it shows what Claude changed and nothing else in the folder. The transcript is all it reads, so a
+code-only `/rewind`, which leaves the conversation alone, leaves the edits it put back on the sheet.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.
@@ -95,7 +99,47 @@ turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that 
 would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
 lasts while other tasks still run, which a background command can stretch across turns.
 
-## chat-decision-6: The stash key is Alt+S, and Up walks the stash
+## chat-decision-6: /mcp is the screen's own, on the session's MCP calls
+
+Sent as a prompt, `/mcp` gets back a count ("2 MCP server(s): 1 connected, 1 connecting, …") and a
+pointer to the terminal, so the screen answers it itself, as it does `/resume`. The list is
+`mcpServerStatus()`; Reconnect is `reconnectMcpServer`, Disable and Enable are `toggleMcpServer`.
+Checked against the pinned SDK: a connected server went to `disabled` and back to `connected`, and a
+name the session does not have throws "Server not found". A failure is printed as the error line.
+
+It is not refused under a running turn, as `/resume` and `/rewind` are: neither call touches the
+conversation. Claude Code's dialog also lists each server's tools and signs in to one that needs it;
+the sheet shows the tool count and the status only.
+
+## chat-decision-7: A message sent while Claude is busy waits in the session's own queue
+
+Main stamps every prompt with a uuid. The CLI queues one that arrives mid-turn itself and reports it
+by that uuid in `command_lifecycle` messages: `queued`, then `started` and `completed`, or `cancelled`.
+The screen draws a prompt sent while busy grey under the conversation and moves it into the
+conversation on any state past `queued`, since one folded into the running turn may report `completed`
+without a `started`. Up in the empty box withdraws the last one through `cancelAsyncMessage`, which
+answers false once the session has taken it. A `/clear` the session runs itself clears the screen
+but keeps the grey prompts, since the process holding them goes on; a reset from the screen (a new
+conversation, `/resume`, a rewind) stops the session and drops them.
+
+Neither the message type nor the method is in the pinned SDK's types (0.3.312); both were checked
+against it by sending two prompts into a running turn and cancelling the second: it was reported
+`cancelled` and never ran, the first ran after the turn. A screen that opens while a prompt waits
+does not see it: the queue lives in the session, and `chat:read` only reads the transcript.
+
+## chat-decision-8: /btw is the session's own side question, through a call the SDK does not declare
+
+`/btw` is the screen's own command: sent as a prompt it would join the conversation, which is what it
+must not do. The pinned SDK has `askSideQuestion` on every query, the control request Claude Code's
+/btw makes, but leaves it out of `sdk.d.ts`, so main reaches it through a cast. Checked against the
+pinned SDK: asked while a Bash call was running, it answered from that turn's prompt in under a
+second, and `getSessionMessages` afterwards held nothing of it. A release that drops the call fails
+the ask with an error on the screen and nothing else.
+
+The card's other way, a second `query()` resuming the conversation with `forkSession` and no tools,
+is left out: it starts a second process for every question, where the call asks the one running.
+
+## chat-decision-9: The stash key is Alt+S, and Up walks the stash
 
 Claude Code stashes the box with Ctrl+S, but Ctrl+S opens the project picker here, before any
 screen sees it. So the stash key is Alt+S, beside the other Claude screen keys.

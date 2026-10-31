@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { rmSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -8,9 +8,9 @@ import { locateCommand, taskArguments } from './shell';
 
 const runCommand = promisify(execFile);
 
-// Reaching a running nvim: where it listens, where the scrollback file goes, and how one is handed to
-// the other. Main keeps the channel and hands over the temp folder; every decision is here. The pieces
-// below are exported for the test beside this file as much as for main — the rules with a branch in
+// Reaching a running nvim: where it listens, where the scrollback and prompt files go, and how one is
+// handed to the other. Main keeps the channel and hands over the temp folder; every decision is here. The
+// pieces below are exported for the test beside this file as much as for main — the rules with a branch in
 // them are the last line, the pid in a name and the vimscript quoting, and none of those is pinned by
 // anything else.
 
@@ -137,14 +137,65 @@ export function openFileArguments(socket: string, file: string, line?: number, c
   return ['--server', socket, '--remote-expr', `execute([${commands.join(', ')}])`];
 }
 
-// Every scrollback file this run has written, so quitting takes them with it. A pane's scrollback is
-// whatever was on your screen — an agent's transcript, a .env someone catted — and the removal on the
+// Every scrollback and prompt file this run has written, so quitting takes them with it. A pane's
+// scrollback is whatever was on your screen — an agent's transcript, a .env someone catted — and the removal on the
 // write path below only runs the next time you press the key on that pane, which may be never.
 const written = new Set<string>();
 
-export function dropScrollbackFiles(): void {
+export function dropWrittenFiles(): void {
   for (const file of written) rmSync(file, { force: true });
   written.clear();
+}
+
+// Owner-only, and never written into a file that is already there. The temp folder is shared, and
+// the default mode would leave a transcript readable by every account on the machine. The
+// remove-then-`wx` pair is the other half: without it, a file planted at this path by someone else
+// is a file this writes your text into, mode and all.
+async function writeOwnFile(file: string, text: string): Promise<void> {
+  rmSync(file, { force: true });
+  await writeFile(file, text, { mode: 0o600, flag: 'wx' });
+  written.add(file);
+}
+
+// Ctrl+G on the Claude screen: the prompt box as a file the page's nvim edits, read back when you
+// return. One name per slot, like scrollbackFile: openPrompt wipes the buffer before the tab opens, so
+// nvim never holds an older copy to bring back over the text just written.
+export function promptFile(temporaryDirectory: string, slot: number): string {
+  return path.join(temporaryDirectory, `dashboard-prompt-${process.pid}-${slot}.md`);
+}
+
+// Per slot, the file in nvim and the text the box last took from it.
+const prompts = new Map<number, { file: string; text: string }>();
+
+export async function writePrompt(temporaryDirectory: string, slot: number, text: string): Promise<string> {
+  const file = promptFile(temporaryDirectory, slot);
+  await writeOwnFile(file, text);
+  prompts.set(slot, { file, text });
+  return file;
+}
+
+// What was saved since the box last took the file, or null when nothing new was.
+export async function readPrompt(slot: number): Promise<string | null> {
+  const prompt = prompts.get(slot);
+  if (!prompt) return null;
+  let contents: string;
+  try {
+    contents = await readFile(prompt.file, 'utf8');
+  } catch {
+    return null;
+  }
+  const text = savedPrompt(contents, prompt.text);
+  if (text !== null) prompt.text = text;
+  return text;
+}
+
+// nvim ends a file it writes with a newline the box never had. Without dropping it, every return to
+// the screen would read a change and put the last saved text back over what you typed since.
+export function savedPrompt(contents: string, seen: string): string | null {
+  // nvim on Windows reads a file with no newline in it as `dos` and saves it with `\r\n`; those
+  // carriage returns are not part of the prompt either.
+  const text = contents.replace(/\r\n/g, '\n').replace(/\n$/, '');
+  return text === seen ? null : text;
 }
 
 // Which nvim a hand-over goes to: the project's slot, the temp folder its socket lives in, and the shell
@@ -153,8 +204,8 @@ export type EditorTarget = { temporaryDirectory: string; shellCommand: string; s
 // What a hand-over answers: whether the file is in front of you, and what the status bar says.
 export type Handover = { ok: boolean; message: string };
 
-// The hand-over both the scrollback key and a path in a pane go through: find nvim, get ready, wait for
-// the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
+// The hand-over the scrollback key, Ctrl+G's prompt and a path in a pane all go through: find nvim, get
+// ready, wait for the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
 // ok-or-why-not rather than throwing, because every one of these has something to put in the status bar
 // and nothing to put in the editor. `prepare` answers a message when it could not get ready.
 async function handToEditor(
@@ -195,13 +246,7 @@ export function openScrollback(
   const file = scrollbackFile(temporaryDirectory, slot, index);
   return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the scrollback', async () => {
     try {
-      // Owner-only, and never written into a file that is already there. The temp folder is shared, and
-      // the default mode would leave a transcript readable by every account on the machine. The
-      // remove-then-`wx` pair is the other half: without it, a file planted at this path by someone else
-      // is a file this writes your scrollback into, mode and all.
-      rmSync(file, { force: true });
-      await writeFile(file, text, { mode: 0o600, flag: 'wx' });
-      written.add(file);
+      await writeOwnFile(file, text);
       return null;
     } catch (error) {
       return `could not write the scrollback: ${(error as Error).message}`;
@@ -219,4 +264,23 @@ export function openFileInEditor(
 ): Promise<Handover> {
   return handToEditor(editor, path.basename(file), async () => null,
     (socket) => [openFileArguments(socket, file, line, column)]);
+}
+
+// Ctrl+G's half in main: the box written out and handed over the way the scrollback is, wiped and then
+// opened in a tab of its own, so `:wq` closes the tab and leaves what you were editing in front of you.
+export function openPrompt(
+  temporaryDirectory: string,
+  shellCommand: string,
+  slot: number,
+  text: string,
+): Promise<Handover> {
+  const file = promptFile(temporaryDirectory, slot);
+  return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the prompt', async () => {
+    try {
+      await writePrompt(temporaryDirectory, slot, text);
+      return null;
+    } catch (error) {
+      return `could not write the prompt: ${(error as Error).message}`;
+    }
+  }, (socket) => [wipeArguments(socket, file), tabArguments(socket, file)]);
 }

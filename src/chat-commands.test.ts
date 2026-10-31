@@ -6,7 +6,9 @@ const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ na
 describe('screenCommand', () => {
   it('takes /resume and /plan for the screen', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
+    expect(screenCommand('/diff')).toEqual({ kind: 'diff' });
     expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
+    expect(screenCommand('/mcp')).toEqual({ kind: 'mcp' });
     expect(screenCommand('  /plan  add a login page ')).toEqual({ kind: 'plan', rest: 'add a login page' });
     expect(screenCommand('/plan')).toEqual({ kind: 'plan', rest: '' });
     expect(screenCommand('/branch')).toEqual({ kind: 'branch', rest: '' });
@@ -14,6 +16,9 @@ describe('screenCommand', () => {
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
+    expect(screenCommand('/rename  board drag fix ')).toEqual({ kind: 'rename', rest: 'board drag fix' });
+    expect(screenCommand('/btw  what was that flag called? ')).toEqual({ kind: 'btw', rest: 'what was that flag called?' });
+    expect(screenCommand('/btw')).toEqual({ kind: 'btw', rest: '' });
   });
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();
