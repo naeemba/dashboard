@@ -126,3 +126,15 @@ Neither the message type nor the method is in the pinned SDK's types (0.3.312); 
 against it by sending two prompts into a running turn and cancelling the second: it was reported
 `cancelled` and never ran, the first ran after the turn. A screen that opens while a prompt waits
 does not see it: the queue lives in the session, and `chat:read` only reads the transcript.
+
+## chat-decision-8: /btw is the session's own side question, through a call the SDK does not declare
+
+`/btw` is the screen's own command: sent as a prompt it would join the conversation, which is what it
+must not do. The pinned SDK has `askSideQuestion` on every query, the control request Claude Code's
+/btw makes, but leaves it out of `sdk.d.ts`, so main reaches it through a cast. Checked against the
+pinned SDK: asked while a Bash call was running, it answered from that turn's prompt in under a
+second, and `getSessionMessages` afterwards held nothing of it. A release that drops the call fails
+the ask with an error on the screen and nothing else.
+
+The card's other way, a second `query()` resuming the conversation with `forkSession` and no tools,
+is left out: it starts a second process for every question, where the call asks the one running.

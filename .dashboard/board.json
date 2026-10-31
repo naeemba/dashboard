@@ -273,22 +273,6 @@
           ]
         },
         {
-          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
-          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
-          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:50:51.462Z",
-          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
-          "pullRequest": 118,
-          "comments": [
-            {
-              "at": "2026-10-31T22:50:51.462Z",
-              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
-            }
-          ]
-        },
-        {
           "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
@@ -1508,18 +1492,38 @@
           ]
         },
         {
+          "id": "1b60136b-82c0-4350-9e04-3f2b43aaaf94",
+          "title": "Ask a side question in the Claude pane without adding it to history (/btw)",
+          "notes": "Claude Code: /btw gives one tool-less answer kept out of history, works mid-turn. SDK: no direct API; a separate query with forkSession and no tools would do it, unverified. If not feasible, comment on the card and stop without a PR. Size M.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:20:37.665Z",
+          "branch": "work-board-card-1b60136b-82c0-4350-9e04-3f2",
+          "pullRequest": 118,
+          "comments": [
+            {
+              "at": "2026-10-31T22:50:51.462Z",
+              "body": "Built in #118: /btw calls the session's askSideQuestion (in the pinned SDK, undeclared in its types). Checked: answered mid-turn in under a second, nothing in the transcript."
+            },
+            {
+              "at": "2026-10-31T23:20:37.665Z",
+              "body": "Shipped in PR #118: /btw asks a side question beside the running turn, answered from the conversation so far without tools and kept out of it. Version 2.24.0."
+            }
+          ]
+        },
+        {
           "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
           "title": "Readline editing keys in the Claude pane's box",
           "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-10-31T23:21:44.178Z",
+          "updatedAt": "2026-10-31T23:22:36.341Z",
           "branch": "work-board-card-1f05e1bb-411e-4d68-badc-344",
           "pullRequest": 127,
           "comments": [
             {
-              "at": "2026-10-31T23:21:44.178Z",
-              "body": "Shipped in PR #127: readline kill and yank keys in the chat box (Ctrl+W, Ctrl+U, Ctrl+K, Ctrl+Y, Alt+Y). Version 2.24.0."
+              "at": "2026-10-31T23:22:36.341Z",
+              "body": "Shipped in PR #127: readline kill and yank keys in the chat box (Ctrl+W, Ctrl+U, Ctrl+K, Ctrl+Y, Alt+Y). Version 2.25.0."
             }
           ]
         }

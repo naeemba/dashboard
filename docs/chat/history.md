@@ -28,4 +28,5 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #122 — /rename names the conversation; /resume lists it by that name
 - 2026-11-01 #114 — Queue a message sent while Claude is busy, grey until taken, Up withdraws it (chat-decision-7)
 - 2026-11-01 #113 — Ctrl+G edits the prompt in the project's nvim
+- 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-8)
 - 2026-11-01 #127 — Readline kill and yank keys in the box: Ctrl+W, U, K, Y and Alt+Y

@@ -10,6 +10,7 @@ import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts } from './c
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
+import { askAside } from './chat-btw-view';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { manageMcp } from './chat-mcp-view';
@@ -313,6 +314,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
     if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
+    if (own?.kind === 'btw') return showAside(own.rest);
     if (own?.kind === 'plan') {
       configure({ permissionMode: (mode = 'plan') });
       if (!planSends(own.rest, images.length)) return;
@@ -664,6 +666,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (text !== undefined && !prompt.value.trim()) prompt.value = text;
       focus();
     });
+  }
+
+  // Asked beside a running turn too: the answer comes from the conversation so far and stays out of it.
+  function showAside(question: string): void {
+    if (!question) return options.onNotice('/btw needs a question after it.');
+    void askAside(bridge, slot, question, options).then(focus);
   }
 
   function showModels(name: string): void {
