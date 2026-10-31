@@ -348,22 +348,6 @@
           ]
         },
         {
-          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
-          "title": "@ file autocomplete in the Claude pane's box",
-          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:13:11.552Z",
-          "branch": "work-board-card-ef5acba4-2913-41f2-b16b-d51",
-          "pullRequest": 103,
-          "comments": [
-            {
-              "at": "2026-10-31T22:13:11.552Z",
-              "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
-            }
-          ]
-        },
-        {
           "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
           "title": "Effort level and ultrathink in the Claude pane",
           "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
@@ -1331,6 +1315,26 @@
             {
               "at": "2026-10-31T22:35:28.992Z",
               "body": "Merged in PR #106: /rewind lists prompts, restores code (rewindFiles with checkpointing on), conversation (forked resumeSessionAt) or both. Left out: summarize, Esc Esc."
+            }
+          ]
+        },
+        {
+          "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
+          "title": "@ file autocomplete in the Claude pane's box",
+          "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:38:35.367Z",
+          "branch": "work-board-card-ef5acba4-2913-41f2-b16b-d51",
+          "pullRequest": 103,
+          "comments": [
+            {
+              "at": "2026-10-31T22:13:11.552Z",
+              "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
+            },
+            {
+              "at": "2026-10-31T22:38:35.367Z",
+              "body": "Shipped in PR #103: @ opens a list of the project's files in the Claude pane's box, narrowing as you type; Tab or Enter puts the pick in as an @ mention. Version 2.10.0."
             }
           ]
         }
