@@ -110,6 +110,12 @@
           "title": "Review all of a session's edits in the Claude pane, like /diff",
           "notes": "Claude Code: /diff opens a review of all edits. SDK: none; /diff sent as a prompt likely answers \"not available\", unverified. Build from the session's Edit/Write calls or git diff of the cwd. If not feasible, comment on the card and stop without a PR. Size M.",
           "priority": "medium"
+        },
+        {
+          "id": "1df5422d-060b-45f9-a931-f8997fb0a0bc",
+          "title": "Edit the Claude pane's prompt in the project's nvim or $EDITOR",
+          "notes": "Claude Code: Ctrl+G opens the prompt in $EDITOR. The app already runs nvim per project. Size S-M.",
+          "priority": "medium"
         }
       ]
     },
