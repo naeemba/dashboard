@@ -2,7 +2,7 @@ import { fileMention, mentionInsertion } from './chat-commands';
 import { fuzzyScore } from './fuzzy';
 
 // The list of the project's files that @ opens in the prompt box, as Claude Code's does. The files are
-// git's list, from main, not the SDK's file_suggestions: chat-decision-3 says why. Matched here.
+// git's list, from main, not the SDK's file_suggestions: chat-decision-4 says why. Matched here.
 
 const SHOWN = 50;
 

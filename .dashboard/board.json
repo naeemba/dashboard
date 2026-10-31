@@ -34,13 +34,6 @@
           "parent": null
         },
         {
-          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
-          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
-          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
@@ -1301,12 +1294,28 @@
           ]
         },
         {
+          "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
+          "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
+          "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:35:28.992Z",
+          "branch": "work-board-card-063fde4e-0348-4b14-9e0c-c90",
+          "pullRequest": 106,
+          "comments": [
+            {
+              "at": "2026-10-31T22:35:28.992Z",
+              "body": "Merged in PR #106: /rewind lists prompts, restores code (rewindFiles with checkpointing on), conversation (forked resumeSessionAt) or both. Left out: summarize, Esc Esc."
+            }
+          ]
+        },
+        {
           "id": "ef5acba4-2913-41f2-b16b-d51d2420b899",
           "title": "@ file autocomplete in the Claude pane's box",
           "notes": "Claude Code: typing @ shows fuzzy path suggestions. SDK: file_suggestions control request (sdk.d.ts:4039) is a non-exported type with no Query method, unverified; fallback is listing files ourselves with the repo's fuzzy.ts. Pane: the menu opens only for /, chat-commands.ts:57; @ comes only from drag and drop. Size M.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-10-31T22:36:17.679Z",
+          "updatedAt": "2026-10-31T22:38:35.367Z",
           "branch": "work-board-card-ef5acba4-2913-41f2-b16b-d51",
           "pullRequest": 103,
           "comments": [
@@ -1315,8 +1324,8 @@
               "body": "PR #103: @ opens a fuzzy list of git's files (tracked + untracked-not-ignored) over the box; Tab/Enter inserts the mention. SDK file_suggestions has no Query method, so files are listed via git ls-files. Folders not offered."
             },
             {
-              "at": "2026-10-31T22:36:17.679Z",
-              "body": "Shipped in PR #103: @ opens a list of the project's files in the Claude pane's box, narrowing as you type; Tab or Enter puts the pick in as an @ mention. Version 2.9.0."
+              "at": "2026-10-31T22:38:35.367Z",
+              "body": "Shipped in PR #103: @ opens a list of the project's files in the Claude pane's box, narrowing as you type; Tab or Enter puts the pick in as an @ mention. Version 2.10.0."
             }
           ]
         }
