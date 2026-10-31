@@ -32,6 +32,12 @@
           "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "10c74f29-5a69-4e57-84aa-5ac7593c182b",
+          "title": "Show Claude's suggested next prompt in the Claude pane's box",
+          "notes": "Turn on promptSuggestions: true in the chat session's query options (chat-sessions.ts). The session then emits a prompt_suggestion message (SDKPromptSuggestionMessage, sdk.d.ts:5898) after each turn's result. Hold the suggestion in the transcript; clear it on a new turn, a sent prompt or a reset (decision module plus test). Draw it as grey placeholder text in the empty box, like Claude Code; Tab accepts it into the box, typing replaces it. New key goes in actions.ts and help.ts. None arrives on the first turn, in plan mode, after an API error, near the usage limit, or with promptSuggestionEnabled: false in settings.json.",
+          "priority": "medium"
         }
       ]
     },
