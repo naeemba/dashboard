@@ -41,13 +41,6 @@
           "parent": null
         },
         {
-          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
-          "title": "Timestamp and model on each message in the Claude pane",
-          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
           "title": "MCP server status, reconnect and toggle in the Claude pane",
           "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
@@ -81,13 +74,6 @@
               "body": "Skipped: the SDK cannot carry a note on an allow. In @anthropic-ai/claude-agent-sdk 0.3.312, sdk.d.ts:2585 types PermissionResult allow as {behavior, updatedInput?, updatedPermissions?, toolUseID?, decisionClassification?}; only deny has message. The bundled CLI (claude-agent-sdk-linux-x64/claude) parses the SDK host answer with the same zod object (behavior: literal allow, updatedInput, updatedPermissions, toolUseID, decisionClassification), so an extra field is dropped. Claude Code's own Tab note on a yes is acceptFeedback, read only by its built-in permission dialog, not reachable from canUseTool. No PR opened. Revisit if a later SDK adds a message or feedback field to the allow result."
             }
           ]
-        },
-        {
-          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
-          "title": "Fast mode toggle in the Claude pane",
-          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
-          "priority": "low",
-          "parent": null
         },
         {
           "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
@@ -417,6 +403,22 @@
           "updatedAt": "2026-10-31T22:59:58.928Z",
           "branch": "work-board-card-9a184bc9-b9c1-4284-8bec-5e6",
           "pullRequest": 122
+          },
+          {
+          "id": "098a7fef-37c6-47ee-954e-6ff3d4047a9d",
+          "title": "Fast mode toggle in the Claude pane",
+          "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:58:57.860Z",
+          "branch": "work-board-card-098a7fef-37c6-47ee-954e-6ff",
+          "pullRequest": 121,
+          "comments": [
+            {
+              "at": "2026-10-31T22:58:57.781Z",
+              "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
+            }
+          ]
         }
       ]
     },
@@ -1434,6 +1436,22 @@
             {
               "at": "2026-10-31T22:53:44.987Z",
               "body": "PR #110: Edit and MultiEdit diffs in the Claude pane now use a line LCS, so far-apart changes show apart with a skipped-lines row between them. Version 2.15.0."
+            }
+          ]
+        },
+        {
+          "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
+          "title": "Timestamp and model on each message in the Claude pane",
+          "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:57:24.083Z",
+          "branch": "work-board-card-5ab46333-ccde-4921-b84a-1e8",
+          "pullRequest": 115,
+          "comments": [
+            {
+              "at": "2026-10-31T22:57:24.083Z",
+              "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
             }
           ]
         }
