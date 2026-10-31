@@ -15,7 +15,7 @@ scrollback and any file path a pane printed open in it.
 - Given a pane's shell has `cd`'d into a worktree, when you open a relative path it printed, then the worktree's copy opens.
 - Given the focused pane, when you press Ctrl+`, then its scrollback opens in nvim in a tab of its own.
 
-## Open questions
+## Known limits
 
 - What reads as a path is decided without the disk, so `and/or` underlines
   too (nvim-decision-1).

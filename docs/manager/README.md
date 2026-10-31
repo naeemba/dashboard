@@ -23,7 +23,7 @@ log, and the build version along its foot.
 - Given projects are marked, when you run a command, then it runs in a free pane of each marked project.
 - Given the manager page, when you look at its foot, then it shows the version from `package.json`.
 
-## Open questions
+## Known limits
 
 - Ctrl+Q and three board-scope keys are listed on manager screens where they
   do nothing (keys-decision-1, keys-decision-2).

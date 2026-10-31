@@ -21,7 +21,7 @@ worktree list shows every git worktree of a project and removes them.
 - Given the review merged the pull request, when it finishes, then the card is moved to Done on the branch, then merged, then on the app's board.
 - Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.
 
-## Open questions
+## Known limits
 
 - An unreadable `worktrees.json` stops the launch instead of opening empty
   (errors-decision-2).
