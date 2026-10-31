@@ -164,6 +164,12 @@
           "title": "Fast mode toggle in the Claude pane",
           "notes": "Claude Code: /fast and Alt+O. SDK: unverified, likely applyFlagSettings. Alt+O is already unfold in the pane (actions.ts:544), so pick another key. If the SDK cannot do it, comment on the card and stop without a PR. Size S.",
           "priority": "low"
+        },
+        {
+          "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
+          "title": "Stash and restore drafts in the Claude pane's box",
+          "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
+          "priority": "low"
         }
       ]
     },
