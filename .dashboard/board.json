@@ -237,16 +237,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
-          "title": "MCP server status, reconnect and toggle in the Claude pane",
-          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:41:02.138Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -390,6 +381,22 @@
             {
               "at": "2026-10-31T22:40:56.632Z",
               "body": "PR #114: prompts sent while busy queue grey under the conversation, taken on command_lifecycle; Up in the empty box withdraws the last one. 2.10.0."
+            }
+          ]
+        },
+        {
+          "id": "0b114dab-e950-4138-9e99-32d5bee8282d",
+          "title": "MCP server status, reconnect and toggle in the Claude pane",
+          "notes": "Claude Code: /mcp lists servers, reconnects, enables/disables. SDK: mcpServerStatus (sdk.d.ts:3108), reconnectMcpServer (3247), toggleMcpServer (3255). Pane: none. Size M.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:48:56.764Z",
+          "branch": "work-board-card-0b114dab-e950-4138-9e99-32d",
+          "pullRequest": 117,
+          "comments": [
+            {
+              "at": "2026-10-31T22:48:56.764Z",
+              "body": "Shipped in #117: /mcp lists the session's MCP servers with status, reconnects, disables or enables one. Version 2.13.0. Needs a hand check in the rebuilt app."
             }
           ]
         }
