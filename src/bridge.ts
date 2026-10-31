@@ -75,9 +75,9 @@ export type DashboardBridge = {
   openScrollback(slot: number, index: number, text: string): Promise<Handover>;
   // A path a pane printed, opened in the project's nvim. Main finds the file; file-open.ts holds how.
   openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
-  // Ctrl+G: the Claude box written to a file for the page's nvim, answering its path; and the text
-  // saved there since the box last read it, or null.
-  writePrompt(slot: number, text: string): Promise<string>;
+  // Ctrl+G: the Claude box written to a file and opened in the page's nvim, answering the way
+  // openScrollback does; and the text saved there since the box last read it, or null.
+  openPrompt(slot: number, text: string): Promise<Handover>;
   readPrompt(slot: number): Promise<string | null>;
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;

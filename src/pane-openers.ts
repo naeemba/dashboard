@@ -3,7 +3,7 @@ import type { Channels } from './channels';
 import { findPaneFile, noSuchFile, type PaneFolders } from './file-open';
 import type { FileLink } from './file-links';
 import { isOpenableLink } from './links';
-import { openFileInEditor, openScrollback, readPrompt, writePrompt, type EditorTarget } from './nvim-remote';
+import { openFileInEditor, openPrompt, openScrollback, readPrompt, type EditorTarget } from './nvim-remote';
 
 // What a pane hands out of itself: a URL to the browser, its scrollback to nvim, a path it printed to
 // nvim. Main-process wiring only, out of main.ts because main had reached its 600-line ceiling; every
@@ -22,7 +22,9 @@ export function registerPaneOpeners(table: Channels, main: {
     openScrollback(app.getPath('temp'), main.shellCommand(), slot, index, text)
   ));
   // Ctrl+G on the Claude screen: the prompt box out to a file for nvim, and back once saved.
-  table.handle('prompt:write', (_screen, slot: number, text: string) => writePrompt(app.getPath('temp'), slot, text));
+  table.handle('prompt:open', (_screen, slot: number, text: string) => (
+    openPrompt(app.getPath('temp'), main.shellCommand(), slot, text)
+  ));
   table.handle('prompt:read', (_screen, slot: number) => readPrompt(slot));
   // A path a pane printed, looked for where that pane's shell is standing now; file-open.ts says why.
   table.handle('file:open', async (_screen, slot: number, index: number, link: FileLink) => {

@@ -55,6 +55,8 @@ export type PageOptions = {
   worktrees(): readonly WorktreeEntry[];
   // A file path clicked in one of the page's panes, which the renderer opens in the page's nvim.
   openFile(page: Page, index: number, link: FileLink): void;
+  // The page's nvim put in front, started if it is not running, when it is the page you are on.
+  showEditor(page: Page): void;
   // A worker's close button, which does what the close key does.
   closePane(page: Page, index: number): void;
 };
@@ -578,7 +580,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onError: (message) => options.onError(`chat:${slot}`, message),
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
       onWaiting: options.onChanged,
-      openEditor: (file) => options.openFile(page, MAIN_INDEX, { path: file, start: 0, end: 0 }),
+      showEditor: () => options.showEditor(page),
     });
     page.chat = chat;
     const main = document.createElement('div');

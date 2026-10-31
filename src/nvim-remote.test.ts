@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
-  editorSocket, nvimFromOutput, openFileArguments, savedPrompt, scrollbackFile, tabArguments, wipeArguments,
+  dropWrittenFiles, editorSocket, nvimFromOutput, openFileArguments, readPrompt, savedPrompt, scrollbackFile,
+  tabArguments, wipeArguments, writePrompt,
 } from './nvim-remote';
 
 describe('nvimFromOutput', () => {
@@ -95,5 +99,43 @@ describe('savedPrompt', () => {
 
   it('keeps a blank line you ended it with on purpose', () => {
     expect(savedPrompt('fix it\n\n', 'fix it')).toBe('fix it\n');
+  });
+
+  // nvim on Windows saves a file it read as `dos` with \r\n; read as a change, it replaces the box.
+  it('reads carriage returns nvim on Windows saved as nothing new', () => {
+    expect(savedPrompt('fix the bug\r\n', 'fix the bug')).toBeNull();
+    expect(savedPrompt('fix the bug\r\nand test it\r\n', 'x')).toBe('fix the bug\nand test it');
+  });
+});
+
+describe('readPrompt', () => {
+  const folders: string[] = [];
+  afterEach(() => {
+    dropWrittenFiles();
+    for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true });
+  });
+  function folder(): string {
+    const made = mkdtempSync(path.join(os.tmpdir(), 'dashboard-prompt-test-'));
+    folders.push(made);
+    return made;
+  }
+
+  // The second read answering null is what stops a later return from putting the saved text back
+  // over what you typed into the box since.
+  it('answers what was saved once, then nothing until it is saved again', async () => {
+    const file = await writePrompt(folder(), 1, 'a');
+    writeFileSync(file, 'b\n');
+    expect(await readPrompt(1)).toBe('b');
+    expect(await readPrompt(1)).toBeNull();
+  });
+
+  it('answers nothing for a slot that never wrote a prompt', async () => {
+    expect(await readPrompt(99)).toBeNull();
+  });
+
+  it('answers nothing once the file is gone', async () => {
+    const file = await writePrompt(folder(), 2, 'a');
+    rmSync(file);
+    expect(await readPrompt(2)).toBeNull();
   });
 });

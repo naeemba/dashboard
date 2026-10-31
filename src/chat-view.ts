@@ -41,8 +41,8 @@ export type ChatViewOptions = {
   onNotice(message: string): void;
   // A question arrived or the last one went, so whatever marks a project that wants you redraws.
   onWaiting(): void;
-  // A file for the page's nvim to open: the box, written out by the editor key.
-  openEditor(file: string): void;
+  // Puts the page's nvim in front, starting it if it is not running: the editor key's last step.
+  showEditor(): void;
 };
 
 export type ChatView = {
@@ -646,11 +646,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   // Once the editor key has written the box out, every return here asks for what nvim saved since.
   let edited = false;
+  // Main is asked before the editor is shown, as with the scrollback key, so a cold nvim gets the
+  // file the moment it listens.
   function editPrompt(): void {
-    bridge.writePrompt(slot, prompt.value).then((file) => {
-      edited = true;
-      options.openEditor(file);
-    }, (error: unknown) => options.onError(`The prompt was not written out: ${failureText(error)}`));
+    edited = true;
+    bridge.openPrompt(slot, prompt.value).then((answer) => {
+      if (!answer.ok) options.onError(answer.message);
+    }, (error: unknown) => options.onError(`The prompt was not opened: ${failureText(error)}`));
+    options.showEditor();
   }
 
   function focus(): void {
