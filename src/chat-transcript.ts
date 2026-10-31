@@ -64,8 +64,9 @@ export type ChatEntry =
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
   // A message Claude Code put in the conversation rather than a person (chat-events.ts), or Claude's
-  // thinking, folded to its title.
-  | { kind: 'event'; title: string; body: string };
+  // thinking, folded to its title. `verbatim` is a failed hook's: what it printed, drawn as terminal
+  // text rather than markdown.
+  | { kind: 'event'; title: string; body: string; verbatim?: true };
 
 // When a message was written and the model that wrote it, as far as the message says: drawn above
 // it (chat-stamp.ts). A saved line and a live message both carry the time; only Claude's carry a model.
@@ -240,10 +241,14 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
   return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
 }
 
-function withHook(transcript: Transcript, message: Record<string, unknown>, hook: string | null): Transcript {
+// A system message about a hook, folded into the working line and, when it failed, the conversation;
+// the same transcript for any other.
+function withHook(transcript: Transcript, message: Record<string, unknown>): Transcript {
+  const hook = runningHook(message);
+  if (hook === undefined) return transcript;
   const failure = hookFailure(message);
   if (!failure && hook === transcript.hook) return transcript;
-  const entries = failure ? [...transcript.entries, { kind: 'event' as const, ...failure }] : transcript.entries;
+  const entries = failure ? [...transcript.entries, { kind: 'event' as const, ...failure, verbatim: true as const }] : transcript.entries;
   return { ...transcript, hook, entries };
 }
 
@@ -325,11 +330,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
       }
-      {
-        const hook = runningHook(message);
-        if (hook !== undefined) return withHook(transcript, message, hook);
-      }
-      return withTasks(transcript, message);
+      return withHook(withTasks(transcript, message), message);
     default: return transcript;
   }
 }
@@ -378,9 +379,13 @@ export function preferencesOf(event: ChatEvent): ChatPreferences | null {
 }
 
 // The conversation read back from disk, unless something has already been drawn: a prompt sent or a
-// message arrived before the read came back is newer than anything in it.
+// message arrived before the read came back is newer than anything in it. A failed hook's line does
+// not count: a SessionStart hook can fail before a resumed conversation is read, and it goes after
+// what was read instead of in place of it.
 export function withEarlier(transcript: Transcript, messages: Record<string, unknown>[]): Transcript {
-  return transcript.entries.length > 0 ? transcript : messages.reduce(applyMessage, transcript);
+  if (transcript.entries.some((entry) => entry.kind !== 'event' || !entry.verbatim)) return transcript;
+  const read = messages.reduce(applyMessage, { ...transcript, entries: [] });
+  return { ...read, entries: [...read.entries, ...transcript.entries] };
 }
 
 // A turn running or a question waiting: what a new conversation is refused under, since the reset

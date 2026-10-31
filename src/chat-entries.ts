@@ -199,7 +199,7 @@ function toolEntry(entry: Extract<ChatEntry, { kind: 'tool' }>): DrawnEntry {
 }
 
 // A message Claude Code injected, or Claude's thinking: one line with its title, unfolding to what it
-// said in markdown.
+// said in markdown; a failed hook's output unfolds as the terminal text it is.
 function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   const element = document.createElement('details');
   element.className = 'chat-entry chat-event';
@@ -210,7 +210,8 @@ function eventEntry(entry: Extract<ChatEntry, { kind: 'event' }>): DrawnEntry {
   element.append(summary, body);
   element.addEventListener('toggle', () => {
     if (!element.open || body.childElementCount > 0) return;
-    markdownInto(body, entry.body);
+    if (entry.verbatim) body.append(withCopy(preformatted('chat-output chat-error', entry.body)));
+    else markdownInto(body, entry.body);
   });
   return { entry, element, fill: null };
 }

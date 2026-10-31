@@ -22,6 +22,14 @@ describe('hookFailure', () => {
       .toEqual({ title: 'PreToolUse:Bash hook failed (exit 2)', body: 'blocked: rm -rf' });
   });
 
+  it('falls back to stdout when stderr is empty, and to the event when the hook has no name', () => {
+    expect(hookFailure(hook('hook_response', { outcome: 'error', stderr: '', stdout: 'reason on stdout\n' })))
+      .toEqual({ title: 'PreToolUse:Bash hook failed', body: 'reason on stdout' });
+    expect(hookFailure({ type: 'system', subtype: 'hook_response', outcome: 'error', hook_event: 'Stop', stderr: 'x' })?.title)
+      .toBe('Stop hook failed');
+    expect(hookFailure({ type: 'system', subtype: 'hook_response', outcome: 'error', stderr: 'x' })?.title).toBe('hook hook failed');
+  });
+
   it('leaves a hook that succeeded or was cancelled out of the conversation', () => {
     expect(hookFailure(hook('hook_response', { outcome: 'success' }))).toBeNull();
     expect(hookFailure(hook('hook_response', { outcome: 'cancelled' }))).toBeNull();
@@ -35,6 +43,6 @@ describe('a hook in the transcript', () => {
     expect(running.hook).toBe('PreToolUse:Bash');
     const done = applyMessage(running, hook('hook_response', { outcome: 'error', stderr: 'no' }));
     expect(done.hook).toBeNull();
-    expect(done.entries).toEqual([{ kind: 'event', title: 'PreToolUse:Bash hook failed', body: 'no' }]);
+    expect(done.entries).toEqual([{ kind: 'event', title: 'PreToolUse:Bash hook failed', body: 'no', verbatim: true }]);
   });
 });
