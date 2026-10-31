@@ -323,7 +323,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'is and declines anything it was asking; with the command list open it only closes the list. '
     + 'While Claude works, a line over the box says whether it is thinking, for how long and roughly '
     + 'how many tokens have come down, and its answer flows in a few characters at a time. What it '
-    + 'thought is folded to a Thinking line in the conversation, unfolding to a summary of it. Above that line, '
+    + 'thought is folded to a Thinking line in the conversation, unfolding to a summary of it. Above the working line, '
     + 'a strip lists the agents, workflows and background commands Claude has running, each under the '
     + 'one that started it, with its tool calls, tokens, time and last tool so far; a task leaves the '
     + 'strip when it ends. It lists only what started while the screen was open, since a saved session '
