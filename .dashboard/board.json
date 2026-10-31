@@ -341,14 +341,14 @@
           ]
         },
         {
-          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
-          "title": "Effort level and ultrathink in the Claude pane",
-          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
-          "priority": "high",
+          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+          "title": "Search prompt history in the Claude pane, across sessions",
+          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+          "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T22:19:49.243Z",
-          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
-          "pullRequest": 105
+          "updatedAt": "2026-10-31T22:27:25.984Z",
+          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+          "pullRequest": 108
         },
         {
           "id": "8f5787fa-cfbc-4044-84f2-faafdcccd8fb",
@@ -1338,18 +1338,18 @@
           ]
         },
         {
-          "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
-          "title": "Search prompt history in the Claude pane, across sessions",
-          "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
-          "priority": "medium",
+          "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+          "title": "Effort level and ultrathink in the Claude pane",
+          "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+          "priority": "high",
           "parent": null,
-          "updatedAt": "2026-10-31T22:44:50.342Z",
-          "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
-          "pullRequest": 108,
+          "updatedAt": "2026-10-31T22:41:21.986Z",
+          "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
+          "pullRequest": 105,
           "comments": [
             {
-              "at": "2026-10-31T22:44:50.342Z",
-              "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box."
+              "at": "2026-10-31T22:41:21.986Z",
+              "body": "Shipped in PR #105: /effort command, effort level in the foot, ultrathink shown while its turn runs. Version 2.11.0."
             }
           ]
         }

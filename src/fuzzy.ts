@@ -12,3 +12,13 @@ export function fuzzyScore(text: string, query: string): number | null {
   }
   return index - start;
 }
+
+// The items whose text matches the query, best first; all of them in their own order for an empty
+// query, since every one scores 0 and the sort is stable.
+export function ranked<T>(items: T[], textOf: (item: T) => string, query: string): T[] {
+  return items
+    .map((item) => ({ item, score: fuzzyScore(textOf(item), query) }))
+    .filter((each): each is { item: T; score: number } => each.score !== null)
+    .sort((one, other) => one.score - other.score)
+    .map(({ item }) => item);
+}

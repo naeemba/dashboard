@@ -1,8 +1,8 @@
 import { modelTone, statusMeters, type ChatMeasure, type StatusTone } from './chat-status';
 
-// The row under the Claude screen's box as DOM: on the left the model, the mode and what Claude is
-// doing; on the right the meters Claude Code's status line carries, then the version. What the meters
-// say is chat-status.ts's; this only builds the elements.
+// The row under the Claude screen's box as DOM: on the left the model, the mode, the effort and what
+// Claude is doing; on the right the meters Claude Code's status line carries, then the version. What
+// the meters say is chat-status.ts's; this only builds the elements.
 
 export type FootState = 'ready' | 'working' | 'waiting';
 
@@ -21,12 +21,14 @@ function toned(element: HTMLElement, tone: StatusTone): HTMLElement {
   return element;
 }
 
-export function footSides(model: string, mode: string, state: FootState, measured: ChatMeasure | null, version: string | null): HTMLElement[] {
+export function footSides(model: string, mode: string, effort: string, ultrathink: boolean, state: FootState, measured: ChatMeasure | null, version: string | null): HTMLElement[] {
   const chosen = document.createElement('div');
   chosen.className = 'chat-foot-side';
   const stateName = piece('chat-foot-state', STATE_LABELS[state]);
   stateName.dataset.state = state;
-  chosen.append(toned(piece('chat-foot-model', model), modelTone(model)), piece('chat-foot-mode', mode), stateName);
+  const effortName = piece('chat-foot-effort', effort);
+  effortName.classList.toggle('ultrathink', ultrathink);
+  chosen.append(toned(piece('chat-foot-model', model), modelTone(model)), piece('chat-foot-mode', mode), effortName, stateName);
   const meters = document.createElement('div');
   meters.className = 'chat-foot-side';
   for (const each of measured ? statusMeters(measured) : []) {
