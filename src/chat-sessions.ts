@@ -118,12 +118,14 @@ function loginShellPath(fallback: string): Promise<string> {
 // The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out.
+// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
+// the pane draws its steps once each arrives whole.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
-export function relayed(message: { type: string; event?: unknown }): boolean {
+export function relayed(message: { type: string; event?: unknown; parent_tool_use_id?: string | null }): boolean {
   if (message.type !== 'stream_event') return RELAYED.has(message.type);
+  if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
   return RELAYED_STREAM.has(String(event.type)) || RELAYED_STREAM.has(String(delta));
@@ -217,6 +219,8 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // A subagent's text as well as its tool calls, so a call that started one can show its steps.
+        forwardSubagentText: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
         // the first turn, in plan mode, after an API error, near the usage limit, and when settings.json
         // has promptSuggestionEnabled: false.

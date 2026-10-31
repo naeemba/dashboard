@@ -17,4 +17,5 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #106 — Rewind to an earlier prompt: code, conversation or both (chat-decision-3)
 - 2026-11-01 #103 — @ file autocomplete in the box
 - 2026-11-01 #109 — Stop or background a running task from the strip (chat-decision-5)
+- 2026-11-01 #107 — Unfold an Agent call to see the subagent's own steps
 - 2026-11-01 #117 — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-6)
