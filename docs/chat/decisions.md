@@ -82,3 +82,14 @@ The SDK has a `file_suggestions` request, but only as an internal type: the `Que
 send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
 --exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
 are not offered. A folder that is not a repository lists nothing rather than walking node_modules.
+
+## chat-decision-5: The task strip's background key is Alt+B, and an ended pick is refused
+
+The terminal backgrounds tasks with Ctrl+B, but Ctrl+B is the board's mode key here, and a mode key
+passes through to the pane only in its own mode (keys-rule-1). So the strip's keys are Alt+T to pick,
+Alt+X to stop and Alt+B to background.
+
+A key pressed for a picked task whose row has since left the strip is refused with a notice, not
+turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling back
+would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
+lasts while other tasks still run, which a background command can stretch across turns.
