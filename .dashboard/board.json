@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
-          "title": "Show hook progress in the Claude pane",
-          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "1f05e1bb-411e-4d68-badc-34463788fcc4",
           "title": "Readline editing keys in the Claude pane's box",
           "notes": "Claude Code: Ctrl+W/K/U/Y, kill ring, undo, vim mode. Pane: plain textarea; modified keys pass through (chat-view.ts:360). Start with Ctrl+W/K/U/Y and the kill ring; vim mode out of scope. Mind the mode-keys hard rule. Size M.",
@@ -382,6 +375,22 @@
             {
               "at": "2026-10-31T22:58:57.781Z",
               "body": "SDK can do it: applyFlagSettings({ fastMode }). Shipped in PR #121: /fast and Alt+F toggle fast mode, replayed on restart, foot shows '· fast'. Not read yet: fast_mode_state when unavailable."
+            }
+          ]
+        },
+        {
+          "id": "743103fc-afcd-4cf0-887c-dcb378c020a0",
+          "title": "Show hook progress in the Claude pane",
+          "notes": "Claude Code shows hooks running. SDK: includeHookEvents (sdk.d.ts:1909), hook_* subtypes (5460-5488). Pane: dropped (chat-sessions.ts:115-119). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:05:43.117Z",
+          "branch": "work-board-card-743103fc-afcd-4cf0-887c-dcb",
+          "pullRequest": 124,
+          "comments": [
+            {
+              "at": "2026-10-31T23:05:43.117Z",
+              "body": "Shipped in #124: working line names the running hook, a failed hook leaves a folded line with its stderr, success leaves nothing. hook_progress not relayed. Needs app rebuild and a hand check."
             }
           ]
         }
