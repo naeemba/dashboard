@@ -43,7 +43,8 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       // dies with the folder. A page of terminals is not a page that should stop ticking when it is
       // behind something.
       backgroundThrottling: false,
-      // Chromium's built-in PDF viewer, which the Claude screen opens a PDF the conversation names in.
+      // Chromium's built-in PDF viewer, for every page in the window. Only the Claude screen uses it,
+      // for a PDF the conversation names; the window loads no remote content.
       plugins: true,
     },
   });

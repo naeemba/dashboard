@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PDF_LIMIT, pdfMentions, pdfName, pdfOfTool, pdfRefusal } from './chat-pdf';
+import { PDF_LIMIT, pdfMentions, pdfOfTool, pdfRefusal } from './chat-pdf';
 
 describe('pdfMentions', () => {
   it('finds a mention of a PDF, quoted or not, and ends it at punctuation', () => {
@@ -16,12 +16,6 @@ describe('pdfOfTool', () => {
     expect(pdfOfTool('Read', { file_path: '/tmp/a.pdf' })).toBe('/tmp/a.pdf');
     expect(pdfOfTool('Read', { file_path: '/tmp/a.png' })).toBeNull();
     expect(pdfOfTool('Edit', { file_path: '/tmp/a.pdf' })).toBeNull();
-  });
-});
-
-describe('pdfName', () => {
-  it('is the last segment', () => {
-    expect(pdfName('docs/spec.pdf')).toBe('spec.pdf');
   });
 });
 

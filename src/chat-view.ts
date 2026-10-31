@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
 import { completion, droppedFiles, fileMention, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, type CommandRow } from './chat-commands';
 import { drawEntry, PDF_TILE, type DrawnEntry } from './chat-entries';
-import { pdfName } from './chat-pdf';
+import { baseName } from './base-name';
 import { onEdgeLine, recall, sentPrompts } from './chat-history';
 import { createCommandMenu } from './chat-menu-view';
 import { renderMarkdown } from './chat-markdown';
@@ -436,12 +436,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
       imageOverlay(event.target.src);
       return;
     }
-    const tile = event.target instanceof Element ? event.target.closest<HTMLElement>(`.${PDF_TILE}`) : null;
+    const target = event.target instanceof Element ? event.target : null;
+    const tile = target?.closest<HTMLElement>(`.${PDF_TILE}`);
     if (tile) {
       openPdf(tile);
       return;
     }
-    const link = event.target instanceof Element ? event.target.closest('a') : null;
+    const link = target?.closest('a');
     if (!link) return;
     event.preventDefault();
     bridge.openExternal(link.href);
@@ -459,14 +460,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // Main reads the file each time, so a PDF written since the tile was drawn opens as it is now. One
   // it will not hand over says why on the tile, which stays.
   function openPdf(tile: HTMLElement): void {
-    bridge.readPdf(slot, tile.dataset.path ?? '').then((answer) => {
+    const file = tile.dataset.path ?? '';
+    bridge.readPdf(slot, file).then(async (answer) => {
       if ('refused' in answer) {
-        tile.querySelector('.chat-pdf-name')?.replaceChildren(`${pdfName(tile.dataset.path ?? '')} — ${answer.refused}`);
+        tile.querySelector('.chat-pdf-name')?.replaceChildren(`${baseName(file)} — ${answer.refused}`);
         return;
       }
-      const bytes = Uint8Array.from(atob(answer.data), (character) => character.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      pdfOverlay(url, () => URL.revokeObjectURL(url));
+      // Decoded by the browser rather than a character at a time.
+      pdfOverlay(await (await fetch(`data:application/pdf;base64,${answer.data}`)).blob());
     }, (error: unknown) => options.onError(`PDF not opened: ${failureText(error)}`));
   }
 
@@ -626,9 +627,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'image') {
-        const shown = (selected === null ? attached : drawn[selected].element).querySelector<HTMLElement>(`img, .${PDF_TILE}`);
-        if (shown instanceof HTMLImageElement) imageOverlay(shown.src);
-        else if (shown) openPdf(shown);
+        // An image first, as before there were tiles, then the first PDF.
+        const chosen = selected === null ? attached : drawn[selected].element;
+        const image = chosen.querySelector('img');
+        const tile = chosen.querySelector<HTMLElement>(`.${PDF_TILE}`);
+        if (image) imageOverlay(image.src);
+        else if (tile) openPdf(tile);
       }
       // The same button a click on the block presses, so the tick shows which block was copied.
       if (command === 'copy' && selected !== null) {

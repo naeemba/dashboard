@@ -478,14 +478,17 @@
 
 /* An image shown full size: the box is the image, as large as the window lets it be, on the sheet's
    centre rather than near its top like a question. */
-.image-viewer {
+.image-viewer, .pdf-viewer {
   padding-top: 0;
 }
 
-.image-viewer-dialog {
+.image-viewer-dialog, .pdf-viewer-dialog {
   align-self: center;
-  width: auto;
   max-height: 90vh;
+}
+
+.image-viewer-dialog {
+  width: auto;
   cursor: zoom-out;
 }
 
@@ -497,15 +500,9 @@
 }
 
 /* A PDF in Chromium's own viewer, as large as the window lets it be, centred like an image. */
-.pdf-viewer {
-  padding-top: 0;
-}
-
 .pdf-viewer-dialog {
-  align-self: center;
   width: 92vw;
   height: 90vh;
-  max-height: 90vh;
   padding: 0;
 }
 

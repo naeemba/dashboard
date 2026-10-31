@@ -12,6 +12,8 @@ import type { Channels } from './channels';
 import { conversationChange, modeOf, type ChatEvent } from './chat-transcript';
 import type { PermissionAsk } from './chat-permission';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
+import { fileCandidates } from './file-open';
+import { homedir } from 'node:os';
 import { failureText } from './failure';
 import { isRecord } from './is-record';
 
@@ -356,13 +358,13 @@ export function registerChatSessions(
   });
 
   // A PDF the conversation names, for the tile that opens it. A mention is relative to the session's
-  // folder, as Claude Code reads it; a Read call's path is absolute and resolve leaves it alone.
+  // folder, as Claude Code reads it; a Read call's path is whole. A page with no folder has nowhere a
+  // mention could be.
   table.handle('pdf:read', async (_screen, slot: number, file: string): Promise<PdfRead> => {
-    const projectPath = host.projectPath(slot);
-    const absolute = path.resolve(projectPath ?? '/', file);
-    const found = await stat(absolute).then((info) => (info.isFile() ? info.size : null), () => null);
-    const refused = pdfRefusal(absolute, found);
-    if (refused !== null) return { refused };
+    const [absolute] = fileCandidates(file, [host.projectPath(slot)], homedir());
+    const found = absolute === undefined ? null : await stat(absolute).then((info) => (info.isFile() ? info.size : null), () => null);
+    const refused = pdfRefusal(file, found);
+    if (refused !== null || absolute === undefined) return { refused: refused ?? 'not found' };
     return { data: (await readFile(absolute)).toString('base64') };
   });
 

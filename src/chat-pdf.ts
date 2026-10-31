@@ -7,7 +7,7 @@
 // second screen gets them in one frame under the host's 8 MB limit (MAX_FRAME_BYTES).
 export const PDF_LIMIT = 5 * 1024 * 1024;
 
-export function isPdfPath(file: string): boolean {
+function isPdfPath(file: string): boolean {
   return /\.pdf$/i.test(file);
 }
 
@@ -27,16 +27,12 @@ export function pdfOfTool(name: string, input: Record<string, unknown>): string 
   return name === 'Read' && typeof file === 'string' && isPdfPath(file) ? file : null;
 }
 
-export function pdfName(file: string): string {
-  return file.split(/[\\/]/).pop() ?? file;
-}
-
 // Why main will not hand a file back, or null when it will. `size` is null for a file that is not
 // there. Main asks this before it reads a byte, and the tile shows what it says.
 export function pdfRefusal(file: string, size: number | null): string | null {
   if (!isPdfPath(file)) return 'not a PDF';
   if (size === null) return 'not found';
-  if (size > PDF_LIMIT) return 'over 5 MB';
+  if (size > PDF_LIMIT) return `over ${PDF_LIMIT / 1024 / 1024} MB`;
   return null;
 }
 

@@ -71,34 +71,30 @@ export function confirmOverlay(message: string, keysLine: string): Promise<boole
 // An image at its full size, or as much of it as the window holds, on the same sheet. Escape, Enter
 // or a click anywhere puts it away; the focus goes back to whatever had it.
 export function imageOverlay(source: string): void {
-  const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  function close(): void {
-    remove();
-    previous?.focus();
-  }
-  const { dialog, remove } = openOverlay('image-viewer', close);
   const image = document.createElement('img');
   image.src = source;
-  dialog.append(image);
-  dialog.addEventListener('click', close);
-  answerKeys(dialog, close);
-  dialog.focus();
+  viewerOverlay('image-viewer', image, () => undefined);
 }
 
-// A PDF in Chromium's own viewer, on the same sheet; the window turns plugins on for it. Escape or
-// Enter puts it away while the sheet has the keyboard, and the dark margin does once the viewer has
-// taken it. A click inside the viewer is the viewer's, so the box does not close on one.
-export function pdfOverlay(source: string, closed: () => void): void {
+// A PDF in Chromium's own viewer, on the same sheet and with the same keys; the window turns plugins
+// on for it. A click inside the viewer is the viewer's: it never reaches this page, so only the dark
+// margin puts the PDF away once the viewer has the pointer. The blob's URL lives as long as the sheet.
+export function pdfOverlay(pdf: Blob): void {
+  const frame = document.createElement('iframe');
+  frame.src = URL.createObjectURL(pdf);
+  viewerOverlay('pdf-viewer', frame, () => URL.revokeObjectURL(frame.src));
+}
+
+function viewerOverlay(name: string, shown: HTMLElement, closed: () => void): void {
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
     remove();
     closed();
     previous?.focus();
   }
-  const { dialog, remove } = openOverlay('pdf-viewer', close);
-  const frame = document.createElement('iframe');
-  frame.src = source;
-  dialog.append(frame);
+  const { dialog, remove } = openOverlay(name, close);
+  dialog.append(shown);
+  dialog.addEventListener('click', close);
   answerKeys(dialog, close);
   dialog.focus();
 }
