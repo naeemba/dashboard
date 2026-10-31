@@ -197,13 +197,12 @@
 .chat-step-tool {
   display: flex;
   gap: 8px;
-  cursor: pointer;
   color: var(--muted);
   font: 12.5px/1.6 var(--mono-font);
 }
 
-.chat-step-tool {
-  cursor: default;
+.chat-tool summary {
+  cursor: pointer;
 }
 
 /* A subagent's steps, set in under the call that started it. */

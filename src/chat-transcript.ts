@@ -221,6 +221,20 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
   return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
 }
 
+// A user message: its tool results reach their calls, and one Claude Code wrote rather than a person
+// folds to the one line it is, or to nothing.
+function userMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
+  const inner = isRecord(message.message) ? message.message : {};
+  // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
+  // still reach its call.
+  const meta = (message.isMeta === true || message.isSynthetic === true)
+    && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
+  const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
+  if (folded === 'hidden') return transcript;
+  if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
+  return user(transcript, inner.content);
+}
+
 // A subagent's own message, folded into the steps of the call that started it, wherever that call
 // sits: a subagent's subagent is a call in its starter's steps. The same entries when no call has the id.
 function withSteps(entries: ChatEntry[], id: string, message: Record<string, unknown>): ChatEntry[] {
@@ -228,21 +242,29 @@ function withSteps(entries: ChatEntry[], id: string, message: Record<string, unk
   const next = entries.map((entry) => {
     if (entry.kind !== 'tool' || (entry.id !== id && !entry.steps)) return entry;
     const steps = entry.id === id ? stepsAfter(entry.steps ?? [], message) : withSteps(entry.steps ?? [], id, message);
-    if (steps === entry.steps) return entry;
+    if (steps === entry.steps || (steps.length === 0 && !entry.steps)) return entry;
     changed = true;
     return { ...entry, steps };
   });
   return changed ? next : entries;
 }
 
-// A step's tool output is never drawn, only whether it failed, so it is not kept.
+// A step's tool output is never drawn, only whether it failed, so it is not kept. Plain text in the
+// subagent's name is left out: its first is its prompt, which the call's input already shows. What
+// Claude Code wrote for it, such as a skill it loaded, is one line, as it is in the main conversation.
+// The same steps when the message added or changed none, so the call does not redraw.
 function stepsAfter(steps: ChatEntry[], message: Record<string, unknown>): ChatEntry[] {
   const inner = isRecord(message.message) ? message.message : {};
   const subagent = { ...EMPTY_TRANSCRIPT, entries: steps };
-  const next = message.type === 'assistant' ? assistant(subagent, inner.content).entries : user(subagent, inner.content).entries;
-  return next.map((step) => (step.kind === 'tool' && step.result && (step.result.text || step.result.images.length > 0)
-    ? { ...step, result: { text: '', images: [], isError: step.result.isError } }
-    : step));
+  const after = message.type === 'assistant' ? assistant(subagent, inner.content) : userMessage(subagent, message);
+  const next = after.entries.filter((step) => step.kind !== 'user').map((step): ChatEntry => {
+    if (step.kind === 'event') return { kind: 'notice', text: step.title };
+    if (step.kind === 'tool' && step.result && (step.result.text || step.result.images.length > 0)) {
+      return { ...step, result: { text: '', images: [], isError: step.result.isError } };
+    }
+    return step;
+  });
+  return next.length === steps.length && next.every((step, index) => step === steps[index]) ? steps : next;
 }
 
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call
@@ -261,16 +283,7 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   switch (message.type) {
     case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
     case 'assistant': return assistant(transcript, inner.content);
-    case 'user': {
-      // Meta or synthetic and holding no tool result: a synthetic message can carry one, and it must
-      // still reach its call.
-      const meta = (message.isMeta === true || message.isSynthetic === true)
-        && !blocksOf(inner.content).some((block) => block.type === 'tool_result');
-      const folded = notTypedMessage(message.origin, meta, textOf(inner.content), meta ? skillOf(transcript.entries, message.sourceToolUseID) : undefined);
-      if (folded === 'hidden') return transcript;
-      if (folded) return { ...transcript, entries: [...transcript.entries, { kind: 'event', ...folded }] };
-      return user(transcript, inner.content);
-    }
+    case 'user': return userMessage(transcript, message);
     case 'stream_event': return streamed(transcript, message.event);
     case 'result': {
       const notice = resultNotice(message, transcript.entries.at(-1));
