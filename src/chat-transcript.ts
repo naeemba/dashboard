@@ -2,6 +2,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatContent } from './bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
+import { rateLimitNotice, retryNotice } from './chat-notices';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 import { isRecord, stringOrEmpty } from './is-record';
 import { timeOf } from './age';
@@ -321,7 +322,15 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
       }
+      if (message.subtype === 'api_retry') {
+        return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: retryNotice(message) }] };
+      }
       return withTasks(transcript, message);
+    case 'rate_limit_event': {
+      const notice = rateLimitNotice(message);
+      if (!notice || transcript.entries.some((entry) => entry.kind === 'notice' && entry.text === notice)) return transcript;
+      return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: notice }] };
+    }
     default: return transcript;
   }
 }

@@ -1,6 +1,7 @@
 import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from './dispatch';
 import { measureOf, type ChatMeasure } from './chat-status';
+import { rateLimitNotice } from './chat-notices';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -115,17 +116,19 @@ function loginShellPath(fallback: string): Promise<string> {
   });
 }
 
-// The messages the pane reads. The rest — hook progress, rate limit events, task updates, and of the
+// The messages the pane reads. The rest — hook progress, task updates, and of the
 // streamed events everything but a block starting and text or thinking arriving — are left on this
 // side of the wire rather than sent to every screen on every token. A Write streams the whole file as
 // its input, so the working line's count leaves tool input out. A prompt's lifecycle says when one
 // sent while Claude was busy is taken or withdrawn. A subagent's stream is left out too: the pane
-// draws its steps once each arrives whole.
+// draws its steps once each arrives whole. A rate limit event goes only when it says a limit is near
+// or hit: most say the plan is fine, one each time its percentage moves.
 const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
-export function relayed(message: { type: string; event?: unknown; parent_tool_use_id?: string | null }): boolean {
-  if (message.type !== 'stream_event') return RELAYED.has(message.type);
+export function relayed(message: Record<string, unknown>): boolean {
+  if (message.type === 'rate_limit_event') return rateLimitNotice(message) !== null;
+  if (message.type !== 'stream_event') return RELAYED.has(String(message.type));
   if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
@@ -259,7 +262,7 @@ export function registerChatSessions(
           if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
           const mode = modeOf(record);
           if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
-          if (relayed(message)) host.send(slot, { kind: 'message', message: record });
+          if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
         error = failureText(thrown);

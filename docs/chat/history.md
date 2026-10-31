@@ -23,4 +23,5 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #115 — Time and model above each message
 - 2026-11-01 #112 — /branch carries on in a copy of the conversation, keeping the original
 - 2026-11-01 #111 — /diff reviews every file Claude changed in the conversation
+- 2026-11-01 #120 — API retry and rate-limit notices in the thread
 - 2026-11-01 #114 — Queue a message sent while Claude is busy, grey until taken, Up withdraws it (chat-decision-6)
