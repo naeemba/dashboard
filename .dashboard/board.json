@@ -322,22 +322,6 @@
           ]
         },
         {
-          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
-          "title": "Branch the Claude pane's conversation, keeping the original",
-          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-10-31T22:39:49.154Z",
-          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
-          "pullRequest": 112,
-          "comments": [
-            {
-              "at": "2026-10-31T22:39:49.154Z",
-              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
-            }
-          ]
-        },
-        {
           "id": "c98fa0a6-0d0d-456a-a3a9-cf5515b60d3f",
           "title": "Queue a message sent while Claude is busy, shown grey until picked up",
           "notes": "Claude Code: Enter while busy queues the message, drawn grey until taken; it can be withdrawn. SDK: the CLI queues streamed input itself; cancel_async_message (sdk.d.ts:3991) is internal, unverified on Query. Pane: send() has no busy check (chat-view.ts:278) and main echoes the prompt as already sent (chat-sessions.ts:273). Size M.",
@@ -1437,12 +1421,32 @@
           ]
         },
         {
+          "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
+          "title": "Branch the Claude pane's conversation, keeping the original",
+          "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-10-31T23:00:30.789Z",
+          "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
+          "pullRequest": 112,
+          "comments": [
+            {
+              "at": "2026-10-31T22:39:49.154Z",
+              "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
+            },
+            {
+              "at": "2026-10-31T23:00:30.789Z",
+              "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+            }
+          ]
+        },
+        {
           "id": "723183d4-7a4c-4208-ba34-e8b134bf0caf",
           "title": "Show API retry and rate-limit notices in the Claude pane",
           "notes": "Claude Code shows retry and limit warnings. SDK: SDKAPIRetryMessage (sdk.d.ts:3680), rate_limit events. Pane: dropped before relay (chat-sessions.ts:119); retries are silent. Size S.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-10-31T23:00:50.761Z",
+          "updatedAt": "2026-10-31T23:03:36.972Z",
           "branch": "work-board-card-723183d4-7a4c-4208-ba34-e8b",
           "pullRequest": 120,
           "comments": [
@@ -1451,8 +1455,8 @@
               "body": "PR #120: api_retry prints a notice (status, wait, attempt n of m); rate_limit_event relayed only for allowed_warning/rejected, shown once per text (limit name, reset time). Percentage left out: CLI emits one event per rounded percentage move."
             },
             {
-              "at": "2026-10-31T23:00:50.761Z",
-              "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.17.0."
+              "at": "2026-10-31T23:03:36.972Z",
+              "body": "Shipped in PR #120: API retry and rate-limit notices in the thread. Merged with main, version 2.18.0."
             }
           ]
         }
