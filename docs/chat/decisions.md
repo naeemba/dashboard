@@ -69,7 +69,14 @@ conversation.
 Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too: Escape
 is the interrupt key, and a double press would need a timing rule beside it.
 
-## chat-decision-4: A message sent while Claude is busy waits in the session's own queue
+## chat-decision-4: The @ list is git's files, not the SDK's file suggestions
+
+The SDK has a `file_suggestions` request, but only as an internal type: the `Query` has no method to
+send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
+--exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
+are not offered. A folder that is not a repository lists nothing rather than walking node_modules.
+
+## chat-decision-5: A message sent while Claude is busy waits in the session's own queue
 
 Main stamps every prompt with a uuid. The CLI queues one that arrives mid-turn itself and reports it
 by that uuid in `command_lifecycle` messages: `queued`, then `started` and `completed`, or `cancelled`.

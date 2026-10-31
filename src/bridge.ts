@@ -195,6 +195,8 @@ export type DashboardBridge = {
   chatReset(slot: number): void;
   // The slash commands the session runs; asking starts the session if it is not running.
   chatCommands(slot: number): Promise<CommandRow[]>;
+  // The project's files, for the list @ opens in the box.
+  chatFiles(slot: number): Promise<string[]>;
   // The models the session offers, for /model; asking starts it the same way.
   chatModels(slot: number): Promise<ModelInfo[]>;
   // The project's earlier conversations for /resume, and picking one of them.
