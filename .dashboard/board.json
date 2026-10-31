@@ -104,13 +104,6 @@
           "parent": null
         },
         {
-          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
-          "title": "Rename a Claude session from the Claude pane",
-          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "75ebca95-a2d8-40cd-8eab-3fe3f1bdfcb0",
           "title": "Export the Claude pane's conversation to clipboard or file",
           "notes": "Claude Code: /export. Pane: none. Size S.",
@@ -238,6 +231,14 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-10-31T22:50:40.941Z"
+        },
+        {
+          "id": "9a184bc9-b9c1-4284-8bec-5e608c6ff59c",
+          "title": "Rename a Claude session from the Claude pane",
+          "notes": "Claude Code: /rename names the session, shown on the prompt bar. SDK: renameSession (sdk.d.ts:3347). Pane: /resume shows only the summary (chat-commands.ts:70). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-10-31T22:52:26.824Z"
         }
       ]
     },
