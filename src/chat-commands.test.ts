@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asksUltrathink, commandMenu, copyCount, replyText, effortRows, footEffort, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, commandMenu, copyCount, copyTarget, replyText, effortRows, footEffort, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
 import type { ChatEntry } from './chat-transcript';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
@@ -298,5 +298,39 @@ describe('replyText', () => {
     expect(replyText(entries, 2)).toBe('# One');
     expect(replyText(entries, 3)).toBeNull();
     expect(replyText([], 1)).toBeNull();
+  });
+
+  it('ends a reply at a message that opens a turn of its own, but not at thinking inside one', () => {
+    const turns: ChatEntry[] = [
+      { kind: 'user', text: 'run the tests', images: [] },
+      { kind: 'text', text: 'Started the run.' },
+      { kind: 'event', title: 'A background task finished', body: '', startsTurn: true },
+      { kind: 'event', title: 'Thinking', body: 'hm' },
+      { kind: 'text', text: 'All 412 tests pass.' },
+      { kind: 'event', title: 'Thinking', body: 'more' },
+      { kind: 'text', text: 'Done.' },
+    ];
+    expect(replyText(turns, 1)).toBe('All 412 tests pass.\n\nDone.');
+    expect(replyText(turns, 2)).toBe('Started the run.');
+  });
+});
+
+describe('copyTarget', () => {
+  const entries: ChatEntry[] = [
+    { kind: 'user', text: 'first', images: [] },
+    { kind: 'text', text: 'One' },
+    { kind: 'user', text: 'second', images: [] },
+    { kind: 'text', text: 'Two' },
+  ];
+
+  it('copies the reply asked for and says which', () => {
+    expect(copyTarget(entries, '')).toEqual({ text: 'Two', notice: "Copied Claude's last reply." });
+    expect(copyTarget(entries, '2')).toEqual({ text: 'One', notice: "Copied Claude's reply 2 back." });
+  });
+
+  it('refuses what is not a count, and a count past the replies there are', () => {
+    expect(copyTarget(entries, 'two')).toEqual({ refused: '/copy takes how many replies back to go, 1 for the last; two is not one.' });
+    expect(copyTarget([], '')).toEqual({ refused: 'Claude has not replied yet.' });
+    expect(copyTarget(entries, '3')).toEqual({ refused: 'Claude has not written 3 replies yet.' });
   });
 });

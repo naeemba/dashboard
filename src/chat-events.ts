@@ -11,7 +11,9 @@ import { isRecord } from './is-record';
 // Tags a notification carries that are its title or its plumbing, not something to read.
 const HIDDEN_TAGS = new Set(['summary', 'task-id', 'tool-use-id']);
 
-export type InjectedMessage = { title: string; body: string };
+// `startsTurn` marks a message that opens a turn of its own, as a prompt does: anything with an origin,
+// never a skill's instructions, which sit inside the turn that loaded them.
+export type InjectedMessage = { title: string; body: string; startsTurn?: true };
 
 // What a user message is when Claude Code injected it, or null when a person typed it. A message with
 // no origin is a person's: text pasted from elsewhere can hold the same tags, and must stay theirs.
@@ -84,5 +86,7 @@ function instructionsMessage(text: string, skill: string | undefined): InjectedM
 // `meta` — marked isMeta in a saved session, isSynthetic in a live one — for instructions it wrote
 // for Claude. `skill` is the skill a Skill call loaded, when the message answers one.
 export function notTypedMessage(origin: unknown, meta: boolean, text: string, skill: string | undefined): InjectedMessage | 'hidden' | null {
-  return injectedMessage(origin, text) ?? (meta ? instructionsMessage(text, skill) : null);
+  const injected = injectedMessage(origin, text);
+  if (injected) return { ...injected, startsTurn: true };
+  return meta ? instructionsMessage(text, skill) : null;
 }

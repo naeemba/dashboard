@@ -318,7 +318,7 @@ describe('a message Claude Code injected', () => {
       type: 'user', parent_tool_use_id: null, origin: { kind: 'task-notification' },
       message: { content: '<task-notification><summary>Agent "Review" finished</summary><result>done</result></task-notification>' },
     };
-    expect(fold([notification]).entries).toEqual([{ kind: 'event', title: 'Agent "Review" finished', body: 'done' }]);
+    expect(fold([notification]).entries).toEqual([{ kind: 'event', title: 'Agent "Review" finished', body: 'done', startsTurn: true }]);
   });
 });
 

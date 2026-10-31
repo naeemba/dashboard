@@ -252,12 +252,13 @@ export function copyCount(rest: string): number | null {
 }
 
 // What /copy copies: the markdown of Claude's reply that many back, 1 the last. A reply is all Claude
-// wrote between two prompts, its tool calls left out; null when there are not that many.
+// wrote between two turns' starts, its tool calls left out: a prompt, or a message Claude Code put in
+// that opens a turn of its own, such as a background task finishing. Null when there are not that many.
 export function replyText(entries: ChatEntry[], count: number): string | null {
   const replies: string[] = [];
   let open = false;
   for (const entry of entries) {
-    if (entry.kind === 'user') open = false;
+    if (entry.kind === 'user' || (entry.kind === 'event' && entry.startsTurn)) open = false;
     else if (entry.kind === 'text') {
       if (open) replies[replies.length - 1] += `\n\n${entry.text}`;
       else replies.push(entry.text);
@@ -265,6 +266,15 @@ export function replyText(entries: ChatEntry[], count: number): string | null {
     }
   }
   return replies.at(-count) ?? null;
+}
+
+// What `/copy N` does: the reply to copy and the notice saying so, or the refusal to show instead.
+export function copyTarget(entries: ChatEntry[], rest: string): { text: string; notice: string } | { refused: string } {
+  const count = copyCount(rest);
+  if (count === null) return { refused: `/copy takes how many replies back to go, 1 for the last; ${rest} is not one.` };
+  const text = replyText(entries, count);
+  if (text === null) return { refused: count === 1 ? 'Claude has not replied yet.' : `Claude has not written ${count} replies yet.` };
+  return { text, notice: count === 1 ? "Copied Claude's last reply." : `Copied Claude's reply ${count} back.` };
 }
 
 // Which of an entry's blocks the copy key copies: the first, then the next on each press while the

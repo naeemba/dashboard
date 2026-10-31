@@ -1,5 +1,5 @@
 import type { DashboardBridge } from './bridge';
-import { copyCount, modelRows, namedModel, replyText, resumeRows } from './chat-commands';
+import { copyTarget, modelRows, namedModel, resumeRows } from './chat-commands';
 import type { ChatEntry } from './chat-transcript';
 import type { ChatViewOptions } from './chat-view';
 import { failureText } from './failure';
@@ -60,13 +60,11 @@ export async function chooseModel(bridge: DashboardBridge, slot: number, name: s
 
 // /copy [N]: Claude's reply that many back, 1 the last, on the clipboard as the markdown it wrote.
 export async function copyReply(entries: ChatEntry[], rest: string, say: Say): Promise<void> {
-  const count = copyCount(rest);
-  if (count === null) return say.onNotice(`/copy takes how many replies back to go, 1 for the last; ${rest} is not one.`);
-  const text = replyText(entries, count);
-  if (text === null) return say.onNotice(count === 1 ? 'Claude has not replied yet.' : `Claude has not written ${count} replies yet.`);
+  const target = copyTarget(entries, rest);
+  if ('refused' in target) return say.onNotice(target.refused);
   try {
-    await navigator.clipboard.writeText(text);
-    say.onNotice(count === 1 ? "Copied Claude's last reply." : `Copied Claude's reply ${count} back.`);
+    await navigator.clipboard.writeText(target.text);
+    say.onNotice(target.notice);
   } catch (error) {
     say.onError(`Reply not copied: ${failureText(error)}`);
   }

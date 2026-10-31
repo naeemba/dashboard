@@ -1,3 +1,7 @@
+// Over the 600-code-line limit, left there on purpose for now: several cards edit this file at once,
+// and a split landing under them would conflict with every one. Split it once they have merged, along
+// the seam of `send`'s dispatch of the screen's own commands (the `screenCommand` branches), which can
+// move to a module of its own beside chat-screen-commands.ts. Do not make the file longer meanwhile.
 import './chat.css';
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
