@@ -134,23 +134,24 @@ describe('agentResumeArguments', () => {
 });
 
 describe('agentArguments', () => {
+  const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
   // A prompt with a space in it — every real one, since a slash command is followed by an argument —
   // goes through quoteForShell like any other word with a space, which is why it comes back quoted.
   it('runs claude through a login and interactive shell, as nvim does', () => {
-    expect(agentArguments('/bin/zsh', '/work-card fc2bf7b0'))
-      .toEqual(['-lic', "exec claude '/work-card fc2bf7b0'"]);
+    expect(agentArguments('/bin/zsh', '/work-card fc2bf7b0', SESSION))
+      .toEqual(['-lic', `exec claude --session-id ${SESSION} '/work-card fc2bf7b0'`]);
   });
 
   // The prompt reaches the shell as a word. A card id is plain, but the quoting is what stops a
   // prompt from ever being read as syntax.
   it('quotes a prompt with a space or a quote in it', () => {
-    expect(agentArguments('/bin/zsh', "/work-card it's here"))
-      .toEqual(['-lic', "exec claude '/work-card it'\\''s here'"]);
+    expect(agentArguments('/bin/zsh', "/work-card it's here", SESSION))
+      .toEqual(['-lic', `exec claude --session-id ${SESSION} '/work-card it'\\''s here'`]);
   });
 
   it('uses PowerShell quoting when PowerShell will receive it', () => {
-    expect(agentArguments('powershell.exe', "/work-card it's here"))
-      .toEqual(['-Command', "claude '/work-card it''s here'"]);
+    expect(agentArguments('powershell.exe', "/work-card it's here", SESSION))
+      .toEqual(['-Command', `claude --session-id ${SESSION} '/work-card it''s here'`]);
   });
 });
 

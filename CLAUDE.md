@@ -35,11 +35,12 @@ app.
   to the pane. Every dialog that reads `event.key` checks
   `if (isModified(event)) return;` first (the manager list asks
   `isBareCharacter` because it takes Shift on purpose). Exceptions, each on
-  purpose: Tab in a search box, the board's filter dialog and the notes box;
-  every key in the settings screen while a row is armed; Shift on the manager
-  list. A new project view is a row in `PROJECT_MODES`, a row in `ACTIONS`, a
-  view in `page.ts`, a branch in `focusMode` and `modeLabel`, and a name and
-  blurb in `src/renderer/keys/help.ts`. An action's name starts with its
+  purpose: Tab in a search box, the board's filter dialog, the notes box and
+  the drawer; the drawer's own key, which closes it; every key in the settings
+  screen while a row is armed; Shift on the manager list. A new project view
+  is a row in `PROJECT_MODES`, a row in `ACTIONS`, a view in `page.ts`, a
+  branch in `focusMode` and `modeLabel`, and a name and blurb in
+  `src/renderer/keys/help.ts`. An action's name starts with its
   scope: it is a key in the user's settings file. (keys-rule-1)
 - **Every `<input>` and `<textarea>` gets `dir = 'auto'`** in the change that
   adds it. These two counts agree (conventions-rule-2):

@@ -36,6 +36,10 @@ These exceptions read a key before the guard, all on purpose:
   overlay.
 - Tab, in the notes box, for the same reason one screen out. It is the only key
   that screen reads.
+- Tab and the drawer's own key (Ctrl+Shift+D), in the drawer. Tab for the
+  search box's reason; the drawer's key because the drawer has the keyboard
+  while it is open, so the window listener never sees the key that should close
+  it (drawer-decision-1).
 - Every key, in the settings screen, while a row is armed — or Ctrl, Cmd, Alt
   and Shift are the only keys you could never bind. One keystroke long, guard
   back immediately after.

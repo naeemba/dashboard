@@ -4,15 +4,6 @@
       "name": "Backlog",
       "cards": [
         {
-          "id": "a376c035-8d4d-4642-9441-44762b0b87a9",
-          "title": "Left drawer listing the project's docs and Claude sessions",
-          "notes": "A drawer on the left of the project page. One key opens it, Esc closes it. It overlays the grid and never resizes it. Two lists, arrow keys walk rows, Enter acts; a filter input with dir = 'auto'.\n\nDocs: the docs/ tree (card 7ade5b82). Enter opens the file in a document pane: the markdown renderer from the SDK pane (card 2b2f2cfe) showing one file instead of a stream, so tables, code and images render. The nvim pane does not render docs; the document pane lands with the SDK pane card, so this card waits on it.\n\nSessions: the app owns session ids. Every Claude launch gets a uuid the app chose (--session-id on the CLI, the SDK equivalent on the SDK pane) and a row in the app's own index: id, project, cwd or worktree, card, label like dashboard-14, started, last used. The index lives in the app's user data keyed by repo path, never in .dashboard/, since sessions are personal and board.json is tracked. No crawling of ~/.claude/projects/: worktree sessions land in other slugs there and would be missed. Labels can be renamed from the drawer.\n\nVolume: newest 50 rows, then a Load more row at the bottom the arrows reach; Enter loads 50 more.\n\nResume: Enter on a session spawns a new worker pane (card a639736a) with --resume <id>. Never into a busy pane.\n\nScope: the drawer is navigation, rows that jump somewhere, never content. Board has cards, Notes has notes.\n\nUsual tax: an ACTIONS row, a help blurb in src/help.ts, [hidden] rule for the drawer class.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-10-29T11:44:11.602Z",
-          "updatedAt": "2026-10-29T11:44:11.602Z"
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -2083,6 +2074,27 @@
             {
               "at": "2026-11-01T15:53:07.098Z",
               "body": "Shipped in PR #159: dashboard project open|close <name|aka>; close refuses while any pane is busy, otherwise closes with no dialog. Open and name lookup shared with #158 (openProject, projectNamed)."
+            }
+          ]
+        },
+        {
+          "id": "a376c035-8d4d-4642-9441-44762b0b87a9",
+          "title": "Left drawer listing the project's docs and Claude sessions",
+          "notes": "A drawer on the left of the project page. One key opens it, Esc closes it. It overlays the grid and never resizes it. Two lists, arrow keys walk rows, Enter acts; a filter input with dir = 'auto'.\n\nDocs: the docs/ tree (card 7ade5b82). Enter opens the file in a document pane: the markdown renderer from the SDK pane (card 2b2f2cfe) showing one file instead of a stream, so tables, code and images render. The nvim pane does not render docs; the document pane lands with the SDK pane card, so this card waits on it.\n\nSessions: the app owns session ids. Every Claude launch gets a uuid the app chose (--session-id on the CLI, the SDK equivalent on the SDK pane) and a row in the app's own index: id, project, cwd or worktree, card, label like dashboard-14, started, last used. The index lives in the app's user data keyed by repo path, never in .dashboard/, since sessions are personal and board.json is tracked. No crawling of ~/.claude/projects/: worktree sessions land in other slugs there and would be missed. Labels can be renamed from the drawer.\n\nVolume: newest 50 rows, then a Load more row at the bottom the arrows reach; Enter loads 50 more.\n\nResume: Enter on a session spawns a new worker pane (card a639736a) with --resume <id>. Never into a busy pane.\n\nScope: the drawer is navigation, rows that jump somewhere, never content. Board has cards, Notes has notes.\n\nUsual tax: an ACTIONS row, a help blurb in src/help.ts, [hidden] rule for the drawer class.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-10-29T11:44:11.602Z",
+          "updatedAt": "2026-11-01T18:14:10.592Z",
+          "branch": "work-board-card-a376c035-8d4d-4642-9441-447",
+          "pullRequest": 161,
+          "comments": [
+            {
+              "at": "2026-11-01T17:21:53.001Z",
+              "body": "Shipped in PR #161 (v2.39.0): drawer button at the left of the tabs plus Ctrl+Shift+D; docs/ markdown opens in the project's nvim (no document pane exists yet); sessions from an app-owned index (--session-id on workers and card agents, main recorded from the SDK), F2 rename, Load more by 50, Enter resumes in a new worker pane, refused while running. Not run in the app: needs a rebuild."
+            },
+            {
+              "at": "2026-11-01T18:14:10.592Z",
+              "body": "Shipped in PR #161: left drawer of docs and sessions, toggled from the header button or Ctrl+Shift+D."
             }
           ]
         }

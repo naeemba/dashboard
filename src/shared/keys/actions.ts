@@ -15,6 +15,7 @@ export type Action =
   | { kind: 'project-move'; index: number }
   | { kind: 'project-picker' }
   | { kind: 'project-last' }
+  | { kind: 'project-drawer' }
   | { kind: 'help' }
   | { kind: 'settings' }
   | { kind: 'worktrees' }
@@ -203,6 +204,12 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'project-close', description: 'Close this project: its page and its shells',
     group: 'projects', scope: 'global',
     action: { kind: 'project-close' }, mac: 'Ctrl+Q', other: 'Ctrl+Q',
+  },
+  // Shift for the reason worktrees below gives: bare Ctrl+D is end-of-file in every shell.
+  {
+    name: 'project-drawer', description: "Open or close the drawer of this project's docs and Claude sessions",
+    group: 'projects', scope: 'global',
+    action: { kind: 'project-drawer' }, mac: 'Ctrl+Shift+D', other: 'Ctrl+Shift+D',
   },
   {
     name: 'help', description: 'Open this dialog', group: 'app', scope: 'global',

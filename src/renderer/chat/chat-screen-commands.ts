@@ -23,9 +23,11 @@ export async function resume(bridge: DashboardBridge, slot: number, say: Say): P
       name: 'chat-resume', placeholder: 'Search conversations', rows: (query) => resumeRows(found, query),
       empty: 'No conversation matches.', glyph: () => 'claude',
     });
-    if (picked !== undefined && picked !== found.current) bridge.chatResume(slot, picked);
+    if (picked === undefined || picked === found.current) return;
+    const reply = await bridge.chatResume(slot, picked);
+    if (reply !== null) say.onNotice(reply.refused);
   } catch (error) {
-    say.onError(`Earlier conversations not listed: ${failureText(error)}`);
+    say.onError(`Conversation not resumed: ${failureText(error)}`);
   }
 }
 

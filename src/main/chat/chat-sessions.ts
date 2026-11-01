@@ -1,5 +1,6 @@
 import type { EffortLevel, ModelInfo, PermissionResult, Query, RewindFilesResult, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from '../workers/dispatch';
+import { stillRunning } from '../workers/session-index';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { execFile } from 'node:child_process';
@@ -40,6 +41,16 @@ export type ChatHost = {
   // The environment every pane gets, so the agent's own shell can find the board command too.
   environment: Record<string, string>;
   userData: string;
+  // The conversation the main session is running now, for the app's session index: on every init,
+  // a resume of the remembered one included, and undefined once it is cleared or the session ends.
+  conversation(projectPath: string, id: string | undefined): void;
+  // The conversation the next launch of the project's main session resumes, undefined for none: once
+  // per project at registration, and again whenever it changes. Main resumes it without asking anyone:
+  // when the session's init comes in after the project opens, and on the next prompt after the
+  // session ended (a crash, say) and nothing restarted it.
+  remembered(projectPath: string, id: string | undefined): void;
+  // The worker pane running a conversation now, as a person names it, or null.
+  runningInPane(id: string): string | null;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -169,6 +180,26 @@ export function shownPreferences(chosen: ChatPreferences | undefined, reportedFa
   return { ...chosen, ...(reportedFast !== undefined && { fast: reportedFast }) };
 }
 
+// The conversation a session message says the session is running now: an init's id, whether or not
+// it is the one remembered (a resume keeps the same id), null after a /clear, undefined for any other.
+export function runningConversation(message: Record<string, unknown>): string | null | undefined {
+  return conversationChange(message, undefined).remember;
+}
+
+// Per project, the session that last reported its conversation running. Only that one reports the end,
+// so a session closed by a new conversation does not clear the one that replaced it.
+export function conversationReporter<S>(): { report(projectPath: string, session: S): void; ended(projectPath: string, session: S): boolean } {
+  const reporters = new Map<string, S>();
+  return {
+    report: (projectPath, session) => void reporters.set(projectPath, session),
+    ended(projectPath, session) {
+      if (reporters.get(projectPath) !== session) return false;
+      reporters.delete(projectPath);
+      return true;
+    },
+  };
+}
+
 // What a project's main session opens on. The conversation the terminal main left wins over one the
 // old Claude view remembered: it was the project's main, the one its workers report to, and `adopt`
 // only arrives on the first launch after main became the screen. Auto mode, as the terminal main ran
@@ -198,6 +229,8 @@ export function registerChatSessions(
   const rewound = new Map<string, string>();
   // Read once, the first time a session starts, rather than at launch for a screen that may never be used.
   let shellPath: Promise<string> | undefined;
+  const reporters = conversationReporter<Session>();
+  for (const [projectPath, id] of Object.entries(remembered)) host.remembered(projectPath, id);
 
   function remember(projectPath: string, id: string | undefined): void {
     rewound.delete(projectPath);
@@ -208,6 +241,7 @@ export function registerChatSessions(
     } catch {
       // ponytail: a write that fails costs the resume on the next launch and nothing else.
     }
+    host.remembered(projectPath, id);
   }
 
   function ask(slot: number, asks: Session['asks'], asked: Omit<PermissionAsk, 'id'>, signal: AbortSignal): Promise<PermissionResult> {
@@ -291,6 +325,11 @@ export function registerChatSessions(
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
           if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
+          const current = runningConversation(record);
+          if (current !== undefined) {
+            reporters.report(projectPath, session);
+            host.conversation(projectPath, current ?? undefined);
+          }
           // What the session reports it is on, so a screen opened later starts from it.
           const reported = reportedPreferences(record);
           if (reported) {
@@ -306,6 +345,7 @@ export function registerChatSessions(
         // way on every prompt after it, so the next one starts a new conversation instead.
         if (resume && !started) remember(projectPath, undefined);
       }
+      if (reporters.ended(projectPath, session)) host.conversation(projectPath, undefined);
       for (const { resolve } of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
       // An end nobody asked for is not restarted here: a session that dies on start would die again
       // in a loop. The screen says it ended, and the next prompt starts it.
@@ -555,10 +595,15 @@ export function registerChatSessions(
   });
 
   // An earlier conversation picked in /resume: the running one is closed, the page remembers the picked
-  // one, and a session resuming it starts at once. Every screen reads it back.
-  table.on('chat:resume', (_screen, slot: number, sessionId: string) => {
+  // one, and a session resuming it starts at once. Every screen reads it back. One a worker pane runs
+  // is refused, as the drawer refuses one the Claude screen runs.
+  table.handle('chat:resume', (_screen, slot: number, sessionId: string): { refused: string } | null => {
     const projectPath = host.projectPath(slot);
-    if (projectPath !== undefined) carryOnIn(slot, projectPath, sessionId);
+    if (projectPath === undefined) return null;
+    const refused = stillRunning(undefined, host.runningInPane(sessionId));
+    if (refused !== null) return { refused };
+    carryOnIn(slot, projectPath, sessionId);
+    return null;
   });
 
   function carryOnIn(slot: number, projectPath: string, sessionId: string): void {

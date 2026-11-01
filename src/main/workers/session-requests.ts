@@ -37,6 +37,8 @@ export type SessionPorts = {
   shellCommand(): string;
   // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
   openWorker(slot: number): number;
+  // The id the worker's conversation starts with, recorded in the app's session index first.
+  newSession(projectPath: string, directory: string, cardId: string | null): string;
   startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null): void;
   closeWorker(id: string): void;
   mark(id: string, state: WorkerState): void;
@@ -145,7 +147,8 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     }
     const { index } = paneFromId(id);
     states.delete(id);
-    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath), card);
+    const session = ports.newSession(projectPath, directory, card);
+    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card);
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}`);
   }
 

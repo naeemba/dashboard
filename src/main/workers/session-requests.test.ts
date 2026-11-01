@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
 
+const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
+
 // One project, api, in slot 2, with main open and nothing else until a test opens a worker.
 function project(overrides: Partial<SessionPorts> = {}) {
   const open = [0];
@@ -29,6 +31,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
       open.push(index);
       return index;
     },
+    newSession: () => SESSION,
     startWorker: (id, directory, agentArguments, cardId) => {
       agents.add(id);
       workers.add(id);
@@ -275,6 +278,7 @@ function pages() {
       return open.length - 1;
     },
     directoryOf: (id) => paths.get(Number(id.split(':')[0])),
+    newSession: () => SESSION,
     startWorker: (id, directory, agentArguments) => { started.push({ id, directory, agentArguments }); },
     closeWorker: (id) => {
       const [slot, index] = id.split(':').map(Number);

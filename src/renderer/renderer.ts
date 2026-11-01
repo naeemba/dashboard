@@ -9,10 +9,13 @@ import './app/dialogs.css';
 import './keys/which-key.css';
 import './app/index.css';
 import './ship/worktrees.css';
+import './drawer/drawer.css';
 import './usage/usage.css';
 import './manager/manager.css';
 import { openHelp } from './keys/help';
 import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
+import { createDrawer } from './drawer/drawer-view';
+import { matchesBinding } from '../shared/keys/binding';
 import { mapShortcut, type Action } from './keys/shortcuts';
 import { failureText } from '../shared/errors/failure';
 import { createStatusError } from './errors/status-error';
@@ -99,10 +102,25 @@ const showNotice = statusError.notice;
 statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
 const addPaneButton = createAddPaneButton(() => addPane(pages[activeIndex]));
-document.getElementById('title')?.append(tabStrip.element, addPaneButton.element);
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 let activeIndex = 0;
+// Its button leads the title row, beside the tabs, so the drawer itself takes no room while closed.
+const drawer = createDrawer({
+  bridge,
+  page: () => {
+    const page = pages[activeIndex];
+    return isProjectPage(page) && !page.project.missing ? page : null;
+  },
+  isToggle: (event) => matchesBinding(event, settings.keys['project-drawer'] ?? null),
+  // No document pane yet, so a doc opens where a path a pane printed opens: the project's nvim.
+  openDoc: (page, path) => openFileLink(page, MAIN_INDEX, { path, start: 0, end: 0 }),
+  report: (message) => showError('drawer', message),
+  closed: () => showPage(activeIndex),
+  resumed: (page, index, open) => { applyProjects(open); if (pages[activeIndex] === page) { setMode('terminals'); focusTerminal(index); } },
+});
+document.getElementById('title')?.append(drawer.button, tabStrip.element, addPaneButton.element);
+pagesElement.append(drawer.element);
 // Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
@@ -241,6 +259,7 @@ function renderStatus(rowsOnly = false): void {
   })));
   modeSwitch.render(page.mode, page.manager === null && !page.project.missing);
   addPaneButton.render(showsAddPane(page.mode, page.workers !== null));
+  drawer.render();
   statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames([...mainEntry(page), ...namedPanes(page)]));
   saveSession();
 }
@@ -608,6 +627,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
+  if (action.kind === 'project-drawer') return drawer.toggle();
   if (action.kind === 'needs-you-next') return showNotice('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {
     worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);

@@ -105,8 +105,11 @@ function asPaneProcess(shellCommand: string, command: string): string[] {
 // pane's only process rather than parking a shell above it for as long as the work takes.
 //
 // PowerShell gets no `exec` — it has none — so the shell stays as claude's parent there.
-export function agentArguments(shellCommand: string, prompt: string): string[] {
-  return claudeArguments(shellCommand, [prompt]);
+//
+// `session` is the conversation's id, chosen by the app so its session index has the row before Claude
+// Code starts (session-index.ts).
+export function agentArguments(shellCommand: string, prompt: string, session: string): string[] {
+  return claudeArguments(shellCommand, ['--session-id', session, prompt]);
 }
 
 // The same start with any words after `claude`, each quoted on its own: the main session and its

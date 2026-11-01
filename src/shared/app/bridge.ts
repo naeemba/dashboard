@@ -16,6 +16,7 @@ import type { Settings } from '../settings/settings';
 import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
 import type { FileLink } from '../panes/links';
+import type { DocEntry, DrawerReply, ResumeReply, SessionList } from '../drawer/drawer';
 
 export type Project = { name: string; path: string; missing: boolean };
 
@@ -129,6 +130,12 @@ export type DashboardBridge = {
   openScrollback(slot: number, index: number, text: string): Promise<Handover>;
   // A path a pane printed, opened in the project's nvim. Main finds the file; file-open.ts holds how.
   openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
+  // The drawer: the project's docs, the newest `count` of the Claude conversations the app started for
+  // it, a rename, and a resume into a new worker pane.
+  listDocs(projectPath: string): Promise<DocEntry[]>;
+  listSessions(projectPath: string, count: number): Promise<SessionList>;
+  renameSession(projectPath: string, id: string, label: string): Promise<DrawerReply>;
+  resumeSession(slot: number, id: string): Promise<ResumeReply>;
   // Ctrl+G: the Claude box written to a file and opened in the page's nvim, answering the way
   // openScrollback does; and the text saved there since the box last read it, or null.
   openPrompt(slot: number, text: string): Promise<Handover>;
@@ -269,7 +276,7 @@ export type DashboardBridge = {
   chatHistory(slot: number): Promise<string[][]>;
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
-  chatResume(slot: number, sessionId: string): void;
+  chatResume(slot: number, sessionId: string): Promise<{ refused: string } | null>;
   // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
   // False when there is no conversation yet to copy.
   chatBranch(slot: number, title: string): Promise<boolean>;

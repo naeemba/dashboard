@@ -12,7 +12,7 @@ import { MANAGER_FOLDER } from '../manager/manager-terminals';
 // space or a slash there is one more thing to quote in a message.
 // The manager's folder is `.dashboard`, which would slug to the same `dashboard` as a checkout of this
 // app, and its main would then share a name with that project's main.
-function projectSlug(projectPath: string): string {
+export function projectSlug(projectPath: string): string {
   if (projectPath === MANAGER_FOLDER) return 'manager';
   return slug(baseName(projectPath)) || 'project';
 }
@@ -85,9 +85,10 @@ export function workerSettings(id: string): string {
 // whose main dispatched it, which is another project's when the pane was claimed with --project: the
 // worker is named for the page it is on and reports to the main that asked.
 export function workerArguments(
-  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath: string,
+  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath: string, session: string,
 ): string[] {
   return claudeArguments(shellCommand, [
+    '--session-id', session,
     '--name', workerSessionName(projectPath, index),
     '--permission-mode', 'auto',
     '--settings', workerSettings(id),
