@@ -25,6 +25,11 @@ declared in `bridge.ts`, beside the contract that carries it. A shared test
 imports only shared modules: a case that needs a renderer module lives in that
 module's test.
 
+`npx eslint .` holds the line (app-rule-2, rules in `eslint.config.mjs`): a file
+in `renderer/` imports nothing from `main/` or `preload/`, one in `main/` nothing
+from `renderer/`, one in `shared/` only from `shared/`; and a package that needs
+Node or the DOM is a value import only on its own side.
+
 - Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`, `version.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
