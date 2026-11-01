@@ -312,12 +312,12 @@ describe('replyText', () => {
     ];
     expect(replyText(turns, 1)).toBe('All 412 tests pass.\n\nDone.');
     expect(replyText(turns, 2)).toBe('Started the run.');
-    const wakeUp: ChatEntry[] = [
-      { kind: 'text', text: 'CI still running.' },
-      { kind: 'event', title: 'Instructions', body: 'Check CI again.', startsTurn: true },
-      { kind: 'text', text: 'CI is green.' },
+    const cutOff: ChatEntry[] = [
+      { kind: 'text', text: 'First half.' },
+      { kind: 'event', title: 'Instructions', body: 'Output token limit hit. Resume directly.' },
+      { kind: 'text', text: 'Second half.' },
     ];
-    expect(replyText(wakeUp, 1)).toBe('CI is green.');
+    expect(replyText(cutOff, 1)).toBe('First half.\n\nSecond half.');
   });
 });
 
