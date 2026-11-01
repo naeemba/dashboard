@@ -6,8 +6,11 @@ import { openLinksOutside, renderMarkdown } from '../chat/chat-markdown';
 // Claude screen's own renderer so tables, code and images read the way they do there. Its one row,
 // Edit, leads it and is always the highlighted one: Enter or a click on it puts the viewer away and
 // opens the file in the project's nvim. The arrows and Page keys scroll the doc, Escape puts it away.
-// A link opens in the browser, the way one on the Claude screen does.
-export function docOverlay(name: string, text: string, images: Record<string, string>, edit: () => void, openLink: (url: string) => void): void {
+// A link opens in the browser, the way one on the Claude screen does. With no `edit`, the manager's
+// page, there is no row and Enter closes it as Escape does.
+export function docOverlay(
+  name: string, text: string, images: Record<string, string>, edit: (() => void) | null, openLink: (url: string) => void,
+): void {
   const row = document.createElement('div');
   row.className = 'drawer-row highlighted doc-viewer-edit';
   const label = document.createElement('span');
@@ -22,6 +25,11 @@ export function docOverlay(name: string, text: string, images: Record<string, st
   body.innerHTML = renderMarkdown(text, images);
   openLinksOutside(body, openLink);
   const shown = document.createElement('div');
+  if (edit === null) {
+    shown.append(body);
+    viewerOverlay('doc-viewer', shown);
+    return;
+  }
   shown.append(row, body);
   const editing = (): void => {
     close();

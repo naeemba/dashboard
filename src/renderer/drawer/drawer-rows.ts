@@ -22,13 +22,14 @@ export function sessionDetail(session: SessionRecord, projectPath: string): stri
 }
 
 // The docs as a tree: at each level its files, in the order they came (each folder's README first),
-// then its folders by name, an open one followed by what is in it.
+// then its folders by name, an open one followed by what is in it. A folder is one a doc's path runs
+// through or one listed as a folder, which the manager's page lists before reading what is in it.
 export function docTree(docs: readonly DocEntry[], open: ReadonlySet<string>): DrawerRow[] {
   const rows: DrawerRow[] = [];
   function walk(prefix: string, depth: number): void {
     const inside = docs.filter((doc) => doc.name.startsWith(prefix)).map((doc) => ({ doc, rest: doc.name.slice(prefix.length) }));
-    for (const { doc, rest } of inside) if (!rest.includes('/')) rows.push({ kind: 'doc', doc, depth, label: rest });
-    const folders = [...new Set(inside.filter(({ rest }) => rest.includes('/')).map(({ rest }) => rest.split('/')[0]))];
+    for (const { doc, rest } of inside) if (!rest.includes('/') && doc.folder !== true) rows.push({ kind: 'doc', doc, depth, label: rest });
+    const folders = [...new Set(inside.filter(({ doc, rest }) => rest.includes('/') || doc.folder === true).map(({ rest }) => rest.split('/')[0]))];
     for (const name of folders.sort((one, other) => one.localeCompare(other))) {
       const folder = prefix + name;
       rows.push({ kind: 'folder', path: folder, name, depth, open: open.has(folder) });
@@ -41,14 +42,15 @@ export function docTree(docs: readonly DocEntry[], open: ReadonlySet<string>): D
 
 // The docs, then the sessions, each narrowed to what the filter matches, then Load more when older
 // sessions are left. Filtering, the docs are a flat list of every match, closed folders' files
-// included. Load more stays while filtering: the filter only searches the rows loaded so far, and the
+// included; on the manager's page that is the files of the folders read so far, so the search never
+// walks ~/.claude. Load more stays while filtering: the filter only searches the rows loaded so far, and the
 // row is how to search further back.
 export function drawerRows(
   docs: readonly DocEntry[], open: ReadonlySet<string>, sessions: SessionList, query: string, projectPath: string,
 ): DrawerRow[] {
   const docRows = query === ''
     ? docTree(docs, open)
-    : ranked([...docs], (doc) => doc.name, query).map((doc): DrawerRow => ({ kind: 'doc', doc, depth: 0, label: doc.name }));
+    : ranked(docs.filter((doc) => doc.folder !== true), (doc) => doc.name, query).map((doc): DrawerRow => ({ kind: 'doc', doc, depth: 0, label: doc.name }));
   const sessionRows = ranked(sessions.rows, (session) => `${session.label} ${sessionDetail(session, projectPath)}`, query)
     .map((session): DrawerRow => ({ kind: 'session', session }));
   return [...docRows, ...sessionRows, ...(sessions.more ? [{ kind: 'more' } as const] : [])];
@@ -63,8 +65,10 @@ export function treeStep(rows: readonly DrawerRow[], index: number, key: 'left' 
   if (row === undefined || (row.kind !== 'folder' && row.kind !== 'doc')) return stay;
   if (key === 'right') {
     if (row.kind !== 'folder') return stay;
-    // An open folder always has a row under it: a folder is only listed for the docs inside it.
-    return row.open ? { toggle: null, highlight: index + 1 } : { toggle: row.path, highlight: index };
+    if (!row.open) return { toggle: row.path, highlight: index };
+    // An open folder of the manager's can be empty, or not read yet: then there is nothing to step into.
+    const below = rows[index + 1];
+    return below !== undefined && 'depth' in below && below.depth > row.depth ? { toggle: null, highlight: index + 1 } : stay;
   }
   if (row.kind === 'folder' && row.open) return { toggle: row.path, highlight: index };
   for (let above = index - 1; above >= 0; above -= 1) {

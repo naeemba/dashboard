@@ -58,6 +58,16 @@ describe('docTree', () => {
     expect(treeStep(opened, 0, 'left')).toEqual({ toggle: null, highlight: 0 });
     expect(treeStep(opened, 0, 'right')).toEqual({ toggle: null, highlight: 0 });
   });
+
+  it("lists a folder entry before anything in it is read, and Right on it open stays put", () => {
+    const manager = [{ path: '/h/.claude', name: '.claude', folder: true as const }, { path: '/h/.dashboard', name: '.dashboard', folder: true as const }];
+    const rows = docTree(manager, new Set(['.claude']));
+    expect(shape(rows)).toEqual(['0:.claude/-', '0:.dashboard/+']);
+    expect(treeStep(rows, 0, 'right')).toEqual({ toggle: null, highlight: 0 });
+    const read = [...manager, { path: '/h/.claude/CLAUDE.md', name: '.claude/CLAUDE.md' }, { path: '/h/.claude/rules', name: '.claude/rules', folder: true as const }];
+    expect(shape(docTree(read, new Set(['.claude'])))).toEqual(['0:.claude/-', '1:CLAUDE.md', '1:rules/+', '0:.dashboard/+']);
+    expect(drawerRows(read, none, { rows: [], more: false }, 'claude', '').map((row) => row.kind === 'doc' && row.label)).toEqual(['.claude/CLAUDE.md']);
+  });
 });
 
 describe('sessionDetail', () => {

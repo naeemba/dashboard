@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { docOrder, imageUrls, isDoc, listDocs, readDoc } from './docs-list';
+import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
@@ -18,23 +18,51 @@ describe('listDocs', () => {
     writeFileSync(path.join(project, 'docs', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'shot.png'), '');
-    expect(await listDocs(project)).toEqual([
+    expect(await listDocs(project, [], '/h')).toEqual([
       { path: path.join(project, 'docs', 'README.md'), name: 'README.md' },
       { path: path.join(project, 'docs', 'board', 'README.md'), name: 'board/README.md' },
     ]);
   });
 
   it('lists nothing for a project with no docs folder', async () => {
-    expect(await listDocs(mkdtempSync(path.join(tmpdir(), 'docs-list-')))).toEqual([]);
+    expect(await listDocs(mkdtempSync(path.join(tmpdir(), 'docs-list-')), [], '/h')).toEqual([]);
+  });
+
+  it("on the manager's page lists its two folders and reads only the folders opened, inside them", async () => {
+    const home = mkdtempSync(path.join(tmpdir(), 'docs-home-'));
+    mkdirSync(path.join(home, '.claude', 'rules'), { recursive: true });
+    mkdirSync(path.join(home, 'Workspace'));
+    writeFileSync(path.join(home, '.claude', 'CLAUDE.md'), '');
+    writeFileSync(path.join(home, '.claude', 'settings.json'), '');
+    writeFileSync(path.join(home, '.claude', 'rules', 'naming.md'), '');
+    writeFileSync(path.join(home, 'Workspace', 'notes.md'), '');
+    const roots = [
+      { path: path.join(home, '.dashboard'), name: '.dashboard', folder: true },
+      { path: path.join(home, '.claude'), name: '.claude', folder: true },
+    ];
+    expect(await listDocs('', [], home)).toEqual(roots);
+    expect(await listDocs('', ['.claude', '.dashboard', 'Workspace', '.claude/../Workspace'], home)).toEqual([...roots,
+      { path: path.join(home, '.claude', 'CLAUDE.md'), name: '.claude/CLAUDE.md' },
+      { path: path.join(home, '.claude', 'rules'), name: '.claude/rules', folder: true },
+    ]);
   });
 });
 
-describe('isDoc', () => {
+describe('docScope', () => {
   it('takes only markdown under the docs folder', () => {
-    expect(isDoc('/p', '/p/docs/board/README.md')).toBe(true);
-    expect(isDoc('/p', '/p/docs/../secret.md')).toBe(false);
-    expect(isDoc('/p', '/home/me/.ssh/id_rsa')).toBe(false);
-    expect(isDoc('/p', '/p/docs/shot.png')).toBe(false);
+    expect(docScope('/p', '/p/docs/board/README.md', '/h')).toEqual({ root: '/p/docs', images: '/p' });
+    expect(docScope('/p', '/p/docs/../secret.md', '/h')).toBeNull();
+    expect(docScope('/p', '/home/me/.ssh/id_rsa', '/h')).toBeNull();
+    expect(docScope('/p', '/p/docs/shot.png', '/h')).toBeNull();
+    expect(docScope('/p', '/h/.claude/CLAUDE.md', '/h')).toBeNull();
+  });
+
+  it("on the manager's page takes only markdown under ~/.dashboard and ~/.claude", () => {
+    expect(docScope('', '/h/.claude/rules/naming.md', '/h')).toEqual({ root: '/h/.claude', images: '/h/.claude' });
+    expect(docScope('', '/h/.dashboard/notes.md', '/h')).toEqual({ root: '/h/.dashboard', images: '/h/.dashboard' });
+    for (const file of ['/h/.claude/settings.json', '/h/.claude/../.ssh/x.md', '/h/Workspace/a.md', '/p/docs/README.md']) {
+      expect(docScope('', file, '/h')).toBeNull();
+    }
   });
 });
 
@@ -61,8 +89,8 @@ describe('readDoc', () => {
     writeFileSync(path.join(project, 'docs', 'README.md'), '# Docs ![a](a.png) ![b](gone.png)');
     writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
     writeFileSync(path.join(project, 'secret.md'), 'no');
-    expect(await readDoc(project, path.join(project, 'docs', 'README.md')))
+    expect(await readDoc(project, path.join(project, 'docs', 'README.md'), '/h'))
       .toEqual({ text: '# Docs ![a](a.png) ![b](gone.png)', images: { 'a.png': `data:image/png;base64,${Buffer.from('png').toString('base64')}` } });
-    expect(await readDoc(project, path.join(project, 'secret.md'))).toHaveProperty('refused');
+    expect(await readDoc(project, path.join(project, 'secret.md'), '/h')).toHaveProperty('refused');
   });
 });

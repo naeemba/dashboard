@@ -19,10 +19,8 @@
   left: var(--drawer-width);
 }
 
-/* display: flex on the drawer and .project's inline-flex on its button both beat the browser's own
-   [hidden] (conventions-rule-3); the button is hidden on the manager's page. */
-.drawer[hidden],
-.drawer-toggle[hidden] {
+/* display: flex on the drawer beats the browser's own [hidden] (conventions-rule-3). */
+.drawer[hidden] {
   display: none;
 }
 
@@ -90,7 +88,8 @@
   font-size: 12px;
 }
 
-/* The drawer's button in the title row is a tab, lit with .project.active while the drawer is open. */
+/* The drawer's button in the title row is a tab, its icon only, on every page so the row never moves
+   between tabs; lit with .project.active while the drawer is open. */
 .drawer-toggle {
   flex: none;
   margin-right: 6px;

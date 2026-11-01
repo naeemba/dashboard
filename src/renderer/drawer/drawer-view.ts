@@ -3,22 +3,23 @@ import { relativeAge } from '../../shared/app/age';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { SESSION_PAGE_SIZE, type DocEntry, type SessionList } from '../../shared/drawer/drawer';
-import { iconButton, icon } from '../app/icons';
+import { isProjectPage } from '../../shared/manager/manager';
+import { icon } from '../app/icons';
 import { promptOverlay } from '../app/overlay';
 import type { Page } from '../app/page';
 import { isModified } from '../keys/shortcuts';
 import { docOverlay } from './doc-viewer';
 import { drawerKey, drawerRows, sessionDetail, treeStep, type DrawerRow } from './drawer-rows';
 
-// The drawer on the left of a project's page: the project's docs as a tree and the Claude sessions the
-// app started for it. Open, it pushes the page to its right and the panes are measured again; closed it
+// The drawer on the left of a page: the project's docs as a tree and the Claude sessions the app started
+// for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own. Open, it pushes the page to its right and the panes are measured again; closed it
 // takes no room. It is opened and closed by its button in the title row, beside the tabs, or by its key.
 // A doc opens in the full-screen viewer (doc-viewer.ts), over the drawer, which is still there after.
 // Every rule with a branch is drawer-rows.ts's; this is the DOM.
 
 type DrawerPorts = {
   bridge: Pick<DashboardBridge, 'listDocs' | 'readDoc' | 'listSessions' | 'renameSession' | 'resumeSession' | 'openExternal'>;
-  // The project page in front, or null on the manager and a project whose folder has gone.
+  // The page in front, the manager's included, or null on a project whose folder has gone.
   page(): Page | null;
   // Whether a keystroke is the drawer's own key, as the settings bind it now.
   isToggle(event: KeyboardEvent): boolean;
@@ -58,13 +59,20 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     if (event.target !== box) event.preventDefault();
   });
 
-  const button = iconButton('project drawer-toggle', 'drawer', 'Docs & sessions', () => toggle());
+  // Only the icon, and on every page, the manager's too, so the title row does not move between tabs.
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'project drawer-toggle';
+  button.title = 'Docs & sessions';
+  button.setAttribute('aria-label', 'Docs & sessions');
+  button.append(icon('drawer'));
+  button.addEventListener('click', () => toggle());
   // A click leaves the keyboard where it was until the drawer takes it.
   button.addEventListener('mousedown', (event) => event.preventDefault());
 
   let shownFor: Page | null = null;
   let docs: DocEntry[] = [];
-  // The folders opened in each project's tree, by their path under docs/, by the project's path. Kept
+  // The folders opened in each page's tree, by their path as the rows name it, by the page's path. Kept
   // while the drawer is closed, so it opens on the tree as it was left there.
   const openFolders = new Map<string, Set<string>>();
   const foldersOpen = (projectPath: string): Set<string> => {
@@ -148,13 +156,14 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     items[highlighted]?.scrollIntoView({ block: 'nearest' });
   }
 
-  // What the drawer lists, read again. The docs only on opening: Load more and a rename change sessions.
+  // What the drawer lists, read again. The docs only on opening the drawer or a folder in it, which the
+  // manager's page reads then: Load more and a rename change sessions.
   function load(withDocs: boolean): void {
     const page = shownFor;
     if (page === null) return;
     const ticket = ++loads;
     Promise.all([
-      withDocs ? ports.bridge.listDocs(page.project.path) : docs,
+      withDocs ? ports.bridge.listDocs(page.project.path, [...foldersOpen(page.project.path)]) : docs,
       ports.bridge.listSessions(page.project.path, count),
     ]).then(
       ([nextDocs, nextSessions]) => {
@@ -205,7 +214,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function toggle(): void {
     if (shownFor !== null) return close();
     const page = ports.page();
-    if (page === null) return ports.report('The drawer lists a project\'s docs and sessions — go to a project first');
+    if (page === null) return ports.report('This project\'s folder has gone, so the drawer has nothing to list');
     open(page);
   }
 
@@ -231,8 +240,10 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function fold(folder: string): void {
     if (shownFor === null) return;
     const open = foldersOpen(shownFor.project.path);
-    if (!open.delete(folder)) open.add(folder);
+    if (open.delete(folder)) return draw();
+    open.add(folder);
     draw();
+    load(true);
   }
 
   // Left and Right in the tree: a folder opened or closed, or the highlight stepped in or out.
@@ -245,15 +256,14 @@ export function createDrawer(ports: DrawerPorts): Drawer {
 
   // The doc, read now so it is shown as it is on the disk, in the viewer over the drawer. Escape there
   // brings the keyboard back to the filter box; Edit puts the drawer away and opens the file in nvim.
+  // The manager's page has no nvim, so its viewer has no Edit.
   function read(page: Page, doc: DocEntry): void {
     ports.bridge.readDoc(page.project.path, doc.path).then(
       (reply) => {
         if ('refused' in reply) return ports.report(reply.refused);
         if (shownFor !== page) return;
-        docOverlay(doc.name, reply.text, reply.images, () => {
-          close();
-          ports.openDoc(page, doc.path);
-        }, (url) => ports.bridge.openExternal(url));
+        const edit = isProjectPage(page) ? () => { close(); ports.openDoc(page, doc.path); } : null;
+        docOverlay(doc.name, reply.text, reply.images, edit, (url) => ports.bridge.openExternal(url));
       },
       (error: unknown) => ports.report(`Could not read ${doc.name}: ${failureText(error)}`),
     );
@@ -303,12 +313,10 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     button,
     element,
     toggle,
-    // Asked on every redraw of the title row: the button is there only on a project page, and the drawer
-    // shown for one page is put away once another is in front.
+    // Asked on every redraw of the title row: the drawer shown for one page is put away once another is
+    // in front.
     render() {
-      const page = ports.page();
-      button.hidden = page === null;
-      if (shownFor !== null && shownFor !== page) hide();
+      if (shownFor !== null && shownFor !== ports.page()) hide();
     },
   };
 }
