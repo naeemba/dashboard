@@ -64,6 +64,12 @@
           "title": "Manager terminals 2: one dashboard command with project, pane and board subcommands",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Replaces the separate board and session commands with one 'dashboard <noun> <verb>' command (project, pane, board), short and scriptable for agents. 'board' and 'session' stay as aliases so every running shell and skill keeps working. One env var for the entry, the old ones kept.",
           "priority": "high"
+        },
+        {
+          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
+          "title": "Manager terminals 4: dispatch a pane into any project",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
+          "priority": "high"
         }
       ]
     },
