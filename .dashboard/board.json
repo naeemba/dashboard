@@ -160,16 +160,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
-          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T13:18:36.468Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -255,6 +246,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
+          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:27:35.250Z",
+          "branch": "work-board-card-18fcec84-94e9-47d3-8e94-fef",
+          "pullRequest": 156,
+          "comments": [
+            {
+              "at": "2026-11-01T13:27:35.213Z",
+              "body": "PR #156: ~/.dashboard/projects.yaml reader (src/main/projects/projects-file.ts, every problem with its line) and dashboard project list / find <word> (name, aka, about via ranked). Adds yaml 2.9.1. Version 2.34.0."
             }
           ]
         }
