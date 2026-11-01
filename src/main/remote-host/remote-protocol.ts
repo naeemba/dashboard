@@ -57,8 +57,8 @@ export function decodeFrame(text: string): Frame | null {
   if (!isRecord(parsed)) return null;
   const hasId = typeof parsed.id === 'number';
   const hasChannel = typeof parsed.channel === 'string';
-  const hasArgs = Array.isArray(parsed.args);
-  if (hasChannel && hasArgs) return parsed as unknown as Request | Push;
+  const hasArguments = Array.isArray(parsed.args);
+  if (hasChannel && hasArguments) return parsed as unknown as Request | Push;
   if (hasId && !hasChannel && ('result' in parsed || 'error' in parsed)) return parsed as unknown as Reply;
   return null;
 }

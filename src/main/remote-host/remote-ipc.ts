@@ -36,7 +36,7 @@ export function registerRemote(held: HeldForRemote, window: {
   function backToLocal(): void {
     handedOver = false;
     window.send('host:change', LOCAL_SCREEN);
-    replaySession(held, (channel, args) => window.send(channel, ...args));
+    replaySession(held, (channel, channelArguments) => window.send(channel, ...channelArguments));
   }
 
   held.table.handle('host:connect', async (_screen, address: string, token: string): Promise<string> => {
@@ -53,11 +53,11 @@ export function registerRemote(held: HeldForRemote, window: {
         // as it comes, this screen would read the host's projects as its own: it would never offer
         // Disconnect, and "a new project" would ask the host for a folder dialog the host refuses. So
         // each list is told whose it is first. The window takes a repeat as nothing.
-        push(channel, args) {
+        push(channel, channelArguments) {
           if (mine !== generation) return;
           handedOver = true;
           if (channel === 'projects:change') window.send('host:change', address);
-          window.send(channel, ...args);
+          window.send(channel, ...channelArguments);
         },
         status(text) {
           if (mine === generation) window.send('host:report', text);

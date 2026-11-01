@@ -20,10 +20,10 @@ function run(): void {
     process.stderr.write(`board.json was damaged and has been kept as ${read.brokenFile}\n`);
   }
 
-  const args = process.argv.slice(2);
+  const commandArguments = process.argv.slice(2);
   // Run against the board as it stands a moment before the write, not the one opened above:
   // runBoardCommandOnLatest says why.
-  const result = runBoardCommandOnLatest(read.board, args, () => readBoard(project).board);
+  const result = runBoardCommandOnLatest(read.board, commandArguments, () => readBoard(project).board);
   if (!result.ok) {
     process.stderr.write(`${result.message}\n`);
     process.exit(1);

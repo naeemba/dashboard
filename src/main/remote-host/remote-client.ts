@@ -12,7 +12,7 @@ import {
 // is retried, and the host replays each pane on the way back in.
 export type ClientPorts = {
   version: string;
-  push(channel: string, args: unknown[]): void;
+  push(channel: string, channelArguments: unknown[]): void;
   status(text: string): void;
   log(draft: LogDraft): void;
   // The host refused a reconnect, so this client has stopped trying and will never carry a request again.
@@ -21,7 +21,7 @@ export type ClientPorts = {
 
 export type RemoteClient = RemoteTarget & {
   address: string;
-  invoke(channel: string, args: unknown[], timeoutMs?: number): Promise<unknown>;
+  invoke(channel: string, channelArguments: unknown[], timeoutMs?: number): Promise<unknown>;
   close(): void;
 };
 
@@ -61,10 +61,10 @@ export function connectRemote(
     return true;
   }
 
-  function request(channel: string, args: unknown[], timeoutMs: number, via: WebSocket | null = socket): Promise<unknown> {
+  function request(channel: string, channelArguments: unknown[], timeoutMs: number, via: WebSocket | null = socket): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = nextId++;
-      if (!send({ id, channel, args }, via)) return reject(new Error(`Not connected to ${address}`));
+      if (!send({ id, channel, args: channelArguments }, via)) return reject(new Error(`Not connected to ${address}`));
       // The timer is cleared once the request settles, so a busy session leaves no timers behind.
       const timer = setTimeout(() => pending.expire(id, address), timeoutMs);
       timer.unref();
@@ -92,7 +92,7 @@ export function connectRemote(
           failedReconnects = 0;
           if (everAccepted) {
             ports.log({ level: 'info', kind: 'screen', message: `reconnected to ${address}` });
-            for (const args of sizes.values()) send({ id: nextId++, channel: 'pty:resize', args });
+            for (const channelArguments of sizes.values()) send({ id: nextId++, channel: 'pty:resize', args: channelArguments });
           }
           everAccepted = true;
           ports.status('');
@@ -134,12 +134,12 @@ export function connectRemote(
 
   return open().then((): RemoteClient => ({
     address,
-    invoke: (channel: string, args: unknown[], timeoutMs: number = REQUEST_TIMEOUT_MS) => request(channel, args, timeoutMs),
-    send(channel, args) {
+    invoke: (channel: string, channelArguments: unknown[], timeoutMs: number = REQUEST_TIMEOUT_MS) => request(channel, channelArguments, timeoutMs),
+    send(channel, channelArguments) {
       // Dropped when down, never queued: a queued `rm` landing a minute late is worse than a lost key.
       // A size is the exception that is kept, to be told again on the way back in.
-      if (channel === 'pty:resize') sizes.set(args[0], args);
-      send({ id: nextId++, channel, args });
+      if (channel === 'pty:resize') sizes.set(channelArguments[0], channelArguments);
+      send({ id: nextId++, channel, args: channelArguments });
     },
     close() {
       closed = true;
