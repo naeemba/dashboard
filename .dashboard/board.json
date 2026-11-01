@@ -13,13 +13,6 @@
           "updatedAt": "2026-10-29T11:44:11.602Z"
         },
         {
-          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
-          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
-          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -144,13 +137,6 @@
           "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
-          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
-          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
-          "priority": "low",
-          "parent": null
         }
       ]
     },
@@ -160,16 +146,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
-          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
-          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:12:12.144Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -304,12 +281,48 @@
           "updatedAt": "2026-11-01T12:10:37.524Z",
           "branch": "fix-github-issue-129-gh-issue-view-129-comm",
           "pullRequest": 149
+        },
+        {
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:15:47.271Z",
+          "branch": "fix-github-issue-145-gh-issue-view-145-comm",
+          "pullRequest": 151,
+          "comments": [
+            {
+              "at": "2026-11-01T12:15:47.226Z",
+              "body": "Shipped in #151: projects:recent renamed to recent-projects:read in main and preload, app-rule-1 entry updated, version 2.32.12."
+            }
+          ]
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
+          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
+          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:11:33.587Z",
+          "branch": "fix-github-issue-80-gh-issue-view-80-commen",
+          "pullRequest": 142,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:33.515Z",
+              "body": "PR #142: mock returns rows as written; new visibleLinks test fails without bufferLine's trimEnd."
+            },
+            {
+              "at": "2026-11-01T12:11:33.587Z",
+              "body": "Shipped in PR #142 (https://github.com/naeemba/dashboard/pull/142). Version 2.32.12."
+            }
+          ]
+        },
         {
           "id": "7af68346-5bee-4566-b99c-13f9f02972e2",
           "title": "A failed board read is a failure, not an empty board",
@@ -1842,6 +1855,27 @@
           ]
         },
         {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:17:53.089Z",
+          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
+          "pullRequest": 147,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:13.460Z",
+              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
+            },
+            {
+              "at": "2026-11-01T12:17:53.089Z",
+              "body": "Shipped in PR #147: args locals and parameters in test files spelled out; merged main in, version 2.32.13."
+            }
+          ]
+        },
+        {
           "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
           "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
           "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
@@ -1856,27 +1890,18 @@
           ]
         },
         {
-          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
-          "title": "Follow-up from #136: args locals and parameters in test files",
-          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
+          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
+          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
           "priority": "low",
           "parent": null,
-          "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:15:29.790Z",
-          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
-          "pullRequest": 147,
+          "updatedAt": "2026-11-01T12:12:07.847Z",
+          "branch": "fix-github-issue-89-gh-issue-view-89-commen",
+          "pullRequest": 143,
           "comments": [
             {
-              "at": "2026-11-01T12:11:13.460Z",
-              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
-            },
-            {
-              "at": "2026-11-01T12:15:14.843Z",
-              "body": "Shipped in PR #147: tests no longer assert on fixed issue numbers in gh issue view comments. Merged main in, version 2.32.12."
-            },
-            {
-              "at": "2026-11-01T12:15:29.790Z",
-              "body": "Correction to the previous comment: PR #147 spells out args locals and parameters in test files (no behaviour change)."
+              "at": "2026-11-01T12:12:07.847Z",
+              "body": "Shipped in PR #143: the image-size notice on the Claude screen is built from IMAGE_LIMIT instead of restating 5 MB by hand."
             }
           ]
         }
