@@ -141,6 +141,12 @@
           "title": "Make one rule say which column a finished card goes in",
           "notes": "The global instructions and the work-card skill say Done; the project CLAUDE.md says Review. Have the skill read the project's rule. Change lives in dotfiles. (docs/review/2026-11-01.md W5)",
           "priority": "low"
+        },
+        {
+          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
+          "title": "Mark history.md files merge=union",
+          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
+          "priority": "low"
         }
       ]
     },
