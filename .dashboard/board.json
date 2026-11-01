@@ -130,7 +130,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "b0704842-dc6d-471d-aed4-a5d80e7e02c1",
+          "title": "Drawer: push the panes aside, docs as a tree, read docs in a full-screen markdown viewer",
+          "notes": "Follow-up to PR #161, from using it.\n\n1. Layout: the open drawer pushes the page to the right, the panes resize; it no longer lies over them. Closed, it takes no room.\n2. Docs as a tree: directories are rows that open and close (arrow keys, Enter, and the usual Left/Right to collapse and expand), not every file listed flat. The filter still finds files across closed directories.\n3. Opening a doc: Enter or a click shows the file rendered as markdown in a full-screen viewer, the way a click on an image in the chat opens it full screen, so it reads properly (tables, code, images). Esc closes it. A row at the top, Edit, opens the file in the project's nvim; it is reachable from the keyboard too.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-01T18:24:02.184Z",
+          "updatedAt": "2026-11-01T18:24:02.184Z"
+        }
+      ]
     },
     {
       "name": "Review",
