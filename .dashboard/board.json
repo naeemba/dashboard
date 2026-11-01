@@ -248,22 +248,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "f54d7a16-3a49-40e2-bed1-454e80961c1c",
-          "title": "Split chat-view.ts under the 600-code-line limit",
-          "notes": "638 code lines now. Seam: move send()'s dispatch of the screen's own commands (the screenCommand branches) into a module beside chat-screen-commands.ts. Wait until the cards editing chat-view.ts in parallel have merged. Raised in review of PR #128: https://github.com/naeemba/dashboard/pull/128#discussion_r4433728620",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-11-01T00:23:49.789Z",
-          "branch": "work-board-card-f54d7a16-3a49-40e2-bed1-454",
-          "pullRequest": 130,
-          "comments": [
-            {
-              "at": "2026-11-01T00:23:49.789Z",
-              "body": "PR #130: chat-view.ts 695 → 573 code lines; screen-command dispatch in chat-screen-dispatch.ts, attachments in chat-attachments.ts. renderer.ts (608) left, noted in docs/app."
-            }
-          ]
         }
       ]
     },
@@ -1589,6 +1573,26 @@
             {
               "at": "2026-11-01T00:10:53.694Z",
               "body": "Shipped in PR #128: /copy [N] copies a whole reply as markdown. Version 2.32.0."
+            }
+          ]
+        },
+        {
+          "id": "f54d7a16-3a49-40e2-bed1-454e80961c1c",
+          "title": "Split chat-view.ts under the 600-code-line limit",
+          "notes": "638 code lines now. Seam: move send()'s dispatch of the screen's own commands (the screenCommand branches) into a module beside chat-screen-commands.ts. Wait until the cards editing chat-view.ts in parallel have merged. Raised in review of PR #128: https://github.com/naeemba/dashboard/pull/128#discussion_r4433728620",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T00:32:53.113Z",
+          "branch": "work-board-card-f54d7a16-3a49-40e2-bed1-454",
+          "pullRequest": 130,
+          "comments": [
+            {
+              "at": "2026-11-01T00:23:49.789Z",
+              "body": "PR #130: chat-view.ts 695 → 573 code lines; screen-command dispatch in chat-screen-dispatch.ts, attachments in chat-attachments.ts. renderer.ts (608) left, noted in docs/app."
+            },
+            {
+              "at": "2026-11-01T00:32:53.113Z",
+              "body": "Shipped in PR #130: chat-view.ts split into chat-screen-dispatch.ts, chat-screen-commands.ts and chat-attachments.ts; version 2.32.1."
             }
           ]
         }
