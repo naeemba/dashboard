@@ -20,7 +20,7 @@ import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
-import { LOCAL_SCREEN, screens, windowHears } from '../shared/remote-host/screens';
+import { folderDialogRefusal, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
 import { peekBoard, writeBoard } from './board/board-store';
 import { readMarkets } from './markets/markets-fetch';
@@ -67,7 +67,7 @@ import type { Settings } from '../shared/settings/settings';
 import { reviewSweep } from './ship/review-flow';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
-import type { OpenProjects, ShipRequest, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
+import type { OpenProjects, ProjectOpen, ShipRequest, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 
 if (started) app.quit();
 
@@ -496,11 +496,12 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
 table.handle('recent-projects:read', () =>
   readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
-// A null path opens the folder dialog; a path from the picker skips it.
-table.handle('projects:open', async (screen, projectPath: string | null) => {
+// A null path opens the folder dialog; a path from the picker skips it. A refusal is answered, not
+// thrown: a throw reaches the screen behind Electron's "Error invoking remote method" prefix.
+table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
   if (projectPath === null) {
-    // A dialog here would open on the host's desk; the other screen types the path instead.
-    if (screen !== LOCAL_SCREEN) throw new Error("Type the folder's path on the host");
+    const refused = folderDialogRefusal(screen);
+    if (refused !== null) return { refused };
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
     if (canceled) return null;
     projectPath = filePaths[0];

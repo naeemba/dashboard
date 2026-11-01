@@ -509,6 +509,11 @@ async function openProject(requested: string | null): Promise<void> {
   if (remote && projectPath === null) return showPage(activeIndex);
   const opened = await bridge.openProject(projectPath);
   if (!opened) return showPage(activeIndex);
+  if ('refused' in opened) {
+    showNotice('project', opened.refused);
+    return showPage(activeIndex);
+  }
+  showNotice('project', '');
   applyProjects(opened.open);
   const position = positionOfSlot(opened.index);
   if (position !== -1) showPage(position);

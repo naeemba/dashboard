@@ -42,3 +42,15 @@ fixed is the rule being broken, not followed. The check is that this prints
 nothing:
 
     grep -rn "String(error)" src/ | grep -v 'failure.ts\|board-cli.ts\|board-view.ts\|notes-view.ts'
+
+## errors-rule-2: An IPC handler answers a refusal, it does not throw it
+
+A handler that throws makes `ipcMain.handle` reject the renderer's `invoke`
+with Electron's wrapper in front of the message. `projects:open` used to refuse
+another screen's folder dialog that way, and that screen read `Error invoking
+remote method 'projects:open': Error: Type the folder's path on the host`
+instead of the sentence. It now answers `{ refused }`, the shape `pdf:read`
+already used, and the view prints the text as it is.
+
+Throwing stays right for a failure: `readBoard` on a broken file throws, and
+the status bar says something broke (errors-decision-2).

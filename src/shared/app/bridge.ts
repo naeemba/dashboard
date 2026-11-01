@@ -92,10 +92,13 @@ export type WorktreeRemoval = { ok: boolean; message: string; dirty: string[] };
 // both; which moments send one is `set`'s in worktree-keeper.ts to say.
 export type WorktreeList = { entries: WorktreeEntry[]; paneDirectories: Record<string, string> };
 
+// What `projects:open` answers: the slot and the list, null for a cancelled dialog, or why not.
+export type ProjectOpen = { index: number; open: OpenProjects } | { refused: string } | null;
+
 export type DashboardBridge = {
   platform: string;
   getRecentProjects(): Promise<Project[]>;
-  openProject(projectPath: string | null): Promise<{ index: number; open: OpenProjects } | null>;
+  openProject(projectPath: string | null): Promise<ProjectOpen>;
   onProjectsChange(listener: (open: OpenProjects) => void): void;
   // Join another Dashboard's session, or go back to this one. Resolves '' or the host's refusal.
   connectHost(address: string, token: string): Promise<string>;
