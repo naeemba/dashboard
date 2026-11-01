@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
-          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
           "title": "Write the board as operations against a fresh read in main",
           "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
@@ -363,6 +356,14 @@
           "priority": "high",
           "parent": null,
           "updatedAt": "2026-11-01T23:43:36.000Z"
+        },
+        {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:52:57.025Z"
         }
       ]
     },
