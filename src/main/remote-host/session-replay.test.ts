@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paneScreenCopy } from './pane-screen-copy';
+import { paneScreenCopy } from '../panes/pane-screen-copy';
 import { replaySession } from './session-replay';
 
 describe('replaySession', () => {

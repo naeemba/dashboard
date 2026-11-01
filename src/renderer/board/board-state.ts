@@ -16,8 +16,8 @@ import {
   type Board,
   type Change,
   type Selection,
-} from './board';
-import { clampIndex } from './clamp-index';
+} from '../../shared/board/board';
+import { clampIndex } from '../../shared/app/clamp-index';
 
 // One step back, held in memory. `d` deletes on a single keystroke, so there has to be a way back
 // from a mis-hit; anything deeper is a feature nobody asked for. The selection is kept with the

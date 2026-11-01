@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { promisify } from 'node:util';
-import { git } from './git';
+import { git } from '../app/git';
 import {
   diskUsageBytes, distinctWorktrees, parseWorktreeList, type ScannedWorktree, type WorktreeRecord,
-} from './git-worktrees';
+} from '../../shared/ship/git-worktrees';
 import { changedFiles } from './ship';
 import { createWorktreeSizes } from './worktree-sizes';
 

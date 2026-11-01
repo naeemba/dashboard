@@ -1,7 +1,7 @@
 import { createServer } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
-import { channels } from './channels';
+import { channels } from '../app/channels';
 import { connectRemote, type RemoteClient } from './remote-client';
 import { startRemoteHost, type HostPorts, type RemoteHost } from './remote-host';
 import { encodeFrame } from './remote-protocol';

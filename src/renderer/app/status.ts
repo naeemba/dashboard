@@ -1,6 +1,6 @@
-import { EDITOR_INDEX, branchOfPane, paneLabel } from './terminals';
-import { paneTokens } from './usage';
-import type { Mode } from './modes';
+import { EDITOR_INDEX, branchOfPane, paneLabel } from '../../shared/panes/terminals';
+import { paneTokens } from '../../shared/usage/usage';
+import type { Mode } from '../../shared/keys/modes';
 
 // What the right-hand end of the status bar says: which view you are on, and for terminals which pane
 // has the keyboard and which checkout that pane is looking at.

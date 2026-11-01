@@ -1,5 +1,5 @@
 import type { ModelInfo, SDKControlGetContextUsageResponse, SDKControlGetUsageResponse } from '@anthropic-ai/claude-agent-sdk';
-import { formatTokens } from './usage';
+import { formatTokens } from '../usage/usage';
 
 // The Claude screen's status line: what Claude Code's own status line shows under the prompt in a
 // terminal — how full the context is, the plan's five-hour and seven-day limits, the model and the

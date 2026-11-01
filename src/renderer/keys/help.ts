@@ -1,14 +1,14 @@
-import { type ActionGroup } from './actions';
-import { PDF_LIMIT_SHOWN } from './chat-pdf';
-import { HISTORY_CONVERSATIONS, STASH_KEPT } from './chat-history';
-import { FOLD_SHOWN_LINES } from './chat-fold';
-import { labelled } from './icons';
+import { type ActionGroup } from '../../shared/keys/actions';
+import { PDF_LIMIT_SHOWN } from '../../shared/chat/chat-pdf';
+import { HISTORY_CONVERSATIONS, STASH_KEPT } from '../../shared/chat/chat-history';
+import { FOLD_SHOWN_LINES } from '../chat/chat-fold';
+import { labelled } from '../app/icons';
 import { keycaps } from './keycaps';
-import { isSection } from './manager-sections';
-import { type Mode } from './modes';
-import { openOverlay } from './overlay';
-import { PANE_SCROLLBACK } from './pane';
-import type { Settings } from './settings';
+import { isSection } from '../../shared/manager/manager-sections';
+import { type Mode } from '../../shared/keys/modes';
+import { openOverlay } from '../app/overlay';
+import { PANE_SCROLLBACK } from '../panes/pane';
+import type { Settings } from '../../shared/settings/settings';
 import { shortcutRows, type Shortcut } from './shortcut-rows';
 import { isModified } from './shortcuts';
 

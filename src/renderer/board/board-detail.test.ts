@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PRIORITY, type Board, type Card } from './board';
+import { DEFAULT_PRIORITY, type Board, type Card } from '../../shared/board/board';
 import { cardMeta } from './board-detail';
 
 const now = Date.parse('2026-09-08T12:00:00.000Z');

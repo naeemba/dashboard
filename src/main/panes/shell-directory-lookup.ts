@@ -1,8 +1,8 @@
 import { execFile } from 'node:child_process';
 import { readlink } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { parentProcesses } from './pane-sessions';
-import { realPath } from './worktree-scan';
+import { parentProcesses } from '../workers/pane-sessions';
+import { realPath } from '../ship/worktree-scan';
 import {
   anyShellStandsIn, answerDespiteFailure, familiesOf, lsofDirectories, oneQuestionAtATime, type ShellDirectories,
 } from './shell-directory';

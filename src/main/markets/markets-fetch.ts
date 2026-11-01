@@ -1,8 +1,8 @@
-import { failureText } from './failure';
+import { failureText } from '../../shared/errors/failure';
 import {
   coinGeckoSeries, forecastOf, placeOf, quoteOf, wallexSeries, type MarketsSnapshot, type Place,
   type Reading,
-} from './markets';
+} from '../../shared/markets/markets';
 
 // Main's half of the manager's four cards: the requests, and nothing about what the answers mean, which
 // is markets.ts's. In main rather than the renderer so the page never needs a network policy of its own.

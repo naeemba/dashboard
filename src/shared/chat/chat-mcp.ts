@@ -1,6 +1,6 @@
 import type { McpServerStatus, Query } from '@anthropic-ai/claude-agent-sdk';
-import { fuzzyScore, ranked } from './fuzzy';
-import type { SearchRow } from './overlay';
+import { fuzzyScore, ranked } from '../app/fuzzy';
+import type { SearchRow } from '../../renderer/app/overlay';
 
 // /mcp on the Claude screen, as Claude Code's dialog: the session's MCP servers with how each one
 // stands, and the one picked reconnected, disabled or enabled. The session answers /mcp sent as a

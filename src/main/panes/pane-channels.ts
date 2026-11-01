@@ -1,7 +1,7 @@
 import { Notification, type BrowserWindow } from 'electron';
-import type { Channels } from './channels';
+import type { Channels } from '../app/channels';
 import type * as pty from 'node-pty';
-import type { Screens } from './screens';
+import type { Screens } from '../../shared/remote-host/screens';
 
 // What a pane sends the main process: its keystrokes, its size, a request to restart its shell, and a
 // banner for it. Main-process wiring only, out of main.ts because main had reached its 600-line

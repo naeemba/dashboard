@@ -1,7 +1,7 @@
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import type { Say } from './chat-screen-commands';
-import { droppedFiles, fileMention, mentionInsertion } from './chat-commands';
-import { imageDataUrl, imagesFit, isImageType, type ChatImage } from './chat-transcript';
+import { droppedFiles, fileMention, mentionInsertion } from '../../shared/chat/chat-commands';
+import { imageDataUrl, imagesFit, isImageType, type ChatImage } from '../../shared/chat/chat-transcript';
 
 // The images waiting to go with the next prompt, drawn as thumbnails over the box, and the paste and
 // drop that bring them: images pasted into the box or dropped anywhere on the screen are attached to

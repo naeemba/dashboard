@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Board, Card } from './board';
+import type { Board, Card } from '../../shared/board/board';
 import { columnCounts, recentActivity } from './board-summary';
 
 const card = (id: string, fields: Partial<Card> = {}): Card => ({

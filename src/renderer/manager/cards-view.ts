@@ -1,10 +1,10 @@
-import type { Action } from './actions';
-import type { WorktreeEntry } from './worktree-store';
-import { SELECTED_CARD, createBoardView, type BoardView } from './board-view';
-import type { DashboardBridge } from './bridge';
+import type { Action } from '../../shared/keys/actions';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import { SELECTED_CARD, createBoardView, type BoardView } from '../board/board-view';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import { cardsProjects, type CardsPage } from './cards';
-import { clampIndex, heldIndex } from './clamp-index';
-import { MANAGER_PROJECT } from './manager';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
+import { MANAGER_PROJECT } from '../../shared/manager/manager';
 
 export type CardsOptions = {
   bridge: DashboardBridge;

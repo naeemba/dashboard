@@ -1,10 +1,10 @@
 import '@fontsource/vazirmatn/arabic-400.css';
 import '@fontsource/vazirmatn/arabic-500.css';
 import './markets.css';
-import type { DashboardBridge } from './bridge';
-import { icon, type IconName } from './icons';
-import type { THEME } from './theme';
-import { formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord } from './markets';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { icon, type IconName } from '../app/icons';
+import type { THEME } from '../../shared/app/theme';
+import { formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord } from '../../shared/markets/markets';
 
 // The row of four cards across the top of the manager page. Read-only: nothing here takes a key or a
 // click, so there is nothing for the keyboard to reach. What the numbers mean is markets.ts's.

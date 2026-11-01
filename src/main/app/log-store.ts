@@ -3,7 +3,7 @@ import path from 'node:path';
 import {
   LOG_FILE, LOG_FILE_COUNT, LOG_FILE_LIMIT, logFileNames, needsRotation, parseLogLine,
   type LogDraft, type LogEntry,
-} from './log-entry';
+} from '../../shared/app/log-entry';
 
 // The log on disk: five files of 5 MB, the live one first. Main-process only, and no electron in it, so
 // rotation is tested on a real folder. Synchronous on purpose: main is one thread, so two entries can

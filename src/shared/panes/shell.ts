@@ -1,5 +1,5 @@
-import { baseName } from './base-name';
-import type { Settings } from './settings';
+import { baseName } from '../app/base-name';
+import type { Settings } from '../settings/settings';
 
 const platformDefault: Record<string, string> = {
   darwin: '/bin/zsh',

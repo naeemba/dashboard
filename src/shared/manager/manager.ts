@@ -1,15 +1,15 @@
-import { relativeAge } from './age';
-import { baseName } from './base-name';
-import { clampIndex } from './clamp-index';
-import type { GitWorktree, ScannedWorktree, WorktreeSize } from './git-worktrees';
-import type { Project } from './projects';
-import { MAIN_INDEX, terminalId } from './terminals';
+import { relativeAge } from '../app/age';
+import { baseName } from '../app/base-name';
+import { clampIndex } from '../app/clamp-index';
+import type { GitWorktree, ScannedWorktree, WorktreeSize } from '../ship/git-worktrees';
+import type { Project } from '../../main/app/projects';
+import { MAIN_INDEX, terminalId } from '../panes/terminals';
 import { needKey, type Need } from './needs-you';
-import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from './usage';
-import { isRinging, type Bell } from './waiting';
-import { orderedWorktrees } from './worktree-rows';
-import type { WorktreeTarget } from './worktree-removal';
-import type { WorktreeEntry } from './worktree-store';
+import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from '../usage/usage';
+import { isRinging, type Bell } from '../panes/waiting';
+import { orderedWorktrees } from '../ship/worktree-rows';
+import type { WorktreeTarget } from '../../renderer/ship/worktree-removal';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 // Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
 // takes a number no project can be given rather than a real one.

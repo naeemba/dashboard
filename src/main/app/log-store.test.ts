@@ -2,7 +2,7 @@ import { appendFileSync, chmodSync, existsSync, mkdtempSync, rmSync, statSync, w
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LogDraft, LogEntry } from './log-entry';
+import type { LogDraft, LogEntry } from '../../shared/app/log-entry';
 import { logStore } from './log-store';
 
 // Lets one test make a rename or an append fail the way a busy or locked file does; every other test

@@ -10,7 +10,7 @@ export default mergeConfig(
   defineConfig({
     build: {
       lib: {
-        entry: 'src/board-cli-entry.ts',
+        entry: 'src/main/board/board-cli-entry.ts',
         fileName: () => 'board-cli-entry.js',
         formats: ['cjs'],
       },

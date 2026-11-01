@@ -1,6 +1,6 @@
-import { failureText } from './failure';
-import type { runProgram } from './git';
-import { changedFiles } from './ship';
+import { failureText } from '../../shared/errors/failure';
+import type { runProgram } from '../app/git';
+import { changedFiles } from '../ship/ship';
 
 // Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open. Only
 // then is the folder thrown away when its worker is released — before that, removing it would take the

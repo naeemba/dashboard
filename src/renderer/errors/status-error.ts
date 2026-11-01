@@ -1,6 +1,6 @@
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import { shouldLogError } from './error-log';
-import { failureNotice } from './failure';
+import { failureNotice } from '../../shared/errors/failure';
 
 export type StatusError = {
   element: HTMLElement;

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { chatShadowPartner, hears, isBareCharacter, mapShortcut } from './shortcuts';
-import { ACTIONS } from './actions';
-import { parseBinding } from './binding';
-import { bindKey, defaultSettings } from './settings';
-import { MODES } from './modes';
-import { key } from './test-key';
+import { ACTIONS } from '../../shared/keys/actions';
+import { parseBinding } from '../../shared/keys/binding';
+import { bindKey, defaultSettings } from '../../shared/settings/settings';
+import { MODES } from '../../shared/keys/modes';
+import { key } from '../../shared/keys/test-key';
 
 const mac = defaultSettings(true).keys;
 const other = defaultSettings(false).keys;

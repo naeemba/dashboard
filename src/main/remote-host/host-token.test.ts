@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ensureHostToken } from './host-token';
-import { defaultSettings } from './settings';
+import { defaultSettings } from '../../shared/settings/settings';
 
 describe('ensureHostToken', () => {
   it('generates a token once', () => {

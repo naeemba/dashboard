@@ -1,6 +1,6 @@
-import { MODE_NAMES } from './help';
+import { MODE_NAMES } from '../keys/help';
 import { iconButton, MODE_GLYPHS } from './icons';
-import { PROJECT_MODES, type ProjectMode } from './modes';
+import { PROJECT_MODES, type ProjectMode } from '../../shared/keys/modes';
 
 // The two bars around the pages: the open projects as tabs along the title row, and a project's views
 // as a switch along the foot. Like the manager's section strip they hold no state — which tab is open

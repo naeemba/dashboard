@@ -1,8 +1,8 @@
-import { ACTIONS, actionByName, type Action, type ActionEntry, type ActionScope } from './actions';
-import { matchesBinding, type KeyInput } from './binding';
-import { isSection } from './manager-sections';
-import type { Mode } from './modes';
-import type { Settings } from './settings';
+import { ACTIONS, actionByName, type Action, type ActionEntry, type ActionScope } from '../../shared/keys/actions';
+import { matchesBinding, type KeyInput } from '../../shared/keys/binding';
+import { isSection } from '../../shared/manager/manager-sections';
+import type { Mode } from '../../shared/keys/modes';
+import type { Settings } from '../../shared/settings/settings';
 
 export type { KeyInput, Action };
 

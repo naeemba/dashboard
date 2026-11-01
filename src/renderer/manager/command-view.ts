@@ -1,11 +1,11 @@
-import { icon } from './icons';
-import type { Action } from './actions';
-import { clampIndex, heldIndex } from './clamp-index';
-import { isBareCharacter } from './shortcuts';
-import { sendSummary, type SendPlan } from './free-pane';
+import { icon } from '../app/icons';
+import type { Action } from '../../shared/keys/actions';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
+import { isBareCharacter } from '../keys/shortcuts';
+import { sendSummary, type SendPlan } from '../panes/free-pane';
 import {
   anyRunning, commandKeys, COMMAND_KEY, hasTail, idleTask, taskSummary, type TaskResult,
-} from './tasks';
+} from '../../shared/manager/tasks';
 
 export type CommandProject = { name: string; path: string };
 

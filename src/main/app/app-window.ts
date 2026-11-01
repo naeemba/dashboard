@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
-import { dismissesViewer, frameNavigation, isOpenableLink } from './links';
-import { TITLE_BAR_HEIGHT } from './theme';
+import { dismissesViewer, frameNavigation, isOpenableLink } from '../../shared/panes/links';
+import { TITLE_BAR_HEIGHT } from '../../shared/app/theme';
 
 // The window and the question its close asks. Main-process wiring, out of main.ts because main had
 // reached its 600-line ceiling; nothing here decides anything a test could reach.

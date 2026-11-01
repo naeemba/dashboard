@@ -1,6 +1,6 @@
-import { clampIndex } from './clamp-index';
-import { isManagerPath } from './manager';
-import type { Direction } from './terminals';
+import { clampIndex } from '../app/clamp-index';
+import { isManagerPath } from '../manager/manager';
+import type { Direction } from '../panes/terminals';
 
 // Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
 export const PRIORITIES = ['urgent', 'high', 'medium', 'low'] as const;

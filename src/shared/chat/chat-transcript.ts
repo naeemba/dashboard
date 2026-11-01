@@ -1,15 +1,15 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
-import type { ChatContent } from './bridge';
+import type { ChatContent } from '../app/bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
 import { rateLimitNotice, retryNotice } from './chat-notices';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 import { hookFailure, runningHook } from './chat-hooks';
-import { isRecord, stringOrEmpty } from './is-record';
-import { timeOf } from './age';
-import type { PermissionAsk } from './chat-permission';
-import type { ChatPreferences } from './chat-sessions';
-import type { QueuedPrompt } from './chat-queue';
+import { isRecord, stringOrEmpty } from '../app/is-record';
+import { timeOf } from '../app/age';
+import type { PermissionAsk } from '../../renderer/chat/chat-permission';
+import type { ChatPreferences } from '../../main/chat/chat-sessions';
+import type { QueuedPrompt } from '../../renderer/chat/chat-queue';
 
 // What main sends the chat pane, one per thing that happened in its session. `message` is an
 // SDKMessage as the Agent SDK yields it, or a line of a saved session read back for a resume; the two

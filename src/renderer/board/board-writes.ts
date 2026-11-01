@@ -1,5 +1,5 @@
-import type { Board } from './board';
-import type { DashboardBridge } from './bridge';
+import type { Board } from '../../shared/board/board';
+import type { DashboardBridge } from '../../shared/app/bridge';
 
 // The app's own board writes, reported to whoever asks. board-watch.ts says why main stays quiet about
 // a write the app made, so this is how a listener hears of one.

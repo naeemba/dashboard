@@ -1,29 +1,29 @@
 import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
-import { mainPrompt, mainSessionName } from './dispatch';
-import { measureOf, type ChatMeasure } from './chat-status';
-import { rateLimitNotice } from './chat-notices';
+import { mainPrompt, mainSessionName } from '../workers/dispatch';
+import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
+import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
-import { replaceFile } from './board-store';
+import { replaceFile } from '../board/board-store';
 import path from 'node:path';
-import type { ChatContent } from './bridge';
-import type { Channels } from './channels';
-import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from './chat-transcript';
-import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
-import type { PermissionAsk } from './chat-permission';
+import type { ChatContent } from '../../shared/app/bridge';
+import type { Channels } from '../app/channels';
+import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
+import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
+import type { PermissionAsk } from '../../renderer/chat/chat-permission';
 import { exportTarget, type ExportWrite } from './chat-export-target';
-import { elicitationAsk, elicitationResult } from './chat-elicitation';
-import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
-import { pdfRefusal, type PdfRead } from './chat-pdf';
-import { renameTarget } from './chat-rename';
-import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from './chat-rewind';
-import { fileCandidates } from './file-open';
+import { elicitationAsk, elicitationResult } from '../../shared/chat/chat-elicitation';
+import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
+import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
+import { renameTarget } from '../../shared/chat/chat-rename';
+import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from '../../shared/chat/chat-rewind';
+import { fileCandidates } from '../nvim/file-open';
 import { homedir } from 'node:os';
-import { failureText } from './failure';
-import { projectFiles } from './git';
-import { isRecord } from './is-record';
+import { failureText } from '../../shared/errors/failure';
+import { projectFiles } from '../app/git';
+import { isRecord } from '../../shared/app/is-record';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started when the project opens and again after a new conversation or a /resume, and

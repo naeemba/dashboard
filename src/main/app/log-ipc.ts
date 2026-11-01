@@ -1,5 +1,5 @@
 import type { Channels } from './channels';
-import { LOG_READ_COUNT, type LogDraft, type LogRead } from './log-entry';
+import { LOG_READ_COUNT, type LogDraft, type LogRead } from '../../shared/app/log-entry';
 import { logStore, type LogStore } from './log-store';
 
 // The log's three channels. Main-process wiring; what is written and how the files turn over is

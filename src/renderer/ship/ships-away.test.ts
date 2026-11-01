@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { returnFromShip, selectionOf, shipHome, SHIP_COLUMN, type Board, type Card } from './board';
+import { returnFromShip, selectionOf, shipHome, SHIP_COLUMN, type Board, type Card } from '../../shared/board/board';
 import { bringHome, createShipsAway, type ShipsAway } from './ships-away';
 
 function card(id: string): Card {

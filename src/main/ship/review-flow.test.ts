@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY, readBoard, writeBoard } from './board-store';
-import { emptyBoard, moveCardById, setPullRequest, type Board } from './board';
+import { BOARD_DIRECTORY, readBoard, writeBoard } from '../board/board-store';
+import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts } from './review-flow';
 import type { WorktreeEntry } from './worktree-store';
 

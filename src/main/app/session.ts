@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { isPaneConversation, type PaneConversation } from './claude-resume';
-import { PROJECT_MODES, type Mode } from './modes';
+import { isPaneConversation, type PaneConversation } from '../workers/claude-resume';
+import { PROJECT_MODES, type Mode } from '../../shared/keys/modes';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
 // was left on, and which pane had the keyboard. Not the shells themselves — those die with the app, and

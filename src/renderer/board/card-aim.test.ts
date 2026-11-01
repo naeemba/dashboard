@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Board } from './board';
+import type { Board } from '../../shared/board/board';
 import { createCardAim } from './card-aim';
 
 const board: Board = {

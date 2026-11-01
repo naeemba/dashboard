@@ -1,10 +1,10 @@
-import { LOCAL_SCREEN } from './screens';
-import type { Channels, RemoteTarget } from './channels';
-import { failureText } from './failure';
-import type { LogDraft } from './log-entry';
+import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
+import type { Channels, RemoteTarget } from '../app/channels';
+import { failureText } from '../../shared/errors/failure';
+import type { LogDraft } from '../../shared/app/log-entry';
 import { connectRemote, type RemoteClient } from './remote-client';
 import { replaySession, type SessionState } from './session-replay';
-import type { Settings } from './settings';
+import type { Settings } from '../../shared/settings/settings';
 
 // What main holds that the client side reads: the channel table, and this machine's own session for
 // the local window to come back to.

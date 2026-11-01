@@ -1,8 +1,8 @@
 import { hintLabels, type FileLink } from './file-links';
 import { visibleLinks, type OpenFileLink } from './file-link-open';
-import { focusedPane, type Page } from './page';
-import type { Pane } from './pane';
-import { isModified } from './shortcuts';
+import { focusedPane, type Page } from '../app/page';
+import type { Pane } from '../panes/pane';
+import { isModified } from '../keys/shortcuts';
 
 // Handed on so the renderer, at its size ceiling, takes both halves of the hint key from one import.
 export { fileLinkOpener } from './file-link-open';

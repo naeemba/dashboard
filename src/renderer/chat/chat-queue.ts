@@ -1,5 +1,5 @@
-import type { ChatContent } from './bridge';
-import type { ChatImage } from './chat-transcript';
+import type { ChatContent } from '../../shared/app/bridge';
+import type { ChatImage } from '../../shared/chat/chat-transcript';
 
 // A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
 // it with. The session reports each one's lifecycle by that id: queued, then started (the next turn

@@ -1,8 +1,8 @@
-import type { OpenProjects } from './bridge';
+import type { OpenProjects } from '../../shared/app/bridge';
 import { afterOpening, planSend, type SendPlan } from './free-pane';
-import { panesById, type Page } from './page';
-import type { PaneUse } from './pane-reading';
-import { terminalId } from './terminals';
+import { panesById, type Page } from '../app/page';
+import type { PaneUse } from '../../shared/panes/pane-reading';
+import { terminalId } from '../../shared/panes/terminals';
 
 // Two ways a key or a line reaches a pane without anybody going to it: the command screen's command
 // typed into one shell per project, and the manager's answer typed into the pane that asked. Out of

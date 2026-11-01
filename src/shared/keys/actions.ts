@@ -1,8 +1,8 @@
-import { projectPosition } from './manager';
-import { SECTIONS } from './manager-sections';
+import { projectPosition } from '../manager/manager';
+import { SECTIONS } from '../manager/manager-sections';
 import type { Mode } from './modes';
-import type { Direction } from './terminals';
-import type { LineEdit } from './chat-line-editing';
+import type { Direction } from '../panes/terminals';
+import type { LineEdit } from '../../renderer/chat/chat-line-editing';
 
 // What a shortcut does once it has fired. The renderer answers the first three groups; the board view
 // answers the board kinds. Moved here from shortcuts.ts so the table can name the action beside its key.

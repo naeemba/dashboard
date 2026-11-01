@@ -1,13 +1,13 @@
-import { icon } from './icons';
-import { relativeAge } from './age';
-import { baseName } from './base-name';
-import { clampIndex } from './clamp-index';
-import type { DashboardBridge } from './bridge';
-import { openOverlay } from './overlay';
-import { isModified } from './shortcuts';
+import { icon } from '../app/icons';
+import { relativeAge } from '../../shared/app/age';
+import { baseName } from '../../shared/app/base-name';
+import { clampIndex } from '../../shared/app/clamp-index';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { openOverlay } from '../app/overlay';
+import { isModified } from '../keys/shortcuts';
 import { notify, removeWorktreeAsking } from './worktree-removal';
-import { dirtyLabel, orderedWorktrees, worktreePaneText } from './worktree-rows';
-import type { WorktreeEntry } from './worktree-store';
+import { dirtyLabel, orderedWorktrees, worktreePaneText } from '../../shared/ship/worktree-rows';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 // Lands on the worktree's pane, or hands back the sentence saying why it could not. The empty string
 // is the landing having happened — there is nothing to say about a key that did what it looked like.

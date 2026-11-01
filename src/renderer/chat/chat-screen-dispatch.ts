@@ -1,15 +1,15 @@
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import { askAside } from './chat-btw-view';
-import { EFFORT_LEVELS, effortRows, namedEffort, namedFast, pickedModel, planSends, type ChosenEffort, type ScreenCommand } from './chat-commands';
+import { EFFORT_LEVELS, effortRows, namedEffort, namedFast, pickedModel, planSends, type ChosenEffort, type ScreenCommand } from '../../shared/chat/chat-commands';
 import { exportConversation } from './chat-export-view';
 import { manageMcp } from './chat-mcp-view';
-import { renameConversation } from './chat-rename';
+import { renameConversation } from '../../shared/chat/chat-rename';
 import { rewind } from './chat-rewind-view';
 import { branch, chooseModel, copyReply, resume, showEdits } from './chat-screen-commands';
-import type { ChatPreferences } from './chat-sessions';
-import { working, type Transcript } from './chat-transcript';
+import type { ChatPreferences } from '../../main/chat/chat-sessions';
+import { working, type Transcript } from '../../shared/chat/chat-transcript';
 import type { ChatViewOptions } from './chat-view';
-import { searchOverlay } from './overlay';
+import { searchOverlay } from '../app/overlay';
 
 // Where `send` in chat-view.ts hands a command typed into the box that is one of the screen's own
 // (screenCommand): each runs here, against what the view tells it of itself, instead of going to the

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../shared/app/bridge';
 
 const bridge: DashboardBridge = {
   platform: process.platform,

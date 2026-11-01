@@ -26,7 +26,7 @@ import {
   seedBoardDirectory,
   writeBoard,
 } from './board-store';
-import { MANAGER_PROJECT } from './manager';
+import { MANAGER_PROJECT } from '../../shared/manager/manager';
 
 // Runs a test with a fake home directory standing in for the real one, so nothing it writes lands in
 // the .dashboard of whoever runs the tests.

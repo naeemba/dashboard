@@ -1,5 +1,5 @@
-import { commandMenu, type CommandRow } from './chat-commands';
-import { clampIndex, heldIndex } from './clamp-index';
+import { commandMenu, type CommandRow } from '../../shared/chat/chat-commands';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 
 // The list of slash commands over the prompt box while what is typed there is a slash and a name, or
 // of files while the caret is in an @ word: a row is a command, or a file's path. CommandMenu keeps

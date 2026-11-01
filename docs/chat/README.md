@@ -7,6 +7,8 @@ Claude has running.
 
 ## Files
 
+Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
+
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,

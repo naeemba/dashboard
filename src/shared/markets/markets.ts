@@ -1,4 +1,4 @@
-import { isRecord } from './is-record';
+import { isRecord } from '../app/is-record';
 
 // The four cards across the top of the manager page: what each source answers, turned into what a card
 // draws. Main fetches (markets-fetch.ts) and the renderer draws (markets-view.ts); everything that could

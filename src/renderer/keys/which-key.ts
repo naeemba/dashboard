@@ -1,7 +1,7 @@
-import type { ActionEntry } from './actions';
-import { formatBinding, parseBinding, type KeyInput, type Keystroke } from './binding';
-import type { Mode } from './modes';
-import type { Settings } from './settings';
+import type { ActionEntry } from '../../shared/keys/actions';
+import { formatBinding, parseBinding, type KeyInput, type Keystroke } from '../../shared/keys/binding';
+import type { Mode } from '../../shared/keys/modes';
+import type { Settings } from '../../shared/settings/settings';
 import { shortcutRows, type Shortcut } from './shortcut-rows';
 import { chatShadow, hears, isModifierKey, stopsTyping } from './shortcuts';
 

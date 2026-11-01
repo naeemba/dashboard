@@ -4,8 +4,8 @@ import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
-import { dashboardFolder } from './dashboard-folder';
-import { isRecord } from './is-record';
+import { dashboardFolder } from '../app/dashboard-folder';
+import { isRecord } from '../../shared/app/is-record';
 import {
   DEFAULT_PRIORITY,
   emptyBoard,
@@ -21,8 +21,8 @@ import {
   type Card,
   type CardComment,
   type Column,
-} from './board';
-import { isManagerPath } from './manager';
+} from '../../shared/board/board';
+import { isManagerPath } from '../../shared/manager/manager';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.

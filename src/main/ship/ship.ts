@@ -1,5 +1,5 @@
 import { basename, dirname, join } from 'node:path';
-import { BOARD_DIRECTORY } from './board-store';
+import { BOARD_DIRECTORY } from '../board/board-store';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
 // commands; what to call things and what counts as being in the way is here, where a test can pin it.

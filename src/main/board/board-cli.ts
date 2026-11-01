@@ -19,7 +19,7 @@ import {
   type Board,
   type Card,
   type Selection,
-} from './board';
+} from '../../shared/board/board';
 import { USAGE } from './board-usage';
 
 // Every decision the command line makes. The board it is handed and the board it answers with are

@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
 import type { Shortcut } from './shortcut-rows';
 import { mapShortcut } from './shortcuts';
-import { ACTIONS } from './actions';
-import { parseBinding } from './binding';
-import { isSection } from './manager-sections';
-import { bindKey, defaultSettings } from './settings';
-import { key } from './test-key';
-import type { Mode } from './modes';
+import { ACTIONS } from '../../shared/keys/actions';
+import { parseBinding } from '../../shared/keys/binding';
+import { isSection } from '../../shared/manager/manager-sections';
+import { bindKey, defaultSettings } from '../../shared/settings/settings';
+import { key } from '../../shared/keys/test-key';
+import type { Mode } from '../../shared/keys/modes';
 
 const mac = defaultSettings(true).keys;
 // Every screen the dialog can be opened on, read back from the table help.ts prints from, so a new mode

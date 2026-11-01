@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import { directoriesOf } from './shell-directory-lookup';
+import { directoriesOf } from '../panes/shell-directory-lookup';
 
 // Where a path printed in a pane points. A relative path is relative to whatever printed it, which is
 // the folder the pane's shell is standing in now — a `cd` since the pane opened included, and the card's

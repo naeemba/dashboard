@@ -1,6 +1,6 @@
-import { baseName } from './base-name';
+import { baseName } from '../app/base-name';
 import { tagged, unescaped, withoutTag } from './chat-tags';
-import { isRecord } from './is-record';
+import { isRecord } from '../app/is-record';
 
 // A message the session's user turn holds that nobody typed: Claude Code injects them — a background
 // agent finishing, a subagent's report, a message from another session — and marks each with an

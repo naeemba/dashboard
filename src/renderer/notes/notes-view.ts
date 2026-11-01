@@ -1,4 +1,4 @@
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import {
   isStranded,
   mayRead,

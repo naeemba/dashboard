@@ -1,4 +1,4 @@
-import type { LinkSpan } from './file-links';
+import type { LinkSpan } from '../nvim/file-links';
 import type { WidthAt } from './print-widths';
 import { bufferLine, cellColumn, type CellLine, type PaneBuffer } from './pane';
 

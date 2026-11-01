@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import { bindKey, defaultSettings } from './settings';
+import { bindKey, defaultSettings } from '../../shared/settings/settings';
 
 function file(): string {
   return join(mkdtempSync(join(tmpdir(), 'dashboard-settings-')), 'settings.json');

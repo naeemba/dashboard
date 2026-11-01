@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { afterOpening, freePaneIndex, planSend, sendSummary, type ProjectPanes } from './free-pane';
-import type { PaneUse } from './pane-reading';
+import type { PaneUse } from '../../shared/panes/pane-reading';
 
 // A shell sitting at its own prompt, which is what a pane nobody is using reads as.
 const free: PaneUse = {

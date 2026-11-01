@@ -1,10 +1,10 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { toolBody } from './chat-entries';
 import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
-import { DECLINED, ELICITATION, fieldAbout, fieldChoices, fieldsOf, takes, typedValue } from './chat-elicitation';
-import { isOpenableLink } from './links';
-import { clampIndex } from './clamp-index';
-import { isModified } from './shortcuts';
+import { DECLINED, ELICITATION, fieldAbout, fieldChoices, fieldsOf, takes, typedValue } from '../../shared/chat/chat-elicitation';
+import { isOpenableLink } from '../../shared/panes/links';
+import { clampIndex } from '../../shared/app/clamp-index';
+import { isModified } from '../keys/shortcuts';
 
 // The box over the prompt that holds what Claude is waiting on: a tool call to allow or decline, or
 // AskUserQuestion's questions, or an MCP server's form, one at a time. Rows the arrows walk and Enter answers; what each row

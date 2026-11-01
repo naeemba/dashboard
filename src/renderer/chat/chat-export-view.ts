@@ -1,9 +1,9 @@
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import { conversationText, exportFileName, exportRows } from './chat-export';
-import type { ChatEntry } from './chat-transcript';
+import type { ChatEntry } from '../../shared/chat/chat-transcript';
 import type { Say } from './chat-screen-commands';
-import { failureText } from './failure';
-import { searchOverlay } from './overlay';
+import { failureText } from '../../shared/errors/failure';
+import { searchOverlay } from '../app/overlay';
 
 // /export's sheet: copy the conversation to the clipboard or save it to a file, or, with a name typed
 // after the command, straight to that file. Resolves once it is done or given up on.

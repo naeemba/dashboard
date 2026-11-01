@@ -1,6 +1,6 @@
-import { iconButton, MODE_GLYPHS } from './icons';
-import { SECTIONS } from './manager-sections';
-import type { Mode } from './modes';
+import { iconButton, MODE_GLYPHS } from '../app/icons';
+import { SECTIONS } from '../../shared/manager/manager-sections';
+import type { Mode } from '../../shared/keys/modes';
 
 export type SectionStrip = { element: HTMLElement; render(mode: Mode): void };
 

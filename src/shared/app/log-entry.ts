@@ -1,5 +1,5 @@
 import type { ShipRequest, ShipResult, WorktreeRemoval } from './bridge';
-import { paneLabel } from './terminals';
+import { paneLabel } from '../panes/terminals';
 
 // One line of the log, and every decision about the file that does not touch the disk. Shared: main
 // writes entries and the renderer reads and filters them, so both sides import the one shape.

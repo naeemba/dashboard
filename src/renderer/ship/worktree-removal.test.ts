@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DashboardBridge, WorktreeRemoval } from './bridge';
-import type { WorktreeEntry } from './worktree-store';
+import type { DashboardBridge, WorktreeRemoval } from '../../shared/app/bridge';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 // The sheets are the overlay's; here each question is answered from a list, in the order asked.
 const answers: boolean[] = [];
 const asked: string[] = [];
-vi.mock('./overlay', () => ({
+vi.mock('../app/overlay', () => ({
   confirmOverlay: vi.fn(async (question: string) => {
     asked.push(question);
     return answers.shift() ?? false;

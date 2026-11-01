@@ -1,8 +1,8 @@
 import type { Channels } from './channels';
 import { existsSync } from 'node:fs';
-import { LOCAL_SCREEN } from './screens';
-import { sessionToWrite, type PaneConversation } from './claude-resume';
-import { resumeLedger, type SessionPlacement } from './resume-ledger';
+import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
+import { sessionToWrite, type PaneConversation } from '../workers/claude-resume';
+import { resumeLedger, type SessionPlacement } from '../workers/resume-ledger';
 import { readSession, writeSession, type Session } from './session';
 
 // session.json, read once at launch and written by main alone. The renderer sends the layout whenever it

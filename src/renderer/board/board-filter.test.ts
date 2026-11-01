@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Board, Card } from './board';
+import type { Board, Card } from '../../shared/board/board';
 import {
   actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, sideRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,

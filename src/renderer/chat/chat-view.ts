@@ -1,12 +1,12 @@
 import './chat.css';
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
-import type { ChatCommand } from './actions';
-import type { ChatContent, DashboardBridge } from './bridge';
+import type { ChatCommand } from '../../shared/keys/actions';
+import type { ChatContent, DashboardBridge } from '../../shared/app/bridge';
 import { createAskPanel } from './chat-ask-view';
 import { createAttachments } from './chat-attachments';
-import { completion, footEffort, nextCopyBlock, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { completion, footEffort, nextCopyBlock, screenCommand, tabFill, type ChosenEffort, type CommandRow } from '../../shared/chat/chat-commands';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
-import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from './chat-history';
+import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from '../../shared/chat/chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
@@ -14,19 +14,19 @@ import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
 import { footSides, piece, type FootState } from './chat-foot-view';
-import { workingLine, type ChatMeasure } from './chat-status';
+import { workingLine, type ChatMeasure } from '../../shared/chat/chat-status';
 import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
-} from './chat-transcript';
-import type { ChatPreferences } from './chat-sessions';
+} from '../../shared/chat/chat-transcript';
+import type { ChatPreferences } from '../../main/chat/chat-sessions';
 import { promptParts, withdrawable } from './chat-queue';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
-import { backgroundTarget, stopTarget } from './chat-tasks';
-import { clampIndex } from './clamp-index';
-import { failureText } from './failure';
-import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
-import { isModified } from './shortcuts';
+import { backgroundTarget, stopTarget } from '../../shared/chat/chat-tasks';
+import { clampIndex } from '../../shared/app/clamp-index';
+import { failureText } from '../../shared/errors/failure';
+import { imageOverlay, pdfOverlay, searchOverlay } from '../app/overlay';
+import { isModified } from '../keys/shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
 // chat-sessions.ts in main. The keys it answers through the window's lookup are rows in actions.ts and

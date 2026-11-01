@@ -6,7 +6,7 @@ The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
 
 The thing first, then what you do to it: `link:open`, `session:write`,
 `board:read`, `pty:resize`, `notification:show`. Every channel in
-`src/preload.ts` follows it.
+`src/preload/preload.ts` follows it.
 
 `notify:show` did not — two verbs, nothing named. Grep for the channels that
 touch notifications and it does not sort next to them, so the next person adds

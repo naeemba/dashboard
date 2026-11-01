@@ -47,7 +47,7 @@ import {
   type Priority,
   type ShipHome,
 } from './board';
-import { MANAGER_PROJECT } from './manager';
+import { MANAGER_PROJECT } from '../manager/manager';
 
 function board(...columns: string[][]): Board {
   return {

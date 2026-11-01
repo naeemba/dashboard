@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paneIsFree } from './free-pane';
+import { paneIsFree } from '../../renderer/panes/free-pane';
 import {
   freePane, paneIsBusy, programIn, runsAnAgent, shipCanTake, type PaneReading,
 } from './pane-reading';

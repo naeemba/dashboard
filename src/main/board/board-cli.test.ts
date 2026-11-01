@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { failureLine, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
 import { USAGE } from './board-usage';
-import { emptyBoard, cardById, type Board } from './board';
+import { emptyBoard, cardById, type Board } from '../../shared/board/board';
 
 // Ids are handed in rather than generated, so a test can name the card it just made.
 let counter = 0;

@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { channels } from './channels';
-import { PROJECT_MODES } from './modes';
-import { LOCAL_SCREEN } from './screens';
+import { PROJECT_MODES } from '../../shared/keys/modes';
+import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { sessionStore } from './session-store';
 
 const directories: string[] = [];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Bell } from './waiting';
+import type { Bell } from '../../shared/panes/waiting';
 import { cellColumn, paneLastLine, paneLooksBusy, paneScreen, paneScrollback, type PaneTerminal } from './pane';
 
 // A screen of `rows` lines starting at `baseY`, with the scrollback above it filled with lines that

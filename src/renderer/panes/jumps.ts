@@ -1,7 +1,7 @@
-import type { Need } from './needs-you';
-import { showMode, type Page } from './page';
-import { modeOfPane } from './terminals';
-import type { WorktreeEntry } from './worktree-store';
+import type { Need } from '../../shared/manager/needs-you';
+import { showMode, type Page } from '../app/page';
+import { modeOfPane } from '../../shared/panes/terminals';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 // The ways to be sent somewhere you are not: a notification click, Enter on a row in the manager or
 // the worktree list, and the key that takes you to the next thing waiting on you. One place, so none

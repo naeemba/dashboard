@@ -3,46 +3,46 @@ import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, type Project } from './projects';
-import { baseName } from './base-name';
-import { git, runProgram } from './git';
-import { forgetSize, realPath, scanWorktrees, worktreeState } from './worktree-scan';
-import { shellDirectories, shellLiveness } from './shell-directory-lookup';
-import { processTree } from './process-tree';
-import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
-import { agentArguments, agentResumeArguments, editorArguments, pickShell } from './shell';
-import { registerTasks } from './task-runner';
-import { openAppWindow } from './app-window';
-import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, sizeOfPane, terminalId } from './terminals';
-import { nextPaneIndex } from './pane-layout';
-import { workerResumeArguments } from './dispatch';
-import { projectOfFolder, sessionRequests } from './session-requests';
-import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
-import { unfinishedWork } from './finished-work';
-import { makeThrowawayWorktree } from './branch-worktree';
-import { LOCAL_SCREEN, screens, windowHears } from './screens';
-import { boardChanges } from './board-changes';
-import { peekBoard, writeBoard } from './board-store';
-import { readMarkets } from './markets-fetch';
-import { boardWatchers } from './board-watch';
-import { failureReporter, failureText } from './failure';
-import { dropWrittenFiles, editorSocket, removeSocket } from './nvim-remote';
-import { registerPaneChannels } from './pane-channels';
-import { registerChatSessions } from './chat-sessions';
-import { startHost, type HeldByMain } from './host-wiring';
-import { connectAtLaunch, registerRemote } from './remote-ipc';
-import { registerPaneOpeners } from './pane-openers';
-import { registerWorkerChannels } from './worker-channels';
-import { channels, registerWithIpc } from './channels';
-import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from './log-entry';
-import { registerLog } from './log-ipc';
-import { registerProjectFiles, watchProjectBoard } from './project-files-ipc';
-import { sessionStore } from './session-store';
-import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation } from './claude-resume';
-import { workingPanes, WORKING_REPORT_MS } from './working-panes';
-import { keepHostToken } from './host-token';
-import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
-import { changedFiles, oneAtATime } from './ship';
+import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, type Project } from './app/projects';
+import { baseName } from '../shared/app/base-name';
+import { git, runProgram } from './app/git';
+import { forgetSize, realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
+import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
+import { processTree } from './panes/process-tree';
+import { paneScreenCopy, type PaneScreenCopy } from './panes/pane-screen-copy';
+import { agentArguments, agentResumeArguments, editorArguments, pickShell } from '../shared/panes/shell';
+import { registerTasks } from './manager/task-runner';
+import { openAppWindow } from './app/app-window';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, sizeOfPane, terminalId } from '../shared/panes/terminals';
+import { nextPaneIndex } from '../shared/panes/pane-layout';
+import { workerResumeArguments } from './workers/dispatch';
+import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
+import { unfinishedWork } from './workers/finished-work';
+import { makeThrowawayWorktree } from './ship/branch-worktree';
+import { LOCAL_SCREEN, screens, windowHears } from '../shared/remote-host/screens';
+import { boardChanges } from './board/board-changes';
+import { peekBoard, writeBoard } from './board/board-store';
+import { readMarkets } from './markets/markets-fetch';
+import { boardWatchers } from './board/board-watch';
+import { failureReporter, failureText } from '../shared/errors/failure';
+import { dropWrittenFiles, editorSocket, removeSocket } from './nvim/nvim-remote';
+import { registerPaneChannels } from './panes/pane-channels';
+import { registerChatSessions } from './chat/chat-sessions';
+import { startHost, type HeldByMain } from './remote-host/host-wiring';
+import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
+import { registerPaneOpeners } from './panes/pane-openers';
+import { registerWorkerChannels } from './workers/worker-channels';
+import { channels, registerWithIpc } from './app/channels';
+import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from '../shared/app/log-entry';
+import { registerLog } from './app/log-ipc';
+import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
+import { sessionStore } from './app/session-store';
+import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation } from './workers/claude-resume';
+import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
+import { keepHostToken } from './remote-host/host-token';
+import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
+import { changedFiles, oneAtATime } from './ship/ship';
 import {
   freePane,
   paneIsBusy,
@@ -50,8 +50,8 @@ import {
   runsAnAgent,
   shipCanTake,
   type PaneCommand, type PaneReading, type PaneUse,
-} from './pane-reading';
-import { usageSweep } from './usage-sweep';
+} from '../shared/panes/pane-reading';
+import { usageSweep } from './usage/usage-sweep';
 import {
   claimsPane,
   entryForCard,
@@ -67,11 +67,11 @@ import {
   worktreesDiffer,
   writeWorktrees,
   type WorktreeEntry,
-} from './worktree-store';
-import type { Settings } from './settings';
-import { reviewSweep } from './review-flow';
-import { shipFlow } from './ship-flow';
-import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from './bridge';
+} from './ship/worktree-store';
+import type { Settings } from '../shared/settings/settings';
+import { reviewSweep } from './ship/review-flow';
+import { shipFlow } from './ship/ship-flow';
+import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from '../shared/app/bridge';
 
 if (started) app.quit();
 

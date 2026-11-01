@@ -1,6 +1,6 @@
 import type { ElicitationRequest, ElicitationResult, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import type { PermissionAsk } from './chat-permission';
-import { isRecord } from './is-record';
+import type { PermissionAsk } from '../../renderer/chat/chat-permission';
+import { isRecord } from '../app/is-record';
 
 // An MCP server asking for something: a form to fill in, or a link to open (a sign-in). It reaches the
 // pane as a permission ask under this tool name, with the request as its input, so it is held, shown

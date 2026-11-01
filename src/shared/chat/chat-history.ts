@@ -1,5 +1,5 @@
 import type { ChatEntry } from './chat-transcript';
-import type { SearchRow } from './overlay';
+import type { SearchRow } from '../../renderer/app/overlay';
 
 // How many of the project's most recent conversations the prompt history search reads. Each is a
 // whole transcript off disk, so the oldest are left to /resume.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
 } from './dispatch';
-import { quoteForShell } from './shell';
+import { quoteForShell } from '../../shared/panes/shell';
 
 describe('session names', () => {
   // Two open projects each have a main, and SendMessage addresses one by its name.

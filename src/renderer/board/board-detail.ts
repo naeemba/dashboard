@@ -9,12 +9,12 @@ import {
   type Card,
   type Change,
   type Selection,
-} from './board';
-import { relativeAge } from './age';
-import { clampIndex } from './clamp-index';
-import { openOverlay } from './overlay';
-import { putEditBack, takeEdit } from './carried-edit';
-import { isModified } from './shortcuts';
+} from '../../shared/board/board';
+import { relativeAge } from '../../shared/app/age';
+import { clampIndex } from '../../shared/app/clamp-index';
+import { openOverlay } from '../app/overlay';
+import { putEditBack, takeEdit } from '../app/carried-edit';
+import { isModified } from '../keys/shortcuts';
 
 export type CardDetailOptions = {
   // The board as it is now, asked for again on every read. The dialog keeps no copy: something else

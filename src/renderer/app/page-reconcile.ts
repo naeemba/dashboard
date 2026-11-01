@@ -1,7 +1,7 @@
-import type { OpenProjects } from './bridge';
-import { clampIndex } from './clamp-index';
-import type { Project } from './projects';
-import { LOCAL_SCREEN } from './screens';
+import type { OpenProjects } from '../../shared/app/bridge';
+import { clampIndex } from '../../shared/app/clamp-index';
+import type { Project } from '../../main/app/projects';
+import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 
 // What the renderer does to its pages when the host says which projects are open. The host owns the
 // list, since two screens can open and close projects; each screen gets the list and makes its pages

@@ -1,4 +1,4 @@
-import { clampIndex } from './clamp-index';
+import { clampIndex } from '../app/clamp-index';
 import { MAIN_INDEX, isWorker, type Direction } from './terminals';
 
 // Where the keyboard goes among a project's terminals: the main session in a column of its own on the

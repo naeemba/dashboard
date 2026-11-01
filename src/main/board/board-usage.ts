@@ -1,4 +1,4 @@
-import { PRIORITIES } from './board';
+import { PRIORITIES } from '../../shared/board/board';
 
 // The one copy of what the `board` command takes. It lives here rather than in board-cli.ts because
 // board-store.ts quotes it into the CLAUDE.md it seeds, and board-store.ts is what main.ts imports:

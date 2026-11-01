@@ -1,5 +1,5 @@
-import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
-import type { Project } from './projects';
+import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
+import type { Project } from '../../main/app/projects';
 
 // A page as the manager's board needs it, which is what the renderer already holds one as.
 export type CardsPage = { project: Project; slot: number };

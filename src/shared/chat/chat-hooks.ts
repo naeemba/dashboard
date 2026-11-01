@@ -1,5 +1,5 @@
 import type { InjectedMessage } from './chat-events';
-import { stringOrEmpty as text } from './is-record';
+import { stringOrEmpty as text } from '../app/is-record';
 
 // Claude Code's hooks, as the session reports them when asked to (includeHookEvents): hook_started,
 // then hook_response when it answers; the hook_progress lines between stay in main (relayed). Claude

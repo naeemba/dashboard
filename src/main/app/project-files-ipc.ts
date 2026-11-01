@@ -1,9 +1,9 @@
 import type { Channels } from './channels';
-import type { Board } from './board';
-import { openBoard, peekBoard, writeBoard } from './board-store';
-import type { BoardChanges } from './board-changes';
-import type { BoardWatchers } from './board-watch';
-import { readNotes, writeNotes } from './notes-store';
+import type { Board } from '../../shared/board/board';
+import { openBoard, peekBoard, writeBoard } from '../board/board-store';
+import type { BoardChanges } from '../board/board-changes';
+import type { BoardWatchers } from '../board/board-watch';
+import { readNotes, writeNotes } from '../notes/notes-store';
 
 // The two files a project keeps in its .dashboard folder, read and written for the renderer. Main-process
 // wiring only, out of main.ts because main had reached its 600-line ceiling; what a board or a page of

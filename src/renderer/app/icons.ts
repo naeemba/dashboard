@@ -9,8 +9,8 @@ import {
   Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
-import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from './board';
-import type { Mode } from './modes';
+import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from '../../shared/board/board';
+import type { Mode } from '../../shared/keys/modes';
 
 const ICONS = {
   backlog: Inbox,

@@ -1,4 +1,4 @@
-import { version } from '../package.json';
+import { version } from '../../../package.json';
 
 // Which build of this app you are looking at. What the manager page prints it for is that page's to
 // say; the help dialog's manager blurb says it in full.

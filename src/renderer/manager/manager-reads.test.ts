@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Board } from './board';
-import type { ScannedWorktree } from './git-worktrees';
+import type { Board } from '../../shared/board/board';
+import type { ScannedWorktree } from '../../shared/ship/git-worktrees';
 import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, sameDirtiness } from './manager-reads';
-import { isStale } from './stale';
+import { isStale } from '../../shared/app/stale';
 
 // A read that settles only when the test says so, so the order things land in is the test's to pick.
 function deferred<Value>() {

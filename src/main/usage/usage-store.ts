@@ -1,6 +1,6 @@
 import { open, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { retainFrom, tokensOf, type FileUsage } from './usage';
+import { retainFrom, tokensOf, type FileUsage } from '../../shared/usage/usage';
 
 // Reading Claude Code's session logs. Every rule about what a number means is usage.ts's; what is here
 // is the walk, the incremental read, and the one decision that belongs with the file rather than the

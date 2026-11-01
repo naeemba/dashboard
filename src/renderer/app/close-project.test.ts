@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { closeRefusal, closingPanes, type ClosingPane } from './close-project';
-import type { PaneUse } from './pane-reading';
+import type { PaneUse } from '../../shared/panes/pane-reading';
 
 // A shell sitting at its own prompt: nothing running in it, so it holds nothing open.
 const pane = (name: string, use: Partial<ClosingPane> = {}): ClosingPane => ({

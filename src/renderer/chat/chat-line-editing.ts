@@ -4,7 +4,7 @@
 // another with nothing between them join into one, so Ctrl+W three times and one Ctrl+Y brings back
 // all three words.
 
-import type { CarriedEdit } from './carried-edit';
+import type { CarriedEdit } from '../app/carried-edit';
 
 export type LineEdit = 'kill-word' | 'kill-line-start' | 'kill-line-end' | 'yank' | 'yank-pop';
 

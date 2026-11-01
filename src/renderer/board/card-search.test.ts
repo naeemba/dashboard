@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardRows } from './card-search';
-import { DEFAULT_PRIORITY, type Board, type Card } from './board';
+import { DEFAULT_PRIORITY, type Board, type Card } from '../../shared/board/board';
 
 const card = (title: string, fields: Partial<Card> = {}): Card => ({
   id: title,

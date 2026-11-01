@@ -1,10 +1,10 @@
-import type { DashboardBridge } from './bridge';
-import { failureText } from './failure';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { failureText } from '../../shared/errors/failure';
 import { fileLinksIn, type FileLink } from './file-links';
-import type { Page } from './page';
-import { bufferLine, cellColumn } from './pane';
-import type { WidthAt } from './print-widths';
-import { linksStartingOn, linksTouching, type WrapBuffer } from './wrapped-links';
+import type { Page } from '../app/page';
+import { bufferLine, cellColumn } from '../panes/pane';
+import type { WidthAt } from '../panes/print-widths';
+import { linksStartingOn, linksTouching, type WrapBuffer } from '../panes/wrapped-links';
 
 // The two decisions behind both ways of opening a path a pane printed: which paths are on screen and
 // in what order, and what happens once one is picked. file-hints.ts puts the letters up; this decides.

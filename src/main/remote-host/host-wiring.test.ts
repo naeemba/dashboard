@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { channels } from './channels';
+import { channels } from '../app/channels';
 import { startHost, type HeldByMain } from './host-wiring';
-import { screens } from './screens';
-import type { Settings } from './settings';
+import { screens } from '../../shared/remote-host/screens';
+import type { Settings } from '../../shared/settings/settings';
 
 describe('startHost', () => {
   it('listens on nothing when the settings give no port', () => {

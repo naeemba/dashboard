@@ -1,5 +1,5 @@
 import { piece } from './chat-foot-view';
-import { keptSelection, nextTaskSelection, pickedTask, taskDetail, taskOrder, type ChatTask, type ChatTasks } from './chat-tasks';
+import { keptSelection, nextTaskSelection, pickedTask, taskDetail, taskOrder, type ChatTask, type ChatTasks } from '../../shared/chat/chat-tasks';
 
 // The strip over the box listing what Claude has running: one row per agent, workflow or background
 // command, each under the one that started it, with what it has done so far and, when the session

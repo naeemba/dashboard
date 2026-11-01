@@ -1,5 +1,5 @@
-import { fileMention, mentionInsertion } from './chat-commands';
-import { fuzzyScore } from './fuzzy';
+import { fileMention, mentionInsertion } from '../../shared/chat/chat-commands';
+import { fuzzyScore } from '../../shared/app/fuzzy';
 
 // The list of the project's files that @ opens in the prompt box, as Claude Code's does. The files are
 // git's list, from main, not the SDK's file_suggestions: chat-decision-4 says why. Matched here.

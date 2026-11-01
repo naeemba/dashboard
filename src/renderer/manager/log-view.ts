@@ -1,8 +1,8 @@
-import type { Action } from './actions';
-import type { DashboardBridge } from './bridge';
-import { clampIndex, heldIndex } from './clamp-index';
-import { failureText } from './failure';
-import { LOG_READ_COUNT, matchesLogFilter, type LogEntry } from './log-entry';
+import type { Action } from '../../shared/keys/actions';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
+import { failureText } from '../../shared/errors/failure';
+import { LOG_READ_COUNT, matchesLogFilter, type LogEntry } from '../../shared/app/log-entry';
 
 export type LogOptions = {
   bridge: DashboardBridge;

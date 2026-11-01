@@ -1,5 +1,5 @@
-import { SIZE_STALE_MS, type WorktreeSize } from './git-worktrees';
-import { isStale } from './stale';
+import { SIZE_STALE_MS, type WorktreeSize } from '../../shared/ship/git-worktrees';
+import { isStale } from '../../shared/app/stale';
 
 // When a worktree's folder is measured, and which measure's answer is kept. A size is a walk of every
 // file in the folder, node_modules and all, so a folder is measured at most once every SIZE_STALE_MS

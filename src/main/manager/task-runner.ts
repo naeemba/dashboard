@@ -1,8 +1,8 @@
-import type { Channels } from './channels';
+import type { Channels } from '../app/channels';
 import { spawn } from 'node:child_process';
-import { tailLines } from './manager';
-import { taskArguments } from './shell';
-import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from './tasks';
+import { tailLines } from '../../shared/manager/manager';
+import { taskArguments } from '../../shared/panes/shell';
+import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from '../../shared/manager/tasks';
 
 // The command screen's processes: starting them, killing them, and saying what each one did. No
 // decision of its own lives here — which report to send after a process ends is `tasks.ts`'s

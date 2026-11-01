@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { conversationText, exportFileName, exportRows } from './chat-export';
-import type { ChatEntry } from './chat-transcript';
+import type { ChatEntry } from '../../shared/chat/chat-transcript';
 
 const entries: ChatEntry[] = [
   { kind: 'user', text: 'Fix the foot,\nplease', images: [{ mediaType: 'image/png', data: '' }] },

@@ -1,11 +1,11 @@
-import { icon } from './icons';
+import { icon } from '../app/icons';
 import { renderMarkdown, safeImage } from './chat-markdown';
 import { todoChecklist, toolDiff, toolSummary, type DiffLine } from './chat-tools';
-import { baseName } from './base-name';
-import { pdfMentions, pdfOfTool } from './chat-pdf';
+import { baseName } from '../../shared/app/base-name';
+import { pdfMentions, pdfOfTool } from '../../shared/chat/chat-pdf';
 import { foldedMessage } from './chat-fold';
 import { stampText } from './chat-stamp';
-import { imageDataUrl, type ChatEntry, type ChatImage, type Stamp, type ToolResult } from './chat-transcript';
+import { imageDataUrl, type ChatEntry, type ChatImage, type Stamp, type ToolResult } from '../../shared/chat/chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
 // and chat-markdown.ts; this only builds the elements.

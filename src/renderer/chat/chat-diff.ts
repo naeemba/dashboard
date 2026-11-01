@@ -1,5 +1,5 @@
 import { toolDiff, type DiffLine } from './chat-tools';
-import type { ChatEntry } from './chat-transcript';
+import type { ChatEntry } from '../../shared/chat/chat-transcript';
 
 // What /diff shows: every file Claude changed in the conversation, in the order it first touched
 // them, with each change it made there one after another. Built from the session's own Edit, Write and

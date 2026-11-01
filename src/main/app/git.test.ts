@@ -3,9 +3,9 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY, BOARD_FILE_PATH } from './board-store';
+import { BOARD_DIRECTORY, BOARD_FILE_PATH } from '../board/board-store';
 import { git } from './git';
-import { blockingChanges } from './ship';
+import { blockingChanges } from '../ship/ship';
 
 // A real repository rather than a mocked child process: what is pinned here is what git prints and
 // what we keep of it, and a mock prints back whatever the test already believes.

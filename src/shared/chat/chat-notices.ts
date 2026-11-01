@@ -1,5 +1,5 @@
 import { clockTime } from './chat-status';
-import { isRecord } from './is-record';
+import { isRecord } from '../app/is-record';
 
 // What Claude Code prints in a terminal when a request is retried or a plan limit is near or hit, said
 // as a notice line in the thread. Everything else these two messages carry says nothing worth a line.

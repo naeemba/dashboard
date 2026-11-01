@@ -1,4 +1,4 @@
-import type { PaneSize } from './terminals';
+import type { PaneSize } from '../panes/terminals';
 
 // Every screen looking at the session, and how big each one draws each pane. A shell gets the smallest
 // columns and the smallest rows anyone reports, the way tmux does, so nothing is cut off on any screen.

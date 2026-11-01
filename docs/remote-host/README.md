@@ -6,6 +6,8 @@ projects are open; every screen's pages follow it.
 
 ## Files
 
+Folders: `src/main/remote-host/`, `src/shared/remote-host/`, `src/renderer/remote-host/`.
+
 - Host: `remote-host.ts`, `host-gate.ts`, `host-token.ts`, `host-wiring.ts`,
   `screens.ts`, `session-replay.ts`
 - Screen: `remote-client.ts`, `connect-flow.ts`, `pending-requests.ts`

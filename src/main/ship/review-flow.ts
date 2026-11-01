@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BOARD_FILE_PATH, parseBoard, readBoard } from './board-store';
+import { BOARD_FILE_PATH, parseBoard, readBoard } from '../board/board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
-import { failureText } from './failure';
-import { allCards, cardById, type Board } from './board';
-import type { ShipResult, WorktreeRemoval } from './bridge';
+import { failureText } from '../../shared/errors/failure';
+import { allCards, cardById, type Board } from '../../shared/board/board';
+import type { ShipResult, WorktreeRemoval } from '../../shared/app/bridge';
 import type { WorktreeEntry } from './worktree-store';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on

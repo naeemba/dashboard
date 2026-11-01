@@ -1,4 +1,4 @@
-import { modelTone, statusMeters, type ChatMeasure, type StatusTone } from './chat-status';
+import { modelTone, statusMeters, type ChatMeasure, type StatusTone } from '../../shared/chat/chat-status';
 
 // The row under the Claude screen's box as DOM: on the left the model, the mode, the effort and what
 // Claude is doing; on the right the meters Claude Code's status line carries, then the version. What

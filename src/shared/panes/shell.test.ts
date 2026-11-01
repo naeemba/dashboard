@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { agentArguments, agentResumeArguments, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
-import { defaultSettings } from './settings';
+import { defaultSettings } from '../settings/settings';
 
 describe('pickShell', () => {
   it('prefers SHELL_COMMAND', () => {

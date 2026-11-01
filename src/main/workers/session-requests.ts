@@ -1,10 +1,10 @@
-import { baseName } from './base-name';
+import { baseName } from '../../shared/app/base-name';
 import { workerArguments, workerSessionName } from './dispatch';
-import { failureText } from './failure';
-import { worktreesRoot } from './ship';
-import { ranInProject } from './usage';
+import { failureText } from '../../shared/errors/failure';
+import { worktreesRoot } from '../ship/ship';
+import { ranInProject } from '../../shared/usage/usage';
 import { parseSessionCommand, type WorkerState, type SessionReply, type SessionRequest } from './session-cli';
-import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from './terminals';
+import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a

@@ -1,4 +1,4 @@
-import { isRecord } from './is-record';
+import { isRecord } from '../../shared/app/is-record';
 
 // The wire between a screen and the host: the bridge's own channels, one JSON frame per
 // message. A request carries an id so its reply finds it; a push has none. Shared by remote-host.ts and

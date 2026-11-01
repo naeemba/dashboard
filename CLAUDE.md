@@ -39,8 +39,8 @@ app.
   every key in the settings screen while a row is armed; Shift on the manager
   list. A new project view is a row in `PROJECT_MODES`, a row in `ACTIONS`, a
   view in `page.ts`, a branch in `focusMode` and `modeLabel`, and a name and
-  blurb in `src/help.ts`. An action's name starts with its scope: it is a key
-  in the user's settings file. (keys-rule-1)
+  blurb in `src/renderer/keys/help.ts`. An action's name starts with its
+  scope: it is a key in the user's settings file. (keys-rule-1)
 - **Every `<input>` and `<textarea>` gets `dir = 'auto'`** in the change that
   adds it. These two counts agree (conventions-rule-2):
 
@@ -61,9 +61,10 @@ app.
   `board-view.ts` and `notes-view.ts` are exempted only until fixed; adding a
   file to that list without fixing it is the rule being broken. (errors-rule-1)
 - **The help dialog is part of the change.** A key, mode or screen change
-  updates `src/help.ts` in the same change: a new key is a row in
-  `src/actions.ts` (handler, help, settings and which-key strip all read it); a
-  screen that does something new gets its blurb updated. (keys-rule-2)
+  updates `src/renderer/keys/help.ts` in the same change: a new key is a row
+  in `src/shared/keys/actions.ts` (handler, help, settings and which-key strip
+  all read it); a screen that does something new gets its blurb updated.
+  (keys-rule-2)
 - **A decision gets its own module and a test.** `renderer.ts` is wiring. A
   rule with branches goes in a small module beside a `.test.ts`. Main-process
   event wiring and spawning are exempt wherever they live; a branch owes a test

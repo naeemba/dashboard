@@ -7,6 +7,8 @@ same file, so an agent can work its own card.
 
 ## Files
 
+Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
+
 - Model and file: `board.ts`, `board-store.ts`, `board-watch.ts`,
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-usage.ts`

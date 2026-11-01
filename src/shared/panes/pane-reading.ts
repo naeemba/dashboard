@@ -1,4 +1,4 @@
-import { baseName } from './base-name';
+import { baseName } from '../app/base-name';
 import { isWorker } from './terminals';
 
 // What can be read off one of a project's panes, and what three screens make of it. Nothing here

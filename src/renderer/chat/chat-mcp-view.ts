@@ -1,8 +1,8 @@
-import type { DashboardBridge } from './bridge';
-import { mcpActions, mcpNotice, mcpRows } from './chat-mcp';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { mcpActions, mcpNotice, mcpRows } from '../../shared/chat/chat-mcp';
 import type { ChatViewOptions } from './chat-view';
-import { failureText } from './failure';
-import { searchOverlay } from './overlay';
+import { failureText } from '../../shared/errors/failure';
+import { searchOverlay } from '../app/overlay';
 
 // /mcp's two sheets: the session's MCP servers with how each stands, then what to do to the one picked.
 export async function manageMcp(

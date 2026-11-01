@@ -1,7 +1,7 @@
-import { PRIORITIES, type Priority } from './board';
+import { PRIORITIES, type Priority } from '../../shared/board/board';
 import { AGE_WORDS, AGES, emptyFilter, FAMILIES, PRESENCES, type BoardFilter } from './board-filter';
-import { openOverlay } from './overlay';
-import { isModified } from './shortcuts';
+import { openOverlay } from '../app/overlay';
+import { isModified } from '../keys/shortcuts';
 
 type ChoiceField = 'family' | 'branch' | 'pullRequest' | 'comments' | 'created' | 'updated';
 

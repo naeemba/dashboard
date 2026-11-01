@@ -1,8 +1,8 @@
 import { localDate, pad } from './chat-stamp';
-import type { ChatEntry } from './chat-transcript';
+import type { ChatEntry } from '../../shared/chat/chat-transcript';
 import { toolSummary } from './chat-tools';
-import { ranked } from './fuzzy';
-import type { SearchRow } from './overlay';
+import { ranked } from '../../shared/app/fuzzy';
+import type { SearchRow } from '../app/overlay';
 
 // /export: the conversation on the Claude screen as plain text, the way Claude Code's /export writes
 // it — a prompt behind `>`, Claude's text as it came, each tool call one `⏺ Name(what)` line — copied

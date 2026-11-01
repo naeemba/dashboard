@@ -1,6 +1,6 @@
-import type { DashboardBridge } from './bridge';
-import { confirmOverlay } from './overlay';
-import type { WorktreeEntry } from './worktree-store';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { confirmOverlay } from '../app/overlay';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 // Removing one worktree, asking first. Its own file because two screens remove worktrees — the
 // worktree dialog and the manager's list — and a second copy of the questions is how one of them would

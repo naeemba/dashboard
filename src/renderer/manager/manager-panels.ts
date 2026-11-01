@@ -1,9 +1,9 @@
-import { relativeAge } from './age';
+import { relativeAge } from '../../shared/app/age';
 import type { ActivityEntry, ColumnCount } from './board-summary';
-import type { ManagerRow } from './manager';
+import type { ManagerRow } from '../../shared/manager/manager';
 import type { Dirtiness } from './manager-reads';
-import { barHeights, formatTokens, sumDays, sumTotals, WEEK_DAYS, weekdayIndex } from './usage';
-import { dirtySummary } from './worktree-rows';
+import { barHeights, formatTokens, sumDays, sumTotals, WEEK_DAYS, weekdayIndex } from '../../shared/usage/usage';
+import { dirtySummary } from '../../shared/ship/worktree-rows';
 
 // The parts of the manager's general screen that are not the list: the figures along the top and the
 // recent activity beside the list. Neither takes the keyboard — there is nothing on them to press —

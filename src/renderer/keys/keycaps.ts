@@ -1,4 +1,4 @@
-import { parseBinding } from './binding';
+import { parseBinding } from '../../shared/keys/binding';
 
 // A key binding as it is printed — "Ctrl+Shift+B", or a run such as "Shift+1…Shift+9" — split into the
 // keys you press, so each can be drawn as its own keycap. Whatever joins two bindings ("…") comes back

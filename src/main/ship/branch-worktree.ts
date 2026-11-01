@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { baseBranch, git } from './git';
+import { baseBranch, git } from '../app/git';
 import { branchNameFor, worktreePathFor } from './ship';
 
 // A new branch off the tip of the base branch on origin, checked out in the folder beside the project

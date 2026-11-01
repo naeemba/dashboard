@@ -1,6 +1,6 @@
-import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type Board } from './board';
-import { BOARD_FILE_PATH } from './board-store';
-import { posixQuoted } from './shell';
+import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
+import { BOARD_FILE_PATH } from '../board/board-store';
+import { posixQuoted } from '../../shared/panes/shell';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps

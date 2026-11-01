@@ -1,6 +1,6 @@
-import type { Board, Card } from './board';
-import { fuzzyScore } from './fuzzy';
-import type { SearchRow } from './overlay';
+import type { Board, Card } from '../../shared/board/board';
+import { fuzzyScore } from '../../shared/app/fuzzy';
+import type { SearchRow } from '../app/overlay';
 
 // One card offered by the search, as a row of the same dialog the project picker is: the name is the
 // card's title and choosing it answers with the card's id. `detail` is the column the card sits in,

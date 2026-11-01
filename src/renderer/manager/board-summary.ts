@@ -1,5 +1,5 @@
-import { timeOf } from './age';
-import { columnNamed, DONE_COLUMN, type Board } from './board';
+import { timeOf } from '../../shared/app/age';
+import { columnNamed, DONE_COLUMN, type Board } from '../../shared/board/board';
 
 // What the manager says about a project's board without opening it: how much is in each column, and
 // which cards were touched last across every open project. Read off the same Board the board view

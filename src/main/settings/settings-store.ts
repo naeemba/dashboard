@@ -1,6 +1,6 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseSettings, withoutShipped, type Settings } from './settings';
+import { parseSettings, withoutShipped, type Settings } from '../../shared/settings/settings';
 
 // Beside the .env file main already reads, not in Electron's userData directory. userData is
 // ~/Library/Application Support/Dashboard on macOS, and the point of this file is that a person opens

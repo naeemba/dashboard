@@ -1,7 +1,7 @@
-import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from './actions';
-import { formatBinding, parseBinding } from './binding';
-import { isRecord } from './is-record';
-import { THEME } from './theme';
+import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from '../keys/actions';
+import { formatBinding, parseBinding } from '../keys/binding';
+import { isRecord } from '../app/is-record';
+import { THEME } from '../app/theme';
 
 // Everything the settings file holds. `keys` always has an entry for every action after parsing, so
 // nothing downstream has to tell "unbound" apart from "not written down yet" — null is the first,

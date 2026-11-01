@@ -25,8 +25,8 @@ import {
   type MoveGesture,
   type Selection,
   type ShipHome,
-} from './board';
-import type { Action } from './actions';
+} from '../../shared/board/board';
+import type { Action } from '../../shared/keys/actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import {
   actsOnHiddenCard,
@@ -48,8 +48,8 @@ import {
 } from './board-filter';
 import { createDropMarker } from './drop-marker';
 import { createCardAim } from './card-aim';
-import { putEditBack, takeEdit } from './carried-edit';
-import { bringHome, shipsAway } from './ships-away';
+import { putEditBack, takeEdit } from '../app/carried-edit';
+import { bringHome, shipsAway } from '../ship/ships-away';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -67,16 +67,16 @@ import {
   undoChange,
   type BoardState,
 } from './board-state';
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import { cardRows } from './card-search';
-import { confirmOverlay, searchOverlay } from './overlay';
-import { columnIcon, icon, labelled } from './icons';
+import { confirmOverlay, searchOverlay } from '../app/overlay';
+import { columnIcon, icon, labelled } from '../app/icons';
 import { filterBar, sortButton } from './board-toolbar';
 import { openFilterDialog } from './filter-dialog';
-import { createNewestRead } from './newest-read';
-import { isModified } from './shortcuts';
-import { paneLabel } from './terminals';
-import type { WorktreeEntry } from './worktree-store';
+import { createNewestRead } from '../app/newest-read';
+import { isModified } from '../keys/shortcuts';
+import { paneLabel } from '../../shared/panes/terminals';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 export type BoardOptions = {
   projectPath: string;

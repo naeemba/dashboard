@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyBoard, moveCardById, type Board } from './board';
+import { emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';

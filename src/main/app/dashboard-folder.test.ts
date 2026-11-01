@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { dashboardFolder } from './dashboard-folder';
-import { MANAGER_PROJECT } from './manager';
+import { MANAGER_PROJECT } from '../../shared/manager/manager';
 
 describe('dashboardFolder', () => {
   it('is the project itself, so its .dashboard commits with the rest of the repository', () => {

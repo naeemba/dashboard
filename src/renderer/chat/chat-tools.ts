@@ -1,4 +1,4 @@
-import { isRecord, stringOrEmpty } from './is-record';
+import { isRecord, stringOrEmpty } from '../../shared/app/is-record';
 
 // A tool call as the chat pane folds it: one line saying what it did, and, for the tools that change a
 // file, the change as a diff. The input is whatever the model sent, so every field is read as maybe

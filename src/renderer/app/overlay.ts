@@ -1,6 +1,6 @@
 import { icon, type IconName } from './icons';
-import { clampIndex } from './clamp-index';
-import { isModified } from './shortcuts';
+import { clampIndex } from '../../shared/app/clamp-index';
+import { isModified } from '../keys/shortcuts';
 
 // The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
 // nobody has to keep a list of the dialogs in step by hand. The box inside it carries the same name

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseBinding } from './binding';
-import type { Mode } from './modes';
+import { parseBinding } from '../../shared/keys/binding';
+import type { Mode } from '../../shared/keys/modes';
 import { PASSED_THROUGH } from './shortcut-rows';
-import { bindKey, defaultSettings } from './settings';
+import { bindKey, defaultSettings } from '../../shared/settings/settings';
 import { mapShortcut } from './shortcuts';
-import { key } from './test-key';
+import { key } from '../../shared/keys/test-key';
 import { heldPrefix, whichKeyRows, whichKeyStep, type Held } from './which-key';
 
 const mac = defaultSettings(true).keys;

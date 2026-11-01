@@ -1,5 +1,5 @@
-import { ACTIONS, type ActionGroup } from './actions';
-import type { Settings } from './settings';
+import { ACTIONS, type ActionGroup } from '../../shared/keys/actions';
+import type { Settings } from '../../shared/settings/settings';
 
 // One line of the settings screen. Headings are printed and walked past; everything else can be
 // selected and changed. Kept apart from the view so the walking is testable without a browser.

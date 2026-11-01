@@ -1,8 +1,8 @@
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { PrintWidths } from './print-widths';
-import { isPrinted, tailLines } from './manager';
-import { isRinging, looksBusy, type Bell } from './waiting';
+import { isPrinted, tailLines } from '../../shared/manager/manager';
+import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
 
 // One pane: what it is, and what can be read off it. xterm has already laid the bytes out by the time
 // anything here runs, so the escape codes, the redraws and the spinner overwriting itself are all

@@ -1,6 +1,6 @@
-import { allCards, type Board } from './board';
+import { allCards, type Board } from '../../shared/board/board';
 import { filterSummary, isFilterActive, type BoardFilter } from './board-filter';
-import { icon, iconButton } from './icons';
+import { icon, iconButton } from '../app/icons';
 
 // The two controls the board draws around its cards: the strip over the columns saying what the
 // filter keeps, and the sort button on each column's heading. DOM only; the view decides what they do.

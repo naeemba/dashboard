@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { showPicker, typedHostFolder, type ConnectFlowPorts } from './connect-flow';
-import type { PickerChoice } from './picker';
-import { defaultSettings } from './settings';
+import type { PickerChoice } from '../app/picker';
+import { defaultSettings } from '../../shared/settings/settings';
 
 // Everything the flow touches is a fake: the answers are queued up front, the calls are recorded.
 function setup(choice: PickerChoice, answers: (string | null)[] = [], saved = { address: '', token: '' }, host = 'local') {

@@ -1,8 +1,8 @@
-import type { Action } from './actions';
-import { timeOf } from './age';
-import { cardAt, childrenOf, PRIORITIES, type Board, type Card, type Priority, type Selection } from './board';
-import { clampIndex } from './clamp-index';
-import type { Direction } from './terminals';
+import type { Action } from '../../shared/keys/actions';
+import { timeOf } from '../../shared/app/age';
+import { cardAt, childrenOf, PRIORITIES, type Board, type Card, type Priority, type Selection } from '../../shared/board/board';
+import { clampIndex } from '../../shared/app/clamp-index';
+import type { Direction } from '../../shared/panes/terminals';
 
 // What the board is narrowed to. Held by the view while you are on the board and dropped when you
 // leave, so nothing here is ever written to the file.

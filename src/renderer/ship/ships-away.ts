@@ -1,4 +1,4 @@
-import type { ShipHome } from './board';
+import type { ShipHome } from '../../shared/board/board';
 
 // Where each ship not yet back came from, by project. A second ship from the same column needs the
 // first one's home to know where it stood — shipHome says why.

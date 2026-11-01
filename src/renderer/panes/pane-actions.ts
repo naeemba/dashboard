@@ -1,7 +1,7 @@
-import { failureText } from './failure';
-import { confirmOverlay } from './overlay';
-import { focusTerminals, focusedPane, toggleFold, toggleZoom, type Page } from './page';
-import { closeQuestion, paneLabel, paneName } from './terminals';
+import { failureText } from '../../shared/errors/failure';
+import { confirmOverlay } from '../app/overlay';
+import { focusTerminals, focusedPane, toggleFold, toggleZoom, type Page } from '../app/page';
+import { closeQuestion, paneLabel, paneName } from '../../shared/panes/terminals';
 
 // The terminals view's keys that act on one pane of the page you are on and need nothing of the
 // renderer's but a way to main and to the error line. Out of renderer.ts, which was past its 600-line

@@ -18,7 +18,7 @@ The predicates live in `board.ts`, `settings.ts`, `ship.ts`, `pane-reading.ts`,
 `notes-state.ts` and `board-state.ts`. A refusal worth a message reuses one or
 adds another — never a second copy of the condition. This lists them:
 
-    grep -rhn "^export function \(has\|is\|may\|blocking\|changed\)[A-Za-z]*(" src/board.ts src/settings.ts src/ship.ts src/pane-reading.ts src/notes-state.ts src/board-state.ts
+    grep -rhn "^export function \(has\|is\|may\|blocking\|changed\)[A-Za-z]*(" src/shared/board/board.ts src/shared/settings/settings.ts src/main/ship/ship.ts src/shared/panes/pane-reading.ts src/renderer/notes/notes-state.ts src/renderer/board/board-state.ts
 
 A predicate is only worth anything if it asks the same question as the thing
 doing the refusing. `blockingChanges` skips `.dashboard/` on purpose, so a ship

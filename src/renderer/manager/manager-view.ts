@@ -1,23 +1,23 @@
-import type { Action } from './actions';
-import { relativeAge } from './age';
-import { icon } from './icons';
+import type { Action } from '../../shared/keys/actions';
+import { relativeAge } from '../../shared/app/age';
+import { icon } from '../app/icons';
 import { columnCounts, recentActivity } from './board-summary';
-import { clampIndex, heldIndex } from './clamp-index';
-import { formatSize } from './git-worktrees';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
+import { formatSize } from '../../shared/ship/git-worktrees';
 import {
   alertSummary, answerTarget, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, queueLength, queueRefresh,
   noPaneText, removableWorktree, slotOfLine, stateLabel, withQueue, type ManagerLine, type ManagerRow,
   type ManagerWorktree, type PaneSummary,
-} from './manager';
+} from '../../shared/manager/manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
-import { NEED_LABELS, nextLanding, needsYou, type Need } from './needs-you';
+import { NEED_LABELS, nextLanding, needsYou, type Need } from '../../shared/manager/needs-you';
 import type { ManagerReads } from './manager-reads';
-import { isBareCharacter } from './shortcuts';
-import { paneTokens, projectTokens, TOKEN_COLUMNS } from './usage';
-import { APP_VERSION } from './version';
-import type { WorktreeTarget } from './worktree-removal';
-import { dirtyLabel, worktreePaneText } from './worktree-rows';
-import type { JumpToWorktree } from './worktree-view';
+import { isBareCharacter } from '../keys/shortcuts';
+import { paneTokens, projectTokens, TOKEN_COLUMNS } from '../../shared/usage/usage';
+import { APP_VERSION } from '../app/version';
+import type { WorktreeTarget } from '../ship/worktree-removal';
+import { dirtyLabel, worktreePaneText } from '../../shared/ship/worktree-rows';
+import type { JumpToWorktree } from '../ship/worktree-view';
 
 export type ManagerOptions = {
   // Where a pane row lands you: the project holding that slot, and the pane at that index.

@@ -6,6 +6,8 @@ before the first window gets a box and an exit.
 
 ## Files
 
+Folders: `src/shared/errors/`, `src/renderer/errors/`.
+
 - `failure.ts`, `status-error.ts`, `error-log.ts`
 
 ## Scenarios

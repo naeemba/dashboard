@@ -1,6 +1,6 @@
-import type { DashboardBridge } from './bridge';
-import type { ChatViewOptions } from './chat-view';
-import { failureText } from './failure';
+import type { DashboardBridge } from '../app/bridge';
+import type { ChatViewOptions } from '../../renderer/chat/chat-view';
+import { failureText } from '../errors/failure';
 
 // /rename on the Claude screen. Claude Code names a conversation with it; the Agent SDK writes the
 // name into the conversation's file, where the summary /resume lists reads it first. The screen sends

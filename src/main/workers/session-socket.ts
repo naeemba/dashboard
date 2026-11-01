@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import { failureText } from './failure';
+import { failureText } from '../../shared/errors/failure';
 import type { SessionReply, SessionRequest } from './session-cli';
 
 // The `session` command's way into the running app. A pane's command is a separate node process and

@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { isManagerPath } from './manager';
+import { isManagerPath } from '../../shared/manager/manager';
 
 // Which folder a page's .dashboard sits in. A project's is the project itself, so everything the
 // dashboard keeps about it commits or is ignored with the rest of the repository.

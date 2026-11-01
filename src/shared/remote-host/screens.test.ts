@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { screens, windowHears, LOCAL_SCREEN } from './screens';
-import { sizeOfPane, DEFAULT_PANE_SIZE } from './terminals';
+import { sizeOfPane, DEFAULT_PANE_SIZE } from '../panes/terminals';
 
 describe('screens', () => {
   it('gives a shell the smallest of what every screen reports', () => {

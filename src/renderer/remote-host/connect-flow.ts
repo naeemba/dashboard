@@ -1,9 +1,9 @@
-import type { DashboardBridge as Bridge } from './bridge';
-import { failureText } from './failure';
-import type { PickerChoice, PickerState } from './picker';
-import { LOCAL_SCREEN } from './screens';
-import type { Project } from './projects';
-import type { Settings } from './settings';
+import type { DashboardBridge as Bridge } from '../../shared/app/bridge';
+import { failureText } from '../../shared/errors/failure';
+import type { PickerChoice, PickerState } from '../app/picker';
+import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
+import type { Project } from '../../main/app/projects';
+import type { Settings } from '../../shared/settings/settings';
 
 // What the renderer hands over: the live pages and settings (functions, since both change between
 // calls) and the few things that put a page on screen.

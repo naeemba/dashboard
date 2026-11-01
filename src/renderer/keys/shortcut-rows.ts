@@ -1,6 +1,6 @@
-import { ACTIONS, defaultBinding, type ActionEntry } from './actions';
-import type { Mode } from './modes';
-import type { Settings } from './settings';
+import { ACTIONS, defaultBinding, type ActionEntry } from '../../shared/keys/actions';
+import type { Mode } from '../../shared/keys/modes';
+import type { Settings } from '../../shared/settings/settings';
 import { passesThrough } from './shortcuts';
 
 // One row of a list of keys: what you press, and what it does. Two screens print such a list — the

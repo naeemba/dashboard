@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   agentToResume, isPaneConversation, mainResume, resumable, resumedAs, resumeLine, sessionToWrite, withClaude, type PaneConversation,
 } from './claude-resume';
-import type { WorktreeEntry } from './worktree-store';
+import type { WorktreeEntry } from '../ship/worktree-store';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';

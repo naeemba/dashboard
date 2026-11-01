@@ -1,6 +1,6 @@
-import type { Board } from './board';
-import type { ScannedWorktree } from './git-worktrees';
-import { isStale } from './stale';
+import type { Board } from '../../shared/board/board';
+import type { ScannedWorktree } from '../../shared/ship/git-worktrees';
+import { isStale } from '../../shared/app/stale';
 
 // What the manager's list reads for itself, on top of the rows the renderer hands it: every open
 // project's board, for the counts and the activity, and every worktree git knows of in those projects —

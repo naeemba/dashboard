@@ -1,5 +1,5 @@
-import { isRecord, stringOrEmpty as text } from './is-record';
-import { formatTokens } from './usage';
+import { isRecord, stringOrEmpty as text } from '../app/is-record';
+import { formatTokens } from '../usage/usage';
 
 // The agents, workflows and background commands Claude has running, as the strip over the box lists
 // them. The session streams them as system messages — task_started, task_progress, task_updated,

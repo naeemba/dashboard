@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Board } from './board';
+import type { Board } from '../../shared/board/board';
 import { boardChanges } from './board-changes';
-import type { LogDraft } from './log-entry';
+import type { LogDraft } from '../../shared/app/log-entry';
 
 const card = { id: 'a', title: 'Fix login' } as never;
 const inTodo: Board = { columns: [{ name: 'Todo', cards: [card] }, { name: 'Doing', cards: [] }] };

@@ -1,5 +1,5 @@
-import { clockTime } from './chat-status';
-import type { Stamp } from './chat-transcript';
+import { clockTime } from '../../shared/chat/chat-status';
+import type { Stamp } from '../../shared/chat/chat-transcript';
 
 export const pad = (value: number): string => String(value).padStart(2, '0');
 

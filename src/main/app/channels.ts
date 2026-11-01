@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
-import { isClientChannel } from './remote-protocol';
-import { LOCAL_SCREEN } from './screens';
+import { isClientChannel } from '../remote-host/remote-protocol';
+import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 
 // Every channel main answers, in one table, so two callers can reach them: ipcMain for the host's own
 // window, and the websocket for every other screen. The screen a call came from is the first argument,

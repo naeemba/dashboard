@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import { reportBoardWrites } from './board-writes';
 
 const empty = { columns: [] };

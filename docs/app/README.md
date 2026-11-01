@@ -6,6 +6,15 @@ project and wires every other feature into it.
 
 ## Files
 
+Folders: `src/main/`, `src/main/app/`, `src/preload/`, `src/shared/app/`, `src/renderer/`, `src/renderer/app/`.
+
+A new file goes in `src/<process>/<feature>/`. The process is the side that
+runs it (a type-only import does not count): `main/` when only main or the two
+command entries reach it, `renderer/` when only `renderer.ts` does (every
+stylesheet too), `shared/` when both do, `preload/` for the preload. The feature
+is the `docs/<feature>/` folder whose Files list names it. Basenames keep their
+prefix (`renderer/chat/chat-view.ts`), and a test sits beside its module.
+
 - Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`, `version.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,

@@ -1,14 +1,14 @@
-import { actionByName } from './actions';
-import { formatBinding, keystrokeOf } from './binding';
-import { labelled } from './icons';
-import { keycaps } from './keycaps';
-import { confirmOverlay, openOverlay } from './overlay';
+import { actionByName } from '../../shared/keys/actions';
+import { formatBinding, keystrokeOf } from '../../shared/keys/binding';
+import { labelled } from '../app/icons';
+import { keycaps } from '../keys/keycaps';
+import { confirmOverlay, openOverlay } from '../app/overlay';
 import {
   bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, resetKeys,
   type Settings,
-} from './settings';
+} from '../../shared/settings/settings';
 import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
-import { chatShadowPartner, isModified } from './shortcuts';
+import { chatShadowPartner, isModified } from '../keys/shortcuts';
 
 // Modifier keys pressed on their own are not a binding — you are still on your way to one. Without
 // this, arming a row and reaching for Ctrl+Shift+K binds Ctrl the moment your finger lands.

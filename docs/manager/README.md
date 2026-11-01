@@ -7,6 +7,8 @@ log, and the build version along its foot.
 
 ## Files
 
+Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
+
 - Page: `manager.ts`, `manager-page.ts`, `manager-view.ts`,
   `manager-panels.ts`, `manager-reads.ts`, `manager-sections.ts`,
   `section-strip.ts`, `manager.css`

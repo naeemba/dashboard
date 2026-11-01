@@ -8,7 +8,7 @@ export default mergeConfig(
   defineConfig({
     build: {
       lib: {
-        entry: 'src/session-cli-entry.ts',
+        entry: 'src/main/workers/session-cli-entry.ts',
         fileName: () => 'session-cli-entry.js',
         formats: ['cjs'],
       },

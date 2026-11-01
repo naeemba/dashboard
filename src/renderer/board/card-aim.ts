@@ -1,4 +1,4 @@
-import { selectionOf, type Board, type Selection } from './board';
+import { selectionOf, type Board, type Selection } from '../../shared/board/board';
 
 // The card the next arrival on a board lands on. The manager's queue sets it before sending you to the
 // board; the arrival spends it, so every later arrival starts where an arrival normally starts.

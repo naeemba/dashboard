@@ -1,8 +1,8 @@
-import type { DashboardBridge } from './bridge';
-import { promptAfterRewind, restoredNotice, rewindChoices, rewindRows } from './chat-rewind';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { promptAfterRewind, restoredNotice, rewindChoices, rewindRows } from '../../shared/chat/chat-rewind';
 import type { Say } from './chat-screen-commands';
-import { failureText } from './failure';
-import { searchOverlay } from './overlay';
+import { failureText } from '../../shared/errors/failure';
+import { searchOverlay } from '../app/overlay';
 
 // /rewind's two sheets: the conversation's prompts, newest first, then what goes back to how it was
 // before the one picked. Resolves with that prompt when the conversation went back, for the box to

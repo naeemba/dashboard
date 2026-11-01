@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Board } from './board';
+import type { Board } from '../../shared/board/board';
 import { cardMoves } from './card-moves';
 
 function board(columns: Record<string, string[]>): Board {

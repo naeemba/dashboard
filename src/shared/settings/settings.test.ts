@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
 } from './settings';
-import { ACTIONS, scopesOverlap } from './actions';
-import { THEME } from './theme';
+import { ACTIONS, scopesOverlap } from '../keys/actions';
+import { THEME } from '../app/theme';
 
 describe('parseSettings', () => {
   it('gives the defaults for an empty object, a missing file, or rubbish', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ACTIONS, defaultBinding } from './actions';
 import { formatBinding, parseBinding } from './binding';
 import { MODES } from './modes';
-import { hears } from './shortcuts';
+import { hears } from '../../renderer/keys/shortcuts';
 
 describe('the action table', () => {
   it('names every action exactly once, because the name is the key in settings.json', () => {

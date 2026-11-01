@@ -1,4 +1,4 @@
-import { freePane, paneIsBusy, type PaneUse } from './pane-reading';
+import { freePane, paneIsBusy, type PaneUse } from '../../shared/panes/pane-reading';
 
 // Which pane a command from the command screen lands in, and which projects it cannot land in at all.
 // That screen marks projects, not panes, so something has to pick one pane per project — and a project

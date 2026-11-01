@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY } from './board-store';
+import { BOARD_DIRECTORY } from '../board/board-store';
 import { NOTES_FILE, notesPath, readNotes, writeNotes } from './notes-store';
 
 function project(): string {

@@ -1,4 +1,4 @@
-import type { Board } from './board';
+import type { Board } from '../../shared/board/board';
 
 // Which cards changed column between two reads of one board, as the log says it. Only moves: a reorder
 // inside a column is noise, and a card added or deleted is on the board itself to see.

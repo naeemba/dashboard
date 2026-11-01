@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PRIORITY, cardAt, deleteCard, moveCard, renameCard, type Board, type Selection } from './board';
+import { DEFAULT_PRIORITY, cardAt, deleteCard, moveCard, renameCard, type Board, type Selection } from '../../shared/board/board';
 import {
   addBlankCard,
   applyAutomaticChange,

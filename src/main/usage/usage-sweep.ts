@@ -1,10 +1,10 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from './usage';
+import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from '../../shared/usage/usage';
 import { liveSessions, sweepUsage } from './usage-store';
-import type { SessionPlacement } from './resume-ledger';
-import { parentProcesses, sessionsByPane } from './pane-sessions';
-import { worktreesRoot } from './ship';
+import type { SessionPlacement } from '../workers/resume-ledger';
+import { parentProcesses, sessionsByPane } from '../workers/pane-sessions';
+import { worktreesRoot } from '../ship/ship';
 
 // Claude Code's own session logs, read for what each project and each pane has cost. Read-only and
 // offline: nothing is asked of any server and nothing under ~/.claude is written. What the numbers mean

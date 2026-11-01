@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createJumps } from './jumps';
-import type { Need } from './needs-you';
-import type { Page } from './page';
+import type { Need } from '../../shared/manager/needs-you';
+import type { Page } from '../app/page';
 
 // page.ts builds terminals, which need a browser; the jumps only need it to switch a page's view.
-vi.mock('./page', () => ({
+vi.mock('../app/page', () => ({
   showMode: (page: { mode: string }, mode: string) => {
     page.mode = mode;
   },

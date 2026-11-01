@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocketServer } from 'ws';
-import type { Channels } from './channels';
-import type { PaneScreenCopy } from './pane-screen-copy';
+import type { Channels } from '../app/channels';
+import type { PaneScreenCopy } from '../panes/pane-screen-copy';
 import { connectAtLaunch, registerRemote, type HeldForRemote } from './remote-ipc';
 import { decodeFrame, encodeFrame, isRequest } from './remote-protocol';
-import type { Settings } from './settings';
+import type { Settings } from '../../shared/settings/settings';
 
 let server: WebSocketServer | undefined;
 afterEach(() => { server?.close(); });

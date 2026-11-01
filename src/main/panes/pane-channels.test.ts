@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type * as pty from 'node-pty';
 import { resizeShellsToScreens } from './pane-channels';
-import { screens } from './screens';
+import { screens } from '../../shared/remote-host/screens';
 
 function shell(cols: number, rows: number) {
   const resizes: number[][] = [];

@@ -1,21 +1,21 @@
 import type { CardsPage } from './cards';
 import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
-import type { DashboardBridge } from './bridge';
-import type { SendPlan } from './free-pane';
-import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import type { SendPlan } from '../panes/free-pane';
+import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
 import { createLogView } from './log-view';
 import { createManagerReads } from './manager-reads';
 import { createManagerView } from './manager-view';
-import { createMarketsView } from './markets-view';
-import type { Mode } from './modes';
-import type { Need } from './needs-you';
-import { createNotesView } from './notes-view';
-import { showMode, type Page } from './page';
+import { createMarketsView } from '../markets/markets-view';
+import type { Mode } from '../../shared/keys/modes';
+import type { Need } from '../../shared/manager/needs-you';
+import { createNotesView } from '../notes/notes-view';
+import { showMode, type Page } from '../app/page';
 import { createSectionStrip } from './section-strip';
-import { removeWorktreeAsking } from './worktree-removal';
-import type { WorktreeEntry } from './worktree-store';
-import type { JumpToWorktree } from './worktree-view';
+import { removeWorktreeAsking } from '../ship/worktree-removal';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { JumpToWorktree } from '../ship/worktree-view';
 
 // The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
 // editor. It has five views — the list of what every project's panes want, a board of its own above

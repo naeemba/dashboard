@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SIZE_STALE_MS } from './git-worktrees';
+import { SIZE_STALE_MS } from '../../shared/ship/git-worktrees';
 import { createWorktreeSizes } from './worktree-sizes';
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));

@@ -1,11 +1,11 @@
-import type { DashboardBridge } from './bridge';
-import { copyTarget, modelRows, namedModel, resumeRows } from './chat-commands';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import { copyTarget, modelRows, namedModel, resumeRows } from '../../shared/chat/chat-commands';
 import { editsHeading, sessionEdits } from './chat-diff';
 import { diffBlock } from './chat-entries';
-import type { ChatEntry } from './chat-transcript';
+import type { ChatEntry } from '../../shared/chat/chat-transcript';
 import type { ChatViewOptions } from './chat-view';
-import { failureText } from './failure';
-import { searchOverlay, viewerOverlay } from './overlay';
+import { failureText } from '../../shared/errors/failure';
+import { searchOverlay, viewerOverlay } from '../app/overlay';
 
 // The Claude screen's own commands that are a sheet or a call to main and nothing of the view's own,
 // the way /rewind is in chat-rewind-view.ts. Each one says what went wrong itself and resolves once it

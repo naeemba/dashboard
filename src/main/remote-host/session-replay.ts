@@ -1,6 +1,6 @@
-import type { OpenProjects, WorktreeList } from './bridge';
-import type { PaneScreenCopy } from './pane-screen-copy';
-import type { UsageSnapshot } from './usage';
+import type { OpenProjects, WorktreeList } from '../../shared/app/bridge';
+import type { PaneScreenCopy } from '../panes/pane-screen-copy';
+import type { UsageSnapshot } from '../../shared/usage/usage';
 
 export type SessionState = {
   screenCopies: Map<string, PaneScreenCopy>;

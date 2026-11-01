@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { connect } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { locateCommand, taskArguments } from './shell';
+import { locateCommand, taskArguments } from '../../shared/panes/shell';
 
 const runCommand = promisify(execFile);
 

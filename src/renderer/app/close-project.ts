@@ -1,5 +1,5 @@
-import { paneIsBusy, programIn, type PaneUse } from './pane-reading';
-import { isWorker } from './terminals';
+import { paneIsBusy, programIn, type PaneUse } from '../../shared/panes/pane-reading';
+import { isWorker } from '../../shared/panes/terminals';
 
 // Whether a project can be closed, and the sentence saying why not. Closing takes every shell and the
 // editor away at once and there is no undo for it, so the one thing worth stopping it for is a pane

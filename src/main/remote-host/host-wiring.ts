@@ -1,9 +1,9 @@
 import type * as pty from 'node-pty';
-import { resizeShellsToScreens } from './pane-channels';
+import { resizeShellsToScreens } from '../panes/pane-channels';
 import type { HeldForRemote } from './remote-ipc';
 import { replaySession } from './session-replay';
 import { startRemoteHost, type RemoteHost } from './remote-host';
-import type { Screens } from './screens';
+import type { Screens } from '../../shared/remote-host/screens';
 
 // What the host needs from the main process, which holds all of it. Out of main.ts because main had
 // reached its 600-line ceiling; this is only the plumbing between the two.

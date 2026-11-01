@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
-import type { RemoteTarget } from './channels';
-import { failureText } from './failure';
-import type { LogDraft } from './log-entry';
+import type { RemoteTarget } from '../app/channels';
+import { failureText } from '../../shared/errors/failure';
+import type { LogDraft } from '../../shared/app/log-entry';
 import { pendingRequests } from './pending-requests';
 import {
   CLOSE_BAD_TOKEN, CLOSE_BAD_VERSION, HELLO_CHANNEL, REQUEST_TIMEOUT_MS, decodeFrame, encodeFrame, isReply, type Frame,

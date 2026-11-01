@@ -1,5 +1,5 @@
-import { clampIndex } from './clamp-index';
-import type { Mode } from './modes';
+import { clampIndex } from '../app/clamp-index';
+import type { Mode } from '../keys/modes';
 
 // The named views along the top of the manager page, in the order the strip prints them.
 //

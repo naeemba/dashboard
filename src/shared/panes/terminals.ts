@@ -1,4 +1,4 @@
-import type { Mode } from './modes';
+import type { Mode } from '../keys/modes';
 
 // A project's terminals are its main session and the worker panes beside it. The main session is
 // always place 0, the Claude screen full height on the left, and never a pty; workers are numbered from 1 and come and go, so a project has

@@ -2,60 +2,60 @@ import '@xterm/xterm/css/xterm.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 // The app's look, a file per area, in the order they cascade: a later file wins a tie.
-import './app.css';
-import './chrome.css';
-import './board.css';
-import './dialogs.css';
-import './which-key.css';
-import './index.css';
-import './worktrees.css';
-import './usage.css';
-import './manager.css';
-import { openHelp } from './help';
-import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './chrome-bars';
-import { mapShortcut, type Action } from './shortcuts';
-import { failureText } from './failure';
-import { createStatusError } from './status-error';
-import { fileLinkOpener, showFileHints } from './file-hints';
-import { type Mode } from './modes';
-import { openPicker } from './picker';
-import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './connect-flow';
-import { openWorktrees, type WorktreeDialog } from './worktree-view';
-import { TITLE_BAR_HEIGHT } from './theme';
+import './app/app.css';
+import './app/chrome.css';
+import './board/board.css';
+import './app/dialogs.css';
+import './keys/which-key.css';
+import './app/index.css';
+import './ship/worktrees.css';
+import './usage/usage.css';
+import './manager/manager.css';
+import { openHelp } from './keys/help';
+import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
+import { mapShortcut, type Action } from './keys/shortcuts';
+import { failureText } from '../shared/errors/failure';
+import { createStatusError } from './errors/status-error';
+import { fileLinkOpener, showFileHints } from './nvim/file-hints';
+import { type Mode } from '../shared/keys/modes';
+import { openPicker } from './app/picker';
+import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './remote-host/connect-flow';
+import { openWorktrees, type WorktreeDialog } from './ship/worktree-view';
+import { TITLE_BAR_HEIGHT } from '../shared/app/theme';
 import {
   EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
-} from './terminals';
-import { terminalStatus, type StatusPage } from './status';
-import type { Project } from './projects';
-import type { Session } from './session';
-import type { WorktreeEntry } from './worktree-store';
-import { WORKING_REPORT_MS } from './working-panes';
-import type { WorktreeList } from './bridge';
-import { createPageSync } from './page-sync';
-import { NO_USAGE, type UsageSnapshot } from './usage';
-import { defaultSettings, type Settings } from './settings';
-import { openSettings } from './settings-view';
-import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './overlay';
-import { anyWaiting, questionBell, waitingNames } from './waiting';
+} from '../shared/panes/terminals';
+import { terminalStatus, type StatusPage } from './app/status';
+import type { Project } from '../main/app/projects';
+import type { Session } from '../main/app/session';
+import type { WorktreeEntry } from '../main/ship/worktree-store';
+import { WORKING_REPORT_MS } from '../shared/panes/working-panes';
+import type { WorktreeList } from '../shared/app/bridge';
+import { createPageSync } from './app/page-sync';
+import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
+import { defaultSettings, type Settings } from '../shared/settings/settings';
+import { openSettings } from './settings/settings-view';
+import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './app/overlay';
+import { anyWaiting, questionBell, waitingNames } from '../shared/panes/waiting';
 import {
   isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerPane, type ManagerRow,
-} from './manager';
-import { createManagerPage } from './manager-page';
-import { closeRefusal, closingPanes } from './close-project';
-import { paneSends } from './pane-sends';
-import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './pane';
+} from '../shared/manager/manager';
+import { createManagerPage } from './manager/manager-page';
+import { closeRefusal, closingPanes } from './app/close-project';
+import { paneSends } from './panes/pane-sends';
+import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './panes/pane';
 import {
   createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, typedNames, type Page,
-} from './page';
-import { neighborPane, paneAtPosition, stepPane } from './pane-layout';
-import { closePane, runPaneAction, type PanePorts } from './pane-actions';
-import { whichKeyRows, whichKeyStep, type Held } from './which-key';
-import { createWhichKey } from './which-key-view';
-import { nextSectionMode } from './manager-sections';
-import { actionByName } from './actions';
-import { reportBoardWrites } from './board-writes';
-import { createJumps } from './jumps';
-import { editFocusedBox } from './chat-line-editing';
+} from './app/page';
+import { neighborPane, paneAtPosition, stepPane } from '../shared/panes/pane-layout';
+import { closePane, runPaneAction, type PanePorts } from './panes/pane-actions';
+import { whichKeyRows, whichKeyStep, type Held } from './keys/which-key';
+import { createWhichKey } from './keys/which-key-view';
+import { nextSectionMode } from '../shared/manager/manager-sections';
+import { actionByName } from '../shared/keys/actions';
+import { reportBoardWrites } from './board/board-writes';
+import { createJumps } from './panes/jumps';
+import { editFocusedBox } from './chat/chat-line-editing';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the

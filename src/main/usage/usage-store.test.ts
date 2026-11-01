@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { liveSessions, sweepUsage } from './usage-store';
-import { totalsOf, type FileUsage } from './usage';
+import { totalsOf, type FileUsage } from '../../shared/usage/usage';
 
 const NOW = new Date(2026, 8, 14, 9, 0, 0).getTime();
 const PROJECT = '/Users/sharp/work/api';

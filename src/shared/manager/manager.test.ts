@@ -6,9 +6,9 @@ import {
   type ManagerLine, type PaneSummary,
 } from './manager';
 import type { Need } from './needs-you';
-import { NO_DAYS, NO_TOTALS } from './usage';
-import type { WorktreeEntry } from './worktree-store';
-import type { Bell } from './waiting';
+import { NO_DAYS, NO_TOTALS } from '../usage/usage';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { Bell } from '../panes/waiting';
 
 // The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
 // with one written out.

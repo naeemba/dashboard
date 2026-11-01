@@ -1,5 +1,5 @@
 import type { PermissionResult, PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
-import { isRecord } from './is-record';
+import { isRecord } from '../../shared/app/is-record';
 import { toolSummary } from './chat-tools';
 
 // A tool call the session wants a yes or no on, as main hands it to the chat pane. Everything the

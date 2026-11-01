@@ -1,6 +1,6 @@
-import type { Board } from './board';
+import type { Board } from '../../shared/board/board';
 import { cardMoves } from './card-moves';
-import type { LogDraft } from './log-entry';
+import type { LogDraft } from '../../shared/app/log-entry';
 
 // Card moves, for the log. The last board each project was read or written with is kept here, and each
 // new one is compared with it: a write from the app is a `card` entry, a change from the `board`

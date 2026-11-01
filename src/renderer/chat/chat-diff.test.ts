@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { editsHeading, sessionEdits } from './chat-diff';
-import type { ChatEntry } from './chat-transcript';
+import type { ChatEntry } from '../../shared/chat/chat-transcript';
 
 const done = { text: 'ok', images: [], isError: false };
 

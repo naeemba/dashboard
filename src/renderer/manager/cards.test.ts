@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardsProjects, type CardsPage } from './cards';
-import { MANAGER_PROJECT, MANAGER_SLOT } from './manager';
+import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
 
 function cardsPage(name: string, missing = false): CardsPage {
   return { project: { name, path: `/projects/${name}`, missing }, slot: 0 };

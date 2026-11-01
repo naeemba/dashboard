@@ -1,9 +1,9 @@
 import { app, shell } from 'electron';
-import type { Channels } from './channels';
-import { findPaneFile, noSuchFile, type PaneFolders } from './file-open';
-import type { FileLink } from './file-links';
-import { isOpenableLink } from './links';
-import { openFileInEditor, openPrompt, openScrollback, readPrompt, type EditorTarget } from './nvim-remote';
+import type { Channels } from '../app/channels';
+import { findPaneFile, noSuchFile, type PaneFolders } from '../nvim/file-open';
+import type { FileLink } from '../../renderer/nvim/file-links';
+import { isOpenableLink } from '../../shared/panes/links';
+import { openFileInEditor, openPrompt, openScrollback, readPrompt, type EditorTarget } from '../nvim/nvim-remote';
 
 // What a pane hands out of itself: a URL to the browser, its scrollback to nvim, a path it printed to
 // nvim. Main-process wiring only, out of main.ts because main had reached its 600-line ceiling; every

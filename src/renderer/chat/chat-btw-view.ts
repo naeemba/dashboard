@@ -1,8 +1,8 @@
-import type { DashboardBridge } from './bridge';
+import type { DashboardBridge } from '../../shared/app/bridge';
 import type { ChatViewOptions } from './chat-view';
 import { renderMarkdown } from './chat-markdown';
-import { failureText } from './failure';
-import { answerKeys, openOverlay } from './overlay';
+import { failureText } from '../../shared/errors/failure';
+import { answerKeys, openOverlay } from '../app/overlay';
 
 // /btw's sheet: the question at once, then the answer under it when it comes, drawn as markdown. It
 // never enters the conversation, so it is gone once the sheet is: Escape or Enter puts it away and

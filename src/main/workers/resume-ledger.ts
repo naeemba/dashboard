@@ -1,5 +1,5 @@
 import { resumable, type PaneConversation } from './claude-resume';
-import type { SavedPage } from './session';
+import type { SavedPage } from '../app/session';
 
 // What a launch owes each pane, and what each pane counts as running when session.json is written.
 // claude-resume.ts holds the rules one pane at a time; this holds them across a run: which saved

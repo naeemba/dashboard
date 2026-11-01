@@ -2,9 +2,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { emptyBoard } from './board';
-import type { BoardChanges } from './board-changes';
-import type { BoardWatchers } from './board-watch';
+import { emptyBoard } from '../../shared/board/board';
+import type { BoardChanges } from '../board/board-changes';
+import type { BoardWatchers } from '../board/board-watch';
 import { channels } from './channels';
 import { registerProjectFiles } from './project-files-ipc';
 

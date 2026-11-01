@@ -1,7 +1,7 @@
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { Channels } from './channels';
-import { failureText } from './failure';
-import type { LogDraft } from './log-entry';
+import type { Channels } from '../app/channels';
+import { failureText } from '../../shared/errors/failure';
+import type { LogDraft } from '../../shared/app/log-entry';
 import { closeReason, gateFrame } from './host-gate';
 import {
   CLOSE_NO_HELLO, HEARTBEAT_MS, HELLO_TIMEOUT_MS, MAX_FRAME_BYTES, decodeFrame, encodeFrame, type Push, type Reply,

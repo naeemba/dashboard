@@ -6,6 +6,8 @@ screen where a row is armed and the next keystroke becomes its key.
 
 ## Files
 
+Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
+
 - `settings.ts`, `settings-store.ts`, `settings-rows.ts`, `settings-view.ts`
 
 ## Scenarios

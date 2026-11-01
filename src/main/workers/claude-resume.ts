@@ -1,6 +1,6 @@
-import type { SavedSession, Session } from './session';
-import { isWorker, paneFromId } from './terminals';
-import type { WorktreeEntry } from './worktree-store';
+import type { SavedSession, Session } from '../app/session';
+import { isWorker, paneFromId } from '../../shared/panes/terminals';
+import type { WorktreeEntry } from '../ship/worktree-store';
 
 // Which Claude Code conversation each pane was running, and how a launch gets it back.
 //

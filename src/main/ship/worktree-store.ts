@@ -1,6 +1,6 @@
 import { readFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { replaceFile } from './board-store';
+import { replaceFile } from '../board/board-store';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
 // recents.json in the app's own folder rather than in the project, because it describes checkouts on

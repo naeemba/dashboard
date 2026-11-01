@@ -1,9 +1,9 @@
-import type { ShipRequest, ShipResult } from './bridge';
-import { moveCardById, shipColumnIndex } from './board';
-import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
-import { failureText } from './failure';
-import { baseBranch, git } from './git';
-import { isManagerPath } from './manager';
+import type { ShipRequest, ShipResult } from '../../shared/app/bridge';
+import { moveCardById, shipColumnIndex } from '../../shared/board/board';
+import { BOARD_FILE_PATH, readBoard, writeBoard } from '../board/board-store';
+import { failureText } from '../../shared/errors/failure';
+import { baseBranch, git } from '../app/git';
+import { isManagerPath } from '../../shared/manager/manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { addBranchWorktree } from './branch-worktree';
 import { entryForCard, type WorktreeEntry } from './worktree-store';

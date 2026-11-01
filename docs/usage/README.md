@@ -5,6 +5,8 @@ logs: this five-hour window, this week and all time, with a trend.
 
 ## Files
 
+Folders: `src/main/usage/`, `src/shared/usage/`, `src/renderer/usage/`.
+
 - `usage.ts`, `usage-store.ts`, `usage-sweep.ts`, `usage.css`
 
 ## Scenarios

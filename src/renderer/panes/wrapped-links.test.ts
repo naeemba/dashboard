@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileLinksIn, webLinksIn } from './file-links';
+import { fileLinksIn, webLinksIn } from '../nvim/file-links';
 import { linksStartingOn, linksTouching, type WrapBuffer } from './wrapped-links';
 
 // A pane ten cells wide. A row starting with `>` is one the terminal wrapped onto from the row above;
