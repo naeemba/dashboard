@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asksUltrathink, commandMenu, effortRows, footEffort, namedEffort, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, commandMenu, effortRows, footEffort, namedEffort, namedFast, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextCopyBlock, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
 
@@ -16,6 +16,8 @@ describe('screenCommand', () => {
     expect(screenCommand('/model')).toEqual({ kind: 'model', rest: '' });
     expect(screenCommand('/model sonnet')).toEqual({ kind: 'model', rest: 'sonnet' });
     expect(screenCommand('/effort  max ')).toEqual({ kind: 'effort', rest: 'max' });
+    expect(screenCommand('/fast')).toEqual({ kind: 'fast', rest: '' });
+    expect(screenCommand('/fast off')).toEqual({ kind: 'fast', rest: 'off' });
     expect(screenCommand('/export notes.md')).toEqual({ kind: 'export', rest: 'notes.md' });
     expect(screenCommand('/rename  board drag fix ')).toEqual({ kind: 'rename', rest: 'board drag fix' });
     expect(screenCommand('/btw  what was that flag called? ')).toEqual({ kind: 'btw', rest: 'what was that flag called?' });
@@ -24,7 +26,18 @@ describe('screenCommand', () => {
   it('leaves every other command, and a word that only starts the same, to the session', () => {
     expect(screenCommand('/compact')).toBeNull();
     expect(screenCommand('/planner')).toBeNull();
+    expect(screenCommand('/faster')).toBeNull();
     expect(screenCommand('resume')).toBeNull();
+  });
+});
+
+describe('namedFast', () => {
+  it('toggles on a bare /fast and sets the state named, so /fast off while off stays off', () => {
+    expect(namedFast('', false)).toBe(true);
+    expect(namedFast('', true)).toBe(false);
+    expect(namedFast('off', false)).toBe(false);
+    expect(namedFast('ON', true)).toBe(true);
+    expect(namedFast('faster', false)).toBeUndefined();
   });
 });
 

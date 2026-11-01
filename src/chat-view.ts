@@ -3,7 +3,7 @@ import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, namedFast, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
 import { editsHeading, sessionEdits } from './chat-diff';
 import { exportConversation } from './chat-export-view';
 import { diffBlock, drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
@@ -127,6 +127,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let images: ChatImage[] = [];
   let model: string | null = null;
   let effort: ChosenEffort;
+  // Off until the session's init or a turn's result says which it is on, the settings file's choice included.
+  let fast = false;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
   let measured: ChatMeasure | null = null;
@@ -164,7 +166,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
   let drawnFoot = '';
   function drawFoot(): void {
-    const shown = measured?.model ?? model ?? transcript.model ?? 'default model';
+    const shown = `${measured?.model ?? model ?? transcript.model ?? 'default model'}${fast ? ' · fast' : ''}`;
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
     const effortShown = footEffort(effort, state, transcript.entries);
@@ -316,6 +318,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'fast') {
+      const named = namedFast(own.rest, fast);
+      if (named === undefined) return options.onNotice(`Fast mode has no ${own.rest}. Try on or off.`);
+      return configure({ fast: named });
+    }
     if (own?.kind === 'export') return void exportConversation(bridge, slot, options, transcript.entries, own.rest).then(focus);
     if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
     if (own?.kind === 'btw') return showAside(own.rest);
@@ -605,6 +612,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
     if (change.permissionMode) mode = change.permissionMode;
     if ('effort' in change) effort = change.effort ?? null;
+    if (change.fast !== undefined) fast = change.fast;
   }
 
   function readEarlier(): void {
@@ -835,6 +843,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       if (command === 'model') configure({ model: next(MODELS, model) });
       if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });
+      if (command === 'fast') configure({ fast: !fast });
       // Not under a running turn: the reset closes the session, and what Claude was half-way through
       // doing would stop with nothing on screen saying so.
       if (command === 'new' && working(transcript, asks.length)) {

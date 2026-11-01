@@ -246,8 +246,15 @@ describe('preferencesOf', () => {
     expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'status', status: null, permissionMode: 'acceptEdits' } }))
       .toEqual({ permissionMode: 'acceptEdits' });
   });
+  it('takes the fast mode the session reports, cooldown as still on', () => {
+    expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'init', permissionMode: 'auto', fast_mode_state: 'on' } }))
+      .toEqual({ permissionMode: 'auto', fast: true });
+    expect(preferencesOf({ kind: 'message', message: { type: 'result', fast_mode_state: 'cooldown' } })).toEqual({ fast: true });
+    expect(preferencesOf({ kind: 'message', message: { type: 'result', fast_mode_state: 'off' } })).toEqual({ fast: false });
+  });
   it('says nothing about any other message', () => {
     expect(preferencesOf({ kind: 'message', message: { type: 'system', subtype: 'status', status: 'compacting' } })).toBeNull();
+    expect(preferencesOf({ kind: 'message', message: { type: 'result' } })).toBeNull();
     expect(preferencesOf({ kind: 'message', message: { type: 'assistant' } })).toBeNull();
   });
 });

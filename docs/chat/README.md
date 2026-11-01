@@ -31,6 +31,7 @@ Claude has running.
 - Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you type `/effort high`, when you send it, then the next turn runs at high and the foot says `high effort`; `ultrathink` in a prompt shows in the foot while its turn runs.
+- Given you type `/fast` or press Alt+F, when fast mode was off, then the session turns it on and the foot shows `· fast` after the model; again turns it off. `/fast on` and `/fast off` set it rather than toggle, and the foot starts from what the session reports, so one already fast from the settings file shows `· fast` from the first turn.
 - Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
 - Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.

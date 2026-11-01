@@ -64,7 +64,7 @@ export type Action =
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash' | 'fast';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -565,6 +565,11 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'claude-permission-mode', description: 'Ask before edits, accept them, plan first, or auto mode',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'permission-mode' },
     mac: 'Shift+Tab', other: 'Shift+Tab',
+  },
+  // Alt+F, for fast; Claude Code's Alt+O is the unfold key here. Alt+F zooms a pane only on the terminals screen.
+  {
+    name: 'claude-fast', description: 'Turn fast mode on or off',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'fast' }, mac: 'Alt+F', other: 'Alt+F',
   },
   // Tab, as in Claude Code. It also fills the box from the open command list, so the list keeps the key.
   {

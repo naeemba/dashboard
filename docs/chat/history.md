@@ -35,3 +35,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #124 — The working line names a running hook; a failed hook leaves a folded line
 - 2026-11-01 #126 — TodoWrite drawn as a checklist
 - 2026-11-01 #125 — /export copies the conversation to the clipboard or saves it to a file
+- 2026-11-01 #121 — Fast mode toggle: /fast and Alt+F

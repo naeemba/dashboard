@@ -10,7 +10,7 @@ import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
+import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
 import { exportTarget, type ExportWrite } from './chat-export-target';
@@ -46,8 +46,9 @@ export type ChatHost = {
 // What the renderer may change on a running session. Held per slot so a choice made before the first
 // prompt is what the session starts with. The default model is null rather than undefined: the second
 // screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
-// as no change at all. The effort is null for the same reason: auto, the model's own default.
-export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null };
+// as no change at all. The effort is null for the same reason: auto, the model's own default. Fast is
+// fast mode, as /fast toggles it in Claude Code; undefined leaves it to the settings file.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null; fast?: boolean };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
 
@@ -153,6 +154,34 @@ export function rememberedSessions(file: string): Record<string, string> {
   }
 }
 
+// The part of a change that goes through the session's flag layer, only the keys it names. An effort
+// of null goes back to the model's default.
+export function flagSettingsOf(change: ChatPreferences): { effortLevel?: EffortLevel | null; fastMode?: boolean } {
+  return { ...('effort' in change && { effortLevel: change.effort ?? null }), ...(change.fast !== undefined && { fastMode: change.fast }) };
+}
+
+// What a restarted session is told through the flag layer about what was chosen before the restart.
+// Auto effort: the effort option cannot say null, and a session started without it runs at the
+// settings file's level. Fast mode, whenever chosen: it has no query option at all. Any other effort
+// rides the query option already. A fast mode the session only reported is not in `chosen`, so a
+// restart leaves it to the settings file rather than pinning it over them.
+export function replayedFlagSettings(chosen: ChatPreferences | undefined): ReturnType<typeof flagSettingsOf> {
+  return flagSettingsOf({ ...(chosen?.effort === null && { effort: null }), fast: chosen?.fast });
+}
+
+// What a report from the session changes. Its permission mode becomes the choice, since the session
+// is on it now and a restart should stay there. Its fast mode is kept apart, so a restart does not
+// replay it over the settings file as if it had been chosen.
+export function afterReport(chosen: ChatPreferences | undefined, reported: ChatPreferences): { chosen: ChatPreferences; reportedFast?: boolean } {
+  return { chosen: { ...chosen, ...(reported.permissionMode && { permissionMode: reported.permissionMode }) }, ...(reported.fast !== undefined && { reportedFast: reported.fast }) };
+}
+
+// What a screen opening the page starts from: the choices made, with the fast mode the session last
+// reported over them, since that is what it is on now.
+export function shownPreferences(chosen: ChatPreferences | undefined, reportedFast: boolean | undefined): ChatPreferences {
+  return { ...chosen, ...(reportedFast !== undefined && { fast: reportedFast }) };
+}
+
 // What a project's main session opens on. The conversation the terminal main left wins over one the
 // old Claude view remembered: it was the project's main, the one its workers report to, and `adopt`
 // only arrives on the first launch after main became the screen. Auto mode, as the terminal main ran
@@ -171,6 +200,9 @@ export function registerChatSessions(
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
   const preferences = new Map<number, ChatPreferences>();
+  // Per slot, the fast mode the session last reported, kept apart from the choices so a restart does
+  // not replay it. A choice clears it until the next report.
+  const reportedFast = new Map<number, boolean>();
   const file = path.join(host.userData, 'chat-sessions.json');
   const remembered = rememberedSessions(file);
   // Per project, the message a /rewind of the conversation resumes up to, until the next prompt's
@@ -255,10 +287,9 @@ export function registerChatSessions(
         onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
     }) };
-    // Auto picked before a restart: the effort option cannot say null, and a session started without
-    // it runs at the settings file's level, so the override goes through the flag layer as /effort
-    // sends it. Failing, the session stays on the settings level until the next pick.
-    if (preferences.get(slot)?.effort === null) session.query.applyFlagSettings({ effortLevel: null }).catch(() => undefined);
+    // Failing, the session stays on the settings file's level and fast mode until the next pick.
+    const replayed = replayedFlagSettings(preferences.get(slot));
+    if (Object.keys(replayed).length > 0) session.query.applyFlagSettings(replayed).catch(() => undefined);
     void (async () => {
       let error: string | null = null;
       // Whether a turn ever began. After one, the conversation remembered may have moved on (/clear,
@@ -273,8 +304,13 @@ export function registerChatSessions(
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
           if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
-          const mode = modeOf(record);
-          if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
+          // What the session reports it is on, so a screen opened later starts from it.
+          const reported = reportedPreferences(record);
+          if (reported) {
+            const after = afterReport(preferences.get(slot), reported);
+            preferences.set(slot, after.chosen);
+            if (after.reportedFast !== undefined) reportedFast.set(slot, after.reportedFast);
+          }
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
@@ -453,13 +489,15 @@ export function registerChatSessions(
 
   table.handle('chat:configure', async (_screen, slot: number, change: ChatPreferences) => {
     preferences.set(slot, { ...preferences.get(slot), ...change });
+    if (change.fast !== undefined) reportedFast.delete(slot);
     host.send(slot, { kind: 'configured', change });
     const session = await sessions.get(slot);
     if (!session) return;
     if ('model' in change) await session.query.setModel(change.model ?? undefined);
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
-    // The session's flag layer, as /effort sets it: null goes back to the model's default.
-    if ('effort' in change) await session.query.applyFlagSettings({ effortLevel: change.effort ?? null });
+    // The session's flag layer, as /effort and /fast set it.
+    const flags = flagSettingsOf(change);
+    if (Object.keys(flags).length > 0) await session.query.applyFlagSettings(flags);
   });
 
   // What the status line shows: how full the context window is, read from the last response rather
@@ -492,7 +530,7 @@ export function registerChatSessions(
     // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
     const asks = running ? [...running.asks.values()].map((pending) => pending.ask) : [];
-    return { messages, asks, preferences: preferences.get(slot) ?? {} };
+    return { messages, asks, preferences: shownPreferences(preferences.get(slot), reportedFast.get(slot)) };
   });
 
   // A PDF the conversation names, for the tile that opens it. A mention is relative to the session's
@@ -610,7 +648,7 @@ export function registerChatSessions(
     },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
-    stop: (slot) => { stop(slot); preferences.delete(slot); },
+    stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
     stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
   };
 }
