@@ -1,0 +1,367 @@
+// node scripts/performance/measure.mjs <measurement> <demo folder> [...]: one measurement against a fresh demo
+// instance, printed as one JSON line per step. docs/performance/README.md lists them and what each found.
+/* global process, performance, console, URL */
+import { execFileSync } from 'node:child_process';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
+import {
+  connectMain, cpuWindow, echoLatency, keys, keyToPaint, launch, memory, press, run, wait,
+} from './demo-instance.mjs';
+
+const [measurement, demo, ...rest] = process.argv.slice(2);
+const here = path.dirname(new URL(import.meta.url).pathname);
+const stream = path.join(here, 'build-log-stream.sh');
+const print = (step, value) => console.log(JSON.stringify({ step, ...value }));
+const stopMatching = (pattern) => { try { execFileSync('pkill', ['-f', pattern]); } catch { /* nothing matched */ } };
+// Bracketed, so pkill's own command line, which holds the pattern too, does not match it.
+const STREAM_PATTERN = '[t]ag=dashboardperf';
+
+// Tab 1 is the manager; alpha is Ctrl+2, beta Ctrl+3, gamma Ctrl+4. Ctrl+T is the terminals view,
+// Ctrl+Shift+T a new worker, Alt+2 the first worker in the list.
+const measurements = {
+  // Launch to window, first paint and every restored project, three runs; with long chats if asked.
+  async startup(runs = '3', chats = 'chat-sessions-none.json') {
+    for (let index = 0; index < Number(runs); index++) {
+      const logFile = path.join(demo, 'userdata', 'dashboard.log');
+      const linesBefore = (() => { try { return readFileSync(logFile, 'utf8').split('\n').length; } catch { return 1; } })();
+      const instance = await launch(demo, { chats, settle: 0 });
+      let chatDrawn = NaN;
+      while (Date.now() - instance.startedAt < 30000) {
+        const entries = await instance.page.evaluate(`document.querySelectorAll('.page')[1]?.querySelectorAll('.chat-entry').length ?? 0`).catch(() => 0);
+        if (entries > 20 || chats === 'chat-sessions-none.json') { chatDrawn = Date.now() - instance.startedAt; break; }
+        await wait(20);
+      }
+      const timing = await instance.page.evaluate(`({ origin: performance.timeOrigin, paint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime })`);
+      await wait(1500);
+      const entries = readFileSync(logFile, 'utf8').split('\n').slice(linesBefore - 1).filter(Boolean).map((line) => JSON.parse(line));
+      const at = (entry) => (entry ? Date.parse(entry.time) - instance.startedAt : NaN);
+      const opened = entries.filter((entry) => entry.message === 'opened');
+      print('startup', {
+        appReady: at(entries.find((entry) => entry.message?.startsWith('started'))),
+        firstContentfulPaint: Math.round(timing.origin - instance.startedAt + timing.paint),
+        firstProjectOpened: at(opened[0]), lastProjectOpened: at(opened.at(-1)), projects: opened.length,
+        ...(chats === 'chat-sessions-none.json' ? {} : { alphaChatDrawn: chatDrawn }),
+      });
+      await instance.stop();
+    }
+  },
+
+  // Four workers on alpha streaming <rate> lines a second each: CPU shown, CPU hidden, typing beside them.
+  async streams(rate = '200') {
+    const { page, stop } = await launch(demo);
+    try {
+      print('idle', await cpuWindow(10));
+      await keys(page, 'Ctrl+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T');
+      await wait(1500);
+      for (const position of [2, 3, 4, 5]) { await keys(page, `Alt+${position}`); await run(page, `${stream} ${rate}`); }
+      await wait(3000);
+      print('four-streams-shown', await cpuWindow(10));
+      await keys(page, 'Ctrl+Shift+T'); await wait(1500); await keys(page, 'Alt+6'); await wait(500);
+      print('typing-beside-four-streams', await echoLatency(page));
+      await keys(page, 'Ctrl+4'); await wait(1000);
+      await keys(page, 'Ctrl+T', 'Ctrl+Shift+T'); await wait(1500); await keys(page, 'Alt+2'); await wait(500);
+      print('four-streams-hidden', await cpuWindow(10));
+      print('typing-other-project', await echoLatency(page));
+      const main = await connectMain();
+      await main.send('Profiler.enable'); await main.send('Profiler.start');
+      await wait(10000);
+      writeFileSync(path.join(demo, 'streams-main.cpuprofile'), JSON.stringify((await main.send('Profiler.stop')).profile));
+      main.close();
+      print('memory', await memory());
+      stopMatching(STREAM_PATTERN);
+      await wait(3000);
+      print('idle-after', await cpuWindow(10));
+    } finally { stopMatching(STREAM_PATTERN); await stop(); }
+  },
+
+  // One worker running `seq` flat out, shown or hidden; then Ctrl+C and how long the pane keeps printing.
+  async flood(where = 'shown') {
+    const { page, stop } = await launch(demo);
+    const lastLine = String.raw`(() => { const page = document.querySelectorAll('.page')[1]; for (const rows of page.querySelectorAll('.xterm-rows')) { const lines = [...rows.children].map((row) => row.textContent.trim()).filter(Boolean); if (lines.some((line) => /^\d{3,}$/.test(line))) return lines.at(-1); } return ''; })()`;
+    try {
+      await keys(page, 'Ctrl+T', 'Ctrl+Shift+T'); await wait(1500);
+      await keys(page, 'Alt+2'); await run(page, 'seq 1 30000017');
+      if (where === 'hidden') await keys(page, 'Ctrl+4');
+      await wait(2000);
+      const main = await connectMain();
+      await main.send('Profiler.enable'); await page.send('Profiler.enable');
+      await main.send('Profiler.start'); await page.send('Profiler.start');
+      const load = await cpuWindow(5);
+      writeFileSync(path.join(demo, `flood-${where}-main.cpuprofile`), JSON.stringify((await main.send('Profiler.stop')).profile));
+      writeFileSync(path.join(demo, `flood-${where}-renderer.cpuprofile`), JSON.stringify((await page.send('Profiler.stop')).profile));
+      main.close();
+      print(`flood-${where}`, load);
+      if (where === 'hidden') await keys(page, 'Ctrl+2');
+      await keys(page, 'Alt+2');
+      const pressedAt = Date.now();
+      await press(page, 'Ctrl+C');
+      let previous = await page.evaluate(lastLine);
+      let changedAt = Date.now();
+      while (Date.now() - changedAt < 2000 && Date.now() - pressedAt < 120000) {
+        await wait(100);
+        const now = await page.evaluate(lastLine);
+        if (now !== previous) { previous = now; changedAt = Date.now(); }
+      }
+      print('ctrl-c', { keptPrintingMs: changedAt - pressedAt });
+      print('after', await cpuWindow(5));
+    } finally { stopMatching('seq 1 30000017'); await stop(); }
+  },
+
+  // A long answer streamed into alpha's Claude screen as the SDK's text_delta events, sent from main the
+  // way chat-sessions.ts relays them. No model is called. 600 characters a second by default.
+  async chat(characters = '16000', perDelta = '12', everyMs = '20') {
+    const { stop } = await launch(demo);
+    try {
+      let answer = readFileSync(path.join(demo, 'answer.md'), 'utf8');
+      while (answer.length < Number(characters)) answer += '\n\n' + answer;
+      answer = answer.slice(0, Number(characters));
+      const main = await connectMain();
+      // Slot 0 is the first project opened, alpha.
+      await main.evaluate(`(() => { const text = ${JSON.stringify(answer)}; const contents = process.mainModule.require('electron').BrowserWindow.getAllWindows()[0].webContents; let at = 0;
+        contents.send('chat:receive', 0, { kind: 'message', message: { type: 'stream_event', event: { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } } } });
+        const timer = setInterval(() => { if (at >= text.length) return clearInterval(timer); contents.send('chat:receive', 0, { kind: 'message', message: { type: 'stream_event', event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: text.slice(at, at + ${Number(perDelta)}) } } } }); at += ${Number(perDelta)}; }, ${Number(everyMs)}); return true; })()`);
+      main.close();
+      const seconds = Math.min(60, Math.ceil(Number(characters) / Number(perDelta) * Number(everyMs) / 1000));
+      print(`chat-stream-${characters}`, { seconds, ...(await cpuWindow(seconds)) });
+    } finally { await stop(); }
+  },
+
+  // Input to next paint for the board's arrows and for tab switches, on alpha's 153-card board.
+  async keys() {
+    const { page, stop } = await launch(demo);
+    try {
+      print('board-open', await keyToPaint(page, ['Ctrl+B']));
+      print('board-arrow-down', await keyToPaint(page, Array(15).fill('ArrowDown')));
+      print('board-arrow-sideways', await keyToPaint(page, ['ArrowRight', 'ArrowRight', 'ArrowLeft', 'ArrowLeft']));
+      await keys(page, 'Ctrl+T');
+      print('tab-switch beta alpha gamma alpha manager alpha delta alpha', await keyToPaint(page, ['Ctrl+3', 'Ctrl+2', 'Ctrl+4', 'Ctrl+2', 'Ctrl+1', 'Ctrl+2', 'Ctrl+5', 'Ctrl+2']));
+      print('cursor-blink-terminal-focused', (await keys(page, 'Ctrl+Shift+T'), await wait(1500), await keys(page, 'Alt+2'), await cpuWindow(10)));
+    } finally { await stop(); }
+  },
+
+  // Messages and bytes per IPC channel, both ways, with four workers streaming 200 lines a second.
+  async ipc(seconds = '10') {
+    const { page, stop } = await launch(demo);
+    try {
+      await keys(page, 'Ctrl+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T'); await wait(1500);
+      for (const position of [2, 3, 4, 5]) { await keys(page, `Alt+${position}`); await run(page, `${stream} 200`); }
+      const main = await connectMain();
+      await main.evaluate(`(() => { const { BrowserWindow, ipcMain } = process.mainModule.require('electron'); const contents = BrowserWindow.getAllWindows()[0].webContents;
+        const size = (value) => { try { return JSON.stringify(value)?.length ?? 0; } catch { return 0; } };
+        globalThis.__ipc = {}; const count = (name, value) => { const entry = globalThis.__ipc[name] ??= { messages: 0, bytes: 0 }; entry.messages++; entry.bytes += size(value); };
+        globalThis.__send = contents.send; contents.send = function (channel, ...values) { count('to renderer ' + channel, values); return globalThis.__send.call(this, channel, ...values); };
+        globalThis.__emit = ipcMain.emit; ipcMain.emit = function (channel, event, ...values) { count('to main ' + channel, values); return globalThis.__emit.call(this, channel, event, ...values); };
+        return true; })()`);
+      await wait(Number(seconds) * 1000);
+      const counted = await main.evaluate(`(() => { const { BrowserWindow, ipcMain } = process.mainModule.require('electron'); BrowserWindow.getAllWindows()[0].webContents.send = globalThis.__send; ipcMain.emit = globalThis.__emit; return globalThis.__ipc; })()`);
+      main.close();
+      print('ipc', Object.fromEntries(Object.entries(counted).map(([channel, entry]) => [channel, { perSecond: +(entry.messages / Number(seconds)).toFixed(1), kilobytesPerSecond: +(entry.bytes / Number(seconds) / 1024).toFixed(1) }])));
+    } finally { stopMatching(STREAM_PATTERN); await stop(); }
+  },
+
+  // Open and close zeta from a pane on gamma, with a snapshot after one warm-up cycle and after the rest.
+  async cycles(count = '10') {
+    const { page, stop } = await launch(demo);
+    const main = await connectMain();
+    await page.send('HeapProfiler.enable'); await main.send('HeapProfiler.enable');
+    const snapshot = async () => {
+      await page.send('HeapProfiler.collectGarbage'); await main.send('HeapProfiler.collectGarbage');
+      const counters = await page.send('Memory.getDOMCounters');
+      const handles = await main.evaluate(`(() => { const counted = {}; for (const handle of process._getActiveHandles()) { const name = handle.constructor?.name ?? '?'; counted[name] = (counted[name] ?? 0) + 1; } return counted; })()`);
+      const { electron, children } = await memory();
+      return {
+        rendererHeapMB: +((await page.evaluate('performance.memory.usedJSHeapSize')) / 1048576).toFixed(1), nodes: counters.nodes, listeners: counters.jsEventListeners,
+        mainHeapMB: +((await main.evaluate('process.memoryUsage().heapUsed')) / 1048576).toFixed(1), handles,
+        rendererPrivateMB: electron.find((entry) => entry.type === 'Tab').privateMB, cliProcesses: children.find((group) => group.name === 'agent-sdk claude CLI')?.count ?? 0,
+      };
+    };
+    const loop = async (times) => { await run(page, `for i in $(seq ${times}); do node "$DASHBOARD_COMMAND" project open zeta; sleep 4; node "$DASHBOARD_COMMAND" project close zeta; sleep 3; done`); await wait(times * 7500 + 3000); await keys(page, 'Ctrl+4', 'Alt+2'); };
+    try {
+      await keys(page, 'Ctrl+4', 'Ctrl+T', 'Ctrl+Shift+T'); await wait(1500); await keys(page, 'Alt+2');
+      print('before', await snapshot());
+      await loop(1);
+      print('after-1-cycle', await snapshot());
+      await loop(Number(count));
+      print(`after-${Number(count) + 1}-cycles`, await snapshot());
+    } finally { main.close(); await stop(); }
+  },
+
+  // Main's event-loop lag from launch on: every time a 10 ms timer fires more than 50 ms late, and typing
+  // into a worker the whole time. Put big logs in the demo's ~/.claude/projects first to see the sweep.
+  async lag(seconds = '45') {
+    const started = Date.now();
+    const instancePromise = launch(demo, { chats: 'chat-sessions-none.json', settle: 0 });
+    let main;
+    for (;;) { try { main = await connectMain(); break; } catch { await wait(20); } }
+    await main.evaluate(`(() => { globalThis.__lag = []; let last = performance.now(); setInterval(() => { const now = performance.now(); const late = now - last - 10; if (late > 50) globalThis.__lag.push([Math.round(Date.now() - ${started}), Math.round(late)]); last = now; }, 10).unref(); return true; })()`);
+    const { page, stop } = await instancePromise;
+    try {
+      await wait(1500);
+      await keys(page, 'Ctrl+Shift+T'); await wait(1000); await keys(page, 'Alt+2');
+      const typing = [];
+      while (Date.now() - started < Number(seconds) * 1000) typing.push([Date.now() - started, (await echoLatency(page, 8)).max]);
+      const lag = await main.evaluate('globalThis.__lag');
+      print('main-lag-over-50ms', { count: lag.length, worst: Math.max(0, ...lag.map((entry) => entry[1])), totalMs: lag.reduce((sum, entry) => sum + entry[1], 0), atAndMs: lag });
+      print('typing-worst-per-2s', { atAndMs: typing });
+    } finally { main.close(); await stop(); }
+  },
+
+  // Main-process CPU profile of the first 3 seconds after launch.
+  async boot() {
+    const instancePromise = launch(demo, { settle: 0 });
+    let main;
+    for (;;) { try { main = await connectMain(); break; } catch { await wait(10); } }
+    await main.send('Profiler.enable'); await main.send('Profiler.setSamplingInterval', { interval: 200 }); await main.send('Profiler.start');
+    await wait(3000);
+    writeFileSync(path.join(demo, 'boot-main.cpuprofile'), JSON.stringify((await main.send('Profiler.stop')).profile));
+    main.close();
+    await (await instancePromise).stop();
+    print('boot', { profile: path.join(demo, 'boot-main.cpuprofile') });
+  },
+
+  // <minutes> of use: five workers streaming 50 lines a second, a tab-and-board round each minute, memory
+  // sampled every minute after a garbage collection.
+  async soak(minutes = '30') {
+    const { page, stop } = await launch(demo);
+    const main = await connectMain();
+    await page.send('HeapProfiler.enable'); await main.send('HeapProfiler.enable'); await page.send('Performance.enable');
+    const startStream = async (position) => { await keys(page, `Alt+${position}`); await run(page, `${stream} 50`); };
+    try {
+      await keys(page, 'Ctrl+3', 'Ctrl+T', 'Ctrl+Shift+T'); await wait(1500); await startStream(2);
+      await keys(page, 'Ctrl+2', 'Ctrl+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T'); await wait(1500);
+      for (const position of [2, 3, 4, 5]) await startStream(position);
+      const started = Date.now();
+      for (let minute = 0; minute <= Number(minutes); minute++) {
+        await page.send('HeapProfiler.collectGarbage'); await main.send('HeapProfiler.collectGarbage');
+        const counters = await page.send('Memory.getDOMCounters');
+        const metrics = Object.fromEntries((await page.send('Performance.getMetrics')).metrics.map((metric) => [metric.name, metric.value]));
+        const { electron, children } = await memory();
+        const of = (type) => electron.find((entry) => entry.type === type)?.privateMB;
+        print('minute', {
+          minute, mainPrivateMB: of('Browser'), rendererPrivateMB: of('Tab'), gpuPrivateMB: of('GPU'),
+          cliPrivateMB: children.find((group) => group.name === 'agent-sdk claude CLI')?.privateMB,
+          rendererHeapMB: +(metrics.JSHeapUsedSize / 1048576).toFixed(1), mainHeapMB: +((await main.evaluate('process.memoryUsage().heapUsed')) / 1048576).toFixed(1),
+          nodes: counters.nodes, listeners: counters.jsEventListeners,
+        });
+        if (minute === Number(minutes)) break;
+        await keys(page, 'Ctrl+3', 'Ctrl+1', 'Ctrl+2', 'Ctrl+B', 'ArrowDown', 'ArrowDown', 'ArrowUp', 'Ctrl+T');
+        await wait(Math.max(0, started + (minute + 1) * 60000 - Date.now()));
+      }
+    } finally { stopMatching(STREAM_PATTERN); main.close(); await stop(); }
+  },
+
+  // Memory of every process with the full load in place: Electron's, and every child of main.
+  async memory() {
+    const { page, stop } = await launch(demo);
+    try {
+      await keys(page, 'Ctrl+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T', 'Ctrl+Shift+T'); await wait(3000);
+      print('memory', await memory());
+    } finally { await stop(); }
+  },
+};
+
+// No demo instance: what the first usage sweep (src/main/usage/usage-store.ts) costs on a real log
+// folder, read-only. Every .jsonl read whole and every line holding "usage" parsed, as the first sweep does.
+async function usageSweep(root) {
+  const files = [];
+  const walk = async (folder) => {
+    for (const entry of await readdir(folder, { withFileTypes: true })) {
+      const full = path.join(folder, entry.name);
+      if (entry.isDirectory()) await walk(full);
+      else if (entry.name.endsWith('.jsonl')) files.push(full);
+    }
+  };
+  const started = performance.now();
+  const cpuBefore = process.cpuUsage();
+  await walk(root);
+  let bytes = 0, parsed = 0, longest = 0, longestSize = 0;
+  for (const file of files) {
+    const { size } = await stat(file);
+    bytes += size;
+    const text = await readFile(file, 'utf8');
+    const held = performance.now();
+    for (const line of text.split('\n')) {
+      if (!line.includes('"usage"')) continue;
+      try { JSON.parse(line); parsed++; } catch { /* a line cut short */ }
+    }
+    if (performance.now() - held > longest) { longest = performance.now() - held; longestSize = size; }
+  }
+  const firstSweep = performance.now() - started;
+  const cpu = process.cpuUsage(cpuBefore);
+  const statStarted = performance.now();
+  for (const file of files) await stat(file);
+  print('usage-sweep', {
+    files: files.length, gigabytes: +(bytes / 1073741824).toFixed(2), linesParsed: parsed,
+    firstSweepSeconds: +(firstSweep / 1000).toFixed(1), firstSweepCpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1),
+    longestHoldMs: Math.round(longest), longestHoldFileMB: +(longestSize / 1048576).toFixed(1), laterSweepStatMs: Math.round(performance.now() - statStarted),
+  });
+}
+
+// Minified renderer bytes per package, from a source-mapped build into the demo folder.
+function bundle() {
+  const out = path.join(demo, 'renderer-build');
+  execFileSync('npx', ['vite', 'build', '--config', 'vite.renderer.config.ts', '--sourcemap', '--outDir', out, '--emptyOutDir'], { cwd: path.join(here, '..', '..'), stdio: 'ignore' });
+  const mapFile = path.join(out, 'assets', readdirSyncMap(out));
+  const map = JSON.parse(readFileSync(mapFile, 'utf8'));
+  const lines = readFileSync(mapFile.replace(/\.map$/, ''), 'utf8').split('\n');
+  const DIGITS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const bytes = new Map();
+  let source = 0;
+  map.mappings.split(';').forEach((line, row) => {
+    let column = 0;
+    const segments = [];
+    for (const segment of line.split(',')) {
+      if (!segment) continue;
+      const values = [];
+      let shift = 0, value = 0;
+      for (const character of segment) {
+        const digit = DIGITS.indexOf(character);
+        value += (digit & 31) << shift;
+        if (digit & 32) shift += 5;
+        else { values.push(value & 1 ? -(value >> 1) : value >> 1); value = 0; shift = 0; }
+      }
+      column += values[0];
+      if (values.length > 1) source += values[1];
+      segments.push([column, source]);
+    }
+    segments.forEach(([start, index], position) => {
+      const end = position + 1 < segments.length ? segments[position + 1][0] : lines[row].length;
+      const name = map.sources[index];
+      const owner = name.includes('node_modules/')
+        ? name.split('node_modules/').pop().split('/').slice(0, name.split('node_modules/').pop().startsWith('@') ? 2 : 1).join('/')
+        : 'src/' + (name.split('src/')[1] ?? name).split('/').slice(0, 2).join('/');
+      bytes.set(owner, (bytes.get(owner) ?? 0) + end - start);
+    });
+  });
+  const total = [...bytes.values()].reduce((sum, value) => sum + value, 0);
+  print('bundle', { totalKB: Math.round(total / 1024), byOwnerKB: Object.fromEntries([...bytes].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([owner, value]) => [owner, Math.round(value / 1024)])) });
+}
+const readdirSyncMap = (out) => readdirSync(path.join(out, 'assets')).find((name) => name.endsWith('.js.map'));
+
+// Self time per function and per file of a .cpuprofile.
+function profileSummary(file, count = '15') {
+  const profile = JSON.parse(readFileSync(file, 'utf8'));
+  const nodes = new Map(profile.nodes.map((node) => [node.id, node]));
+  const sampleMs = (profile.endTime - profile.startTime) / profile.samples.length / 1000;
+  const byFunction = new Map();
+  for (const id of profile.samples) {
+    const frame = nodes.get(id).callFrame;
+    const where = (frame.url || '(native)').replace(/.*node_modules\//, '').replace(/.*\.vite\//, '.vite/');
+    const name = `${frame.functionName || '(anonymous)'} ${where}:${frame.lineNumber + 1}`;
+    byFunction.set(name, (byFunction.get(name) ?? 0) + sampleMs);
+  }
+  const busy = [...byFunction].filter(([name]) => !/^\((idle|program)\)/.test(name)).reduce((sum, [, ms]) => sum + ms, 0);
+  console.log(`window ${Math.round((profile.endTime - profile.startTime) / 1000)} ms, busy ${Math.round(busy)} ms`);
+  for (const [name, ms] of [...byFunction].sort((a, b) => b[1] - a[1]).slice(0, Number(count))) console.log(String(Math.round(ms)).padStart(7), 'ms', name);
+}
+
+if (measurement === 'usage-sweep') await usageSweep(demo);
+else if (measurement === 'profile') profileSummary(demo, rest[0]);
+else if (measurement === 'bundle') bundle();
+else if (measurements[measurement]) await measurements[measurement](...rest);
+else {
+  console.log(`measurements: ${Object.keys(measurements).join(', ')}, usage-sweep <~/.claude/projects>, profile <file.cpuprofile>, bundle <demo folder>`);
+  process.exitCode = 1;
+}
+process.exit();
