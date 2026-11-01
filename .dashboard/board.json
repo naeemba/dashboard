@@ -105,6 +105,12 @@
           "title": "Tell main when a worker finishes",
           "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
           "priority": "medium"
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
+          "priority": "medium"
         }
       ]
     },
