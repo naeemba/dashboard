@@ -34,7 +34,8 @@ its own side. `eslint.config.test.ts` pins each of those.
 - Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`, `version.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
-  `projects.ts`, `picker.ts`, `close-project.ts`, `chrome-bars.ts`, `status.ts`
+  `projects.ts`, `picker.ts`, `close-project.ts`, `close-refusal.ts` (in `src/shared/panes/`, since
+  `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`
 - Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
@@ -52,8 +53,7 @@ its own side. `eslint.config.test.ts` pins each of those.
 
 ## Open questions
 
-- Neither entry file is at the 600-line ceiling: `main.ts` is at 543 code lines
-  since the worktree record moved to `worktree-keeper.ts`, and `renderer.ts` is
+- Neither entry file is at the 600-line ceiling: `main.ts` is at 571 code lines, and `renderer.ts` is
   at 566 since the close flow moved into `close-project.ts` and the which-key
   strip's tracking into `which-key-tracking.ts`. A feature that would push
   either past 600 needs a seam split out first (workflow-decision-1).

@@ -23,6 +23,7 @@ describe('fileCandidates', () => {
 // What decides whether the pane's live folder is looked up at all: only when this answers nothing.
 describe('wholePath', () => {
   it('names the place for ~/ and an absolute path, and nothing for a relative one', () => {
+    expect(wholePath('~', '/home/me')).toBe('/home/me');
     expect(wholePath('~/.zshrc', '/home/me')).toBe('/home/me/.zshrc');
     expect(wholePath('/etc/hosts', '/home/me')).toBe('/etc/hosts');
     expect(wholePath('src/a.ts', '/home/me')).toBeUndefined();

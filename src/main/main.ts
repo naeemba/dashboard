@@ -13,10 +13,11 @@ import { paneScreenCopy, type PaneScreenCopy } from './panes/pane-screen-copy';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, sizeOfPane, terminalId } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, sizeOfPane, terminalId } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
@@ -298,10 +299,12 @@ table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, 
 // app has is in this file, so a project main cannot place has none left to run anything.
 table.handle('panes:read', (_screen, projectPath: string): PaneUse[] => {
   const slot = slotOfProject(projectPath);
-  if (slot === -1) return [];
+  return slot === -1 ? [] : paneUsesIn(slot);
+});
+function paneUsesIn(slot: number): PaneUse[] {
   return paneReadingsIn(slot)
     .map((pane) => ({ ...pane, exited: !shells.has(terminalId(slot, pane.index)) }));
-});
+}
 
 // The question the review asks, which is the one above with "and has not finished" on the end. A ship
 // is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
@@ -518,6 +521,11 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
     if (canceled) return null;
     projectPath = filePaths[0];
   }
+  return { index: openProjectFolder(projectPath), open: openProjects() };
+});
+// Opening a folder, from the picker or `dashboard project open`: its slot, filled now or already
+// holding it, and every screen told. The one way a project opens, so the two doors cannot differ.
+function openProjectFolder(projectPath: string): number {
   const picked = projectFromPath(projectPath);
   const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
@@ -530,12 +538,9 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
-  // The slot holds a project either way by now: it was just filled, or the path matched one that is
-  // open. `picked` is only what stops the type being optional, never an answer anyone receives.
-  const open = openProjects();
-  sendToRenderer('projects:change', open);
-  return { index, open };
-});
+  sendToRenderer('projects:change', openProjects());
+  return index;
+}
 // Closing a project. Its panes and editor are killed and forgotten, and its slot is emptied. Nothing is
 // answered: whether anything was running in it was read off the panes themselves, which only the
 // renderer can see, and it has already refused or gone ahead by the time this arrives.
@@ -543,7 +548,10 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
 // every pane on read: no shell of this project survives the close, so a record still naming pane 2
 // would put a branch under a pane that is a plain shell of some other project — and would hold its
 // card in flight, unable to be shipped again, with nothing left running to finish it.
-table.on('projects:close', (_screen, slot: number) => {
+table.on('projects:close', (_screen, slot: number) => closeProjectSlot(slot));
+// The close itself, from the key once it has agreed or from `dashboard project close` once
+// project-requests.ts has. Every screen takes the page down on the list it is sent.
+function closeProjectSlot(slot: number): void {
   const closing = projects[slot];
   // A slot that holds nothing has already been closed, and there is nothing of it left to kill.
   // Answered first so a slot past the end of the list is not written into it as a hole.
@@ -557,7 +565,7 @@ table.on('projects:close', (_screen, slot: number) => {
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
   worktrees.set(withoutPanes(worktrees.entries(), closing.path));
   sendToRenderer('projects:change', openProjects());
-});
+}
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
 // when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
 const tokenUsage = usageSweep({
@@ -820,7 +828,16 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 
 // The `session` command. Every decision is session-requests.ts's; what is handed over here is the panes
 // and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
-const sessions = listenForSessions(sessionSocket, sessionRequests({
+// `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
+// the session command's and decides them.
+const sessions = listenForSessions(sessionSocket, projectRequests({
+  slotOf: slotOfProject,
+  folderExists: (projectPath) => !projectFromPath(projectPath).missing,
+  open: openProjectFolder,
+  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
+  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
+  close: closeProjectSlot,
+}, sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
   openPanes,
@@ -861,7 +878,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
-}), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+})), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
 
 function createWindow(): void {
   mainWindow = openAppWindow({

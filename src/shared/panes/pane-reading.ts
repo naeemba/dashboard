@@ -126,7 +126,7 @@ export function freePane<Pane extends { index: number; inWorktree: boolean }>(
 }
 
 // What was seen running in a pane, for a refusal that names it rather than leaving you to go and look.
-// The close prints it in close-project.ts. The empty string is unreachable for a pane paneIsBusy called
+// The close prints it in close-refusal.ts. The empty string is unreachable for a pane paneIsBusy called
 // busy, which is the only pane that refusal asks about.
 export function programIn(pane: PaneReading): string {
   return runsAnAgent(pane.command) ? 'an agent' : pane.foreground ?? '';

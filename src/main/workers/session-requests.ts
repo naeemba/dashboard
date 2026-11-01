@@ -53,8 +53,8 @@ export function projectOfFolder(
   ));
 }
 
-const answered = (output: string): SessionReply => ({ ok: true, output });
-const refused = (output: string): SessionReply => ({ ok: false, output });
+export const answered = (output: string): SessionReply => ({ ok: true, output });
+export const refused = (output: string): SessionReply => ({ ok: false, output });
 
 export function sessionRequests(ports: SessionPorts): (request: SessionRequest) => Promise<SessionReply> {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
