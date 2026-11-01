@@ -151,13 +151,6 @@
           "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
-          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
-          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
-          "priority": "low",
-          "parent": null
         }
       ]
     },
@@ -167,7 +160,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
+          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
+          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:01:16.753Z"
+        }
+      ]
     },
     {
       "name": "Review",

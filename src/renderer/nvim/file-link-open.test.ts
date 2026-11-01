@@ -7,7 +7,8 @@ import type { FileLink } from '../../shared/panes/links';
 const COLUMNS = 80;
 
 // A buffer whose screen starts `viewportY` lines down, laid out the way xterm does it: a Han character
-// is a cell of width 2 followed by a spacer of width 0, anything else one cell.
+// is a cell of width 2 followed by a spacer of width 0, anything else one cell. A trailing space in a
+// row is one the program wrote, and xterm's trim keeps it: it drops only cells nothing was written to.
 const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
   baseY: viewportY,
   length: lines.length,
@@ -21,7 +22,7 @@ const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
     return {
       isWrapped: false,
       length: cells.length,
-      translateToString: (trim) => (trim ? text.trimEnd() : text),
+      translateToString: () => text,
       getCell: (column) => {
         const [chars, width] = cells[column] ?? ['', 1];
         return { getChars: () => chars, getWidth: () => width };
@@ -44,6 +45,14 @@ describe('visibleLinks', () => {
     const screen = buffer(['- a/b/cde/', '  f/g.md.', 'x'], 1);
     expect(visibleLinks(screen, 2, () => 10).map(({ row, column, link }) => [row, column, link.path])).toEqual([
       [0, 2, 'a/b/cde/f/g.md'],
+    ]);
+  });
+
+  // Claude Code's fullscreen view writes spaces out to the edge after the cut.
+  it('labels a wrapped path whose row the program filled with spaces after the cut', () => {
+    const screen = buffer(['- a/b/cd/ ', '  e/f.md  '], 0);
+    expect(visibleLinks(screen, 2, () => 10).map(({ row, column, link }) => [row, column, link.path])).toEqual([
+      [0, 2, 'a/b/cd/e/f.md'],
     ]);
   });
 
