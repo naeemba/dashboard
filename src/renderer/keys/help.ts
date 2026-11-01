@@ -1,5 +1,6 @@
 import { type ActionGroup } from '../../shared/keys/actions';
 import { PDF_LIMIT_SHOWN } from '../../shared/chat/chat-pdf';
+import { LOG_FILE_COUNT, LOG_FILE_LIMIT_SHOWN } from '../../shared/app/log-entry';
 import { IMAGE_LIMIT_SHOWN } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, STASH_KEPT } from '../../shared/chat/chat-history';
 import { FOLD_SHOWN_LINES } from '../chat/chat-fold';
@@ -391,7 +392,8 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
   log: 'What the app did and what went wrong, newest first: errors, panes and agents exiting, cards '
     + 'moving, ships, worktrees, projects opening and closing. Type in the box to filter — every word '
     + 'must appear, so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s '
-    + 'data folder, five files of 5 MB; the path is at the top. Never what you type in a pane.',
+    + 'data folder, ' + LOG_FILE_COUNT + ' files of ' + LOG_FILE_LIMIT_SHOWN + '; the path is at the top. '
+    + 'Never what you type in a pane.',
   app: 'There is a second way to find a key, for when you know you are reaching for one and not which. '
     + 'Hold Ctrl, Cmd or Alt without pressing anything else and a panel near the bottom names every '
     + 'key that modifier can still start on the screen you are on, each row saying what is left to '

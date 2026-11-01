@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agentStartEntry, logFileNames, matchesLogFilter, needsRotation, paneExitEntry, parseLogLine,
+  agentStartEntry, LOG_FILE_LIMIT_SHOWN, logFileNames, matchesLogFilter, needsRotation, paneExitEntry, parseLogLine,
   removalEntry, shipEntry, type LogEntry,
 } from './log-entry';
 
@@ -106,4 +106,8 @@ describe('entry wording', () => {
       level: 'warn', kind: 'worktree', project: '/work/shop', message: 'not removed /work/shop-fix: has changes',
     });
   });
+});
+
+describe('LOG_FILE_LIMIT_SHOWN', () => {
+  it('says the limit the store enforces', () => expect(LOG_FILE_LIMIT_SHOWN).toBe('5 MB'));
 });

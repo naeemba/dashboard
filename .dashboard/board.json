@@ -213,22 +213,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
-          "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
-          "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:18:52.346Z",
-          "branch": "fix-github-issue-148-gh-issue-view-148-comm",
-          "pullRequest": 152,
-          "comments": [
-            {
-              "at": "2026-11-01T12:18:52.307Z",
-              "body": "PR #152: help blurb built from LOG_FILE_COUNT and new LOG_FILE_LIMIT_SHOWN (tested); log-store comments name the constants; v2.32.13."
-            }
-          ]
         }
       ]
     },
@@ -1949,6 +1933,26 @@
             {
               "at": "2026-11-01T12:32:45.559Z",
               "body": "Shipped in PR #153: /resume, the @ file list and the board search are ranked by fuzzy match. Merged after a clean review round."
+            }
+          ]
+        },
+        {
+          "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
+          "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
+          "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:25:50.300Z",
+          "branch": "fix-github-issue-148-gh-issue-view-148-comm",
+          "pullRequest": 152,
+          "comments": [
+            {
+              "at": "2026-11-01T12:18:52.307Z",
+              "body": "PR #152: help blurb built from LOG_FILE_COUNT and new LOG_FILE_LIMIT_SHOWN (tested); log-store comments name the constants; v2.32.13."
+            },
+            {
+              "at": "2026-11-01T12:25:50.300Z",
+              "body": "Shipped in #152: the log screen's help blurb is built from LOG_FILE_COUNT and LOG_FILE_LIMIT."
             }
           ]
         }
