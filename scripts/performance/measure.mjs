@@ -2,8 +2,9 @@
 // instance, printed as one JSON line per step. docs/performance/README.md lists them and what each found.
 /* global process, performance, console, URL, setInterval, clearInterval */
 import { execFileSync } from 'node:child_process';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { bytesPerSource, ownerOf } from './calculations.mjs';
 import {
   connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, press, retry, run, wait, withInstance,
@@ -282,6 +283,34 @@ async function usageSweep(root) {
     files: known.size, gigabytes: +(bytes / 1073741824).toFixed(2),
     firstSweepSeconds: +(firstSweep / 1000).toFixed(1), firstSweepCpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1),
     longestHoldMs: Math.round(longest), laterSweepMs: Math.round(laterSweep),
+  });
+  await usageSweepInThread(root, known);
+}
+
+// The same first sweep the way the app runs it: on its own thread, from the built usage-worker.js
+// (npm run package first). The hold is still main's, which now only waits. The tokens are checked
+// against the in-process sweep's, so a thread that read nothing cannot pass for a fast one. They differ
+// by whatever running sessions appended in between.
+async function usageSweepInThread(root, known) {
+  const file = path.join(here, '..', '..', '.vite', 'build', 'usage-worker.js');
+  if (!existsSync(file)) return print('usage-sweep-thread', { skipped: `${file} not built` });
+  const expected = [...known.values()].reduce((sum, usage) => sum + (usage.directory === '' ? 0 : usage.allTime), 0);
+  const worker = new Worker(file);
+  let longest = 0, last = performance.now();
+  const timer = setInterval(() => { const now = performance.now(); longest = Math.max(longest, now - last - 10); last = now; }, 10);
+  const started = performance.now();
+  const cpuBefore = process.cpuUsage();
+  // A project of '' takes in every log that named a folder: ranInProject asks for `${path}/` as a prefix.
+  worker.postMessage({ root, now: Date.now(), projects: [{ path: '', worktrees: '\0' }], paneSessions: new Map() });
+  const reply = await new Promise((resolve, reject) => { worker.once('message', resolve); worker.once('error', reject); });
+  const firstSweep = performance.now() - started;
+  const cpu = process.cpuUsage(cpuBefore);
+  clearInterval(timer);
+  await worker.terminate();
+  if ('error' in reply) throw reply.error;
+  print('usage-sweep-thread', {
+    firstSweepSeconds: +(firstSweep / 1000).toFixed(1), firstSweepCpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1),
+    mainLongestHoldMs: Math.round(longest), allTimeTokens: reply.snapshot.projects[''].allTime, inProcessAllTimeTokens: expected,
   });
 }
 

@@ -5,6 +5,39 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-02: usage sweep on its own thread
+
+Same machine, logs and tooling as the first profile below. Fixes its finding 1:
+the sweep now runs on a worker thread (`src/main/usage/usage-worker.ts`).
+
+`measure.mjs usage-sweep ~/.claude/projects`, 4,648 files, 4.57 GB, two runs:
+
+| | before (main's thread) | after (own thread) |
+|---|---|---|
+| First sweep | 17.5–19.1 s | 13.9–17.4 s |
+| First sweep CPU | 21.5–22.3 CPU-s | 16.2–18.7 CPU-s |
+| Longest hold of main's event loop | 148–160 ms | 1–2 ms |
+
+The thread's all-time total came within 0.001% of the in-process one; the gap
+is what running sessions appended between the two sweeps.
+
+`measure.mjs lag <demo> 30`, 560 MB of logs in the demo's `~/.claude/projects`, three runs
+each. Every run also has 2–3 stalls in the first 0.5 s of launch, worst
+125–157 ms, with or without the change; those are left out below.
+
+| | before | after |
+|---|---|---|
+| Main late over 50 ms, 3–5 s after launch | 6–8 times | 0 |
+| Worst of those | 141–146 ms | none |
+| Worst keystroke echo in that window | 35–74 ms | 32–35 ms |
+
+One run before the change also had a 188 ms stall at 28.6 s; no run after had
+one past 0.5 s.
+
+Not done: the counts are still kept only in memory, so every launch reads
+every log again, now on the thread. Saving them in userData would cut the
+CPU too.
+
 ## 2026-11-02: first profile (v2.41.1)
 
 Linux, i7-11800H (16 threads), headless weston, `.vite/` build. The load was 5
