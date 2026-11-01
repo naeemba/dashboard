@@ -257,6 +257,12 @@
           "title": "Make Ctrl+C stop a flooding pane at once and spare main's core",
           "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "medium"
+        },
+        {
+          "id": "057e092b-9786-4e57-9be3-20cbcbf1e86f",
+          "title": "Make switching to the manager tab as quick as a project tab",
+          "notes": "Measured: Ctrl+1 is 88-184 ms input-to-paint vs 24-72 ms for project tabs; handler 27-37 ms. Where: src/renderer/manager/manager-view.ts:492 list.replaceChildren every render, each row reading the live xterm buffer. Fix (small): build rows once, update changed ones. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "low"
         }
       ]
     },
