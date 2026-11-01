@@ -38,3 +38,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #121 — Fast mode toggle: /fast and Alt+F
 - 2026-11-01 #128 — /copy [N] copies a whole Claude reply as markdown
 - 2026-11-01 #135 — An exported file's name cuts the shared slug instead of its own copy
+- 2026-11-01 #143 — The image-size notice and help blurb read the limit from IMAGE_LIMIT

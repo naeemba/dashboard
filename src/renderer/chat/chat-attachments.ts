@@ -1,7 +1,7 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import type { Say } from './chat-screen-commands';
 import { droppedFiles, fileMention, mentionInsertion } from '../../shared/chat/chat-commands';
-import { imageDataUrl, imagesFit, isImageType, type ChatImage } from '../../shared/chat/chat-transcript';
+import { IMAGE_LIMIT_SHOWN, imageDataUrl, imagesFit, isImageType, type ChatImage } from '../../shared/chat/chat-transcript';
 
 // The images waiting to go with the next prompt, drawn as thumbnails over the box, and the paste and
 // drop that bring them: images pasted into the box or dropped anywhere on the screen are attached to
@@ -43,7 +43,7 @@ export function createAttachments(
       reader.onload = () => {
         const data = String(reader.result).split(',')[1] ?? '';
         if (!imagesFit([...images.map((picture) => picture.data.length), data.length])) {
-          say.onNotice('That image would put this prompt over 5 MB of images; Claude cannot take it.');
+          say.onNotice(`That image would put this prompt over ${IMAGE_LIMIT_SHOWN} of images; Claude cannot take it.`);
           return;
         }
         add([{ mediaType: file.type, data }]);
