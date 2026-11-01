@@ -16,12 +16,11 @@ installed app was never touched.
 ### Findings
 
 1. **The first usage sweep reads every Claude Code log on main's thread.**
-   - Measured: on this machine that is 4,585 files and 4.53 GB, taking 56 s
-     and 46 CPU-s. The longest single hold is 477 ms, on one 128.8 MB log.
-     These came from a copy of the sweep that skipped `Date.parse`,
-     `tokensOf` and the sample push per line, so the hold is a floor.
-     `usage-sweep` now runs the app's own `sweepUsage`; rerun it before
-     comparing a fix against these.
+   - Measured: the app's own `sweepUsage` on this machine's logs reads 4,608
+     files and 4.55 GB in 17.9 s, using 22.6 CPU-s. It holds the event loop
+     for up to 182 ms at a time. A later sweep, which only stats the files,
+     takes 103 ms. A first hand-written copy of the sweep read 56 s and 477 ms
+     and overstated it; those numbers are retired.
    - In the app, with 0.5 GB of those logs copied in, main's event loop was
      more than 50 ms late 22 times between 3.5 s and 7.1 s after launch, worst
      411 ms. One keystroke echo took 356 ms. A launch without the logs had
@@ -99,7 +98,7 @@ installed app was never touched.
    - Fix (small): turn `cursorBlink` off, or make it a setting with off as the
      default.
 7. **A pane printing flat out takes a whole main core, and Ctrl+C does not stop
-   it for 2.5 s.**
+   it for 3 s.**
    - Measured: `seq` in one worker puts main at 109–112% CPU and the renderer
      at 110–119%, with the renderer heap at 124–208 MB. 59% of main's busy
      time (2.3 s of 3.9 s) goes to the pane's headless xterm copy parsing every
@@ -107,11 +106,9 @@ installed app was never touched.
    - After Ctrl+C the pane keeps printing for 2.6 s when shown and 2.5 s when
      hidden: about 9 million more lines. Typing in the pane beside it stayed at
      24–27 ms median.
-   - Unconfirmed: the run used `seq 1 30000017`, which could have reached its
-     last line in those 2.5 s, so this may be `seq` finishing rather than
-     Ctrl+C landing late. `flood` now runs `seq 1 inf` and prints whether the
-     pane stopped and its last line. Rerun it before sizing the flow-control
-     fix on this number.
+   - Confirmed with `seq 1 inf`, which never finishes on its own: the pane
+     stopped, but only 3.2 s after Ctrl+C. The first runs used
+     `seq 1 30000017` and could have been `seq` finishing.
    - Where: `src/main/main.ts:429` (`copy.push(data)` on every chunk) and
      `src/main/panes/pane-screen-copy.ts`. The renderer's xterm write queue
      has no flow control back to the pty.
@@ -156,10 +153,10 @@ installed app was never touched.
   reply streaming.
 - **IPC.** Idle traffic is about one message every 5 s. Four streams at 200
   lines/s each make 81 `pty:data` messages and 120 kB a second, already
-  batched per pty chunk. These counted only `ipcRenderer.send` traffic and
-  what main sends: every `ipcRenderer.invoke` channel (`board:peek` and
-  `worktree:scan` among them) went uncounted. `ipc` now counts invoke calls
-  and their replies, so this is not yet ruled out for invoke traffic.
+  batched per pty chunk. A rerun that also counted `ipcRenderer.invoke`
+  calls and replies gave 78 `pty:data` messages and 123 kB a second, with no
+  invoke traffic at all over the 10 s, on a project page. The manager's
+  `board:peek` and `worktree:scan` were not on screen to fire.
 - **Main at ordinary output.** With four streams at 200 lines/s, main spends
   58 ms of each 10 s in JavaScript.
 - **Renderer timers when idle.** With the chat input focused, renderer CPU is
