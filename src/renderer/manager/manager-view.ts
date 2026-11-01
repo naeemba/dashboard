@@ -24,7 +24,7 @@ export type ManagerOptions = {
   // One keystroke, straight to that pane's shell, without going there.
   onAnswer(slot: number, index: number, key: string): void;
   // Closes the project holding that slot, or says why it cannot. The view picks the project; what
-  // closing costs, and what stops it, is the renderer's and close-project.ts's to answer.
+  // closing costs, and what stops it, is close-project.ts's to answer.
   onClose(slot: number): void;
   // Redraws the page. The rows are the renderer's, so the view asks for them back rather than keeping
   // its own copy; the status bar, which names what the selection is on, is redrawn by the same call.
