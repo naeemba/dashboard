@@ -217,14 +217,23 @@ export function rowsToDraw(
   return { visible, selection: settleSelection(visible, selection) };
 }
 
+// What one render draws: the rows the filter keeps, with the selected card kept among them while
+// keepsSelection says so, and where the selection rests. The redraw and the arrow keys both ask here,
+// so a new reason to keep a card cannot reach one of them alone.
+export function drawnRows(
+  board: Board, filter: BoardFilter, now: number, selection: Selection, typing: boolean, changedCardId: string | null,
+): { visible: number[][]; selection: Selection } {
+  return rowsToDraw(visibleRows(board, filter, now), selection, keepsSelection(board, selection, typing, changedCardId));
+}
+
 // Whether an arrow key can leave every card on screen and only move the highlight: the rows the board
-// would draw now are the rows it drew, and the selection rests where the key put it. Rebuilding 179
-// cards for an arrow cost 90 ms a press. The selection stepping off a card a filter only kept because
-// you had just changed it takes that card off screen, which is a full redraw.
-export function movesHighlightOnly(drawnBefore: number[][], rows: number[][], selection: Selection, keep: boolean): boolean {
-  const drawn = rowsToDraw(rows, selection, keep);
-  return drawn.selection === selection && drawn.visible.length === drawnBefore.length
-    && drawn.visible.every((column, index) => column.join() === drawnBefore[index].join());
+// would draw now are the rows it drew, and the selection rests where the key put it. A full redraw per
+// arrow is what docs/performance/history.md measured at about 90 ms a press. The selection stepping off
+// a card a filter only kept because you had just changed it takes that card off screen: a redraw.
+export function movesHighlightOnly(
+  drawnBefore: number[][], drawn: { visible: number[][]; selection: Selection }, selection: Selection,
+): boolean {
+  return drawn.selection === selection && JSON.stringify(drawn.visible) === JSON.stringify(drawnBefore);
 }
 
 // The card a change acted on, for keepsSelection to hold on screen: the selected card if the change

@@ -33,7 +33,7 @@ import {
   filterAfterPicking,
   changedCardIdAfter,
   hiddenSelectedCard,
-  keepsSelection,
+  drawnRows,
   emptyFilter,
   isFilterActive,
   realRow,
@@ -41,10 +41,8 @@ import {
   sideRow,
   rowAbove,
   movesHighlightOnly,
-  rowsToDraw,
   settleSelection,
   stepSelection,
-  visibleRows,
   type BoardFilter,
 } from './board-filter';
 import { createDropMarker } from './drop-marker';
@@ -625,8 +623,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     inFlight = new Map(options.worktrees()
       .filter((entry) => entry.projectPath === options.projectPath)
       .map((entry) => [entry.cardId, entry]));
-    const keep = keepsSelection(state.board, state.selection, editing !== null, changedCardId);
-    const drawn = rowsToDraw(visibleRows(state.board, filter, Date.now()), state.selection, keep);
+    const drawn = drawnRows(state.board, filter, Date.now(), state.selection, editing !== null, changedCardId);
     visible = drawn.visible;
     if (drawn.selection !== state.selection) state = { ...state, selection: drawn.selection };
     const filtered = isFilterActive(filter);
@@ -696,9 +693,9 @@ export function createBoardView(options: BoardOptions): BoardView {
   // every card; movesHighlightOnly says when it can. A card it cannot find, such as an empty column's,
   // is the full redraw too.
   function moveHighlight(): void {
-    const keep = keepsSelection(state.board, state.selection, editing !== null, changedCardId);
     const item = element.querySelector(`[data-card-id="${CSS.escape(cardAt(state.board, state.selection)?.id ?? '')}"]`);
-    if (!item || !movesHighlightOnly(visible, visibleRows(state.board, filter, Date.now()), state.selection, keep)) return render();
+    const drawn = drawnRows(state.board, filter, Date.now(), state.selection, editing !== null, changedCardId);
+    if (!item || !movesHighlightOnly(visible, drawn, state.selection)) return render();
     element.querySelector(SELECTED_CARD)?.classList.remove('selected');
     item.classList.add('selected');
     item.scrollIntoView({ block: 'nearest' });
