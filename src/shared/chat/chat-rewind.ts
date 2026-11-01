@@ -1,7 +1,7 @@
 import type { ForkSessionOptions, Options, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import { typedPrompt } from './chat-history';
 import { applyMessage, EMPTY_TRANSCRIPT } from './chat-transcript';
-import { fuzzyScore, type SearchRow } from '../app/fuzzy';
+import { ranked, fuzzyScore, type SearchRow } from '../app/fuzzy';
 
 // /rewind on the Claude screen, as Claude Code's Esc Esc: a prompt of the conversation picked, and the
 // code, the conversation or both put back to how they were just before it. The code goes back through
@@ -52,14 +52,9 @@ export function rewoundTo<T extends { uuid: string }>(messages: T[], at: string 
 
 // The prompts /rewind lists, newest first, or the ones matching what is typed, best first.
 export function rewindRows(points: RewindPoint[], query: string): SearchRow<RewindPoint>[] {
-  // The sort is stable, so prompts that score the same stay newest first.
-  return [...points].reverse()
-    .flatMap((point) => {
-      const score = query ? fuzzyScore(point.text, query) : 0;
-      return score === null ? [] : [{ point, score }];
-    })
-    .sort((one, other) => one.score - other.score)
-    .map(({ point }) => ({ name: point.text.split('\n')[0], detail: '', choice: point }));
+  // Reversed before ranking, so prompts that match as tightly stay newest first.
+  return ranked([...points].reverse(), (point) => point.text, query)
+    .map((point) => ({ name: point.text.split('\n')[0], detail: '', choice: point }));
 }
 
 // What can go back, as Claude Code offers it, filtered by what is typed.
