@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject } from './app/projects';
+import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
 import { realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
@@ -39,6 +39,7 @@ import { channels, registerWithIpc } from './app/channels';
 import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
+import { SESSION_FILE } from './app/session';
 import { sessionStore } from './app/session-store';
 import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation } from './workers/claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
@@ -130,7 +131,7 @@ const projects: (Project | undefined)[] = [];
 // says what the manager is to main.
 const projectIn = (slot: number): Project | undefined => projectInSlot(projects, slot);
 // The recently opened projects live next to the app's other per-user state.
-const recentsFile = path.join(app.getPath('userData'), 'recents.json');
+const recentsFile = path.join(app.getPath('userData'), RECENTS_FILE);
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
 // flight forever with nothing able to clear it.
@@ -215,6 +216,8 @@ const paneEnvironment = {
   DASHBOARD_BOARD: boardCommand,
   DASHBOARD_SESSION: sessionCommand,
   DASHBOARD_SOCKET: sessionSocket,
+  // Where session.json and recents.json are, for `dashboard project init`.
+  DASHBOARD_USER_DATA: app.getPath('userData'),
 } as Record<string, string>;
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
@@ -506,8 +509,7 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
-table.handle('recent-projects:read', () =>
-  readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
+table.handle('recent-projects:read', () => existingProjects(readRecentPaths(recentsFile)));
 // A null path opens the folder dialog; a path from the picker skips it. A refusal is answered, not
 // thrown: a throw reaches the screen behind Electron's "Error invoking remote method" prefix.
 table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
@@ -583,7 +585,7 @@ table.handle('usage:read', () => tokenUsage.latest());
 
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
 // so a crash loses at most the change you were making, or half a minute of sessions.
-const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), 'session.json'), slotOfProject, (id) => mainsWorkers.has(id));
+const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SESSION_FILE), slotOfProject, (id) => mainsWorkers.has(id));
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
