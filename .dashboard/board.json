@@ -13,13 +13,6 @@
           "updatedAt": "2026-10-29T11:44:11.602Z"
         },
         {
-          "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
-          "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
-          "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
           "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
           "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
@@ -69,9 +62,9 @@
           "parent": null
         },
         {
-          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
-          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
-          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
+          "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
+          "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
+          "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
           "priority": "low",
           "parent": null
         }
@@ -162,22 +155,12 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
-          "title": "IPC refusals thrown instead of answered (#129)",
-          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
           "priority": "low",
           "parent": null,
-          "createdAt": "2026-11-01T12:06:15.202Z",
-          "updatedAt": "2026-11-01T12:06:15.202Z"
-        },
-        {
-          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
-          "title": "Follow-up from #136: args locals and parameters in test files",
-          "notes": "https://github.com/naeemba/dashboard/issues/138",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:07:07.954Z"
+          "updatedAt": "2026-11-01T12:12:12.144Z"
         }
       ]
     },
@@ -269,17 +252,6 @@
           ]
         },
         {
-          "id": "5a6ac86c-0e7f-4ee7-97d7-88f94adb09c0",
-          "title": "Rename chat:commands and chat:sessions IPC channels to <noun>:<verb> (#88)",
-          "notes": "https://github.com/naeemba/dashboard/issues/88 — shipped in PR #141: chat-commands:read and chat-sessions:read, matching chat-models:read.",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:03:41.946Z",
-          "updatedAt": "2026-11-01T12:03:42.029Z",
-          "branch": "fix-github-issue-88-gh-issue-view-88-commen",
-          "pullRequest": 141
-        },
-        {
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
@@ -296,6 +268,34 @@
             {
               "at": "2026-11-01T12:09:38.318Z",
               "body": "PR #146: pickerRows, modelRows and rewindRows now call ranked; ranked returns early for an empty query. resumeRows, chat-mentions and card-search still score by hand, out of scope."
+            }
+          ]
+        },
+        {
+          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
+          "title": "IPC refusals thrown instead of answered (#129)",
+          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:06:15.202Z",
+          "updatedAt": "2026-11-01T12:10:37.524Z",
+          "branch": "fix-github-issue-129-gh-issue-view-129-comm",
+          "pullRequest": 149
+        },
+        {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:11:13.460Z",
+          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
+          "pullRequest": 147,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:13.460Z",
+              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
             }
           ]
         }
@@ -1819,12 +1819,43 @@
           ]
         },
         {
+          "id": "5a6ac86c-0e7f-4ee7-97d7-88f94adb09c0",
+          "title": "Rename chat:commands and chat:sessions IPC channels to <noun>:<verb> (#88)",
+          "notes": "https://github.com/naeemba/dashboard/issues/88 — shipped in PR #141: chat-commands:read and chat-sessions:read, matching chat-models:read.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:03:41.946Z",
+          "updatedAt": "2026-11-01T12:08:42.403Z",
+          "branch": "fix-github-issue-88-gh-issue-view-88-commen",
+          "pullRequest": 141,
+          "comments": [
+            {
+              "at": "2026-11-01T12:08:42.403Z",
+              "body": "Shipped in PR #141: fix for issue #88, merged after one review round (no fixes needed), version 2.32.11."
+            }
+          ]
+        },
+        {
+          "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
+          "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
+          "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:11:02.598Z",
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:02.555Z",
+              "body": "Done in PR #141 (tracked there as card 5a6ac86c): chat:commands and chat:sessions renamed to chat-commands:read and chat-sessions:read."
+            }
+          ]
+        },
+        {
           "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
           "title": "Terminal drop types '' for a file with no path on disk",
           "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-01T12:11:28.151Z",
+          "updatedAt": "2026-11-01T12:13:23.955Z",
           "branch": "fix-github-issue-91-gh-issue-view-91-commen",
           "pullRequest": 144,
           "comments": [
@@ -1833,8 +1864,8 @@
               "body": "PR #144: droppedPathsText skips empty paths, so a drop of a file with no path on disk types nothing. Version 2.32.11."
             },
             {
-              "at": "2026-11-01T12:11:28.151Z",
-              "body": "Shipped in PR #144: a dropped file with no path on disk is skipped instead of typing '' into the pane."
+              "at": "2026-11-01T12:13:23.955Z",
+              "body": "Shipped in PR #144: a dropped file with no path on disk is skipped instead of typing '' into the pane. Version 2.32.12."
             }
           ]
         }
