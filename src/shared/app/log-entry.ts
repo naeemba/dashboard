@@ -3,9 +3,9 @@ import { paneLabel } from '../panes/terminals';
 
 // One line of the log, and every decision about the file that does not touch the disk. Shared: main
 // writes entries and the renderer reads and filters them, so both sides import the one shape.
-export const LOG_LEVELS = ['error', 'warn', 'info'] as const;
+const LOG_LEVELS = ['error', 'warn', 'info'] as const;
 export type LogLevel = typeof LOG_LEVELS[number];
-export const LOG_KINDS = ['app', 'project', 'pane', 'agent', 'card', 'ship', 'worktree', 'board', 'error', 'screen'] as const;
+const LOG_KINDS = ['app', 'project', 'pane', 'agent', 'card', 'ship', 'worktree', 'board', 'error', 'screen'] as const;
 export type LogKind = typeof LOG_KINDS[number];
 
 export type LogEntry = { time: string; level: LogLevel; kind: LogKind; project?: string; message: string };

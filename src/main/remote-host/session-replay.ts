@@ -13,7 +13,7 @@ export type SessionState = {
 // then which of those panes' shells have ended, the worktrees and the token usage. A remote screen hears it on joining; the local window hears it on
 // coming back from another host, because while it was away its own pushes were held back from it.
 // Its own file so the client side can reach it without importing the host's electron wiring.
-export function replaySession(held: SessionState, send: (channel: string, args: unknown[]) => void): void {
+export function replaySession(held: SessionState, send: (channel: string, channelArguments: unknown[]) => void): void {
   send('projects:change', [held.projects()]);
   for (const [id, copy] of held.screenCopies) {
     const text = copy.replay();

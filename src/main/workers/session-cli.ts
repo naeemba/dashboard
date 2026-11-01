@@ -16,7 +16,7 @@ export type SessionCommand =
 export type SessionRequest = { directory: string; args: string[] };
 export type SessionReply = { ok: boolean; output: string };
 
-export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
+const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim
   session run <id> [--card <card id> | --worktree] "<prompt>"
@@ -62,8 +62,8 @@ function parseRun(words: readonly string[]): Parsed {
   return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree } };
 }
 
-export function parseSessionCommand(args: readonly string[]): Parsed {
-  const [verb, ...rest] = args;
+export function parseSessionCommand(commandArguments: readonly string[]): Parsed {
+  const [verb, ...rest] = commandArguments;
   switch (verb) {
     case 'claim': return { ok: true, command: { kind: 'claim' } };
     case 'list': return { ok: true, command: { kind: 'list' } };

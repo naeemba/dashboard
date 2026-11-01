@@ -34,7 +34,7 @@ export type ChatEvent =
   | { kind: 'ended'; error: string | null };
 
 // The images the API takes, and so the only ones a pasted image is sent as.
-export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
+const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const;
 export type ImageType = typeof IMAGE_TYPES[number];
 export const isImageType = (type: string): boolean => (IMAGE_TYPES as readonly string[]).includes(type);
 
@@ -397,7 +397,7 @@ export function afterReset(transcript: Transcript, event: Extract<ChatEvent, { k
 // The permission mode a session message says the session is now in: the one it started in, which its
 // settings may have set, or one it moved to by itself — a plan approved, an edit allowed with "do not
 // ask again", which Claude Code answers by accepting edits for the rest of the session.
-export function modeOf(message: Record<string, unknown>): PermissionMode | null {
+function modeOf(message: Record<string, unknown>): PermissionMode | null {
   if (message.type !== 'system' || (message.subtype !== 'init' && message.subtype !== 'status')) return null;
   return typeof message.permissionMode === 'string' ? message.permissionMode as PermissionMode : null;
 }
@@ -405,7 +405,7 @@ export function modeOf(message: Record<string, unknown>): PermissionMode | null 
 // Whether a session message says fast mode is on: `init` and every `result` carry it, which covers a
 // session already running fast from the settings file, and a model or plan without it reporting off.
 // Cooldown, paused after a rate limit, is still on: the choice stands and comes back by itself.
-export function fastOf(message: Record<string, unknown>): boolean | null {
+function fastOf(message: Record<string, unknown>): boolean | null {
   const reports = message.type === 'result' || (message.type === 'system' && message.subtype === 'init');
   return reports && typeof message.fast_mode_state === 'string' ? message.fast_mode_state !== 'off' : null;
 }

@@ -21,7 +21,7 @@ export type ScreenCommand =
   | { kind: 'resume' } | { kind: 'diff' } | { kind: 'rewind' } | { kind: 'mcp' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
   | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'btw'; rest: string } | { kind: 'export'; rest: string } | { kind: 'fast'; rest: string } | { kind: 'copy'; rest: string };
 
-export const SCREEN_COMMANDS: CommandRow[] = [
+const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
   { name: 'diff', description: 'Review every change Claude made to a file in this conversation', argumentHint: '' },
   { name: 'rewind', description: 'Put the code, the conversation or both back to just before an earlier prompt', argumentHint: '' },
@@ -201,9 +201,9 @@ export function pickedModel(value: string): string | null {
 export function typedCommand(text: string): string | null {
   const name = tagged(text, 'command-name')?.trim();
   if (!name) return null;
-  const args = tagged(text, 'command-args')?.trim();
+  const argumentText = tagged(text, 'command-args')?.trim();
   const command = name.startsWith('/') ? name : `/${name}`;
-  return args ? `${command} ${args}` : command;
+  return argumentText ? `${command} ${argumentText}` : command;
 }
 
 // A file dropped on the screen that is not an image to attach, as the box takes it: an @ mention, the
