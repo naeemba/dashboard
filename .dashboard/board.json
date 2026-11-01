@@ -276,22 +276,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
-          "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
-          "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:25:52.331Z",
-          "branch": "work-board-card-4862fe16-89f4-4428-a975-8e8",
-          "pullRequest": 135,
-          "comments": [
-            {
-              "at": "2026-11-01T01:25:52.331Z",
-              "body": "PR #135: dispatch.ts calls ship.ts's exported slug; branch cut kept in branchSlug. 3 pinning tests added, 1821 tests pass."
-            }
-          ]
         }
       ]
     },
@@ -1737,6 +1721,26 @@
             {
               "at": "2026-11-01T01:37:25.799Z",
               "body": "Shipped in PR #137: board.test.ts split, shared board test builder reused in board-state.test.ts."
+            }
+          ]
+        },
+        {
+          "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
+          "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
+          "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:40:05.176Z",
+          "branch": "work-board-card-4862fe16-89f4-4428-a975-8e8",
+          "pullRequest": 135,
+          "comments": [
+            {
+              "at": "2026-11-01T01:25:52.331Z",
+              "body": "PR #135: dispatch.ts calls ship.ts's exported slug; branch cut kept in branchSlug. 3 pinning tests added, 1821 tests pass."
+            },
+            {
+              "at": "2026-11-01T01:40:05.176Z",
+              "body": "Shipped in PR #135: one slug rule in src/shared/app/slug.ts, imported by main and renderer (chat export included). Version 2.32.7."
             }
           ]
         }

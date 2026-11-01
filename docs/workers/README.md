@@ -19,6 +19,7 @@ Folders: `src/main/workers/`.
 - Given a project is open, when main dispatches a task, then a worker pane opens in the list on the right and runs it.
 - Given a worker's agent stops, when its Stop hook runs `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
 - Given a worker ran Claude Code, when the app restarts, then the pane comes back resumed as main's worker with the worker's flags.
+- Given a project folder called `My API`, when its sessions start, then main is `main-my-api` and its workers `my-api-terminal-<n>` (lower-case, every other run one hyphen, none at either end, never cut short); a folder name with no Latin letters gives `main-project`.
 - Given a throwaway worktree with uncommitted work, when the worker is released, then the worktree is kept and the reply says why.
 
 ## Open questions

@@ -33,7 +33,7 @@ module's test.
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`
 - Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,
-  `clamp-index.ts`, `fuzzy.ts`, `is-record.ts`, `base-name.ts`, `age.ts`,
+  `clamp-index.ts`, `fuzzy.ts`, `is-record.ts`, `base-name.ts`, `slug.ts`, `age.ts`,
   `stale.ts`, `theme.ts`, `icons.ts`
 - Styles: `index.css`, `app.css`, `chrome.css`, `dialogs.css`
 
