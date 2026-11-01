@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { channels, registerWithIpc } from './channels';
 
-const callbacks = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>());
+const callbacks = vi.hoisted(() => new Map<string, (...channelArguments: unknown[]) => unknown>());
 vi.mock('electron', () => ({
   ipcMain: {
-    handle: (channel: string, callback: (...args: unknown[]) => unknown) => callbacks.set(channel, callback),
-    on: (channel: string, callback: (...args: unknown[]) => unknown) => callbacks.set(channel, callback),
+    handle: (channel: string, callback: (...channelArguments: unknown[]) => unknown) => callbacks.set(channel, callback),
+    on: (channel: string, callback: (...channelArguments: unknown[]) => unknown) => callbacks.set(channel, callback),
   },
 }));
 

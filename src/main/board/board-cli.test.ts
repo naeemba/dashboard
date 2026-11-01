@@ -7,12 +7,12 @@ import { emptyBoard, cardById, type Board } from '../../shared/board/board';
 let counter = 0;
 const makeId = (): string => `id-${(counter += 1)}`;
 
-function run(board: Board, ...args: string[]) {
-  return runBoardCommand(board, args, makeId);
+function run(board: Board, ...commandArguments: string[]) {
+  return runBoardCommand(board, commandArguments, makeId);
 }
 
-function boardAfter(board: Board, ...args: string[]): Board {
-  const result = run(board, ...args);
+function boardAfter(board: Board, ...commandArguments: string[]): Board {
+  const result = run(board, ...commandArguments);
   if (!result.ok) throw new Error(result.message);
   return result.board ?? board;
 }

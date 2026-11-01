@@ -8,7 +8,7 @@ let server: WebSocketServer | undefined;
 let client: RemoteClient | undefined;
 afterEach(() => { client?.close(); server?.close(); });
 
-function hostOn(answer: (channel: string, args: unknown[]) => unknown): Promise<string> {
+function hostOn(answer: (channel: string, channelArguments: unknown[]) => unknown): Promise<string> {
   return new Promise((resolve) => {
     server = new WebSocketServer({ port: 0 }, () => {
       const address = server!.address()!;
@@ -32,7 +32,7 @@ const ports = () => ({ version: '1.17.0', push: () => undefined, status: () => u
 
 describe('connectRemote', () => {
   it('connects, then forwards a request and brings back its result', async () => {
-    const address = await hostOn((channel, args) => `${channel}:${String(args[0])}`);
+    const address = await hostOn((channel, channelArguments) => `${channel}:${String(channelArguments[0])}`);
     client = await connectRemote(address, 'good', ports());
     await expect(client.invoke('board:read', ['/code/api'])).resolves.toBe('board:read:/code/api');
   });
@@ -45,7 +45,7 @@ describe('connectRemote', () => {
   it('relays a push to the renderer', async () => {
     const pushed: unknown[] = [];
     const address = await hostOn(() => null);
-    client = await connectRemote(address, 'good', { ...ports(), push: (channel, args) => pushed.push([channel, args]) });
+    client = await connectRemote(address, 'good', { ...ports(), push: (channel, channelArguments) => pushed.push([channel, channelArguments]) });
     for (const socket of server!.clients) socket.send(encodeFrame({ channel: 'pty:data', args: ['0-1', 'hi'] }));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(pushed).toEqual([['pty:data', ['0-1', 'hi']]]);
@@ -80,7 +80,7 @@ describe('connectRemote', () => {
 
   it('tells the host every pane size again after a reconnect', async () => {
     const resizes: unknown[][] = [];
-    const address = await hostOn((channel, args) => { if (channel === 'pty:resize') resizes.push(args); });
+    const address = await hostOn((channel, channelArguments) => { if (channel === 'pty:resize') resizes.push(channelArguments); });
     client = await connectRemote(address, 'good', ports());
     client.send('pty:resize', ['0:1', 120, 40]);
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -134,7 +134,7 @@ describe('connectRemote', () => {
         else setTimeout(() => socket.readyState === socket.OPEN && answer(), 500);
       });
     });
-    client = await connectRemote(address, 'good', { ...ports(), push: (channel, args) => pushed.push([channel, args]) });
+    client = await connectRemote(address, 'good', { ...ports(), push: (channel, channelArguments) => pushed.push([channel, channelArguments]) });
     for (const socket of server.clients) socket.terminate();
     await new Promise((resolve) => setTimeout(resolve, 2_300));
     expect(server.clients.size).toBe(1);
