@@ -79,6 +79,13 @@ app.
   on the branch first, then the merge, then the app's board. (board-rule-2)
 - **IPC channels are `<noun>:<verb>`**: `link:open`, `board:read`,
   `pty:resize`. (app-rule-1)
+- **Imports stay on their process's side.** `src/renderer/` never imports
+  `src/main/` or `src/preload/`, `src/main/` never imports `src/renderer/` or
+  `src/preload/`, `src/preload/` and `src/shared/` import only `src/shared/`,
+  even for a type or an `import()`. A Node or DOM package is a value import
+  only on its own side. `npx eslint .` enforces it, `eslint.config.test.ts`
+  pins it; a type both sides name moves to `src/shared/`, never an
+  eslint-disable. (app-rule-2)
 - **Every merged card bumps `package.json` `version`** in the same pull
   request: patch for a fix, minor for a capability, major for a break.
   (workflow-rule-3)
