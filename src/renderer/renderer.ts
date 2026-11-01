@@ -477,7 +477,7 @@ const { removePage, applyProjects, host } = createPageSync({
 const closeProject = createProjectCloser({
   readPanes: (projectPath) => bridge.readPanes(projectPath),
   closeProject: (slot) => bridge.closeProject(slot),
-  pages,
+  pages: () => pages,
   positionOfSlot,
   activeIndex: () => activeIndex,
   namedPanes,

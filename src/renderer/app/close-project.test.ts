@@ -77,7 +77,7 @@ describe('createProjectCloser', () => {
     const ports: ProjectCloserPorts = {
       readPanes: vi.fn(async () => readings.shift() ?? []),
       closeProject: vi.fn(),
-      pages,
+      pages: () => pages,
       positionOfSlot: (slot) => pages.findIndex((each) => each.slot === slot),
       activeIndex: () => options.activeIndex ?? 1,
       namedPanes: () => [{ index: 1, name: 'terminal 2' }],

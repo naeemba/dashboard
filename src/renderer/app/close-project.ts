@@ -60,7 +60,8 @@ export function closingPanes(
 export type ProjectCloserPorts = {
   readPanes: (projectPath: string) => Promise<PaneUse[]>;
   closeProject: (slot: number) => void;
-  pages: readonly Page[];
+  // A function, since the list changes between calls: the closer reads it again after removePage.
+  pages: () => readonly Page[];
   positionOfSlot: (slot: number) => number;
   activeIndex: () => number;
   namedPanes: (page: Page) => { index: number; name: string }[];
@@ -106,7 +107,7 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
     // because the window's guard only fires when focus is inside an overlay, and no key clears it.
     if (closing) return;
     const position = ports.positionOfSlot(slot);
-    const page = ports.pages[position];
+    const page = ports.pages()[position];
     // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
     // has already gone.
     if (!page || !isProjectPage(page)) return;
@@ -140,7 +141,7 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
       // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
       // found afresh here. Whatever page holds this slot is a project page, because the slot is the same
       // one the check at the top answered for and isProjectPage reads nothing else.
-      const closingPage = ports.pages[ports.positionOfSlot(slot)];
+      const closingPage = ports.pages()[ports.positionOfSlot(slot)];
       if (!closingPage) return;
       // Read again with the page and for the same reason: the answer was given over a quiet project, and
       // a pane that took an agent or a question while the dialog was up is one the close refuses over.
@@ -158,7 +159,7 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
       // it was the last one, which is the manager at worst. A close from the manager's own list is the
       // other case and needs none of this: the manager holds the first tab and never moves off it, so
       // what leaves is always behind the page you are looking at.
-      if (closingPosition === ports.activeIndex()) ports.landOn(positionAfterClose(closingPosition, ports.pages.length));
+      if (closingPosition === ports.activeIndex()) ports.landOn(positionAfterClose(closingPosition, ports.pages().length));
       // The row leaves the list, the tab leaves the strip, and the session file is written without it.
       ports.renderStatus();
     });
