@@ -40,6 +40,7 @@ Rules that hold for every feature. `CLAUDE.md` states each in one line.
 |---|---|
 | [conventions](conventions/README.md) | Keyboard first, `dir="auto"`, `hidden` against the stylesheet |
 | [workflow](workflow/README.md) | Never restart the app, a decision gets a test, bump the version |
+| [performance](performance/README.md) | How to profile a demo instance, and what each profiling run found |
 
 Older design specs and plans are in `superpowers/`; they are inputs, not the
 record.
