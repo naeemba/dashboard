@@ -2,6 +2,7 @@ import { projectPosition } from './manager';
 import { SECTIONS } from './manager-sections';
 import type { Mode } from './modes';
 import type { Direction } from './terminals';
+import type { LineEdit } from './chat-line-editing';
 
 // What a shortcut does once it has fired. The renderer answers the first three groups; the board view
 // answers the board kinds. Moved here from shortcuts.ts so the table can name the action beside its key.
@@ -58,11 +59,12 @@ export type Action =
   | { kind: 'log-select'; direction: 'up' | 'down' }
   | { kind: 'log-open' }
   | { kind: 'log-filter-reset' }
-  | { kind: 'chat'; command: ChatCommand };
+  | { kind: 'chat'; command: ChatCommand }
+  | { kind: 'chat-edit'; edit: LineEdit };
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash' | 'fast';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -564,6 +566,11 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'permission-mode' },
     mac: 'Shift+Tab', other: 'Shift+Tab',
   },
+  // Alt+F, for fast; Claude Code's Alt+O is the unfold key here. Alt+F zooms a pane only on the terminals screen.
+  {
+    name: 'claude-fast', description: 'Turn fast mode on or off',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'fast' }, mac: 'Alt+F', other: 'Alt+F',
+  },
   // Tab, as in Claude Code. It also fills the box from the open command list, so the list keeps the key.
   {
     name: 'claude-accept-suggestion', description: 'Fill the empty box with the prompt Claude suggests, or with the command picked in the list',
@@ -587,9 +594,30 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'claude-task-background', description: 'Send the picked task to the background, or every foreground task with none picked',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-background' }, mac: 'Alt+B', other: 'Alt+B',
   },
+  // Ctrl+S, the terminal's stash key, opens the project picker here (chat-decision-9).
+  {
+    name: 'claude-stash', description: 'Stash the draft in the box and empty it; Up brings it back',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'stash' }, mac: 'Alt+S', other: 'Alt+S',
+  },
+  // The readline keys the Claude Code terminal's box has, on whichever of the screen's boxes has the
+  // keyboard. Ctrl+Y was redo on Linux and Windows; Ctrl+Shift+Z still is.
+  ...([
+    ['kill-word', 'Delete the word before the caret, keeping it for Ctrl+Y', 'Ctrl+W'],
+    ['kill-line-start', 'Delete back to the start of the line, keeping it for Ctrl+Y', 'Ctrl+U'],
+    ['kill-line-end', 'Delete on to the end of the line, keeping it for Ctrl+Y', 'Ctrl+K'],
+    ['yank', 'Put back the last text deleted with Ctrl+W, Ctrl+U or Ctrl+K', 'Ctrl+Y'],
+    ['yank-pop', 'Straight after Ctrl+Y, swap what it put back for the text deleted before that', 'Alt+Y'],
+  ] as const).map(([edit, description, key]): ActionEntry => ({
+    name: `claude-${edit}`, description, group: 'claude', scope: 'claude', action: { kind: 'chat-edit', edit }, mac: key, other: key,
+  })),
   {
     name: 'claude-new', description: 'Start a new conversation',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'new' }, mac: 'Alt+N', other: 'Alt+N',
+  },
+  // Ctrl+G, as in Claude Code, which opens the prompt in $EDITOR. Here the editor is the page's nvim.
+  {
+    name: 'claude-editor', description: 'Edit the prompt in nvim; save and come back to take it',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'editor' }, mac: 'Ctrl+G', other: 'Ctrl+G',
   },
 ];
 

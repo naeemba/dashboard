@@ -66,3 +66,22 @@ export function historyRows(prompts: string[], query: string): SearchRow<string>
     .filter((text) => text.toLowerCase().includes(typed))
     .map((text) => ({ name: text.slice(0, ROW_NAME_LIMIT * 2).replace(/\s+/g, ' ').trim().slice(0, ROW_NAME_LIMIT), detail: '', choice: text }));
 }
+
+// How many drafts the stash key keeps; the oldest goes when another is stashed past it.
+export const STASH_KEPT = 10;
+
+// The stash key's drafts, oldest first, after the box's text is stashed. Up walks them after the
+// draft in the box and before the prompts sent, newest first. A draft stashed again moves to the end
+// rather than showing twice, and an empty box stashes nothing. Trimmed, as a sent prompt is, so
+// sending it takes it out of the stash.
+export function stashDraft(stashed: string[], text: string): string[] {
+  const draft = text.trim();
+  if (draft === '') return stashed;
+  return [...stashed.filter((each) => each !== draft), draft].slice(-STASH_KEPT);
+}
+
+// What the stash key keeps: the box, or, while Up shows an earlier entry, the draft held aside. The
+// earlier entry is one Up can already reach; the draft is what would be lost.
+export function stashedText(box: string, held: string, recalled: number | null): string {
+  return recalled === null ? box : held;
+}

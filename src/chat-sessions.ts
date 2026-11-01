@@ -4,15 +4,17 @@ import { measureOf, type ChatMeasure } from './chat-status';
 import { rateLimitNotice } from './chat-notices';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { replaceFile } from './board-store';
 import path from 'node:path';
 import type { ChatContent } from './bridge';
 import type { Channels } from './channels';
-import { conversationChange, EMPTY_TRANSCRIPT, modeOf, withEarlier, type ChatEvent } from './chat-transcript';
+import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from './chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from './chat-history';
 import type { PermissionAsk } from './chat-permission';
+import { exportTarget, type ExportWrite } from './chat-export-target';
+import { elicitationAsk, elicitationResult } from './chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from './chat-mcp';
 import { pdfRefusal, type PdfRead } from './chat-pdf';
 import { renameTarget } from './chat-rename';
@@ -44,13 +46,17 @@ export type ChatHost = {
 // What the renderer may change on a running session. Held per slot so a choice made before the first
 // prompt is what the session starts with. The default model is null rather than undefined: the second
 // screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
-// as no change at all. The effort is null for the same reason: auto, the model's own default.
-export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null };
+// as no change at all. The effort is null for the same reason: auto, the model's own default. Fast is
+// fast mode, as /fast toggles it in Claude Code; undefined leaves it to the settings file.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null; fast?: boolean };
 
 export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
 
 // The conversations /resume offers, newest first, and the one this page is on.
 export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
+
+// The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
+type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };
 
 export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close(): void };
 
@@ -118,18 +124,19 @@ function loginShellPath(fallback: string): Promise<string> {
   });
 }
 
-// The messages the pane reads. The rest — hook progress, task updates, and of the
-// streamed events everything but a block starting and text or thinking arriving — are left on this
-// side of the wire rather than sent to every screen on every token. A Write streams the whole file as
-// its input, so the working line's count leaves tool input out. A subagent's stream is left out too:
+// The messages the pane reads. The rest — a hook's progress lines (it is named when it starts), task
+// updates, and of the streamed events everything but a block starting and text or thinking arriving —
+// are left on this side of the wire rather than sent to every screen on every token. A Write streams
+// the whole file as its input, so the working line's count leaves tool input out. A prompt's lifecycle
+// says when one sent while Claude was busy is taken or withdrawn. A subagent's stream is left out too:
 // the pane draws its steps once each arrives whole. A rate limit event goes only when it says a limit
 // is near or hit: most say the plan is fine, one each time its percentage moves.
-const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion']);
+const RELAYED = new Set(['assistant', 'user', 'result', 'system', 'prompt_suggestion', 'command_lifecycle']);
 const RELAYED_STREAM = new Set(['content_block_start', 'text_delta', 'thinking_delta']);
 
 export function relayed(message: Record<string, unknown>): boolean {
   if (message.type === 'rate_limit_event') return rateLimitNotice(message) !== null;
-  if (message.type !== 'stream_event') return RELAYED.has(String(message.type));
+  if (message.type !== 'stream_event') return RELAYED.has(String(message.type)) && message.subtype !== 'hook_progress';
   if (typeof message.parent_tool_use_id === 'string') return false;
   const event = isRecord(message.event) ? message.event : {};
   const delta = isRecord(event.delta) ? event.delta.type : undefined;
@@ -145,6 +152,34 @@ export function rememberedSessions(file: string): Record<string, string> {
   } catch {
     return {};
   }
+}
+
+// The part of a change that goes through the session's flag layer, only the keys it names. An effort
+// of null goes back to the model's default.
+export function flagSettingsOf(change: ChatPreferences): { effortLevel?: EffortLevel | null; fastMode?: boolean } {
+  return { ...('effort' in change && { effortLevel: change.effort ?? null }), ...(change.fast !== undefined && { fastMode: change.fast }) };
+}
+
+// What a restarted session is told through the flag layer about what was chosen before the restart.
+// Auto effort: the effort option cannot say null, and a session started without it runs at the
+// settings file's level. Fast mode, whenever chosen: it has no query option at all. Any other effort
+// rides the query option already. A fast mode the session only reported is not in `chosen`, so a
+// restart leaves it to the settings file rather than pinning it over them.
+export function replayedFlagSettings(chosen: ChatPreferences | undefined): ReturnType<typeof flagSettingsOf> {
+  return flagSettingsOf({ ...(chosen?.effort === null && { effort: null }), fast: chosen?.fast });
+}
+
+// What a report from the session changes. Its permission mode becomes the choice, since the session
+// is on it now and a restart should stay there. Its fast mode is kept apart, so a restart does not
+// replay it over the settings file as if it had been chosen.
+export function afterReport(chosen: ChatPreferences | undefined, reported: ChatPreferences): { chosen: ChatPreferences; reportedFast?: boolean } {
+  return { chosen: { ...chosen, ...(reported.permissionMode && { permissionMode: reported.permissionMode }) }, ...(reported.fast !== undefined && { reportedFast: reported.fast }) };
+}
+
+// What a screen opening the page starts from: the choices made, with the fast mode the session last
+// reported over them, since that is what it is on now.
+export function shownPreferences(chosen: ChatPreferences | undefined, reportedFast: boolean | undefined): ChatPreferences {
+  return { ...chosen, ...(reportedFast !== undefined && { fast: reportedFast }) };
 }
 
 // What a project's main session opens on. The conversation the terminal main left wins over one the
@@ -165,6 +200,9 @@ export function registerChatSessions(
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
   const preferences = new Map<number, ChatPreferences>();
+  // Per slot, the fast mode the session last reported, kept apart from the choices so a restart does
+  // not replay it. A choice clears it until the next report.
+  const reportedFast = new Map<number, boolean>();
   const file = path.join(host.userData, 'chat-sessions.json');
   const remembered = rememberedSessions(file);
   // Per project, the message a /rewind of the conversation resumes up to, until the next prompt's
@@ -224,6 +262,9 @@ export function registerChatSessions(
         extraArgs: { name: mainSessionName(projectPath), 'thinking-display': 'summarized' },
         env: environment,
         includePartialMessages: true,
+        // Every hook's start and answer, not only SessionStart's: the working line names the one
+        // running and a failed one goes in the conversation (chat-hooks.ts).
+        includeHookEvents: true,
         // A subagent's text as well as its tool calls, so a call that started one can show its steps.
         forwardSubagentText: true,
         // The next prompt Claude Code would offer, after each turn's result. The CLI holds it back on
@@ -241,12 +282,14 @@ export function registerChatSessions(
           defaultToNo: options.defaultToNo === true,
           suppressAlwaysAllowRule: options.suppressAlwaysAllowRule === true,
         }, options.signal),
+        // An MCP server's form or sign-in link, asked in the same box. A server's dialogs
+        // (onUserDialog) are left undeclared, so the CLI never sends one and keeps its own fallback.
+        onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
     }) };
-    // Auto picked before a restart: the effort option cannot say null, and a session started without
-    // it runs at the settings file's level, so the override goes through the flag layer as /effort
-    // sends it. Failing, the session stays on the settings level until the next pick.
-    if (preferences.get(slot)?.effort === null) session.query.applyFlagSettings({ effortLevel: null }).catch(() => undefined);
+    // Failing, the session stays on the settings file's level and fast mode until the next pick.
+    const replayed = replayedFlagSettings(preferences.get(slot));
+    if (Object.keys(replayed).length > 0) session.query.applyFlagSettings(replayed).catch(() => undefined);
     void (async () => {
       let error: string | null = null;
       // Whether a turn ever began. After one, the conversation remembered may have moved on (/clear,
@@ -260,9 +303,14 @@ export function registerChatSessions(
           // then the cleared one is not what the next launch should resume.
           const change = conversationChange(record, remembered[projectPath]);
           if (change.remember !== undefined) remember(projectPath, change.remember ?? undefined);
-          if (change.reset) host.send(slot, { kind: 'reset' });
-          const mode = modeOf(record);
-          if (mode) preferences.set(slot, { ...preferences.get(slot), permissionMode: mode });
+          if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
+          // What the session reports it is on, so a screen opened later starts from it.
+          const reported = reportedPreferences(record);
+          if (reported) {
+            const after = afterReport(preferences.get(slot), reported);
+            preferences.set(slot, after.chosen);
+            if (after.reportedFast !== undefined) reportedFast.set(slot, after.reportedFast);
+          }
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
@@ -296,13 +344,14 @@ export function registerChatSessions(
     return session;
   }
 
-  // A prompt for this page's session.
+  // A prompt for this page's session, stamped with the uuid the session's queue reports it by.
   table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
-    host.send(slot, { kind: 'prompt', content });
+    const id = randomUUID();
+    host.send(slot, { kind: 'prompt', content, id });
     running(slot, projectPath).then(
-      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null }),
+      (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
   });
@@ -320,6 +369,17 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     return projectFiles(projectPath);
+  });
+
+  // /export saving the conversation: the file goes in the project's folder, a name typed with a folder
+  // in it relative to there, never outside it and never over a file (exportTarget). Answers where it
+  // went, or the refusal as a value; it throws only when the write fails.
+  table.handle('chat-export:write', async (_screen, slot: number, name: string, text: string): Promise<ExportWrite> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return { refused: 'This page has no project folder to save into.' };
+    const target = exportTarget(projectPath, name, existsSync);
+    if ('path' in target) replaceFile(target.path, text);
+    return target;
   });
 
   // The models /model lists, as the session offers them; asking starts it, as the command list does.
@@ -349,6 +409,14 @@ export function registerChatSessions(
     };
   });
 
+  // A prompt still waiting in the session's queue, taken back; false once the session has taken it.
+  // cancelAsyncMessage is on Query in the pinned SDK but missing from its types.
+  table.handle('chat:withdraw', async (_screen, slot: number, id: string): Promise<boolean> => {
+    const session = await sessions.get(slot)?.catch(() => undefined);
+    if (!session) return false;
+    return (session.query as Query & { cancelAsyncMessage(uuid: string): Promise<boolean> }).cancelAsyncMessage(id);
+  });
+
   // /rename: the SDK writes the name into the conversation's file, where /resume's summary reads it
   // first. The refusal, or null once renamed.
   table.handle('chat:rename', async (_screen, slot: number, title: string): Promise<string | null> => {
@@ -358,6 +426,15 @@ export function registerChatSessions(
     const { renameSession } = await import('@anthropic-ai/claude-agent-sdk');
     await renameSession(target.sessionId, target.title, { dir: projectPath });
     return null;
+  });
+
+  // /btw: a question answered from the conversation so far and never added to it (chat-decision-8).
+  // Null for no answer.
+  table.handle('chat-side-question:ask', async (_screen, slot: number, question: string): Promise<string | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    const { query } = await running(slot, projectPath);
+    return (await (query as unknown as SideQuestions).askSideQuestion(question))?.response ?? null;
   });
 
   // The prompts sent in the project's recent conversations, newest conversation first, for the history
@@ -412,13 +489,15 @@ export function registerChatSessions(
 
   table.handle('chat:configure', async (_screen, slot: number, change: ChatPreferences) => {
     preferences.set(slot, { ...preferences.get(slot), ...change });
+    if (change.fast !== undefined) reportedFast.delete(slot);
     host.send(slot, { kind: 'configured', change });
     const session = await sessions.get(slot);
     if (!session) return;
     if ('model' in change) await session.query.setModel(change.model ?? undefined);
     if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
-    // The session's flag layer, as /effort sets it: null goes back to the model's default.
-    if ('effort' in change) await session.query.applyFlagSettings({ effortLevel: change.effort ?? null });
+    // The session's flag layer, as /effort and /fast set it.
+    const flags = flagSettingsOf(change);
+    if (Object.keys(flags).length > 0) await session.query.applyFlagSettings(flags);
   });
 
   // What the status line shows: how full the context window is, read from the last response rather
@@ -451,7 +530,7 @@ export function registerChatSessions(
     // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
     const asks = running ? [...running.asks.values()].map((pending) => pending.ask) : [];
-    return { messages, asks, preferences: preferences.get(slot) ?? {} };
+    return { messages, asks, preferences: shownPreferences(preferences.get(slot), reportedFast.get(slot)) };
   });
 
   // A PDF the conversation names, for the tile that opens it. A mention is relative to the session's
@@ -569,7 +648,7 @@ export function registerChatSessions(
     },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
-    stop: (slot) => { stop(slot); preferences.delete(slot); },
+    stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
     stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
   };
 }

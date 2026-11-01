@@ -21,7 +21,7 @@ export type CommandRow = SlashCommand;
 
 export type ScreenCommand =
   | { kind: 'resume' } | { kind: 'diff' } | { kind: 'rewind' } | { kind: 'mcp' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
-  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'copy'; rest: string };
+  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'btw'; rest: string } | { kind: 'export'; rest: string } | { kind: 'fast'; rest: string } | { kind: 'copy'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -37,6 +37,9 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'rename', description: 'Name this conversation; /resume lists it by that name', argumentHint: '<name>' },
   // No hint: the count is optional, so Enter copies the last reply now.
   { name: 'copy', description: "Copy Claude's last reply as markdown, or the one that many back named after it", argumentHint: '' },
+  { name: 'btw', description: 'Ask a side question about the conversation, answered without tools and kept out of it', argumentHint: '<question>' },
+  { name: 'export', description: 'Copy the conversation to the clipboard or save it to a file; a name after it saves to that file', argumentHint: '' },
+  { name: 'fast', description: 'Turn fast mode on or off, or to the one named after it: faster output from the same model, billed higher', argumentHint: '' },
 ];
 
 // The command typed into the box when it is one of the screen's own, else null and the text goes to
@@ -53,6 +56,9 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'rename') return { kind: 'rename', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'copy') return { kind: 'copy', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'btw') return { kind: 'btw', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'export') return { kind: 'export', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'fast') return { kind: 'fast', rest: (match[2] ?? '').trim() };
   return null;
 }
 
@@ -85,6 +91,14 @@ export function effortRows(current: ChosenEffort, query: string): SearchRow<Effo
     detail: EFFORT_DETAILS[level ?? 'auto'] ?? '',
     choice: level,
   }));
+}
+
+// What `/fast x` turns fast mode to: the other of what it is on when nothing is named, on or off when
+// that is named, undefined for any other word, which is refused.
+export function namedFast(name: string, current: boolean): boolean | undefined {
+  const wanted = name.toLowerCase();
+  if (wanted === '') return !current;
+  return wanted === 'on' ? true : wanted === 'off' ? false : undefined;
 }
 
 // Whether a prompt asks for deeper thinking on its turn with the ultrathink keyword. The session acts on
