@@ -79,7 +79,8 @@
           "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
           "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
           "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -167,15 +168,6 @@
     {
       "name": "Doing",
       "cards": [
-        {
-          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
-          "title": "IPC refusals thrown instead of answered (#129)",
-          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:06:15.202Z",
-          "updatedAt": "2026-11-01T12:06:15.202Z"
-        },
         {
           "id": "350ca982-2ed1-44a7-88af-d539860d141e",
           "title": "Follow-up from #136: args locals and parameters in test files",
@@ -309,6 +301,17 @@
               "body": "PR #146: pickerRows, modelRows and rewindRows now call ranked; ranked returns early for an empty query. resumeRows, chat-mentions and card-search still score by hand, out of scope."
             }
           ]
+        },
+        {
+          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
+          "title": "IPC refusals thrown instead of answered (#129)",
+          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:06:15.202Z",
+          "updatedAt": "2026-11-01T12:10:37.524Z",
+          "branch": "fix-github-issue-129-gh-issue-view-129-comm",
+          "pullRequest": 149
         }
       ]
     },
