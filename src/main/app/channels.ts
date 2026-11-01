@@ -6,20 +6,20 @@ import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 // window, and the websocket for every other screen. The screen a call came from is the first argument,
 // because a pane's size is the screen's and so is a banner's click.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ChannelHandler = (screen: string, ...args: any[]) => unknown;
+export type ChannelHandler = (screen: string, ...channelArguments: any[]) => unknown;
 
 export type Channels = {
   handle(channel: string, handler: ChannelHandler): void;
   on(channel: string, handler: ChannelHandler): void;
-  invoke(screen: string, channel: string, args: unknown[]): Promise<unknown>;
-  dispatch(screen: string, channel: string, args: unknown[]): void;
+  invoke(screen: string, channel: string, channelArguments: unknown[]): Promise<unknown>;
+  dispatch(screen: string, channel: string, channelArguments: unknown[]): void;
   handled(): string[];
   listened(): string[];
 };
 
 export type RemoteTarget = {
-  invoke(channel: string, args: unknown[]): Promise<unknown>;
-  send(channel: string, args: unknown[]): void;
+  invoke(channel: string, channelArguments: unknown[]): Promise<unknown>;
+  send(channel: string, channelArguments: unknown[]): void;
 };
 
 export function channels(): Channels {
@@ -30,16 +30,16 @@ export function channels(): Channels {
     on(channel, handler) { listeners.set(channel, handler); },
     // A send arriving as a request, which is how a remote screen sends everything, is dispatched and
     // answered null: it has no reply of its own, but the screen's frame has an id that waits for one.
-    async invoke(screen, channel, args) {
+    async invoke(screen, channel, channelArguments) {
       const handler = handlers.get(channel);
-      if (handler) return handler(screen, ...args);
+      if (handler) return handler(screen, ...channelArguments);
       const listener = listeners.get(channel);
       if (!listener) throw new Error(`No such channel: ${channel}`);
-      listener(screen, ...args);
+      listener(screen, ...channelArguments);
       return null;
     },
-    dispatch(screen, channel, args) {
-      listeners.get(channel)?.(screen, ...args);
+    dispatch(screen, channel, channelArguments) {
+      listeners.get(channel)?.(screen, ...channelArguments);
     },
     handled: () => [...handlers.keys()],
     listened: () => [...listeners.keys()],
@@ -51,16 +51,16 @@ export function channels(): Channels {
 // bypassed, not emptied, so disconnecting brings the local session straight back.
 export function registerWithIpc(table: Channels, remote: () => RemoteTarget | null): void {
   for (const channel of table.handled()) {
-    ipcMain.handle(channel, (_event, ...args: unknown[]) => {
+    ipcMain.handle(channel, (_event, ...channelArguments: unknown[]) => {
       const target = remote();
-      return target && !isClientChannel(channel) ? target.invoke(channel, args) : table.invoke(LOCAL_SCREEN, channel, args);
+      return target && !isClientChannel(channel) ? target.invoke(channel, channelArguments) : table.invoke(LOCAL_SCREEN, channel, channelArguments);
     });
   }
   for (const channel of table.listened()) {
-    ipcMain.on(channel, (_event, ...args: unknown[]) => {
+    ipcMain.on(channel, (_event, ...channelArguments: unknown[]) => {
       const target = remote();
-      if (target && !isClientChannel(channel)) target.send(channel, args);
-      else table.dispatch(LOCAL_SCREEN, channel, args);
+      if (target && !isClientChannel(channel)) target.send(channel, channelArguments);
+      else table.dispatch(LOCAL_SCREEN, channel, channelArguments);
     });
   }
 }

@@ -441,16 +441,16 @@ function spawnTerminal(id: string): void {
   // pane listened before and nothing has to be told the name again. Anything left behind by a previous
   // run — a crash, a kill -9 — is cleared first: nvim refuses to listen on a path that already exists,
   // and the pane would show a one-line error instead of an editor.
-  let args = entry.args;
-  if (args === 'editor') {
+  let paneArguments = entry.args;
+  if (paneArguments === 'editor') {
     const socket = editorSocket(app.getPath('temp'), paneFromId(id).slot);
     removeSocket(socket);
-    args = editorArguments(shellCommand, socket);
+    paneArguments = editorArguments(shellCommand, socket);
   }
   let terminalProcess: pty.IPty;
   try {
     const { cols, rows } = sizeOfPane(paneScreens, id);
-    terminalProcess = pty.spawn(shellCommand, args, {
+    terminalProcess = pty.spawn(shellCommand, paneArguments, {
       name: 'xterm-256color',
       cols,
       rows,
@@ -528,8 +528,8 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
     shells.get(id)?.write(resumeLine(resume));
     return;
   }
-  const args = comesBackAs === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
-  startAgent(id, card?.worktreePath ?? resume.directory, args);
+  const agentArguments = comesBackAs === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
+  startAgent(id, card?.worktreePath ?? resume.directory, agentArguments);
   if (comesBackAs === 'worker') mainsWorkers.add(id);
 }
 
@@ -545,9 +545,9 @@ const mainsWorkers = new Set<string>();
 //
 // What it runs is the caller's, because there are three agents now: the one that works a card, the one
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
-function startAgent(id: string, worktreePath: string, args: string[]): void {
+function startAgent(id: string, worktreePath: string, agentArguments: string[]): void {
   mainsWorkers.delete(id);
-  setPaneCommand(id, { args, directory: worktreePath });
+  setPaneCommand(id, { args: agentArguments, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
@@ -937,13 +937,13 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.
-  startWorker(id, directory, args, cardId) {
+  startWorker(id, directory, agentArguments, cardId) {
     const entry = cardId === null ? undefined : entryForCard(worktrees, cardId);
     const { slot, index } = paneFromId(id);
     takePane(projects[slot]?.path ?? '', index, cardId ?? '');
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
-    startAgent(id, directory, args);
+    startAgent(id, directory, agentArguments);
     mainsWorkers.add(id);
   },
   closeWorker,
