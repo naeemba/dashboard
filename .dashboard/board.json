@@ -116,6 +116,12 @@
           "title": "Split board.test.ts by describe block",
           "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
           "priority": "medium"
+        },
+        {
+          "id": "154a7a68-302c-4e65-aebe-3b1bb0926668",
+          "title": "Spell out args as a full word in locals and parameters",
+          "notes": "src refactoring audit, step 8. Plan: /tmp/claude-1000/src-audit.md (section 'Step 8').",
+          "priority": "medium"
         }
       ]
     },
