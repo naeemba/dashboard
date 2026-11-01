@@ -183,6 +183,15 @@
           "parent": null,
           "createdAt": "2026-11-01T12:06:15.202Z",
           "updatedAt": "2026-11-01T12:06:15.202Z"
+        },
+        {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:07:07.954Z"
         }
       ]
     },
