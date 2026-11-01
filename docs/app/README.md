@@ -11,7 +11,8 @@ Folders: `src/main/`, `src/main/app/`, `src/preload/`, `src/shared/app/`, `src/r
 A new file goes in `src/<process>/<feature>/`. The process is the side that
 runs it (a type-only import does not count): `main/` when only main or the two
 command entries reach it, `renderer/` when only `renderer.ts` does (every
-stylesheet too), `shared/` when both do, `preload/` for the preload. The feature
+stylesheet too), `shared/` when both do, `preload/` for the preload, and `shared/` for a
+file nothing runs: a module of types, or a helper only tests import. The feature
 is the `docs/<feature>/` folder whose Files list names it. Basenames keep their
 prefix (`renderer/chat/chat-view.ts`), and a test sits beside its module.
 
