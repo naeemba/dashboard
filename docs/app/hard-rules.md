@@ -12,6 +12,11 @@ The thing first, then what you do to it: `link:open`, `session:write`,
 touch notifications and it does not sort next to them, so the next person adds
 `alert:send` and now there are three spellings of one idea.
 
+`chat:commands` and `chat:sessions` did not either — two nouns, the verb
+missing — and the next channel copied them as `chat:models`. They are
+`chat-commands:read` and `chat-sessions:read` now, beside `chat-models:read`:
+a list the page asks for is the list's name, then `read`.
+
 ## app-rule-2: Imports stay on their process's side
 
 `src/main/` runs in Node, `src/renderer/` in the window, `src/preload/` in the
