@@ -9,6 +9,8 @@ const COLUMNS = 80;
 // A buffer whose screen starts `viewportY` lines down, laid out the way xterm does it: a Han character
 // is a cell of width 2 followed by a spacer of width 0, anything else one cell. A trailing space in a
 // row is one the program wrote, and xterm's trim keeps it: it drops only cells nothing was written to.
+// No row is wrapped, so the untrimmed form is not modelled: `translateToString` ignores `trim` and never
+// pads to the row width. A wrapped case needs the padding `wrapped-links.test.ts` gives its buffer.
 const buffer = (lines: string[], viewportY: number): ScreenBuffer => ({
   baseY: viewportY,
   length: lines.length,
