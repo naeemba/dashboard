@@ -127,6 +127,8 @@ function countInto(usage: FileUsage, text: string): void {
 // ponytail: reads every log whole again on each launch, since the counts live only in memory — 18
 // CPU-seconds for 4.5 GB, off main's thread. If launches start feeling it, save each file's size and
 // counts in userData so a launch reads only what was appended since the last run.
+// ponytail: stats every log every sweep — about a hundred milliseconds for four thousand files. If
+// that starts showing, narrow the walk to the folders of the projects that are open.
 export async function sweepUsage(
   root: string,
   known: Map<string, FileUsage>,

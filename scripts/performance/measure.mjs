@@ -258,59 +258,60 @@ const measurements = {
   }),
 };
 
+// How late a 10 ms timer on this thread fires, which is how long the whole loop was held. Stop it
+// for the longest hold seen.
+function holdTimer() {
+  let longest = 0, last = performance.now();
+  const timer = setInterval(() => { const now = performance.now(); longest = Math.max(longest, now - last - 10); last = now; }, 10);
+  return () => { clearInterval(timer); return longest; };
+}
+
+// Wall time and this process's CPU (every thread's) for one run.
+async function timed(run) {
+  const started = performance.now();
+  const cpuBefore = process.cpuUsage();
+  const result = await run();
+  const cpu = process.cpuUsage(cpuBefore);
+  return { result, seconds: +((performance.now() - started) / 1000).toFixed(1), cpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1) };
+}
+
 // No demo instance: the app's own sweepUsage (src/main/usage/usage-store.ts), loaded through vite, on a
 // real log folder, read-only. Twice: the first sweep reads everything, the second what a later one costs.
-// The longest hold is how late a 10 ms timer on the same thread fired, so it is the app's whole loop.
+// Then the first sweep again the way the app runs it, on the built usage-worker.js thread
+// (npm run package first), where main's hold is only waiting. A project of '' takes in every log that
+// named a folder, since ranInProject asks for `${path}/` as a prefix, and its tokens are checked against
+// the in-process sweep's so a thread that read nothing cannot pass for a fast one. They differ by
+// whatever running sessions appended in between.
 async function usageSweep(root) {
   const { createServer } = await import('vite');
   const server = await createServer({ configFile: false, root: path.join(here, '..', '..'), logLevel: 'error', server: { middlewareMode: true, hmr: false } });
   const { sweepUsage } = await server.ssrLoadModule('/src/main/usage/usage-store.ts');
+  const { snapshotOf } = await server.ssrLoadModule('/src/shared/usage/usage.ts');
+  const { requestSweep } = await server.ssrLoadModule('/src/main/usage/usage-thread.ts');
   await server.close();
-  let longest = 0, last = performance.now();
-  const timer = setInterval(() => { const now = performance.now(); longest = Math.max(longest, now - last - 10); last = now; }, 10);
+  const everything = [{ path: '', worktrees: '\0' }];
+  let stop = holdTimer();
   const known = new Map();
-  const started = performance.now();
-  const cpuBefore = process.cpuUsage();
-  await sweepUsage(root, known, Date.now());
-  const firstSweep = performance.now() - started;
-  const cpu = process.cpuUsage(cpuBefore);
-  const laterStarted = performance.now();
-  await sweepUsage(root, known, Date.now());
-  const laterSweep = performance.now() - laterStarted;
-  clearInterval(timer);
+  const first = await timed(() => sweepUsage(root, known, Date.now()));
+  const later = await timed(() => sweepUsage(root, known, Date.now()));
+  const longest = stop();
   const bytes = [...known.values()].reduce((sum, usage) => sum + usage.size, 0);
   print('usage-sweep', {
     files: known.size, gigabytes: +(bytes / 1073741824).toFixed(2),
-    firstSweepSeconds: +(firstSweep / 1000).toFixed(1), firstSweepCpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1),
-    longestHoldMs: Math.round(longest), laterSweepMs: Math.round(laterSweep),
+    firstSweepSeconds: first.seconds, firstSweepCpuSeconds: first.cpuSeconds,
+    longestHoldMs: Math.round(longest), laterSweepMs: Math.round(later.seconds * 1000),
   });
-  await usageSweepInThread(root, known);
-}
-
-// The same first sweep the way the app runs it: on its own thread, from the built usage-worker.js
-// (npm run package first). The hold is still main's, which now only waits. The tokens are checked
-// against the in-process sweep's, so a thread that read nothing cannot pass for a fast one. They differ
-// by whatever running sessions appended in between.
-async function usageSweepInThread(root, known) {
   const file = path.join(here, '..', '..', '.vite', 'build', 'usage-worker.js');
   if (!existsSync(file)) return print('usage-sweep-thread', { skipped: `${file} not built` });
-  const expected = [...known.values()].reduce((sum, usage) => sum + (usage.directory === '' ? 0 : usage.allTime), 0);
   const worker = new Worker(file);
-  let longest = 0, last = performance.now();
-  const timer = setInterval(() => { const now = performance.now(); longest = Math.max(longest, now - last - 10); last = now; }, 10);
-  const started = performance.now();
-  const cpuBefore = process.cpuUsage();
-  // A project of '' takes in every log that named a folder: ranInProject asks for `${path}/` as a prefix.
-  worker.postMessage({ root, now: Date.now(), projects: [{ path: '', worktrees: '\0' }], paneSessions: new Map() });
-  const reply = await new Promise((resolve, reject) => { worker.once('message', resolve); worker.once('error', reject); });
-  const firstSweep = performance.now() - started;
-  const cpu = process.cpuUsage(cpuBefore);
-  clearInterval(timer);
+  stop = holdTimer();
+  const threaded = await timed(() => requestSweep(worker, { root, now: Date.now(), projects: everything, paneSessions: new Map() }));
+  const mainLongest = stop();
   await worker.terminate();
-  if ('error' in reply) throw reply.error;
   print('usage-sweep-thread', {
-    firstSweepSeconds: +(firstSweep / 1000).toFixed(1), firstSweepCpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1),
-    mainLongestHoldMs: Math.round(longest), allTimeTokens: reply.snapshot.projects[''].allTime, inProcessAllTimeTokens: expected,
+    firstSweepSeconds: threaded.seconds, firstSweepCpuSeconds: threaded.cpuSeconds, mainLongestHoldMs: Math.round(mainLongest),
+    allTimeTokens: threaded.result.projects[''].allTime,
+    inProcessAllTimeTokens: snapshotOf(known.values(), everything, new Map(), Date.now()).projects[''].allTime,
   });
 }
 

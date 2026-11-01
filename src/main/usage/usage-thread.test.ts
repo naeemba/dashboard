@@ -15,6 +15,8 @@ describe('requestSweep', () => {
   it('resolves with the snapshot the thread sends back', async () => {
     const fake = thread((emitter) => emitter.emit('message', { snapshot: NO_USAGE }));
     expect(await requestSweep(fake, request)).toBe(NO_USAGE);
+    // None left behind, so the next sweep is answered once.
+    expect(fake.listenerCount('message') + fake.listenerCount('error') + fake.listenerCount('exit')).toBe(0);
   });
 
   it('rejects with the error a sweep that threw sends back', async () => {
@@ -26,11 +28,5 @@ describe('requestSweep', () => {
   it('rejects when the thread stops before answering', async () => {
     const fake = thread((emitter) => emitter.emit('exit', 1));
     await expect(requestSweep(fake, request)).rejects.toThrow('exit code 1');
-  });
-
-  it('leaves no listener behind, so the next sweep is answered once', async () => {
-    const fake = thread((emitter) => emitter.emit('message', { snapshot: NO_USAGE }));
-    await requestSweep(fake, request);
-    expect(fake.listenerCount('message') + fake.listenerCount('error') + fake.listenerCount('exit')).toBe(0);
   });
 });

@@ -45,13 +45,6 @@ export function requestSweep(thread: Thread, request: SweepRequest): Promise<Usa
   });
 }
 
-// Built beside main as its own file, and unpacked for the reason the CLI entries are: a worker thread
-// is started from a path on disk, and that path cannot be inside the asar. In development there is no
-// asar in the path and the replace does nothing.
-const workerFile = path
-  .join(__dirname, 'usage-worker.js')
-  .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
-
 // Started on the first sweep and kept for the life of the app, since the counts it holds are what make
 // every sweep after the first one cheap. Unref'd so it never keeps the app from quitting. A thread
 // that died is replaced on the next sweep, which then reads every log again from the start.
@@ -59,6 +52,13 @@ export function usageThread(): (request: SweepRequest) => Promise<UsageSnapshot>
   let thread: Worker | undefined;
   return (request) => {
     if (thread === undefined) {
+      // Built beside main as its own file, and unpacked for the reason the CLI entries are: a worker
+      // thread is started from a path on disk, and that path cannot be inside the asar. In development
+      // there is no asar in the path and the replace does nothing. Worked out here, not on import, so
+      // the performance script can load this file as a module, where there is no __dirname.
+      const workerFile = path
+        .join(__dirname, 'usage-worker.js')
+        .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
       const started = new Worker(workerFile);
       started.unref();
       started.once('exit', () => { if (thread === started) thread = undefined; });

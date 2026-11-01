@@ -13,11 +13,13 @@ import type { SweepReply, SweepRequest } from './usage-thread';
 
 const known = new Map<string, FileUsage>();
 
-parentPort?.on('message', (request: SweepRequest) => {
-  void sweepUsage(request.root, known, request.now).then(
-    () => snapshotOf(known.values(), request.projects, request.paneSessions, request.now),
-  ).then(
-    (snapshot): SweepReply => ({ snapshot }),
-    (error: unknown): SweepReply => ({ error }),
-  ).then((reply) => parentPort?.postMessage(reply));
+parentPort?.on('message', async (request: SweepRequest) => {
+  let reply: SweepReply;
+  try {
+    await sweepUsage(request.root, known, request.now);
+    reply = { snapshot: snapshotOf(known.values(), request.projects, request.paneSessions, request.now) };
+  } catch (error) {
+    reply = { error };
+  }
+  parentPort?.postMessage(reply);
 });
