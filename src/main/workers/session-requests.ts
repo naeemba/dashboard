@@ -29,7 +29,7 @@ export type SessionPorts = {
   shellCommand(): string;
   // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
   openWorker(slot: number): number;
-  startWorker(id: string, directory: string, args: string[], cardId: string | null): void;
+  startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null): void;
   closeWorker(id: string): void;
   mark(id: string, state: WorkerState): void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.

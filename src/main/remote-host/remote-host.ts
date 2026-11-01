@@ -15,7 +15,7 @@ export type HostPorts = {
   table: Channels;
   token: () => string;
   version: string;
-  onJoin(screen: string, send: (channel: string, args: unknown[]) => void): void;
+  onJoin(screen: string, send: (channel: string, channelArguments: unknown[]) => void): void;
   onLeave(screen: string): void;
   log(draft: LogDraft): void;
   // For a failure nobody asked for, which only the status bar can tell: a port that could not be opened.
@@ -23,7 +23,7 @@ export type HostPorts = {
 };
 
 // `except` is a screen that is not told, because it is the one that caused the push.
-export type RemoteHost = { broadcast(channel: string, args: unknown[], except?: string): void; close(): void };
+export type RemoteHost = { broadcast(channel: string, channelArguments: unknown[], except?: string): void; close(): void };
 
 // heartbeatMs exists for the test of a screen that stops answering.
 export function startRemoteHost(port: number, ports: HostPorts, heartbeatMs: number = HEARTBEAT_MS): RemoteHost {
@@ -77,7 +77,7 @@ export function startRemoteHost(port: number, ports: HostPorts, heartbeatMs: num
         answered.add(socket);
         ports.log({ level: 'info', kind: 'screen', message: `${address} joined` });
         push(socket, { id: answer.id, result: null });
-        return ports.onJoin(screen, (channel, args) => push(socket, { channel, args }));
+        return ports.onJoin(screen, (channel, channelArguments) => push(socket, { channel, args: channelArguments }));
       }
       const frame = answer.request;
       void ports.table.invoke(screen, frame.channel, frame.args)
@@ -101,8 +101,8 @@ export function startRemoteHost(port: number, ports: HostPorts, heartbeatMs: num
   });
 
   return {
-    broadcast(channel, args, except) {
-      for (const [screen, socket] of screens) if (screen !== except) push(socket, { channel, args });
+    broadcast(channel, channelArguments, except) {
+      for (const [screen, socket] of screens) if (screen !== except) push(socket, { channel, args: channelArguments });
     },
     close() {
       clearInterval(heartbeat);
