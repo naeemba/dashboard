@@ -543,8 +543,6 @@ function openProject(projectPath: string): { index: number; open: OpenProjects }
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
-  // The slot holds a project either way by now: it was just filled, or the path matched one that is
-  // open. `picked` is only what stops the type being optional, never an answer anyone receives.
   const open = openProjects();
   sendToRenderer('projects:change', open);
   return { index, open };
@@ -841,10 +839,11 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
 // `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
 // the session command's and decides them.
+const folderExists = (folder: string) => !projectFromPath(folder).missing;
 const sessions = listenForSessions(sessionSocket, projectRequests({
   slotOf: slotOfProject,
   missingIn: (slot) => projects[slot]?.missing === true,
-  folderExists: (projectPath) => !projectFromPath(projectPath).missing,
+  folderExists,
   open: openProject,
   // Named the way the close key names them, less any name you gave a pane: those are the screen's.
   panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
@@ -857,7 +856,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
     return project === undefined ? [] : [{ slot, name: project.name }];
   }),
   findProject: projectNamedInFile,
-  folderExists: (folder) => !projectFromPath(folder).missing,
+  folderExists,
   openProject: (folder) => openProject(folder).index,
   openPanes,
   agentIn: (id) => runsAnAgent(terminalCommands.get(id)),

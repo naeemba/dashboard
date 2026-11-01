@@ -9,7 +9,7 @@ import { directoriesOf } from '../panes/shell-directory-lookup';
 
 // `~`, `~/` and an absolute path name one place whatever folder the pane is in; a relative path names none
 // yet. Both fileCandidates and findPaneFile ask this, so the pane's folder is looked up exactly when it
-// is used. projects.yaml's paths are read by it too, in project-cli.ts.
+// is used. projects.yaml's paths are read by it too, in project-named.ts.
 export function wholePath(filePath: string, home: string): string | undefined {
   if (filePath === '~') return home;
   if (filePath.startsWith('~/')) return path.join(home, filePath.slice(2));
