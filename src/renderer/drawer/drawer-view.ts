@@ -4,7 +4,7 @@ import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { SESSION_PAGE_SIZE, type DocEntry, type SessionList } from '../../shared/drawer/drawer';
 import { isProjectPage } from '../../shared/manager/manager';
-import { icon } from '../app/icons';
+import { icon, iconOnlyButton } from '../app/icons';
 import { promptOverlay } from '../app/overlay';
 import type { Page } from '../app/page';
 import { isModified } from '../keys/shortcuts';
@@ -60,13 +60,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   });
 
   // Only the icon, and on every page, the manager's too, so the title row does not move between tabs.
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'project drawer-toggle';
-  button.title = 'Docs & sessions';
-  button.setAttribute('aria-label', 'Docs & sessions');
-  button.append(icon('drawer'));
-  button.addEventListener('click', () => toggle());
+  const button = iconOnlyButton('project drawer-toggle', 'drawer', 'Docs & sessions', () => toggle());
   // A click leaves the keyboard where it was until the drawer takes it.
   button.addEventListener('mousedown', (event) => event.preventDefault());
 
@@ -156,15 +150,15 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     items[highlighted]?.scrollIntoView({ block: 'nearest' });
   }
 
-  // What the drawer lists, read again. The docs only on opening the drawer or a folder in it, which the
-  // manager's page reads then: Load more and a rename change sessions.
-  function load(withDocs: boolean): void {
+  // What the drawer lists, read again: on opening it both, on Load more and a rename the sessions, on
+  // opening a folder the docs, which the manager's page reads a folder at a time.
+  function load(withDocs: boolean, withSessions = true): void {
     const page = shownFor;
     if (page === null) return;
     const ticket = ++loads;
     Promise.all([
       withDocs ? ports.bridge.listDocs(page.project.path, [...foldersOpen(page.project.path)]) : docs,
-      ports.bridge.listSessions(page.project.path, count),
+      withSessions ? ports.bridge.listSessions(page.project.path, count) : sessions,
     ]).then(
       ([nextDocs, nextSessions]) => {
         if (ticket !== loads) return;
@@ -240,10 +234,14 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function fold(folder: string): void {
     if (shownFor === null) return;
     const open = foldersOpen(shownFor.project.path);
-    if (open.delete(folder)) return draw();
+    if (open.delete(folder)) {
+      // The folders inside it close with it, so a closed folder's subfolders are not read again.
+      for (const inside of open) if (inside.startsWith(`${folder}/`)) open.delete(inside);
+      return draw();
+    }
     open.add(folder);
     draw();
-    load(true);
+    load(true, false);
   }
 
   // Left and Right in the tree: a folder opened or closed, or the highlight stepped in or out.

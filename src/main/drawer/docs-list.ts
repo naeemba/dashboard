@@ -3,6 +3,7 @@ import path from 'node:path';
 import { imageDataUrl, type ImageType } from '../../shared/chat/chat-transcript';
 import type { DocEntry, DocReply } from '../../shared/drawer/drawer';
 import { isManagerPath } from '../../shared/manager/manager';
+import { BOARD_DIRECTORY } from '../board/board-store';
 import { isInside } from '../panes/shell-directory';
 
 // The markdown files the drawer lists, and one of them read for its viewer: a project's docs/ folder,
@@ -11,7 +12,9 @@ import { isInside } from '../panes/shell-directory';
 
 // The manager's two folders, by their names in the home folder. ~/.claude holds thousands of files
 // (projects/, plugins/, caches), so these are read a folder at a time, as each is opened, never walked.
-export const MANAGER_DOC_ROOTS = ['.dashboard', '.claude'];
+const MANAGER_DOC_ROOTS = [BOARD_DIRECTORY, '.claude'];
+const managerRoots = (home: string): string[] => MANAGER_DOC_ROOTS.map((name) => path.join(home, name));
+const isMarkdown = (name: string): boolean => name.toLowerCase().endsWith('.md');
 
 // The order the rows print in: by folder, each folder's README before the rest of it, so the index of a
 // feature leads the feature.
@@ -29,7 +32,7 @@ async function projectDocs(projectPath: string): Promise<DocEntry[]> {
     return [];
   }
   return names
-    .filter((name) => name.toLowerCase().endsWith('.md'))
+    .filter(isMarkdown)
     .map((name) => name.split(path.sep).join('/'))
     .sort(docOrder)
     .map((name) => ({ path: path.join(root, name), name }));
@@ -39,12 +42,12 @@ async function projectDocs(projectPath: string): Promise<DocEntry[]> {
 // markdown files and its folders, which may hold none. A name outside the two folders lists nothing.
 async function managerFolder(home: string, folder: string): Promise<DocEntry[]> {
   const directory = path.resolve(home, folder);
-  if (!MANAGER_DOC_ROOTS.some((root) => isInside(directory, path.join(home, root)))) return [];
+  if (!managerRoots(home).some((root) => isInside(directory, root))) return [];
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
   const name = (entry: { name: string }): string => path.relative(home, path.join(directory, entry.name)).split(path.sep).join('/');
   return entries.flatMap((entry): DocEntry[] => {
     if (entry.isDirectory()) return [{ path: path.join(directory, entry.name), name: name(entry), folder: true }];
-    return entry.name.toLowerCase().endsWith('.md') ? [{ path: path.join(directory, entry.name), name: name(entry) }] : [];
+    return isMarkdown(entry.name) ? [{ path: path.join(directory, entry.name), name: name(entry) }] : [];
   });
 }
 
@@ -75,14 +78,14 @@ type DocScope = { root: string; images: string };
 
 function scopes(projectPath: string, home: string): DocScope[] {
   if (!isManagerPath(projectPath)) return [{ root: path.join(projectPath, 'docs'), images: projectPath }];
-  return MANAGER_DOC_ROOTS.map((name) => ({ root: path.join(home, name), images: path.join(home, name) }));
+  return managerRoots(home).map((root) => ({ root, images: root }));
 }
 
 // The scope a file is a doc of, the only files the viewer reads: markdown under the project's docs/,
 // or under the manager's two folders on its page. A path from anywhere else is refused, so the channel
 // cannot be asked for ~/.ssh/id_rsa.
 export function docScope(projectPath: string, file: string, home: string): DocScope | null {
-  if (!file.toLowerCase().endsWith('.md')) return null;
+  if (!isMarkdown(file)) return null;
   return scopes(projectPath, home).find(({ root }) => file !== root && isInside(file, root)) ?? null;
 }
 

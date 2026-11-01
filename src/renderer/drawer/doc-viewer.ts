@@ -11,15 +11,6 @@ import { openLinksOutside, renderMarkdown } from '../chat/chat-markdown';
 export function docOverlay(
   name: string, text: string, images: Record<string, string>, edit: (() => void) | null, openLink: (url: string) => void,
 ): void {
-  const row = document.createElement('div');
-  row.className = 'drawer-row highlighted doc-viewer-edit';
-  const label = document.createElement('span');
-  label.className = 'drawer-name';
-  label.textContent = `Edit ${name} in nvim`;
-  const keys = document.createElement('span');
-  keys.className = 'drawer-detail';
-  keys.textContent = 'Enter edits · ↑↓ scroll · Escape closes';
-  row.append(icon('editor'), label, keys);
   const body = document.createElement('div');
   body.className = 'chat-text doc-viewer-text';
   body.innerHTML = renderMarkdown(text, images);
@@ -30,6 +21,15 @@ export function docOverlay(
     viewerOverlay('doc-viewer', shown);
     return;
   }
+  const row = document.createElement('div');
+  row.className = 'drawer-row highlighted doc-viewer-edit';
+  const label = document.createElement('span');
+  label.className = 'drawer-name';
+  label.textContent = `Edit ${name} in nvim`;
+  const keys = document.createElement('span');
+  keys.className = 'drawer-detail';
+  keys.textContent = 'Enter edits · ↑↓ scroll · Escape closes';
+  row.append(icon('editor'), label, keys);
   shown.append(row, body);
   const editing = (): void => {
     close();
