@@ -1,32 +1,22 @@
-// Over the 600-code-line limit, left there on purpose for now: several cards edit this file at once,
-// and a split landing under them would conflict with every one. Split it once they have merged, along
-// the seam of `send`'s dispatch of the screen's own commands (the `screenCommand` branches), which can
-// move to a module of its own beside chat-screen-commands.ts. Do not make the file longer meanwhile.
 import './chat.css';
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
 import type { ChatContent, DashboardBridge } from './bridge';
 import { createAskPanel } from './chat-ask-view';
-import { completion, droppedFiles, EFFORT_LEVELS, effortRows, fileMention, footEffort, mentionInsertion, namedEffort, namedFast, nextCopyBlock, pickedModel, planSends, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
-import { editsHeading, sessionEdits } from './chat-diff';
-import { exportConversation } from './chat-export-view';
-import { diffBlock, drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { createAttachments } from './chat-attachments';
+import { completion, footEffort, nextCopyBlock, screenCommand, tabFill, type ChosenEffort, type CommandRow } from './chat-commands';
+import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from './chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { renderMarkdown } from './chat-markdown';
-import { askAside } from './chat-btw-view';
 import { permissionTitle, type PermissionAsk } from './chat-permission';
 import { revealed } from './chat-reveal';
-import { manageMcp } from './chat-mcp-view';
-import { renameConversation } from './chat-rename';
-import { rewind } from './chat-rewind-view';
-import { branch as branchConversation, chooseModel, copyReply, resume } from './chat-screen-commands';
+import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
-  afterReset, applyEvent, EMPTY_TRANSCRIPT, imageDataUrl, isImageType, imagesFit, preferencesOf, withEarlier, working, type ChatEvent, type ChatImage,
-  type ImageType, type Transcript,
+  afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from './chat-transcript';
 import type { ChatPreferences } from './chat-sessions';
 import { promptParts, withdrawable } from './chat-queue';
@@ -35,7 +25,7 @@ import { createTaskStrip } from './chat-task-strip';
 import { backgroundTarget, stopTarget } from './chat-tasks';
 import { clampIndex } from './clamp-index';
 import { failureText } from './failure';
-import { imageOverlay, pdfOverlay, searchOverlay, viewerOverlay } from './overlay';
+import { imageOverlay, pdfOverlay, searchOverlay } from './overlay';
 import { isModified } from './shortcuts';
 
 // The Claude screen: a conversation drawn as HTML over a prompt box, run through the Agent SDK by
@@ -103,13 +93,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
     bridge.chatAnswer(slot, id, result);
     dropAsk(id);
   }, bridge.openExternal);
-  const attached = document.createElement('div');
-  attached.className = 'chat-attached';
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
   prompt.placeholder = PLACEHOLDER;
   prompt.rows = 3;
   prompt.dir = 'auto';
+  const attachments = createAttachments(element, prompt, bridge, options);
   const menu = createCommandMenu();
   const activity = document.createElement('div');
   activity.className = 'chat-working';
@@ -120,7 +109,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   foot.className = 'chat-foot';
   const tasks = createTaskStrip();
   const queue = createQueueStrip();
-  element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attached, prompt, foot);
+  element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
@@ -128,7 +117,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // The block the copy key copied last, so the next press on the same entry copies the one after it.
   let copied: { entry: number; block: number } | null = null;
   let asks: PermissionAsk[] = [];
-  let images: ChatImage[] = [];
   let model: string | null = null;
   let effort: ChosenEffort;
   // Off until the session's init or a turn's result says which it is on, the settings file's choice included.
@@ -311,33 +299,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function send(): void {
     let text = prompt.value.trim();
-    if (!text && images.length === 0) return;
+    if (!text && attachments.list().length === 0) return;
     stashed = stashed.filter((each) => each !== text);
     const own = screenCommand(text);
-    if (own) emptyBox();
-    if (own?.kind === 'resume') return showResume();
-    if (own?.kind === 'diff') return showDiff();
-    if (own?.kind === 'rewind') return showRewind();
-    if (own?.kind === 'mcp') return void manageMcp(bridge, slot, options).then(focus);
-    if (own?.kind === 'model') return showModels(own.rest);
-    if (own?.kind === 'branch') return branch(own.rest);
-    if (own?.kind === 'effort') return showEfforts(own.rest);
-    if (own?.kind === 'copy') return void copyReply(transcript.entries, own.rest, options);
-    if (own?.kind === 'fast') {
-      const named = namedFast(own.rest, fast);
-      if (named === undefined) return options.onNotice(`Fast mode has no ${own.rest}. Try on or off.`);
-      return configure({ fast: named });
-    }
-    if (own?.kind === 'export') return void exportConversation(bridge, slot, options, transcript.entries, own.rest).then(focus);
-    if (own?.kind === 'rename') return renameConversation(bridge, slot, own.rest, options);
-    if (own?.kind === 'btw') return showAside(own.rest);
-    if (own?.kind === 'plan') {
-      configure({ permissionMode: (mode = 'plan') });
-      if (!planSends(own.rest, images.length)) return;
-      text = own.rest;
+    if (own) {
+      emptyBox();
+      const rest = runScreenCommand(own, commandScreen);
+      if (rest === null) return;
+      text = rest;
     }
     const content: ChatContent = [
-      ...images.map((picture) => ({
+      ...attachments.list().map((picture) => ({
         type: 'image' as const,
         source: { type: 'base64' as const, media_type: picture.mediaType as ImageType, data: picture.data },
       })),
@@ -347,20 +319,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
     bridge.chatSend(slot, content);
     if (commands === null) commandsAsked = false;
     emptyBox();
-    images = [];
-    attached.replaceChildren();
+    attachments.clear();
     selected = null;
     log.scrollTop = log.scrollHeight;
     render();
-  }
-
-  function drawAttached(): void {
-    attached.replaceChildren(...images.map((picture, index) => {
-      const thumbnail = document.createElement('img');
-      thumbnail.src = imageDataUrl(picture);
-      thumbnail.alt = `image ${index + 1}`;
-      return thumbnail;
-    }));
   }
 
   // The list follows what is typed. The first slash asks main for the session's commands, which
@@ -433,15 +395,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // One at a time: an Up pressed again before main answers would ask to withdraw the same prompt.
   let withdrawing = false;
   function withdraw(): boolean {
-    const waiting = withdrawable(transcript.queued, prompt.value, images.length);
+    const waiting = withdrawable(transcript.queued, prompt.value, attachments.list().length);
     if (!waiting || withdrawing) return waiting !== null;
     withdrawing = true;
     bridge.chatWithdraw(slot, waiting.id).finally(() => { withdrawing = false; }).then((withdrawn) => {
       if (!withdrawn) return options.onNotice('Claude has already read that message.');
       const parts = promptParts(waiting.content);
       prompt.value = prompt.value ? `${prompt.value}\n${parts.text}` : parts.text;
-      images = [...images, ...parts.images];
-      drawAttached();
+      attachments.add(parts.images);
     }, (error: unknown) => options.onError(`Message not withdrawn: ${failureText(error)}`));
     return true;
   }
@@ -480,59 +441,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
     } else if (event.key === 'Enter') {
       event.preventDefault();
       send();
-    } else if (event.key === 'Backspace' && prompt.value === '' && images.length > 0) {
-      images = images.slice(0, -1);
-      drawAttached();
+    } else if (event.key === 'Backspace' && prompt.value === '') {
+      attachments.dropLast();
     }
   });
-
-  // Images pasted into the box or dropped anywhere on the screen are attached to the next prompt. The
-  // window cancels every drop's default, so a file dropped here never replaces the page.
-  prompt.addEventListener('paste', (event) => {
-    const files = [...event.clipboardData?.files ?? []].filter((file) => isImageType(file.type));
-    if (files.length === 0) return;
-    event.preventDefault();
-    attach(files);
-  });
-
-  // Only a drag carrying files lights the box; text dragged out of the log is not something it takes.
-  element.addEventListener('dragover', (event) => {
-    if (event.dataTransfer?.types.includes('Files')) element.classList.add('dropping');
-  });
-  element.addEventListener('dragleave', (event) => {
-    if (!(event.relatedTarget instanceof Node && element.contains(event.relatedTarget))) element.classList.remove('dropping');
-  });
-  element.addEventListener('drop', (event) => {
-    element.classList.remove('dropping');
-    const dropped = [...event.dataTransfer?.files ?? []];
-    if (dropped.length === 0) return;
-    const { pictures, paths, refused } = droppedFiles(dropped.map((file) => ({ file, type: file.type, path: bridge.getPathForFile(file) })));
-    if (pictures.length > 0) attach(pictures.map((each) => each.file));
-    if (paths.length > 0) {
-      const insertion = mentionInsertion(prompt.value.slice(0, prompt.selectionStart), paths.map(fileMention));
-      prompt.setRangeText(insertion, prompt.selectionStart, prompt.selectionEnd, 'end');
-      // setRangeText fires no input event; the box's own handler forgets a recalled prompt and refreshes the command list.
-      prompt.dispatchEvent(new Event('input'));
-    }
-    if (refused) options.onNotice('Only PNG, JPEG, GIF, WEBP images or files on disk can be dropped here.');
-    prompt.focus();
-  });
-
-  function attach(files: File[]): void {
-    for (const file of files) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const data = String(reader.result).split(',')[1] ?? '';
-        if (!imagesFit([...images.map((picture) => picture.data.length), data.length])) {
-          options.onNotice('That image would put this prompt over 5 MB of images; Claude cannot take it.');
-          return;
-        }
-        images = [...images, { mediaType: file.type, data }];
-        drawAttached();
-      };
-      reader.readAsDataURL(file);
-    }
-  }
 
   // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
   // decides what is safe to hand the system, never in this window.
@@ -646,58 +558,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (!seen()) bridge.notify(options.projectName, `Claude is asking: ${permissionTitle(waiting)}`, options.paneId);
   }
 
-  // The screen's own commands, refused under a running turn but /model: a conversation changed then
-  // would end wherever the turn had got to. A conversation put back by /rewind holds its prompt in the
-  // box again, ready to edit and send, unless something was typed there meanwhile.
-  function refusedWhileWorking(then: string): boolean {
-    const busy = working(transcript, asks.length);
-    if (busy) options.onNotice(`Claude is still working. Escape stops it; then ${then}.`);
-    return busy;
-  }
-
-  function showResume(): void {
-    if (!refusedWhileWorking('pick the conversation')) void resume(bridge, slot, options).then(focus);
-  }
-
-  function branch(title: string): void {
-    if (!refusedWhileWorking('branch')) void branchConversation(bridge, slot, title, options).then(focus);
-  }
-
-  // Every file Claude changed in the conversation, each under a line naming it, on a sheet to read.
-  function showDiff(): void {
-    const files = sessionEdits(transcript.entries);
-    if (files.length === 0) return options.onNotice('Claude has not changed a file in this conversation.');
-    const review = document.createElement('div');
-    review.append(...files.flatMap((file) => {
-      const heading = document.createElement('div');
-      heading.className = 'chat-diff-file';
-      heading.textContent = editsHeading(file);
-      return [heading, diffBlock(file.lines)];
-    }));
-    viewerOverlay('diff-viewer', review);
-  }
-
-  function showRewind(): void {
-    if (refusedWhileWorking('rewind')) return;
-    void rewind(bridge, slot, options).then((text) => {
-      if (text !== undefined && !prompt.value.trim()) prompt.value = text;
-      focus();
-    });
-  }
-
-  // Asked beside a running turn too: the answer comes from the conversation so far and stays out of it.
-  function showAside(question: string): void {
-    if (!question) return options.onNotice('/btw needs a question after it.');
-    void askAside(bridge, slot, question, options).then(focus);
-  }
-
-  function showModels(name: string): void {
-    void chooseModel(bridge, slot, name, model ?? transcript.model, options).then((picked) => {
-      if (picked !== undefined) configure({ model: pickedModel(picked) });
-      focus();
-    });
-  }
-
   // The project's earlier prompts in a search sheet, as Claude Code's Ctrl+R searches them; the one
   // picked goes in the box to edit or send, over whatever was there. This screen's own conversation
   // comes first, from what it holds rather than read off disk again.
@@ -715,24 +575,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       focus();
     }, (error: unknown) => options.onError(`Earlier prompts not listed: ${failureText(error)}`));
-  }
-
-  // The effort levels in a search sheet, as Claude Code's /effort offers them, or straight to the one
-  // named after the command; the next turn runs at it, on every screen.
-  function showEfforts(name: string): void {
-    if (name) {
-      const named = namedEffort(name);
-      if (named === undefined) options.onNotice(`Claude has no effort ${name}. Try auto, ${EFFORT_LEVELS.join(', ')}.`);
-      else configure({ effort: named });
-      return;
-    }
-    void searchOverlay({
-      name: 'chat-effort', placeholder: 'Search effort levels', rows: (query) => effortRows(effort, query),
-      empty: 'No level matches.', glyph: () => 'claude',
-    }).then((picked) => {
-      if (picked !== undefined) configure({ effort: picked });
-      focus();
-    });
   }
 
   // A new conversation, started on this screen or another: the old one leaves the screen.
@@ -776,6 +618,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
       prompt.dispatchEvent(new Event('input'));
     }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
+
+  const commandScreen: CommandScreen = {
+    bridge, slot, options, prompt, configure, focus,
+    transcript: () => transcript,
+    askCount: () => asks.length,
+    model: () => model,
+    effort: () => effort,
+    fast: () => fast,
+    imageCount: () => attachments.list().length,
+  };
 
   return {
     element,
@@ -830,7 +682,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       if (command === 'image') {
         // An image first, as before there were tiles, then the first PDF.
-        const chosen = selected === null ? attached : drawn[selected].element;
+        const chosen = selected === null ? attachments.element : drawn[selected].element;
         const image = chosen.querySelector('img');
         const tile = chosen.querySelector<HTMLElement>(`.${PDF_TILE}`);
         if (image) imageOverlay(image.src);
