@@ -77,9 +77,10 @@ image only carried inline and never reads the disk, so main reads a doc's
 relative images, from inside the project only, and sends them beside the text
 as data URLs, keyed by the address the doc gives each (`imageUrls` in
 `docs-list.ts`); the renderer swaps an image's address for its data URL only
-where marked reads an image, so image syntax shown as code stays as written. The read itself is
-refused for any file not under the project's docs/ (`isDoc`), so the channel is
-not a way to read any file the app can. A relative link stays text: following
+where marked reads an image, so image syntax shown as code stays as written.
+The read itself is refused for any file not under the project's docs/
+(`isDoc`), so the channel is not a way to read any file the app can. A relative link stays text: following
 it would mean a second rule about which links the renderer keeps.
 
-Watch for: an image over a few megabytes travels as base64 in the doc's text.
+Watch for: an image over a few megabytes travels as base64 in the reply's
+`images`, beside the text.
