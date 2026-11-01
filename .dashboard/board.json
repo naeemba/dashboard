@@ -237,7 +237,8 @@
           "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
           "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
           "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
-          "priority": "high"
+          "priority": "high",
+          "parent": null
         }
       ]
     },
@@ -332,14 +333,6 @@
               "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
             }
           ]
-        },
-        {
-          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
-          "title": "Stamp the build's commit in its version instead of bumping on every card",
-          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:24:01.496Z"
         },
         {
           "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
@@ -2420,6 +2413,16 @@
               "body": "Shipped in #167: .gitattributes marks docs/**/history.md merge=union (workflow-decision-2). Throwaway merge: with the attribute both appended lines land, without it the merge conflicts."
             }
           ]
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)\n\nShipped in #168: builds show <version>+<commit> stamped by vite.build-version.ts (manager foot, log, About panel, remote handshake). workflow-rule-3 now says cards leave package.json version alone; it moves only on a release.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:41:30.922Z",
+          "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
+          "pullRequest": 168
         }
       ]
     }

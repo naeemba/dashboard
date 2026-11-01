@@ -25,7 +25,7 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
 - Given several things need you, when you press the next-in-queue key, then you are taken to the next one.
 - Given the manager's board, when you move a card in a project's board there, then that project's `board.json` changes.
 - Given projects are marked, when you run a command, then it runs in a free pane of each marked project.
-- Given the manager page, when you look at its foot, then it shows the version from `package.json`.
+- Given the manager page, when you look at its foot, then it shows the version from `package.json` and the commit it was built from.
 - Given the manager page, when you press the terminals key, then its main session `main-manager` is on the left, working in `~/.dashboard` (made if missing), with its worker panes on the right.
 - Given the manager's main, when it runs `session claim` and `session run`, then a worker opens on the manager page in `~/.dashboard` as `manager-terminal-<n>` and reports to `main-manager`.
 - Given the manager's terminals, when you press a key that opens something in nvim (the scrollback, Ctrl+G, a path a pane printed), then the status bar says at once that the manager has no nvim.

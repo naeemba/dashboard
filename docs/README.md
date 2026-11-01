@@ -39,7 +39,7 @@ Rules that hold for every feature. `CLAUDE.md` states each in one line.
 | Folder | What it is |
 |---|---|
 | [conventions](conventions/README.md) | Keyboard first, `dir="auto"`, `hidden` against the stylesheet |
-| [workflow](workflow/README.md) | Never restart the app, a decision gets a test, bump the version |
+| [workflow](workflow/README.md) | Never restart the app, a decision gets a test, the build stamps its commit |
 
 Profiling of the whole app, how to rerun it on a demo instance, and what each
 run found are in [`performance/`](performance/README.md).
