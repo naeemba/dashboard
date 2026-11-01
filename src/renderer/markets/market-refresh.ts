@@ -18,8 +18,9 @@ export function createMarketRefresh(
     busy = true;
     clearTimeout(timer);
     onBusy(true);
-    // A rejected read is the card's own business to draw; here it only has to end the spin and
-    // schedule the next read, or the card would spin and never read again.
+    // A failed fetch does not reject: it arrives as an answer the card draws. A rejected read is a
+    // broken renderer or a draw that threw, and the card keeps its last answer. Here the spin only
+    // has to end and the next read be scheduled, or the card would spin and never read again.
     void read().catch(() => {}).finally(() => {
       busy = false;
       onBusy(false);
