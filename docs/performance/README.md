@@ -16,17 +16,21 @@ Folder: `scripts/performance/`.
   Claude screens, and `answer.md`, the reply the chat measurement streams.
 - `launch-demo.sh`: starts this checkout's build against that folder. It sets
   `HOME`, `--user-data-dir` and the Wayland socket `wl-perf`, and drops every
-  `CLAUDE_*` and `DASHBOARD_*` variable. DevTools listen on 9433 (renderer) and
+  `CLAUDE_*`, `DASHBOARD_*` and `ANTHROPIC_*` variable. DevTools listen on 9433 (renderer) and
   9434 (main).
 - `demo-instance.mjs`: what the measurements are built from. It covers the
   DevTools protocol client, key presses, CPU and private memory per process from
   `/proc`, keystroke-echo latency, and input-to-paint from the Event Timing API.
-  `withInstance` refuses to start while anything answers on 9433, which would
-  be an earlier run's instance with every number read off it. Afterwards it
+  `withInstance` refuses to start while anything answers on 9433 or 9434, which
+  would be an earlier run's instance, or another process's inspector, with
+  every number read off it. Afterwards it
   kills the whole demo, Ctrl+C included. That covers the process group, anything
   carrying the demo's `--user-data-dir`, and every pane process with the demo's
   HOME, since panes run in sessions of their own.
 - `measure.mjs`: one command per measurement, each printing a JSON line per step.
+- `calculations.mjs`: the parts that decide something (which process is the
+  demo's, what a chord sends, quantiles, the source-map split), pinned by
+  `calculations.test.mjs` in `npm test`.
 - `build-log-stream.sh`: a pane's fake build log at a given number of lines a
   second.
 
@@ -39,15 +43,18 @@ Ports 9222 and 9333 are left alone because the installed app can already be
 listening on either. Connecting there reads the real app.
 
 Every `CLAUDE_*` and `DASHBOARD_*` variable is unset so that a demo pane cannot
-reach the session that started it. With no credentials in the demo's HOME, its
-Agent SDK sessions start and resume but never call a model.
+reach the session that started it. Every `ANTHROPIC_*` variable is unset too
+(`ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`). With no
+credentials in the environment or the demo's HOME, its Agent SDK sessions
+start and resume but never call a model.
 
 ## Reproduce
 
 Build once into `.vite/`. The `out/` package is not needed, and its fuses turn
-off `--inspect`:
+off `--inspect`. `npm run package` rather than `electron-forge package`, so
+`prepackage` refuses while a demo instance still runs out of `.vite/`:
 
-    npm ci && ./scripts/node-pty-built.sh && npx electron-forge package
+    npm ci && npm run package
 
 Start a headless compositor of its own. Nothing appears on your screen:
 
@@ -69,14 +76,14 @@ instance:
 | `measure.mjs boot $D` | Main-process CPU profile of the first 3 s, into `$D/boot-main.cpuprofile` |
 | `measure.mjs lag $D [seconds]` | Every time main's event loop is more than 50 ms late after launch, with typing in a worker throughout |
 | `measure.mjs streams $D [lines/s]` | Four workers on alpha streaming: CPU with alpha shown, then hidden behind gamma, typing beside them, a main profile, memory |
-| `measure.mjs flood $D [shown\|hidden]` | One worker runs `seq` flat out. Main and renderer profiles, then Ctrl+C and how long the pane keeps printing |
+| `measure.mjs flood $D [shown\|hidden]` | One worker runs `seq 1 inf` flat out. Main and renderer profiles, then Ctrl+C, how long the pane keeps printing, and whether it stopped |
 | `measure.mjs chat $D [characters] [per delta] [ms]` | A long answer streamed into alpha's Claude screen as SDK `text_delta` events sent from main; no model call |
 | `measure.mjs keys $D` | Input to next paint for board arrows and tab switches, then idle CPU with a terminal focused (cursor blink) |
-| `measure.mjs ipc $D [seconds]` | Messages and bytes per IPC channel with four streams running |
+| `measure.mjs ipc $D [seconds]` | Messages and bytes per IPC channel with four streams running: `send` and `invoke` to main, `invoke` replies, and everything main sends |
 | `measure.mjs cycles $D [count]` | Opens and closes zeta from a pane. Renderer heap, DOM nodes, listeners, main handles and CLI count after each batch |
 | `measure.mjs soak $D [minutes]` | Five streaming workers and a tab-and-board round every minute, with memory after a GC each minute |
 | `measure.mjs memory $D` | Private memory of every Electron process and every child of main |
-| `measure.mjs usage-sweep ~/.claude/projects` | No instance. What the first usage sweep reads and parses on a real log folder, read-only |
+| `measure.mjs usage-sweep ~/.claude/projects` | No instance. The app's own `sweepUsage`, loaded through vite, on a real log folder, read-only: the first sweep, a later one, and the longest the thread was held |
 | `measure.mjs bundle $D` | Minified renderer bytes per package, from a source-mapped build into `$D` |
 | `measure.mjs profile <file.cpuprofile> [n]` | Self time per function of a profile written by the others |
 

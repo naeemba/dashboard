@@ -1,10 +1,10 @@
 // node scripts/performance/measure.mjs <measurement> <demo folder> [...]: one measurement against a fresh demo
 // instance, printed as one JSON line per step. docs/performance/README.md lists them and what each found.
-/* global process, performance, console, URL */
+/* global process, performance, console, URL, setInterval, clearInterval */
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { bytesPerSource, ownerOf } from './calculations.mjs';
 import {
   connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, press, retry, run, wait, withInstance,
 } from './demo-instance.mjs';
@@ -97,10 +97,11 @@ const measurements = {
   }),
 
   // One worker running `seq` flat out, shown or hidden; then Ctrl+C and how long the pane keeps printing.
+  // `seq 1 inf` never ends on its own, so a pane that stops printing is one the interrupt reached.
   flood: (where = 'shown') => withInstance(demo, {}, async ({ page }) => {
     const lastLine = String.raw`(() => { const page = document.querySelectorAll('.page')[1]; for (const rows of page.querySelectorAll('.xterm-rows')) { const lines = [...rows.children].map((row) => row.textContent.trim()).filter(Boolean); if (lines.some((line) => /^\d{3,}$/.test(line))) return lines.at(-1); } return ''; })()`;
     await openWorkers(page);
-    await run(page, 'seq 1 30000017');
+    await run(page, 'seq 1 inf');
     if (where === 'hidden') await keys(page, 'Ctrl+4');
     await wait(2000);
     // CPU first with nothing attached, then profiles over a window of their own, so sampling does not
@@ -124,7 +125,7 @@ const measurements = {
       const now = await page.evaluate(lastLine);
       if (now !== previous) { previous = now; changedAt = Date.now(); }
     }
-    print('ctrl-c', { keptPrintingMs: changedAt - pressedAt });
+    print('ctrl-c', { keptPrintingMs: changedAt - pressedAt, stopped: Date.now() - changedAt >= 2000, lastLine: previous });
     print('after', await cpuWindow(5));
   }),
 
@@ -157,6 +158,8 @@ const measurements = {
   }),
 
   // Messages and bytes per IPC channel, both ways, with four workers streaming 200 lines a second.
+  // ipcRenderer.send reaches ipcMain.emit; ipcRenderer.invoke never does, so every registered handle
+  // is wrapped as well, its arguments counted to main and its answer as the reply.
   ipc: (seconds = '10') => withInstance(demo, {}, async ({ page }) => {
     await openWorkers(page, 4);
     await startStreams(page, 4, 200);
@@ -166,9 +169,11 @@ const measurements = {
       globalThis.__ipc = {}; const count = (name, value) => { const entry = globalThis.__ipc[name] ??= { messages: 0, bytes: 0 }; entry.messages++; entry.bytes += size(value); };
       globalThis.__send = contents.send; contents.send = function (channel, ...values) { count('to renderer ' + channel, values); return globalThis.__send.call(this, channel, ...values); };
       globalThis.__emit = ipcMain.emit; ipcMain.emit = function (channel, event, ...values) { count('to main ' + channel, values); return globalThis.__emit.call(this, channel, event, ...values); };
+      globalThis.__handlers = new Map(ipcMain._invokeHandlers);
+      for (const [channel, handler] of globalThis.__handlers) ipcMain._invokeHandlers.set(channel, async function (event, ...values) { count('to main ' + channel, values); const answer = await handler.call(this, event, ...values); count('reply ' + channel, answer); return answer; });
       return true; })()`);
     await wait(Number(seconds) * 1000);
-    const counted = await main.evaluate(`(() => { const { BrowserWindow, ipcMain } = process.mainModule.require('electron'); BrowserWindow.getAllWindows()[0].webContents.send = globalThis.__send; ipcMain.emit = globalThis.__emit; return globalThis.__ipc; })()`);
+    const counted = await main.evaluate(`(() => { const { BrowserWindow, ipcMain } = process.mainModule.require('electron'); BrowserWindow.getAllWindows()[0].webContents.send = globalThis.__send; ipcMain.emit = globalThis.__emit; for (const [channel, handler] of globalThis.__handlers) ipcMain._invokeHandlers.set(channel, handler); return globalThis.__ipc; })()`);
     main.close();
     print('ipc', Object.fromEntries(Object.entries(counted).map(([channel, entry]) => [channel, { perSecond: +(entry.messages / Number(seconds)).toFixed(1), kilobytesPerSecond: +(entry.bytes / Number(seconds) / 1024).toFixed(1) }])));
   }),
@@ -250,44 +255,36 @@ const measurements = {
   }),
 };
 
-// No demo instance: what the first usage sweep (src/main/usage/usage-store.ts) costs on a real log
-// folder, read-only. Every .jsonl read whole and every line holding "usage" parsed, as the first sweep does.
+// No demo instance: the app's own sweepUsage (src/main/usage/usage-store.ts), loaded through vite, on a
+// real log folder, read-only. Twice: the first sweep reads everything, the second what a later one costs.
+// The longest hold is how late a 10 ms timer on the same thread fired, so it is the app's whole loop.
 async function usageSweep(root) {
+  const { createServer } = await import('vite');
+  const server = await createServer({ configFile: false, root: path.join(here, '..', '..'), logLevel: 'error', server: { middlewareMode: true, hmr: false } });
+  const { sweepUsage } = await server.ssrLoadModule('/src/main/usage/usage-store.ts');
+  await server.close();
+  let longest = 0, last = performance.now();
+  const timer = setInterval(() => { const now = performance.now(); longest = Math.max(longest, now - last - 10); last = now; }, 10);
+  const known = new Map();
   const started = performance.now();
   const cpuBefore = process.cpuUsage();
-  const files = (await readdir(root, { recursive: true })).filter((name) => name.endsWith('.jsonl')).map((name) => path.join(root, name));
-  let bytes = 0, parsed = 0, longest = 0, longestSize = 0;
-  for (const file of files) {
-    const { size } = await stat(file);
-    bytes += size;
-    const text = await readFile(file, 'utf8');
-    const held = performance.now();
-    for (const line of text.split('\n')) {
-      if (!line.includes('"usage"')) continue;
-      try { JSON.parse(line); parsed++; } catch { /* a line cut short */ }
-    }
-    if (performance.now() - held > longest) { longest = performance.now() - held; longestSize = size; }
-  }
+  await sweepUsage(root, known, Date.now());
   const firstSweep = performance.now() - started;
   const cpu = process.cpuUsage(cpuBefore);
-  const statStarted = performance.now();
-  for (const file of files) await stat(file);
+  const laterStarted = performance.now();
+  await sweepUsage(root, known, Date.now());
+  const laterSweep = performance.now() - laterStarted;
+  clearInterval(timer);
+  const bytes = [...known.values()].reduce((sum, usage) => sum + usage.size, 0);
   print('usage-sweep', {
-    files: files.length, gigabytes: +(bytes / 1073741824).toFixed(2), linesParsed: parsed,
+    files: known.size, gigabytes: +(bytes / 1073741824).toFixed(2),
     firstSweepSeconds: +(firstSweep / 1000).toFixed(1), firstSweepCpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1),
-    longestHoldMs: Math.round(longest), longestHoldFileMB: +(longestSize / 1048576).toFixed(1), laterSweepStatMs: Math.round(performance.now() - statStarted),
+    longestHoldMs: Math.round(longest), laterSweepMs: Math.round(laterSweep),
   });
 }
 
-// A source path as the package (or src/ folder) it belongs to.
-function ownerOf(source) {
-  const packagePath = source.includes('node_modules/') ? source.split('node_modules/').pop() : null;
-  if (packagePath) return packagePath.split('/').slice(0, packagePath.startsWith('@') ? 2 : 1).join('/');
-  return 'src/' + (source.split('src/')[1] ?? source).split('/').slice(0, 2).join('/');
-}
-
-// Minified renderer bytes per package, from a source-mapped build into the demo folder. The mappings are
-// base64 VLQ: per segment, a column delta and a source-index delta, both running totals.
+// Minified renderer bytes per package, from a source-mapped build into the demo folder. Bytes no source
+// maps to (glue the bundler wrote) are counted as (unmapped).
 function bundle() {
   const out = path.join(demo, 'renderer-build');
   execFileSync('npx', ['vite', 'build', '--config', 'vite.renderer.config.ts', '--sourcemap', '--outDir', out, '--emptyOutDir'], { cwd: path.join(here, '..', '..'), stdio: 'ignore' });
@@ -295,31 +292,11 @@ function bundle() {
   const map = JSON.parse(readFileSync(mapFile, 'utf8'));
   const owners = map.sources.map(ownerOf);
   const lines = readFileSync(mapFile.replace(/\.map$/, ''), 'utf8').split('\n');
-  const DIGITS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const bytes = new Map();
-  let source = 0;
-  map.mappings.split(';').forEach((line, row) => {
-    let column = 0;
-    const segments = [];
-    for (const segment of line.split(',')) {
-      if (!segment) continue;
-      const values = [];
-      let shift = 0, value = 0;
-      for (const character of segment) {
-        const digit = DIGITS.indexOf(character);
-        value += (digit & 31) << shift;
-        if (digit & 32) shift += 5;
-        else { values.push(value & 1 ? -(value >> 1) : value >> 1); value = 0; shift = 0; }
-      }
-      column += values[0];
-      if (values.length > 1) source += values[1];
-      segments.push([column, source]);
-    }
-    segments.forEach(([start, index], position) => {
-      const end = position + 1 < segments.length ? segments[position + 1][0] : lines[row].length;
-      bytes.set(owners[index], (bytes.get(owners[index]) ?? 0) + end - start);
-    });
-  });
+  for (const [index, count] of bytesPerSource(map.mappings, lines.map((line) => line.length))) {
+    const owner = owners[index] ?? '(unmapped)';
+    bytes.set(owner, (bytes.get(owner) ?? 0) + count);
+  }
   const total = [...bytes.values()].reduce((sum, value) => sum + value, 0);
   print('bundle', { totalKB: Math.round(total / 1024), byOwnerKB: Object.fromEntries([...bytes].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([owner, value]) => [owner, Math.round(value / 1024)])) });
 }

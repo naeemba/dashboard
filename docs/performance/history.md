@@ -18,6 +18,10 @@ installed app was never touched.
 1. **The first usage sweep reads every Claude Code log on main's thread.**
    - Measured: on this machine that is 4,585 files and 4.53 GB, taking 56 s
      and 46 CPU-s. The longest single hold is 477 ms, on one 128.8 MB log.
+     These came from a copy of the sweep that skipped `Date.parse`,
+     `tokensOf` and the sample push per line, so the hold is a floor.
+     `usage-sweep` now runs the app's own `sweepUsage`; rerun it before
+     comparing a fix against these.
    - In the app, with 0.5 GB of those logs copied in, main's event loop was
      more than 50 ms late 22 times between 3.5 s and 7.1 s after launch, worst
      411 ms. One keystroke echo took 356 ms. A launch without the logs had
@@ -103,6 +107,11 @@ installed app was never touched.
    - After Ctrl+C the pane keeps printing for 2.6 s when shown and 2.5 s when
      hidden: about 9 million more lines. Typing in the pane beside it stayed at
      24–27 ms median.
+   - Unconfirmed: the run used `seq 1 30000017`, which could have reached its
+     last line in those 2.5 s, so this may be `seq` finishing rather than
+     Ctrl+C landing late. `flood` now runs `seq 1 inf` and prints whether the
+     pane stopped and its last line. Rerun it before sizing the flow-control
+     fix on this number.
    - Where: `src/main/main.ts:429` (`copy.push(data)` on every chunk) and
      `src/main/panes/pane-screen-copy.ts`. The renderer's xterm write queue
      has no flow control back to the pty.
@@ -147,13 +156,18 @@ installed app was never touched.
   reply streaming.
 - **IPC.** Idle traffic is about one message every 5 s. Four streams at 200
   lines/s each make 81 `pty:data` messages and 120 kB a second, already
-  batched per pty chunk.
+  batched per pty chunk. These counted only `ipcRenderer.send` traffic and
+  what main sends: every `ipcRenderer.invoke` channel (`board:peek` and
+  `worktree:scan` among them) went uncounted. `ipc` now counts invoke calls
+  and their replies, so this is not yet ruled out for invoke traffic.
 - **Main at ordinary output.** With four streams at 200 lines/s, main spends
   58 ms of each 10 s in JavaScript.
 - **Renderer timers when idle.** With the chat input focused, renderer CPU is
   0.0% over 10 s windows, the 5 s and 30 s intervals included.
 - **The bundle.** It is 772 KB minified (233 KB gzip): xterm 42%,
-  highlight.js common 20%, marked 6%. It loads from disk, and startup is
+  highlight.js common 20%, marked 6%. That split credited bytes no source
+  maps to to the package before them; `bundle` now counts those as
+  `(unmapped)`, so the shares may drop slightly on a rerun. It loads from disk, and startup is
   within 0.6 s, so splitting it buys nothing measurable.
 
 ### Not measured

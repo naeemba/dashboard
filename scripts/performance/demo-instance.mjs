@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import { copyFileSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { isDemoProcess, keyEvent, spread } from './calculations.mjs';
 
 // Not 9222 or 9333: the installed app may already be listening on either, and a probe that lands on it
 // is a probe of the running app.
@@ -62,11 +63,14 @@ export async function retry(attempt, timeoutMs = 30000, everyMs = 20) {
 // `--user-data-dir=<demo>/userdata`, and the panes, which run in sessions of their own (setsid) but inherit
 // the HOME launch-demo.sh set. No unrelated process has that HOME.
 function demoProcesses(demo, group) {
-  const home = `HOME=${path.resolve(demo, 'home')}`;
-  const userData = `--user-data-dir=${path.resolve(demo, 'userdata')}`;
-  const holds = (pid, file, marker) => { try { return readFileSync(`/proc/${pid}/${file}`, 'utf8').split('\0').includes(marker); } catch { return false; } };
+  const marks = { group, home: path.resolve(demo, 'home'), userData: path.resolve(demo, 'userdata') };
+  const read = (pid, file) => { try { return readFileSync(`/proc/${pid}/${file}`, 'utf8'); } catch { return ''; } };
   return readdirSync('/proc').filter((entry) => /^\d+$/.test(entry) && Number(entry) !== process.pid)
-    .filter((pid) => { try { if (Number(statFields(pid)[2]) === group) return true; } catch { return false; } return holds(pid, 'cmdline', userData) || holds(pid, 'environ', home); }).map(Number);
+    .filter((pid) => {
+      let processGroup;
+      try { processGroup = Number(statFields(pid)[2]); } catch { return false; }
+      return isDemoProcess({ processGroup, commandLine: read(pid, 'cmdline'), environment: read(pid, 'environ') }, marks);
+    }).map(Number);
 }
 
 export async function killDemo(demo, group) {
@@ -80,12 +84,14 @@ export async function killDemo(demo, group) {
 
 // Starts the demo from the staged folder with the layout and remembered chats given, waits for the
 // window, runs `measure(instance)`, and always tears the whole demo down after, Ctrl+C included. It
-// refuses to start while anything already answers on the demo's port: that would be the instance a
-// run before this one left behind, and every number would be read off it.
+// refuses to start while anything already answers on either of the demo's ports: that would be the
+// instance a run before this one left behind, or another process's inspector on 9434, and every number
+// would be read off it.
 export async function withInstance(demo, options, measure) {
   const { session = 'session-5.json', chats = 'chat-sessions-long.json', settle = 15000, onSpawn } = options;
-  if (await connectRenderer().then((page) => (page.close(), true), () => false)) {
-    throw new Error(`something already answers on ${RENDERER_PORT}; stop it first (an earlier demo run?)`);
+  const answers = (connection) => connection().then((target) => (target.close(), true), () => false);
+  for (const [port, connection] of [[RENDERER_PORT, connectRenderer], [MAIN_PORT, connectMain]]) {
+    if (await answers(connection)) throw new Error(`something already answers on ${port}; stop it first (an earlier demo run?)`);
   }
   copyFileSync(path.join(demo, session), path.join(demo, 'userdata', 'session.json'));
   copyFileSync(path.join(demo, chats), path.join(demo, 'userdata', 'chat-sessions.json'));
@@ -99,9 +105,10 @@ export async function withInstance(demo, options, measure) {
   group = child.pid;
   let page;
   try {
+    // Awaited together, so a rejection from onSpawn reaches the finally instead of crashing the run
+    // with the demo left up.
     const spawned = onSpawn?.(startedAt);
-    page = await retry(connectRenderer);
-    await spawned;
+    [page] = await Promise.all([retry(connectRenderer), spawned]);
     await wait(settle);
     return await measure({ page, startedAt });
   } finally {
@@ -114,19 +121,9 @@ export async function withInstance(demo, options, measure) {
 
 // --- keys ------------------------------------------------------------------------------------------
 
-const KEY_CODES = { Enter: 13, Escape: 27, Tab: 9, ArrowDown: 40, ArrowUp: 38, ArrowLeft: 37, ArrowRight: 39, Backspace: 8 };
-
 // One chord, `Ctrl+Shift+T`, `Alt+2`, `ArrowDown`, `x`, as the window would get it from a keyboard.
 export async function press(page, chord) {
-  const parts = chord.split('+');
-  const key = parts.pop();
-  const modifiers = (parts.includes('Alt') ? 1 : 0) | (parts.includes('Ctrl') ? 2 : 0) | (parts.includes('Meta') ? 4 : 0) | (parts.includes('Shift') ? 8 : 0);
-  const single = key.length === 1;
-  const shown = single && parts.includes('Shift') ? key.toUpperCase() : single ? key.toLowerCase() : key;
-  const code = single ? (/\d/.test(key) ? `Digit${key}` : `Key${key.toUpperCase()}`) : key;
-  const keyCode = single ? key.toUpperCase().charCodeAt(0) : KEY_CODES[key] ?? 0;
-  const base = { modifiers, key: shown, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
-  const text = single && !(modifiers & 7) ? shown : key === 'Enter' && !modifiers ? '\r' : undefined;
+  const { base, text } = keyEvent(chord);
   await page.send('Input.dispatchKeyEvent', { type: text ? 'keyDown' : 'rawKeyDown', ...base, ...(text ? { text, unmodifiedText: text } : {}) });
   await page.send('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
 }
@@ -248,12 +245,6 @@ const ECHO_PROBE = `(() => {
   }, true);
   return true;
 })()`;
-
-const spread = (values) => {
-  const sorted = [...values].sort((a, b) => a - b);
-  const at = (quantile) => sorted[Math.min(sorted.length - 1, Math.floor(quantile * sorted.length))];
-  return { samples: sorted.length, median: at(0.5), p90: at(0.9), max: sorted.at(-1) };
-};
 
 export async function echoLatency(page, samples = 20) {
   await page.evaluate(ECHO_PROBE);

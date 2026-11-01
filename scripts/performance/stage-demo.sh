@@ -28,12 +28,14 @@ node -e '
   require("fs").writeFileSync(`${demo}/session-5.json`, JSON.stringify({ pages, activeIndex: 0 }));
   require("fs").writeFileSync(`${demo}/chat-sessions-none.json`, "{}");
 ' "$demo" "$home"
-# The Agent SDK reads a project'"'"'s conversations from ~/.claude/projects/<path with / and . as ->.
+# The Agent SDK reads a project's conversations from ~/.claude/projects/<path with every character
+# that is not a letter or a digit as ->. It also cuts and hashes a slug past 200 characters, which a
+# demo folder path that long would need.
 long=$(basename "$2" .jsonl)
 second=$(basename "$3" .jsonl)
 for pair in "alpha:$2" "beta:$3"; do
   project=${pair%%:*}
-  slug=$(echo "$home/projects/$project" | sed 's#[/.]#-#g')
+  slug=$(printf '%s' "$home/projects/$project" | sed 's#[^a-zA-Z0-9]#-#g')
   mkdir -p "$home/.claude/projects/$slug"
   cp "${pair#*:}" "$home/.claude/projects/$slug/"
 done
