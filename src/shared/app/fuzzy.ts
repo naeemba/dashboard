@@ -16,12 +16,14 @@ export function fuzzyScore(text: string, query: string): number | null {
 // The items whose text matches the query, best first; all of them in their own order for an empty
 // query, since every one scores 0 and the sort is stable. That case returns early: a picker calls
 // this on every keystroke, and /rewind's prompts can be long pasted text not worth lowercasing.
-export function ranked<T>(items: T[], textOf: (item: T) => string, query: string): T[] {
-  if (query.trim() === '') return [...items];
+// `tieBreak` orders items the score cannot separate, the empty query included; without it they keep
+// their own order.
+export function ranked<T>(items: T[], textOf: (item: T) => string, query: string, tieBreak?: (one: T, other: T) => number): T[] {
+  if (query.trim() === '') return tieBreak ? [...items].sort(tieBreak) : [...items];
   return items
     .map((item) => ({ item, score: fuzzyScore(textOf(item), query) }))
     .filter((each): each is { item: T; score: number } => each.score !== null)
-    .sort((one, other) => one.score - other.score)
+    .sort((one, other) => one.score - other.score || (tieBreak?.(one.item, other.item) ?? 0))
     .map(({ item }) => item);
 }
 

@@ -17,3 +17,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #146 — Picker, /model and /rewind rank with the one shared ranked
 - 2026-11-01 #151 — projects:recent is recent-projects:read (app-rule-1)
 - 2026-11-01 #152 — The log screen's help blurb reads its caps from the log's constants
+- 2026-11-01 #153 — /resume, the @ file list and the board search rank with ranked too

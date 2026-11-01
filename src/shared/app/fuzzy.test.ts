@@ -28,4 +28,10 @@ describe('ranked', () => {
     expect(textOf).not.toHaveBeenCalled();
     expect(ranked(['xhigh', 'low', 'high'], (each) => each, 'hi')).toEqual(['xhigh', 'high']);
   });
+  it('orders what the score cannot separate by the tie-break, an empty query included', () => {
+    const shorter = (one: string, other: string): number => one.length - other.length;
+    expect(ranked(['ab-long', 'ab'], (each) => each, 'ab', shorter)).toEqual(['ab', 'ab-long']);
+    expect(ranked(['ab-long', 'ab'], (each) => each, '', shorter)).toEqual(['ab', 'ab-long']);
+    expect(ranked(['xaxb', 'ab-long', 'ab'], (each) => each, 'ab', shorter)).toEqual(['ab', 'ab-long', 'xaxb']);
+  });
 });

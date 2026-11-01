@@ -32,6 +32,11 @@ describe('cardRows', () => {
     expect(rows.map((row) => row.name)).toEqual(['pty', 'save the pane typography']);
   });
 
+  it('keeps board order between two equally tight title matches', () => {
+    const rows = cardRows(board({ Todo: [card('pty resize')], Doing: [card('pty spawn')] }), 'pty');
+    expect(rows.map((row) => row.name)).toEqual(['pty resize', 'pty spawn']);
+  });
+
   it('finds a card by a word in its description, and says which line it was on', () => {
     const cards = [card('fix the crash', { notes: 'the quit fires\nnode-pty exits during teardown' })];
     const rows = cardRows(board({ Doing: cards }), 'node-pty');
