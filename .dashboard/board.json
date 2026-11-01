@@ -171,6 +171,12 @@
           "title": "Check exact dependency pins with a test",
           "notes": "The holds in app/README are not enforced; dc08326 had to re-pin electron, the SDK and marked. A vitest that fails on a caret for held dependencies. (docs/review/2026-11-01.md D1)",
           "priority": "low"
+        },
+        {
+          "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
+          "title": "Decide whether Windows is a target and drop the installer dependencies if not",
+          "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
+          "priority": "low"
         }
       ]
     },
