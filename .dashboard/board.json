@@ -82,6 +82,12 @@
           "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
           "priority": "high"
+        },
+        {
+          "id": "7001ab20-6a38-4132-9fbe-257c75f9b5f1",
+          "title": "Manager terminals 3: terminals mode in the manager tab",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. The manager tab gets the same terminals layout as a project: a main Claude session and worker panes, working in ~/.dashboard so the session sees projects.yaml. Keys, help and which-key as for a project's terminals mode.",
+          "priority": "high"
         }
       ]
     },
