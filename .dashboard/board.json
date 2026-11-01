@@ -222,11 +222,15 @@
           "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-01T22:18:53.958Z",
+          "updatedAt": "2026-11-01T22:23:48.077Z",
           "comments": [
             {
               "at": "2026-11-01T22:18:53.958Z",
               "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
+            },
+            {
+              "at": "2026-11-01T22:23:48.077Z",
+              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
             }
           ]
         },
@@ -271,11 +275,15 @@
           "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-01T22:18:53.916Z",
+          "updatedAt": "2026-11-01T22:23:48.118Z",
           "comments": [
             {
               "at": "2026-11-01T22:18:53.916Z",
               "body": "Unconfirmed: the 2.5-2.6 s after Ctrl+C came from a run of seq 1 30000017, which could have reached its last line in that time, so it may be seq finishing rather than Ctrl+C landing late. flood now runs seq 1 inf and prints whether the pane stopped. Rerun it before sizing the pty flow-control fix on this number. See docs/performance/history.md."
+            },
+            {
+              "at": "2026-11-01T22:23:48.118Z",
+              "body": "Confirmed with seq 1 inf (PR #166): the pane stops, but 3.2 s after Ctrl+C."
             }
           ]
         },
