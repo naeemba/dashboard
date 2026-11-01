@@ -55,13 +55,6 @@
           ]
         },
         {
-          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
-          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
-          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "66f14bdd-63d4-44ae-99ae-106bb597be4f",
           "title": "projects:open refuses by throwing, so the remote screen reads Electron's invoke prefix",
           "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
@@ -72,6 +65,13 @@
           "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
           "title": "Spell out args in test-file locals and parameters",
           "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
           "priority": "low",
           "parent": null
         }
@@ -162,12 +162,22 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
-          "title": "Terminal drop types '' for a file with no path on disk",
-          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
-          "priority": "medium",
+          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
+          "title": "IPC refusals thrown instead of answered (#129)",
+          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "priority": "low",
           "parent": null,
-          "updatedAt": "2026-11-01T12:02:58.850Z"
+          "createdAt": "2026-11-01T12:06:15.202Z",
+          "updatedAt": "2026-11-01T12:06:15.202Z"
+        },
+        {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:07:07.954Z"
         }
       ]
     },
@@ -255,6 +265,53 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "5a6ac86c-0e7f-4ee7-97d7-88f94adb09c0",
+          "title": "Rename chat:commands and chat:sessions IPC channels to <noun>:<verb> (#88)",
+          "notes": "https://github.com/naeemba/dashboard/issues/88 — shipped in PR #141: chat-commands:read and chat-sessions:read, matching chat-models:read.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:03:41.946Z",
+          "updatedAt": "2026-11-01T12:03:42.029Z",
+          "branch": "fix-github-issue-88-gh-issue-view-88-commen",
+          "pullRequest": 141
+        },
+        {
+          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+          "title": "Terminal drop types '' for a file with no path on disk",
+          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:05:57.181Z",
+          "branch": "fix-github-issue-91-gh-issue-view-91-commen",
+          "pullRequest": 144,
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:57.181Z",
+              "body": "PR #144: droppedPathsText skips empty paths, so a drop of a file with no path on disk types nothing. Version 2.32.11."
+            }
+          ]
+        },
+        {
+          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
+          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
+          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:09:38.364Z",
+          "branch": "fix-github-issue-119-gh-issue-view-119-comm",
+          "pullRequest": 146,
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:04.121Z",
+              "body": "GitHub issue #119. Working on branch fix-github-issue-119-gh-issue-view-119-comm."
+            },
+            {
+              "at": "2026-11-01T12:09:38.318Z",
+              "body": "PR #146: pickerRows, modelRows and rewindRows now call ranked; ranked returns early for an empty query. resumeRows, chat-mentions and card-search still score by hand, out of scope."
             }
           ]
         }
