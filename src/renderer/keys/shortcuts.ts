@@ -14,6 +14,14 @@ export function isModified(input: KeyInput): boolean {
   return input.shiftKey || stopsTyping(input);
 }
 
+// A button the keyboard walked to with Tab presses itself on a bare Enter or Space, the way every
+// button does, instead of the key going to the screen behind it — on the manager, Enter would open the
+// selected row. A button focused by a click is not walked to: the browser does not draw it as
+// :focus-visible, so a click never takes Enter away from the screen.
+export function pressesWalkedToButton(input: KeyInput, walkedToButton: boolean): boolean {
+  return walkedToButton && !isModified(input) && (input.key === 'Enter' || input.key === ' ');
+}
+
 // The three modifiers that turn a keystroke into somebody's shortcut instead of a character. Shift is
 // not one of them, which is the only difference between the two predicates either side of this — so
 // they are written as one list, and a fourth modifier added here reaches both.

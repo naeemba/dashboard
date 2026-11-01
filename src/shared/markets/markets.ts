@@ -18,6 +18,8 @@ export type Reading<T> = { ok: true; value: T } | { ok: false; message: string }
 export type MarketsSnapshot = {
   weather: Reading<Forecast>; btc: Reading<Quote>; usdt: Reading<Quote>; gold: Reading<Quote>;
 };
+// Each card is read on its own, named by its field in the snapshot.
+export type MarketName = keyof MarketsSnapshot;
 
 const DAY_MS = 86_400_000;
 

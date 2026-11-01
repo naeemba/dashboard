@@ -201,3 +201,50 @@
 .markets-note:empty {
   display: none;
 }
+
+/* The refresh button in each card's corner: the last thing in the head, pushed to its far end, or
+   straight after the date card's Persian half, which already took the space. */
+.markets-refresh {
+  flex: none;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  margin-left: auto;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  color: color-mix(in srgb, var(--white) 45%, transparent);
+  background: none;
+  cursor: pointer;
+}
+
+.markets-refresh .icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.markets-persian + .markets-refresh {
+  margin-left: 0;
+}
+
+.markets-refresh:hover,
+.markets-refresh:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.markets-refresh.busy {
+  cursor: default;
+}
+
+.markets-refresh.busy svg {
+  animation: markets-spin 1s linear infinite;
+}
+
+@keyframes markets-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markets-refresh.busy svg { animation: none; opacity: 0.5; }
+}
