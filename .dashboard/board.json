@@ -55,13 +55,6 @@
           "parent": null
         },
         {
-          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
-          "title": "Manager terminals 4: dispatch a pane into any project",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "1d1c7bfa-8698-46b2-bebf-ca09fe9e0371",
           "title": "Manager terminals 5: open and close a project from the command",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard project open|close <name|aka>. Close uses the app's own refusal: refused while any pane in the project is busy, naming it; otherwise closes with no confirm dialog. Open adds the page the way the project picker does.",
@@ -160,7 +153,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
+          "title": "Manager terminals 4: dispatch a pane into any project",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:47:29.329Z"
+        }
+      ]
     },
     {
       "name": "Review",
