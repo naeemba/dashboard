@@ -4,7 +4,7 @@ import { onlyPlumbing } from './chat-events';
 import { isModel, type FootState } from './chat-status';
 import { tagged, unescaped } from './chat-tags';
 import { isImageType, type ChatEntry } from './chat-transcript';
-import { fuzzyScore, ranked, type SearchRow } from '../app/fuzzy';
+import { ranked, type SearchRow } from '../app/fuzzy';
 import type { ChatSessions } from '../app/bridge';
 
 // Slash commands on the Claude screen. The session runs every command Claude Code has when it is sent
@@ -155,13 +155,10 @@ export function commandMenu(text: string, sessionCommands: CommandRow[]): Comman
 }
 
 // What /resume lists for what is typed in its box: the conversations newest first, or the ones whose
-// title and branch match it, best first. The one the page is on is marked.
+// title and branch match it, best first and newest first among equals. The one the page is on is marked.
 export function resumeRows(found: ChatSessions, query: string, now = Date.now()): SearchRow<string>[] {
-  const scored = found.sessions
-    .map((session) => ({ session, score: query ? fuzzyScore(`${session.summary} ${session.gitBranch ?? ''}`, query) : 0 }))
-    .filter((each): each is { session: ChatSessions['sessions'][number]; score: number } => each.score !== null)
-    .sort((one, other) => one.score - other.score || other.session.lastModified - one.session.lastModified);
-  return scored.map(({ session }) => ({
+  const text = (session: ChatSessions['sessions'][number]): string => `${session.summary} ${session.gitBranch ?? ''}`;
+  return ranked(found.sessions, text, query, (one, other) => other.lastModified - one.lastModified).map((session) => ({
     name: `${session.sessionId === found.current ? '● ' : ''}${session.summary}`,
     detail: [relativeAge(session.lastModified, now), session.gitBranch].filter(Boolean).join(' · '),
     choice: session.sessionId,

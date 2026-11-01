@@ -1,5 +1,5 @@
 import { fileMention, mentionInsertion } from '../../shared/chat/chat-commands';
-import { fuzzyScore } from '../../shared/app/fuzzy';
+import { ranked } from '../../shared/app/fuzzy';
 
 // The list of the project's files that @ opens in the prompt box, as Claude Code's does. The files are
 // git's list, from main, not the SDK's file_suggestions: chat-decision-4 says why. Matched here.
@@ -16,12 +16,7 @@ export function mentionAt(text: string, caret: number): { start: number; query: 
 // The files the list offers for what follows the @: the tightest fuzzy match first, then the shorter
 // path, so `chatview` finds src/chat-view.ts ahead of a test deep in another folder.
 export function fileRows(files: string[], query: string): string[] {
-  return files
-    .map((file) => ({ file, score: fuzzyScore(file, query) }))
-    .filter((each): each is { file: string; score: number } => each.score !== null)
-    .sort((one, other) => one.score - other.score || one.file.length - other.file.length || one.file.localeCompare(other.file))
-    .slice(0, SHOWN)
-    .map(({ file }) => file);
+  return ranked(files, (file) => file, query, (one, other) => one.length - other.length || one.localeCompare(other)).slice(0, SHOWN);
 }
 
 // The box after a file is picked: the @ word the caret is in, all of it, replaced by the file's mention

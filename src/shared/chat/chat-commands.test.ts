@@ -83,6 +83,9 @@ describe('resumeRows', () => {
   it('keeps what matches the title or branch', () => {
     expect(resumeRows(found, 'board', now).map((row) => row.choice)).toEqual(['a']);
   });
+  it('puts the newer of two equal matches first', () => {
+    expect(resumeRows(found, 'i', now).map((row) => row.choice)).toEqual(['b', 'a']);
+  });
 });
 
 describe('typedCommand', () => {

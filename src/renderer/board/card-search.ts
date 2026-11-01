@@ -1,5 +1,5 @@
 import type { Board, Card } from '../../shared/board/board';
-import { fuzzyScore, type SearchRow } from '../../shared/app/fuzzy';
+import { ranked, type SearchRow } from '../../shared/app/fuzzy';
 
 // One card offered by the search, as a row of the same dialog the project picker is: the name is the
 // card's title and choosing it answers with the card's id. `detail` is the column the card sits in,
@@ -31,24 +31,18 @@ function writtenMatch(card: Card, query: string): string | null {
 // putting the two in one ranking would let a loose title match and a solid mention trade places as
 // you type.
 //
-// An empty query offers every card, in board order — fuzzyScore scores a query of no letters as a
-// match on everything, and a sort that cannot separate them leaves them as the board has them. So
-// opening the search and pressing nothing is the board as a list.
+// An empty query offers every card, in board order: ranked keeps its items' order for an empty query
+// and among equal scores. So opening the search and pressing nothing is the board as a list.
 export function cardRows(board: Board, query: string): CardRow[] {
   const written = query.trim().toLowerCase();
-  const titles: { row: CardRow; score: number }[] = [];
-  const mentions: CardRow[] = [];
-  for (const column of board.columns) {
-    for (const card of column.cards) {
-      const score = fuzzyScore(card.title, query);
-      if (score !== null) {
-        titles.push({ row: { name: card.title, detail: column.name, choice: card.id }, score });
-        continue;
-      }
-      const line = written === '' ? null : writtenMatch(card, written);
-      if (line !== null) mentions.push({ name: card.title, detail: `${column.name} · ${line}`, choice: card.id });
-    }
-  }
-  // Sorting is stable, so cards the query cannot separate stay in the order the board has them.
-  return [...titles.sort((first, second) => first.score - second.score).map((entry) => entry.row), ...mentions];
+  const placed = board.columns.flatMap((column) => column.cards.map((card) => ({ card, column: column.name })));
+  const titled = ranked(placed, ({ card }) => card.title, query);
+  const titles = titled.map(({ card, column }) => ({ name: card.title, detail: column, choice: card.id }));
+  if (written === '') return titles;
+  const matched = new Set(titled.map(({ card }) => card));
+  const mentions = placed.flatMap(({ card, column }) => {
+    const line = matched.has(card) ? null : writtenMatch(card, written);
+    return line === null ? [] : [{ name: card.title, detail: `${column} · ${line}`, choice: card.id }];
+  });
+  return [...titles, ...mentions];
 }
