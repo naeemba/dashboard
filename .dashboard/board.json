@@ -67,6 +67,12 @@
           "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "bf8b8d2d-cfb3-43c6-bf5e-915ae63d6df3",
+          "title": "Use ranked in resumeRows, fileRows and cardRows instead of hand-rolled fuzzy ranking",
+          "notes": "resumeRows (src/shared/chat/chat-commands.ts), fileRows (src/renderer/chat/chat-mentions.ts) and the title half of cardRows (src/renderer/board/card-search.ts) re-spell the score, filter and stable sort that ranked in src/shared/app/fuzzy.ts does, each with an extra tie-break that a pre-sort before ranked expresses (newest first, shorter path then name, board order), as rewindRows now reverses first. Cost: a change to how ranked breaks ties or skips an empty query reaches the picker, /model, /rewind and /effort but not /resume, the @ file list or the board search; the empty-query early return from #146 already does not reach fileRows, which scores and sorts every file when @ is typed alone.\n\nIssue: https://github.com/naeemba/dashboard/issues/150\nReview: https://github.com/naeemba/dashboard/pull/146#discussion_r4435526462",
+          "priority": "low"
         }
       ]
     },
