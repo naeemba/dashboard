@@ -199,13 +199,6 @@
           ]
         },
         {
-          "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
-          "title": "Move the board selection without rebuilding the whole board",
-          "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
           "title": "Start a page's Claude CLI only when it is needed",
           "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -359,6 +352,14 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-01T23:24:01.496Z"
+        },
+        {
+          "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
+          "title": "Move the board selection without rebuilding the whole board",
+          "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:36:36.976Z"
         }
       ]
     },
