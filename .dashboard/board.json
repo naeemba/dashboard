@@ -55,13 +55,6 @@
           ]
         },
         {
-          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
-          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
-          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "66f14bdd-63d4-44ae-99ae-106bb597be4f",
           "title": "projects:open refuses by throwing, so the remote screen reads Electron's invoke prefix",
           "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
@@ -168,6 +161,20 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-01T12:02:58.850Z"
+        },
+        {
+          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
+          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
+          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:05:04.121Z",
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:04.121Z",
+              "body": "GitHub issue #119. Working on branch fix-github-issue-119-gh-issue-view-119-comm."
+            }
+          ]
         }
       ]
     },
