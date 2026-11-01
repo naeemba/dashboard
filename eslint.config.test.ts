@@ -33,6 +33,8 @@ describe('process boundaries', () => {
     ['src/preload/probe.ts', "import '../renderer/renderer';"],
     ['src/preload/probe.ts', "import '../main/main';"],
     ['src/preload/probe.ts', "import { marked } from 'marked';"],
+    ['src/preload/probe.ts', "import fs from 'node:fs';"],
+    ['src/preload/probe.ts', "import path from 'path';"],
   ])('%s fails on %s', async (filePath, source) => {
     expect(await boundaryErrors(filePath, source)).toHaveLength(1);
   });

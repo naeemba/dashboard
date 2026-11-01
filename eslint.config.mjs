@@ -67,7 +67,8 @@ export default defineConfig(
   // The preload runs in the window with `electron` and nothing else of Node's.
   { files: ['src/preload/**'], rules: side({
     folders: ['main', 'renderer'], folderMessage: 'The preload imports only src/shared.',
-    packages: domOnly, packageMessage: 'DOM-only module in the preload.',
+    packages: [...nodeOnly.filter((name) => name !== 'electron'), ...domOnly], builtins: unprefixedBuiltins,
+    packageMessage: 'Only electron in the preload.',
   }) },
   { files: ['src/shared/**'], rules: side({
     folders: ['main', 'renderer', 'preload'], folderMessage: 'Shared code imports only shared code.',

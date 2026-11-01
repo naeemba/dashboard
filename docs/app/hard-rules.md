@@ -20,7 +20,7 @@ window with only `electron`, `src/shared/` in both. The rules in
 importing main or the preload, main importing the renderer or the preload, the
 preload or shared importing anything but shared, a value import of a Node
 package (`nodeOnly` in that file, or a builtin with or without `node:`) in the
-renderer or shared, and a DOM package (`domOnly`) outside the renderer. A new
+renderer or shared, a Node package other than `electron` in the preload, and a DOM package (`domOnly`) outside the renderer. A new
 dependency that needs one side goes in its list. A type import of a package is
 erased at build and passes; any import of another process's file does not, a
 type one included, because the type belongs in `src/shared/`. Static imports,
