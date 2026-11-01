@@ -233,6 +233,12 @@
           "title": "Start a page's Claude CLI only when it is needed",
           "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "medium"
+        },
+        {
+          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
+          "title": "Stop hidden projects laying out and painting their terminals",
+          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium"
         }
       ]
     },
