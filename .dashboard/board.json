@@ -75,6 +75,12 @@
               "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
             }
           ]
+        },
+        {
+          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
+          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
+          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
+          "priority": "high"
         }
       ]
     },
