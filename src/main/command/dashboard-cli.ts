@@ -9,18 +9,20 @@
 // `session` is the old name of `pane`, kept so a skill written against the session command reads
 // the same with `dashboard` in front of it.
 
-export type Noun = 'board' | 'pane';
+export type Noun = 'board' | 'pane' | 'project';
 
 const NOUNS = new Map<string, Noun>([
   ['board', 'board'],
   ['pane', 'pane'],
   ['session', 'pane'],
+  ['project', 'project'],
 ]);
 
 export const DASHBOARD_USAGE = `dashboard — the Dashboard app, from a shell in any of its panes
 
-  dashboard board <command>   the board of the project you are in
-  dashboard pane <command>    the project's worker panes
+  dashboard board <command>     the board of the project you are in
+  dashboard pane <command>      the project's worker panes
+  dashboard project <command>   every project in ~/.dashboard/projects.yaml, by name
 
 Run a noun with no command to see what it takes. \`session\` is another name for \`pane\`.`;
 
