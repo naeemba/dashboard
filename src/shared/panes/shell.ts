@@ -55,6 +55,15 @@ export function quoteForShell(value: string, shellCommand: string): string {
   return posixQuoted(value);
 }
 
+// What a drop on a terminal pane types: each path quoted, then the trailing space every terminal
+// appends so a second drop starts a new word. A dropped file with no path on disk (an image dragged
+// out of a web page) comes back from getPathForFile as '', and quoting that would type `'' ` into the
+// pane, so it is skipped. Empty when nothing is left, and then nothing is typed at all.
+export function droppedPathsText(paths: string[], shellCommand: string): string {
+  const words = paths.filter(Boolean).map((entry) => quoteForShell(entry, shellCommand));
+  return words.length === 0 ? '' : `${words.join(' ')} `;
+}
+
 // The editor pane runs nvim, and nvim has to be found on PATH. An app launched from the Dock inherits
 // almost none of one — /usr/bin and /bin, no Homebrew — so the exec fails and the pane shows "[exited 1]"
 // before it ever draws. Running nvim through the shell is what gives it a PATH the user recognises.
