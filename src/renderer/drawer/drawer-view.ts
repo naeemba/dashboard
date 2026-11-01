@@ -14,8 +14,7 @@ import { drawerFollows, drawerKey, drawerRows, sessionDetail, toggledFolders, tr
 // The drawer on the left of a page: the project's docs as a tree and the Claude sessions the app started
 // for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own.
 // Open, it pushes the page to its right and the panes are measured again; closed it takes no room.
-// It is opened and closed by its button in the title row, beside the tabs, or by its key, and stays open
-// across a tab switch, listing the page in front.
+// It is opened and closed by its button in the title row, beside the tabs, or by its key.
 // A doc opens in the full-screen viewer (doc-viewer.ts), over the drawer, which is still there after.
 // Every rule with a branch is drawer-rows.ts's; this is the DOM.
 
@@ -178,6 +177,13 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     }
   }
 
+  // In or out of sight; the panes are measured again only when that changes.
+  function setShown(shown: boolean): void {
+    if (element.hidden !== shown) return;
+    element.hidden = !shown;
+    ports.resized();
+  }
+
   // The page the drawer lists now, read afresh: on opening it, and when another page comes in front of
   // it open. Only opening takes the keyboard; after a tab switch it stays where the switch put it.
   function show(page: Page): void {
@@ -187,10 +193,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     count = SESSION_PAGE_SIZE;
     highlighted = 0;
     box.value = '';
-    if (element.hidden) {
-      element.hidden = false;
-      ports.resized();
-    }
+    setShown(true);
     draw();
     load(true);
   }
@@ -208,10 +211,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     shownFor = null;
     docLoads += 1;
     sessionLoads += 1;
-    if (!element.hidden) {
-      element.hidden = true;
-      ports.resized();
-    }
+    setShown(false);
     docs = [];
     sessions = NO_SESSIONS;
     rows = [];
