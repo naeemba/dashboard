@@ -76,6 +76,12 @@
           "title": "Manager terminals 5: open and close a project from the command",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard project open|close <name|aka>. Close uses the app's own refusal: refused while any pane in the project is busy, naming it; otherwise closes with no confirm dialog. Open adds the page the way the project picker does.",
           "priority": "high"
+        },
+        {
+          "id": "956f502a-609d-4ed4-bae5-5d3d8bb73917",
+          "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
+          "priority": "high"
         }
       ]
     },
