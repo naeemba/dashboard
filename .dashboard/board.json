@@ -202,16 +202,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
-          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
-          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:21:23.439Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -299,6 +290,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
+          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
+          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:25:09.584Z",
+          "branch": "work-board-card-5c1e86d4-6467-41fb-8d3c-769",
+          "pullRequest": 134
         }
       ]
     },
