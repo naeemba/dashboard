@@ -269,17 +269,6 @@
           ]
         },
         {
-          "id": "5a6ac86c-0e7f-4ee7-97d7-88f94adb09c0",
-          "title": "Rename chat:commands and chat:sessions IPC channels to <noun>:<verb> (#88)",
-          "notes": "https://github.com/naeemba/dashboard/issues/88 — shipped in PR #141: chat-commands:read and chat-sessions:read, matching chat-models:read.",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:03:41.946Z",
-          "updatedAt": "2026-11-01T12:03:42.029Z",
-          "branch": "fix-github-issue-88-gh-issue-view-88-commen",
-          "pullRequest": 141
-        },
-        {
           "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
           "title": "Terminal drop types '' for a file with no path on disk",
           "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
@@ -1831,6 +1820,23 @@
             {
               "at": "2026-11-01T11:50:40.022Z",
               "body": "Merged via PR #140."
+            }
+          ]
+        },
+        {
+          "id": "5a6ac86c-0e7f-4ee7-97d7-88f94adb09c0",
+          "title": "Rename chat:commands and chat:sessions IPC channels to <noun>:<verb> (#88)",
+          "notes": "https://github.com/naeemba/dashboard/issues/88 — shipped in PR #141: chat-commands:read and chat-sessions:read, matching chat-models:read.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:03:41.946Z",
+          "updatedAt": "2026-11-01T12:08:42.403Z",
+          "branch": "fix-github-issue-88-gh-issue-view-88-commen",
+          "pullRequest": 141,
+          "comments": [
+            {
+              "at": "2026-11-01T12:08:42.403Z",
+              "body": "Shipped in PR #141: fix for issue #88, merged after one review round (no fixes needed), version 2.32.11."
             }
           ]
         }
