@@ -67,7 +67,9 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
   // number is taken as written, so `name: 0123` stays 0123 instead of becoming 123.
   const oneLine = (value: unknown, key: string, line: number): string | null => {
     if (isEmpty(value)) return '';
-    if (isScalar(value) && typeof value.value === 'string' && !value.value.includes('\n')) return value.value.trim();
+    // Trimmed before the check: a `>` or `|` block keeps its trailing newline even on one line.
+    const written = isScalar(value) && typeof value.value === 'string' ? value.value.trim() : null;
+    if (written !== null && !written.includes('\n')) return written;
     if (isScalar(value) && typeof value.value === 'number' && value.range) return text.slice(value.range[0], value.range[1]).trim();
     problem(line, `${key} must be one line of text`);
     return null;

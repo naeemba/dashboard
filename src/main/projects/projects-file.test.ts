@@ -89,6 +89,9 @@ describe('readProjects', () => {
   it('refuses text on two lines and keeps a number as written', () => {
     expect(readProjects('- name: a\n  path: /a\n  about: |\n    one\n    two\n'))
       .toEqual({ ok: false, problems: ['projects.yaml:3: about must be one line of text'] });
+    expect(projects("- name: a\n  path: /a\n  about: >\n    The sales team's CRM,\n    used by everyone\n")[0].about)
+      .toBe("The sales team's CRM, used by everyone");
+    expect(projects('- name: a\n  path: /a\n  about: |\n    one line\n')[0].about).toBe('one line');
     expect(projects('- name: 0123\n  aka: [1.10]\n  path: /a\n')[0]).toMatchObject({ name: '0123', aka: ['1.10'] });
   });
 
@@ -121,5 +124,7 @@ describe('findProjects', () => {
     expect(findProjects(photos, 'pharia')).toEqual([]);
     expect(findProjects(photos, 'SHARING').map((project) => project.name)).toEqual(['shop']);
     expect(names('idle')).toEqual(['screensaver']);
+    const billing = projects('- name: billing\n  path: /billing\n  about: Invoices sent from the crm\n' + FILE);
+    expect(findProjects(billing, 'crm').map((project) => project.name)).toEqual(['new-crm', 'billing']);
   });
 });
