@@ -218,17 +218,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "f4c2ee18-66a4-4987-8c93-feea255c1d7e",
-          "title": "Drawer button: icon only, always in the header, manager tab lists .dashboard and .claude docs",
-          "notes": "Follow-up to PR #162, from using it.\n\n1. The header button shows only the docs icon, no 'Docs & sessions' text. It keeps a tooltip and an accessible name.\n2. The button is always visible, on the manager tab too. Today it hides on the manager tab and shows on project tabs, so switching tabs makes the header jump.\n3. On the manager tab the drawer's docs tree lists the markdown files under ~/.dashboard and ~/.claude (the manager's folder and Claude's config), as a tree like the project docs. Sessions on the manager tab list the manager's own sessions if the index has them, else that list is empty with a line saying so.\n4. docs:read today refuses files outside a project's docs/; for the manager it accepts .md files under those two roots only, nothing else.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-11-01T18:51:24.629Z",
-          "updatedAt": "2026-11-01T19:02:17.577Z",
-          "branch": "work-board-card-f4c2ee18-66a4-4987-8c93-fee",
-          "pullRequest": 163
         }
       ]
     },
@@ -2119,6 +2108,17 @@
           "updatedAt": "2026-11-01T18:50:55.494Z",
           "branch": "work-board-card-b0704842-dc6d-471d-aed4-a5d",
           "pullRequest": 162
+        },
+        {
+          "id": "f4c2ee18-66a4-4987-8c93-feea255c1d7e",
+          "title": "Drawer button: icon only, always in the header, manager tab lists .dashboard and .claude docs",
+          "notes": "Follow-up to PR #162, from using it.\n\n1. The header button shows only the docs icon, no 'Docs & sessions' text. It keeps a tooltip and an accessible name.\n2. The button is always visible, on the manager tab too. Today it hides on the manager tab and shows on project tabs, so switching tabs makes the header jump.\n3. On the manager tab the drawer's docs tree lists the markdown files under ~/.dashboard and ~/.claude (the manager's folder and Claude's config), as a tree like the project docs. Sessions on the manager tab list the manager's own sessions if the index has them, else that list is empty with a line saying so.\n4. docs:read today refuses files outside a project's docs/; for the manager it accepts .md files under those two roots only, nothing else.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-01T18:51:24.629Z",
+          "updatedAt": "2026-11-01T19:17:54.923Z",
+          "branch": "work-board-card-f4c2ee18-66a4-4987-8c93-fee",
+          "pullRequest": 163
         }
       ]
     }
