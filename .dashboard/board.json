@@ -146,16 +146,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
-          "title": "Manager terminals 4: dispatch a pane into any project",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T13:47:29.329Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -259,6 +250,16 @@
               "body": "PR #157: dashboard project init writes a first ~/.dashboard/projects.yaml (name and path) from the open and recent projects; never overwrites. Panes carry DASHBOARD_USER_DATA."
             }
           ]
+        },
+        {
+          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
+          "title": "Manager terminals 4: dispatch a pane into any project",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:57:17.077Z",
+          "branch": "work-board-card-d4595cfd-6853-4c0f-9c9e-cb9",
+          "pullRequest": 158
         }
       ]
     },
