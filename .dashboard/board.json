@@ -181,16 +181,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
-          "title": "Split renderer.ts under 600 code lines",
-          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:43:16.588Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -278,6 +269,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
+          "title": "Split renderer.ts under 600 code lines",
+          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:49:58.298Z",
+          "branch": "work-board-card-169de259-cfef-46a3-8e52-eca",
+          "pullRequest": 139
         }
       ]
     },
