@@ -17,7 +17,7 @@ import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
 import type { SectionStrip } from '../manager/section-strip';
 import type { Settings } from '../../shared/settings/settings';
-import { quoteForShell } from '../../shared/panes/shell';
+import { droppedPathsText } from '../../shared/panes/shell';
 import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from '../../shared/panes/terminals';
 import { icon, type IconName } from './icons';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from '../../shared/panes/waiting';
@@ -376,13 +376,12 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     });
     // Dropping files types their absolute paths at the prompt, quoted, the way a terminal is expected to
     // take them. It goes through terminal.input so a dead pane ignores the drop like any other keystroke.
-    // The trailing space is what every terminal appends, so a second drop starts a new word instead of
-    // gluing itself onto the first path.
     container.addEventListener('drop', (event) => {
       const paths = [...event.dataTransfer?.files ?? []].map((file) => options.bridge.getPathForFile(file));
-      if (paths.length === 0) return;
+      const text = droppedPathsText(paths, options.shellCommand());
+      if (!text) return;
       terminal.focus();
-      terminal.input(`${paths.map((entry) => quoteForShell(entry, options.shellCommand())).join(' ')} `);
+      terminal.input(text);
     });
     terminal.onResize(({ cols, rows }) => options.bridge.resize(id, cols, rows));
     // The other thing a program in a pane can say about itself, and as cheap to listen for as the bell:
