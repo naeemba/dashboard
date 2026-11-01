@@ -74,6 +74,12 @@
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
           "priority": "high",
           "parent": null
+        },
+        {
+          "id": "ffac7938-8f71-4205-b6c8-3d52cd5fd6cd",
+          "title": "Bring the manager's worker panes back after a restart",
+          "notes": "Follow-up from #155 (manager terminals). The manager's worker panes (manager-terminal-<n>) do not come back after the app restarts: session-store keys saved pages by project path, and the manager is not in that list. Project pages already restore their panes and resume their Claude sessions; the manager's should too.",
+          "priority": "medium"
         }
       ]
     },
