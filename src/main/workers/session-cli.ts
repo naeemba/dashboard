@@ -16,7 +16,7 @@ export type SessionCommand =
 export type SessionRequest = { directory: string; args: string[] };
 export type SessionReply = { ok: boolean; output: string };
 
-export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
+const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim
   session run <id> [--card <card id> | --worktree] "<prompt>"

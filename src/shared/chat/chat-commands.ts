@@ -21,7 +21,7 @@ export type ScreenCommand =
   | { kind: 'resume' } | { kind: 'diff' } | { kind: 'rewind' } | { kind: 'mcp' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
   | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'btw'; rest: string } | { kind: 'export'; rest: string } | { kind: 'fast'; rest: string } | { kind: 'copy'; rest: string };
 
-export const SCREEN_COMMANDS: CommandRow[] = [
+const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
   { name: 'diff', description: 'Review every change Claude made to a file in this conversation', argumentHint: '' },
   { name: 'rewind', description: 'Put the code, the conversation or both back to just before an earlier prompt', argumentHint: '' },

@@ -17,7 +17,7 @@ import { Terminal } from '@xterm/headless';
 // pane has one of these in main for as long as it runs, at about 12 bytes a cell: ten thousand lines
 // of a 200-column pane is some 24 MB, times six panes a project. A screen joining, or this window
 // coming home from another host, starts a pane at most this far back from its end.
-export const REPLAY_SCROLLBACK = 1000;
+const REPLAY_SCROLLBACK = 1000;
 const RESET = '\x1bc';
 
 export type PaneScreenCopy = {

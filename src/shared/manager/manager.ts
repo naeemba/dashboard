@@ -79,7 +79,7 @@ export function positionAfterClose(closed: number, remaining: number): number {
 // Asking comes first wherever they are listed: a pane waiting on an answer is the one you can do
 // something about right now. The order of this array is that order, so a state added here is counted
 // and printed without anyone remembering a second list.
-export const ALERT_STATES = ['waiting', 'exited'] as const;
+const ALERT_STATES = ['waiting', 'exited'] as const;
 
 // Every pane is listed, not only the two states above, so a pane getting on with its work needs a
 // state to be printed as. What it is doing is not the half you read anyway — how long it has been
