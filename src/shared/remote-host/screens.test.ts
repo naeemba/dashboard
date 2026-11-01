@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screens, windowHears, LOCAL_SCREEN } from './screens';
+import { folderDialogRefusal, screens, windowHears, LOCAL_SCREEN } from './screens';
 import { sizeOfPane, DEFAULT_PANE_SIZE } from '../panes/terminals';
 
 describe('screens', () => {
@@ -44,5 +44,15 @@ describe('windowHears', () => {
 
   it('tells the window nothing while it shows another host', () => {
     expect(windowHears('screen-1', false)).toBe(false);
+  });
+});
+
+describe('folderDialogRefusal', () => {
+  it('lets the host window open the folder dialog', () => {
+    expect(folderDialogRefusal(LOCAL_SCREEN)).toBeNull();
+  });
+
+  it('tells another screen to type the path', () => {
+    expect(folderDialogRefusal('mac')).toBe("Type the folder's path on the host");
   });
 });

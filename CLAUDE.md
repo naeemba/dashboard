@@ -60,6 +60,8 @@ app.
 
   `board-view.ts` and `notes-view.ts` are exempted only until fixed; adding a
   file to that list without fixing it is the rule being broken. (errors-rule-1)
+- **An IPC handler that refuses answers the refusal as a value** (`{ refused }`)
+  and throws only for failures. (errors-rule-2)
 - **The help dialog is part of the change.** A key, mode or screen change
   updates `src/renderer/keys/help.ts` in the same change: a new key is a row
   in `src/shared/keys/actions.ts` (handler, help, settings and which-key strip

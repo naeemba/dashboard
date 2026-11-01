@@ -222,17 +222,6 @@
           ]
         },
         {
-          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
-          "title": "IPC refusals thrown instead of answered (#129)",
-          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:06:15.202Z",
-          "updatedAt": "2026-11-01T12:10:37.524Z",
-          "branch": "fix-github-issue-129-gh-issue-view-129-comm",
-          "pullRequest": 149
-        },
-        {
           "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
           "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
           "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
@@ -1910,6 +1899,23 @@
             {
               "at": "2026-11-01T12:21:43.452Z",
               "body": "Shipped in PR #146: the project picker, /model and /rewind rank with ranked; a blank query scores nothing (pinned by test). Merged with main at 2.32.14."
+            }
+          ]
+        },
+        {
+          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
+          "title": "IPC refusals thrown instead of answered (#129)",
+          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:06:15.202Z",
+          "updatedAt": "2026-11-01T12:24:56.906Z",
+          "branch": "fix-github-issue-129-gh-issue-view-129-comm",
+          "pullRequest": 149,
+          "comments": [
+            {
+              "at": "2026-11-01T12:24:56.906Z",
+              "body": "Shipped in PR #149: the folder dialog refusal is answered as a value instead of thrown, the screen's status bar says to type the path on the host, and the notice clears after a later successful open. Version 2.32.15."
             }
           ]
         },
