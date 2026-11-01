@@ -255,16 +255,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
-          "title": "Copy a whole Claude reply as markdown from the Claude pane",
-          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-10-31T23:12:15.674Z",
-          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
-          "pullRequest": 128
         }
       ]
     },
@@ -1574,6 +1564,22 @@
             {
               "at": "2026-10-31T23:59:00.180Z",
               "body": "Shipped in PR #121: /fast and Alt+F toggle fast mode; the foot shows fast beside the model; the choice replays on a new session. Review loop: 3 rounds, 6 threads fixed."
+            }
+          ]
+        },
+        {
+          "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+          "title": "Copy a whole Claude reply as markdown from the Claude pane",
+          "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T00:10:53.694Z",
+          "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+          "pullRequest": 128,
+          "comments": [
+            {
+              "at": "2026-11-01T00:10:53.694Z",
+              "body": "Shipped in PR #128: /copy [N] copies a whole reply as markdown. Version 2.32.0."
             }
           ]
         }
