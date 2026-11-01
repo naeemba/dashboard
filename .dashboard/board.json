@@ -110,6 +110,12 @@
           "title": "Split main.ts: worktree bookkeeping into its own module",
           "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
           "priority": "medium"
+        },
+        {
+          "id": "a28da61b-64d4-4149-9e90-e8d61be4a461",
+          "title": "Split board.test.ts by describe block",
+          "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
+          "priority": "medium"
         }
       ]
     },
