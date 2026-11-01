@@ -171,7 +171,13 @@
           "priority": "high",
           "parent": null,
           "createdAt": "2026-11-01T20:03:57.126Z",
-          "updatedAt": "2026-11-01T20:20:54.113Z"
+          "updatedAt": "2026-11-01T20:28:15.816Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:28:15.816Z",
+              "body": "Scope addition: every dependency in package.json, runtime and dev, not only the platform ones. For each: why it is there, its cost (size, maintenance, security record, upgrade breakage), whether stdlib, platform or a few lines would do, whether a better library exists. A Dependencies section in the report, same verdicts."
+            }
+          ]
         }
       ]
     },
