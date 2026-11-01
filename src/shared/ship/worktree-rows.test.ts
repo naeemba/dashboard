@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dirtyLabel, dirtySummary, orderedWorktrees, worktreePaneText } from './worktree-rows';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { WorktreeEntry } from '../app/bridge';
 
 function entry(cardId: string, startedAt: string): WorktreeEntry {
   return {

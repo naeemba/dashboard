@@ -7,8 +7,8 @@ import {
 } from './manager';
 import type { Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS } from '../usage/usage';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
 import type { Bell } from '../panes/waiting';
+import type { WorktreeEntry } from '../app/bridge';
 
 // The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
 // with one written out.

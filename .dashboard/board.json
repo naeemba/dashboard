@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
-          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
-          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
           "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
           "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
@@ -1669,6 +1662,26 @@
             {
               "at": "2026-11-01T00:54:48.764Z",
               "body": "Shipped in PR #131: moved src files into per-process folders; review loop round 1 added the placement note for modules nothing runs. Merged after green CI."
+            }
+          ]
+        },
+        {
+          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
+          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
+          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:19:02.281Z",
+          "branch": "work-board-card-cc9c87a6-2e96-4ff0-a144-397",
+          "pullRequest": 132,
+          "comments": [
+            {
+              "at": "2026-11-01T01:10:36.820Z",
+              "body": "PR #132: crossing types moved to src/shared (bridge.ts for bridge-carried, else owning shared module), chat-rename split, two tests moved. Boundary imports 58 -> 0; tests 132/1819 unchanged."
+            },
+            {
+              "at": "2026-11-01T01:19:02.281Z",
+              "body": "Shipped in PR #132: cross-process types moved into src/shared, chat-rename.ts split."
             }
           ]
         }

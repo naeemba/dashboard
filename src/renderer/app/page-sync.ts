@@ -1,8 +1,7 @@
-import type { OpenProjects } from '../../shared/app/bridge';
+import type { OpenProjects, Project } from '../../shared/app/bridge';
 import { isProjectPage } from '../../shared/manager/manager';
 import { discardPanes, type Page } from './page';
 import { hostTracker, landingAfterMoves } from './page-reconcile';
-import type { Project } from '../../main/app/projects';
 
 // What the renderer hands over: its live list of pages, the tab it is on, and the few things that put
 // a page on screen. Functions rather than values, since the list and the tab change between calls.

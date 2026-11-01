@@ -18,6 +18,9 @@ export type ChatMeasure = {
 
 export type StatusTone = 'green' | 'yellow' | 'red' | 'blue' | 'plain';
 
+// What the foot of the Claude screen says Claude is doing.
+export type FootState = 'ready' | 'working' | 'waiting';
+
 type ContextUsage = Pick<SDKControlGetContextUsageResponse, 'totalTokens' | 'maxTokens' | 'percentage' | 'model'>;
 type PlanUsage = Pick<SDKControlGetUsageResponse, 'rate_limits'> | null;
 type PlanWindow = NonNullable<SDKControlGetUsageResponse['rate_limits']>['five_hour'];

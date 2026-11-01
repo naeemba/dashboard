@@ -1,6 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { confirmOverlay } from '../app/overlay';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { WorktreeTarget } from '../../shared/manager/manager';
 
 // Removing one worktree, asking first. Its own file because two screens remove worktrees — the
 // worktree dialog and the manager's list — and a second copy of the questions is how one of them would
@@ -8,10 +8,6 @@ import type { WorktreeEntry } from '../../main/ship/worktree-store';
 //
 // `refocus` hands the keyboard back to whichever screen asked, after each sheet closes. A sheet takes
 // focus while it is up, and without this the next arrow key goes nowhere.
-
-// What a removal needs to know: what to call the worktree in the question, and where it is. A record
-// has all four; a worktree the manager found through git is named by its folder.
-export type WorktreeTarget = Pick<WorktreeEntry, 'title' | 'branch' | 'worktreePath' | 'projectPath'>;
 
 // A notice with nothing to answer, built on the same sheet as the two questions so a refusal is read
 // on the screen that asked, not off the status bar behind it.

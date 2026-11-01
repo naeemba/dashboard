@@ -1,18 +1,14 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { isPaneConversation, type PaneConversation } from '../workers/claude-resume';
 import { PROJECT_MODES, type Mode } from '../../shared/keys/modes';
+import type { SessionPage } from '../../shared/app/bridge';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
 // was left on, and which pane had the keyboard. Not the shells themselves — those die with the app, and
 // every pane comes back empty at its project's directory, and what each pane was called, except a pane
-// that was running Claude Code, which resumes that conversation.
-//
-// `names` is one entry per pane number, `null` for a pane nobody named or a number no pane holds. Not a list of the panes
-// that have one: with the panes that do not left out, a name lands on the wrong pane the moment a
-// middle pane is unnamed. Only the names you typed are here — a title a program set is gone with the
-// program that set it, so a restored pane says nothing until something in it speaks up.
-export type SessionPage = { path: string; mode: Mode; focused: number; names: (string | null)[] };
-export type Session = { pages: SessionPage[]; activeIndex: number };
+// that was running Claude Code, which resumes that conversation. `Session` and `SessionPage`, the
+// part the renderer sends, are declared in bridge.ts.
+
 // What is on disk: the layout the renderer sends, plus which Claude Code conversation each terminal was
 // running, one entry per pane number like `names`. Main fills these in; the renderer never sees them change.
 // claude-resume.ts holds why each entry carries its folder.

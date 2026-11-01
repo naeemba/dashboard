@@ -1,4 +1,4 @@
-import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, Query, RewindFilesResult, SDKSessionInfo, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, PermissionResult, Query, RewindFilesResult, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from '../workers/dispatch';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
@@ -8,13 +8,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { replaceFile } from '../board/board-store';
 import path from 'node:path';
-import type { ChatContent } from '../../shared/app/bridge';
+import type { ChatContent, ExportWrite, ChatPreferences, ChatState, ChatSessions } from '../../shared/app/bridge';
 import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
-import type { PermissionAsk } from '../../renderer/chat/chat-permission';
-import { exportTarget, type ExportWrite } from './chat-export-target';
-import { elicitationAsk, elicitationResult } from '../../shared/chat/chat-elicitation';
+import { exportTarget } from './chat-export-target';
+import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
 import { renameTarget } from '../../shared/chat/chat-rename';
@@ -42,18 +41,6 @@ export type ChatHost = {
   environment: Record<string, string>;
   userData: string;
 };
-
-// What the renderer may change on a running session. Held per slot so a choice made before the first
-// prompt is what the session starts with. The default model is null rather than undefined: the second
-// screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
-// as no change at all. The effort is null for the same reason: auto, the model's own default. Fast is
-// fast mode, as /fast toggles it in Claude Code; undefined leaves it to the settings file.
-export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null; fast?: boolean };
-
-export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
-
-// The conversations /resume offers, newest first, and the one this page is on.
-export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
 type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };

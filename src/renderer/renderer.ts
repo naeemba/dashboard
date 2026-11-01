@@ -26,11 +26,8 @@ import {
   EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from '../shared/panes/terminals';
 import { terminalStatus, type StatusPage } from './app/status';
-import type { Project } from '../main/app/projects';
-import type { Session } from '../main/app/session';
-import type { WorktreeEntry } from '../main/ship/worktree-store';
 import { WORKING_REPORT_MS } from '../shared/panes/working-panes';
-import type { WorktreeList } from '../shared/app/bridge';
+import type { WorktreeList, Project, Session, WorktreeEntry } from '../shared/app/bridge';
 import { createPageSync } from './app/page-sync';
 import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
 import { defaultSettings, type Settings } from '../shared/settings/settings';

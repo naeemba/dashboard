@@ -85,3 +85,11 @@ export function showEdits(entries: ChatEntry[], say: Say): void {
   }));
   viewerOverlay('diff-viewer', review);
 }
+
+// /rename: main's refusal, or that it was renamed, as a notice.
+export function renameConversation(bridge: DashboardBridge, slot: number, title: string, say: Say): void {
+  bridge.chatRename(slot, title).then(
+    (refused) => say.onNotice(refused ?? `Renamed to ${title}.`),
+    (error: unknown) => say.onError(`Not renamed: ${failureText(error)}`),
+  );
+}

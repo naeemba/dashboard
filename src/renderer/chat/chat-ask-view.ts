@@ -1,7 +1,7 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { toolBody } from './chat-entries';
-import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
-import { DECLINED, ELICITATION, fieldAbout, fieldChoices, fieldsOf, takes, typedValue } from '../../shared/chat/chat-elicitation';
+import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf } from './chat-permission';
+import { DECLINED, ELICITATION, fieldAbout, fieldChoices, fieldsOf, takes, typedValue, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { isOpenableLink } from '../../shared/panes/links';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { isModified } from '../keys/shortcuts';

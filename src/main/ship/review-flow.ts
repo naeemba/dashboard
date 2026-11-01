@@ -4,8 +4,7 @@ import { BOARD_FILE_PATH, parseBoard, readBoard } from '../board/board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
-import type { ShipResult, WorktreeRemoval } from '../../shared/app/bridge';
-import type { WorktreeEntry } from './worktree-store';
+import type { ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on
 // its card is finished, so the card lands in Review, the worktree the work was written in is thrown

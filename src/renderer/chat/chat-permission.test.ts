@@ -1,6 +1,7 @@
 import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
-import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf, type PermissionAsk } from './chat-permission';
+import { declined, permissionChoices, permissionTitle, questionAnswer, questionsOf } from './chat-permission';
+import type { PermissionAsk } from '../../shared/chat/chat-elicitation';
 
 const ask = (over: Partial<PermissionAsk> = {}): PermissionAsk => ({
   id: '1', toolName: 'Bash', input: { command: 'rm -rf build' }, defaultToNo: false, suppressAlwaysAllowRule: false, ...over,

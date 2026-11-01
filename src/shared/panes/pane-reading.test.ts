@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { paneIsFree } from '../../renderer/panes/free-pane';
 import {
   freePane, paneIsBusy, programIn, runsAnAgent, shipCanTake, type PaneReading,
 } from './pane-reading';
@@ -97,17 +96,6 @@ describe('freePane', () => {
     const finished: PaneReading = { ...idle, command: { args: [], directory: '/work/api.worktrees/one' }, inWorktree: true };
     expect(freePane(numbered([finished, idle]), shipCanTake)).toBe(2);
     expect(freePane(numbered([finished, running('npm')]), shipCanTake)).toBe(1);
-  });
-
-  // The order is the half the command screen shares, so it is pinned against a different idea of free
-  // too: here a dead pane cannot take a line, and a worktree pane still goes last.
-  it('keeps that order whatever the caller counts as free', () => {
-    const dead = { ...idle, exited: true };
-    const inWorktree = { ...idle, exited: false, inWorktree: true };
-    const alive = { ...idle, exited: false };
-    expect(freePane(numbered([dead, inWorktree, alive]), paneIsFree)).toBe(3);
-    expect(freePane(numbered([dead, inWorktree]), paneIsFree)).toBe(2);
-    expect(freePane(numbered([dead]), paneIsFree)).toBe(null);
   });
 });
 

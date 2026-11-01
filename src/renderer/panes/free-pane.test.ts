@@ -35,6 +35,7 @@ describe('freePaneIndex', () => {
   it('takes a pane still standing in a card\'s worktree last, the way a ship does', () => {
     expect(freePaneIndex(workers(finished, free))).toBe(2);
     expect(freePaneIndex(workers(finished, busy))).toBe(1);
+    expect(freePaneIndex(workers(dead, finished, free))).toBe(3);
   });
 });
 

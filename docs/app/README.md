@@ -16,6 +16,15 @@ file nothing runs: a module of types, or a helper only tests import. The feature
 is the `docs/<feature>/` folder whose Files list names it. Basenames keep their
 prefix (`renderer/chat/chat-view.ts`), and a test sits beside its module.
 
+A type that both sides name lives on the shared side, never in a file of one
+process. It goes in the shared module that owns its concept (`FileLink` in
+`links.ts`, `PermissionAsk` in `chat-elicitation.ts`, `SearchRow` in
+`fuzzy.ts`, `Board` in `board.ts`); one the bridge carries that no shared
+module owns (`Project`, `WorktreeEntry`, `Session`, `ChatState`, ...) is
+declared in `bridge.ts`, beside the contract that carries it. A shared test
+imports only shared modules: a case that needs a renderer module lives in that
+module's test.
+
 - Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`, `version.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,

@@ -1,4 +1,4 @@
-import type { KeyInput } from '../../renderer/keys/shortcuts';
+import type { KeyInput } from './binding';
 
 // A keystroke for the tests: name the parts you are pressing, everything else is up. Only the test files
 // import this — spelling out all six fields at every call site is the thing it exists to avoid.

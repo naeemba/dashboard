@@ -3,7 +3,7 @@ import type { Board, Card } from '../board/board';
 import type { ManagerRow, PaneSummary } from './manager';
 import { STALL_MS, needKey, needsInTurn, needsYou, nextLanding } from './needs-you';
 import { NO_DAYS, NO_TOTALS } from '../usage/usage';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { WorktreeEntry } from '../app/bridge';
 
 const NOW = Date.parse('2026-10-01T12:00:00Z');
 const minutesAgo = (minutes: number) => NOW - minutes * 60_000;

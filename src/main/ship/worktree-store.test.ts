@@ -16,8 +16,8 @@ import {
   withoutWorktree,
   worktreesDiffer,
   writeWorktrees,
-  type WorktreeEntry,
 } from './worktree-store';
+import type { WorktreeEntry } from '../../shared/app/bridge';
 
 const entry: WorktreeEntry = {
   cardId: 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa',

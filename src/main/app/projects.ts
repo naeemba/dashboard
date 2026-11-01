@@ -1,7 +1,6 @@
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-
-export type Project = { name: string; path: string; missing: boolean };
+import type { Project } from '../../shared/app/bridge';
 
 function isDirectory(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;

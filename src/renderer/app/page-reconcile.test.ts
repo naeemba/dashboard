@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hostTracker, landingAfterMoves, pageMoves } from './page-reconcile';
-import type { Project } from '../../main/app/projects';
+import type { Project } from '../../shared/app/bridge';
 
 const project = (path: string, missing = false): Project => ({ name: path.split('/').pop() ?? path, path, missing });
 

@@ -1,7 +1,6 @@
 import type { Action } from '../../shared/keys/actions';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
 import { SELECTED_CARD, createBoardView, type BoardView } from '../board/board-view';
-import type { DashboardBridge } from '../../shared/app/bridge';
+import type { DashboardBridge, WorktreeEntry } from '../../shared/app/bridge';
 import { cardsProjects, type CardsPage } from './cards';
 import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 import { MANAGER_PROJECT } from '../../shared/manager/manager';

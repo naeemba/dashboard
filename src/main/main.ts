@@ -3,7 +3,7 @@ import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, type Project } from './app/projects';
+import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
 import { forgetSize, realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
@@ -66,12 +66,11 @@ import {
   withoutWorktree,
   worktreesDiffer,
   writeWorktrees,
-  type WorktreeEntry,
 } from './ship/worktree-store';
 import type { Settings } from '../shared/settings/settings';
 import { reviewSweep } from './ship/review-flow';
 import { shipFlow } from './ship/ship-flow';
-import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval } from '../shared/app/bridge';
+import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval, Project, WorktreeEntry } from '../shared/app/bridge';
 
 if (started) app.quit();
 

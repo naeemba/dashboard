@@ -5,6 +5,7 @@ import { connect } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { locateCommand, taskArguments } from '../../shared/panes/shell';
+import type { Handover } from '../../shared/app/bridge';
 
 const runCommand = promisify(execFile);
 
@@ -201,8 +202,6 @@ export function savedPrompt(contents: string, seen: string): string | null {
 // Which nvim a hand-over goes to: the project's slot, the temp folder its socket lives in, and the shell
 // that finds nvim on your PATH.
 export type EditorTarget = { temporaryDirectory: string; shellCommand: string; slot: number };
-// What a hand-over answers: whether the file is in front of you, and what the status bar says.
-export type Handover = { ok: boolean; message: string };
 
 // The hand-over the scrollback key, Ctrl+G's prompt and a path in a pane all go through: find nvim, get
 // ready, wait for the editor to answer, run each set of arguments. `what` names the thing in every message. Answers

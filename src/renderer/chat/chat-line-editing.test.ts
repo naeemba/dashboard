@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyChange, EMPTY_RING, planLineEdit, type Box, type KillRing, type LineEdit } from './chat-line-editing';
+import { applyChange, EMPTY_RING, planLineEdit, type Box, type KillRing } from './chat-line-editing';
+import type { LineEdit } from '../../shared/keys/actions';
 
 // Runs keys in order the way the box would, caret collapsed after each change.
 function press(text: string, caret: number, edits: LineEdit[], ring: KillRing = EMPTY_RING): { box: Box; ring: KillRing } {

@@ -1,5 +1,6 @@
 import { piece } from './chat-foot-view';
-import { promptParts, type QueuedPrompt } from './chat-queue';
+import { promptParts } from './chat-queue';
+import type { QueuedPrompt } from '../../shared/chat/chat-transcript';
 
 // The prompts sent while Claude was busy, under the conversation and grey until the session takes
 // them, as Claude Code draws its queue. Hidden with nothing waiting.

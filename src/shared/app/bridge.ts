@@ -1,27 +1,75 @@
-import type { ModelInfo, PermissionResult, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
-import type { ChatPreferences, ChatSessions, ChatState } from '../../main/chat/chat-sessions';
+import type { EffortLevel, ModelInfo, PermissionMode, PermissionResult, RewindFilesResult, SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import type { CommandRow } from '../chat/chat-commands';
-import type { ExportWrite } from '../../main/chat/chat-export-target';
+import type { PermissionAsk } from '../chat/chat-elicitation';
 import type { McpAction, McpServer } from '../chat/chat-mcp';
 import type { PdfRead } from '../chat/chat-pdf';
 import type { RewindChoice, RewindPoint } from '../chat/chat-rewind';
 import type { ChatMeasure } from '../chat/chat-status';
 import type { ChatEvent, ImageType } from '../chat/chat-transcript';
 import type { ScannedWorktree } from '../ship/git-worktrees';
-import type { Project } from '../../main/app/projects';
 import type { Board } from '../board/board';
-import type { FileLink } from '../../renderer/nvim/file-links';
 import type { MarketsSnapshot } from '../markets/markets';
-import type { Handover } from '../../main/nvim/nvim-remote';
 import type { PaneUse } from '../panes/pane-reading';
-import type { WorkerState } from '../../main/workers/session-cli';
-import type { BoardRead } from '../../main/board/board-store';
-import type { Session } from '../../main/app/session';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
+import type { Mode } from '../keys/modes';
 import type { Settings } from '../settings/settings';
 import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { FileLink } from '../panes/links';
+
+export type Project = { name: string; path: string; missing: boolean };
+
+// One worktree the app has made, as worktree-store.ts keeps it on disk; that file says why.
+export type WorktreeEntry = {
+  cardId: string;
+  title: string;
+  projectPath: string;
+  branch: string;
+  worktreePath: string;
+  // The pane running the agent, or null when the worktree was made and every pane was already in
+  // use. Null is a real state, not a missing field.
+  pane: number | null;
+  startedAt: string;
+  // Whether this is the review worktree rather than the one the card was worked in. The two look the
+  // same on disk — same project, same card, same branch — and only this says which agent is in there,
+  // so without it the sweep that starts a review would find the review it just started and start
+  // another one, every five seconds, for as long as the app is open.
+  reviewing: boolean;
+};
+
+// The layout the renderer sends for a restart to put back; session.ts says what that covers.
+//
+// `names` is one entry per pane number, `null` for a pane nobody named or a number no pane holds. Not a list of the panes
+// that have one: with the panes that do not left out, a name lands on the wrong pane the moment a
+// middle pane is unnamed. Only the names you typed are here — a title a program set is gone with the
+// program that set it, so a restored pane says nothing until something in it speaks up.
+export type SessionPage = { path: string; mode: Mode; focused: number; names: (string | null)[] };
+export type Session = { pages: SessionPage[]; activeIndex: number };
+
+// Running is a worker back at work after either: a prompt submitted or a tool run.
+export type WorkerState = 'running' | 'blocked' | 'done';
+
+// What the renderer may change on a running session. Held per slot so a choice made before the first
+// prompt is what the session starts with. The default model is null rather than undefined: the second
+// screen's link is JSON, which drops an undefined field, and a change back to the default would arrive
+// as no change at all. The effort is null for the same reason: auto, the model's own default. Fast is
+// fast mode, as /fast toggles it in Claude Code; undefined leaves it to the settings file.
+export type ChatPreferences = { model?: string | null; permissionMode?: PermissionMode; effort?: EffortLevel | null; fast?: boolean };
+
+export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionAsk[]; preferences: ChatPreferences };
+
+// The conversations /resume offers, newest first, and the one this page is on.
+export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
+
+// What readBoard hands back. brokenFile is the path a damaged board.json was moved to, or null when
+// nothing needed salvaging — including the ordinary case of no board.json existing yet.
+export type BoardRead = { board: Board; brokenFile: string | null };
+
+// What a hand-over answers: whether the file is in front of you, and what the status bar says.
+export type Handover = { ok: boolean; message: string };
+
+// What `chat-export:write` answers: where the file went, or why it was not written.
+export type ExportWrite = { path: string } | { refused: string };
 
 // Each slot's project, and the terminals it has open — main first, then its workers — by number. One
 // list for both, because a worker opening or closing is a change to what every screen has to draw.

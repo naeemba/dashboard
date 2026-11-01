@@ -4,7 +4,7 @@ import { isSection } from '../../shared/manager/manager-sections';
 import type { Mode } from '../../shared/keys/modes';
 import type { Settings } from '../../shared/settings/settings';
 
-export type { KeyInput, Action };
+export type { Action };
 
 // What every keydown handler asks before it acts on `event.key`. A key with a modifier held is on its
 // way to whoever owns that combination, so a handler that reads `event.key` without asking this first

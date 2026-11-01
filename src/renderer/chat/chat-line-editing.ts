@@ -5,8 +5,7 @@
 // all three words.
 
 import type { CarriedEdit } from '../app/carried-edit';
-
-export type LineEdit = 'kill-word' | 'kill-line-start' | 'kill-line-end' | 'yank' | 'yank-pop';
+import type { LineEdit } from '../../shared/keys/actions';
 
 // The box as the planner sees it: its text and its selection, the caret when the two ends meet.
 export type Box = CarriedEdit;

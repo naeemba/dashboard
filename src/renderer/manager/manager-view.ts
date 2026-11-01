@@ -7,7 +7,7 @@ import { formatSize } from '../../shared/ship/git-worktrees';
 import {
   alertSummary, answerTarget, canOpen, groupOpenings, isAlerting, lineKey, managerLines, paneAge, queueLength, queueRefresh,
   noPaneText, removableWorktree, slotOfLine, stateLabel, withQueue, type ManagerLine, type ManagerRow,
-  type ManagerWorktree, type PaneSummary,
+  type ManagerWorktree, type PaneSummary, type WorktreeTarget,
 } from '../../shared/manager/manager';
 import { countChips, createActivity, createOverview } from './manager-panels';
 import { NEED_LABELS, nextLanding, needsYou, type Need } from '../../shared/manager/needs-you';
@@ -15,7 +15,6 @@ import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from '../keys/shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from '../../shared/usage/usage';
 import { APP_VERSION } from '../app/version';
-import type { WorktreeTarget } from '../ship/worktree-removal';
 import { dirtyLabel, worktreePaneText } from '../../shared/ship/worktree-rows';
 import type { JumpToWorktree } from '../ship/worktree-view';
 

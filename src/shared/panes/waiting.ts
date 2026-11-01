@@ -1,4 +1,4 @@
-import type { WorkerState } from '../../main/workers/session-cli';
+import type { WorkerState } from '../app/bridge';
 
 // What a bell means. Three questions with three answers, kept here rather than inline in the handler
 // so they can be tested: does this bell mark the pane, does it raise a banner, and which panes on a

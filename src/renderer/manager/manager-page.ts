@@ -1,7 +1,7 @@
 import type { CardsPage } from './cards';
 import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
-import type { DashboardBridge } from '../../shared/app/bridge';
+import type { DashboardBridge, WorktreeEntry } from '../../shared/app/bridge';
 import type { SendPlan } from '../panes/free-pane';
 import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
 import { createLogView } from './log-view';
@@ -14,7 +14,6 @@ import { createNotesView } from '../notes/notes-view';
 import { showMode, type Page } from '../app/page';
 import { createSectionStrip } from './section-strip';
 import { removeWorktreeAsking } from '../ship/worktree-removal';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
 import type { JumpToWorktree } from '../ship/worktree-view';
 
 // The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
