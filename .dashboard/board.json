@@ -123,6 +123,12 @@
           "title": "Open a typed folder path from the project picker",
           "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
           "priority": "medium"
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium"
         }
       ]
     },
