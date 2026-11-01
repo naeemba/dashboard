@@ -172,14 +172,10 @@ export function resumeRows(found: ChatSessions, query: string, now = Date.now())
 // first. The one the screen is on is marked, whether it was picked by its alias or the session named
 // it by its full id.
 export function modelRows(models: ModelInfo[], current: string | null, query: string): SearchRow<string>[] {
-  return models
-    .map((model) => ({ model, score: query ? fuzzyScore(`${model.displayName} ${model.value}`, query) : 0 }))
-    .filter((each): each is { model: ModelInfo; score: number } => each.score !== null)
-    .sort((one, other) => one.score - other.score)
-    .map(({ model }) => {
-      const mark = current !== null && isModel(model, current) ? '● ' : '';
-      return { name: `${mark}${model.displayName}`, detail: model.description, choice: model.value };
-    });
+  return ranked(models, (model) => `${model.displayName} ${model.value}`, query).map((model) => {
+    const mark = current !== null && isModel(model, current) ? '● ' : '';
+    return { name: `${mark}${model.displayName}`, detail: model.description, choice: model.value };
+  });
 }
 
 // The model `/model x` names, by its alias, full id or shown name; null for one the session does not
