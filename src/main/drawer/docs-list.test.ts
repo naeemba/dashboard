@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { docOrder, listDocs } from './docs-list';
+import { docOrder, inlineImages, isDoc, listDocs, readDoc } from './docs-list';
 
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
@@ -26,5 +26,40 @@ describe('listDocs', () => {
 
   it('lists nothing for a project with no docs folder', async () => {
     expect(await listDocs(mkdtempSync(path.join(tmpdir(), 'docs-list-')))).toEqual([]);
+  });
+});
+
+describe('isDoc', () => {
+  it('takes only markdown under the docs folder', () => {
+    expect(isDoc('/p', '/p/docs/board/README.md')).toBe(true);
+    expect(isDoc('/p', '/p/docs/../secret.md')).toBe(false);
+    expect(isDoc('/p', '/home/me/.ssh/id_rsa')).toBe(false);
+    expect(isDoc('/p', '/p/docs/shot.png')).toBe(false);
+  });
+});
+
+describe('inlineImages', () => {
+  const read = (image: string): Buffer | null => (image === '/p/docs/screenshots/board.png' ? Buffer.from('png') : null);
+
+  it("carries an image inside the project inline, relative to the doc's folder", () => {
+    expect(inlineImages('See ![the board](../screenshots/board.png).', '/p/docs/board/README.md', '/p', read))
+      .toBe(`See ![the board](data:image/png;base64,${Buffer.from('png').toString('base64')}).`);
+  });
+
+  it('leaves one outside the project, from the web, missing or of another type as it was', () => {
+    for (const text of ['![a](../../../etc/x.png)', '![a](https://x.example/a.png)', '![a](gone.png)', '![a](notes.svg)']) {
+      expect(inlineImages(text, '/p/docs/board/README.md', '/p', read)).toBe(text);
+    }
+  });
+});
+
+describe('readDoc', () => {
+  it('reads a doc and refuses a file outside the docs folder', async () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'docs-read-'));
+    mkdirSync(path.join(project, 'docs'));
+    writeFileSync(path.join(project, 'docs', 'README.md'), '# Docs');
+    writeFileSync(path.join(project, 'secret.md'), 'no');
+    expect(await readDoc(project, path.join(project, 'docs', 'README.md'))).toEqual({ text: '# Docs' });
+    expect(await readDoc(project, path.join(project, 'secret.md'))).toHaveProperty('refused');
   });
 });
