@@ -38,10 +38,10 @@ export type CommandResult =
 
 // `--name value` and `--name=value` both, because an agent writing the command will use either and
 // refusing one of them is a refusal nobody can see coming. A flag repeated takes its last value.
-function readFlags(args: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
+function readFlags(flagArguments: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
   const flags = new Map<string, string>();
-  for (let at = 0; at < args.length; at += 1) {
-    const argument = args[at];
+  for (let at = 0; at < flagArguments.length; at += 1) {
+    const argument = flagArguments[at];
     if (!argument.startsWith('--')) return { message: `not a flag: ${argument}` };
     const equals = argument.indexOf('=');
     const name = equals === -1 ? argument.slice(2) : argument.slice(2, equals);
@@ -53,8 +53,8 @@ function readFlags(args: readonly string[], allowed: readonly string[]): { flags
     // A missing value is refused rather than read as an empty string: `--branch --notes x` would
     // otherwise clear the branch and say nothing, and the notes would go missing with it.
     at += 1;
-    if (at >= args.length) return { message: `--${name} needs a value` };
-    flags.set(name, args[at]);
+    if (at >= flagArguments.length) return { message: `--${name} needs a value` };
+    flags.set(name, flagArguments[at]);
   }
   return { flags };
 }
@@ -143,10 +143,10 @@ function formatCard(column: string, card: Card): string {
 
 export function runBoardCommand(
   board: Board,
-  args: readonly string[],
+  commandArguments: readonly string[],
   makeId: () => string = () => crypto.randomUUID(),
 ): CommandResult {
-  const [command, ...rest] = args;
+  const [command, ...rest] = commandArguments;
   if (command === undefined || command === '--help' || command === '-h') {
     return { ok: true, output: USAGE, board: null };
   }
@@ -255,12 +255,12 @@ export function runBoardCommand(
 // next rung, when two writers are common enough to hit that window.
 export function runBoardCommandOnLatest(
   board: Board,
-  args: readonly string[],
+  commandArguments: readonly string[],
   readAgain: () => Board,
 ): CommandResult {
-  const opened = runBoardCommand(board, args);
+  const opened = runBoardCommand(board, commandArguments);
   if (!opened.ok || opened.board === null) return opened;
-  return runBoardCommand(readAgain(), args);
+  return runBoardCommand(readAgain(), commandArguments);
 }
 
 // Which of a thrown error's two faces the terminal gets. Every fs failure carries an errno `code`, and

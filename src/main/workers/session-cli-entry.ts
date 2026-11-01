@@ -5,8 +5,8 @@ import { askApp } from './session-socket';
 // out, a line back. A spelling mistake is answered here, without the app; everything else is the
 // app's to decide, because the panes are its.
 async function run(): Promise<number> {
-  const args = process.argv.slice(2);
-  const parsed = parseSessionCommand(args);
+  const commandArguments = process.argv.slice(2);
+  const parsed = parseSessionCommand(commandArguments);
   if (!parsed.ok) {
     process.stderr.write(`${parsed.message}\n`);
     return 1;
@@ -16,7 +16,7 @@ async function run(): Promise<number> {
     process.stderr.write('DASHBOARD_SOCKET is not set — run this from a pane the Dashboard app opened\n');
     return 1;
   }
-  const reply = await askApp(socket, { directory: process.cwd(), args });
+  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments });
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }

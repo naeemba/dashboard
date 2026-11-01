@@ -11,13 +11,13 @@ const runCommand = promisify(execFile);
 // change that is not staged leaves the leading column blank. A leading trim takes that blank away on
 // the first line only, which shifts its path one character left — and a reader that counts columns
 // then gets a path that is not the one git named. Only the trailing newline is ours to drop.
-export async function git(args: string[], cwd: string): Promise<string> {
-  return runProgram('git', args, cwd);
+export async function git(gitArguments: string[], cwd: string): Promise<string> {
+  return runProgram('git', gitArguments, cwd);
 }
 
 // The same for another program, which so far is gh asking whether a branch has a pull request.
-export async function runProgram(program: string, args: string[], cwd: string): Promise<string> {
-  const { stdout } = await runCommand(program, args, { cwd, maxBuffer: 64 * 1024 * 1024 });
+export async function runProgram(program: string, programArguments: string[], cwd: string): Promise<string> {
+  const { stdout } = await runCommand(program, programArguments, { cwd, maxBuffer: 64 * 1024 * 1024 });
   return stdout.trimEnd();
 }
 
@@ -26,7 +26,7 @@ export async function runProgram(program: string, args: string[], cwd: string): 
 // as written rather than C-quoted. A folder that is not a repository lists none rather than walking
 // node_modules.
 export async function projectFiles(projectPath: string): Promise<string[]> {
-  const listed = (args: string[]) => git(['ls-files', '-z', ...args], projectPath).then((list) => list.split('\0').filter(Boolean));
+  const listed = (listArguments: string[]) => git(['ls-files', '-z', ...listArguments], projectPath).then((list) => list.split('\0').filter(Boolean));
   return Promise.all([listed(['--cached', '--others', '--exclude-standard']), listed(['--deleted'])]).then(([files, deleted]) => {
     const gone = new Set(deleted);
     return files.filter((file) => !gone.has(file));

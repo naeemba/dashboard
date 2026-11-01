@@ -201,9 +201,9 @@ export function pickedModel(value: string): string | null {
 export function typedCommand(text: string): string | null {
   const name = tagged(text, 'command-name')?.trim();
   if (!name) return null;
-  const args = tagged(text, 'command-args')?.trim();
+  const argumentText = tagged(text, 'command-args')?.trim();
   const command = name.startsWith('/') ? name : `/${name}`;
-  return args ? `${command} ${args}` : command;
+  return argumentText ? `${command} ${argumentText}` : command;
 }
 
 // A file dropped on the screen that is not an image to attach, as the box takes it: an @ mention, the
