@@ -68,7 +68,13 @@
           "priority": "medium",
           "parent": null,
           "createdAt": "2026-11-01T20:23:46.345Z",
-          "updatedAt": "2026-11-01T20:23:46.345Z"
+          "updatedAt": "2026-11-01T20:25:59.478Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:25:59.478Z",
+              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
+            }
+          ]
         }
       ]
     },
