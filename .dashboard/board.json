@@ -86,6 +86,12 @@
           "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
           "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
           "priority": "medium"
+        },
+        {
+          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
+          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
+          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
+          "priority": "medium"
         }
       ]
     },
