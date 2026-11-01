@@ -46,6 +46,6 @@ module's test.
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling (599 code lines) and `renderer.ts` is past
-  it (608); the next feature wired through either needs a seam split out first
-  (workflow-decision-1).
+- `renderer.ts` is past the 600-line ceiling (608 code lines); the next feature
+  wired through it needs a seam split out first (workflow-decision-1). `main.ts`
+  is at 543 since the worktree record moved to `worktree-keeper.ts`.

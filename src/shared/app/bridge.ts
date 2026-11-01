@@ -89,7 +89,7 @@ export type WorktreeRemoval = { ok: boolean; message: string; dirty: string[] };
 // Everything in flight, and the folder each pane's shell was started in, keyed by terminal id. The
 // folders ride along with the records because the status bar's question is the two of them together:
 // is the pane I am in one of these checkouts. Only main knows where a pane is, so one message carries
-// both; which moments send one is setWorktrees' in main.ts to say.
+// both; which moments send one is `set`'s in worktree-keeper.ts to say.
 export type WorktreeList = { entries: WorktreeEntry[]; paneDirectories: Record<string, string> };
 
 export type DashboardBridge = {
@@ -191,7 +191,7 @@ export type DashboardBridge = {
   // The same two answers again, unasked, whenever the records change — a ship, a worktree removed, a
   // folder that went away outside the app. The pane directories ride along on that message rather than
   // sending one of their own, so a pane that moved without a record moving (a project opened into a
-  // freed slot) is not news here; setWorktrees in main.ts is where that is decided and says why.
+  // freed slot) is not news here; `set` in worktree-keeper.ts is where that is decided and says why.
   // It is what lets a board on screen be right about a change made from somewhere else — before this
   // the renderer re-read the list on arriving at a board, so a card whose worktree went while you were
   // looking at it kept its badge until you left.

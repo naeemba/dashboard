@@ -121,8 +121,8 @@ function projectPages(): Page[] {
 let worktrees: WorktreeEntry[] = [];
 // The folder each pane's shell was started in, keyed by terminal id, which is what says whether a pane
 // is in a worktree. Main's copy, never a second one kept here, and it rides along with the records
-// because only main knows where a pane is. When a message carries it is setWorktrees' to say — see
-// main.ts, where that is decided.
+// because only main knows where a pane is. When a message carries it is `set`'s to say — see
+// worktree-keeper.ts, where that is decided.
 let paneDirectories: Record<string, string> = {};
 // What each project and each pane has cost in tokens. Main sweeps Claude Code's logs and sends this
 // every half minute; nothing here computes a figure, the way nothing here computes a worktree.

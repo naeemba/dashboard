@@ -6,7 +6,7 @@ import started from 'electron-squirrel-startup';
 import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
-import { forgetSize, realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
+import { realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
 import { paneScreenCopy, type PaneScreenCopy } from './panes/pane-screen-copy';
@@ -42,7 +42,7 @@ import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation
 import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
-import { changedFiles, oneAtATime } from './ship/ship';
+import { oneAtATime } from './ship/ship';
 import {
   freePane,
   paneIsBusy,
@@ -55,22 +55,19 @@ import { usageSweep } from './usage/usage-sweep';
 import {
   claimsPane,
   entryForCard,
-  entryForPath,
   livingEntries,
   readWorktrees,
-  stillLiving,
   withEntry,
   withoutPane,
   panesAtLaunch,
   withoutPanes,
-  withoutWorktree,
-  worktreesDiffer,
   writeWorktrees,
 } from './ship/worktree-store';
 import type { Settings } from '../shared/settings/settings';
 import { reviewSweep } from './ship/review-flow';
+import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
-import type { OpenProjects, ShipRequest, ShipResult, WorktreeList, WorktreeRemoval, Project, WorktreeEntry } from '../shared/app/bridge';
+import type { OpenProjects, ShipRequest, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 
 if (started) app.quit();
 
@@ -147,13 +144,13 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // a window, and there is not going to be one — and the message is all anyone gets, so it names the
 // file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
 // half built and has nothing to shut down yet.
-let worktrees: WorktreeEntry[] = [];
+let recordAtLaunch: WorktreeEntry[] = [];
 // The pane each card's agent was in when the app last ran, kept from before the clearing so a restart
 // resumes the agent in that pane and nowhere else. agentToResume holds why.
 let agentPanesBeforeLaunch = new Map<string, number>();
 try {
   const recorded = livingEntries(readWorktrees(worktreesFile), existsSync);
-  ({ entries: worktrees, panes: agentPanesBeforeLaunch } = panesAtLaunch(recorded));
+  ({ entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = panesAtLaunch(recorded));
 } catch (error: unknown) {
   dialog.showErrorBox(
     'Dashboard cannot read its worktree record',
@@ -163,13 +160,7 @@ try {
 }
 // Outside the try: a failed write is worktree-store's to swallow, and inside it would read as a write
 // that can stop the launch.
-writeWorktrees(worktreesFile, worktrees);
-// The worktrees a removal is part way through. `git worktree remove` is awaited, and git unlinks the
-// folder before it answers, so without this the sweep lands in that gap, calls the record dead and
-// hands its pane back to the project — and the kill that follows the removal then finds no pane in the
-// worktree and leaves the agent running in a folder git has just deleted, writing errors into a pane
-// the app counts as free. Held for the length of the one removal, the way ship-flow.ts holds a ship.
-const removingWorktrees = new Set<string>();
+writeWorktrees(worktreesFile, recordAtLaunch);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
@@ -322,77 +313,20 @@ function releaseAgentPane(id: string): void {
   // shipped into, and the pane is still there. The claim ends where the pane is taken, in attachPane.
 }
 
-// The other half, for a pane whose worktree has gone rather than whose agent has: it goes back to a
-// plain shell in the project, since the folder it was in is not there any more. That is also what puts
-// the pane back at the front of the queue a ship picks from — freePane holds why a pane standing in a
-// worktree is taken last, and this one is not standing in it any more.
-function releaseWorktreePanes(entry: WorktreeEntry): void {
-  for (const [id, command] of terminalCommands) {
-    if (command.directory !== entry.worktreePath) continue;
-    terminalCommands.set(id, { args: [], directory: entry.projectPath });
-  }
-}
-
-// The panes with a live shell opened in this folder: the ones a removal kills.
-function shellsIn(worktreePath: string): string[] {
-  return Array.from(terminalCommands)
-    .filter(([id, command]) => command.directory === worktreePath && shells.has(id))
-    .map(([id]) => id);
-}
+// The record after launch: every change to it, the sweep that drops dead ones and a removal.
+// worktree-keeper.ts holds each; what is handed over here is what only this file has.
+const worktrees = worktreeKeeper({
+  file: worktreesFile,
+  entries: recordAtLaunch,
+  commands: terminalCommands,
+  shells,
+  changed: (list) => sendToRenderer('worktree:change', list),
+});
 
 // shell-directory-lookup.ts says what asking a shell where it is means.
 const shellLivesIn = shellLiveness({
-  shells, opened: terminalCommands, shellsIn, ask: shellDirectories(processTree),
+  shells, opened: terminalCommands, shellsIn: worktrees.shellsIn, ask: shellDirectories(processTree),
 });
-
-// The pair the renderer draws a card's badge and the status bar's branch from. WorktreeList in bridge.ts
-// is where the two of them being one answer is explained.
-//
-// The directories are read straight off terminalCommands rather than tracked beside it, so there is
-// one copy of them. It is the spawn cwd, not the shell's: `cd` in a pane never reaches here, so the
-// branch the status bar prints is the one the pane was opened in.
-function worktreeList(): WorktreeList {
-  return {
-    entries: worktrees,
-    paneDirectories: Object.fromEntries(
-      Array.from(terminalCommands, ([id, command]) => [id, command.directory]),
-    ),
-  };
-}
-
-// The one place the record changes after launch. Every writer goes through it, so the file on disk and
-// the screen are the same fact — a writer that updated one and not the other is how a card goes on
-// naming a worktree that is not there any more. Whether a rewrite is worth a message is
-// worktreesDiffer's to say.
-//
-// The records are what it looks at, not the pane directories riding along with them, and that is enough
-// rather than lucky: the only things that move a pane into or out of a worktree are a ship, a card's
-// agent resumed after a restart, and a worktree removed, and all three change a record here. A pane whose folder changes for any other reason —
-// a project closed, a project opened in a freed slot, an agent exiting — has moved between two
-// ordinary checkouts, which is not something the status bar prints or a badge reads.
-function setWorktrees(next: WorktreeEntry[]): void {
-  const changed = worktreesDiffer(worktrees, next);
-  worktrees = next;
-  // Neither half runs for a rewrite of what is already there — closing a project that shipped nothing
-  // is one. The file already holds these bytes, written by whoever last changed them, and the board on
-  // screen would be torn down and redrawn for a record nobody touched.
-  if (!changed) return;
-  writeWorktrees(worktreesFile, worktrees);
-  sendToRenderer('worktree:change', worktreeList());
-}
-
-// Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand
-// outside the app strands a pane exactly the way one removed inside it used to, so the two share this.
-// What it does not do is kill whatever is running: a folder that went by other means may still have an
-// agent doing something, and that is not this function's to decide.
-function dropDeadWorktrees(): void {
-  // Whether a tick that found nothing is worth a write is setWorktrees' to say, so there is no second
-  // answer to that question here. What counts as living is stillLiving's — a folder mid-removal is not
-  // dead just because git has already unlinked it.
-  const living = livingEntries(worktrees, stillLiving(removingWorktrees, existsSync));
-  for (const entry of worktrees) if (!living.includes(entry)) releaseWorktreePanes(entry);
-  setWorktrees(living);
-}
 
 // A worktree taken away outside the app — `git worktree remove` typed in a pane, an agent tidying up
 // after itself, an rm -rf — is not an event anything here hears. It used to be noticed only when the
@@ -416,7 +350,7 @@ setInterval(() => {
   // module scope, before a window has necessarily opened, and a failure here has a known, nameable
   // cost — a worktree list or a review run gone stale — not the unknown one report() is for.
   try {
-    dropDeadWorktrees();
+    worktrees.dropDead();
   } catch (error: unknown) {
     failures.hold(`Worktree list not updated: ${failureText(error)}`);
   }
@@ -519,7 +453,7 @@ function spawnProject(project: Project, projectIndex: number): void {
 // a second ship of the card is refused, and the review sweep waits for it rather than starting beside
 // it. A worker main dispatched comes back as main's again; resumedAs says how each one comes back.
 function resumeIn(id: string, projectPath: string, savedIndex: number, resume: PaneConversation): void {
-  const card = agentToResume(worktrees, agentPanesBeforeLaunch, resume, projectPath, savedIndex, realPath);
+  const card = agentToResume(worktrees.entries(), agentPanesBeforeLaunch, resume, projectPath, savedIndex, realPath);
   const comesBackAs = resumedAs(resume, card);
   if (card !== undefined) recordWorktree({ ...card, pane: paneFromId(id).index });
   if (comesBackAs === 'shell') {
@@ -606,9 +540,9 @@ table.on('projects:close', (_screen, slot: number) => {
   boards.forget(closing.path);
   chats.stop(slot);
   for (const id of [...terminalCommands.keys()]) if (paneFromId(id).slot === slot) dropPane(id);
-  // A project that never shipped a card has nothing to give up here, and setWorktrees is the one that
+  // A project that never shipped a card has nothing to give up here, and worktrees.set is the one that
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
-  setWorktrees(withoutPanes(worktrees, closing.path));
+  worktrees.set(withoutPanes(worktrees.entries(), closing.path));
   sendToRenderer('projects:change', openProjects());
 });
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
@@ -729,7 +663,7 @@ function closeWorker(id: string): void {
 // record gives it up here: one record per pane in this project. claimsPane holds why the project half
 // matters. `cardId` is the card taking it, whose own record is left alone.
 function takePane(projectPath: string, index: number, cardId: string): void {
-  const claimed = claimsPane(worktrees, projectPath, index, cardId);
+  const claimed = claimsPane(worktrees.entries(), projectPath, index, cardId);
   if (claimed) recordWorktree(withoutPane(claimed));
 }
 
@@ -738,7 +672,7 @@ registerWorkerChannels(table, {
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
-  setWorktrees(withEntry(worktrees, entry));
+  worktrees.set(withEntry(worktrees.entries(), entry));
   return entry;
 }
 
@@ -792,11 +726,11 @@ const shipInProject = oneAtATime();
 // it is review-flow.ts's; what is handed over here is only what this file knows — the records, the
 // pages, the panes — and the two steps, which are the ones a ship already takes.
 const reviews = reviewSweep({
-  worktrees: () => worktrees,
+  worktrees: worktrees.entries,
   slotOf: slotOfProject,
   agentWorksIn,
   shellLivesIn,
-  removeWorktree,
+  removeWorktree: worktrees.remove,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
   queue: shipInProject,
@@ -808,11 +742,11 @@ const reviews = reviewSweep({
 // A card moved into Ship. Every step of it is ship-flow.ts's; what is handed over here is the records
 // and the panes, which only this file holds.
 const shipCard = shipFlow({
-  worktrees: () => worktrees,
+  worktrees: worktrees.entries,
   recordWorktree,
   attachPane,
   agentRunsIn,
-  dropDeadWorktrees,
+  dropDeadWorktrees: worktrees.dropDead,
   forgetReview: (cardId) => reviews.forget(cardId),
   queue: shipInProject,
 });
@@ -825,8 +759,8 @@ table.handle('worktree:create', async (_screen, request: ShipRequest) => {
 // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
 // a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
 table.handle('worktree:list', () => {
-  dropDeadWorktrees();
-  return worktreeList();
+  worktrees.dropDead();
+  return worktrees.list();
 });
 
 // A channel of its own rather than riding along on worktree:list and worktree:change, which reach the
@@ -837,7 +771,7 @@ table.handle('worktree:list', () => {
 // the removal this row's `d` is about to ask for. Run concurrently — this is main, and every pane's
 // bytes flow through it.
 table.handle('worktree:check', async () => {
-  const results = await Promise.all(worktrees.map(async (entry) => (
+  const results = await Promise.all(worktrees.entries().map(async (entry) => (
     { worktreePath: entry.worktreePath, ...await worktreeState(entry.worktreePath) }
   )));
   return {
@@ -848,67 +782,11 @@ table.handle('worktree:check', async () => {
 
 // Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
 table.handle('worktree:scan', (_screen, projectPaths: string[]) => (
-  scanWorktrees(projectPaths, worktrees)
+  scanWorktrees(projectPaths, worktrees.entries())
 ));
 
-// Refused once for a dirty worktree, and only once: the changes in it exist nowhere else, so the
-// question is worth asking, and refusing forever would mean the only way out is the command line.
-//
-// A function rather than only a handler, because the review takes the same step: a card whose agent
-// has finished has its worktree thrown away before a fresh one is made on the branch.
-//
-// `projectPath` is for a worktree the app has no record of — one the manager found through git — and
-// is the project to ask git from. A recorded worktree is asked from the project its record names.
-async function removeWorktree(worktreePath: string, force: boolean, projectPath?: string): Promise<WorktreeRemoval> {
-  const entry = entryForPath(worktrees, worktreePath);
-  const project = entry?.projectPath ?? projectPath;
-  // A path with no record and no project is the removal having already happened — the sweep dropped it
-  // while the dialog's question was on screen, or a second `d` landed on a row that had gone. There is
-  // nothing to remove and no project to ask git from, and the goal state already holds, so this
-  // answers yes rather than refusing. Refusing sends the dialog down its failure path and offers to
-  // force-delete a folder that is not there.
-  if (!project) return { ok: true, message: '', dirty: [] };
-  removingWorktrees.add(worktreePath);
-  try {
-    // A folder deleted by hand cannot be asked whether it is dirty: git is spawned into a cwd that is
-    // not there, and node fails with `spawn git ENOENT` — its own failure to start a process, which
-    // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
-    // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
-    // folder has vanished, so the question is skipped rather than asked and lost.
-    //
-    // changedFiles, not blockingChanges: this refusal exists to ask before git does, and git counts
-    // .dashboard/ like any other folder. Ask the ship's narrower question here and a worktree holding
-    // nothing but an uncommitted board move sails past, straight into git saying no in its own words.
-    const dirty = existsSync(worktreePath)
-      ? changedFiles(await git(['status', '--porcelain'], worktreePath))
-      : [];
-    if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
-    await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], project);
-    forgetSize(worktreePath);
-    // A worktree with no record has no agent of the app's in it, so a shell of yours standing there is
-    // left alone.
-    if (!entry) return { ok: true, message: `removed ${baseName(worktreePath)}`, dirty: [] };
-    // The agent goes with the folder it was working in: leaving it running leaves it writing into a
-    // directory git has just deleted. Only here, where the folder was deleted on purpose.
-    for (const id of shellsIn(worktreePath)) shells.get(id)?.kill();
-    releaseWorktreePanes(entry);
-    setWorktrees(withoutWorktree(worktrees, worktreePath));
-    return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
-  } catch (error: unknown) {
-    return {
-      ok: false,
-      message: `not removed: ${failureText(error)}`,
-      dirty: [],
-    };
-  } finally {
-    // In a finally, so a removal that throws part way cannot hold a dead record past the sweep for the
-    // rest of the run.
-    removingWorktrees.delete(worktreePath);
-  }
-}
-
 table.handle('worktree:remove', async (_screen, worktreePath: string, force: boolean, projectPath: string) => {
-  const result = await removeWorktree(worktreePath, force, projectPath);
+  const result = await worktrees.remove(worktreePath, force, projectPath);
   logStore.log(removalEntry(projectPath, worktreePath, result));
   return result;
 });
@@ -938,7 +816,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.
   startWorker(id, directory, agentArguments, cardId) {
-    const entry = cardId === null ? undefined : entryForCard(worktrees, cardId);
+    const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
     const { slot, index } = paneFromId(id);
     takePane(projects[slot]?.path ?? '', index, cardId ?? '');
     if (entry) reviews.forget(entry.cardId);
@@ -949,7 +827,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   closeWorker,
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
   cardWorktree(projectPath, cardId) {
-    const entry = entryForCard(worktrees, cardId);
+    const entry = entryForCard(worktrees.entries(), cardId);
     if (entry?.projectPath !== projectPath) return undefined;
     return { worktreePath: entry.worktreePath, working: agentRunsIn(slotOfProject(projectPath), entry.pane) };
   },
@@ -958,7 +836,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   // The worktree dialog's own removal, so a folder deleted by hand and a sweep landing mid-removal are
   // handled the one way. Unforced: unfinishedWork has already said there is nothing in it to lose.
   removeWorktree: (worktreePath, projectPath) => shipInProject(projectPath, async () => {
-    const removal = await removeWorktree(worktreePath, false, projectPath);
+    const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
 }), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
@@ -983,7 +861,7 @@ function createWindow(): void {
 // on leaving another host.
 const held: HeldByMain = {
   table, screenCopies, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
-  projects: openProjects, worktrees: worktreeList, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
+  projects: openProjects, worktrees: worktrees.list, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
 const remote = registerRemote(held, {
