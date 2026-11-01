@@ -107,7 +107,8 @@
           "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
           "title": "Spell out args in test-file locals and parameters",
           "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -280,22 +281,6 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
-            }
-          ]
-        },
-        {
-          "id": "154a7a68-302c-4e65-aebe-3b1bb0926668",
-          "title": "Spell out args as a full word in locals and parameters",
-          "notes": "src refactoring audit, step 8. Plan: /tmp/claude-1000/src-audit.md (section 'Step 8').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:25:51.378Z",
-          "branch": "work-board-card-154a7a68-302c-4e65-aebe-3b1",
-          "pullRequest": 136,
-          "comments": [
-            {
-              "at": "2026-11-01T01:25:51.377Z",
-              "body": "PR #136: args locals and parameters renamed in 14 non-test src files; wire fields keep args (remote-host-decision-2). v2.32.4."
             }
           ]
         },
@@ -1719,6 +1704,26 @@
             {
               "at": "2026-11-01T01:28:55.677Z",
               "body": "PR #133 merged into main: 18 unused exports dropped. Review loop found nothing in one round; main merged in, 1818 tests pass, tsc and eslint clean."
+            }
+          ]
+        },
+        {
+          "id": "154a7a68-302c-4e65-aebe-3b1bb0926668",
+          "title": "Spell out args as a full word in locals and parameters",
+          "notes": "src refactoring audit, step 8. Plan: /tmp/claude-1000/src-audit.md (section 'Step 8').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:33:41.332Z",
+          "branch": "work-board-card-154a7a68-302c-4e65-aebe-3b1",
+          "pullRequest": 136,
+          "comments": [
+            {
+              "at": "2026-11-01T01:25:51.377Z",
+              "body": "PR #136: args locals and parameters renamed in 14 non-test src files; wire fields keep args (remote-host-decision-2). v2.32.4."
+            },
+            {
+              "at": "2026-11-01T01:33:41.332Z",
+              "body": "Shipped in PR #136: args locals and parameters spelled out as full words across src. Test-file renames follow in #138."
             }
           ]
         }
