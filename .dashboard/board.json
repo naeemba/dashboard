@@ -232,6 +232,12 @@
           "notes": "Measured: Ctrl+1 is 88-184 ms input-to-paint vs 24-72 ms for project tabs; handler 27-37 ms. Where: src/renderer/manager/manager-view.ts:492 list.replaceChildren every render, each row reading the live xterm buffer. Fix (small): build rows once, update changed ones. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
+          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
+          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
+          "priority": "high"
         }
       ]
     },
