@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
+import { buildVersionDefine } from './vite.build-version';
 
 // https://vitejs.dev/config
 export default defineConfig({
+  define: buildVersionDefine,
   // node-pty loads a native .node binary at runtime via a dynamic require.
   // Rollup can't bundle that call, so keep node-pty as a real require instead.
   build: {

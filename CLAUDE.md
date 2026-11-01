@@ -89,6 +89,6 @@ app.
   only on its own side. `npx eslint .` enforces it, `eslint.config.test.ts`
   pins it; a type both sides name moves to `src/shared/`, never an
   eslint-disable. (app-rule-2)
-- **Every merged card bumps `package.json` `version`** in the same pull
-  request: patch for a fix, minor for a capability, major for a break.
+- **A card does not bump `package.json` `version`.** The build stamps its
+  commit (`2.41.3+df3aad4`); the version moves only on a release.
   (workflow-rule-3)
