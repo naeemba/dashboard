@@ -2,7 +2,7 @@
 
 Keyboard-first terminal dashboard. Each project gets a page, shown several ways: its main Claude session, drawn as the Claude screen, beside a list of worker panes it dispatches tasks into, a full-window nvim, a kanban board, or a page of notes.
 
-The main session dispatches with `node "$DASHBOARD_SESSION"` (`claim`, `run`, `list`, `release`); a worker's hooks report back with `notify`. Ctrl+H on the terminals screen says the rest.
+The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run`, `list`, `release`); a worker's hooks report back with `notify`. Ctrl+H on the terminals screen says the rest.
 
 ![The terminals view: the main Claude session on the left, three workers on the right](docs/screenshots/terminals.png)
 
@@ -96,6 +96,7 @@ The notes are one page of free text per project, kept in `.dashboard/notes.md` b
 Ctrl+Shift+N rather than Ctrl+N, which is nvim's. xterm makes a control character for Ctrl with a letter and refuses the moment another modifier is held, so Ctrl+Shift with a letter never reached a pane as bytes anyway and this costs the shells nothing.
 
 Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that edits the board of the project you are in. It goes through the same code the app does.
+`node "$DASHBOARD_COMMAND" board <command>` is the same program as `node "$DASHBOARD_BOARD"`.
 
     node "$DASHBOARD_BOARD" list
     node "$DASHBOARD_BOARD" show 0f6a2c5e-...
