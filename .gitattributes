@@ -1,0 +1,3 @@
+# Feature history files only ever gain appended lines; a union merge keeps
+# both sides instead of conflicting. See workflow-decision-2.
+docs/**/history.md merge=union
