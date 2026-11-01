@@ -15,6 +15,7 @@ Claude has running.
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
+  `chat-screen-dispatch.ts`, `chat-attachments.ts`,
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
   `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`
