@@ -7,3 +7,4 @@ One line per merged change: date, pull request, why.
 - 2026-09-14 #35 — Ctrl+` opens the focused pane's scrollback in nvim
 - 2026-10-22 #75 — A file path printed in a pane opens in the project's nvim (nvim-decision-1)
 - 2026-11-01 #113 — Ctrl+G opens the Claude box in a tab of its own, read back on return
+- 2026-11-01 #142 — The file-link test buffer keeps written spaces, so it catches a lost trim
