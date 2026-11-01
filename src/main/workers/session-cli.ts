@@ -25,10 +25,11 @@ const SESSION_USAGE = `session — the Dashboard panes of the project you are in
   session notify <id> running|blocked|done
 
 claim opens a worker pane and prints its id: --project opens it on the page of the project
-~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude in it with the prompt as its argument:
---card runs it in the worktree the card was shipped into, --worktree in a throwaway one that release
-removes once its work is pushed with a pull request open, and neither in the project itself. notify is
-what a worker's hooks call. list --all lists the panes of every open project and the manager.`;
+~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
+in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
+--worktree in a throwaway one that release removes once its work is pushed with a pull request open,
+and neither in the project itself. notify is what a worker's hooks call. list --all lists the panes
+of every open project and the manager.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 

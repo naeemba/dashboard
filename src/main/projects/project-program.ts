@@ -16,4 +16,3 @@ export function runProjectProgram(commandArguments: readonly string[]): number {
     return 1;
   }
 }
-

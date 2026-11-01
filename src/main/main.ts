@@ -626,7 +626,9 @@ registerProjectFiles(table, boards, boardLog, tellOthers);
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
 // the day a slot means something other than an index into this array.
 function slotOfProject(projectPath: string): number {
-  return projects.findIndex((project) => project?.path === projectPath);
+  // Real paths, because projects.yaml may spell a project through a symlink the page was not opened by.
+  const wanted = realPath(projectPath);
+  return projects.findIndex((project) => project !== undefined && realPath(project.path) === wanted);
 }
 
 // The list every screen draws its tabs from, with the terminals each one has open, so a screen arriving

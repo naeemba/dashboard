@@ -69,7 +69,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   // because a worker run a second time has not finished the second task.
   const states = new Map<string, WorkerState>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
-  const throwaways = new Map<string, string>();
+  const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
   // running there is somebody else's — a dev server, a card a ship gave an agent — and release would
   // kill it. Main's worker always runs as the pane's agent, so a pane that is not running one is not it.
@@ -101,7 +101,9 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
 
   // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
   // which is opened first if it is closed. Every claim settles who claimed the id, so a pane number
-  // freed and handed out again never keeps the rights of whoever held it before.
+  // claimed again never keeps the rights of whoever claimed it before. Only a claim or a release
+  // settles it: a claimed pane closed by hand and reopened by the new-terminal key stays the
+  // claimer's, as a project's own panes already are its main's.
   function claim(slot: number, word: string | null): SessionReply {
     let target = slot;
     if (word !== null) {
@@ -129,7 +131,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     if (program !== null) return refused(`${id} is running ${program} — claim another`);
     // One throwaway per pane, or release would forget the first.
     const held = throwaways.get(id);
-    if (worktree && held !== undefined) return refused(`${id} still holds ${held} — release it first`);
+    if (worktree && held !== undefined) return refused(`${id} still holds ${held.worktreePath} — release it first`);
     let directory = projectPath;
     if (card !== null) {
       const found = ports.cardWorktree(projectPath, card);
@@ -139,7 +141,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       directory = found.worktreePath;
     } else if (worktree) {
       directory = await ports.makeWorktree(projectPath, prompt);
-      throwaways.set(id, directory);
+      throwaways.set(id, { worktreePath: directory, projectPath });
     }
     const { index } = paneFromId(id);
     states.delete(id);
@@ -158,10 +160,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     const throwaway = throwaways.get(id);
     throwaways.delete(id);
     if (throwaway === undefined) return answered(`released ${id}`);
-    const reason = await ports.unfinished(throwaway);
-    if (reason !== null) return answered(`released ${id}; kept ${throwaway}: ${reason}`);
-    await ports.removeWorktree(throwaway, paneProject(id) ?? '');
-    return answered(`released ${id} and removed ${baseName(throwaway)}`);
+    const reason = await ports.unfinished(throwaway.worktreePath);
+    if (reason !== null) return answered(`released ${id}; kept ${throwaway.worktreePath}: ${reason}`);
+    await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
+    return answered(`released ${id} and removed ${baseName(throwaway.worktreePath)}`);
   }
 
   function paneLines(slot: number, prefix: string): string[] {
