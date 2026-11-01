@@ -148,7 +148,7 @@ export function pickedTask(tasks: ChatTasks, selected: string | null): ChatTask 
 }
 
 // What the stop and background keys both say when the picked task has left the strip.
-export const TASK_ENDED = 'The picked task has ended. The task key picks another, or none after the last.';
+const TASK_ENDED = 'The picked task has ended. The task key picks another, or none after the last.';
 
 export type StopTarget = { kind: 'one'; taskId: string } | { kind: 'refused'; reason: string };
 

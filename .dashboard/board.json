@@ -83,13 +83,6 @@
           "parent": null
         },
         {
-          "id": "642730ed-cd79-496d-9410-3ef6631d157c",
-          "title": "Drop the 18 exports nobody outside their file uses",
-          "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
           "title": "Split renderer.ts under 600 code lines",
           "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
@@ -118,11 +111,10 @@
           "parent": null
         },
         {
-          "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
-          "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
-          "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
-          "priority": "medium",
-          "parent": null
+          "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
+          "title": "Spell out args in test-file locals and parameters",
+          "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
+          "priority": "low"
         }
       ]
     },
@@ -295,6 +287,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
+          "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
+          "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:25:52.331Z",
+          "branch": "work-board-card-4862fe16-89f4-4428-a975-8e8",
+          "pullRequest": 135,
+          "comments": [
+            {
+              "at": "2026-11-01T01:25:52.331Z",
+              "body": "PR #135: dispatch.ts calls ship.ts's exported slug; branch cut kept in branchSlug. 3 pinning tests added, 1821 tests pass."
             }
           ]
         }
@@ -1682,6 +1690,26 @@
             {
               "at": "2026-11-01T01:19:02.281Z",
               "body": "Shipped in PR #132: cross-process types moved into src/shared, chat-rename.ts split."
+            }
+          ]
+        },
+        {
+          "id": "642730ed-cd79-496d-9410-3ef6631d157c",
+          "title": "Drop the 18 exports nobody outside their file uses",
+          "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:28:55.677Z",
+          "branch": "work-board-card-642730ed-cd79-496d-9410-3ef",
+          "pullRequest": 133,
+          "comments": [
+            {
+              "at": "2026-11-01T01:24:28.672Z",
+              "body": "PR #133: export dropped from the 18 values; tests 1818 pass, tsc and eslint clean."
+            },
+            {
+              "at": "2026-11-01T01:28:55.677Z",
+              "body": "PR #133 merged into main: 18 unused exports dropped. Review loop found nothing in one round; main merged in, 1818 tests pass, tsc and eslint clean."
             }
           ]
         }

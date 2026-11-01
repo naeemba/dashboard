@@ -52,7 +52,7 @@ export function initialBoardState(): BoardState {
 
 // Only a board that was shown the file may be written over it. Asked here rather than read off the
 // field at each gesture, so the refusal and the sentence the status bar says about it cannot come apart.
-export function mayEdit(state: BoardState): boolean {
+function mayEdit(state: BoardState): boolean {
   return state.showsTheFile;
 }
 

@@ -35,7 +35,7 @@ function trendBars(days: readonly number[], today: number): HTMLElement {
 // A column's name as a small pill, with its count in front when there is one. The name goes on the
 // element too, so the stylesheet can colour the columns that mean something — Review waiting on
 // someone, Doing in hand.
-export function columnChip(name: string, count?: number): HTMLElement {
+function columnChip(name: string, count?: number): HTMLElement {
   const chip = document.createElement('span');
   chip.className = 'manager-chip';
   chip.dataset.column = name.toLowerCase();
