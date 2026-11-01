@@ -67,6 +67,12 @@
           "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
+          "priority": "low"
         }
       ]
     },
