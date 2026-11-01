@@ -76,58 +76,60 @@
           "parent": null
         },
         {
-          "id": "d80ab5c0-a82a-4d09-8d76-dd505e70967f",
-          "title": "Move src into process and feature folders, no behaviour change",
-          "notes": "src refactoring audit, step 1. Plan: /tmp/claude-1000/src-audit.md (section 'Step 1').",
-          "priority": "medium"
-        },
-        {
           "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
           "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
           "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
           "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
           "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "642730ed-cd79-496d-9410-3ef6631d157c",
           "title": "Drop the 18 exports nobody outside their file uses",
           "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
           "title": "Split renderer.ts under 600 code lines",
           "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "a2de2be5-d7c3-402e-a96e-3893b9e4607c",
           "title": "Split main.ts: worktree bookkeeping into its own module",
           "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "a28da61b-64d4-4149-9e90-e8d61be4a461",
           "title": "Split board.test.ts by describe block",
           "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "154a7a68-302c-4e65-aebe-3b1bb0926668",
           "title": "Spell out args as a full word in locals and parameters",
           "notes": "src refactoring audit, step 8. Plan: /tmp/claude-1000/src-audit.md (section 'Step 8').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         },
         {
           "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
           "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
           "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
@@ -214,7 +216,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "d80ab5c0-a82a-4d09-8d76-dd505e70967f",
+          "title": "Move src into process and feature folders, no behaviour change",
+          "notes": "src refactoring audit, step 1. Plan: /tmp/claude-1000/src-audit.md (section 'Step 1').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T00:40:15.216Z"
+        }
+      ]
     },
     {
       "name": "Review",
