@@ -62,21 +62,6 @@
           "updatedAt": "2026-11-01T19:56:29.757Z"
         },
         {
-          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
-          "title": "Refresh button on each market card of the manager page",
-          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T20:23:46.345Z",
-          "updatedAt": "2026-11-01T20:25:59.478Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:25:59.478Z",
-              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
-            }
-          ]
-        },
-        {
           "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
           "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
           "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
@@ -108,13 +93,6 @@
           "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
           "title": "Tell main when a worker finishes",
           "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
-          "title": "Stamp the build's commit in its version instead of bumping on every card",
-          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
           "priority": "medium",
           "parent": null
         },
@@ -159,20 +137,6 @@
           "notes": "The global instructions and the work-card skill say Done; the project CLAUDE.md says Review. Have the skill read the project's rule. Change lives in dotfiles. (docs/review/2026-11-01.md W5)",
           "priority": "low",
           "parent": null
-        },
-        {
-          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
-          "title": "Mark history.md files merge=union",
-          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T20:46:57.707Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.707Z",
-              "body": "Raised to medium: history.md files show up in 72 conflicted merges."
-            }
-          ]
         },
         {
           "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
@@ -372,7 +336,45 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
+          "title": "Refresh button on each market card of the manager page",
+          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T20:23:46.345Z",
+          "updatedAt": "2026-11-01T23:24:01.442Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:25:59.478Z",
+              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
+            }
+          ]
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:24:01.496Z"
+        },
+        {
+          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
+          "title": "Mark history.md files merge=union",
+          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:24:01.543Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.707Z",
+              "body": "Raised to medium: history.md files show up in 72 conflicted merges."
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "Review",
