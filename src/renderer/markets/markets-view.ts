@@ -2,12 +2,16 @@ import '@fontsource/vazirmatn/arabic-400.css';
 import '@fontsource/vazirmatn/arabic-500.css';
 import './markets.css';
 import type { DashboardBridge } from '../../shared/app/bridge';
-import { icon, type IconName } from '../app/icons';
+import { icon, iconOnlyButton, type IconName } from '../app/icons';
 import type { THEME } from '../../shared/app/theme';
-import { formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord } from '../../shared/markets/markets';
+import {
+  formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord,
+} from '../../shared/markets/markets';
+import { createMarketRefresh } from './market-refresh';
 
-// The row of four cards across the top of the manager page. Read-only: nothing here takes a key or a
-// click, so there is nothing for the keyboard to reach. What the numbers mean is markets.ts's.
+// The row of four cards across the top of the manager page. Each card's corner holds a refresh button,
+// reached with Tab; the manager-page refresh key presses all four. What the numbers mean is
+// markets.ts's, and when each card reads again is market-refresh.ts's.
 
 // Often enough for a price you glance at, rare enough to stay far inside every source's free limit.
 const REFRESH_MS = 30 * 60_000;
@@ -33,7 +37,11 @@ function persianDate(now: Date): { weekday: string; date: string } {
 }
 
 // One card's elements, and its last good answer, kept on screen through a failed read.
-type Card<T> = { title: HTMLElement; subtitle: HTMLElement; body: HTMLElement; note: HTMLElement; last: T | null };
+type Card<T> = {
+  title: HTMLElement; subtitle: HTMLElement; body: HTMLElement; note: HTMLElement; button: HTMLButtonElement; last: T | null;
+};
+
+export type MarketsView = { element: HTMLElement; refresh(): void };
 
 function part(className: string, ...children: (string | HTMLElement)[]): HTMLElement {
   const element = document.createElement('div');
@@ -66,20 +74,26 @@ function forecastParts(forecast: Forecast | null): HTMLElement[] {
   return [figure, facts];
 }
 
-export function createMarketsView(bridge: DashboardBridge): HTMLElement {
+export function createMarketsView(bridge: DashboardBridge): MarketsView {
   const element = document.createElement('div');
   element.className = 'markets';
 
   // The accent names a theme colour, so a card's badge follows whatever palette settings hold.
-  // aside: drawn at the far end of the head, the date card's Persian half.
-  function card<T>(glyph: IconName, accent: keyof typeof THEME, title: string, subtitle: string, aside?: HTMLElement): Card<T> {
+  // aside: drawn at the far end of the head, the date card's Persian half. what: the end of the refresh
+  // button's name, "Refresh Bitcoin".
+  function card<T>(
+    glyph: IconName, accent: keyof typeof THEME, title: string, subtitle: string, what: string, aside?: HTMLElement,
+  ): Card<T> {
     const badge = part('markets-badge', icon(glyph));
+    // Its click is wired once the card's read exists, below.
+    const button = iconOnlyButton('markets-refresh', 'refresh', `Refresh ${what}`, () => {});
     const parts = {
       title: part('markets-title', title), subtitle: part('markets-subtitle', subtitle),
-      body: part('markets-body'), note: part('markets-note'), last: null,
+      body: part('markets-body'), note: part('markets-note'), button, last: null,
     };
     const head = part('markets-head', badge, part('markets-heading', parts.title, parts.subtitle));
     if (aside) head.append(aside);
+    head.append(button);
     const box = part('markets-card', head, parts.body, parts.note);
     box.style.setProperty('--accent', `var(--${accent})`);
     element.append(box);
@@ -97,12 +111,12 @@ export function createMarketsView(bridge: DashboardBridge): HTMLElement {
   const persianDay = part('markets-subtitle');
   const persian = part('markets-persian', persianWeekday, persianDay);
   persian.dir = 'rtl';
-  const date = card<Forecast>('calendar', 'blue', '', '', persian);
+  const date = card<Forecast>('calendar', 'blue', '', '', 'weather', persian);
   const quotes = [
-    { card: card<Quote>('bitcoin', 'yellow', 'Bitcoin', 'BTC · USD'), unit: 'USD' },
-    { card: card<Quote>('dollar', 'green', 'Tether', 'USDT · Toman'), unit: 'Toman' },
-    { card: card<Quote>('coins', 'brightYellow', 'Gold', 'PAXG · USD per oz'), unit: 'USD' },
-  ];
+    { market: 'btc', card: card<Quote>('bitcoin', 'yellow', 'Bitcoin', 'BTC · USD', 'Bitcoin'), unit: 'USD' },
+    { market: 'usdt', card: card<Quote>('dollar', 'green', 'Tether', 'USDT · Toman', 'Tether'), unit: 'Toman' },
+    { market: 'gold', card: card<Quote>('coins', 'brightYellow', 'Gold', 'PAXG · USD per oz', 'gold'), unit: 'USD' },
+  ] as const;
 
   function drawDate(reading: Reading<Forecast>): void {
     const now = new Date();
@@ -114,18 +128,23 @@ export function createMarketsView(bridge: DashboardBridge): HTMLElement {
     draw(date, reading, forecastParts);
   }
 
-  function refresh(): void {
-    void bridge.readMarkets().then((snapshot) => {
-      drawDate(snapshot.weather);
-      [snapshot.btc, snapshot.usdt, snapshot.gold].forEach((reading, index) =>
-        draw(quotes[index].card, reading, (quote) => quoteParts(quotes[index].unit, quote)));
-    });
+  // A card's read, its timer and its spinning button. The date itself needs no fetch, so the date card's
+  // read is the weather's.
+  function refresher<T>(target: Card<T>, read: () => Promise<void>): () => void {
+    const { refresh } = createMarketRefresh(read, REFRESH_MS, (busy) => target.button.classList.toggle('busy', busy));
+    target.button.addEventListener('click', refresh);
+    return refresh;
   }
+
+  const refreshes = [
+    refresher(date, () => bridge.readMarket('weather').then(drawDate)),
+    ...quotes.map(({ market, card: target, unit }) => refresher(target, () => bridge.readMarket(market)
+      .then((reading) => draw(target, reading, (quote) => quoteParts(unit, quote))))),
+  ];
 
   // The dates are there before the first answer, which can take a few seconds: a failed reading with
   // nothing to say draws them alone.
   drawDate({ ok: false, message: '' });
-  refresh();
-  setInterval(refresh, REFRESH_MS);
-  return element;
+  refreshes.forEach((refresh) => refresh());
+  return { element, refresh: () => refreshes.forEach((refresh) => refresh()) };
 }

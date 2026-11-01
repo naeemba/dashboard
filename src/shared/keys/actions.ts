@@ -55,6 +55,7 @@ export type Action =
   | { kind: 'manager-remove' }
   | { kind: 'project-close' }
   | { kind: 'section-move'; direction: 'previous' | 'next' }
+  | { kind: 'markets-refresh' }
   | { kind: 'command-select'; direction: 'up' | 'down' }
   | { kind: 'command-open' }
   | { kind: 'command-run-in-panes' }
@@ -498,6 +499,14 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'section-next', description: 'The section to the right, along the top',
     group: 'sections', scope: 'manager-page',
     action: { kind: 'section-move', direction: 'next' }, mac: 'Alt+L', other: 'Alt+L',
+  },
+  // The four cards above the strip are on screen in every section, so their key is heard in every
+  // section too, and listed with the strip's for helpSections' reason above. Each card's own button
+  // reads that card alone; this reads all four.
+  {
+    name: 'section-refresh-markets', description: 'Read the four cards along the top again',
+    group: 'sections', scope: 'manager-page',
+    action: { kind: 'markets-refresh' }, mac: 'Alt+R', other: 'Alt+R',
   },
   // The command screen. Bare arrows, a bare Enter and Escape, heard on this screen only. Nothing here
   // is forwarded to a pane — this is not the manager's list — so a bare key costs nothing.

@@ -673,6 +673,7 @@ function apply(action: Action): void {
     case 'terminal-copy':
     case 'terminal-paste': return runPaneAction(page, action.kind, panePorts);
     case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
+    case 'markets-refresh': return page.markets?.refresh();
     case 'command-select':
     case 'command-open':
     case 'command-cancel': return page.command?.runAction(action);
