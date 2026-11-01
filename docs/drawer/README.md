@@ -21,6 +21,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 
 - Given any page, the manager's included, then the drawer's button, its icon alone with "Docs & sessions" as its tooltip, is at the left of the title row, so the row does not move between tabs.
 - Given a project page, when you click the drawer's button at the left of the title row or press Ctrl+Shift+D, then the drawer opens at the left and the page moves to its right, the panes resized to the room left.
+- Given the drawer is open, when you switch to another tab, the manager's included, then it stays open and lists that page's docs and sessions; the keyboard goes to the page, as after any switch, and each project's open folders are as it left them.
 - Given the drawer is open, when you press Escape, Ctrl+Shift+D or the button, then it closes and takes no room at all.
 - Given the drawer, when you type, then the docs and the sessions are both narrowed to what matches; the arrows walk the rows and a click does what Enter does on the row it lands on.
 - Given the drawer with an empty filter, then docs/ is a tree: the files at its top, then its folders, closed; a folder opened stays open the next time the drawer opens.

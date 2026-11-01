@@ -116,3 +116,27 @@ index's rows for `~/.dashboard`, where its main and workers run.
 
 Watch for: a folder holding thousands of entries lists them all as rows when
 opened; only markdown and folders are kept.
+
+## drawer-decision-4: Open or closed is one value for the whole app
+
+From using 2.41.0: open the drawer, switch to another project, come back, and
+it was closed. Every redraw of the title row put the drawer away once another
+page was in front, so a tab switch closed it. **Open or closed is now one value
+for the app**, not each page's: open, it stays open on every tab, the manager's
+too, until its button, its key or Escape closes it. A tab switch lists the page
+now in front, read afresh, with an empty filter.
+
+Per-project was the other choice: each page remembering whether its drawer was
+open. It was not taken because the drawer is something you keep beside you
+while moving between projects, and a per-page value means opening it again on
+every tab you visit.
+
+**A switch does not take the keyboard.** It goes to the page, as after any
+switch; only opening the drawer puts it in the filter. What each project's tree
+has open is still kept per project. A project whose folder has gone has nothing
+to list, so the open drawer is out of sight there and back on the next page.
+The open state is not kept across a restart. `drawerFollows` in
+`drawer-rows.ts` decides.
+
+Watch for: opening a doc's Edit or resuming a session still closes the drawer,
+on purpose: both send the keyboard to a pane.
