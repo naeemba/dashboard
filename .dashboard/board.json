@@ -251,6 +251,12 @@
           "title": "Turn off the terminal cursor blink that costs idle CPU",
           "notes": "Measured: focused terminal, nothing happening: renderer 3.7-5% CPU, ~70 style recalcs/s, +1% main, +1% GPU; 0.1% with xterm's animation off. Where: cursorBlink: true at src/renderer/app/page.ts:318; xterm DOM renderer blinks via CSS keyframes on background-color. Fix (small): cursorBlink off, or a setting defaulting off. Rerun: measure.mjs keys (last step). From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "low"
+        },
+        {
+          "id": "69800344-8134-4450-bafc-e045518a0cd5",
+          "title": "Make Ctrl+C stop a flooding pane at once and spare main's core",
+          "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium"
         }
       ]
     },
