@@ -15,8 +15,8 @@ import { blockingChanges } from '../ship/ship';
 // with nothing about the code changed.
 function repositoryWithAnEditedBoard(): string {
   const repository = mkdtempSync(join(tmpdir(), 'dashboard-git-'));
-  const run = (...args: string[]): void => {
-    execFileSync('git', args, {
+  const run = (...gitArguments: string[]): void => {
+    execFileSync('git', gitArguments, {
       cwd: repository,
       env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' },
     });

@@ -260,23 +260,6 @@
           "pullRequest": 149
         },
         {
-          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
-          "title": "Follow-up from #136: args locals and parameters in test files",
-          "notes": "https://github.com/naeemba/dashboard/issues/138",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:11:13.460Z",
-          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
-          "pullRequest": 147,
-          "comments": [
-            {
-              "at": "2026-11-01T12:11:13.460Z",
-              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
-            }
-          ]
-        },
-        {
           "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
           "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
           "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
@@ -1861,6 +1844,27 @@
             {
               "at": "2026-11-01T12:08:42.403Z",
               "body": "Shipped in PR #141: fix for issue #88, merged after one review round (no fixes needed), version 2.32.11."
+            }
+          ]
+        },
+        {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:17:53.089Z",
+          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
+          "pullRequest": 147,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:13.460Z",
+              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
+            },
+            {
+              "at": "2026-11-01T12:17:53.089Z",
+              "body": "Shipped in PR #147: args locals and parameters in test files spelled out; merged main in, version 2.32.13."
             }
           ]
         },
