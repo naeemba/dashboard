@@ -1862,7 +1862,7 @@
           "priority": "low",
           "parent": null,
           "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:15:14.843Z",
+          "updatedAt": "2026-11-01T12:15:29.790Z",
           "branch": "fix-github-issue-138-gh-issue-view-138-comm",
           "pullRequest": 147,
           "comments": [
@@ -1873,6 +1873,10 @@
             {
               "at": "2026-11-01T12:15:14.843Z",
               "body": "Shipped in PR #147: tests no longer assert on fixed issue numbers in gh issue view comments. Merged main in, version 2.32.12."
+            },
+            {
+              "at": "2026-11-01T12:15:29.790Z",
+              "body": "Correction to the previous comment: PR #147 spells out args locals and parameters in test files (no behaviour change)."
             }
           ]
         }
