@@ -147,6 +147,12 @@
           "title": "Mark history.md files merge=union",
           "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
           "priority": "low"
+        },
+        {
+          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
+          "title": "Add a Content-Security-Policy to the window",
+          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
+          "priority": "medium"
         }
       ]
     },
