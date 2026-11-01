@@ -55,13 +55,6 @@
           "parent": null
         },
         {
-          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
-          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
           "title": "Manager terminals 4: dispatch a pane into any project",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
@@ -167,7 +160,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
+          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:18:36.468Z"
+        }
+      ]
     },
     {
       "name": "Review",
