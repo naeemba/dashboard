@@ -81,6 +81,12 @@
           "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
           "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
           "priority": "high"
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
+          "priority": "high"
         }
       ]
     },
