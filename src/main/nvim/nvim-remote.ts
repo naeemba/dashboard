@@ -161,7 +161,7 @@ async function writeOwnFile(file: string, text: string): Promise<void> {
 // Ctrl+G on the Claude screen: the prompt box as a file the page's nvim edits, read back when you
 // return. One name per slot, like scrollbackFile: openPrompt wipes the buffer before the tab opens, so
 // nvim never holds an older copy to bring back over the text just written.
-export function promptFile(temporaryDirectory: string, slot: number): string {
+function promptFile(temporaryDirectory: string, slot: number): string {
   return path.join(temporaryDirectory, `dashboard-prompt-${process.pid}-${slot}.md`);
 }
 

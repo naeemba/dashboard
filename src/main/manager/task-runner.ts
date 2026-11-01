@@ -26,7 +26,7 @@ export type TaskRunner = {
   stop: () => void;
 };
 
-export function taskRunner(ports: TaskPorts): TaskRunner {
+function taskRunner(ports: TaskPorts): TaskRunner {
   // Every process the current run started, each beside the project it is running in. The path is kept
   // here because cancelling has to name every project it stopped — a row told nothing sits on `running`
   // forever, and the process it was waiting for is already dead.
