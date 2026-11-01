@@ -85,7 +85,7 @@ export function imageOverlay(source: string): void {
 export function pdfOverlay(pdf: Blob): void {
   const frame = document.createElement('iframe');
   frame.src = URL.createObjectURL(pdf);
-  viewerOverlay('pdf-viewer', frame, () => URL.revokeObjectURL(frame.src));
+  viewerOverlay('pdf-viewer', frame, { closed: () => URL.revokeObjectURL(frame.src) });
 }
 
 // The viewer on screen, if any, for the Escape main hands over from the PDF's frame.
@@ -93,14 +93,17 @@ let closeViewer: (() => void) | null = null;
 
 // Something shown on the sheet: Escape or Enter puts it away, and so does the dark margin. A click
 // inside is the shown thing's own, so a long read such as /diff's can be selected and copied; the
-// image, which has nothing to select, closes on its own click. Returns the close.
-export function viewerOverlay(name: string, shown: HTMLElement, closed: () => void = () => undefined): () => void {
+// image, which has nothing to select, closes on its own click. A viewer with a row of its own, the doc
+// viewer's Edit, passes `enter` and Enter does that instead. Returns the close.
+export function viewerOverlay(
+  name: string, shown: HTMLElement, { closed, enter }: { closed?: () => void; enter?: () => void } = {},
+): () => void {
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
     closeViewer = null;
     document.removeEventListener('focusin', hold);
     remove();
-    closed();
+    closed?.();
     previous?.focus();
   }
   // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks
@@ -111,7 +114,7 @@ export function viewerOverlay(name: string, shown: HTMLElement, closed: () => vo
   }
   const { dialog, remove } = openOverlay(name, close);
   dialog.append(shown);
-  answerKeys(dialog, close);
+  answerKeys(dialog, (key) => (key === 'Enter' && enter !== undefined ? enter() : close()));
   document.addEventListener('focusin', hold);
   closeViewer = close;
   dialog.focus();

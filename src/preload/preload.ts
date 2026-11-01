@@ -20,6 +20,7 @@ const bridge: DashboardBridge = {
   openScrollback: (slot, index, text) => ipcRenderer.invoke('scrollback:open', slot, index, text),
   openFile: (slot, index, link) => ipcRenderer.invoke('file:open', slot, index, link),
   listDocs: (projectPath) => ipcRenderer.invoke('docs:list', projectPath),
+  readDoc: (projectPath, file) => ipcRenderer.invoke('docs:read', projectPath, file),
   listSessions: (projectPath, count) => ipcRenderer.invoke('sessions:list', projectPath, count),
   renameSession: (projectPath, id, label) => ipcRenderer.invoke('sessions:rename', projectPath, id, label),
   resumeSession: (slot, id) => ipcRenderer.invoke('sessions:resume', slot, id),

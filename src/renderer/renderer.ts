@@ -105,7 +105,8 @@ const addPaneButton = createAddPaneButton(() => addPane(pages[activeIndex]));
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 let activeIndex = 0;
-// Its button leads the title row, beside the tabs, so the drawer itself takes no room while closed.
+// Its button leads the title row, beside the tabs; the drawer takes no room while closed and pushes the
+// pages aside while open.
 const drawer = createDrawer({
   bridge,
   page: () => {
@@ -113,9 +114,10 @@ const drawer = createDrawer({
     return isProjectPage(page) && !page.project.missing ? page : null;
   },
   isToggle: (event) => matchesBinding(event, settings.keys['project-drawer'] ?? null),
-  // No document pane yet, so a doc opens where a path a pane printed opens: the project's nvim.
+  // The viewer's Edit: a doc opens where a path a pane printed opens, the project's nvim.
   openDoc: (page, path) => openFileLink(page, MAIN_INDEX, { path, start: 0, end: 0 }),
   report: (message) => showError('drawer', message),
+  resized: fitAllPages,
   closed: () => showPage(activeIndex),
   resumed: (page, index, open) => { applyProjects(open); if (pages[activeIndex] === page) { setMode('terminals'); focusTerminal(index); } },
 });

@@ -1,6 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import type { ChatViewOptions } from './chat-view';
-import { renderMarkdown } from './chat-markdown';
+import { openLinksOutside, renderMarkdown } from './chat-markdown';
 import { failureText } from '../../shared/errors/failure';
 import { answerKeys, openOverlay } from '../app/overlay';
 
@@ -28,12 +28,7 @@ export function askAside(
     keys.className = 'confirm-keys';
     keys.textContent = 'Escape or Enter puts it away · not added to the conversation';
     // The sheet hangs off document.body, outside the screen's own link handler, so it opens its own.
-    answer.addEventListener('click', (event) => {
-      const link = (event.target as Element | null)?.closest('a');
-      if (!link) return;
-      event.preventDefault();
-      bridge.openExternal(link.href);
-    });
+    openLinksOutside(answer, (url) => bridge.openExternal(url));
     dialog.append(asked, answer, keys);
     dialog.focus();
     answerKeys(dialog, close);

@@ -1,24 +1,32 @@
 # Drawer
 
-A drawer over the left of a project's page listing the project's docs and the
-Claude conversations the app started for it. Navigation only: every row jumps
-somewhere, none of them holds content.
+A drawer on the left of a project's page listing the project's docs, as a tree,
+and the Claude conversations the app started for it. Open, it pushes the page to
+its right; closed, it takes no room. A doc opens rendered in a full-screen viewer.
 
 ## Files
 
 Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 
 - Lists and resume: `docs-list.ts`, `drawer-ipc.ts`, `drawer.ts`
-- On screen: `drawer-rows.ts`, `drawer-view.ts`, `drawer.css`
+- On screen: `drawer-rows.ts`, `drawer-view.ts`, `doc-viewer.ts`, `drawer.css`
+- The viewer reuses the Claude screen's `chat-markdown.ts` and the sheet of
+  `viewerOverlay` in `overlay.ts`; neither is this feature's
 - The session index it reads is the workers feature's: `session-index.ts`,
   `session-index-store.ts` (see [workers](../workers/README.md))
 
 ## Scenarios
 
-- Given a project page, when you click the drawer's button at the left of the title row or press Ctrl+Shift+D, then the drawer opens over the page and the grid under it keeps its size.
+- Given a project page, when you click the drawer's button at the left of the title row or press Ctrl+Shift+D, then the drawer opens at the left and the page moves to its right, the panes resized to the room left.
 - Given the drawer is open, when you press Escape, Ctrl+Shift+D or the button, then it closes and takes no room at all.
 - Given the drawer, when you type, then the docs and the sessions are both narrowed to what matches; the arrows walk the rows and a click does what Enter does on the row it lands on.
-- Given a doc row, when you press Enter, then the file opens in the project's nvim.
+- Given the drawer with an empty filter, then docs/ is a tree: the files at its top, then its folders, closed; a folder opened stays open the next time the drawer opens.
+- Given a closed folder row, when you press Right or Enter, then it opens; Right again steps to its first row. Given an open folder, when you press Left or Enter, then it closes; Left on a row inside one steps to that folder.
+- Given a doc inside a closed folder, when you type part of its path, then it is listed, flat, by its whole path; Left and Right move the caret in the filter.
+- Given a doc row, when you press Enter or click it, then the doc is shown rendered as markdown, full screen, over the drawer: tables, highlighted code, and images the doc points at inside the project.
+- Given the doc viewer, when you press the arrows or the Page keys, then the doc scrolls; when you press Escape or click the dark margin, then the viewer goes and the keyboard is back in the drawer's filter.
+- Given the doc viewer, when you press Enter or click its Edit row at the top, then the viewer and the drawer go and the file opens in the project's nvim.
+- Given a link in the doc viewer, when you click it, then it opens in the browser; a link to another doc is not followed.
 - Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in and `claude --resume <id>` is typed into it; the page goes to the terminals view with the keyboard in that pane; a busy pane is never used.
 - Given the drawer, when you click a row that leaves it open (Load more, a refused resume), then the keyboard stays in the drawer's filter box.
 - Given a session still running in a pane or on the Claude screen, when you press Enter on it, then it is refused and the status bar says where it runs.
@@ -30,7 +38,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 
 ## Open questions
 
-- There is no document pane yet, so a doc opens in nvim rather than rendered
-  (drawer-decision-1).
+- A link from one doc to another prints as text in the viewer: the renderer
+  keeps only links that open in the browser (drawer-decision-2).
 - A Claude typed into a shell by hand is not the app's launch and is not
   listed (drawer-decision-1).
