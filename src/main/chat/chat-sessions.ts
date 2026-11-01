@@ -345,7 +345,7 @@ export function registerChatSessions(
 
   // The slash commands the session would run, for the menu. The list is the CLI's, and only a running
   // session has it; one that has ended is started again by the asking, as a prompt would.
-  table.handle('chat:commands', async (_screen, slot: number): Promise<SlashCommand[]> => {
+  table.handle('chat-commands:read', async (_screen, slot: number): Promise<SlashCommand[]> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     return (await running(slot, projectPath)).query.supportedCommands();
@@ -385,7 +385,7 @@ export function registerChatSessions(
 
   // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:
   // a worktree's are its own, so a worker's conversations do not crowd the project's.
-  table.handle('chat:sessions', async (_screen, slot: number): Promise<ChatSessions> => {
+  table.handle('chat-sessions:read', async (_screen, slot: number): Promise<ChatSessions> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return { current: null, sessions: [] };
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
