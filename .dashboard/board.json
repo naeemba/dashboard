@@ -255,22 +255,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "a2de2be5-d7c3-402e-a96e-3893b9e4607c",
-          "title": "Split main.ts: worktree bookkeeping into its own module",
-          "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:50:46.109Z",
-          "branch": "work-board-card-a2de2be5-d7c3-402e-a96e-389",
-          "pullRequest": 140,
-          "comments": [
-            {
-              "at": "2026-11-01T01:50:46.075Z",
-              "body": "PR #140: worktree bookkeeping moved to src/main/ship/worktree-keeper.ts; main.ts 598 -> 543 code lines; dropDead tested. Hand checks listed in the PR body, not yet done."
-            }
-          ]
         }
       ]
     },
@@ -1768,6 +1752,26 @@
             {
               "at": "2026-11-01T11:47:40.454Z",
               "body": "Merged via PR #139."
+            }
+          ]
+        },
+        {
+          "id": "a2de2be5-d7c3-402e-a96e-3893b9e4607c",
+          "title": "Split main.ts: worktree bookkeeping into its own module",
+          "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T11:50:40.022Z",
+          "branch": "work-board-card-a2de2be5-d7c3-402e-a96e-389",
+          "pullRequest": 140,
+          "comments": [
+            {
+              "at": "2026-11-01T01:50:46.075Z",
+              "body": "PR #140: worktree bookkeeping moved to src/main/ship/worktree-keeper.ts; main.ts 598 -> 543 code lines; dropDead tested. Hand checks listed in the PR body, not yet done."
+            },
+            {
+              "at": "2026-11-01T11:50:40.022Z",
+              "body": "Merged via PR #140."
             }
           ]
         }

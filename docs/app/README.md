@@ -52,7 +52,8 @@ its own side. `eslint.config.test.ts` pins each of those.
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling (599 code lines); the next feature wired
-  through it needs a seam split out first (workflow-decision-1). `renderer.ts`
-  is at 566: the close flow moved into `close-project.ts` and the which-key
-  strip's tracking into `which-key-tracking.ts`.
+- Neither entry file is at the 600-line ceiling: `main.ts` is at 543 code lines
+  since the worktree record moved to `worktree-keeper.ts`, and `renderer.ts` is
+  at 566 since the close flow moved into `close-project.ts` and the which-key
+  strip's tracking into `which-key-tracking.ts`. A feature that would push
+  either past 600 needs a seam split out first (workflow-decision-1).
