@@ -7,21 +7,30 @@ import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from '../usage/usage';
 import { isRinging, type Bell } from '../panes/waiting';
 import { orderedWorktrees } from '../ship/worktree-rows';
-import type { Project, WorktreeEntry } from '../app/bridge';
+import type { OpenProjects, Project, WorktreeEntry } from '../app/bridge';
 
 // What a removal needs to know: what to call the worktree in the question, and where it is. A record
 // has all four; a worktree the manager found through git is named by its folder.
 export type WorktreeTarget = Pick<WorktreeEntry, 'title' | 'branch' | 'worktreePath' | 'projectPath'>;
 
-// Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
-// takes a number no project can be given rather than a real one.
-export const MANAGER_SLOT = -1;
+// Slots are handed out by main, one per project, counting from zero, so the manager takes a number no
+// project can be given. Not -1: every lookup of a slot answers -1 for "no project", and the `session`
+// command run from the manager's terminals would then be refused as coming from nowhere — or, read the
+// other way, a folder in no project would land in the manager.
+export const MANAGER_SLOT = -2;
 
 // It sits in the tab strip where a project sits, and has none of what a project has: no folder, no
 // five shells, no editor, no repository. Which page is the manager is answered by its mode, not by this;
 // the empty path is the second lock on the same door, because session.ts throws away a stored page
 // whose path is empty, so the manager cannot reach a saved layout even if something else lets it.
 export const MANAGER_PROJECT: Project = { name: 'manager', path: '', missing: false };
+
+// The workers a page has open, out of main's list: a project's by its slot, the manager's on a field of
+// its own, since it holds no place in the list of projects. A host built before the manager had
+// terminals sends no such field, and the manager there has none.
+export function openPanesOf(open: OpenProjects, slot: number): readonly number[] {
+  return (slot === MANAGER_SLOT ? open.manager : open.panes[slot]) ?? [];
+}
 
 // Whether this path is the manager's page, which has no repository behind it. The board asks it
 // because what a board can do there is less than what it can do in a project: nothing to ship a card

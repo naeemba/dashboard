@@ -28,7 +28,10 @@ export const MODE_NAMES: Record<Mode, string> = {
 // yet, that the board has no save key, that settings are a file you can also edit by hand.
 const BLURBS: Record<Mode | ActionGroup, string> = {
   terminals: 'The project\'s main session on the left, full height, and its worker panes in a list '
-    + 'down the right. Main is Claude Code drawn as a page rather than a terminal (the Claude keys '
+    + 'down the right. The manager has the same screen, last along its strip and reached with the '
+    + 'terminals key: its main is main-manager, working with its workers in ~/.dashboard, where '
+    + 'projects.yaml describes every project, and the board key or a click on the strip leaves it. '
+    + 'Main is Claude Code drawn as a page rather than a terminal (the Claude keys '
     + 'below are its own), started as soon as the project opens and told to dispatch '
     + 'the tasks you give it — do this, review that, research the other — into workers rather than run '
     + 'them itself. It does that with DASHBOARD_COMMAND, a command every pane carries: run `node '
@@ -481,8 +484,9 @@ export function helpSections(
     blurb: BLURBS[mode],
     shortcuts: screenShortcuts(mode, onManagerPage, keys, isMac),
   };
-  // Main on a project's terminals view is the Claude screen, whose keys answer while it has the keyboard.
-  const main: Section[] = mode === 'terminals' && !onManagerPage
+  // Main on a terminals view, a project's or the manager's, is the Claude screen, whose keys answer
+  // while it has the keyboard.
+  const main: Section[] = mode === 'terminals'
     ? [{ title: 'Claude', blurb: BLURBS.claude, shortcuts: groupShortcuts('claude', mode, keys, isMac) }]
     : [];
   const rest: readonly ('modes' | 'projects' | 'app')[] = ['modes', 'projects', 'app'];

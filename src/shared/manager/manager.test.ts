@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, groupOpenings, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
+  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, openPanesOf, canOpen, groupOpenings, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
   managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
   takesAnswer, answerTarget, projectWorktrees, queueRefresh, withQueue,
   type ManagerLine, type PaneSummary,
@@ -38,6 +38,26 @@ describe('isProjectPage', () => {
   it('says every project is one, whatever slot it was handed', () => {
     expect(isProjectPage({ slot: 0 })).toBe(true);
     expect(isProjectPage({ slot: 4 })).toBe(true);
+  });
+});
+
+describe('openPanesOf', () => {
+  const open = { projects: [null, null], panes: [[1], [1, 3]], manager: [2] };
+
+  it("reads a project's workers by its slot and the manager's off their own field", () => {
+    expect(openPanesOf(open, 1)).toEqual([1, 3]);
+    expect(openPanesOf(open, MANAGER_SLOT)).toEqual([2]);
+  });
+
+  it('gives the manager none when the host sent no field for them', () => {
+    expect(openPanesOf({ projects: [], panes: [] }, MANAGER_SLOT)).toEqual([]);
+  });
+
+  // -1 is what every slot lookup answers for "no project"; the manager taking it would make a folder
+  // in no project read as the manager's.
+  it('is not reached through the slot that means no project', () => {
+    expect(MANAGER_SLOT).not.toBe(-1);
+    expect(openPanesOf(open, -1)).toEqual([]);
   });
 });
 

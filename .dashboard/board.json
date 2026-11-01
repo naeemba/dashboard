@@ -74,13 +74,6 @@
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
           "priority": "high",
           "parent": null
-        },
-        {
-          "id": "7001ab20-6a38-4132-9fbe-257c75f9b5f1",
-          "title": "Manager terminals 3: terminals mode in the manager tab",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. The manager tab gets the same terminals layout as a project: a main Claude session and worker panes, working in ~/.dashboard so the session sees projects.yaml. Keys, help and which-key as for a project's terminals mode.",
-          "priority": "high",
-          "parent": null
         }
       ]
     },
@@ -2024,6 +2017,26 @@
             {
               "at": "2026-11-01T13:14:37.997Z",
               "body": "Shipped in #154: one dashboard command with board and pane nouns."
+            }
+          ]
+        },
+        {
+          "id": "7001ab20-6a38-4132-9fbe-257c75f9b5f1",
+          "title": "Manager terminals 3: terminals mode in the manager tab",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. The manager tab gets the same terminals layout as a project: a main Claude session and worker panes, working in ~/.dashboard so the session sees projects.yaml. Keys, help and which-key as for a project's terminals mode.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:39:36.511Z",
+          "branch": "work-board-card-7001ab20-6a38-4132-9fbe-257",
+          "pullRequest": 155,
+          "comments": [
+            {
+              "at": "2026-11-01T13:12:53.650Z",
+              "body": "Shipped in PR #155: manager terminals view, main-manager plus workers in ~/.dashboard, session socket reaches the manager slot (MANAGER_SLOT now -2). Manager workers not resumed after restart."
+            },
+            {
+              "at": "2026-11-01T13:39:36.511Z",
+              "body": "Merged in PR #155: manager tab terminals mode (main-manager session plus worker panes in ~/.dashboard), session socket reaches the manager slot. Version 2.34.0 after merging main."
             }
           ]
         }

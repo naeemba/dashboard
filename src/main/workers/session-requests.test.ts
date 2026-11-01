@@ -223,6 +223,23 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'go'] }))
       .toEqual({ ok: false, output: 'session run failed: git said no' });
   });
+
+  // The manager's terminals sit in slot -2, so every id it is handed starts with a minus sign.
+  it('claims, runs, notifies and releases through the manager\'s negative slot', async () => {
+    const { ports, started, marked, closed } = project({
+      slotOf: (directory) => (directory === '/home/me/.dashboard' ? -2 : -1),
+      projectPath: (slot) => (slot === -2 ? '/home/me/.dashboard' : undefined),
+    });
+    const answer = sessionRequests(ports);
+    const ask = (words: string[]) => answer({ directory: '/home/me/.dashboard', args: words });
+    expect(await ask(['claim'])).toEqual({ ok: true, output: '-2:1' });
+    expect(await ask(['run', '-2:1', 'review it'])).toMatchObject({ ok: true });
+    expect(started[0]).toMatchObject({ id: '-2:1', directory: '/home/me/.dashboard' });
+    expect(await ask(['notify', '-2:1', 'done'])).toEqual({ ok: true, output: '' });
+    expect(marked).toEqual(['-2:1 done']);
+    expect(await ask(['release', '-2:1'])).toEqual({ ok: true, output: 'released -2:1' });
+    expect(closed).toEqual(['-2:1']);
+  });
 });
 
 describe('projectOfFolder', () => {

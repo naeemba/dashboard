@@ -3,9 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  dropWrittenFiles, editorSocket, nvimFromOutput, openFileArguments, readPrompt, savedPrompt, scrollbackFile,
-  tabArguments, wipeArguments, writePrompt,
+  dropWrittenFiles, editorSocket, nvimFromOutput, openFileArguments, openFileInEditor, openPrompt, openScrollback,
+  readPrompt, savedPrompt, scrollbackFile, tabArguments, wipeArguments, writePrompt,
 } from './nvim-remote';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 describe('nvimFromOutput', () => {
   it('takes the path the shell printed', () => {
@@ -137,5 +138,17 @@ describe('readPrompt', () => {
     const file = await writePrompt(folder(), 2, 'a');
     rmSync(file);
     expect(await readPrompt(2)).toBeNull();
+  });
+});
+
+// The manager's terminals have no nvim: each hand-over is refused at once, not after the socket wait.
+describe('the manager\'s slot', () => {
+  it('refuses the scrollback, the prompt and a file without waiting for an editor', async () => {
+    const temporaryDirectory = os.tmpdir();
+    const editor = { temporaryDirectory, shellCommand: '/bin/sh', slot: MANAGER_SLOT };
+    expect(await openScrollback(temporaryDirectory, '/bin/sh', MANAGER_SLOT, 1, 'text'))
+      .toEqual({ ok: false, message: 'the manager has no nvim, so there is nowhere to open the scrollback' });
+    expect(await openPrompt(temporaryDirectory, '/bin/sh', MANAGER_SLOT, 'text')).toMatchObject({ ok: false });
+    expect(await openFileInEditor(editor, '/etc/hosts')).toMatchObject({ ok: false });
   });
 });
