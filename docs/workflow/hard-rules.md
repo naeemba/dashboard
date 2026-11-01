@@ -43,7 +43,7 @@ Wiring is exempt wherever it sits; a branch owes a test wherever it sits.
 ## workflow-rule-3: A card does not bump the version
 
 The manager's foot line, the log's `started` line and the remote host's
-handshake all show `<package.json version>+<short commit>`, stamped at build
+handshake all show `<package.json version>+<12-digit commit>`, stamped at build
 time by `vite.build-version.ts`. The commit is what tells an installed copy
 from main: the same commit and it has everything merged up to that point (the
 stamp is HEAD, so a build from a dirty tree says so nowhere). The remote host

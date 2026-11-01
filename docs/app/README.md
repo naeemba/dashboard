@@ -32,7 +32,9 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 its own side. `eslint.config.test.ts` pins each of those.
 
 - Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
-  `channels.ts`, `app-window.ts`, `vite.build-version.ts`
+  `channels.ts`, `app-window.ts`
+- Build: `vite.build-version.ts` and its test at the repository root, declared
+  in `forge.env.d.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
   `projects.ts`, `picker.ts`, `close-project.ts`, `close-refusal.ts` (in `src/shared/panes/`, since
   `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`

@@ -6,8 +6,8 @@ Settled questions. Read the entry before re-litigating it.
 
 The card that added it asked for a version "in the manager tab and on the
 app". It ships one: `v1.1.0` along the foot of the manager page, read from
-`package.json` at build time (now with the build's commit; workflow-rule-3). There is no second display inside a project's
-own view.
+`package.json` at build time (now with the build's commit; workflow-rule-3).
+There is no second display inside a project's own view.
 
 The manager page is the one screen every project sits under, open or not, so
 it is the one place a version is guaranteed to be on screen already. A second

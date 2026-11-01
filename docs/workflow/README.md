@@ -1,8 +1,9 @@
 # Workflow
 
 How a change is made and shipped here: never touch the running app, a decision
-gets a module and a test, and the build stamps its commit instead of every card bumping the version. Owns no
-files; `CLAUDE.md` carries each rule in one line and points at its id here.
+gets a module and a test, and the build stamps its commit instead of every card
+bumping the version. Owns no files; `CLAUDE.md` carries each rule in one line
+and points at its id here.
 
 ## Scenarios
 
