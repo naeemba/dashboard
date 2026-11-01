@@ -38,7 +38,7 @@ export type ActivityEntry = {
 
 // How many cards the activity list holds. Enough to cover a working day across a handful of projects,
 // few enough that it ends before the screen does.
-export const ACTIVITY_LIMIT = 12;
+const ACTIVITY_LIMIT = 12;
 
 // The cards touched most recently across every board handed in, newest first. A card with no
 // `updatedAt` is left off: it was written before the field existed, and placing it anywhere on a

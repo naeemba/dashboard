@@ -34,7 +34,7 @@ const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 // Windows run git-bash. cmd.exe has no single-quote quoting at all and is not supported.
 const POWERSHELL = /^(powershell|pwsh)(\.exe)?$/i;
 
-export function isPowerShell(shellCommand: string): boolean {
+function isPowerShell(shellCommand: string): boolean {
   return POWERSHELL.test(baseName(shellCommand));
 }
 
