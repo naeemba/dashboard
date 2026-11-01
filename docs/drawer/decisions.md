@@ -97,7 +97,9 @@ and memory live. `~/.claude` holds thousands of files (`projects/`, `plugins/`,
 caches), so it is **never walked**. The tree starts as the two folders, closed;
 opening one asks main for that folder alone, its markdown and its subfolders,
 and every open folder is read again when the drawer opens. A folder is listed
-before anything in it is read, so it may turn out empty. The filter searches
+before anything in it is read, so it may turn out empty. A link to a folder is
+listed as a folder (`rules/` and `commands/` are often links into a dotfiles
+repository), and a broken link is left out. The filter searches
 only what has been read, which keeps it bounded: a doc in a folder never opened
 is not found. A search that walks `~/.claude` on each keystroke is what this
 avoids. Opening a folder in a project reads its docs/ again too, one path for

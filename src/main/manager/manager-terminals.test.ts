@@ -1,9 +1,16 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager-terminals';
-import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { MANAGER_FOLDER, projectInSlot, sessionSlot, sessionsFolder } from './manager-terminals';
+import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
 
 const same = (folder: string): string => folder;
+
+describe('sessionsFolder', () => {
+  it("files the manager's page's sessions under its folder and a project's under its path", () => {
+    expect(sessionsFolder(MANAGER_PROJECT.path)).toBe(MANAGER_FOLDER);
+    expect(sessionsFolder('/work/api')).toBe('/work/api');
+  });
+});
 
 describe('projectInSlot', () => {
   const api = { name: 'api', path: '/work/api', missing: false };

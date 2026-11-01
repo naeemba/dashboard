@@ -1,6 +1,7 @@
 import { ranked } from '../../shared/app/fuzzy';
 import { baseName } from '../../shared/app/base-name';
 import type { DocEntry, SessionList, SessionRecord } from '../../shared/drawer/drawer';
+import { isManagerPath } from '../../shared/manager/manager';
 
 // What the drawer lists and what a key does in it. drawer-view.ts puts it on screen; every rule with a
 // branch is here so it has a test.
@@ -8,7 +9,7 @@ import type { DocEntry, SessionList, SessionRecord } from '../../shared/drawer/d
 // One line the arrows walk. Each list's heading is drawn by the view and is not a row: there is
 // nothing to press Enter on.
 // A doc's depth and label are where it sits in the tree, its file name; filtered, the list is flat and
-// the label is its whole path under docs/.
+// the label is its whole path: under docs/, or on the manager's page from the home folder.
 export type DrawerRow =
   | { kind: 'folder'; path: string; name: string; depth: number; open: boolean }
   | { kind: 'doc'; doc: DocEntry; depth: number; label: string }
@@ -16,8 +17,10 @@ export type DrawerRow =
   | { kind: 'more' };
 
 // What a session row says beside its label: the worktree it ran in when it was not the project's own
-// checkout, so two workers on two cards read apart.
+// checkout, so two workers on two cards read apart. The manager has no worktrees, so its rows say
+// nothing there.
 export function sessionDetail(session: SessionRecord, projectPath: string): string {
+  if (isManagerPath(projectPath)) return '';
   return session.directory === projectPath ? 'project' : baseName(session.directory);
 }
 
@@ -43,8 +46,8 @@ export function docTree(docs: readonly DocEntry[], open: ReadonlySet<string>): D
 // The docs, then the sessions, each narrowed to what the filter matches, then Load more when older
 // sessions are left. Filtering, the docs are a flat list of every match, closed folders' files
 // included; on the manager's page that is the files of the folders read so far, so the search never
-// walks ~/.claude. Load more stays while filtering: the filter only searches the rows loaded so far, and the
-// row is how to search further back.
+// walks ~/.claude. Load more stays while filtering: the filter only searches the rows loaded so far,
+// and the row is how to search further back.
 export function drawerRows(
   docs: readonly DocEntry[], open: ReadonlySet<string>, sessions: SessionList, query: string, projectPath: string,
 ): DrawerRow[] {
@@ -54,6 +57,14 @@ export function drawerRows(
   const sessionRows = ranked(sessions.rows, (session) => `${session.label} ${sessionDetail(session, projectPath)}`, query)
     .map((session): DrawerRow => ({ kind: 'session', session }));
   return [...docRows, ...sessionRows, ...(sessions.more ? [{ kind: 'more' } as const] : [])];
+}
+
+// The folders open once `folder` is opened or closed. Closing one closes every folder inside it too,
+// so a closed folder's subfolders are not read again; a folder whose name only starts the same, `ab`
+// beside `a`, is left as it was.
+export function toggledFolders(open: ReadonlySet<string>, folder: string): Set<string> {
+  if (!open.has(folder)) return new Set([...open, folder]);
+  return new Set([...open].filter((inside) => inside !== folder && !inside.startsWith(`${folder}/`)));
 }
 
 // Left and Right in the tree, as a file manager's: Right opens a closed folder and steps into an open

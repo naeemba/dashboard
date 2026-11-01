@@ -9,11 +9,11 @@ import { promptOverlay } from '../app/overlay';
 import type { Page } from '../app/page';
 import { isModified } from '../keys/shortcuts';
 import { docOverlay } from './doc-viewer';
-import { drawerKey, drawerRows, sessionDetail, treeStep, type DrawerRow } from './drawer-rows';
+import { drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type DrawerRow } from './drawer-rows';
 
 // The drawer on the left of a page: the project's docs as a tree and the Claude sessions the app started
-// for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own. Open, it pushes the page to its right and the panes are measured again; closed it
-// takes no room. It is opened and closed by its button in the title row, beside the tabs, or by its key.
+// for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own.
+// Open, it pushes the page to its right and the panes are measured again; closed it takes no room. It is opened and closed by its button in the title row, beside the tabs, or by its key.
 // A doc opens in the full-screen viewer (doc-viewer.ts), over the drawer, which is still there after.
 // Every rule with a branch is drawer-rows.ts's; this is the DOM.
 
@@ -68,19 +68,18 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   let docs: DocEntry[] = [];
   // The folders opened in each page's tree, by their path as the rows name it, by the page's path. Kept
   // while the drawer is closed, so it opens on the tree as it was left there.
-  const openFolders = new Map<string, Set<string>>();
-  const foldersOpen = (projectPath: string): Set<string> => {
-    const open = openFolders.get(projectPath) ?? new Set<string>();
-    openFolders.set(projectPath, open);
-    return open;
-  };
+  const openFolders = new Map<string, ReadonlySet<string>>();
+  const foldersOpen = (projectPath: string): ReadonlySet<string> => openFolders.get(projectPath) ?? new Set<string>();
   let sessions = NO_SESSIONS;
   let count = SESSION_PAGE_SIZE;
   let rows: DrawerRow[] = [];
   let items: HTMLElement[] = [];
   let highlighted = 0;
-  // Each load is numbered, so an answer that arrives after the drawer moved to another page is dropped.
-  let loads = 0;
+  // Each load is numbered, so an answer that arrives after the drawer moved to another page, or after a
+  // newer load of the same list, is dropped. The docs and the sessions count apart: a folder opened while
+  // Load more is in flight must not lose its rows to the sessions' answer, nor the other way round.
+  let docLoads = 0;
+  let sessionLoads = 0;
 
   function heading(text: string, empty: boolean, emptyText: string): HTMLElement[] {
     const title = document.createElement('li');
@@ -155,19 +154,23 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function load(withDocs: boolean, withSessions = true): void {
     const page = shownFor;
     if (page === null) return;
-    const ticket = ++loads;
-    Promise.all([
-      withDocs ? ports.bridge.listDocs(page.project.path, [...foldersOpen(page.project.path)]) : docs,
-      withSessions ? ports.bridge.listSessions(page.project.path, count) : sessions,
-    ]).then(
-      ([nextDocs, nextSessions]) => {
-        if (ticket !== loads) return;
-        docs = nextDocs;
-        sessions = nextSessions;
+    const failed = (error: unknown): void => ports.report(`Could not read the drawer: ${failureText(error)}`);
+    if (withDocs) {
+      const ticket = ++docLoads;
+      ports.bridge.listDocs(page.project.path, [...foldersOpen(page.project.path)]).then((next) => {
+        if (ticket !== docLoads) return;
+        docs = next;
         draw();
-      },
-      (error: unknown) => ports.report(`Could not read the drawer: ${failureText(error)}`),
-    );
+      }, failed);
+    }
+    if (withSessions) {
+      const ticket = ++sessionLoads;
+      ports.bridge.listSessions(page.project.path, count).then((next) => {
+        if (ticket !== sessionLoads) return;
+        sessions = next;
+        draw();
+      }, failed);
+    }
   }
 
   function open(page: Page): void {
@@ -187,7 +190,8 @@ export function createDrawer(ports: DrawerPorts): Drawer {
 
   function hide(): void {
     shownFor = null;
-    loads += 1;
+    docLoads += 1;
+    sessionLoads += 1;
     if (!element.hidden) {
       element.hidden = true;
       ports.resized();
@@ -233,15 +237,11 @@ export function createDrawer(ports: DrawerPorts): Drawer {
 
   function fold(folder: string): void {
     if (shownFor === null) return;
-    const open = foldersOpen(shownFor.project.path);
-    if (open.delete(folder)) {
-      // The folders inside it close with it, so a closed folder's subfolders are not read again.
-      for (const inside of open) if (inside.startsWith(`${folder}/`)) open.delete(inside);
-      return draw();
-    }
-    open.add(folder);
+    const projectPath = shownFor.project.path;
+    const open = toggledFolders(foldersOpen(projectPath), folder);
+    openFolders.set(projectPath, open);
     draw();
-    load(true, false);
+    if (open.has(folder)) load(true, false);
   }
 
   // Left and Right in the tree: a folder opened or closed, or the highlight stepped in or out.

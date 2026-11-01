@@ -2,8 +2,9 @@
 
 A drawer on the left of a page listing the project's docs, as a tree, and the
 Claude conversations the app started for it; on the manager's page, the markdown
-under `~/.dashboard` and `~/.claude` and the manager's own conversations. Open, it pushes the page to
-its right; closed, it takes no room. A doc opens rendered in a full-screen viewer.
+under `~/.dashboard` and `~/.claude` and the manager's own conversations. Open,
+it pushes the page to its right; closed, it takes no room. A doc opens rendered
+in a full-screen viewer.
 
 ## Files
 

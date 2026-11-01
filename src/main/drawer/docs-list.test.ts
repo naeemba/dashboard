@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -18,50 +18,59 @@ describe('listDocs', () => {
     writeFileSync(path.join(project, 'docs', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'shot.png'), '');
-    expect(await listDocs(project, [], '/h')).toEqual([
+    expect(await listDocs(project, [], [])).toEqual([
       { path: path.join(project, 'docs', 'README.md'), name: 'README.md' },
       { path: path.join(project, 'docs', 'board', 'README.md'), name: 'board/README.md' },
     ]);
   });
 
   it('lists nothing for a project with no docs folder', async () => {
-    expect(await listDocs(mkdtempSync(path.join(tmpdir(), 'docs-list-')), [], '/h')).toEqual([]);
+    expect(await listDocs(mkdtempSync(path.join(tmpdir(), 'docs-list-')), [], [])).toEqual([]);
   });
 
-  it("on the manager's page lists its two folders and reads only the folders opened, inside them", async () => {
+  it("on the manager's page lists its roots and reads only the folders opened, inside them", async () => {
     const home = mkdtempSync(path.join(tmpdir(), 'docs-home-'));
-    mkdirSync(path.join(home, '.claude', 'rules'), { recursive: true });
+    mkdirSync(path.join(home, '.claude', 'commands'), { recursive: true });
     mkdirSync(path.join(home, 'Workspace'));
+    mkdirSync(path.join(home, 'dotfiles', 'rules'), { recursive: true });
     writeFileSync(path.join(home, '.claude', 'CLAUDE.md'), '');
     writeFileSync(path.join(home, '.claude', 'settings.json'), '');
-    writeFileSync(path.join(home, '.claude', 'rules', 'naming.md'), '');
+    writeFileSync(path.join(home, 'dotfiles', 'rules', 'naming.md'), '');
     writeFileSync(path.join(home, 'Workspace', 'notes.md'), '');
-    const roots = [
+    // A folder linked in from a dotfiles repository is a folder; a broken link is left out.
+    symlinkSync(path.join(home, 'dotfiles', 'rules'), path.join(home, '.claude', 'rules'));
+    symlinkSync(path.join(home, 'gone'), path.join(home, '.claude', 'gone'));
+    const roots = [path.join(home, '.dashboard'), path.join(home, '.claude')];
+    const tops = [
       { path: path.join(home, '.dashboard'), name: '.dashboard', folder: true },
       { path: path.join(home, '.claude'), name: '.claude', folder: true },
     ];
-    expect(await listDocs('', [], home)).toEqual(roots);
-    expect(await listDocs('', ['.claude', '.dashboard', 'Workspace', '.claude/../Workspace'], home)).toEqual([...roots,
+    expect(await listDocs('', [], roots)).toEqual(tops);
+    expect(await listDocs('', ['.claude', '.dashboard', 'Workspace', '.claude/../Workspace', '.claude/rules'], roots)).toEqual([...tops,
       { path: path.join(home, '.claude', 'CLAUDE.md'), name: '.claude/CLAUDE.md' },
+      { path: path.join(home, '.claude', 'commands'), name: '.claude/commands', folder: true },
       { path: path.join(home, '.claude', 'rules'), name: '.claude/rules', folder: true },
+      { path: path.join(home, '.claude', 'rules', 'naming.md'), name: '.claude/rules/naming.md' },
     ]);
   });
 });
 
 describe('docScope', () => {
+  const ROOTS = ['/h/.dashboard', '/h/.claude'];
+
   it('takes only markdown under the docs folder', () => {
-    expect(docScope('/p', '/p/docs/board/README.md', '/h')).toEqual({ root: '/p/docs', images: '/p' });
-    expect(docScope('/p', '/p/docs/../secret.md', '/h')).toBeNull();
-    expect(docScope('/p', '/home/me/.ssh/id_rsa', '/h')).toBeNull();
-    expect(docScope('/p', '/p/docs/shot.png', '/h')).toBeNull();
-    expect(docScope('/p', '/h/.claude/CLAUDE.md', '/h')).toBeNull();
+    expect(docScope('/p', '/p/docs/board/README.md', [])).toEqual({ root: '/p/docs', images: '/p' });
+    expect(docScope('/p', '/p/docs/../secret.md', [])).toBeNull();
+    expect(docScope('/p', '/home/me/.ssh/id_rsa', [])).toBeNull();
+    expect(docScope('/p', '/p/docs/shot.png', [])).toBeNull();
+    expect(docScope('/p', '/h/.claude/CLAUDE.md', ROOTS)).toBeNull();
   });
 
   it("on the manager's page takes only markdown under ~/.dashboard and ~/.claude", () => {
-    expect(docScope('', '/h/.claude/rules/naming.md', '/h')).toEqual({ root: '/h/.claude', images: '/h/.claude' });
-    expect(docScope('', '/h/.dashboard/notes.md', '/h')).toEqual({ root: '/h/.dashboard', images: '/h/.dashboard' });
+    expect(docScope('', '/h/.claude/rules/naming.md', ROOTS)).toEqual({ root: '/h/.claude', images: '/h/.claude' });
+    expect(docScope('', '/h/.dashboard/notes.md', ROOTS)).toEqual({ root: '/h/.dashboard', images: '/h/.dashboard' });
     for (const file of ['/h/.claude/settings.json', '/h/.claude/../.ssh/x.md', '/h/Workspace/a.md', '/p/docs/README.md']) {
-      expect(docScope('', file, '/h')).toBeNull();
+      expect(docScope('', file, ROOTS)).toBeNull();
     }
   });
 });
@@ -89,8 +98,8 @@ describe('readDoc', () => {
     writeFileSync(path.join(project, 'docs', 'README.md'), '# Docs ![a](a.png) ![b](gone.png)');
     writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
     writeFileSync(path.join(project, 'secret.md'), 'no');
-    expect(await readDoc(project, path.join(project, 'docs', 'README.md'), '/h'))
+    expect(await readDoc(project, path.join(project, 'docs', 'README.md'), []))
       .toEqual({ text: '# Docs ![a](a.png) ![b](gone.png)', images: { 'a.png': `data:image/png;base64,${Buffer.from('png').toString('base64')}` } });
-    expect(await readDoc(project, path.join(project, 'secret.md'), '/h')).toHaveProperty('refused');
+    expect(await readDoc(project, path.join(project, 'secret.md'), [])).toHaveProperty('refused');
   });
 });
