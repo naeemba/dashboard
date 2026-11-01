@@ -46,6 +46,7 @@ module's test.
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling (599 code lines) and `renderer.ts` is past
-  it (608); the next feature wired through either needs a seam split out first
-  (workflow-decision-1).
+- `main.ts` is at the 600-line ceiling (599 code lines); the next feature wired
+  through it needs a seam split out first (workflow-decision-1). `renderer.ts`
+  is at 566: the close flow moved into `close-project.ts` and the which-key
+  strip's tracking into `which-key-tracking.ts`.

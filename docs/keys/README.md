@@ -11,7 +11,7 @@ Folders: `src/shared/keys/`, `src/renderer/keys/`.
 - Table and modes: `actions.ts`, `modes.ts`
 - Keystrokes: `binding.ts`, `shortcuts.ts`, `keycaps.ts`, `test-key.ts`
 - Help and strip: `help.ts`, `shortcut-rows.ts`, `which-key.ts`,
-  `which-key-view.ts`, `which-key.css`
+  `which-key-view.ts`, `which-key-tracking.ts`, `which-key.css`
 
 ## Scenarios
 

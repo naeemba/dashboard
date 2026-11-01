@@ -83,13 +83,6 @@
           "parent": null
         },
         {
-          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
-          "title": "Split renderer.ts under 600 code lines",
-          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "a2de2be5-d7c3-402e-a96e-3893b9e4607c",
           "title": "Split main.ts: worktree bookkeeping into its own module",
           "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
@@ -188,7 +181,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
+          "title": "Split renderer.ts under 600 code lines",
+          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:43:16.588Z"
+        }
+      ]
     },
     {
       "name": "Review",

@@ -35,10 +35,10 @@ import { openSettings } from './settings/settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './app/overlay';
 import { anyWaiting, questionBell, waitingNames } from '../shared/panes/waiting';
 import {
-  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerPane, type ManagerRow,
+  isProjectPage, landingPosition, managerRows, projectPosition, type ManagerPane, type ManagerRow,
 } from '../shared/manager/manager';
 import { createManagerPage } from './manager/manager-page';
-import { closeRefusal, closingPanes } from './app/close-project';
+import { createProjectCloser } from './app/close-project';
 import { paneSends } from './panes/pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './panes/pane';
 import {
@@ -46,8 +46,7 @@ import {
 } from './app/page';
 import { neighborPane, paneAtPosition, stepPane } from '../shared/panes/pane-layout';
 import { closePane, runPaneAction, type PanePorts } from './panes/pane-actions';
-import { whichKeyRows, whichKeyStep, type Held } from './keys/which-key';
-import { createWhichKey } from './keys/which-key-view';
+import { createWhichKeyTracking } from './keys/which-key-tracking';
 import { nextSectionMode } from '../shared/manager/manager-sections';
 import { actionByName } from '../shared/keys/actions';
 import { reportBoardWrites } from './board/board-writes';
@@ -107,9 +106,6 @@ let activeIndex = 0;
 // Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
 // Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
 let previousSlot: number | null = null;
-// Whether a close is already waiting on main for the panes it would take. closeProject says what a
-// second one costs.
-let closing = false;
 
 function projectPages(): Page[] {
   return pages.filter(isProjectPage);
@@ -322,7 +318,7 @@ function setMode(mode: Mode): void {
   if (!page.views[mode]) return;
   showMode(page, mode);
   focusMode(page, true);
-  refreshWhichKey();
+  whichKey.refresh();
 }
 
 // nvim, running by the time this returns — started if it has never run, started again if it was quit.
@@ -411,7 +407,7 @@ function landOn(index: number): void {
     page.element.hidden = pageIndex !== activeIndex;
   });
   focusMode(pages[activeIndex], true);
-  refreshWhichKey();
+  whichKey.refresh();
 }
 
 // The one page builder, handed the few things a pane needs from this file. Every one that can change
@@ -477,92 +473,21 @@ const { removePage, applyProjects, host } = createPageSync({
   },
 });
 
-// Asked twice — once before the question and once with the answer — so it is one function. What the
-// flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
-// `panes:read`, and this only puts the names to it.
-//
-// The terminals, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
-// for as long as the project is open, so on a reading of what the pty has in the foreground it is busy
-// from launch, and a close that counted it would refuse every time with `nvim` named as the thing in
-// the way. It was never much of a signal on the old reading either: it blocked a close only while its
-// bell was ringing or its screen happened to match an agent's spinner. What guards a half-finished
-// edit in nvim is the question below, which is asked whether or not anything is in the way.
-async function closeRefusalFor(page: Page): Promise<string> {
-  const uses = await bridge.readPanes(page.project.path);
-  return closeRefusal(page.project.name, closingPanes(uses, namedPanes(page)));
-}
-
-// Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
-// takes is gone for good — its shells, the editor, and whatever was running in them — so what can stop
-// it, and the sentence saying so, are close-project.ts's. A pane that has exited or is sitting at a
-// prompt stops nothing, so the question below is asked whether or not anything was in the way.
-// The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
-// pane id that named this project names nothing from here on.
-async function closeProject(slot: number): Promise<void> {
-  // One close at a time, the same guard runInPanes has and for the same reason: what stops a close is
-  // a question to main now, and nothing on screen changes while the answer is out. Two presses in that
-  // window build two confirm sheets. Answer the top one and the project closes correctly — the sheet
-  // underneath stays on screen with nothing focusing it, the page behind goes on taking every key
-  // because the window's guard only fires when focus is inside an overlay, and no key clears it.
-  if (closing) return;
-  const position = positionOfSlot(slot);
-  const page = pages[position];
-  // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
-  // has already gone.
-  if (!page || !isProjectPage(page)) return;
-  closing = true;
-  let refusal: string;
-  try {
-    refusal = await closeRefusalFor(page);
-  } finally {
-    // In a finally, because readPanes is an IPC call and can reject: a flag left up by one failed
-    // round trip would make Ctrl+Q do nothing for the rest of the run. Nothing yields between here
-    // and the sheet below, so no keystroke can arrive in the gap.
-    closing = false;
-  }
-  if (refusal !== '') return showNotice('close', refusal);
-  // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
-  // is: cancelling the dialog leaves no path back here to clear it.
-  showNotice('close', '');
-  // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
-  // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
-  // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
-  // twice; this takes every shell and an editor with no undo.
-  void confirmOverlay(
-    `Close ${page.project.name}?`,
-    'Enter closes it, its shells and its editor. Escape keeps it.',
-  ).then(async (confirmed) => {
-    // The keyboard back to the page first, for the same reason namePane does it: the sheet that held the
-    // focus has gone, so answering Escape here would otherwise leave you unable to type in any pane.
-    showPage(activeIndex);
-    if (!confirmed) return;
-    // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
-    // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
-    // found afresh here. Whatever page holds this slot is a project page, because the slot is the same
-    // one the check at the top answered for and isProjectPage reads nothing else.
-    const closingPage = pages[positionOfSlot(slot)];
-    if (!closingPage) return;
-    // Read again with the page and for the same reason: the answer was given over a quiet project, and
-    // a pane that took an agent or a question while the dialog was up is one the close refuses over.
-    const late = await closeRefusalFor(closingPage);
-    if (late !== '') return showNotice('close', late);
-    // The page's place in the list, found after that question rather than before it: asking main is a
-    // round trip, and a project closed from elsewhere while it was out shifts every page after it
-    // along. The index taken before would splice a different project out of the list.
-    const closingPosition = positionOfSlot(slot);
-    if (closingPosition === -1) return;
-    bridge.closeProject(slot);
-    removePage(slot);
-    // The page that went can be the one you were standing on, since the key closes the project you are
-    // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
-    // it was the last one, which is the manager at worst. A close from the manager's own list is the
-    // other case and needs none of this: the manager holds the first tab and never moves off it, so
-    // what leaves is always behind the page you are looking at.
-    if (closingPosition === activeIndex) landOn(positionAfterClose(closingPosition, pages.length));
-    // The row leaves the list, the tab leaves the strip, and the session file is written without it.
-    renderStatus();
-  });
-}
+// Closing a project, refused and asked about in close-project.ts.
+const closeProject = createProjectCloser({
+  readPanes: (projectPath) => bridge.readPanes(projectPath),
+  closeProject: (slot) => bridge.closeProject(slot),
+  pages,
+  positionOfSlot,
+  activeIndex: () => activeIndex,
+  namedPanes,
+  showNotice,
+  confirm: confirmOverlay,
+  showPage,
+  removePage,
+  landOn,
+  renderStatus,
+});
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are
 // untouched; only the order you cycle and jump through changes. Where it may land, and whether the page
@@ -739,46 +664,21 @@ function apply(action: Action): void {
   }
 }
 
-const whichKey = createWhichKey();
-// The modifiers the strip last answered, null while it is down. which-key.ts decides what each
-// keystroke does to it; this is only where the answer is kept.
-let whichKeyHeld: Held | null = null;
-
-const dialogOpen = (): boolean => document.querySelector(OVERLAY_SELECTOR) !== null;
-
-function hideWhichKey(): void {
-  whichKeyHeld = null;
-  whichKey.hide();
-}
-
-// Every press and release, whether the strip is up or not: adding Shift to a held Ctrl is a different
-// question, and pressing a key that starts something is the answer being taken.
-function trackWhichKey(event: KeyboardEvent): void {
-  const step = whichKeyStep(event, dialogOpen, whichKeyHeld);
-  if (step.kind === 'unchanged') return;
-  if (step.kind === 'hide') return hideWhichKey();
-  whichKeyHeld = step.held;
-  refreshWhichKey();
-}
-
-// The rows are built from the page and the mode the modifier went down on, and nothing about holding a
-// modifier rebuilds them. Every key that changes the screen also takes the strip away, so from the
-// keyboard they cannot go stale; a click on a section name or on a manager row changes both while the
-// modifier is still down. So this is called wherever the screen changes, beside renderStatus.
-function refreshWhichKey(): void {
-  if (!whichKeyHeld) return;
+// The which-key strip, built here so it lands in the document where it always has. which-key-tracking.ts
+// keeps what it is showing.
+const whichKey = createWhichKeyTracking(() => {
   const page = pages[activeIndex];
-  whichKey.show(whichKeyRows(whichKeyHeld, settings.keys, page.mode, !isProjectPage(page), isMac, chatFocused(page)));
-}
+  return { keys: settings.keys, mode: page.mode, onManagerPage: !isProjectPage(page), chatFocused: chatFocused(page) };
+}, isMac);
 
 // A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
 // listener, so the panel would sit there over a window nobody is typing into.
-window.addEventListener('blur', hideWhichKey);
-window.addEventListener('keyup', trackWhichKey, true);
+window.addEventListener('blur', whichKey.hide);
+window.addEventListener('keyup', whichKey.track, true);
 
 // Capture phase runs before xterm's own key handler, so the shell never sees these keys.
 window.addEventListener('keydown', (event) => {
-  trackWhichKey(event);
+  whichKey.track(event);
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
