@@ -58,10 +58,10 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
 // command leaves, a pasted image's source path, the coordinate note after Claude reads a large image.
 // Taken out before deciding whether anything is left.
 const PLUMBING_TAGS = ['system-reminder', 'local-command-caveat'];
-const IMAGE_SOURCE = /\[Image: (?:source:|original) [^\]]*\]/g;
+const IMAGE_NOTES = /\[Image: (?:source:|original) [^\]]*\]/g;
 
 function withoutPlumbing(text: string): string {
-  return PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_SOURCE, '').trim();
+  return PLUMBING_TAGS.reduce(withoutTag, text).replace(IMAGE_NOTES, '').trim();
 }
 
 // Whether a message is nothing but plumbing. Hidden as written only when Claude Code marked it as its own.
