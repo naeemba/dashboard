@@ -160,16 +160,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
-          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
-          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:01:23.811Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -255,6 +246,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
+          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
+          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:05:13.737Z",
+          "branch": "fix-github-issue-89-gh-issue-view-89-commen",
+          "pullRequest": 143,
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:13.699Z",
+              "body": "Shipped in #143: IMAGE_LIMIT_SHOWN exported from chat-transcript.ts; the refusal notice and help blurb read it."
             }
           ]
         }
