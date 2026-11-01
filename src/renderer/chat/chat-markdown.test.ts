@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { renderMarkdown, safeImage, safeLink } from './chat-markdown';
 
 describe('renderMarkdown', () => {
+  it("swaps an image's address for the data URL carried with it, but not inside code", () => {
+    const html = renderMarkdown('![a](a.png) `![a](a.png)`', { 'a.png': 'data:image/png;base64,cG5n' });
+    expect(html).toContain('<img src="data:image/png;base64,cG5n" alt="a">');
+    expect(html).toContain('<code>![a](a.png)</code>');
+  });
+
   it('draws a pipe table as a table', () => {
     const html = renderMarkdown('| a | b |\n|---|---|\n| 1 | 2 |');
     expect(html).toContain('<table>');

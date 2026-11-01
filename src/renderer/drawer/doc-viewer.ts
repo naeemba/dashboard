@@ -1,13 +1,13 @@
 import { icon } from '../app/icons';
 import { viewerOverlay } from '../app/overlay';
-import { renderMarkdown } from '../chat/chat-markdown';
+import { openLinksOutside, renderMarkdown } from '../chat/chat-markdown';
 
 // A doc read as markdown, full screen on the sheet the Claude screen opens an image on, drawn by the
 // Claude screen's own renderer so tables, code and images read the way they do there. Its one row,
 // Edit, leads it and is always the highlighted one: Enter or a click on it puts the viewer away and
 // opens the file in the project's nvim. The arrows and Page keys scroll the doc, Escape puts it away.
 // A link opens in the browser, the way one on the Claude screen does.
-export function docOverlay(name: string, text: string, edit: () => void, openLink: (url: string) => void): void {
+export function docOverlay(name: string, text: string, images: Record<string, string>, edit: () => void, openLink: (url: string) => void): void {
   const row = document.createElement('div');
   row.className = 'drawer-row highlighted doc-viewer-edit';
   const label = document.createElement('span');
@@ -19,13 +19,8 @@ export function docOverlay(name: string, text: string, edit: () => void, openLin
   row.append(icon('editor'), label, keys);
   const body = document.createElement('div');
   body.className = 'chat-text doc-viewer-text';
-  body.innerHTML = renderMarkdown(text);
-  body.addEventListener('click', (event) => {
-    const link = event.target instanceof Element ? event.target.closest('a') : null;
-    if (link === null) return;
-    event.preventDefault();
-    openLink(link.href);
-  });
+  body.innerHTML = renderMarkdown(text, images);
+  openLinksOutside(body, openLink);
   const shown = document.createElement('div');
   shown.append(row, body);
   const editing = (): void => {

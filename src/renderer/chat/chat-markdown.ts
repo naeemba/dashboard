@@ -63,6 +63,22 @@ const marked = new Marked({
   },
 });
 
-export function renderMarkdown(text: string): string {
-  return marked.parse(text, { async: false });
+// `images` carries an image a doc points at by address, as a data URL, so the text is drawn as written
+// and only an image marked reads as one is swapped, never a code sample of one.
+export function renderMarkdown(text: string, images: Readonly<Record<string, string>> = {}): string {
+  const tokens = marked.lexer(text);
+  marked.walkTokens(tokens, (token) => {
+    if (token.type === 'image' && Object.hasOwn(images, token.href)) token.href = images[token.href];
+  });
+  return marked.parser(tokens);
+}
+
+// A click on a link in rendered markdown opens it in the browser, never in the window.
+export function openLinksOutside(element: HTMLElement, openLink: (url: string) => void): void {
+  element.addEventListener('click', (event) => {
+    const link = event.target instanceof Element ? event.target.closest('a') : null;
+    if (link === null) return;
+    event.preventDefault();
+    openLink(link.href);
+  });
 }

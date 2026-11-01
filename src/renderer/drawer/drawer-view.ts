@@ -64,9 +64,14 @@ export function createDrawer(ports: DrawerPorts): Drawer {
 
   let shownFor: Page | null = null;
   let docs: DocEntry[] = [];
-  // The folders opened in the tree, by their path under docs/. Kept while the drawer is closed, so it
-  // opens on the tree as it was left.
-  const openFolders = new Set<string>();
+  // The folders opened in each project's tree, by their path under docs/, by the project's path. Kept
+  // while the drawer is closed, so it opens on the tree as it was left there.
+  const openFolders = new Map<string, Set<string>>();
+  const foldersOpen = (projectPath: string): Set<string> => {
+    const open = openFolders.get(projectPath) ?? new Set<string>();
+    openFolders.set(projectPath, open);
+    return open;
+  };
   let sessions = NO_SESSIONS;
   let count = SESSION_PAGE_SIZE;
   let rows: DrawerRow[] = [];
@@ -121,7 +126,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function draw(): void {
     if (shownFor === null) return;
     const projectPath = shownFor.project.path;
-    rows = drawerRows(docs, openFolders, sessions, box.value, projectPath);
+    rows = drawerRows(docs, foldersOpen(projectPath), sessions, box.value, projectPath);
     highlighted = clampIndex(highlighted, rows.length - 1);
     items = rows.map((row, index) => rowElement(row, index, projectPath));
     const docCount = rows.filter((row) => row.kind === 'doc' || row.kind === 'folder').length;
@@ -224,7 +229,9 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   }
 
   function fold(folder: string): void {
-    if (!openFolders.delete(folder)) openFolders.add(folder);
+    if (shownFor === null) return;
+    const open = foldersOpen(shownFor.project.path);
+    if (!open.delete(folder)) open.add(folder);
     draw();
   }
 
@@ -243,7 +250,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
       (reply) => {
         if ('refused' in reply) return ports.report(reply.refused);
         if (shownFor !== page) return;
-        docOverlay(doc.name, reply.text, () => {
+        docOverlay(doc.name, reply.text, reply.images, () => {
           close();
           ports.openDoc(page, doc.path);
         }, (url) => ports.bridge.openExternal(url));

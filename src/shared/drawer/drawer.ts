@@ -25,8 +25,9 @@ export const SESSION_PAGE_SIZE = 50;
 // A markdown file under the project's docs/ folder: where it is, and the path the row prints.
 export type DocEntry = { path: string; name: string };
 
-// A doc's text for the viewer, its images carried inline, or why it was not read (errors-rule-2).
-export type DocReply = { text: string } | { refused: string };
+// A doc's text for the viewer with its images carried inline as data URLs, by the address the doc
+// gives each, or why it was not read (errors-rule-2).
+export type DocReply = { text: string; images: Record<string, string> } | { refused: string };
 
 // A refusal answered as a value (errors-rule-2); null is the thing having happened.
 export type DrawerReply = { refused: string } | null;

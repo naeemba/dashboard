@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { docOrder, inlineImages, isDoc, listDocs, readDoc } from './docs-list';
+import { docOrder, imageUrls, isDoc, listDocs, readDoc } from './docs-list';
 
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
@@ -38,17 +38,18 @@ describe('isDoc', () => {
   });
 });
 
-describe('inlineImages', () => {
+describe('imageUrls', () => {
   const read = new Map([['/p/docs/screenshots/board.png', Buffer.from('png')]]);
+  const url = `data:image/png;base64,${Buffer.from('png').toString('base64')}`;
 
-  it("carries an image inside the project inline, relative to the doc's folder", () => {
-    expect(inlineImages('See ![the board](../screenshots/board.png).', '/p/docs/board/README.md', '/p', read))
-      .toBe(`See ![the board](data:image/png;base64,${Buffer.from('png').toString('base64')}).`);
+  it("carries an image inside the project inline, by its address, relative to the doc's folder", () => {
+    expect(imageUrls('See ![the board](../screenshots/board.png "t").', '/p/docs/board/README.md', '/p', read))
+      .toEqual({ '../screenshots/board.png': url });
   });
 
-  it('leaves one outside the project, from the web, missing or of another type as it was', () => {
-    for (const text of ['![a](../../../etc/x.png)', '![a](https://x.example/a.png)', '![a](gone.png)', '![a](notes.svg)']) {
-      expect(inlineImages(text, '/p/docs/board/README.md', '/p', read)).toBe(text);
+  it('leaves out one outside the project, from the web, missing, of another type or badly escaped', () => {
+    for (const text of ['![a](../../../etc/x.png)', '![a](https://x.example/a.png)', '![a](gone.png)', '![a](notes.svg)', '![a](50%.png)']) {
+      expect(imageUrls(text, '/p/docs/board/README.md', '/p', read)).toEqual({});
     }
   });
 });
@@ -61,7 +62,7 @@ describe('readDoc', () => {
     writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
     writeFileSync(path.join(project, 'secret.md'), 'no');
     expect(await readDoc(project, path.join(project, 'docs', 'README.md')))
-      .toEqual({ text: `# Docs ![a](data:image/png;base64,${Buffer.from('png').toString('base64')}) ![b](gone.png)` });
+      .toEqual({ text: '# Docs ![a](a.png) ![b](gone.png)', images: { 'a.png': `data:image/png;base64,${Buffer.from('png').toString('base64')}` } });
     expect(await readDoc(project, path.join(project, 'secret.md'))).toHaveProperty('refused');
   });
 });

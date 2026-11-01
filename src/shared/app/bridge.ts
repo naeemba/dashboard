@@ -130,8 +130,8 @@ export type DashboardBridge = {
   openScrollback(slot: number, index: number, text: string): Promise<Handover>;
   // A path a pane printed, opened in the project's nvim. Main finds the file; file-open.ts holds how.
   openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
-  // The drawer: the project's docs and one of them read for its viewer, the newest `count` of the Claude conversations the app started for
-  // it, a rename, and a resume into a new worker pane.
+  // The drawer: the project's docs and one of them read for its viewer, the newest `count` of the
+  // Claude conversations the app started for it, a rename, and a resume into a new worker pane.
   listDocs(projectPath: string): Promise<DocEntry[]>;
   readDoc(projectPath: string, file: string): Promise<DocReply>;
   listSessions(projectPath: string, count: number): Promise<SessionList>;
