@@ -5,9 +5,10 @@ import {
   type LogDraft, type LogEntry,
 } from '../../shared/app/log-entry';
 
-// The log on disk: five files of 5 MB, the live one first. Main-process only, and no electron in it, so
-// rotation is tested on a real folder. Synchronous on purpose: main is one thread, so two entries can
-// never interleave in the file or start the same rotation twice, and an append is microseconds.
+// The log on disk: LOG_FILE_COUNT files of LOG_FILE_LIMIT, the live one first. Main-process only,
+// and no electron in it, so rotation is tested on a real folder. Synchronous on purpose: main is one
+// thread, so two entries can never interleave in the file or start the same rotation twice, and an
+// append is microseconds.
 export type LogStore = { file: string; log(draft: LogDraft): void; tail(count: number): LogEntry[] };
 
 const NEWLINE = 0x0a;
@@ -82,7 +83,7 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
 
   // The newest `count`, oldest first. Files are read newest first and stop as soon as there are enough,
   // so the usual read is the live file alone. Each file is walked from its end and parsed only as far
-  // back as is needed: this runs on every arrival, and parsing a whole 5 MB file each time is most of
+  // back as is needed: this runs on every arrival, and parsing a whole log file each time is most of
   // what an arrival would cost.
   function tail(count: number): LogEntry[] {
     if (count <= 0) return [];
