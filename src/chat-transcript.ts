@@ -68,9 +68,9 @@ export type ChatEntry =
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
   // A message Claude Code put in the conversation rather than a person (chat-events.ts), or Claude's
-  // thinking, folded to its title. `verbatim` is a failed hook's: what it printed, drawn as terminal
-  // text rather than markdown.
-  | { kind: 'event'; title: string; body: string; verbatim?: true };
+  // thinking, folded to its title. `startsTurn` when the message opens a turn, as a prompt does.
+  // `verbatim` is a failed hook's: what it printed, drawn as terminal text rather than markdown.
+  | { kind: 'event'; title: string; body: string; startsTurn?: true; verbatim?: true };
 
 // When a message was written and the model that wrote it, as far as the message says: drawn above
 // it (chat-stamp.ts). A saved line and a live message both carry the time; only Claude's carry a model.

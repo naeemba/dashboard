@@ -1,3 +1,7 @@
+// Over the 600-code-line limit, left there on purpose for now: several cards edit this file at once,
+// and a split landing under them would conflict with every one. Split it once they have merged, along
+// the seam of `send`'s dispatch of the screen's own commands (the `screenCommand` branches), which can
+// move to a module of its own beside chat-screen-commands.ts. Do not make the file longer meanwhile.
 import './chat.css';
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from './actions';
@@ -17,7 +21,7 @@ import { revealed } from './chat-reveal';
 import { manageMcp } from './chat-mcp-view';
 import { renameConversation } from './chat-rename';
 import { rewind } from './chat-rewind-view';
-import { branch as branchConversation, chooseModel, resume } from './chat-screen-commands';
+import { branch as branchConversation, chooseModel, copyReply, resume } from './chat-screen-commands';
 import { footSides, piece, type FootState } from './chat-foot-view';
 import { workingLine, type ChatMeasure } from './chat-status';
 import {
@@ -318,6 +322,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (own?.kind === 'model') return showModels(own.rest);
     if (own?.kind === 'branch') return branch(own.rest);
     if (own?.kind === 'effort') return showEfforts(own.rest);
+    if (own?.kind === 'copy') return void copyReply(transcript.entries, own.rest, options);
     if (own?.kind === 'fast') {
       const named = namedFast(own.rest, fast);
       if (named === undefined) return options.onNotice(`Fast mode has no ${own.rest}. Try on or off.`);

@@ -21,7 +21,7 @@ export type CommandRow = SlashCommand;
 
 export type ScreenCommand =
   | { kind: 'resume' } | { kind: 'diff' } | { kind: 'rewind' } | { kind: 'mcp' } | { kind: 'plan'; rest: string } | { kind: 'model'; rest: string } | { kind: 'effort'; rest: string }
-  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'btw'; rest: string } | { kind: 'export'; rest: string } | { kind: 'fast'; rest: string };
+  | { kind: 'branch'; rest: string } | { kind: 'rename'; rest: string } | { kind: 'btw'; rest: string } | { kind: 'export'; rest: string } | { kind: 'fast'; rest: string } | { kind: 'copy'; rest: string };
 
 export const SCREEN_COMMANDS: CommandRow[] = [
   { name: 'resume', description: 'Pick an earlier conversation of this project and carry on from it', argumentHint: '' },
@@ -35,6 +35,8 @@ export const SCREEN_COMMANDS: CommandRow[] = [
   // No hint either: the name is optional, so Enter branches now.
   { name: 'branch', description: 'Carry on in a copy of this conversation, called whatever follows, if anything; the original stays in /resume', argumentHint: '' },
   { name: 'rename', description: 'Name this conversation; /resume lists it by that name', argumentHint: '<name>' },
+  // No hint: the count is optional, so Enter copies the last reply now.
+  { name: 'copy', description: "Copy Claude's last reply as markdown, or the one that many back named after it", argumentHint: '' },
   { name: 'btw', description: 'Ask a side question about the conversation, answered without tools and kept out of it', argumentHint: '<question>' },
   { name: 'export', description: 'Copy the conversation to the clipboard or save it to a file; a name after it saves to that file', argumentHint: '' },
   { name: 'fast', description: 'Turn fast mode on or off, or to the one named after it: faster output from the same model, billed higher', argumentHint: '' },
@@ -53,6 +55,7 @@ export function screenCommand(text: string): ScreenCommand | null {
   if (match?.[1] === 'effort') return { kind: 'effort', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'branch') return { kind: 'branch', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'rename') return { kind: 'rename', rest: (match[2] ?? '').trim() };
+  if (match?.[1] === 'copy') return { kind: 'copy', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'btw') return { kind: 'btw', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'export') return { kind: 'export', rest: (match[2] ?? '').trim() };
   if (match?.[1] === 'fast') return { kind: 'fast', rest: (match[2] ?? '').trim() };
@@ -253,6 +256,39 @@ export function localCommandOutput(text: string): string | null {
   if (text.includes('<local-command-caveat>') && onlyPlumbing(text)) return '';
   const output = /^\s*<local-command-(?:stdout|stderr)>([\s\S]*?)<\/local-command-(?:stdout|stderr)>\s*$/.exec(text);
   return output ? unescaped(output[1]).trim() : null;
+}
+
+// How many replies back `/copy N` goes: 1, the last, when nothing follows; null for anything but a
+// whole number from 1, which is refused.
+export function copyCount(rest: string): number | null {
+  if (!rest) return 1;
+  return /^[1-9]\d*$/.test(rest) ? Number(rest) : null;
+}
+
+// What /copy copies: the markdown of Claude's reply that many back, 1 the last. A reply is all Claude
+// wrote between two turns' starts, its tool calls left out: a prompt, or a message Claude Code put in
+// that opens a turn of its own, such as a background task finishing. Null when there are not that many.
+export function replyText(entries: ChatEntry[], count: number): string | null {
+  const replies: string[] = [];
+  let open = false;
+  for (const entry of entries) {
+    if (entry.kind === 'user' || (entry.kind === 'event' && entry.startsTurn)) open = false;
+    else if (entry.kind === 'text') {
+      if (open) replies[replies.length - 1] += `\n\n${entry.text}`;
+      else replies.push(entry.text);
+      open = true;
+    }
+  }
+  return replies.at(-count) ?? null;
+}
+
+// What `/copy N` does: the reply to copy and the notice saying so, or the refusal to show instead.
+export function copyTarget(entries: ChatEntry[], rest: string): { text: string; notice: string } | { refused: string } {
+  const count = copyCount(rest);
+  if (count === null) return { refused: `/copy takes how many replies back to go, 1 for the last; ${rest} is not one.` };
+  const text = replyText(entries, count);
+  if (text === null) return { refused: count === 1 ? 'Claude has not replied yet.' : `Claude has not written ${count} replies yet.` };
+  return { text, notice: count === 1 ? "Copied Claude's last reply." : `Copied Claude's reply ${count} back.` };
 }
 
 // Which of an entry's blocks the copy key copies: the first, then the next on each press while the

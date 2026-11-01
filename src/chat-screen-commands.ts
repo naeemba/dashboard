@@ -1,5 +1,6 @@
 import type { DashboardBridge } from './bridge';
-import { modelRows, namedModel, resumeRows } from './chat-commands';
+import { copyTarget, modelRows, namedModel, resumeRows } from './chat-commands';
+import type { ChatEntry } from './chat-transcript';
 import type { ChatViewOptions } from './chat-view';
 import { failureText } from './failure';
 import { searchOverlay } from './overlay';
@@ -54,5 +55,17 @@ export async function chooseModel(bridge: DashboardBridge, slot: number, name: s
   } catch (error) {
     say.onError(`Models not listed: ${failureText(error)}`);
     return undefined;
+  }
+}
+
+// /copy [N]: Claude's reply that many back, 1 the last, on the clipboard as the markdown it wrote.
+export async function copyReply(entries: ChatEntry[], rest: string, say: Say): Promise<void> {
+  const target = copyTarget(entries, rest);
+  if ('refused' in target) return say.onNotice(target.refused);
+  try {
+    await navigator.clipboard.writeText(target.text);
+    say.onNotice(target.notice);
+  } catch (error) {
+    say.onError(`Reply not copied: ${failureText(error)}`);
   }
 }

@@ -69,8 +69,13 @@ describe('notTypedMessage', () => {
     expect(meta('Capture this as a card on the board.')).toEqual({ title: 'Instructions', body: 'Capture this as a card on the board.' });
   });
 
-  it('hides what is only plumbing: pasted image sources, a reminder, a local command\'s caveat', () => {
+  it('does not start a turn with instructions answering no call, since notes inside a reply come that way', () => {
+    expect(meta('Output token limit hit. Resume directly.')).not.toHaveProperty('startsTurn');
+  });
+
+  it('hides what is only plumbing: pasted image sources and size notes, a reminder, a local command\'s caveat', () => {
     expect(meta('[Image: source: /tmp/1.png]\n[Image: source: /tmp/2.png]')).toBe('hidden');
+    expect(meta('[Image: original 2148x1196, displayed at 2000x1114. Multiply coordinates by 1.07]')).toBe('hidden');
     expect(meta('<system-reminder>x</system-reminder>')).toBe('hidden');
     expect(meta('<local-command-caveat>Run directly.</local-command-caveat>')).toBe('hidden');
   });
