@@ -359,20 +359,6 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-01T23:24:01.496Z"
-        },
-        {
-          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
-          "title": "Mark history.md files merge=union",
-          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:24:01.543Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.707Z",
-              "body": "Raised to medium: history.md files show up in 72 conflicted merges."
-            }
-          ]
         }
       ]
     },
@@ -2407,6 +2393,26 @@
           "createdAt": "2026-11-01T20:00:00.251Z",
           "updatedAt": "2026-11-01T22:26:46.244Z",
           "pullRequest": 166
+        },
+        {
+          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
+          "title": "Mark history.md files merge=union",
+          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:34:48.288Z",
+          "branch": "work-board-card-b8ebaf6c-f468-45f6-9dc9-df5",
+          "pullRequest": 167,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.707Z",
+              "body": "Raised to medium: history.md files show up in 72 conflicted merges."
+            },
+            {
+              "at": "2026-11-01T23:34:48.288Z",
+              "body": "Shipped in #167: .gitattributes marks docs/**/history.md merge=union (workflow-decision-2). Throwaway merge: with the attribute both appended lines land, without it the merge conflicts."
+            }
+          ]
         }
       ]
     }

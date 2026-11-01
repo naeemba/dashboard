@@ -1,0 +1,2 @@
+# See workflow-decision-2 in docs/workflow/decisions.md.
+docs/**/history.md merge=union
