@@ -10,4 +10,4 @@ id here.
 - Given a code change is done, when the checks pass, then the installed app is left running and the change is reported as needing a rebuild.
 - Given a rule with branches, when it is written, then it lives in its own module beside a `.test.ts`.
 - Given a card's pull request, when it merges, then `package.json` `version` has moved in it.
-- Given two branches that each append a line to the same `docs/*/history.md`, when one merges the other, then both lines are kept and git reports no conflict.
+- Given two branches cut after #167 that each append a line to the same `docs/**/history.md`, when one merges the other, then both lines are kept and git reports no conflict. A branch cut before #167 still conflicts once, on the merge that brings `.gitattributes` in.
