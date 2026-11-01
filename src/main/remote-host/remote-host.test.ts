@@ -38,7 +38,7 @@ function hosted() {
 }
 
 const clientPorts = (pushed: unknown[][] = []) => ({
-  version: '1', push: (channel: string, args: unknown[]) => pushed.push([channel, ...args]),
+  version: '1', push: (channel: string, channelArguments: unknown[]) => pushed.push([channel, ...channelArguments]),
   status: () => undefined, log: () => undefined, gone: () => undefined,
 });
 
