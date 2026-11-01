@@ -6,7 +6,7 @@ import { version } from './package.json';
 // every merge. Outside a git checkout the commit is `unknown` rather than a failed build.
 function commit(): string {
   try {
-    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: __dirname, encoding: 'utf8' }).trim();
   } catch {
     return 'unknown';
   }

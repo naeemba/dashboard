@@ -14,7 +14,6 @@ import { NEED_LABELS, nextLanding, needsYou, type Need } from '../../shared/mana
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from '../keys/shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from '../../shared/usage/usage';
-import { APP_VERSION } from '../app/version';
 import { dirtyLabel, worktreePaneText } from '../../shared/ship/worktree-rows';
 import type { JumpToWorktree } from '../ship/worktree-view';
 
@@ -171,10 +170,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   body.append(projects, activity.element);
   // The last line on the page: which build of the app you are looking at. Never hidden, unlike the
   // rest — it is a fact about the app rather than about the projects, so it is still the answer on a
-  // window with nothing open. version.ts says where the number comes from.
+  // window with nothing open. vite.build-version.ts says where the number comes from.
   const buildVersion = document.createElement('div');
   buildVersion.className = 'manager-version';
-  buildVersion.textContent = `v${APP_VERSION}`;
+  buildVersion.textContent = `v${__BUILD_VERSION__}`;
   element.append(overview.element, empty, needs, body, buildVersion);
 
   // Asked by both draws, and cheap when nothing is due: manager-reads.ts decides what is old. The

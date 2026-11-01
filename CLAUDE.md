@@ -90,5 +90,5 @@ app.
   pins it; a type both sides name moves to `src/shared/`, never an
   eslint-disable. (app-rule-2)
 - **A card does not bump `package.json` `version`.** The build stamps its
-  commit (`2.41.3+df3aad4`); the version moves only on a release.
+  commit (`<version>+<commit>`); the version moves only on a release.
   (workflow-rule-3)

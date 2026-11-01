@@ -947,6 +947,7 @@ registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 
 app.on('ready', () => {
+  app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
   logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
 });
