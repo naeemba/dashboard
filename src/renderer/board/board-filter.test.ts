@@ -255,8 +255,9 @@ describe('movesHighlightOnly', () => {
     expect(movesHighlightOnly([[1, 2, 3], [0, 2, 4], []], rows(visible, selection), selection)).toBe(false);
   });
 
-  it('redraws when the selection has to settle on another card', () => {
-    expect(movesHighlightOnly(visible, rows(visible, { column: 0, card: 1 }), { column: 0, card: 2 })).toBe(false);
+  it('redraws when the arrow lands on a card that is not drawn, as in an empty column', () => {
+    const selection = { column: 2, card: 0 };
+    expect(movesHighlightOnly(visible, rows(visible, selection), selection)).toBe(false);
   });
 });
 

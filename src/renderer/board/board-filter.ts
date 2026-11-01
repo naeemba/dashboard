@@ -227,13 +227,14 @@ export function drawnRows(
 }
 
 // Whether an arrow key can leave every card on screen and only move the highlight: the rows the board
-// would draw now are the rows it drew, and the selection rests where the key put it. A full redraw per
+// would draw now are the rows it drew, and the selected card is among them. A full redraw per
 // arrow is what docs/performance/history.md measured at about 90 ms a press. The selection stepping off
 // a card a filter only kept because you had just changed it takes that card off screen: a redraw.
 export function movesHighlightOnly(
   drawnBefore: number[][], drawn: { visible: number[][]; selection: Selection }, selection: Selection,
 ): boolean {
-  return drawn.selection === selection && JSON.stringify(drawn.visible) === JSON.stringify(drawnBefore);
+  return (drawn.visible[selection.column] ?? []).includes(selection.card)
+    && JSON.stringify(drawn.visible) === JSON.stringify(drawnBefore);
 }
 
 // The card a change acted on, for keepsSelection to hold on screen: the selected card if the change
