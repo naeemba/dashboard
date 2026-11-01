@@ -159,6 +159,12 @@
           "title": "Stop chasing Claude Code parity on the Claude screen",
           "notes": "36 PRs and 4,791 lines in four days re-implement TUI commands; two SDK calls are undeclared. Each new command must name what a CLI worker pane cannot do. Opinion. (docs/review/2026-11-01.md C1)",
           "priority": "low"
+        },
+        {
+          "id": "9fd936d8-7edb-4d2e-844e-da312ce12f16",
+          "title": "Move the market cards off the top of the manager page",
+          "notes": "Four price/weather cards lead the page above what wants you. Move to the foot line or a section. Opinion. (docs/review/2026-11-01.md U4)",
+          "priority": "low"
         }
       ]
     },
