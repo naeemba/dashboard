@@ -202,12 +202,19 @@ const boardCommand = path
   .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
 // The `session` command, built and unpacked the same way, and the socket it reaches this app on.
 // session-socket.ts says why the socket is this run's own.
-const sessionCommand = boardCommand.replace('board-cli-entry.js', 'session-cli-entry.js');
+const sessionCommand = path.join(path.dirname(boardCommand), 'session-cli-entry.js');
+// The `dashboard` command, both of the above behind one entry. DASHBOARD_BOARD and DASHBOARD_SESSION
+// stay, since skills and worker hooks call them by name.
+const dashboardCommand = path.join(path.dirname(boardCommand), 'dashboard-cli-entry.js');
 const sessionSocket = sessionSocketPath(process.platform, app.getPath('temp'), process.pid);
 // Built once. Every pane gets the same one, and cloning the whole environment per pane is a clone per
 // pane opened for a value that never changes.
 const paneEnvironment = {
-  ...process.env, DASHBOARD_BOARD: boardCommand, DASHBOARD_SESSION: sessionCommand, DASHBOARD_SOCKET: sessionSocket,
+  ...process.env,
+  DASHBOARD_COMMAND: dashboardCommand,
+  DASHBOARD_BOARD: boardCommand,
+  DASHBOARD_SESSION: sessionCommand,
+  DASHBOARD_SOCKET: sessionSocket,
 } as Record<string, string>;
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.

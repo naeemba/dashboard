@@ -11,7 +11,8 @@ Folders: `src/main/workers/`.
 
 - Dispatch: `dispatch.ts`, `worker-channels.ts`, `finished-work.ts`
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
-  `session-socket.ts`, `session-requests.ts`
+  `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
+  `dashboard pane`, see [command](../command/README.md))
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 
 ## Scenarios

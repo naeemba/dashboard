@@ -55,20 +55,6 @@
           "parent": null
         },
         {
-          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
-          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
-          "priority": "high",
-          "parent": null
-        },
-        {
-          "id": "0fafa31b-55b6-4b3e-a5f9-2f406708a229",
-          "title": "Manager terminals 2: one dashboard command with project, pane and board subcommands",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Replaces the separate board and session commands with one 'dashboard <noun> <verb>' command (project, pane, board), short and scriptable for agents. 'board' and 'session' stay as aliases so every running shell and skill keeps working. One env var for the entry, the old ones kept.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
           "title": "Manager terminals 4: dispatch a pane into any project",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
@@ -269,6 +255,22 @@
             {
               "at": "2026-11-01T13:12:53.650Z",
               "body": "Shipped in PR #155: manager terminals view, main-manager plus workers in ~/.dashboard, session socket reaches the manager slot (MANAGER_SLOT now -2). Manager workers not resumed after restart."
+            }
+          ]
+        },
+        {
+          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
+          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:27:35.250Z",
+          "branch": "work-board-card-18fcec84-94e9-47d3-8e94-fef",
+          "pullRequest": 156,
+          "comments": [
+            {
+              "at": "2026-11-01T13:27:35.213Z",
+              "body": "PR #156: ~/.dashboard/projects.yaml reader (src/main/projects/projects-file.ts, every problem with its line) and dashboard project list / find <word> (name, aka, about via ranked). Adds yaml 2.9.1. Version 2.34.0."
             }
           ]
         }
@@ -2011,6 +2013,26 @@
             {
               "at": "2026-11-01T12:25:50.300Z",
               "body": "Shipped in #152: the log screen's help blurb is built from LOG_FILE_COUNT and LOG_FILE_LIMIT."
+            }
+          ]
+        },
+        {
+          "id": "0fafa31b-55b6-4b3e-a5f9-2f406708a229",
+          "title": "Manager terminals 2: one dashboard command with project, pane and board subcommands",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Replaces the separate board and session commands with one 'dashboard <noun> <verb>' command (project, pane, board), short and scriptable for agents. 'board' and 'session' stay as aliases so every running shell and skill keeps working. One env var for the entry, the old ones kept.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:14:37.997Z",
+          "branch": "work-board-card-0fafa31b-55b6-4b3e-a5f9-2f4",
+          "pullRequest": 154,
+          "comments": [
+            {
+              "at": "2026-11-01T13:05:08.280Z",
+              "body": "PR #154: dashboard command (DASHBOARD_COMMAND) with board and pane nouns, session as alias of pane; old DASHBOARD_BOARD/DASHBOARD_SESSION entries unchanged. Version 2.33.0."
+            },
+            {
+              "at": "2026-11-01T13:14:37.997Z",
+              "body": "Shipped in #154: one dashboard command with board and pane nouns."
             }
           ]
         }

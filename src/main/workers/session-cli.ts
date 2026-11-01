@@ -13,7 +13,7 @@ export type SessionCommand =
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.
-export type SessionRequest = { directory: string; args: string[] };
+export type SessionRequest = { directory: string; args: readonly string[] };
 export type SessionReply = { ok: boolean; output: string };
 
 const SESSION_USAGE = `session — the Dashboard panes of the project you are in
