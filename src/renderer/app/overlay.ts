@@ -1,6 +1,7 @@
 import { icon, type IconName } from './icons';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { isModified } from '../keys/shortcuts';
+import type { SearchRow } from '../../shared/app/fuzzy';
 
 // The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
 // nobody has to keep a list of the dialogs in step by hand. The box inside it carries the same name
@@ -168,18 +169,6 @@ export function promptOverlay(
     answerKeys(dialog, (key) => close(key === 'Enter' ? input.value : null));
   });
 }
-
-// One row of a search list: what it is called, what else is worth saying about it, and what choosing
-// it answers with. The choice is the caller's own type — a project's path here, a card's id there —
-// so nothing about what a row means leaks into the dialog that draws it.
-export type SearchRow<Choice> = {
-  name: string;
-  detail: string;
-  choice: Choice;
-  // The row's own class, on top of the list's. Only a row that is not one of the things being
-  // searched needs one — the picker's line that opens a folder dialog.
-  className?: string;
-};
 
 // The third sheet: a box to type in with a list under it that the arrows walk, Enter takes the
 // highlighted row and Escape leaves. Three dialogs are this — the project picker, the board's card

@@ -22,3 +22,17 @@ export function ranked<T>(items: T[], textOf: (item: T) => string, query: string
     .sort((one, other) => one.score - other.score)
     .map(({ item }) => item);
 }
+
+// One row of a search list: what it is called, what else is worth saying about it, and what choosing
+// it answers with. The choice is the caller's own type — a project's path in the picker, a card's id
+// in the board's search — so nothing about what a row means leaks into overlay.ts's dialog that draws
+// it. Here rather than beside that dialog because shared code builds rows too (chat-commands.ts,
+// chat-history.ts, chat-mcp.ts, chat-rewind.ts), and ranks them with the functions above.
+export type SearchRow<Choice> = {
+  name: string;
+  detail: string;
+  choice: Choice;
+  // The row's own class, on top of the list's. Only a row that is not one of the things being
+  // searched needs one — the picker's line that opens a folder dialog.
+  className?: string;
+};

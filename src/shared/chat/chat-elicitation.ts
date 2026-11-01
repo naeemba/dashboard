@@ -1,6 +1,19 @@
-import type { ElicitationRequest, ElicitationResult, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
-import type { PermissionAsk } from '../../renderer/chat/chat-permission';
+import type { ElicitationRequest, ElicitationResult, PermissionResult, PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
 import { isRecord } from '../app/is-record';
+
+// A tool call the session wants a yes or no on, as main hands it to the chat pane. Everything the
+// SDK's canUseTool is told that the pane draws or answers with; the id is main's, so the answer finds
+// the call that is waiting for it.
+export type PermissionAsk = {
+  id: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  title?: string;
+  description?: string;
+  suggestions?: PermissionUpdate[];
+  defaultToNo: boolean;
+  suppressAlwaysAllowRule: boolean;
+};
 
 // An MCP server asking for something: a form to fill in, or a link to open (a sign-in). It reaches the
 // pane as a permission ask under this tool name, with the request as its input, so it is held, shown

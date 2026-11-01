@@ -2,7 +2,9 @@ import { projectPosition } from '../manager/manager';
 import { SECTIONS } from '../manager/manager-sections';
 import type { Mode } from './modes';
 import type { Direction } from '../panes/terminals';
-import type { LineEdit } from '../../renderer/chat/chat-line-editing';
+
+// The readline keys of the Claude screen's boxes; chat-line-editing.ts holds what each does.
+export type LineEdit = 'kill-word' | 'kill-line-start' | 'kill-line-end' | 'yank' | 'yank-pop';
 
 // What a shortcut does once it has fired. The renderer answers the first three groups; the board view
 // answers the board kinds. Moved here from shortcuts.ts so the table can name the action beside its key.

@@ -3,8 +3,9 @@ import { workerArguments, workerSessionName } from './dispatch';
 import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
-import { parseSessionCommand, type WorkerState, type SessionReply, type SessionRequest } from './session-cli';
+import { parseSessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
+import type { WorkerState } from '../../shared/app/bridge';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a

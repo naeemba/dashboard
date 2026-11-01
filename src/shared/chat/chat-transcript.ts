@@ -1,5 +1,5 @@
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
-import type { ChatContent } from '../app/bridge';
+import type { ChatContent, ChatPreferences } from '../app/bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
 import { rateLimitNotice, retryNotice } from './chat-notices';
@@ -7,9 +7,12 @@ import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
-import type { PermissionAsk } from '../../renderer/chat/chat-permission';
-import type { ChatPreferences } from '../../main/chat/chat-sessions';
-import type { QueuedPrompt } from '../../renderer/chat/chat-queue';
+import type { PermissionAsk } from './chat-elicitation';
+
+// A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
+// it with. The session reports each one's lifecycle by that id: queued, then started (the next turn
+// took it, or the running one folded it in) and completed, or cancelled when it was withdrawn first.
+export type QueuedPrompt = { id: string; content: ChatContent };
 
 // What main sends the chat pane, one per thing that happened in its session. `message` is an
 // SDKMessage as the Agent SDK yields it, or a line of a saved session read back for a resume; the two

@@ -3,7 +3,7 @@ import {
   DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
 } from '../board/board';
 import { isAlerting, takesAnswer, type ManagerRow, type PaneSummary } from './manager';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { WorktreeEntry } from '../app/bridge';
 
 // Everything across the open projects that is waiting on you, as one list. The manager's rows say what
 // every project is doing; this says what to do next, so it is the first thing on the page and the

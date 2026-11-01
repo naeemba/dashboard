@@ -67,7 +67,7 @@ import {
   undoChange,
   type BoardState,
 } from './board-state';
-import type { DashboardBridge } from '../../shared/app/bridge';
+import type { DashboardBridge, WorktreeEntry } from '../../shared/app/bridge';
 import { cardRows } from './card-search';
 import { confirmOverlay, searchOverlay } from '../app/overlay';
 import { columnIcon, icon, labelled } from '../app/icons';
@@ -76,7 +76,6 @@ import { openFilterDialog } from './filter-dialog';
 import { createNewestRead } from '../app/newest-read';
 import { isModified } from '../keys/shortcuts';
 import { paneLabel } from '../../shared/panes/terminals';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
 
 export type BoardOptions = {
   projectPath: string;

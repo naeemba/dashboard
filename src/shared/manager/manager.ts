@@ -2,14 +2,16 @@ import { relativeAge } from '../app/age';
 import { baseName } from '../app/base-name';
 import { clampIndex } from '../app/clamp-index';
 import type { GitWorktree, ScannedWorktree, WorktreeSize } from '../ship/git-worktrees';
-import type { Project } from '../../main/app/projects';
 import { MAIN_INDEX, terminalId } from '../panes/terminals';
 import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from '../usage/usage';
 import { isRinging, type Bell } from '../panes/waiting';
 import { orderedWorktrees } from '../ship/worktree-rows';
-import type { WorktreeTarget } from '../../renderer/ship/worktree-removal';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { Project, WorktreeEntry } from '../app/bridge';
+
+// What a removal needs to know: what to call the worktree in the question, and where it is. A record
+// has all four; a worktree the manager found through git is named by its folder.
+export type WorktreeTarget = Pick<WorktreeEntry, 'title' | 'branch' | 'worktreePath' | 'projectPath'>;
 
 // Slots are handed out by main, one per project, counting from zero. The manager owns no ptys, so it
 // takes a number no project can be given rather than a real one.

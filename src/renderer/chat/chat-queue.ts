@@ -1,10 +1,5 @@
 import type { ChatContent } from '../../shared/app/bridge';
-import type { ChatImage } from '../../shared/chat/chat-transcript';
-
-// A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
-// it with. The session reports each one's lifecycle by that id: queued, then started (the next turn
-// took it, or the running one folded it in) and completed, or cancelled when it was withdrawn first.
-export type QueuedPrompt = { id: string; content: ChatContent };
+import type { ChatImage, QueuedPrompt } from '../../shared/chat/chat-transcript';
 
 // What a queued prompt is drawn as and what withdrawing it puts back: its text, and its images for
 // the row of thumbnails over the box.

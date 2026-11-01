@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { sessionToWrite, type PaneConversation } from '../workers/claude-resume';
 import { resumeLedger, type SessionPlacement } from '../workers/resume-ledger';
-import { readSession, writeSession, type Session } from './session';
+import { readSession, writeSession } from './session';
+import type { Session } from '../../shared/app/bridge';
 
 // session.json, read once at launch and written by main alone. The renderer sends the layout whenever it
 // changes, as it always has; main writes it with which Claude Code conversation each pane is running,

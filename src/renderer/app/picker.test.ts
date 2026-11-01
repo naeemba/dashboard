@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pickerRows } from './picker';
-import type { Project } from '../../main/app/projects';
+import type { Project } from '../../shared/app/bridge';
 
 const none = { connectedTo: null, lastAddress: '' };
 const project = (name: string, path: string): Project => ({ name, path, missing: false });

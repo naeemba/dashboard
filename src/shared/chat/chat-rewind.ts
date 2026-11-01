@@ -1,8 +1,7 @@
 import type { ForkSessionOptions, Options, RewindFilesResult } from '@anthropic-ai/claude-agent-sdk';
 import { typedPrompt } from './chat-history';
 import { applyMessage, EMPTY_TRANSCRIPT } from './chat-transcript';
-import { fuzzyScore } from '../app/fuzzy';
-import type { SearchRow } from '../../renderer/app/overlay';
+import { fuzzyScore, type SearchRow } from '../app/fuzzy';
 
 // /rewind on the Claude screen, as Claude Code's Esc Esc: a prompt of the conversation picked, and the
 // code, the conversation or both put back to how they were just before it. The code goes back through

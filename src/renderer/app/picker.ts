@@ -1,6 +1,6 @@
-import { fuzzyScore } from '../../shared/app/fuzzy';
-import { searchOverlay, type SearchRow } from './overlay';
-import type { Project } from '../../main/app/projects';
+import { fuzzyScore, type SearchRow } from '../../shared/app/fuzzy';
+import { searchOverlay } from './overlay';
+import type { Project } from '../../shared/app/bridge';
 
 // What the picker settles on. Opening carries a path, or null for "a new project"; the host choices
 // carry the address they act on; undefined means the picker was dismissed.

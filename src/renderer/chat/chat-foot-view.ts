@@ -1,10 +1,8 @@
-import { modelTone, statusMeters, type ChatMeasure, type StatusTone } from '../../shared/chat/chat-status';
+import { modelTone, statusMeters, type ChatMeasure, type StatusTone, type FootState } from '../../shared/chat/chat-status';
 
 // The row under the Claude screen's box as DOM: on the left the model, the mode, the effort and what
 // Claude is doing; on the right the meters Claude Code's status line carries, then the version. What
 // the meters say is chat-status.ts's; this only builds the elements.
-
-export type FootState = 'ready' | 'working' | 'waiting';
 
 const STATE_LABELS: Record<FootState, string> = { ready: 'ready', working: 'working', waiting: 'waiting on you' };
 

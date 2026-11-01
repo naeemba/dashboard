@@ -23,6 +23,7 @@ import {
   type Column,
 } from '../../shared/board/board';
 import { isManagerPath } from '../../shared/manager/manager';
+import type { BoardRead } from '../../shared/app/bridge';
 
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.
@@ -37,10 +38,6 @@ export const BOARD_FILE_PATH = `${BOARD_DIRECTORY}/${BOARD_FILE}`;
 // Where a board.json that could not be parsed is moved aside, so a crash mid-write or a bad hand-edit
 // loses nothing: the next read starts fresh, and the damaged file sits right next to it under this name.
 export const BROKEN_BOARD_FILE = 'board.json.broken';
-
-// What readBoard hands back. brokenFile is the path a damaged board.json was moved to, or null when
-// nothing needed salvaging — including the ordinary case of no board.json existing yet.
-export type BoardRead = { board: Board; brokenFile: string | null };
 
 // Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
 // writes a file that is not there, so those copies would otherwise drift the moment this text changes.

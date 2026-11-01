@@ -1,6 +1,5 @@
-import type { OpenProjects } from '../../shared/app/bridge';
+import type { OpenProjects, Project } from '../../shared/app/bridge';
 import { clampIndex } from '../../shared/app/clamp-index';
-import type { Project } from '../../main/app/projects';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 
 // What the renderer does to its pages when the host says which projects are open. The host owns the

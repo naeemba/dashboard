@@ -1,5 +1,5 @@
 import { paneLabel } from '../panes/terminals';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { WorktreeEntry } from '../app/bridge';
 
 // The two rulings the worktree dialog makes about a row before it draws one: what order the rows go
 // in, and what the dirty cell is allowed to say. Out of the dialog because both are decisions with a

@@ -1,29 +1,15 @@
 import { readFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { replaceFile } from '../board/board-store';
+import type { WorktreeEntry } from '../../shared/app/bridge';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
 // recents.json in the app's own folder rather than in the project, because it describes checkouts on
 // this machine. Nothing here is ever committed, so it can never take part in a merge.
 //
 // The board on main says what has been merged. This file is what stops that being the whole truth on
-// screen: a card whose work is under way draws its badge from here.
-export type WorktreeEntry = {
-  cardId: string;
-  title: string;
-  projectPath: string;
-  branch: string;
-  worktreePath: string;
-  // The pane running the agent, or null when the worktree was made and every pane was already in
-  // use. Null is a real state, not a missing field.
-  pane: number | null;
-  startedAt: string;
-  // Whether this is the review worktree rather than the one the card was worked in. The two look the
-  // same on disk — same project, same card, same branch — and only this says which agent is in there,
-  // so without it the sweep that starts a review would find the review it just started and start
-  // another one, every five seconds, for as long as the app is open.
-  reviewing: boolean;
-};
+// screen: a card whose work is under way draws its badge from here. One entry is a `WorktreeEntry`,
+// declared in bridge.ts because the renderer draws it too.
 
 const TEXT_FIELDS = ['cardId', 'title', 'projectPath', 'branch', 'worktreePath', 'startedAt'] as const;
 

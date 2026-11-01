@@ -1,13 +1,11 @@
 import type { EffortLevel, ModelInfo, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { relativeAge } from '../app/age';
 import { onlyPlumbing } from './chat-events';
-import type { ChatSessions } from '../../main/chat/chat-sessions';
-import { isModel } from './chat-status';
+import { isModel, type FootState } from './chat-status';
 import { tagged, unescaped } from './chat-tags';
 import { isImageType, type ChatEntry } from './chat-transcript';
-import type { FootState } from '../../renderer/chat/chat-foot-view';
-import { fuzzyScore, ranked } from '../app/fuzzy';
-import type { SearchRow } from '../../renderer/app/overlay';
+import { fuzzyScore, ranked, type SearchRow } from '../app/fuzzy';
+import type { ChatSessions } from '../app/bridge';
 
 // Slash commands on the Claude screen. The session runs every command Claude Code has when it is sent
 // as a prompt, skills and the project's own commands included; what the screen adds is the menu that

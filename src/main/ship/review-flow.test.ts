@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, readBoard, writeBoard } from '../board/board-store';
 import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts } from './review-flow';
-import type { WorktreeEntry } from './worktree-store';
+import type { WorktreeEntry } from '../../shared/app/bridge';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
 

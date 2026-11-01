@@ -6,15 +6,7 @@
 // Nothing here knows whether the file exists. That is main's to answer, against the pane's own folder,
 // when you actually open one; file-open.ts holds that half.
 
-// Where a link sits in the line, as string offsets, end exclusive.
-export type LinkSpan = { start: number; end: number };
-
-// The line number and column are inside the span, so the underline covers `main.ts:42` whole.
-export type FileLink = LinkSpan & {
-  path: string;
-  line?: number;
-  column?: number;
-};
+import type { LinkSpan, FileLink } from '../../shared/panes/links';
 
 // A path is segments joined by slashes, with an optional `~/`, `./`, `../` or `/` in front. A dot only
 // sits between word characters, so the full stop that ends a sentence is not part of the path. A

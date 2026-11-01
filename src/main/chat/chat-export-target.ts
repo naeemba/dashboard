@@ -1,7 +1,5 @@
 import path from 'node:path';
-
-// What `chat-export:write` answers: where the file went, or why it was not written.
-export type ExportWrite = { path: string } | { refused: string };
+import type { ExportWrite } from '../../shared/app/bridge';
 
 // Where a typed name saves to, or why not. A name leaving the project's folder — an absolute path or
 // one whose first segment is `..` — is refused, and so is a file already there, so /export never

@@ -1,20 +1,7 @@
-import type { PermissionResult, PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
+import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { isRecord } from '../../shared/app/is-record';
 import { toolSummary } from './chat-tools';
-
-// A tool call the session wants a yes or no on, as main hands it to the chat pane. Everything the
-// SDK's canUseTool is told that the pane draws or answers with; the id is main's, so the answer finds
-// the call that is waiting for it.
-export type PermissionAsk = {
-  id: string;
-  toolName: string;
-  input: Record<string, unknown>;
-  title?: string;
-  description?: string;
-  suggestions?: PermissionUpdate[];
-  defaultToNo: boolean;
-  suppressAlwaysAllowRule: boolean;
-};
+import type { PermissionAsk } from '../../shared/chat/chat-elicitation';
 
 // `typed` is a row with a box to say why: what is typed there goes back through `declined` as the
 // reason for the no, and an empty box is the plain no.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chatShadowPartner, hears, isBareCharacter, mapShortcut } from './shortcuts';
-import { ACTIONS } from '../../shared/keys/actions';
+import { ACTIONS, defaultBinding } from '../../shared/keys/actions';
 import { parseBinding } from '../../shared/keys/binding';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
 import { MODES } from '../../shared/keys/modes';
@@ -131,6 +131,27 @@ describe('mapShortcut', () => {
       expect(mapShortcut(key({ code: 'ArrowRight', metaKey: true }), mac, mode)).toBeNull();
       expect(mapShortcut(key({ code: 'ArrowLeft', metaKey: true }), mac, mode)).toBeNull();
       expect(mapShortcut(key({ code: 'Backspace', metaKey: true }), mac, mode)).toBeNull();
+    }
+  });
+});
+
+describe('hears, over the action table', () => {
+  it('ships no two actions on the same key, on any screen', () => {
+    // Asked screen by screen, of the same function the handler asks. Two keys only clash if one screen
+    // hears them both, which is what lets the board's Up and the manager's Up ship as they are — and
+    // what would catch a new scope heard on a screen that already has that key.
+    for (const isMac of [true, false]) {
+      for (const mode of MODES) {
+        const taken = new Map<string, string>();
+        for (const entry of ACTIONS) {
+          if (!hears(entry.scope, mode, true)) continue;
+          const binding = defaultBinding(entry, isMac);
+          if (binding === null) continue;
+          expect(taken.get(binding), `${entry.name} and ${taken.get(binding)} both ship on ${binding} in ${mode}`)
+            .toBeUndefined();
+          taken.set(binding, entry.name);
+        }
+      }
     }
   });
 });

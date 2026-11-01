@@ -1,8 +1,7 @@
 import { app, shell } from 'electron';
 import type { Channels } from '../app/channels';
 import { findPaneFile, noSuchFile, type PaneFolders } from '../nvim/file-open';
-import type { FileLink } from '../../renderer/nvim/file-links';
-import { isOpenableLink } from '../../shared/panes/links';
+import { isOpenableLink, type FileLink } from '../../shared/panes/links';
 import { openFileInEditor, openPrompt, openScrollback, readPrompt, type EditorTarget } from '../nvim/nvim-remote';
 
 // What a pane hands out of itself: a URL to the browser, its scrollback to nvim, a path it printed to

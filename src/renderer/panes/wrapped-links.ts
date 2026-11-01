@@ -1,6 +1,6 @@
-import type { LinkSpan } from '../nvim/file-links';
 import type { WidthAt } from './print-widths';
 import { bufferLine, cellColumn, type CellLine, type PaneBuffer } from './pane';
+import type { LinkSpan } from '../../shared/panes/links';
 
 // A link that does not fit on its row carries on onto the next one, two ways. The terminal wraps it,
 // and marks the next row `isWrapped`. Or the program printing it wraps it itself: Claude Code breaks

@@ -1,6 +1,5 @@
-import type { OpenProjects } from '../../shared/app/bridge';
+import type { OpenProjects, Project } from '../../shared/app/bridge';
 import type { Channels } from '../app/channels';
-import type { Project } from '../app/projects';
 import { terminalId } from '../../shared/panes/terminals';
 
 // The new-pane and close-pane channels. Main-process wiring only, out of main.ts at its 600-line

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIONS, defaultBinding } from './actions';
 import { formatBinding, parseBinding } from './binding';
-import { MODES } from './modes';
-import { hears } from '../../renderer/keys/shortcuts';
 
 describe('the action table', () => {
   it('names every action exactly once, because the name is the key in settings.json', () => {
@@ -23,25 +21,6 @@ describe('the action table', () => {
 
   it('gives every action a description, so no help row is blank', () => {
     for (const entry of ACTIONS) expect(entry.description.length, entry.name).toBeGreaterThan(0);
-  });
-
-  it('ships no two actions on the same key, on any screen', () => {
-    // Asked screen by screen, of the same function the handler asks. Two keys only clash if one screen
-    // hears them both, which is what lets the board's Up and the manager's Up ship as they are — and
-    // what would catch a new scope heard on a screen that already has that key.
-    for (const isMac of [true, false]) {
-      for (const mode of MODES) {
-        const taken = new Map<string, string>();
-        for (const entry of ACTIONS) {
-          if (!hears(entry.scope, mode, true)) continue;
-          const binding = defaultBinding(entry, isMac);
-          if (binding === null) continue;
-          expect(taken.get(binding), `${entry.name} and ${taken.get(binding)} both ship on ${binding} in ${mode}`)
-            .toBeUndefined();
-          taken.set(binding, entry.name);
-        }
-      }
-    }
   });
 
   it('leaves the macOS-only keys unbound elsewhere', () => {

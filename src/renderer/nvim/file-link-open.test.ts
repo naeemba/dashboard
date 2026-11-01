@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { FileLink } from './file-links';
 import { fileLinkOpener, visibleLinks, type ScreenBuffer } from './file-link-open';
-import type { Handover } from '../../main/nvim/nvim-remote';
 import type { Page } from '../app/page';
+import type { Handover } from '../../shared/app/bridge';
+import type { FileLink } from '../../shared/panes/links';
 
 const COLUMNS = 80;
 

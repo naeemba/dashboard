@@ -2,8 +2,7 @@
 // so a typo is answered without the app, and by main, which answers the rest. One parser, because the
 // command and the app it talks to are built from the same tree and must not disagree on a spelling.
 
-// Running is a worker back at work after either: a prompt submitted or a tool run.
-export type WorkerState = 'running' | 'blocked' | 'done';
+import type { WorkerState } from '../../shared/app/bridge';
 
 export type SessionCommand =
   | { kind: 'claim' }

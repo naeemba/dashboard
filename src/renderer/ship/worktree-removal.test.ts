@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DashboardBridge, WorktreeRemoval } from '../../shared/app/bridge';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { DashboardBridge, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
 
 // The sheets are the overlay's; here each question is answered from a list, in the order asked.
 const answers: boolean[] = [];

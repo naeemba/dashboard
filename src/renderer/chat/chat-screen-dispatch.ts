@@ -1,12 +1,10 @@
-import type { DashboardBridge } from '../../shared/app/bridge';
+import type { DashboardBridge, ChatPreferences } from '../../shared/app/bridge';
 import { askAside } from './chat-btw-view';
 import { EFFORT_LEVELS, effortRows, namedEffort, namedFast, pickedModel, planSends, type ChosenEffort, type ScreenCommand } from '../../shared/chat/chat-commands';
 import { exportConversation } from './chat-export-view';
 import { manageMcp } from './chat-mcp-view';
-import { renameConversation } from '../../shared/chat/chat-rename';
 import { rewind } from './chat-rewind-view';
-import { branch, chooseModel, copyReply, resume, showEdits } from './chat-screen-commands';
-import type { ChatPreferences } from '../../main/chat/chat-sessions';
+import { branch, chooseModel, copyReply, renameConversation, resume, showEdits } from './chat-screen-commands';
 import { working, type Transcript } from '../../shared/chat/chat-transcript';
 import type { ChatViewOptions } from './chat-view';
 import { searchOverlay } from '../app/overlay';

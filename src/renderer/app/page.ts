@@ -2,11 +2,11 @@ import { Terminal } from '@xterm/xterm';
 import type { ILink, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { createBoardView, type BoardView } from '../board/board-view';
-import type { DashboardBridge } from '../../shared/app/bridge';
+import type { DashboardBridge, Project, WorkerState, WorktreeEntry } from '../../shared/app/bridge';
 import { createChatView, type ChatView } from '../chat/chat-view';
 import type { CommandView } from '../manager/command-view';
 import type { LogView } from '../manager/log-view';
-import { fileLinksIn, webLinksIn, type FileLink, type LinkSpan } from '../nvim/file-links';
+import { fileLinksIn, webLinksIn } from '../nvim/file-links';
 import type { ManagerView } from '../manager/manager-view';
 import type { Mode, ProjectMode } from '../../shared/keys/modes';
 import { createNotesView, type NotesView } from '../notes/notes-view';
@@ -15,15 +15,13 @@ import { PANE_SCROLLBACK, paneScreen } from '../panes/pane';
 import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
-import type { Project } from '../../main/app/projects';
 import type { SectionStrip } from '../manager/section-strip';
 import type { Settings } from '../../shared/settings/settings';
 import { quoteForShell } from '../../shared/panes/shell';
 import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from '../../shared/panes/terminals';
 import { icon, type IconName } from './icons';
-import type { WorkerState } from '../../main/workers/session-cli';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from '../../shared/panes/waiting';
-import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { FileLink, LinkSpan } from '../../shared/panes/links';
 
 // A page and the panes on it: what one is, how one is built, and how its panes are measured. Split out
 // of renderer.ts when that file reached its 600-line ceiling, along the seam the file itself named.
