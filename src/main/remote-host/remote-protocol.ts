@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { isRecord } from '../../shared/app/is-record';
 
 // The wire between a screen and the host: the bridge's own channels, one JSON frame per
@@ -71,14 +72,23 @@ export function isReply(frame: Frame): frame is Reply {
   return 'id' in frame && !('channel' in frame);
 }
 
+// The token is the only gate to a shell on the host, so it is compared in constant time: a !== stops at
+// the first wrong byte, and how long the refusal takes tells a guesser how many leading bytes were right.
+// timingSafeEqual throws on buffers of different lengths, so the length is checked first; that leaks
+// only the token's length, which every generated token shares.
+export function sameToken(token: string, expectedToken: string): boolean {
+  const given = Buffer.from(token);
+  const expected = Buffer.from(expectedToken);
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
 // The host's answer to a hello. The token is checked first: a wrong token learns nothing about the
 // host, not even its version. The versions must match because the protocol is the bridge itself, and
 // two builds can disagree about an argument's shape.
 export function helloRefusal(
   token: string, version: string, expectedToken: string, expectedVersion: string,
 ): { code: number; reason: string } | null {
-  // Plain !== is accepted: the host listens on a home network, and the token is the only gate.
-  if (token !== expectedToken) return { code: CLOSE_BAD_TOKEN, reason: 'The host refused the token' };
+  if (!sameToken(token, expectedToken)) return { code: CLOSE_BAD_TOKEN, reason: 'The host refused the token' };
   if (version !== expectedVersion) {
     return { code: CLOSE_BAD_VERSION, reason: `The host runs Dashboard ${expectedVersion}, this is ${version}` };
   }

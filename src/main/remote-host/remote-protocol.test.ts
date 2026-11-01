@@ -52,6 +52,12 @@ describe('helloRefusal', () => {
     expect(helloRefusal('t', '1.17.0', 't', '1.17.0')).toBeNull();
   });
 
+  it('refuses a token of another length without throwing', () => {
+    expect(helloRefusal('', '1.17.0', 't', '1.17.0')?.code).toBe(CLOSE_BAD_TOKEN);
+    expect(helloRefusal('tt', '1.17.0', 't', '1.17.0')?.code).toBe(CLOSE_BAD_TOKEN);
+    expect(helloRefusal('é', '1.17.0', 'ab', '1.17.0')?.code).toBe(CLOSE_BAD_TOKEN);
+  });
+
   it('refuses a wrong token before it looks at the version', () => {
     expect(helloRefusal('x', '1.0.0', 't', '1.17.0')).toEqual({ code: CLOSE_BAD_TOKEN, reason: 'The host refused the token' });
   });

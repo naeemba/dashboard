@@ -16,8 +16,11 @@ export type Settings = {
   // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
   // geocoder whenever it changes, so it is never blank.
   weatherPlace: string;
-  // The port a second Dashboard joins this one on (null: do not listen) and the token it must show.
-  host: { port: number | null; token: string };
+  // The port a second Dashboard joins this one on (null: do not listen), the token it must show, and the
+  // interface the port is opened on. `bind` is written by hand only, never by the settings screen: the
+  // default keeps the port on this machine, and anything wider is a choice made in the file on purpose
+  // (remote-host-decision-3).
+  host: { port: number | null; token: string; bind: string };
   // The host this Dashboard last joined, remembered by the connect dialog. Not a settings screen row.
   remote: { address: string; token: string };
 };
@@ -29,6 +32,10 @@ type Binding = { binding: string | null; written: boolean };
 const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 
 export const DEFAULT_WEATHER_PLACE = 'Tehran';
+
+// Loopback: a second screen on another machine reaches it through an SSH tunnel unless the file says
+// otherwise.
+export const DEFAULT_HOST_BIND = '127.0.0.1';
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -61,7 +68,7 @@ export function defaultSettings(isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [name, String(THEME[name as keyof typeof THEME])])),
     keys: Object.fromEntries(ACTIONS.map((entry) => [entry.name, defaultBinding(entry, isMac)])),
     weatherPlace: DEFAULT_WEATHER_PLACE,
-    host: { port: null, token: '' },
+    host: { port: null, token: '', bind: DEFAULT_HOST_BIND },
     remote: { address: '', token: '' },
   };
 }
@@ -145,6 +152,8 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     host: {
       port: typeof storedHost.port === 'number' && isPort(storedHost.port) ? storedHost.port : null,
       token: typeof storedHost.token === 'string' ? storedHost.token : '',
+      bind: typeof storedHost.bind === 'string' && storedHost.bind.trim() !== ''
+        ? storedHost.bind.trim() : defaults.host.bind,
     },
     remote: {
       address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',

@@ -25,9 +25,13 @@ export type HostPorts = {
 // `except` is a screen that is not told, because it is the one that caused the push.
 export type RemoteHost = { broadcast(channel: string, channelArguments: unknown[], except?: string): void; close(): void };
 
+// `bind` is the interface it listens on: 127.0.0.1 unless the settings file says otherwise, because a
+// joined screen can type into every shell and the wire is plain ws (remote-host-decision-3).
 // heartbeatMs exists for the test of a screen that stops answering.
-export function startRemoteHost(port: number, ports: HostPorts, heartbeatMs: number = HEARTBEAT_MS): RemoteHost {
-  const server = new WebSocketServer({ port, maxPayload: MAX_FRAME_BYTES });
+export function startRemoteHost(
+  port: number, bind: string, ports: HostPorts, heartbeatMs: number = HEARTBEAT_MS,
+): RemoteHost {
+  const server = new WebSocketServer({ port, host: bind, maxPayload: MAX_FRAME_BYTES });
   const screens = new Map<string, WebSocket>();
   // The screens that have answered since the last ping. A close comes only when a write fails after
   // the kernel's retransmission timeout, or never on a quiet pane, and until then a sleeping mac's
@@ -94,8 +98,12 @@ export function startRemoteHost(port: number, ports: HostPorts, heartbeatMs: num
     });
   });
 
+  server.on('listening', () => {
+    ports.log({ level: 'info', kind: 'screen', message: `Listening on ${bind}:${port}` });
+  });
+
   server.on('error', (error) => {
-    const message = `Not listening on ${port}: ${failureText(error)}`;
+    const message = `Not listening on ${bind}:${port}: ${failureText(error)}`;
     ports.log({ level: 'error', kind: 'screen', message });
     ports.hold(message);
   });
