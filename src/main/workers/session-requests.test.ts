@@ -47,7 +47,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     })[cardId],
     makeWorktree: async () => '/work/api.worktrees/fix-the-tests',
     unfinished: async () => null,
-    removeWorktree: async (worktreePath) => { removed.push(worktreePath); },
+    removeWorktree: async (worktreePath, projectPath) => { removed.push(`${worktreePath} from ${projectPath}`); },
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
@@ -109,7 +109,7 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['release', '2:1'] }))
       .toEqual({ ok: true, output: 'released 2:1 and removed fix-the-tests' });
     expect(finished.closed).toEqual(['2:1']);
-    expect(finished.removed).toEqual(['/work/api.worktrees/fix-the-tests']);
+    expect(finished.removed).toEqual(['/work/api.worktrees/fix-the-tests from /work/api']);
 
     const unpushed = project({ unfinished: async () => 'its branch was never pushed' });
     const again = sessionRequests(unpushed.ports);
