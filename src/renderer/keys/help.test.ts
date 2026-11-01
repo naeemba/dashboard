@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
 import type { Shortcut } from './shortcut-rows';
 import { mapShortcut } from './shortcuts';
-import { ACTIONS } from '../../shared/keys/actions';
+import { ACTIONS, actionByName } from '../../shared/keys/actions';
 import { parseBinding } from '../../shared/keys/binding';
 import { isSection } from '../../shared/manager/manager-sections';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
@@ -63,7 +63,9 @@ describe('helpSections', () => {
   // and the section keys are not heard there, so the dialog does not list them.
   it('lists the manager\'s terminals as a project\'s, with no section keys', () => {
     expect(titles('terminals', true)).toEqual(titles('terminals', false));
-    expect(rows('terminals', true).map((row) => row.action)).not.toContain('The section to the left, along the top');
+    const sectionKey = actionByName('section-previous')?.description;
+    expect(sectionKey).toBeDefined();
+    expect(rows('terminals', true).map((row) => row.action)).not.toContain(sectionKey);
   });
 
   it('names only keys mapShortcut actually answers to', () => {
