@@ -25,7 +25,7 @@ deploy needs all of `name`, `role` and `address`.
 
 Folders: `src/main/projects/`.
 
-- The file: `projects-file.ts`, `projects-file.test.ts`
+- The file: `projects-file.ts` (also reads it from disk), `projects-file.test.ts`
 - The project a word names: `project-named.ts`, `project-named.test.ts`
 - The `project` command: `project-cli.ts`, `project-cli.test.ts`, `project-program.ts`
   (run as `dashboard project`, see [command](../command/README.md))

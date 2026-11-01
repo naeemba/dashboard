@@ -85,7 +85,7 @@ export function workerSettings(id: string): string {
 // whose main dispatched it, which is another project's when the pane was claimed with --project: the
 // worker is named for the page it is on and reports to the main that asked.
 export function workerArguments(
-  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath = projectPath,
+  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath: string,
 ): string[] {
   return claudeArguments(shellCommand, [
     '--name', workerSessionName(projectPath, index),

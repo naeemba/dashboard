@@ -74,7 +74,8 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       return { ok: true, command: { kind: 'claim', project } };
     }
     case 'list': {
-      if (rest.length === 0 || (rest.length === 1 && rest[0] === '--all')) return { ok: true, command: { kind: 'list', all: rest.length === 1 } };
+      if (rest.length === 0) return { ok: true, command: { kind: 'list', all: false } };
+      if (rest.length === 1 && rest[0] === '--all') return { ok: true, command: { kind: 'list', all: true } };
       return refuse('session list takes nothing, or --all');
     }
     case 'run': return parseRun(rest);

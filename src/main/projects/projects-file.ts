@@ -1,5 +1,9 @@
 import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Node } from 'yaml';
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { ranked } from '../../shared/app/fuzzy';
+import { BOARD_DIRECTORY } from '../board/board-store';
 
 // ~/.dashboard/projects.yaml: every project the manager can be asked about, one entry each, written
 // by hand. Read here, and only here, into Project values; the `project` command and whatever opens a
@@ -155,4 +159,24 @@ export function findProjects(projects: readonly Project[], word: string): Projec
     .map((text) => ({ project, text })));
   const byAbout = projects.filter((project) => project.about.toLowerCase().includes(word.toLowerCase()));
   return [...new Set([...ranked(texts, (each) => each.text, word).map((each) => each.project), ...byAbout])];
+}
+
+// The file's projects, or what is wrong with it: missing, or every problem readProjects found. Every
+// reader of the file starts here, so a missing or broken file is said the one way.
+export function projectsListed(text: string | null, filePath: string): { ok: true; projects: Project[] } | { ok: false; message: string } {
+  if (text === null) return { ok: false, message: `${filePath} does not exist yet; write one, a list of projects with a name and a path each` };
+  const read = readProjects(text, filePath);
+  return read.ok ? read : { ok: false, message: read.problems.join('\n') };
+}
+
+// ~/.dashboard/projects.yaml's text, or null when there is none. The `project` command and
+// projectNamedInFile both read it here. A file that cannot be read for any other reason throws.
+export function readProjectsFile(): { text: string | null; filePath: string } {
+  const filePath = join(homedir(), BOARD_DIRECTORY, 'projects.yaml');
+  try {
+    return { text: readFileSync(filePath, 'utf8'), filePath };
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    return { text: null, filePath };
+  }
 }

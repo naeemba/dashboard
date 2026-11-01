@@ -283,7 +283,7 @@ function pages() {
   });
   const answer = sessionRequests(ports);
   const ask = (words: string[], directory = '/work/desk') => answer({ directory, args: words });
-  return { ask, started, opened };
+  return { ask, ports, started, opened };
 }
 
 describe('sessionRequests across projects', () => {
@@ -316,6 +316,15 @@ describe('sessionRequests across projects', () => {
     expect(await ask(['run', '3:1', 'go'], '/work/api')).toEqual({ ok: false, output: '3:1 is not a pane of this project' });
     // The project's own main may still use a pane on its own page.
     expect(await ask(['run', '3:1', 'go'], '/work/shop')).toMatchObject({ ok: true });
+  });
+
+  it('forgets who claimed a pane once its number is claimed again on its own page', async () => {
+    const { ask, ports } = pages();
+    await ask(['claim', '--project', 'api']);
+    // Closed by hand, not released: the number is free and the api's own claim takes it.
+    ports.closeWorker('2:1');
+    expect(await ask(['claim'], '/work/api')).toEqual({ ok: true, output: '2:1' });
+    expect(await ask(['run', '2:1', 'go'])).toEqual({ ok: false, output: '2:1 is not a pane of this project' });
   });
 
   it('lists every open page\'s panes with --all, each line led by its project', async () => {

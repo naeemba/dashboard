@@ -1,6 +1,6 @@
+import { homedir } from 'node:os';
 import path from 'node:path';
-import { projectsListed } from './project-cli';
-import { findProjects } from './projects-file';
+import { findProjects, projectsListed, readProjectsFile } from './projects-file';
 
 // The one project a word names in ~/.dashboard/projects.yaml, for whatever opens or dispatches into a
 // project by name. Only an exact name or aka counts, in any case: a fuzzy match is a guess, and a
@@ -30,4 +30,10 @@ export function projectNamed(text: string | null, filePath: string, word: string
       ? `no project is called ${word}; it could be ${near.join(', ')}`
       : `no project is called ${word}; ${filePath} has ${listed.projects.map((project) => project.name).join(', ') || 'none'}`,
   };
+}
+
+// projectNamed against the file on disk and this user's home folder: what main asks.
+export function projectNamedInFile(word: string): ProjectNamed {
+  const { text, filePath } = readProjectsFile();
+  return projectNamed(text, filePath, word, homedir());
 }

@@ -73,7 +73,7 @@ describe('workerSettings', () => {
 
 describe('workerArguments', () => {
   it('hands the prompt over as the argument, ending with the message to main', () => {
-    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests');
+    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests', '/work/api');
     expect(agentArguments[1]).toContain('--name api-terminal-4 --permission-mode auto --settings ');
     expect(agentArguments[1]).toMatch(/'fix the tests\n\nSendMessage to main-api when done, saying what you did\.'$/);
   });

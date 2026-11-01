@@ -99,22 +99,30 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     return states.get(id) ?? 'running';
   }
 
-  // A claim on the page of the project projects.yaml names, which is opened first if it is closed.
-  function claimIn(word: string, slot: number): SessionReply {
-    const found = ports.findProject(word);
-    if (!found.ok) return refused(found.message);
-    if (!ports.folderExists(found.path)) return refused(`${found.name} is at ${found.path}, which is not a folder`);
-    const target = ports.openProject(found.path);
+  // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
+  // which is opened first if it is closed. Every claim settles who claimed the id, so a pane number
+  // freed and handed out again never keeps the rights of whoever held it before.
+  function claim(slot: number, word: string | null): SessionReply {
+    let target = slot;
+    if (word !== null) {
+      const found = ports.findProject(word);
+      if (!found.ok) return refused(found.message);
+      if (!ports.folderExists(found.path)) return refused(`${found.name} is at ${found.path}, which is not a folder`);
+      target = ports.openProject(found.path);
+    }
     const id = terminalId(target, ports.openWorker(target));
-    if (target !== slot) dispatchers.set(id, slot);
+    if (target === slot) dispatchers.delete(id);
+    else dispatchers.set(id, slot);
     return answered(id);
   }
+
+  // The pane's own project, which is where its worker works and whose cards and worktrees it takes.
+  const paneProject = (id: string): string | undefined => ports.projectPath(paneFromId(id).slot);
 
   async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
-    // The pane's own project, which is where its worker works and whose cards and worktrees it takes.
-    const projectPath = ports.projectPath(paneFromId(id).slot);
+    const projectPath = paneProject(id);
     if (projectPath === undefined) return refused(`${id} is not in a project open in Dashboard`);
     if (ports.agentIn(id)) return refused(`${id} already has a worker running — release it or claim another`);
     const program = ports.busyWith(id);
@@ -142,7 +150,6 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   async function release(id: string, slot: number): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
-    const projectPath = ports.projectPath(paneFromId(id).slot) ?? '';
     const program = ports.busyWith(id);
     if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
@@ -153,7 +160,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     if (throwaway === undefined) return answered(`released ${id}`);
     const reason = await ports.unfinished(throwaway);
     if (reason !== null) return answered(`released ${id}; kept ${throwaway}: ${reason}`);
-    await ports.removeWorktree(throwaway, projectPath);
+    await ports.removeWorktree(throwaway, paneProject(id) ?? '');
     return answered(`released ${id} and removed ${baseName(throwaway)}`);
   }
 
@@ -188,7 +195,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     if (slot === -1 || projectPath === undefined) return refused(`${request.directory} is not in a project open in Dashboard`);
     try {
       switch (command.kind) {
-        case 'claim': return command.project === null ? answered(terminalId(slot, ports.openWorker(slot))) : claimIn(command.project, slot);
+        case 'claim': return claim(slot, command.project);
         case 'list': return list(slot, command.all);
         case 'run': return await run(command.id, slot, projectPath, command.prompt, command.card, command.worktree);
         case 'release': return await release(command.id, slot);

@@ -1,7 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { homedir } from 'node:os';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject } from './app/projects';
@@ -19,8 +18,7 @@ import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
-import { readProjectsFile } from './projects/project-program';
-import { projectNamed } from './projects/project-named';
+import { projectNamedInFile } from './projects/project-named';
 import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
@@ -836,10 +834,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     const project = projectIn(slot);
     return project === undefined ? [] : [{ slot, name: project.name }];
   }),
-  findProject: (word) => {
-    const { text, filePath } = readProjectsFile();
-    return projectNamed(text, filePath, word, homedir());
-  },
+  findProject: projectNamedInFile,
   folderExists: (folder) => !projectFromPath(folder).missing,
   openProject: (folder) => openProject(folder).index,
   openPanes,

@@ -1,9 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
-import { BOARD_DIRECTORY } from '../board/board-store';
 import { failureLine } from '../command/failure-line';
 import { runProjectCommand } from './project-cli';
+import { readProjectsFile } from './projects-file';
 
 // The whole of the `project` program outside project-cli.ts: read ~/.dashboard/projects.yaml, print
 // the answer. `dashboard project` is its one door.
@@ -20,14 +17,3 @@ export function runProjectProgram(commandArguments: readonly string[]): number {
   }
 }
 
-// ~/.dashboard/projects.yaml's text, or null when there is none. Main reads it the same way to find
-// the project a `pane claim --project` names. A file that cannot be read for any other reason throws.
-export function readProjectsFile(): { text: string | null; filePath: string } {
-  const filePath = join(homedir(), BOARD_DIRECTORY, 'projects.yaml');
-  try {
-    return { text: readFileSync(filePath, 'utf8'), filePath };
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return { text: null, filePath };
-  }
-}

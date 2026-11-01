@@ -1,4 +1,4 @@
-import { findProjects, readProjects, type Project } from './projects-file';
+import { findProjects, projectsListed, type Project } from './projects-file';
 
 // The `project` noun's decisions: which verb, and what it answers given the file's text. The file
 // itself is project-program.ts's to read, so every branch here is a test away.
@@ -26,14 +26,6 @@ export function runProjectCommand(commandArguments: readonly string[], text: str
   const projects = verb === 'find' ? findProjects(listed.projects, word) : listed.projects;
   if (projects.length === 0) return { ok: false, message: verb === 'find' ? `no project matches ${word}` : `${filePath} lists no projects` };
   return { ok: true, output: projects.map(describeProject).join('\n\n') };
-}
-
-// The file's projects, or what is wrong with it: missing, or every problem readProjects found. Every
-// reader of the file starts here, so a missing or broken file is said the one way.
-export function projectsListed(text: string | null, filePath: string): { ok: true; projects: Project[] } | { ok: false; message: string } {
-  if (text === null) return { ok: false, message: `${filePath} does not exist yet; write one, a list of projects with a name and a path each` };
-  const read = readProjects(text, filePath);
-  return read.ok ? read : { ok: false, message: read.problems.join('\n') };
 }
 
 // How a project reads in the command's output: a heading line, then one indented line per field it has.
