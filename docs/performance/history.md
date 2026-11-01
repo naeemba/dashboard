@@ -122,6 +122,16 @@ installed app was never touched.
 
 ### Ruled out, by measurement
 
+- **Growth over 30 minutes of use.** Five workers streamed 50 lines/s each,
+  with a tab-and-board round every minute, and every value below was read after
+  a GC.
+  - Renderer private memory went from 57 to 155 MB in the first two minutes,
+    while scrollback filled. From minute 2 to 30 it went from 155 to 165 MB.
+  - The renderer heap stayed at 19–20 MB from minute 2 on. DOM nodes held at
+    about 9,670 and listeners at 1,425.
+  - Main stayed at 67–69 MB private and 15.2–15.8 MB heap. The GPU process went
+    from 82 to 90 MB.
+  - The CLIs went from 615 to 497 MB as the OS reclaimed their pages.
 - **A leak on project close.** Over 11 open/close cycles the renderer heap stayed
   at 9.5 MB and event listeners at 573. DOM nodes went from 5,098 to 5,148.
   `FSWatcher` handles stayed at 5 and CLI processes at 6. Main's heap went from
