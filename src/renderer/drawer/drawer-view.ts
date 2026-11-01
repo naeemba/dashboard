@@ -7,21 +7,25 @@ import { iconButton, icon } from '../app/icons';
 import { promptOverlay } from '../app/overlay';
 import type { Page } from '../app/page';
 import { isModified } from '../keys/shortcuts';
-import { drawerKey, drawerRows, sessionDetail, type DrawerRow } from './drawer-rows';
+import { docOverlay } from './doc-viewer';
+import { drawerKey, drawerRows, sessionDetail, treeStep, type DrawerRow } from './drawer-rows';
 
-// The drawer on the left of a project's page: the project's docs and the Claude sessions the app started
-// for it, rows that jump somewhere and never content. It lies over the page without resizing it, and is
-// opened and closed by its button in the title row, beside the tabs, or by its key. Every rule with a
-// branch is drawer-rows.ts's; this is the DOM.
+// The drawer on the left of a project's page: the project's docs as a tree and the Claude sessions the
+// app started for it. Open, it pushes the page to its right and the panes are measured again; closed it
+// takes no room. It is opened and closed by its button in the title row, beside the tabs, or by its key.
+// A doc opens in the full-screen viewer (doc-viewer.ts), over the drawer, which is still there after.
+// Every rule with a branch is drawer-rows.ts's; this is the DOM.
 
 type DrawerPorts = {
-  bridge: Pick<DashboardBridge, 'listDocs' | 'listSessions' | 'renameSession' | 'resumeSession'>;
+  bridge: Pick<DashboardBridge, 'listDocs' | 'readDoc' | 'listSessions' | 'renameSession' | 'resumeSession' | 'openExternal'>;
   // The project page in front, or null on the manager and a project whose folder has gone.
   page(): Page | null;
   // Whether a keystroke is the drawer's own key, as the settings bind it now.
   isToggle(event: KeyboardEvent): boolean;
   openDoc(page: Page, path: string): void;
   report(message: string): void;
+  // The page's width changed, opening or closing the drawer: its panes are measured again.
+  resized(): void;
   // The keyboard back to the page once the drawer goes.
   closed(): void;
   // A resume opened this worker on the page: the keyboard goes to it, on the terminals view.
@@ -45,7 +49,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   list.className = 'drawer-list';
   const keys = document.createElement('p');
   keys.className = 'drawer-keys';
-  keys.textContent = '↑↓ choose · Enter opens · F2 renames a session · Escape closes';
+  keys.textContent = '↑↓ choose · ←→ fold · Enter opens · F2 renames a session · Escape closes';
   element.append(box, list, keys);
   // A click anywhere in the drawer, on a row, a heading or empty space, leaves the keyboard in the box,
   // so the arrows, Enter and Escape still work after Load more or a refused resume. A click in the box
@@ -60,6 +64,9 @@ export function createDrawer(ports: DrawerPorts): Drawer {
 
   let shownFor: Page | null = null;
   let docs: DocEntry[] = [];
+  // The folders opened in the tree, by their path under docs/. Kept while the drawer is closed, so it
+  // opens on the tree as it was left.
+  const openFolders = new Set<string>();
   let sessions = NO_SESSIONS;
   let count = SESSION_PAGE_SIZE;
   let rows: DrawerRow[] = [];
@@ -83,12 +90,16 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     const item = document.createElement('li');
     item.className = 'drawer-row';
     item.classList.toggle('highlighted', index === highlighted);
+    if ('depth' in row) item.style.paddingLeft = `${10 + row.depth * 16}px`;
     const name = document.createElement('span');
     name.className = 'drawer-name';
     const detail = document.createElement('span');
     detail.className = 'drawer-detail';
-    if (row.kind === 'doc') {
-      name.textContent = row.doc.name;
+    if (row.kind === 'folder') {
+      name.textContent = row.name;
+      item.append(icon(row.open ? 'collapse' : 'expand'), icon('folder'), name);
+    } else if (row.kind === 'doc') {
+      name.textContent = row.label;
       item.append(icon('notes'), name);
     } else if (row.kind === 'session') {
       name.textContent = row.session.label;
@@ -110,10 +121,10 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function draw(): void {
     if (shownFor === null) return;
     const projectPath = shownFor.project.path;
-    rows = drawerRows(docs, sessions, box.value, projectPath);
+    rows = drawerRows(docs, openFolders, sessions, box.value, projectPath);
     highlighted = clampIndex(highlighted, rows.length - 1);
     items = rows.map((row, index) => rowElement(row, index, projectPath));
-    const docCount = rows.filter((row) => row.kind === 'doc').length;
+    const docCount = rows.filter((row) => row.kind === 'doc' || row.kind === 'folder').length;
     const filtering = box.value !== '';
     list.replaceChildren(
       ...heading('Docs', docCount === 0, filtering ? 'No doc matches' : 'No docs/ folder here'),
@@ -160,6 +171,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     box.value = '';
     element.hidden = false;
     button.classList.add('active');
+    ports.resized();
     draw();
     load(true);
     box.focus();
@@ -168,7 +180,10 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function hide(): void {
     shownFor = null;
     loads += 1;
-    element.hidden = true;
+    if (!element.hidden) {
+      element.hidden = true;
+      ports.resized();
+    }
     button.classList.remove('active');
     docs = [];
     sessions = NO_SESSIONS;
@@ -196,10 +211,8 @@ export function createDrawer(ports: DrawerPorts): Drawer {
       count += SESSION_PAGE_SIZE;
       return load(false);
     }
-    if (row.kind === 'doc') {
-      close();
-      return ports.openDoc(page, row.doc.path);
-    }
+    if (row.kind === 'folder') return fold(row.path);
+    if (row.kind === 'doc') return read(page, row.doc);
     ports.bridge.resumeSession(page.slot, row.session.id).then(
       (reply) => {
         if ('refused' in reply) return ports.report(reply.refused);
@@ -207,6 +220,35 @@ export function createDrawer(ports: DrawerPorts): Drawer {
         ports.resumed(page, reply.index, reply.open);
       },
       (error: unknown) => ports.report(`Could not resume ${row.session.label}: ${failureText(error)}`),
+    );
+  }
+
+  function fold(folder: string): void {
+    if (!openFolders.delete(folder)) openFolders.add(folder);
+    draw();
+  }
+
+  // Left and Right in the tree: a folder opened or closed, or the highlight stepped in or out.
+  function step(key: 'left' | 'right'): void {
+    const { toggle: folder, highlight: next } = treeStep(rows, highlighted, key);
+    if (folder === null) return highlight(next);
+    highlighted = next;
+    fold(folder);
+  }
+
+  // The doc, read now so it is shown as it is on the disk, in the viewer over the drawer. Escape there
+  // brings the keyboard back to the filter box; Edit puts the drawer away and opens the file in nvim.
+  function read(page: Page, doc: DocEntry): void {
+    ports.bridge.readDoc(page.project.path, doc.path).then(
+      (reply) => {
+        if ('refused' in reply) return ports.report(reply.refused);
+        if (shownFor !== page) return;
+        docOverlay(doc.name, reply.text, () => {
+          close();
+          ports.openDoc(page, doc.path);
+        }, (url) => ports.bridge.openExternal(url));
+      },
+      (error: unknown) => ports.report(`Could not read ${doc.name}: ${failureText(error)}`),
     );
   }
 
@@ -233,7 +275,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   });
   element.addEventListener('keydown', (event) => {
     const row = rows[highlighted];
-    const action = drawerKey(event.key, isModified(event), ports.isToggle(event), row);
+    const action = drawerKey(event.key, isModified(event), ports.isToggle(event), row, box.value !== '');
     if (action === 'ignore') return;
     event.preventDefault();
     switch (action) {
@@ -245,6 +287,8 @@ export function createDrawer(ports: DrawerPorts): Drawer {
         return highlight((highlighted + (action === 'next' ? 1 : -1) + rows.length) % rows.length);
       case 'act': return act(row);
       case 'rename': return rename(row);
+      case 'left':
+      case 'right': return step(action);
     }
   });
 

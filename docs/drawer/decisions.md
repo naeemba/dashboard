@@ -6,7 +6,7 @@ Settled questions. Read the entry before re-litigating it.
 
 **The button is in the title row, at the left of the tabs**, not in the page.
 Closed, the drawer takes no room at all and the button is all there is of it.
-Open, the drawer lies over the left of the page and never resizes the grid. Its
+Open, it pushes the page aside (drawer-decision-2 replaced lying over it). Its
 key, Ctrl+Shift+D, opens and closes it too (bare Ctrl+D is end-of-file in every
 shell). The button is not on the manager page, which has no docs and no
 sessions of its own.
@@ -42,9 +42,42 @@ a conversation a worker pane runs, such as one of main's older ones the drawer
 resumed into a pane. Both ask `stillRunning` in `session-index.ts`.
 
 **No document pane.** The card waited on one built from the Claude screen's
-markdown renderer; that pane was never built. A doc opens where a path a pane
-printed opens, in the project's nvim, until it is.
+markdown renderer; that pane was never built. drawer-decision-2 opens a doc in
+a viewer instead.
 
 Watch for: a Claude typed into a pane by hand is not an app launch and is not
 listed. A sweep that has not run since a pane's Claude started does not know it
 is running, so a resume in the first half minute is not refused.
+
+## drawer-decision-2: Push the page, a tree of docs, a viewer rather than a pane
+
+From using #161. Lying over the page hid the left of main's pane, the one the
+drawer is opened beside, so **the open drawer pushes the page to its right**:
+every page after it in `#pages` starts where it ends, and the panes are measured
+again on opening and closing, the way a window resize measures them. A pane
+measured once at the new width is a shell told its real size, not a full-width
+terminal drawn in a narrower box.
+
+**The docs are a tree**, closed folders until opened, because a flat list of
+every file under docs/ was most of the drawer before a session showed. The
+filter still searches every file, flat and by whole path, so finding a doc never
+means opening folders first. Left and Right walk the tree only with the filter
+empty; with text in it they belong to the caret. Opened folders are remembered
+while the app runs, not across a restart.
+
+**A doc opens in a full-screen viewer, not a pane**: the sheet the Claude
+screen opens an image on (`viewerOverlay`), drawn by the Claude screen's own
+renderer (`chat-markdown.ts`). Neither was copied. A pane would take a slot in
+the grid for something read once and put away. The viewer's Edit row is its
+only row and always highlighted, so Enter is Edit and Escape is close, the keys
+every sheet already answers.
+
+**The renderer was left as strict as the Claude screen needs it.** It shows an
+image only carried inline and never reads the disk, so main reads a doc's
+relative images, from inside the project only, and writes them into the text
+before it travels (`inlineImages` in `docs-list.ts`). The read itself is
+refused for any file not under the project's docs/ (`isDoc`), so the channel is
+not a way to read any file the app can. A relative link stays text: following
+it would mean a second rule about which links the renderer keeps.
+
+Watch for: an image over a few megabytes travels as base64 in the doc's text.

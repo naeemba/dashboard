@@ -1,15 +1,22 @@
-/* The drawer of a project's docs and sessions: laid over the left of the page, never beside it, so the
-   grid under it keeps its size. Above the pages, which come after it in #pages. */
+/* The drawer of a project's docs and sessions, on the left of #pages. Open, every page after it in
+   #pages starts where it ends, so the grid is narrower and the panes are measured again (drawer-view.ts
+   asks); closed it is display: none and the pages have the whole width. */
+#pages {
+  --drawer-width: min(340px, 40%);
+}
+
 .drawer {
   position: absolute;
   inset: 0 auto 0 0;
-  z-index: 10;
   display: flex;
   flex-direction: column;
-  width: min(380px, 90%);
+  width: var(--drawer-width);
   background: var(--surface-raised);
   border-right: 1px solid var(--line);
-  box-shadow: 4px 0 16px rgb(0 0 0 / 35%);
+}
+
+.drawer:not([hidden]) ~ .page {
+  left: var(--drawer-width);
 }
 
 /* display: flex on the drawer and .project's inline-flex on its button both beat the browser's own
@@ -87,4 +94,44 @@
 .drawer-toggle {
   flex: none;
   margin-right: 6px;
+}
+
+/* A doc in the full-screen viewer, as large as the window lets it be like an image, the text kept to
+   a width that reads. The dialog holds the keyboard and scrolls, so the arrows and Page keys scroll
+   the doc; the Edit row stays at the top while it does. */
+.doc-viewer {
+  padding-top: 0;
+}
+
+.doc-viewer-dialog {
+  display: block;
+  align-self: center;
+  width: 92vw;
+  max-height: 90vh;
+  padding: 0 24px 16px;
+  overflow-y: auto;
+}
+
+.doc-viewer-edit {
+  position: sticky;
+  top: 0;
+  margin: 0 -24px 8px;
+  padding: 10px 24px;
+  border-radius: 0;
+  background: var(--surface-overlay);
+  border-bottom: 1px solid var(--line);
+}
+
+.doc-viewer-edit.highlighted {
+  background: linear-gradient(var(--tint), var(--tint)), var(--surface-overlay);
+}
+
+.doc-viewer-text {
+  max-width: 900px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+
+.doc-viewer-text img {
+  max-width: 100%;
 }
