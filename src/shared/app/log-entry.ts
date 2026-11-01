@@ -19,6 +19,7 @@ export type LogRead = { file: string; entries: LogEntry[] };
 export const LOG_FILE = 'dashboard.log';
 export const LOG_FILE_COUNT = 5;
 export const LOG_FILE_LIMIT = 5 * 1024 * 1024;
+export const LOG_FILE_LIMIT_SHOWN = `${LOG_FILE_LIMIT / 1024 / 1024} MB`;
 export const LOG_READ_COUNT = 1000;
 
 // Undefined for anything that is not an entry. A crash mid-write leaves half a line at the end of the
