@@ -13,16 +13,19 @@ import { BOARD_DIRECTORY } from '../board/board-store';
 const BRANCH_LIMIT = 48;
 // How many characters of the card id disambiguate two cards with the same title.
 const ID_LENGTH = 4;
-// slug() cannot wait to find out whether a collision is coming before it cuts the title down — by
-// then the id suffix is already decided. So it reserves the hyphen and the id up front and cuts to
+// branchSlug() cannot wait to find out whether a collision is coming before it cuts the title down —
+// by then the id suffix is already decided. So it reserves the hyphen and the id up front and cuts to
 // that shorter length always, not only on the collision path.
 const BASE_LIMIT = BRANCH_LIMIT - (ID_LENGTH + 1);
 
-function slug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+// Lower-case Latin letters and digits, every other run turned into one hyphen, none at either end.
+// No length cut here: a session name is not cut short, only a branch is.
+export function slug(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function branchSlug(title: string): string {
+  return slug(title)
     .slice(0, BASE_LIMIT)
     // Again after the cut: slicing mid-word can land the last character on a hyphen, and git accepts
     // a branch ending in one while nothing else about it reads as a name.
@@ -37,7 +40,7 @@ function slug(title: string): string {
 // characters get a number, which is as far as this bothers to go.
 export function branchNameFor(title: string, cardId: string, taken: readonly string[]): string {
   const short = cardId.replace(/-/g, '').slice(0, ID_LENGTH);
-  const base = slug(title) || `card-${short}`;
+  const base = branchSlug(title) || `card-${short}`;
   if (!taken.includes(base)) return base;
   const withId = `${base}-${short}`;
   if (!taken.includes(withId)) return withId;

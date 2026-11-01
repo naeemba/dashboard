@@ -1,6 +1,7 @@
 import { baseName } from '../../shared/app/base-name';
 import { claudeArguments } from '../../shared/panes/shell';
 import { paneLabel } from '../../shared/panes/terminals';
+import { slug } from '../ship/ship';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -8,19 +9,19 @@ import { paneLabel } from '../../shared/panes/terminals';
 
 // The project's name as it can go in a session name: SendMessage addresses a session by it, and a
 // space or a slash there is one more thing to quote in a message.
-function slug(projectPath: string): string {
-  return baseName(projectPath).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'project';
+function projectSlug(projectPath: string): string {
+  return slug(baseName(projectPath)) || 'project';
 }
 
 // `main-<project>` rather than the card's plain `main`: every open project has one, and two sessions
 // both called main are two a worker's SendMessage cannot tell apart.
 export function mainSessionName(projectPath: string): string {
-  return `main-${slug(projectPath)}`;
+  return `main-${projectSlug(projectPath)}`;
 }
 
 // After its pane, so the name in the title and the label on the pane say the same number.
 export function workerSessionName(projectPath: string, index: number): string {
-  return `${slug(projectPath)}-${paneLabel(index).replace(' ', '-')}`;
+  return `${projectSlug(projectPath)}-${paneLabel(index).replace(' ', '-')}`;
 }
 
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
