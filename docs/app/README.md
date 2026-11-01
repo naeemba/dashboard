@@ -44,6 +44,29 @@ its own side. `eslint.config.test.ts` pins each of those.
   `stale.ts`, `theme.ts`, `icons.ts`
 - Styles: `index.css`, `app.css`, `chrome.css`, `dialogs.css`
 
+## Dependency holds
+
+`package.json` cannot carry a comment, so each deliberate hold is recorded here
+with its reason and the condition that lifts it.
+
+- `electron`, `@anthropic-ai/claude-agent-sdk`, `marked`, `highlight.js` and
+  `yaml` stay on exact versions. Each is bumped by hand after reading its
+  changelog: the chat code reaches SDK methods its types leave out
+  (`cancelAsyncMessage`, `askSideQuestion`), so a caret range would let a
+  release that drops them in with tests still green.
+- `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
+  keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
+  when typescript-eslint supports TypeScript 7.
+- `@types/node` follows the Node major that Electron ships (Node 24 for
+  Electron 45), so code cannot type-check against a Node API the app's runtime
+  lacks.
+- The `undici@6` and `undici@7` overrides go when node-gyp and @electron/get
+  ship the patched releases themselves.
+- The `minimatch@10` override to 11 goes when its consumers (eslint,
+  @eslint/config-array, typescript-estree, glob, @electron/asar) move to 11.
+  Version 11 removed `makeRe`, `AST` and `Minimatch#matchOne`; before any bump
+  of those consumers, check that none of them calls one.
+
 ## Scenarios
 
 - Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
