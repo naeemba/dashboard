@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { existingProjects, readRecentPaths, RECENTS_FILE } from '../app/projects';
 import { readSession, SESSION_FILE } from '../app/session';
 import { failureLine } from '../command/failure-line';
+import { askAppFromPane } from '../workers/session-socket';
 import { type KnownFolders, runProjectCommand } from './project-cli';
 import { readProjectsFile } from './projects-file';
 
@@ -21,11 +22,13 @@ function knownFolders(): KnownFolders {
 }
 
 // The whole of the `project` program outside project-cli.ts: read ~/.dashboard/projects.yaml, write
-// it for init, print the answer. `dashboard project` is its one door.
-export function runProjectProgram(commandArguments: readonly string[]): number {
+// it for init, print the answer, or hand open and close to the app over the socket the `pane` noun
+// uses. `dashboard project` is its one door.
+export async function runProjectProgram(commandArguments: readonly string[]): Promise<number> {
   try {
     const { text, filePath } = readProjectsFile();
     const answer = runProjectCommand(commandArguments, text, filePath, knownFolders, homedir());
+    if ('ask' in answer) return await askAppFromPane(answer.ask);
     if (answer.ok && answer.file !== undefined) {
       mkdirSync(dirname(filePath), { recursive: true });
       // wx: a file written between the read above and now is still never overwritten.

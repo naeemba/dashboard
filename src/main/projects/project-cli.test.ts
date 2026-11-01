@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeProject, initialPaths, OUTSIDE_PANE_MESSAGE, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
+import { describeProject, initialPaths, OUTSIDE_PANE_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
@@ -10,7 +10,8 @@ const init = (text: string | null, folders: () => KnownFolders, words: string[] 
 describe('runProjectCommand', () => {
   it('answers no verb with the usage and an unknown one with its name', () => {
     expect(run([])).toEqual({ ok: false, message: PROJECT_USAGE });
-    expect(run(['open'])).toEqual({ ok: false, message: `no such command: open\n\n${PROJECT_USAGE}` });
+    expect(run(['opne'])).toEqual({ ok: false, message: `no such command: opne\n\n${PROJECT_USAGE}` });
+    expect(run(['open'])).toEqual({ ok: false, message: `open takes a word\n\n${PROJECT_USAGE}` });
     expect(run(['find'])).toEqual({ ok: false, message: `find takes a word\n\n${PROJECT_USAGE}` });
     expect(run(['list', 'crm'])).toEqual({ ok: false, message: `list takes no words\n\n${PROJECT_USAGE}` });
   });
@@ -25,6 +26,19 @@ describe('runProjectCommand', () => {
     expect(run(['list'], null)).toEqual({ ok: false, message: 'projects.yaml does not exist yet; "dashboard project init" writes a first one from the open and recent projects' });
     expect(run(['list'], '')).toEqual({ ok: false, message: 'projects.yaml lists no projects' });
     expect(run(['list'], '- name: a\n')).toEqual({ ok: false, message: 'projects.yaml:1: project a has no path' });
+  });
+});
+
+describe('project open and close', () => {
+  it('asks the app with the folder, ~ expanded, and the name, for a name or an aka in any case', () => {
+    expect(run(['open', 'Mandala'])).toEqual({ ok: true, ask: [PROJECT_REQUEST, 'open', '/screensaver', 'screensaver'] });
+    expect(run(['close', 'new-crm'], '- name: new-crm\n  path: ~/Workspace/new-crm\n'))
+      .toEqual({ ok: true, ask: [PROJECT_REQUEST, 'close', '/home/me/Workspace/new-crm', 'new-crm'] });
+  });
+
+  // A fuzzy match would close a project you did not name. The refusal is projectNamed's.
+  it('refuses a word that only comes close, naming what it came close to', () => {
+    expect(run(['close', 'cr'])).toEqual({ ok: false, message: 'no project is called cr; it could be new-crm, screensaver' });
   });
 });
 

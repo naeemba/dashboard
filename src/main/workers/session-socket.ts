@@ -62,6 +62,19 @@ export function listenForSessions(
   return server;
 }
 
+// A command's whole conversation with the app that opened its pane, whichever noun it was: the words
+// out, the answer printed, the exit code back. Run outside such a pane, it says so instead.
+export async function askAppFromPane(commandArguments: readonly string[]): Promise<number> {
+  const socket = process.env.DASHBOARD_SOCKET;
+  if (!socket) {
+    process.stderr.write('DASHBOARD_SOCKET is not set — run this from a pane the Dashboard app opened\n');
+    return 1;
+  }
+  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments });
+  if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
+  return reply.ok ? 0 : 1;
+}
+
 // The command's half: the request out, the answer back. A socket nobody is listening on is the app
 // that opened this pane having quit, which is worth saying in those words.
 export function askApp(socketPath: string, request: SessionRequest): Promise<SessionReply> {

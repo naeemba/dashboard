@@ -13,10 +13,11 @@ import { paneScreenCopy, type PaneScreenCopy } from './panes/pane-screen-copy';
 import { agentArguments, agentResumeArguments, editorArguments, pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, sizeOfPane, terminalId } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, sizeOfPane, terminalId } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { projectNamedInFile } from './projects/project-named';
 import { MANAGER_SLOT } from '../shared/manager/manager';
@@ -302,10 +303,12 @@ table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, 
 // app has is in this file, so a project main cannot place has none left to run anything.
 table.handle('panes:read', (_screen, projectPath: string): PaneUse[] => {
   const slot = slotOfProject(projectPath);
-  if (slot === -1) return [];
+  return slot === -1 ? [] : paneUsesIn(slot);
+});
+function paneUsesIn(slot: number): PaneUse[] {
   return paneReadingsIn(slot)
     .map((pane) => ({ ...pane, exited: !shells.has(terminalId(slot, pane.index)) }));
-});
+}
 
 // The question the review asks, which is the one above with "and has not finished" on the end. A ship
 // is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
@@ -524,8 +527,9 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
   return openProject(projectPath);
 });
 // A project opened from its path, unless it is open already, and the slot it is in either way. The
-// picker's open and `pane claim --project` both come here, and so should anything else that opens a
-// project from main, so every way in starts its shells, watches its board and remembers it alike.
+// picker's open, `pane claim --project` and `project open` all come here, and so should anything else
+// that opens a project from main, so every way in starts its shells, watches its board and remembers
+// it alike.
 function openProject(projectPath: string): { index: number; open: OpenProjects } {
   const picked = projectFromPath(projectPath);
   const matchIndex = slotOfProject(picked.path);
@@ -539,8 +543,6 @@ function openProject(projectPath: string): { index: number; open: OpenProjects }
   // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
   // entry must not fail the open and strand them on a slot the renderer has no page for.
   if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
-  // The slot holds a project either way by now: it was just filled, or the path matched one that is
-  // open. `picked` is only what stops the type being optional, never an answer anyone receives.
   const open = openProjects();
   sendToRenderer('projects:change', open);
   return { index, open };
@@ -552,7 +554,10 @@ function openProject(projectPath: string): { index: number; open: OpenProjects }
 // every pane on read: no shell of this project survives the close, so a record still naming pane 2
 // would put a branch under a pane that is a plain shell of some other project — and would hold its
 // card in flight, unable to be shipped again, with nothing left running to finish it.
-table.on('projects:close', (_screen, slot: number) => {
+table.on('projects:close', (_screen, slot: number) => closeProjectSlot(slot));
+// The close itself, from the key once it has agreed or from `dashboard project close` once
+// project-requests.ts has. Every screen takes the page down on the list it is sent.
+function closeProjectSlot(slot: number): void {
   const closing = projects[slot];
   // A slot that holds nothing has already been closed, and there is nothing of it left to kill.
   // Answered first so a slot past the end of the list is not written into it as a hole.
@@ -566,7 +571,7 @@ table.on('projects:close', (_screen, slot: number) => {
   // knows it: withoutPanes hands back the same records and nothing is written or sent.
   worktrees.set(withoutPanes(worktrees.entries(), closing.path));
   sendToRenderer('projects:change', openProjects());
-});
+}
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
 // when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
 const tokenUsage = usageSweep({
@@ -626,11 +631,12 @@ registerProjectFiles(table, boards, boardLog, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
-// the day a slot means something other than an index into this array.
+// the day a slot means something other than an index into this array. Compared through realPath, as
+// projectOfFolder does for the session command, so a folder opened through a symlink and named in
+// projects.yaml by its real path is one project, not two pages on the same shells and board.
 function slotOfProject(projectPath: string): number {
-  // Real paths, because projects.yaml may spell a project through a symlink the page was not opened by.
-  const wanted = realPath(projectPath);
-  return projects.findIndex((project) => project !== undefined && realPath(project.path) === wanted);
+  const real = realPath(projectPath);
+  return projects.findIndex((project) => project !== undefined && realPath(project.path) === real);
 }
 
 // The list every screen draws its tabs from, with the terminals each one has open, so a screen arriving
@@ -831,7 +837,18 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 
 // The `session` command. Every decision is session-requests.ts's; what is handed over here is the panes
 // and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
-const sessions = listenForSessions(sessionSocket, sessionRequests({
+// `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
+// the session command's and decides them.
+const folderExists = (folder: string) => !projectFromPath(folder).missing;
+const sessions = listenForSessions(sessionSocket, projectRequests({
+  slotOf: slotOfProject,
+  missingIn: (slot) => projects[slot]?.missing === true,
+  folderExists,
+  open: openProject,
+  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
+  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
+  close: closeProjectSlot,
+}, sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
   openSlots: () => [MANAGER_SLOT, ...projects.keys()].flatMap((slot) => {
@@ -839,7 +856,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     return project === undefined ? [] : [{ slot, name: project.name }];
   }),
   findProject: projectNamedInFile,
-  folderExists: (folder) => !projectFromPath(folder).missing,
+  folderExists,
   openProject: (folder) => openProject(folder).index,
   openPanes,
   agentIn: (id) => runsAnAgent(terminalCommands.get(id)),
@@ -879,7 +896,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
     const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
-}), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+})), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
 
 function createWindow(): void {
   mainWindow = openAppWindow({

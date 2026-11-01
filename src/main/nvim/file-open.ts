@@ -7,10 +7,11 @@ import { directoriesOf } from '../panes/shell-directory-lookup';
 // worktree for an agent shipped into one. So the live folder is asked first, then the folder the pane
 // was started in, then the project; the first that holds a file wins.
 
-// `~/` and an absolute path name one place whatever folder the pane is in; a relative path names none
+// `~`, `~/` and an absolute path name one place whatever folder the pane is in; a relative path names none
 // yet. Both fileCandidates and findPaneFile ask this, so the pane's folder is looked up exactly when it
-// is used.
+// is used. projects.yaml's paths are read by it too, in project-named.ts.
 export function wholePath(filePath: string, home: string): string | undefined {
+  if (filePath === '~') return home;
   if (filePath.startsWith('~/')) return path.join(home, filePath.slice(2));
   return path.isAbsolute(filePath) ? filePath : undefined;
 }
