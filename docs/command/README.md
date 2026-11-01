@@ -8,7 +8,7 @@ own and parses its own verbs; this feature only picks the program.
 |---|---|---|
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment |
 | `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], release, notify |
-| `project` | the `project` program ([projects](../projects/README.md)) | list, find |
+| `project` | the `project` program ([projects](../projects/README.md)) | list, find, init |
 
 `session` is another name for `pane`.
 

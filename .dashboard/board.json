@@ -55,6 +55,13 @@
           "parent": null
         },
         {
+          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
+          "title": "Manager terminals 4: dispatch a pane into any project",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
+          "priority": "high",
+          "parent": null
+        },
+        {
           "id": "1d1c7bfa-8698-46b2-bebf-ca09fe9e0371",
           "title": "Manager terminals 5: open and close a project from the command",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard project open|close <name|aka>. Close uses the app's own refusal: refused while any pane in the project is busy, naming it; otherwise closes with no confirm dialog. Open adds the page the way the project picker does.",
@@ -234,32 +241,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "956f502a-609d-4ed4-bae5-5d3d8bb73917",
-          "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T13:55:00.371Z",
-          "branch": "work-board-card-956f502a-609d-4ed4-bae5-5d3",
-          "pullRequest": 157,
-          "comments": [
-            {
-              "at": "2026-11-01T13:55:00.322Z",
-              "body": "PR #157: dashboard project init writes a first ~/.dashboard/projects.yaml (name and path) from the open and recent projects; never overwrites. Panes carry DASHBOARD_USER_DATA."
-            }
-          ]
-        },
-        {
-          "id": "d4595cfd-6853-4c0f-9c9e-cb92c8835620",
-          "title": "Manager terminals 4: dispatch a pane into any project",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard pane claim --project <name|aka> opens the project if it is closed and claims a pane on its page; run/release work on it as today; dashboard pane list --all lists panes across projects. The worker's report goes to the session that dispatched it (the manager's main session when it came from there).",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T13:57:17.077Z",
-          "branch": "work-board-card-d4595cfd-6853-4c0f-9c9e-cb9",
-          "pullRequest": 158
         }
       ]
     },
@@ -2060,6 +2041,26 @@
             {
               "at": "2026-11-01T13:44:46.867Z",
               "body": "Shipped in PR #156: reviewed over 3 rounds (11 findings fixed), main merged in, version 2.35.0."
+            }
+          ]
+        },
+        {
+          "id": "956f502a-609d-4ed4-bae5-5d3d8bb73917",
+          "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T14:04:51.295Z",
+          "branch": "work-board-card-956f502a-609d-4ed4-bae5-5d3",
+          "pullRequest": 157,
+          "comments": [
+            {
+              "at": "2026-11-01T13:55:00.322Z",
+              "body": "PR #157: dashboard project init writes a first ~/.dashboard/projects.yaml (name and path) from the open and recent projects; never overwrites. Panes carry DASHBOARD_USER_DATA."
+            },
+            {
+              "at": "2026-11-01T14:04:51.295Z",
+              "body": "Shipped in PR #157: dashboard project init writes a first projects.yaml from the open and recent projects, and refuses outside a pane."
             }
           ]
         }

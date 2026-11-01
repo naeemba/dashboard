@@ -164,7 +164,7 @@ export function findProjects(projects: readonly Project[], word: string): Projec
 // The file's projects, or what is wrong with it: missing, or every problem readProjects found. Every
 // reader of the file starts here, so a missing or broken file is said the one way.
 export function projectsListed(text: string | null, filePath: string): { ok: true; projects: Project[] } | { ok: false; message: string } {
-  if (text === null) return { ok: false, message: `${filePath} does not exist yet; write one, a list of projects with a name and a path each` };
+  if (text === null) return { ok: false, message: `${filePath} does not exist yet; "dashboard project init" writes a first one from the open and recent projects` };
   const read = readProjects(text, filePath);
   return read.ok ? read : { ok: false, message: read.problems.join('\n') };
 }
