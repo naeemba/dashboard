@@ -223,7 +223,7 @@ export function restylePanes(settings: Settings): void {
 // pane that changed shape keeps drawing at the old size until this runs.
 // A folded worker is left at its last size: measured in its 26px bar it would tell its shell, and
 // whatever full-screen program runs there, it has one row.
-export function fitPanes(page: Page): void {
+function fitPanes(page: Page): void {
   for (const pane of page.panes) if (!pane.folded) pane.fit.fit();
 }
 

@@ -83,13 +83,6 @@
           "parent": null
         },
         {
-          "id": "642730ed-cd79-496d-9410-3ef6631d157c",
-          "title": "Drop the 18 exports nobody outside their file uses",
-          "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
           "title": "Split renderer.ts under 600 code lines",
           "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
@@ -1691,6 +1684,26 @@
             {
               "at": "2026-11-01T01:19:02.281Z",
               "body": "Shipped in PR #132: cross-process types moved into src/shared, chat-rename.ts split."
+            }
+          ]
+        },
+        {
+          "id": "642730ed-cd79-496d-9410-3ef6631d157c",
+          "title": "Drop the 18 exports nobody outside their file uses",
+          "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:28:55.677Z",
+          "branch": "work-board-card-642730ed-cd79-496d-9410-3ef",
+          "pullRequest": 133,
+          "comments": [
+            {
+              "at": "2026-11-01T01:24:28.672Z",
+              "body": "PR #133: export dropped from the 18 values; tests 1818 pass, tsc and eslint clean."
+            },
+            {
+              "at": "2026-11-01T01:28:55.677Z",
+              "body": "PR #133 merged into main: 18 unused exports dropped. Review loop found nothing in one round; main merged in, 1818 tests pass, tsc and eslint clean."
             }
           ]
         }

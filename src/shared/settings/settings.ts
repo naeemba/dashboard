@@ -26,7 +26,7 @@ export type Settings = {
 // from the same look at the stored value; see toBinding.
 type Binding = { binding: string | null; written: boolean };
 
-export const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
+const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 
 export const DEFAULT_WEATHER_PLACE = 'Tehran';
 
