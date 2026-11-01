@@ -138,5 +138,13 @@ to list, so the open drawer is out of sight there and back on the next page.
 The open state is not kept across a restart. `drawerFollows` in
 `drawer-rows.ts` decides.
 
+**The drawer's key still only opens or closes it.** After a switch the drawer
+is open with the keyboard on the page, and the key closes it there; reaching
+the filter takes the key twice, or a click on the filter box. Making the key
+focus the filter when the drawer is open but unfocused was the other choice.
+It was not taken because the button and the key share one toggle, and a click
+on the button moves focus out of the drawer, so the button could then never
+close it; splitting the two is more change than the extra key press is worth.
+
 Watch for: opening a doc's Edit or resuming a session still closes the drawer,
 on purpose: both send the keyboard to a pane.
