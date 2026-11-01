@@ -122,6 +122,12 @@
           "title": "Spell out args as a full word in locals and parameters",
           "notes": "src refactoring audit, step 8. Plan: /tmp/claude-1000/src-audit.md (section 'Step 8').",
           "priority": "medium"
+        },
+        {
+          "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
+          "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
+          "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
+          "priority": "medium"
         }
       ]
     },
