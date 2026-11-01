@@ -16,6 +16,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`
 - Narrowing: `board-filter.ts`, `filter-dialog.ts`, `card-search.ts`
 - Styles: `board.css`
+- Tests: `test-board.ts` (helpers), `board.test.ts`, `board.columns.test.ts`,
+  `board.tree.test.ts`
 
 ## Scenarios
 
