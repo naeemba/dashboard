@@ -42,5 +42,9 @@ Rules that hold for every feature. `CLAUDE.md` states each in one line.
 | [workflow](workflow/README.md) | Never restart the app, a decision gets a test, bump the version |
 | [performance](performance/README.md) | How to profile a demo instance, and what each profiling run found |
 
+Reviews of the whole app are in `review/`, one file per date. They argue
+with the decisions above and are inputs, not the record: a verdict changes
+nothing until a card acts on it.
+
 Older design specs and plans are in `superpowers/`; they are inputs, not the
 record.
