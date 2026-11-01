@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
-          "title": "Let pane shells outlive the app",
-          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "4187f056-2471-4ea9-be8d-36104044bca0",
           "title": "Bind the remote host to localhost by default and compare tokens in constant time",
           "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
@@ -359,6 +352,14 @@
               "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
             }
           ]
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:43:36.000Z"
         }
       ]
     },
