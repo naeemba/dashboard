@@ -138,6 +138,10 @@ installed app was never touched.
   13.7 to 14.1 MB.
 - **Startup.** Launch to all 5 projects restored took 0.59–0.68 s, with first
   paint at 0.54–0.66 s. The 31 MB conversation was drawn at 0.90–0.95 s.
+  - Main does peak while it reads the two long conversations. At 16 s after
+    launch it holds 290 MB private (51 MB heap, 113 MB external), then 78 MB
+    by 56 s. Without them it holds 116 MB at 16 s and 80 MB at 56 s. This is
+    transient, but a `memory` sample taken in the first 20 s reads high.
 - **Typing under load.** Keystroke-echo latency was 23–30 ms median, p90 at
   most 39 ms, with four streams shown or hidden, a flood beside it, or a 16k
   reply streaming.

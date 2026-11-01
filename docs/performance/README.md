@@ -21,6 +21,11 @@ Folder: `scripts/performance/`.
 - `demo-instance.mjs`: what the measurements are built from. It covers the
   DevTools protocol client, key presses, CPU and private memory per process from
   `/proc`, keystroke-echo latency, and input-to-paint from the Event Timing API.
+  `withInstance` refuses to start while anything answers on 9433, which would
+  be an earlier run's instance with every number read off it. Afterwards it
+  kills the whole demo, Ctrl+C included. That covers the process group, anything
+  carrying the demo's `--user-data-dir`, and every pane process with the demo's
+  HOME, since panes run in sessions of their own.
 - `measure.mjs`: one command per measurement, each printing a JSON line per step.
 - `build-log-stream.sh`: a pane's fake build log at a given number of lines a
   second.

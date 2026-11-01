@@ -49,22 +49,67 @@ export const connectMain = () => connect(MAIN_PORT);
 
 // --- the demo instance -----------------------------------------------------------------------------
 
-// Starts the demo from the staged folder with the layout and remembered chats given, and waits for the
-// window. `stop()` kills the instance's whole process group, which is this instance and nothing else.
-export async function launch(demo, { session = 'session-5.json', chats = 'chat-sessions-long.json', settle = 15000 } = {}) {
+// Tries `attempt` until it succeeds, or throws once `timeoutMs` has gone by.
+export async function retry(attempt, timeoutMs = 30000, everyMs = 20) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try { return await attempt(); } catch (error) { if (Date.now() > deadline) throw error; await wait(everyMs); }
+  }
+}
+
+// Every process of the demo: the instance's process group (Electron's main writes its process title over
+// both its command line and its environment, so only the group finds it), anything carrying
+// `--user-data-dir=<demo>/userdata`, and the panes, which run in sessions of their own (setsid) but inherit
+// the HOME launch-demo.sh set. No unrelated process has that HOME.
+function demoProcesses(demo, group) {
+  const home = `HOME=${path.resolve(demo, 'home')}`;
+  const userData = `--user-data-dir=${path.resolve(demo, 'userdata')}`;
+  const holds = (pid, file, marker) => { try { return readFileSync(`/proc/${pid}/${file}`, 'utf8').split('\0').includes(marker); } catch { return false; } };
+  return readdirSync('/proc').filter((entry) => /^\d+$/.test(entry) && Number(entry) !== process.pid)
+    .filter((pid) => { try { if (Number(statFields(pid)[2]) === group) return true; } catch { return false; } return holds(pid, 'cmdline', userData) || holds(pid, 'environ', home); }).map(Number);
+}
+
+export async function killDemo(demo, group) {
+  for (const signal of ['SIGTERM', 'SIGKILL']) {
+    for (const pid of demoProcesses(demo, group)) { try { process.kill(pid, signal); } catch { /* already gone */ } }
+    const deadline = Date.now() + 5000;
+    while (demoProcesses(demo, group).length > 0 && Date.now() < deadline) await wait(100);
+    if (demoProcesses(demo, group).length === 0) return;
+  }
+}
+
+// Starts the demo from the staged folder with the layout and remembered chats given, waits for the
+// window, runs `measure(instance)`, and always tears the whole demo down after, Ctrl+C included. It
+// refuses to start while anything already answers on the demo's port: that would be the instance a
+// run before this one left behind, and every number would be read off it.
+export async function withInstance(demo, options, measure) {
+  const { session = 'session-5.json', chats = 'chat-sessions-long.json', settle = 15000, onSpawn } = options;
+  if (await connectRenderer().then((page) => (page.close(), true), () => false)) {
+    throw new Error(`something already answers on ${RENDERER_PORT}; stop it first (an earlier demo run?)`);
+  }
   copyFileSync(path.join(demo, session), path.join(demo, 'userdata', 'session.json'));
   copyFileSync(path.join(demo, chats), path.join(demo, 'userdata', 'chat-sessions.json'));
+  let group;
+  const interrupted = () => { void killDemo(demo, group).finally(() => process.exit(130)); };
+  process.once('SIGINT', interrupted);
+  process.once('SIGTERM', interrupted);
   const startedAt = Date.now();
   const child = spawn(path.join(here, 'launch-demo.sh'), [demo], { stdio: 'ignore', detached: true });
+  child.unref();
+  group = child.pid;
   let page;
-  for (;;) {
-    try { page = await connectRenderer(); break; } catch { await wait(50); }
+  try {
+    const spawned = onSpawn?.(startedAt);
+    page = await retry(connectRenderer);
+    await spawned;
+    await wait(settle);
+    return await measure({ page, startedAt });
+  } finally {
+    page?.close();
+    await killDemo(demo, group);
+    process.off('SIGINT', interrupted);
+    process.off('SIGTERM', interrupted);
   }
-  await wait(settle);
-  return {
-    page, startedAt,
-    async stop() { page.close(); process.kill(-child.pid, 'SIGTERM'); await wait(2000); },
-  };
 }
 
 // --- keys ------------------------------------------------------------------------------------------
@@ -100,11 +145,12 @@ export async function run(page, command) {
 // --- CPU and memory from /proc ---------------------------------------------------------------------
 
 const CLOCK_TICKS = 100;
-function cpuTicks(pid) {
+// /proc/<pid>/stat after the command name, which is in parentheses and may hold spaces: state, ppid, ...
+function statFields(pid) {
   const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
-  const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ');
-  return Number(fields[11]) + Number(fields[12]);
+  return stat.slice(stat.lastIndexOf(')') + 2).split(' ');
 }
+const cpuTicks = (pid) => { const fields = statFields(pid); return Number(fields[11]) + Number(fields[12]); };
 
 // Private memory is what a process holds alone; summed RSS counts every shared page once per process.
 function privateMemory(pid) {
@@ -117,21 +163,20 @@ function privateMemory(pid) {
   }
 }
 
-// Electron's own processes, named the way app.getAppMetrics names them.
-export async function electronProcesses() {
+// Electron's own processes, named the way app.getAppMetrics names them. Pids and names only: reading
+// memory walks each process's page tables, which a CPU window should not pay for.
+async function electronPids() {
   const main = await connectMain();
   const metrics = await main.evaluate(`process.mainModule.require('electron').app.getAppMetrics().map((m) => ({ pid: m.pid, type: m.type, service: m.serviceName }))`);
   main.close();
-  return metrics.map((metric) => ({ ...metric, name: metric.service || metric.type, ...privateMemory(metric.pid) }));
+  return metrics.map((metric) => ({ ...metric, name: metric.service || metric.type }));
 }
 
 // Everything main has started, grouped: the Agent SDK's claude CLI per page, shells, what runs in them.
-export function childProcesses(mainPid, skip) {
+function childProcesses(mainPid, skip) {
   const all = readdirSync('/proc').filter((entry) => /^\d+$/.test(entry)).flatMap((pid) => {
     try {
-      const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
-      const parent = Number(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[1]);
-      return [{ pid: Number(pid), parent, command: readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0')[0] }];
+      return [{ pid: Number(pid), parent: Number(statFields(pid)[1]), command: readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0')[0] }];
     } catch { return []; }
   });
   const children = new Map();
@@ -143,22 +188,22 @@ export function childProcesses(mainPid, skip) {
   const groups = new Map();
   for (const child of found) {
     const name = kind(child.command);
-    const group = groups.get(name) ?? { name, count: 0, privateMB: 0, pids: [] };
-    group.count++; group.privateMB = +(group.privateMB + privateMemory(child.pid).privateMB).toFixed(1); group.pids.push(child.pid);
+    const group = groups.get(name) ?? { name, count: 0, privateMB: 0 };
+    group.count++; group.privateMB = +(group.privateMB + privateMemory(child.pid).privateMB).toFixed(1);
     groups.set(name, group);
   }
   return [...groups.values()];
 }
 
 export async function memory() {
-  const electron = await electronProcesses();
+  const electron = (await electronPids()).map((entry) => ({ ...entry, ...privateMemory(entry.pid) }));
   const main = electron.find((entry) => entry.type === 'Browser');
   return { electron, children: childProcesses(main.pid, new Set(electron.map((entry) => entry.pid))) };
 }
 
 // CPU % per Electron process over a window, with the renderer's own split of where its time went.
 export async function cpuWindow(seconds) {
-  const processes = await electronProcesses();
+  const processes = await electronPids();
   const page = await connectRenderer();
   await page.send('Performance.enable');
   await page.evaluate(`window.__longTasks = []; window.__longTaskObserver?.disconnect(); window.__longTaskObserver = new PerformanceObserver((list) => { for (const entry of list.getEntries()) window.__longTasks.push(Math.round(entry.duration)); }); window.__longTaskObserver.observe({ type: 'longtask' }); true`);
