@@ -41,6 +41,9 @@ Rules that hold for every feature. `CLAUDE.md` states each in one line.
 | [conventions](conventions/README.md) | Keyboard first, `dir="auto"`, `hidden` against the stylesheet |
 | [workflow](workflow/README.md) | Never restart the app, a decision gets a test, bump the version |
 
+Profiling of the whole app, how to rerun it on a demo instance, and what each
+run found are in [`performance/`](performance/README.md).
+
 Reviews of the whole app are in `review/`, one file per date. They argue
 with the decisions above and are inputs, not the record: a verdict changes
 nothing until a card acts on it.
