@@ -17,4 +17,4 @@ One line per merged change: date, pull request, why.
 - 2026-10-22 #78 — Measure a cut row against the width the pane had when it was printed
 - 2026-10-22 #79 — Strip trailing spaces so a path Claude Code cut is joined back whole
 - 2026-10-30 #92 — Keep the main pane half the terminals view after a worker is zoomed
-- 2026-11-01 #91 — A dropped file with no path on disk types nothing, not `''`
+- 2026-11-01 #144 — A dropped file with no path on disk types nothing, not `''`
