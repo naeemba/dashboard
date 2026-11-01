@@ -18,10 +18,11 @@ export function projectInSlot(projects: readonly (Project | undefined)[], slot: 
   return slot === MANAGER_SLOT ? MANAGER_TERMINALS : projects[slot];
 }
 
-// The slot a `session` command was run from. `projectSlot` is the open project the folder is in, or
-// -1; a folder in none of them is the manager's when it is the manager's folder or under it. Compared in
+// The slot a `session` command was run from: the manager's for its folder or anything under it, and
+// otherwise `projectSlot`, the open project the folder is in, or -1. The manager's folder is asked first
+// because it is the more specific match: a project open at the home folder holds ~/.dashboard too, and
+// asked the other way round the manager's main would claim panes on that project's page. Compared in
 // real paths, as projectOfFolder compares a project's.
 export function sessionSlot(projectSlot: number, directory: string, realPath: (path: string) => string): number {
-  if (projectSlot !== -1) return projectSlot;
-  return isInside(realPath(directory), realPath(MANAGER_FOLDER)) ? MANAGER_SLOT : -1;
+  return isInside(realPath(directory), realPath(MANAGER_FOLDER)) ? MANAGER_SLOT : projectSlot;
 }

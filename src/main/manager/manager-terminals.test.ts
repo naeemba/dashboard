@@ -1,16 +1,9 @@
-import { homedir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager-terminals';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 const same = (folder: string): string => folder;
-
-describe('MANAGER_FOLDER', () => {
-  it('is the .dashboard folder in the home directory, where projects.yaml is', () => {
-    expect(MANAGER_FOLDER).toBe(path.join(homedir(), '.dashboard'));
-  });
-});
 
 describe('projectInSlot', () => {
   const api = { name: 'api', path: '/work/api', missing: false };
@@ -25,6 +18,12 @@ describe('projectInSlot', () => {
 describe('sessionSlot', () => {
   it('keeps the project a folder was found in', () => {
     expect(sessionSlot(2, '/work/api', same)).toBe(2);
+  });
+
+  // A project open at the home folder holds ~/.dashboard as well; the manager is the closer match.
+  it('is the manager even when a project holds the manager\'s folder', () => {
+    expect(sessionSlot(0, MANAGER_FOLDER, same)).toBe(MANAGER_SLOT);
+    expect(sessionSlot(0, path.dirname(MANAGER_FOLDER), same)).toBe(0);
   });
 
   it('is the manager for its folder and anything under it', () => {
