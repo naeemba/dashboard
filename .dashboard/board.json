@@ -181,24 +181,6 @@
           "parent": null
         },
         {
-          "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
-          "title": "Stop the first usage sweep freezing main for a minute after launch",
-          "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T22:23:48.077Z",
-          "comments": [
-            {
-              "at": "2026-11-01T22:18:53.958Z",
-              "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
-            },
-            {
-              "at": "2026-11-01T22:23:48.077Z",
-              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
-            }
-          ]
-        },
-        {
           "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
           "title": "Start a page's Claude CLI only when it is needed",
           "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -360,6 +342,24 @@
           "priority": "high",
           "parent": null,
           "updatedAt": "2026-11-01T23:36:36.976Z"
+        },
+        {
+          "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
+          "title": "Stop the first usage sweep freezing main for a minute after launch",
+          "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:36:51.612Z",
+          "comments": [
+            {
+              "at": "2026-11-01T22:18:53.958Z",
+              "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
+            },
+            {
+              "at": "2026-11-01T22:23:48.077Z",
+              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
+            }
+          ]
         }
       ]
     },
