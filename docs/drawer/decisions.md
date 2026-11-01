@@ -8,8 +8,7 @@ Settled questions. Read the entry before re-litigating it.
 Closed, the drawer takes no room at all and the button is all there is of it.
 Open, it pushes the page aside (drawer-decision-2 replaced lying over it). Its
 key, Ctrl+Shift+D, opens and closes it too (bare Ctrl+D is end-of-file in every
-shell). The button is not on the manager page, which has no docs and no
-sessions of its own.
+shell). drawer-decision-3 put the button on the manager page too.
 
 **Sessions come from the app's own index, never from `~/.claude/projects/`.**
 A worker in a card's worktree lands in another slug folder there and would be
@@ -79,8 +78,39 @@ as data URLs, keyed by the address the doc gives each (`imageUrls` in
 `docs-list.ts`); the renderer swaps an image's address for its data URL only
 where marked reads an image, so image syntax shown as code stays as written.
 The read itself is refused for any file not under the project's docs/
-(`isDoc`), so the channel is not a way to read any file the app can. A relative link stays text: following
+(`docScope`), so the channel is not a way to read any file the app can. A relative link stays text: following
 it would mean a second rule about which links the renderer keeps.
 
 Watch for: an image over a few megabytes travels as base64 in the reply's
 `images`, beside the text.
+
+## drawer-decision-3: An icon on every page, the manager's folders read a folder at a time
+
+From using #162. The button was its icon and "Docs & sessions", and was hidden
+on the manager page: switching to the manager made the title row jump. **The
+button is its icon alone**, the words its tooltip and accessible name, **on
+every page**.
+
+**On the manager page the drawer lists the markdown under `~/.dashboard` and
+`~/.claude`**: the manager's folder and Claude's config, where its notes, rules
+and memory live. `~/.claude` holds thousands of files (`projects/`, `plugins/`,
+caches), so it is **never walked**. The tree starts as the two folders, closed;
+opening one asks main for that folder alone, its markdown and its subfolders,
+and every open folder is read again when the drawer opens. A folder is listed
+before anything in it is read, so it may turn out empty. The filter searches
+only what has been read, which keeps it bounded: a doc in a folder never opened
+is not found. A search that walks `~/.claude` on each keystroke is what this
+avoids. Opening a folder in a project reads its docs/ again too, one path for
+both pages; docs/ is small.
+
+`docs:read` asked from the manager page takes markdown under those two folders
+only, and its images only from the same folder (`docScope`); anything else is
+refused as a value (errors-rule-2). The check is on the path as given, not on
+where a link points, because `~/.claude` files are often links into a dotfiles
+repository.
+
+The manager has no nvim, so its viewer has no Edit row. Its sessions are the
+index's rows for `~/.dashboard`, where its main and workers run.
+
+Watch for: a folder holding thousands of entries lists them all as rows when
+opened; only markdown and folders are kept.

@@ -207,7 +207,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   },
   // Shift for the reason worktrees below gives: bare Ctrl+D is end-of-file in every shell.
   {
-    name: 'project-drawer', description: "Open or close the drawer of this project's docs and Claude sessions",
+    name: 'project-drawer', description: "Open or close the drawer of this page's docs and Claude sessions",
     group: 'projects', scope: 'global',
     action: { kind: 'project-drawer' }, mac: 'Ctrl+Shift+D', other: 'Ctrl+Shift+D',
   },
