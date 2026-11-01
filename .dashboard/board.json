@@ -167,16 +167,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "7001ab20-6a38-4132-9fbe-257c75f9b5f1",
-          "title": "Manager terminals 3: terminals mode in the manager tab",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. The manager tab gets the same terminals layout as a project: a main Claude session and worker panes, working in ~/.dashboard so the session sees projects.yaml. Keys, help and which-key as for a project's terminals mode.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:59:11.584Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -262,6 +253,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "7001ab20-6a38-4132-9fbe-257c75f9b5f1",
+          "title": "Manager terminals 3: terminals mode in the manager tab",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. The manager tab gets the same terminals layout as a project: a main Claude session and worker panes, working in ~/.dashboard so the session sees projects.yaml. Keys, help and which-key as for a project's terminals mode.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:12:53.650Z",
+          "branch": "work-board-card-7001ab20-6a38-4132-9fbe-257",
+          "pullRequest": 155,
+          "comments": [
+            {
+              "at": "2026-11-01T13:12:53.650Z",
+              "body": "Shipped in PR #155: manager terminals view, main-manager plus workers in ~/.dashboard, session socket reaches the manager slot (MANAGER_SLOT now -2). Manager workers not resumed after restart."
             }
           ]
         }
