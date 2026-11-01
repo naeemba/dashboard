@@ -15,6 +15,9 @@ import type { SessionPage } from '../../shared/app/bridge';
 export type SavedPage = SessionPage & { claude: (PaneConversation | null)[] };
 export type SavedSession = { pages: SavedPage[]; activeIndex: number };
 
+// In the app's userData folder; main writes it, `project init` reads its pages as the open projects.
+export const SESSION_FILE = 'session.json';
+
 const EMPTY: SavedSession = { pages: [], activeIndex: 0 };
 
 // The modes a project can be left on are already spelled once, in modes.ts. Reading them back off

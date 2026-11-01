@@ -5,9 +5,9 @@
 import type { WorkerState } from '../../shared/app/bridge';
 
 export type SessionCommand =
-  | { kind: 'claim' }
+  | { kind: 'claim'; project: string | null }
   | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean }
-  | { kind: 'list' }
+  | { kind: 'list'; all: boolean }
   | { kind: 'release'; id: string }
   | { kind: 'notify'; id: string; state: WorkerState };
 
@@ -18,16 +18,18 @@ export type SessionReply = { ok: boolean; output: string };
 
 const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
-  session claim
+  session claim [--project <name|aka>]
   session run <id> [--card <card id> | --worktree] "<prompt>"
-  session list
+  session list [--all]
   session release <id>
   session notify <id> running|blocked|done
 
-claim opens a worker pane and prints its id. run starts Claude in it with the prompt as its argument:
---card runs it in the worktree the card was shipped into, --worktree in a throwaway one that release
-removes once its work is pushed with a pull request open, and neither in the project itself. notify is
-what a worker's hooks call.`;
+claim opens a worker pane and prints its id: --project opens it on the page of the project
+~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
+in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
+--worktree in a throwaway one that release removes once its work is pushed with a pull request open,
+and neither in the project itself. notify is what a worker's hooks call. list --all lists the panes
+of every open project and the manager.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 
@@ -66,8 +68,17 @@ function parseRun(words: readonly string[]): Parsed {
 export function parseSessionCommand(commandArguments: readonly string[]): Parsed {
   const [verb, ...rest] = commandArguments;
   switch (verb) {
-    case 'claim': return { ok: true, command: { kind: 'claim' } };
-    case 'list': return { ok: true, command: { kind: 'list' } };
+    case 'claim': {
+      if (rest.length === 0) return { ok: true, command: { kind: 'claim', project: null } };
+      const project = rest.slice(1).join(' ').trim();
+      if (rest[0] !== '--project' || project === '') return refuse('session claim takes nothing, or --project and a project\'s name or aka');
+      return { ok: true, command: { kind: 'claim', project } };
+    }
+    case 'list': {
+      if (rest.length === 0) return { ok: true, command: { kind: 'list', all: false } };
+      if (rest.length === 1 && rest[0] === '--all') return { ok: true, command: { kind: 'list', all: true } };
+      return refuse('session list takes nothing, or --all');
+    }
     case 'run': return parseRun(rest);
     case 'release': {
       const id = paneId(rest[0], 'release');
