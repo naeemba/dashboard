@@ -74,6 +74,12 @@
           "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "d80ab5c0-a82a-4d09-8d76-dd505e70967f",
+          "title": "Move src into process and feature folders, no behaviour change",
+          "notes": "src refactoring audit, step 1. Plan: /tmp/claude-1000/src-audit.md (section 'Step 1').",
+          "priority": "medium"
         }
       ]
     },
