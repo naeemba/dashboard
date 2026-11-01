@@ -97,13 +97,6 @@
           "parent": null
         },
         {
-          "id": "a28da61b-64d4-4149-9e90-e8d61be4a461",
-          "title": "Split board.test.ts by describe block",
-          "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
           "title": "Spell out args in test-file locals and parameters",
           "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
@@ -1712,12 +1705,32 @@
           ]
         },
         {
+          "id": "a28da61b-64d4-4149-9e90-e8d61be4a461",
+          "title": "Split board.test.ts by describe block",
+          "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:37:25.799Z",
+          "branch": "work-board-card-a28da61b-64d4-4149-9e90-e8d",
+          "pullRequest": 137,
+          "comments": [
+            {
+              "at": "2026-11-01T01:37:25.639Z",
+              "body": "PR #137: board.test.ts split into board.columns.test.ts and board.tree.test.ts, shared builders in test-board.ts. 829 -> 261/366/209 code lines, 169 tests either way."
+            },
+            {
+              "at": "2026-11-01T01:37:25.799Z",
+              "body": "Shipped in PR #137: board.test.ts split, shared board test builder reused in board-state.test.ts."
+            }
+          ]
+        },
+        {
           "id": "4862fe16-89f4-4428-a975-8e8ede5e9e8e",
           "title": "Merge the two slug helpers in dispatch.ts and ship.ts",
           "notes": "src refactoring audit, step 9. Plan: /tmp/claude-1000/src-audit.md (section 'Step 9').",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-01T01:37:35.235Z",
+          "updatedAt": "2026-11-01T01:40:05.176Z",
           "branch": "work-board-card-4862fe16-89f4-4428-a975-8e8",
           "pullRequest": 135,
           "comments": [
@@ -1726,8 +1739,8 @@
               "body": "PR #135: dispatch.ts calls ship.ts's exported slug; branch cut kept in branchSlug. 3 pinning tests added, 1821 tests pass."
             },
             {
-              "at": "2026-11-01T01:37:35.235Z",
-              "body": "Shipped in PR #135: one slug rule in src/shared/app/slug.ts, imported by main and renderer (chat export included). Version 2.32.6."
+              "at": "2026-11-01T01:40:05.176Z",
+              "body": "Shipped in PR #135: one slug rule in src/shared/app/slug.ts, imported by main and renderer (chat export included). Version 2.32.7."
             }
           ]
         }

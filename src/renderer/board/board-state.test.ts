@@ -17,15 +17,7 @@ import {
   undoChange,
   type BoardState,
 } from './board-state';
-
-function board(...columns: string[][]): Board {
-  return {
-    columns: columns.map((cardTitles, index) => ({
-      name: `Column ${index}`,
-      cards: cardTitles.map((title) => ({ id: title, title, notes: '', priority: DEFAULT_PRIORITY, parent: null })),
-    })),
-  };
-}
+import { board } from '../../shared/board/test-board';
 
 function state(next: Board, selection: Selection): BoardState {
   return { ...initialBoardState(), board: next, selection };
