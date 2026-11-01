@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeProject, PROJECT_USAGE, runProjectCommand } from './project-cli';
+import { describeProject, PROJECT_USAGE, projectInit, runProjectCommand } from './project-cli';
 import { readProjects } from './projects-file';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
@@ -20,9 +20,18 @@ describe('runProjectCommand', () => {
   });
 
   it('says when the file is missing, empty or broken', () => {
-    expect(run(['list'], null)).toEqual({ ok: false, message: 'projects.yaml does not exist yet; write one, a list of projects with a name and a path each' });
+    expect(run(['list'], null)).toEqual({ ok: false, message: 'projects.yaml does not exist yet; "dashboard project init" writes a first one from the open and recent projects' });
     expect(run(['list'], '')).toEqual({ ok: false, message: 'projects.yaml lists no projects' });
     expect(run(['list'], '- name: a\n')).toEqual({ ok: false, message: 'projects.yaml:1: project a has no path' });
+  });
+});
+
+describe('projectInit', () => {
+  it('writes from the known folders, and never over a file that is there', () => {
+    const init = projectInit([], null, () => ['/home/me/crm', '/home/me/crm'], '/home/me', 'projects.yaml');
+    expect(init).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy by hand' });
+    expect(projectInit([], '', () => { throw new Error('asked for the folders'); }, '/home/me', 'projects.yaml')).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
+    expect(projectInit(['now'], null, () => [], '/home/me', 'projects.yaml')).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
   });
 });
 
