@@ -297,22 +297,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
-          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
-          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:10:36.879Z",
-          "branch": "work-board-card-cc9c87a6-2e96-4ff0-a144-397",
-          "pullRequest": 132,
-          "comments": [
-            {
-              "at": "2026-11-01T01:10:36.820Z",
-              "body": "PR #132: crossing types moved to src/shared (bridge.ts for bridge-carried, else owning shared module), chat-rename split, two tests moved. Boundary imports 58 -> 0; tests 132/1819 unchanged."
-            }
-          ]
         }
       ]
     },
@@ -1678,6 +1662,26 @@
             {
               "at": "2026-11-01T00:54:48.764Z",
               "body": "Shipped in PR #131: moved src files into per-process folders; review loop round 1 added the placement note for modules nothing runs. Merged after green CI."
+            }
+          ]
+        },
+        {
+          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
+          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
+          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:19:02.281Z",
+          "branch": "work-board-card-cc9c87a6-2e96-4ff0-a144-397",
+          "pullRequest": 132,
+          "comments": [
+            {
+              "at": "2026-11-01T01:10:36.820Z",
+              "body": "PR #132: crossing types moved to src/shared (bridge.ts for bridge-carried, else owning shared module), chat-rename split, two tests moved. Boundary imports 58 -> 0; tests 132/1819 unchanged."
+            },
+            {
+              "at": "2026-11-01T01:19:02.281Z",
+              "body": "Shipped in PR #132: cross-process types moved into src/shared, chat-rename.ts split."
             }
           ]
         }
