@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "956f502a-609d-4ed4-bae5-5d3d8bb73917",
-          "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "ffac7938-8f71-4205-b6c8-3d52cd5fd6cd",
           "title": "Bring the manager's worker panes back after a restart",
           "notes": "Follow-up from #155 (manager terminals). The manager's worker panes (manager-terminal-<n>) do not come back after the app restarts: session-store keys saved pages by project path, and the manager is not in that list. Project pages already restore their panes and resume their Claude sessions; the manager's should too.",
@@ -246,6 +239,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "956f502a-609d-4ed4-bae5-5d3d8bb73917",
+          "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:55:00.371Z",
+          "branch": "work-board-card-956f502a-609d-4ed4-bae5-5d3",
+          "pullRequest": 157,
+          "comments": [
+            {
+              "at": "2026-11-01T13:55:00.322Z",
+              "body": "PR #157: dashboard project init writes a first ~/.dashboard/projects.yaml (name and path) from the open and recent projects; never overwrites. Panes carry DASHBOARD_USER_DATA."
             }
           ]
         }
