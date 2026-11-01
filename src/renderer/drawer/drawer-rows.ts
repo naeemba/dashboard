@@ -110,3 +110,12 @@ export function drawerKey(key: string, modified: boolean, isToggle: boolean, row
     default: return 'ignore';
   }
 }
+
+// What the open drawer does when another page comes in front. Open or closed is one value for the
+// whole app (drawer-decision-4), so a tab switch never closes it: it lists the new page instead, or,
+// on a project whose folder has gone, is put out of sight until a page it can list is in front again.
+// Closed, or with the same page still in front, nothing changes.
+export function drawerFollows<T>(open: boolean, shown: T | null, front: T | null): 'keep' | 'show' | 'conceal' {
+  if (!open || front === shown) return 'keep';
+  return front === null ? 'conceal' : 'show';
+}

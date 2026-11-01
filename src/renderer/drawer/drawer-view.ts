@@ -9,7 +9,7 @@ import { promptOverlay } from '../app/overlay';
 import type { Page } from '../app/page';
 import { isModified } from '../keys/shortcuts';
 import { docOverlay } from './doc-viewer';
-import { drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type DrawerRow } from './drawer-rows';
+import { drawerFollows, drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type DrawerRow } from './drawer-rows';
 
 // The drawer on the left of a page: the project's docs as a tree and the Claude sessions the app started
 // for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own.
@@ -65,6 +65,9 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   // A click leaves the keyboard where it was until the drawer takes it.
   button.addEventListener('mousedown', (event) => event.preventDefault());
 
+  // Open or closed is one value for the whole app, not each page's (drawer-decision-4): open, it stays
+  // open on every tab until it is closed. Not kept across a restart.
+  let isOpen = false;
   let shownFor: Page | null = null;
   let docs: DocEntry[] = [];
   // The folders opened in each page's tree, by their path as the rows name it, by the page's path. Kept
@@ -174,35 +177,52 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     }
   }
 
-  function open(page: Page): void {
+  // In or out of sight; the panes are measured again only when that changes.
+  function setShown(shown: boolean): void {
+    if (element.hidden !== shown) return;
+    element.hidden = !shown;
+    ports.resized();
+  }
+
+  // The page the drawer lists now, read afresh: on opening it, and when another page comes in front of
+  // it open. Only opening takes the keyboard; after a tab switch it stays where the switch put it.
+  function show(page: Page): void {
     shownFor = page;
     docs = [];
     sessions = NO_SESSIONS;
     count = SESSION_PAGE_SIZE;
     highlighted = 0;
     box.value = '';
-    element.hidden = false;
-    button.classList.add('active');
-    ports.resized();
+    setShown(true);
     draw();
     load(true);
+  }
+
+  function open(page: Page): void {
+    isOpen = true;
+    button.classList.add('active');
+    show(page);
     box.focus();
   }
 
-  function hide(): void {
+  // Out of sight and listing nothing, still open or not: a closed drawer, or an open one in front of a
+  // project whose folder has gone.
+  function conceal(): void {
     shownFor = null;
     docLoads += 1;
     sessionLoads += 1;
-    if (!element.hidden) {
-      element.hidden = true;
-      ports.resized();
-    }
-    button.classList.remove('active');
+    setShown(false);
     docs = [];
     sessions = NO_SESSIONS;
     rows = [];
     items = [];
     list.replaceChildren();
+  }
+
+  function hide(): void {
+    isOpen = false;
+    button.classList.remove('active');
+    conceal();
   }
 
   function close(): void {
@@ -211,7 +231,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   }
 
   function toggle(): void {
-    if (shownFor !== null) return close();
+    if (isOpen) return close();
     const page = ports.page();
     if (page === null) return ports.report('This project\'s folder has gone, so the drawer has nothing to list');
     open(page);
@@ -312,10 +332,12 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     button,
     element,
     toggle,
-    // Asked on every redraw of the title row: the drawer shown for one page is put away once another is
-    // in front.
+    // Asked on every redraw of the title row: once another page is in front, the open drawer lists it.
     render() {
-      if (shownFor !== null && shownFor !== ports.page()) hide();
+      const front = ports.page();
+      const follow = drawerFollows(isOpen, shownFor, front);
+      if (follow === 'show' && front !== null) show(front);
+      else if (follow === 'conceal') conceal();
     },
   };
 }

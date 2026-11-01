@@ -116,3 +116,35 @@ index's rows for `~/.dashboard`, where its main and workers run.
 
 Watch for: a folder holding thousands of entries lists them all as rows when
 opened; only markdown and folders are kept.
+
+## drawer-decision-4: Open or closed is one value for the whole app
+
+From using 2.41.0: open the drawer, switch to another project, come back, and
+it was closed. Every redraw of the title row put the drawer away once another
+page was in front, so a tab switch closed it. **Open or closed is now one value
+for the app**, not each page's: open, it stays open on every tab, the manager's
+too, until its button, its key or Escape closes it. A tab switch lists the page
+now in front, read afresh, with an empty filter.
+
+Per-project was the other choice: each page remembering whether its drawer was
+open. It was not taken because the drawer is something you keep beside you
+while moving between projects, and a per-page value means opening it again on
+every tab you visit.
+
+**A switch does not take the keyboard.** It goes to the page, as after any
+switch; only opening the drawer puts it in the filter. What each project's tree
+has open is still kept per project. A project whose folder has gone has nothing
+to list, so the open drawer is out of sight there and back on the next page.
+The open state is not kept across a restart. `drawerFollows` in
+`drawer-rows.ts` decides.
+
+**The drawer's key still only opens or closes it.** After a switch the drawer
+is open with the keyboard on the page, and the key closes it there; reaching
+the filter takes the key twice, or a click on the filter box. Making the key
+focus the filter when the drawer is open but unfocused was the other choice.
+It was not taken because the button and the key share one toggle, and a click
+on the button moves focus out of the drawer, so the button could then never
+close it; splitting the two is more change than the extra key press is worth.
+
+Watch for: opening a doc's Edit or resuming a session still closes the drawer,
+on purpose: both send the keyboard to a pane.
