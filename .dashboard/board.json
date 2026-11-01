@@ -245,22 +245,6 @@
               "body": "PR #152: help blurb built from LOG_FILE_COUNT and new LOG_FILE_LIMIT_SHOWN (tested); log-store comments name the constants; v2.32.13."
             }
           ]
-        },
-        {
-          "id": "bf8b8d2d-cfb3-43c6-bf5e-915ae63d6df3",
-          "title": "Use ranked in resumeRows, fileRows and cardRows instead of hand-rolled fuzzy ranking",
-          "notes": "resumeRows (src/shared/chat/chat-commands.ts), fileRows (src/renderer/chat/chat-mentions.ts) and the title half of cardRows (src/renderer/board/card-search.ts) re-spell the score, filter and stable sort that ranked in src/shared/app/fuzzy.ts does, each with an extra tie-break that a pre-sort before ranked expresses (newest first, shorter path then name, board order), as rewindRows now reverses first. Cost: a change to how ranked breaks ties or skips an empty query reaches the picker, /model, /rewind and /effort but not /resume, the @ file list or the board search; the empty-query early return from #146 already does not reach fileRows, which scores and sorts every file when @ is typed alone.\n\nIssue: https://github.com/naeemba/dashboard/issues/150\nReview: https://github.com/naeemba/dashboard/pull/146#discussion_r4435526462",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:28:32.763Z",
-          "branch": "fix-github-issue-150-gh-issue-view-150-comm",
-          "pullRequest": 153,
-          "comments": [
-            {
-              "at": "2026-11-01T12:28:32.724Z",
-              "body": "Shipped in #153: resumeRows, fileRows and cardRows call ranked, which now takes an optional tie-break (newest first for /resume, shorter path first for @, board order for the search)."
-            }
-          ]
         }
       ]
     },
@@ -1941,6 +1925,26 @@
             {
               "at": "2026-11-01T12:24:56.906Z",
               "body": "Shipped in PR #149: the folder dialog refusal is answered as a value instead of thrown, the screen's status bar says to type the path on the host, and the notice clears after a later successful open. Version 2.32.15."
+            }
+          ]
+        },
+        {
+          "id": "bf8b8d2d-cfb3-43c6-bf5e-915ae63d6df3",
+          "title": "Use ranked in resumeRows, fileRows and cardRows instead of hand-rolled fuzzy ranking",
+          "notes": "resumeRows (src/shared/chat/chat-commands.ts), fileRows (src/renderer/chat/chat-mentions.ts) and the title half of cardRows (src/renderer/board/card-search.ts) re-spell the score, filter and stable sort that ranked in src/shared/app/fuzzy.ts does, each with an extra tie-break that a pre-sort before ranked expresses (newest first, shorter path then name, board order), as rewindRows now reverses first. Cost: a change to how ranked breaks ties or skips an empty query reaches the picker, /model, /rewind and /effort but not /resume, the @ file list or the board search; the empty-query early return from #146 already does not reach fileRows, which scores and sorts every file when @ is typed alone.\n\nIssue: https://github.com/naeemba/dashboard/issues/150\nReview: https://github.com/naeemba/dashboard/pull/146#discussion_r4435526462",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:32:45.559Z",
+          "branch": "fix-github-issue-150-gh-issue-view-150-comm",
+          "pullRequest": 153,
+          "comments": [
+            {
+              "at": "2026-11-01T12:28:32.724Z",
+              "body": "Shipped in #153: resumeRows, fileRows and cardRows call ranked, which now takes an optional tie-break (newest first for /resume, shorter path first for @, board order for the search)."
+            },
+            {
+              "at": "2026-11-01T12:32:45.559Z",
+              "body": "Shipped in PR #153: /resume, the @ file list and the board search are ranked by fuzzy match. Merged after a clean review round."
             }
           ]
         }
