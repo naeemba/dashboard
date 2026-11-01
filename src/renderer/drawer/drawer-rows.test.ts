@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { docTree, drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type DrawerRow } from './drawer-rows';
+import { docTree, drawerFollows, drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type DrawerRow } from './drawer-rows';
 import type { SessionRecord } from '../../shared/drawer/drawer';
 
 const PROJECT = '/work/dashboard';
@@ -115,5 +115,25 @@ describe('drawerKey', () => {
     expect(drawerKey('ArrowLeft', false, false, docRow, false)).toBe('left');
     expect(drawerKey('ArrowRight', false, false, docRow, false)).toBe('right');
     expect(drawerKey('ArrowRight', false, false, docRow, true)).toBe('ignore');
+  });
+});
+
+describe('drawerFollows', () => {
+  const first = { name: 'dashboard' };
+  const second = { name: 'manager' };
+
+  it('lists the page in front once another one comes in front of the open drawer', () => {
+    expect(drawerFollows(true, first, second)).toBe('show');
+    expect(drawerFollows(true, null, second)).toBe('show');
+  });
+
+  it('puts the open drawer out of sight on a project whose folder has gone, without closing it', () => {
+    expect(drawerFollows(true, first, null)).toBe('conceal');
+  });
+
+  it('leaves the drawer alone while it is closed or the same page is still in front', () => {
+    expect(drawerFollows(false, null, second)).toBe('keep');
+    expect(drawerFollows(true, first, first)).toBe('keep');
+    expect(drawerFollows(true, null, null)).toBe('keep');
   });
 });
