@@ -13,13 +13,6 @@
           "updatedAt": "2026-10-29T11:44:11.602Z"
         },
         {
-          "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
-          "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
-          "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
           "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
           "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
@@ -65,13 +58,6 @@
           "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
           "title": "Spell out args in test-file locals and parameters",
           "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
-          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
-          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
           "priority": "low",
           "parent": null
         },
@@ -162,22 +148,12 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
-          "title": "IPC refusals thrown instead of answered (#129)",
-          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
           "priority": "low",
           "parent": null,
-          "createdAt": "2026-11-01T12:06:15.202Z",
-          "updatedAt": "2026-11-01T12:06:15.202Z"
-        },
-        {
-          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
-          "title": "Follow-up from #136: args locals and parameters in test files",
-          "notes": "https://github.com/naeemba/dashboard/issues/138",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:07:07.954Z"
+          "updatedAt": "2026-11-01T12:12:12.144Z"
         }
       ]
     },
@@ -303,12 +279,60 @@
               "body": "PR #146: pickerRows, modelRows and rewindRows now call ranked; ranked returns early for an empty query. resumeRows, chat-mentions and card-search still score by hand, out of scope."
             }
           ]
+        },
+        {
+          "id": "39cab32c-a679-4499-899f-d7ed27ee4a55",
+          "title": "IPC refusals thrown instead of answered (#129)",
+          "notes": "https://github.com/naeemba/dashboard/issues/129 — projects:open refuses a remote screen's folder dialog by throwing, so the screen reads Electron's 'Error invoking remote method' wrapper. Return the refusal as a value.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:06:15.202Z",
+          "updatedAt": "2026-11-01T12:10:37.524Z",
+          "branch": "fix-github-issue-129-gh-issue-view-129-comm",
+          "pullRequest": 149
+        },
+        {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:11:13.460Z",
+          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
+          "pullRequest": 147,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:13.460Z",
+              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
+            }
+          ]
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
+          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
+          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:11:33.587Z",
+          "branch": "fix-github-issue-80-gh-issue-view-80-commen",
+          "pullRequest": 142,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:33.515Z",
+              "body": "PR #142: mock returns rows as written; new visibleLinks test fails without bufferLine's trimEnd."
+            },
+            {
+              "at": "2026-11-01T12:11:33.587Z",
+              "body": "Shipped in PR #142 (https://github.com/naeemba/dashboard/pull/142). Version 2.32.12."
+            }
+          ]
+        },
         {
           "id": "7af68346-5bee-4566-b99c-13f9f02972e2",
           "title": "A failed board read is a failure, not an empty board",
@@ -1841,22 +1865,16 @@
           ]
         },
         {
-          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
-          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
-          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
+          "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
+          "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
+          "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
           "priority": "low",
           "parent": null,
-          "updatedAt": "2026-11-01T12:11:33.587Z",
-          "branch": "fix-github-issue-80-gh-issue-view-80-commen",
-          "pullRequest": 142,
+          "updatedAt": "2026-11-01T12:11:02.598Z",
           "comments": [
             {
-              "at": "2026-11-01T12:11:33.515Z",
-              "body": "PR #142: mock returns rows as written; new visibleLinks test fails without bufferLine's trimEnd."
-            },
-            {
-              "at": "2026-11-01T12:11:33.587Z",
-              "body": "Shipped in PR #142 (https://github.com/naeemba/dashboard/pull/142). Version 2.32.12."
+              "at": "2026-11-01T12:11:02.555Z",
+              "body": "Done in PR #141 (tracked there as card 5a6ac86c): chat:commands and chat:sessions renamed to chat-commands:read and chat-sessions:read."
             }
           ]
         }
