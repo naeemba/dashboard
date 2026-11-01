@@ -153,16 +153,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "1d1c7bfa-8698-46b2-bebf-ca09fe9e0371",
-          "title": "Manager terminals 5: open and close a project from the command",
-          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard project open|close <name|aka>. Close uses the app's own refusal: refused while any pane in the project is busy, naming it; otherwise closes with no confirm dialog. Open adds the page the way the project picker does.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T13:47:27.532Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -248,6 +239,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "1d1c7bfa-8698-46b2-bebf-ca09fe9e0371",
+          "title": "Manager terminals 5: open and close a project from the command",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. dashboard project open|close <name|aka>. Close uses the app's own refusal: refused while any pane in the project is busy, naming it; otherwise closes with no confirm dialog. Open adds the page the way the project picker does.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T13:58:44.619Z",
+          "branch": "work-board-card-1d1c7bfa-8698-46b2-bebf-ca0",
+          "pullRequest": 159,
+          "comments": [
+            {
+              "at": "2026-11-01T13:58:44.578Z",
+              "body": "PR #159: dashboard project open|close <name|aka>, exact name/aka match, ~ expanded via wholePath. Main: project-requests.ts routes 'project' socket requests; openProjectFolder / closeProjectSlot in main.ts; closeRefusal moved to src/shared/panes/close-refusal.ts; askAppFromPane shared by pane and project nouns."
             }
           ]
         }
