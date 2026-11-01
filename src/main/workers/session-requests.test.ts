@@ -14,6 +14,10 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const ports: SessionPorts = {
     slotOf: (directory) => (directory.startsWith('/work/api') ? 2 : -1),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
+    openSlots: () => [{ slot: 2, name: 'api' }],
+    findProject: (word) => ({ ok: false, message: `no project is called ${word}` }),
+    folderExists: () => true,
+    openProject: () => 2,
     openPanes: () => open,
     agentIn: (id) => agents.has(id),
     busyWith: (id) => (agents.has(id) ? 'an agent' : null),
@@ -239,6 +243,90 @@ describe('sessionRequests', () => {
     expect(marked).toEqual(['-2:1 done']);
     expect(await ask(['release', '-2:1'])).toEqual({ ok: true, output: 'released -2:1' });
     expect(closed).toEqual(['-2:1']);
+  });
+});
+
+// The manager in slot -2 asking about two projects: api open in slot 2, shop closed until a claim
+// opens it into slot 3. Each page has only its main until a worker is claimed on it.
+function pages() {
+  const paths = new Map<number, string>([[-2, '/work/desk'], [2, '/work/api']]);
+  const panes = new Map<number, number[]>([[-2, [0]], [2, [0]]]);
+  const started: { id: string; directory: string; agentArguments: string[] }[] = [];
+  const opened: string[] = [];
+  const known: Record<string, string> = { api: '/work/api', shop: '/work/shop', gone: '/work/gone' };
+  const { ports } = project({
+    slotOf: (directory) => [...paths].find(([, folder]) => directory.startsWith(folder))?.[0] ?? -1,
+    projectPath: (slot) => paths.get(slot),
+    openSlots: () => [...paths].map(([slot, folder]) => ({ slot, name: folder.split('/')[2] })),
+    findProject: (word) => (known[word] ? { ok: true, name: word, path: known[word] } : { ok: false, message: `no project is called ${word}` }),
+    folderExists: (folder) => folder !== '/work/gone',
+    openProject: (folder) => {
+      const open = [...paths].find(([, each]) => each === folder);
+      if (open) return open[0];
+      opened.push(folder);
+      paths.set(3, folder);
+      panes.set(3, [0]);
+      return 3;
+    },
+    openPanes: (slot) => panes.get(slot) ?? [],
+    openWorker: (slot) => {
+      const open = panes.get(slot) ?? [];
+      open.push(open.length);
+      return open.length - 1;
+    },
+    directoryOf: (id) => paths.get(Number(id.split(':')[0])),
+    startWorker: (id, directory, agentArguments) => { started.push({ id, directory, agentArguments }); },
+    closeWorker: (id) => {
+      const [slot, index] = id.split(':').map(Number);
+      panes.set(slot, (panes.get(slot) ?? []).filter((each) => each !== index));
+    },
+  });
+  const answer = sessionRequests(ports);
+  const ask = (words: string[], directory = '/work/desk') => answer({ directory, args: words });
+  return { ask, started, opened };
+}
+
+describe('sessionRequests across projects', () => {
+  it('claims a pane on a project already open, and runs it there reporting to the asker\'s main', async () => {
+    const { ask, started, opened } = pages();
+    expect(await ask(['claim', '--project', 'api'])).toEqual({ ok: true, output: '2:1' });
+    expect(opened).toEqual([]);
+    expect(await ask(['run', '2:1', 'fix the tests'])).toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api' });
+    expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api' });
+    expect(started[0].agentArguments[1]).toContain('SendMessage to main-desk when done');
+    expect(await ask(['release', '2:1'])).toEqual({ ok: true, output: 'released 2:1' });
+    expect(await ask(['release', '2:1'])).toMatchObject({ ok: false });
+  });
+
+  it('opens a closed project before claiming a pane on its page', async () => {
+    const { ask, opened } = pages();
+    expect(await ask(['claim', '--project', 'shop'])).toEqual({ ok: true, output: '3:1' });
+    expect(opened).toEqual(['/work/shop']);
+  });
+
+  it('refuses a name projects.yaml does not give, and a project whose folder is gone', async () => {
+    const { ask } = pages();
+    expect(await ask(['claim', '--project', 'zzz'])).toEqual({ ok: false, output: 'no project is called zzz' });
+    expect(await ask(['claim', '--project', 'gone'])).toEqual({ ok: false, output: 'gone is at /work/gone, which is not a folder' });
+  });
+
+  it('keeps a pane another project claimed out of reach of every other asker', async () => {
+    const { ask } = pages();
+    await ask(['claim', '--project', 'shop']);
+    expect(await ask(['run', '3:1', 'go'], '/work/api')).toEqual({ ok: false, output: '3:1 is not a pane of this project' });
+    // The project's own main may still use a pane on its own page.
+    expect(await ask(['run', '3:1', 'go'], '/work/shop')).toMatchObject({ ok: true });
+  });
+
+  it('lists every open page\'s panes with --all, each line led by its project', async () => {
+    const { ask } = pages();
+    await ask(['claim', '--project', 'api']);
+    expect((await ask(['list', '--all'])).output).toBe([
+      'desk\t-2:0\tmain\tmain\t/work/desk',
+      'api\t2:0\tmain\tmain\t/work/api',
+      'api\t2:1\tterminal 2\tidle\t/work/api',
+    ].join('\n'));
+    expect((await ask(['list'])).output).toBe('-2:0\tmain\tmain\t/work/desk');
   });
 });
 

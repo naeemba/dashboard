@@ -20,13 +20,20 @@ export function runProjectCommand(commandArguments: readonly string[], text: str
   if (verb === 'find' && word === '') return { ok: false, message: `find takes a word\n\n${PROJECT_USAGE}` };
   if (verb === 'list' && rest.length > 0) return { ok: false, message: `list takes no words\n\n${PROJECT_USAGE}` };
 
-  if (text === null) return { ok: false, message: `${filePath} does not exist yet; write one, a list of projects with a name and a path each` };
-  const read = readProjects(text, filePath);
-  if (!read.ok) return { ok: false, message: read.problems.join('\n') };
+  const listed = projectsListed(text, filePath);
+  if (!listed.ok) return listed;
 
-  const projects = verb === 'find' ? findProjects(read.projects, word) : read.projects;
+  const projects = verb === 'find' ? findProjects(listed.projects, word) : listed.projects;
   if (projects.length === 0) return { ok: false, message: verb === 'find' ? `no project matches ${word}` : `${filePath} lists no projects` };
   return { ok: true, output: projects.map(describeProject).join('\n\n') };
+}
+
+// The file's projects, or what is wrong with it: missing, or every problem readProjects found. Every
+// reader of the file starts here, so a missing or broken file is said the one way.
+export function projectsListed(text: string | null, filePath: string): { ok: true; projects: Project[] } | { ok: false; message: string } {
+  if (text === null) return { ok: false, message: `${filePath} does not exist yet; write one, a list of projects with a name and a path each` };
+  const read = readProjects(text, filePath);
+  return read.ok ? read : { ok: false, message: read.problems.join('\n') };
 }
 
 // How a project reads in the command's output: a heading line, then one indented line per field it has.
