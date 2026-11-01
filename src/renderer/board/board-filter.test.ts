@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board, Card } from '../../shared/board/board';
 import {
-  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, sideRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, movesHighlightOnly, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, sideRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -239,6 +239,25 @@ describe('rowsToDraw', () => {
   it('keeps the new card a filter would hide, on a column the filter empties', () => {
     const selection = { column: 2, card: 3 };
     expect(rowsToDraw(visible, selection, true).visible[2]).toEqual([3]);
+  });
+});
+
+describe('movesHighlightOnly', () => {
+  it('moves only the highlight when the drawn rows stay the same', () => {
+    expect(movesHighlightOnly(visible, visible.map((column) => [...column]), { column: 1, card: 2 }, false)).toBe(true);
+  });
+
+  it('redraws when stepping off a kept card takes it off screen', () => {
+    const drawnBefore = [[1, 2, 3], [0, 2, 4], []];
+    expect(movesHighlightOnly(drawnBefore, visible, { column: 0, card: 3 }, false)).toBe(false);
+  });
+
+  it('redraws when the selection has to settle on another card', () => {
+    expect(movesHighlightOnly(visible, visible, { column: 0, card: 2 }, false)).toBe(false);
+  });
+
+  it('redraws when a card the filter matched no longer does', () => {
+    expect(movesHighlightOnly(visible, [[1], [0, 2, 4], []], { column: 1, card: 0 }, false)).toBe(false);
   });
 });
 

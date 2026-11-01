@@ -217,6 +217,16 @@ export function rowsToDraw(
   return { visible, selection: settleSelection(visible, selection) };
 }
 
+// Whether an arrow key can leave every card on screen and only move the highlight: the rows the board
+// would draw now are the rows it drew, and the selection rests where the key put it. Rebuilding 179
+// cards for an arrow cost 90 ms a press. The selection stepping off a card a filter only kept because
+// you had just changed it takes that card off screen, which is a full redraw.
+export function movesHighlightOnly(drawnBefore: number[][], rows: number[][], selection: Selection, keep: boolean): boolean {
+  const drawn = rowsToDraw(rows, selection, keep);
+  return drawn.selection === selection && drawn.visible.length === drawnBefore.length
+    && drawn.visible.every((column, index) => column.join() === drawnBefore[index].join());
+}
+
 // The card a change acted on, for keepsSelection to hold on screen: the selected card if the change
 // made or altered it, or if it was already the one selected. A delete leaves the selection on the
 // neighbour that slid into the gap, untouched and not selected before, so that one gets null — or a

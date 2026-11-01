@@ -40,6 +40,7 @@ import {
   reorderRow,
   sideRow,
   rowAbove,
+  movesHighlightOnly,
   rowsToDraw,
   settleSelection,
   stepSelection,
@@ -404,6 +405,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const item = document.createElement('li');
     // The priority rides on the card as a class so board.css owns which colour each one is.
     item.className = `board-card priority-${card.priority}${selected ? ' selected' : ''}`;
+    item.dataset.cardId = card.id;
     // Which piece of work this card belongs to. Invisible from the column otherwise: a subtask is an
     // ordinary card sitting in an ordinary column, and nothing else on it says so.
     const parent = card.parent === null ? undefined : cardById(state.board, card.parent);
@@ -690,6 +692,19 @@ export function createBoardView(options: BoardOptions): BoardView {
     options.onChanged();
   }
 
+  // An arrow key that leaves the drawn rows as they are moves the class across instead of rebuilding
+  // every card; movesHighlightOnly says when it can. A card it cannot find, such as an empty column's,
+  // is the full redraw too.
+  function moveHighlight(): void {
+    const keep = keepsSelection(state.board, state.selection, editing !== null, changedCardId);
+    const item = element.querySelector(`[data-card-id="${CSS.escape(cardAt(state.board, state.selection)?.id ?? '')}"]`);
+    if (!item || !movesHighlightOnly(visible, visibleRows(state.board, filter, Date.now()), state.selection, keep)) return render();
+    element.querySelector(SELECTED_CARD)?.classList.remove('selected');
+    item.classList.add('selected');
+    item.scrollIntoView({ block: 'nearest' });
+    options.onChanged();
+  }
+
   // The count is descendants, not direct children, because that is how many cards vanish — and most
   // of them are in columns you are not looking at. A leaf card gets the same dialog without the
   // second clause: one key that always behaves the same way is worth more than a saved keystroke.
@@ -887,7 +902,7 @@ export function createBoardView(options: BoardOptions): BoardView {
             ? stepSelection(visible, state.selection, action.direction)
             : moveSelection(state.board, state.selection, action.direction);
           state = { ...state, selection };
-          return render();
+          return moveHighlight();
         }
         case 'board-move':
           // Up and down trade places with the next card you can see, not one the filter hides.
