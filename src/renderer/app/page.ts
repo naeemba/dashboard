@@ -601,6 +601,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
 
   // Called again on a page that has terminals, it drops them first: the manager's, on a host change.
   function addTerminals(page: Page): void {
+    const hadFocus = page.views.terminals?.contains(document.activeElement) ?? false;
     if (page.views.terminals) {
       discardPanes(page.slot);
       page.views.terminals.remove();
@@ -611,6 +612,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     page.views.terminals = view;
     page.element.append(view);
     fillTerminals(page, view, []);
+    if (hadFocus) focusTerminals(page);
   }
 
   return { build: buildPage, syncPanes, addTerminals };
