@@ -21,7 +21,7 @@ function entry(worktreePath: string, cardId: string): WorktreeEntry {
 function keeperWith(entries: WorktreeEntry[], commands: Map<string, PaneCommand>) {
   const file = join(mkdtempSync(join(folder, 'record-')), 'worktrees.json');
   const sent: WorktreeList[] = [];
-  const keeper = worktreeKeeper({ file, entries, commands, shells: new Map(), changed: (list) => sent.push(list) });
+  const keeper = worktreeKeeper({ file, entries, commands, shells: new Map(), announce: (list) => sent.push(list) });
   return { keeper, file, sent };
 }
 
@@ -47,6 +47,26 @@ describe('dropDead', () => {
     const { keeper, file, sent } = keeperWith([entry(folder, 'living')], new Map());
     keeper.dropDead();
     expect(existsSync(file)).toBe(false);
+    expect(sent).toHaveLength(0);
+  });
+});
+
+describe('remove', () => {
+  it('keeps a record the sweep would drop while its removal is still running, and lets go after', async () => {
+    const gone = entry(join(folder, 'gone-mid-removal'), 'gone');
+    const { keeper } = keeperWith([gone], new Map());
+    const pending = keeper.remove(gone.worktreePath, false);
+    keeper.dropDead();
+    expect(keeper.entries()).toEqual([gone]);
+    // git fails here, since the project folder does not exist; the hold still has to be let go.
+    await pending;
+    keeper.dropDead();
+    expect(keeper.entries()).toEqual([]);
+  });
+
+  it('answers yes for a path with no record and no project', async () => {
+    const { keeper, sent } = keeperWith([], new Map());
+    expect(await keeper.remove(join(folder, 'nowhere'), false)).toEqual({ ok: true, message: '', dirty: [] });
     expect(sent).toHaveLength(0);
   });
 });

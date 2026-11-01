@@ -320,7 +320,7 @@ const worktrees = worktreeKeeper({
   entries: recordAtLaunch,
   commands: terminalCommands,
   shells,
-  changed: (list) => sendToRenderer('worktree:change', list),
+  announce: (list) => sendToRenderer('worktree:change', list),
 });
 
 // shell-directory-lookup.ts says what asking a shell where it is means.

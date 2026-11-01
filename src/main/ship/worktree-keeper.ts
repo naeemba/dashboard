@@ -22,12 +22,12 @@ type WorktreeKeeperPorts = {
   entries: WorktreeEntry[];
   commands: Map<string, PaneCommand>;
   shells: ReadonlyMap<string, { kill(): void }>;
-  changed: (list: WorktreeList) => void;
+  announce: (list: WorktreeList) => void;
 };
 
 // The worktree record after launch, and every change to it. main.ts holds the launch read, because a
 // record it cannot read stops the app with a dialog only main can show.
-export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells, changed }: WorktreeKeeperPorts) {
+export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells, announce }: WorktreeKeeperPorts) {
   let entries = recordAtLaunch;
   // The worktrees a removal is part way through. `git worktree remove` is awaited, and git unlinks the
   // folder before it answers, so without this the sweep lands in that gap, calls the record dead and
@@ -81,14 +81,14 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
   // a project closed, a project opened in a freed slot, an agent exiting — has moved between two
   // ordinary checkouts, which is not something the status bar prints or a badge reads.
   function set(next: WorktreeEntry[]): void {
-    const differ = worktreesDiffer(entries, next);
+    const changed = worktreesDiffer(entries, next);
     entries = next;
     // Neither half runs for a rewrite of what is already there — closing a project that shipped nothing
     // is one. The file already holds these bytes, written by whoever last changed them, and the board on
     // screen would be torn down and redrawn for a record nobody touched.
-    if (!differ) return;
+    if (!changed) return;
     writeWorktrees(file, entries);
-    changed(list());
+    announce(list());
   }
 
   // Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand
