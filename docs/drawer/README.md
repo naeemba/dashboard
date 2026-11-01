@@ -22,6 +22,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in and `claude --resume <id>` is typed into it; the page goes to the terminals view with the keyboard in that pane; a busy pane is never used.
 - Given the drawer, when you click a row that leaves it open (Load more, a refused resume), then the keyboard stays in the drawer's filter box.
 - Given a session still running in a pane or on the Claude screen, when you press Enter on it, then it is refused and the status bar says where it runs.
+- Given the app just reopened and no prompt sent yet, when you press Enter on the conversation the Claude screen will resume, then it is refused as running on the Claude screen.
 - Given a session row, when you press F2, then a box asks for its new name; an empty one is refused.
 - Given more than fifty sessions, when you reach the Load more row and press Enter, then fifty more are listed.
 - Given the manager page, when you press the drawer's key, then the status bar says to go to a project; the button is not shown there.

@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -142,4 +142,15 @@ describe('runningConversation', () => {
   });
   it('reports none after a /clear', () => expect(runningConversation({ type: 'conversation_reset' })).toBeNull());
   it('says nothing for any other message', () => expect(runningConversation({ type: 'assistant' })).toBeUndefined());
+});
+
+describe('conversationReporter', () => {
+  it('lets only the session that reported last clear the conversation', () => {
+    const reporters = conversationReporter<string>();
+    reporters.report('/a', 'old');
+    reporters.report('/a', 'new');
+    expect(reporters.ended('/a', 'old')).toBe(false);
+    expect(reporters.ended('/a', 'new')).toBe(true);
+    expect(reporters.ended('/a', 'new')).toBe(false);
+  });
 });

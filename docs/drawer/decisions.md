@@ -15,21 +15,26 @@ sessions of its own.
 A worker in a card's worktree lands in another slug folder there and would be
 missed. Every Claude the app starts gets an id the app chose, recorded before it
 starts: `--session-id` on a worker's and a card agent's command line. Main's
-conversation is recorded the moment the SDK names it (init, `/clear`,
-`/resume`), through the same `remember` that keeps it for the next launch; the
-SDK's own `sessionId` option would add nothing the index does not already have.
+conversation is reported from the session's own lifecycle: every init reports
+its id (a resume of the remembered one included), and a `/clear` or the end of
+the session reports none. Its first init adds its row; the SDK's own `sessionId`
+option would add nothing the index does not already have.
 The index is `session-index.json` in the app's user data, keyed by project path,
 because sessions are one person's and `board.json` is tracked. Labels are
 `<project>-<n>`; F2 renames one.
 
 **Last used** moves when the drawer resumes a session, and when the token sweep
-finds it running and its last use is five minutes old: moving it every
-half-minute sweep would rewrite the file for an age no row can show.
+finds it running (a pane's, or main's while its session runs) and its last use
+is five minutes old: moving it every half-minute sweep would rewrite the file
+for an age no row can show. Main's init leaves an existing row alone.
 
 **A resume is always a new worker pane**, so it is never typed into a busy one.
 It is refused while the conversation runs anywhere the app can see — a pane, by
 the sweep's reading, or the Claude screen — because two Claudes on one
-conversation each write their own turns into it.
+conversation each write their own turns into it. On the Claude screen means the
+conversation its session runs now, or the one it will resume on the next
+prompt (`chat-sessions.json`, read at launch and kept as it changes): after a
+restart nothing runs until a prompt, and that prompt resumes it without asking.
 
 **No document pane.** The card waited on one built from the Claude screen's
 markdown renderer; that pane was never built. A doc opens where a path a pane

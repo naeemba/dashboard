@@ -43,6 +43,9 @@ export type ChatHost = {
   // The conversation the main session is running now, for the app's session index: on every init,
   // a resume of the remembered one included, and undefined once it is cleared or the session ends.
   conversation(projectPath: string, id: string | undefined): void;
+  // The conversation the next launch of the project's main session resumes, undefined for none: once
+  // per project at registration, and again whenever it changes. Main resumes it without asking anyone.
+  remembered(projectPath: string, id: string | undefined): void;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -178,6 +181,20 @@ export function runningConversation(message: Record<string, unknown>): string | 
   return conversationChange(message, undefined).remember;
 }
 
+// Per project, the session that last reported its conversation running. Only that one reports the end,
+// so a session closed by a new conversation does not clear the one that replaced it.
+export function conversationReporter<S>(): { report(projectPath: string, session: S): void; ended(projectPath: string, session: S): boolean } {
+  const reporters = new Map<string, S>();
+  return {
+    report: (projectPath, session) => void reporters.set(projectPath, session),
+    ended(projectPath, session) {
+      if (reporters.get(projectPath) !== session) return false;
+      reporters.delete(projectPath);
+      return true;
+    },
+  };
+}
+
 // What a project's main session opens on. The conversation the terminal main left wins over one the
 // old Claude view remembered: it was the project's main, the one its workers report to, and `adopt`
 // only arrives on the first launch after main became the screen. Auto mode, as the terminal main ran
@@ -207,9 +224,8 @@ export function registerChatSessions(
   const rewound = new Map<string, string>();
   // Read once, the first time a session starts, rather than at launch for a screen that may never be used.
   let shellPath: Promise<string> | undefined;
-  // Per project, the session that last reported its conversation running. Only that one reports the end,
-  // so a session closed by a new conversation does not clear the one that replaced it.
-  const reporters = new Map<string, Session>();
+  const reporters = conversationReporter<Session>();
+  for (const [projectPath, id] of Object.entries(remembered)) host.remembered(projectPath, id);
 
   function remember(projectPath: string, id: string | undefined): void {
     rewound.delete(projectPath);
@@ -220,6 +236,7 @@ export function registerChatSessions(
     } catch {
       // ponytail: a write that fails costs the resume on the next launch and nothing else.
     }
+    host.remembered(projectPath, id);
   }
 
   function ask(slot: number, asks: Session['asks'], asked: Omit<PermissionAsk, 'id'>, signal: AbortSignal): Promise<PermissionResult> {
@@ -305,7 +322,7 @@ export function registerChatSessions(
           if (change.reset) host.send(slot, { kind: 'reset', sessionGoesOn: true });
           const current = runningConversation(record);
           if (current !== undefined) {
-            reporters.set(projectPath, session);
+            reporters.report(projectPath, session);
             host.conversation(projectPath, current ?? undefined);
           }
           // What the session reports it is on, so a screen opened later starts from it.
@@ -323,10 +340,7 @@ export function registerChatSessions(
         // way on every prompt after it, so the next one starts a new conversation instead.
         if (resume && !started) remember(projectPath, undefined);
       }
-      if (reporters.get(projectPath) === session) {
-        reporters.delete(projectPath);
-        host.conversation(projectPath, undefined);
-      }
+      if (reporters.ended(projectPath, session)) host.conversation(projectPath, undefined);
       for (const { resolve } of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
       // An end nobody asked for is not restarted here: a session that dies on start would die again
       // in a loop. The screen says it ended, and the next prompt starts it.

@@ -47,6 +47,26 @@ describe('sessionIndexStore', () => {
     expect(store.runningIn(id)).toBe('terminal 4');
   });
 
+  it("names the Claude screen for the conversation main will resume, before anything runs", () => {
+    const store = sessionIndexStore(temporaryFile());
+    const id = store.launched(project, project, null);
+    store.mainRemembers(project, id);
+    expect(store.runningIn(id)).toBe('the Claude screen');
+    store.mainRemembers(project, undefined);
+    expect(store.runningIn(id)).toBeNull();
+  });
+
+  it("does not move main's row again when an init names it", () => {
+    const file = temporaryFile();
+    const store = sessionIndexStore(file);
+    const id = randomUUID();
+    store.mainIs(project, id);
+    rmSync(file);
+    store.mainIs(project, undefined);
+    store.mainIs(project, id);
+    expect(existsSync(file)).toBe(false);
+  });
+
   it("records main's conversation as a row of the project", () => {
     const store = sessionIndexStore(temporaryFile());
     const id = randomUUID();

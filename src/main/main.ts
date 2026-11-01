@@ -631,7 +631,7 @@ registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, windo
 const chats = registerChatSessions(table, {
   send: (slot, event) => sendToRenderer('chat:receive', slot, event),
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
-  conversation: sessionIndex.mainIs,
+  conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers,
 });
 // The manager's main, started at launch the way a project's starts when it opens: its workers report to
 // it. Its folder is made first, since a session cannot start in a folder that is not there.

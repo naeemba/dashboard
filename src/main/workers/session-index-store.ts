@@ -18,6 +18,9 @@ export type SessionIndexStore = {
   launched(projectPath: string, directory: string, card: string | null): string;
   // The main session's conversation, reported when it begins or changes; undefined when it has none.
   mainIs(projectPath: string, id: string | undefined): void;
+  // The conversation main's next launch resumes, undefined for none. Taken as well, since main resumes
+  // it on the first prompt without asking: after a restart nothing is running yet.
+  mainRemembers(projectPath: string, id: string | undefined): void;
   placed(placement: SessionPlacement): void;
   page(projectPath: string, count: number): SessionList;
   find(projectPath: string, id: string): SessionRecord | undefined;
@@ -40,6 +43,7 @@ export function sessionIndexStore(file: string): SessionIndexStore {
   let index = readIndex(file);
   let livePanes = new Map<string, string>();
   const mains = new Map<string, string>();
+  const mainsNext = new Map<string, string>();
 
   function save(next: SessionIndex): void {
     if (next === index) return;
@@ -64,7 +68,12 @@ export function sessionIndexStore(file: string): SessionIndexStore {
     mainIs(projectPath, id) {
       if (id === undefined) return void mains.delete(projectPath);
       mains.set(projectPath, id);
-      record(projectPath, id, projectPath, null);
+      // A row already there is left to the sweep, so an init does not rewrite the file.
+      if (index[projectPath]?.some((row) => row.id === id) !== true) record(projectPath, id, projectPath, null);
+    },
+    mainRemembers(projectPath, id) {
+      if (id === undefined) mainsNext.delete(projectPath);
+      else mainsNext.set(projectPath, id);
     },
     placed(placement) {
       livePanes = new Map([...placement.byPane].map(([pane, live]) => [live.session, pane]));
@@ -80,7 +89,7 @@ export function sessionIndexStore(file: string): SessionIndexStore {
     },
     used: (projectPath, id) => save(withUse(index, projectPath, id, Date.now())),
     runningIn(id) {
-      if ([...mains.values()].includes(id)) return 'the Claude screen';
+      if ([...mains.values(), ...mainsNext.values()].includes(id)) return 'the Claude screen';
       const pane = livePanes.get(id);
       return pane === undefined ? null : paneLabel(paneFromId(pane).index);
     },
