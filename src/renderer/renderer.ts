@@ -513,6 +513,7 @@ async function openProject(requested: string | null): Promise<void> {
     showNotice('project', opened.refused);
     return showPage(activeIndex);
   }
+  showNotice('project', '');
   applyProjects(opened.open);
   const position = positionOfSlot(opened.index);
   if (position !== -1) showPage(position);
