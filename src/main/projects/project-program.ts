@@ -5,16 +5,19 @@ import { existingProjects, readRecentPaths, RECENTS_FILE } from '../app/projects
 import { readSession, SESSION_FILE } from '../app/session';
 import { BOARD_DIRECTORY } from '../board/board-store';
 import { failureLine } from '../command/failure-line';
-import { projectInit, runProjectCommand } from './project-cli';
+import { type KnownFolders, runProjectCommand } from './project-cli';
 
-// The folders `project init` starts from: the projects open at the app's last save, then the recent
+// The folders `project init` starts from: the projects open at the app's last save and the recent
 // ones, each a folder that is still there. Both files are the app's own, in the userData folder main
-// names in DASHBOARD_USER_DATA; outside a pane there is none, and init writes the header alone.
-function knownProjectPaths(): string[] {
+// names in DASHBOARD_USER_DATA; outside a pane there is none.
+function knownFolders(): KnownFolders {
   const userData = process.env.DASHBOARD_USER_DATA;
-  if (!userData) return [];
-  const open = readSession(join(userData, SESSION_FILE)).pages.map((page) => page.path);
-  return existingProjects([...open, ...readRecentPaths(join(userData, RECENTS_FILE))]).map((project) => project.path);
+  if (!userData) return null;
+  const stillThere = (paths: readonly string[]) => existingProjects(paths).map((project) => project.path);
+  return {
+    open: stillThere(readSession(join(userData, SESSION_FILE)).pages.map((page) => page.path)),
+    recent: stillThere(readRecentPaths(join(userData, RECENTS_FILE))),
+  };
 }
 
 // The whole of the `project` program outside project-cli.ts: read ~/.dashboard/projects.yaml, write
@@ -28,10 +31,7 @@ export function runProjectProgram(commandArguments: readonly string[]): number {
     } catch (error: unknown) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    const [verb, ...rest] = commandArguments;
-    const answer = verb === 'init'
-      ? projectInit(rest, text, knownProjectPaths, homedir(), filePath)
-      : runProjectCommand(commandArguments, text, filePath);
+    const answer = runProjectCommand(commandArguments, text, filePath, knownFolders, homedir());
     if (answer.ok && answer.file !== undefined) {
       mkdirSync(dirname(filePath), { recursive: true });
       // wx: a file written between the read above and now is still never overwritten.

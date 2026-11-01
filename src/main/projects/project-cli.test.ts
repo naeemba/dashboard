@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { describeProject, PROJECT_USAGE, projectInit, runProjectCommand } from './project-cli';
+import { describeProject, initialPaths, OUTSIDE_PANE_MESSAGE, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
-const run = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml');
+const NO_FOLDERS = () => { throw new Error('asked for the folders'); };
+const run = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml', NO_FOLDERS, '/home/me');
+const init = (text: string | null, folders: () => KnownFolders, words: string[] = []) => runProjectCommand(['init', ...words], text, 'projects.yaml', folders, '/home/me');
 
 describe('runProjectCommand', () => {
   it('answers no verb with the usage and an unknown one with its name', () => {
@@ -26,12 +28,19 @@ describe('runProjectCommand', () => {
   });
 });
 
-describe('projectInit', () => {
+describe('project init', () => {
   it('writes from the known folders, and never over a file that is there', () => {
-    const init = projectInit([], null, () => ['/home/me/crm', '/home/me/crm'], '/home/me', 'projects.yaml');
-    expect(init).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy by hand' });
-    expect(projectInit([], '', () => { throw new Error('asked for the folders'); }, '/home/me', 'projects.yaml')).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
-    expect(projectInit(['now'], null, () => [], '/home/me', 'projects.yaml')).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
+    expect(init(null, () => ({ open: ['/home/me/crm'], recent: ['/home/me/crm'] }))).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy by hand' });
+    expect(init('', NO_FOLDERS)).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
+    expect(init(null, NO_FOLDERS, ['now'])).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
+  });
+
+  it('refuses outside a pane rather than write a file with no projects', () => {
+    expect(init(null, () => null)).toEqual({ ok: false, message: OUTSIDE_PANE_MESSAGE });
+  });
+
+  it('lists the open folders before the recent ones', () => {
+    expect(initialPaths({ open: ['/open'], recent: ['/recent'] })).toEqual(['/open', '/recent']);
   });
 });
 

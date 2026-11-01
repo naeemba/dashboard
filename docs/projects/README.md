@@ -25,8 +25,9 @@ deploy needs all of `name`, `role` and `address`.
 `init` reads the app's own `session.json` (the projects open at its last save)
 and `recents.json` from the folder pane shells carry as `DASHBOARD_USER_DATA`,
 keeps the folders still there, writes a path under home from `~`, and names a
-second folder with the same name `-2`. Run outside a pane, it writes the
-commented header alone.
+second folder with the same name `-2`. Run outside a pane, where there is no
+`DASHBOARD_USER_DATA`, it refuses and writes nothing, so a later run from a pane
+is not blocked by an empty file.
 
 ## Files
 
