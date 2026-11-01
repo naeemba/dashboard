@@ -69,7 +69,7 @@ describe('hostTracker', () => {
   it('reconciles as usual while the host stays the same, and takes a repeat of it as nothing', () => {
     const hosts = hostTracker();
     hosts.change('local');
-    expect(hosts.movesFor(current, { projects: [project('/a'), project('/b')], panes: [] })).toEqual({ moves: [], home: false });
+    expect(hosts.movesFor(current, { projects: [project('/a'), project('/b')], panes: [] })).toEqual({ moves: [], home: false, replacing: false });
   });
 
   it('replaces every page with the first list of a new host, then reconciles again', () => {
@@ -80,6 +80,7 @@ describe('hostTracker', () => {
     expect(hosts.movesFor(current, { projects: [project('/a')], panes: [] })).toEqual({
       moves: [{ kind: 'remove', slot: 0 }, { kind: 'remove', slot: 1 }, { kind: 'build', slot: 0, project: project('/a') }],
       home: false,
+      replacing: true,
     });
     expect(hosts.movesFor([{ slot: 0, project: project('/a') }], { projects: [project('/a')], panes: [] }).moves).toEqual([]);
   });

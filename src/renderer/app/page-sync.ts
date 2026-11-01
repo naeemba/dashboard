@@ -1,5 +1,5 @@
 import type { OpenProjects, Project } from '../../shared/app/bridge';
-import { isProjectPage } from '../../shared/manager/manager';
+import { isProjectPage, openPanesOf } from '../../shared/manager/manager';
 import { discardPanes, type Page } from './page';
 import { hostTracker, landingAfterMoves } from './page-reconcile';
 
@@ -13,6 +13,8 @@ export type PageSyncPorts = {
   setPage(project: Project, slot: number, open: readonly number[]): void;
   // Makes a page's terminals the ones the list says it has open.
   syncPanes(page: Page, open: readonly number[]): void;
+  // Puts a fresh, empty terminals view on a page that is not a project's, in place of the one it has.
+  addTerminals(page: Page): void;
   landOn(index: number): void;
   // Moves the tab marker to a page that shifted, without arriving on it.
   follow(index: number): void;
@@ -57,7 +59,7 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
     const pages = ports.pages();
     const standingSlot = pages[ports.activeIndex()]?.slot ?? null;
     const current = projectPages().map((page) => ({ slot: page.slot, project: page.project }));
-    const { moves, home } = hosts.movesFor(current, open);
+    const { moves, home, replacing } = hosts.movesFor(current, open);
     const apply = (): void => {
       for (const move of moves) {
         if (move.kind === 'remove') removePage(move.slot);
@@ -67,9 +69,13 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
           ports.setPage(move.project, move.slot, open.panes[move.slot] ?? []);
         }
       }
-      // A worker opening or closing changes no page, only what is on one. Every page is asked, since
-      // the list does not say which changed; one that already matches is left as it is.
-      for (const page of projectPages()) ports.syncPanes(page, open.panes[page.slot] ?? []);
+      // The manager is never removed or rebuilt as a project is, so on a host change its terminals are
+      // emptied and drawn again here: otherwise its main keeps this machine's conversation while its
+      // prompt goes to the host's, and its workers draw the host's output over this machine's.
+      if (replacing) for (const page of pages) if (!isProjectPage(page) && page.views.terminals) ports.addTerminals(page);
+      // A worker opening or closing changes no page, only what is on one. Every page is asked, the
+      // manager's too, since the list does not say which changed; one that already matches is left as it is.
+      for (const page of pages) ports.syncPanes(page, openPanesOf(open, page.slot));
       const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
       if (landing.takeFocus) ports.landOn(landing.position);
       else {

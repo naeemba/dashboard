@@ -65,7 +65,7 @@ export function oneQuestionAtATime<Asked, Answer>(
 }
 
 // A folder anywhere below the worktree counts, not only its top: `cd src` is still standing in it.
-function isInside(directory: string, root: string): boolean {
+export function isInside(directory: string, root: string): boolean {
   const relative = path.relative(root, directory);
   if (relative === '') return true;
   if (path.isAbsolute(relative)) return false;

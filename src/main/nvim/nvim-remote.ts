@@ -6,6 +6,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { locateCommand, taskArguments } from '../../shared/panes/shell';
 import type { Handover } from '../../shared/app/bridge';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 const runCommand = promisify(execFile);
 
@@ -213,6 +214,10 @@ async function handToEditor(
   prepare: () => Promise<string | null>,
   argumentLists: (socket: string) => string[][],
 ): Promise<Handover> {
+  // The manager's terminals have no editor pane, so its socket never comes; refused on the spot rather
+  // than after the fifteen-second wait below. One check here covers the scrollback key, Ctrl+G and a
+  // path in a pane alike.
+  if (editor.slot === MANAGER_SLOT) return { ok: false, message: `the manager has no nvim, so there is nowhere to open ${what}` };
   // Asked before the wait, not after. A machine with no nvim has an editor pane that exits on the spot
   // and a socket that is never coming, so without this the answer is fifteen seconds of nothing
   // followed by a message about a start that was never going to happen.

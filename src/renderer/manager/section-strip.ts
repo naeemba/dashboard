@@ -1,5 +1,5 @@
 import { iconButton, MODE_GLYPHS } from '../app/icons';
-import { SECTIONS } from '../../shared/manager/manager-sections';
+import { STRIP } from '../../shared/manager/manager-sections';
 import type { Mode } from '../../shared/keys/modes';
 
 export type SectionStrip = { element: HTMLElement; render(mode: Mode): void };
@@ -13,7 +13,7 @@ export type SectionStrip = { element: HTMLElement; render(mode: Mode): void };
 export function createSectionStrip(onPick: (mode: Mode) => void): SectionStrip {
   const element = document.createElement('nav');
   element.className = 'section-strip';
-  const names = SECTIONS.map((section) => {
+  const names = STRIP.map((section) => {
     // A click goes to that section, which is what the key does. Every control in this app answers the
     // keyboard first and the pointer to the same place.
     const item = iconButton('section-name', MODE_GLYPHS[section.mode], section.name, () => onPick(section.mode));
