@@ -130,7 +130,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "772e8753-c12b-4a42-9e31-3e0f61c3eded",
+          "title": "Drawer stays open across project switches until closed",
+          "notes": "Bug from using 2.41.0: open the drawer, switch to another project, come back, and the drawer is closed.\n\nFix: the drawer's open state is one app-wide value, not per page. Open it and it stays open on every tab, the manager's too, until the button or Ctrl+Shift+D closes it. Switching tabs shows that tab's docs and sessions in the open drawer, and keeps each project's open folders and selection as today. Focus after a switch goes where it goes today (the page), not into the drawer. Not persisted across an app restart.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-01T19:52:21.649Z",
+          "updatedAt": "2026-11-01T19:52:21.649Z"
+        }
+      ]
     },
     {
       "name": "Review",
