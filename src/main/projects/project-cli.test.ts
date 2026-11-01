@@ -9,7 +9,8 @@ describe('runProjectCommand', () => {
   it('answers no verb with the usage and an unknown one with its name', () => {
     expect(run([])).toEqual({ ok: false, message: PROJECT_USAGE });
     expect(run(['open'])).toEqual({ ok: false, message: `no such command: open\n\n${PROJECT_USAGE}` });
-    expect(run(['find']).ok).toBe(false);
+    expect(run(['find'])).toEqual({ ok: false, message: `find takes a word\n\n${PROJECT_USAGE}` });
+    expect(run(['list', 'crm'])).toEqual({ ok: false, message: `list takes no words\n\n${PROJECT_USAGE}` });
   });
 
   it('lists every project and finds by word', () => {
