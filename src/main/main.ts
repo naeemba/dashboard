@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog } from 'electron';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
@@ -17,6 +17,8 @@ import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, sizeOfPane, terminalId 
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
+import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
@@ -124,6 +126,9 @@ if (existsSync(environmentFile)) {
 // the same reason read the other way round: a new project in an old slot inherits the ids that a
 // notification, a worktree record or a board's ship may still be naming.
 const projects: (Project | undefined)[] = [];
+// What a slot starts its shells and session in, the manager's folder included. manager-terminals.ts
+// says what the manager is to main.
+const projectIn = (slot: number): Project | undefined => projectInSlot(projects, slot);
 // The recently opened projects live next to the app's other per-user state.
 const recentsFile = path.join(app.getPath('userData'), 'recents.json');
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
@@ -364,7 +369,7 @@ registerPaneOpeners(table, {
   shellCommand: () => shellCommand,
   paneFolders: (slot, index) => {
     const id = terminalId(slot, index);
-    return { pid: shells.get(id)?.pid, startDirectory: terminalCommands.get(id)?.directory, projectPath: projects[slot]?.path };
+    return { pid: shells.get(id)?.pid, startDirectory: terminalCommands.get(id)?.directory, projectPath: projectIn(slot)?.path };
   },
 });
 
@@ -414,7 +419,7 @@ function spawnTerminal(id: string): void {
     if (shells.get(id) !== terminalProcess) return;
     shells.delete(id);
     const { slot, index } = paneFromId(id);
-    logStore.log(paneExitEntry(projects[slot]?.path, index, exitCode, agentRunsIn(slot, index)));
+    logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
     copy.exit(exitCode);
     sendToRenderer('pty:exit', id, exitCode);
@@ -487,7 +492,7 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
   // and the sweep in between would read the pane as quiet and take the folder away from the agent.
   agentsAtWork.started(id, Date.now());
   const { slot, index } = paneFromId(id);
-  logStore.log(agentStartEntry(projects[slot]?.path, index));
+  logStore.log(agentStartEntry(projectIn(slot)?.path, index));
   shells.get(id)?.kill();
   shells.delete(id);
   spawnTerminal(id);
@@ -591,8 +596,16 @@ registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, windo
 // screen and which project a slot holds.
 const chats = registerChatSessions(table, {
   send: (slot, event) => sendToRenderer('chat:receive', slot, event),
-  projectPath: (slot) => projects[slot]?.path, environment: paneEnvironment, userData: app.getPath('userData'),
+  projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
 });
+// The manager's main, started at launch the way a project's starts when it opens: its workers report to
+// it. Its folder is made first, since a session cannot start in a folder that is not there.
+try {
+  mkdirSync(MANAGER_FOLDER, { recursive: true });
+  chats.open(MANAGER_SLOT);
+} catch (error: unknown) {
+  failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
+}
 registerProjectFiles(table, boards, boardLog, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
@@ -608,6 +621,7 @@ function slotOfProject(projectPath: string): number {
 const openProjects = (): OpenProjects => ({
   projects: projects.map((project) => project ?? null),
   panes: projects.map((_project, slot) => openPanes(slot)),
+  manager: openPanes(MANAGER_SLOT),
 });
 // Every screen redraws its pages from the list, so a worker opening or closing is the list again.
 const panesChanged = (): void => sendToRenderer('projects:change', openProjects());
@@ -624,7 +638,7 @@ function openPanes(slot: number): number[] {
 function openWorker(slot: number): number {
   const index = nextPaneIndex(openPanes(slot));
   const id = terminalId(slot, index);
-  setPaneCommand(id, { args: [], directory: projects[slot]?.path ?? '' });
+  setPaneCommand(id, { args: [], directory: projectIn(slot)?.path ?? '' });
   spawnTerminal(id);
   return index;
 }
@@ -655,7 +669,7 @@ function dropPane(id: string): void {
 function closeWorker(id: string): void {
   const { slot, index } = paneFromId(id);
   dropPane(id);
-  takePane(projects[slot]?.path ?? '', index, '');
+  takePane(projectIn(slot)?.path ?? '', index, '');
   panesChanged();
 }
 
@@ -669,7 +683,7 @@ function takePane(projectPath: string, index: number, cardId: string): void {
 }
 
 registerWorkerChannels(table, {
-  project: (slot) => projects[slot], openPanes, openWorker, closeWorker, openProjects,
+  project: projectIn, openPanes, openWorker, closeWorker, openProjects,
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
@@ -686,7 +700,7 @@ function freePaneIn(slot: number): number {
 
 // Every open terminal of the project as pane-reading.ts reads them.
 function paneReadingsIn(slot: number): PaneReading[] {
-  const projectPath = projects[slot]?.path;
+  const projectPath = projectIn(slot)?.path;
   return openPanes(slot).map((index): PaneReading => {
     const id = terminalId(slot, index);
     const command = terminalCommands.get(id);
@@ -800,8 +814,8 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // The `session` command. Every decision is session-requests.ts's; what is handed over here is the panes
 // and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
 const sessions = listenForSessions(sessionSocket, sessionRequests({
-  slotOf: (directory) => projectOfFolder(projects.map((project) => project?.path), directory, realPath),
-  projectPath: (slot) => projects[slot]?.path,
+  slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
+  projectPath: (slot) => projectIn(slot)?.path,
   openPanes,
   agentIn: (id) => runsAnAgent(terminalCommands.get(id)),
   busyWith(id) {
@@ -819,7 +833,7 @@ const sessions = listenForSessions(sessionSocket, sessionRequests({
   startWorker(id, directory, agentArguments, cardId) {
     const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
     const { slot, index } = paneFromId(id);
-    takePane(projects[slot]?.path ?? '', index, cardId ?? '');
+    takePane(projectIn(slot)?.path ?? '', index, cardId ?? '');
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
     startAgent(id, directory, agentArguments);

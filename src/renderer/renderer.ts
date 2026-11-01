@@ -874,6 +874,7 @@ async function start(): Promise<void> {
     runInPanes: (text, paths) => sendToPanes(text, paths),
     cancelTasks: () => bridge.cancelTasks(),
   });
+  builder.addTerminals(manager);
   pagesElement.append(manager.element);
   pages.push(manager);
   renderStatus();

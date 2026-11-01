@@ -3,6 +3,7 @@ import {
   mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
 } from './dispatch';
 import { quoteForShell } from '../../shared/panes/shell';
+import { MANAGER_FOLDER } from '../manager/manager-terminals';
 
 describe('session names', () => {
   // Two open projects each have a main, and SendMessage addresses one by its name.
@@ -27,6 +28,20 @@ describe('session names', () => {
   it('falls back to project when the name leaves nothing behind', () => {
     expect(mainSessionName('/work/پروژه')).toBe('main-project');
     expect(workerSessionName('/work/!!!', 2)).toBe('project-terminal-3');
+  });
+});
+
+describe('the manager\'s session names', () => {
+  // Its folder is .dashboard, which on its own would name it after a checkout called dashboard.
+  it('names main and its workers manager', () => {
+    expect(mainSessionName(MANAGER_FOLDER)).toBe('main-manager');
+    expect(workerSessionName(MANAGER_FOLDER, 1)).toBe('manager-terminal-2');
+    expect(mainSessionName('/work/dashboard')).toBe('main-dashboard');
+  });
+
+  it('tells the manager\'s main where projects.yaml is', () => {
+    expect(mainPrompt(MANAGER_FOLDER)).toContain(`You work in ${MANAGER_FOLDER}`);
+    expect(mainPrompt('/work/api')).not.toContain('projects.yaml');
   });
 });
 

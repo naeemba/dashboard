@@ -2,6 +2,7 @@ import { baseName } from '../../shared/app/base-name';
 import { claudeArguments } from '../../shared/panes/shell';
 import { paneLabel } from '../../shared/panes/terminals';
 import { slug } from '../../shared/app/slug';
+import { MANAGER_FOLDER } from '../manager/manager-terminals';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -9,7 +10,10 @@ import { slug } from '../../shared/app/slug';
 
 // The project's name as it can go in a session name: SendMessage addresses a session by it, and a
 // space or a slash there is one more thing to quote in a message.
+// The manager's folder is `.dashboard`, which would slug to the same `dashboard` as a checkout of this
+// app, and its main would then share a name with that project's main.
 function projectSlug(projectPath: string): string {
+  if (projectPath === MANAGER_FOLDER) return 'manager';
   return slug(baseName(projectPath)) || 'project';
 }
 
@@ -27,9 +31,13 @@ export function workerSessionName(projectPath: string, index: number): string {
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
 export function mainPrompt(projectPath: string): string {
+  const manager = projectPath === MANAGER_FOLDER;
   return [
-    `You are the main session of ${baseName(projectPath)}, in the Dashboard app's left-hand pane. The panes`
-      + ' on the right are workers: you dispatch tasks into them rather than running them yourself.',
+    `You are the main session of ${manager ? 'the Dashboard manager' : baseName(projectPath)}, in the Dashboard`
+      + " app's left-hand pane. The panes on the right are workers: you dispatch tasks into them rather"
+      + ' than running them yourself.',
+    ...(manager ? ['', `You work in ${projectPath}, about no project in particular; projects.yaml there`
+      + ' describes every project.'] : []),
     '',
     'Dispatch rule: a pane is for a task I asked for (do X, review X, research X), never for a lookup you'
       + ' need mid-task; those stay inline or in the Agent tool.',

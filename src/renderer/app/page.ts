@@ -252,11 +252,22 @@ export function toggleZoom(page: Page): void {
   fitPanes(page);
 }
 
+// One view of a page, hidden unless it is the mode the page shows.
+function makeView(mode: Mode, shown: Mode): HTMLElement {
+  const view = document.createElement('div');
+  view.className = `view view-${mode}`;
+  view.hidden = mode !== shown;
+  return view;
+}
+
 // What the builder hands back: a page for a project, and the step that makes a page's terminals the
 // ones main says it has open.
 export type PageBuilder = {
   build(project: Project, slot: number, open: readonly number[]): Page;
   syncPanes(page: Page, open: readonly number[]): void;
+  // A terminals view added to a page built elsewhere: the manager's, which has no folder of its own on
+  // this side but a main session and workers in main's.
+  addTerminals(page: Page): void;
 };
 
 // Builds the page for one project: its views, its terminals and its editor — or, for a project whose
@@ -514,15 +525,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     const element = document.createElement('section');
     element.className = 'page';
     const views: Record<ProjectMode, HTMLElement> = {
-      terminals: document.createElement('div'),
-      nvim: document.createElement('div'),
-      board: document.createElement('div'),
-      notes: document.createElement('div'),
+      terminals: makeView('terminals', 'terminals'), nvim: makeView('nvim', 'terminals'),
+      board: makeView('board', 'terminals'), notes: makeView('notes', 'terminals'),
     };
-    for (const [mode, view] of Object.entries(views)) {
-      view.className = `view view-${mode}`;
-      view.hidden = mode !== 'terminals';
-    }
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: MAIN_INDEX, workers: null, slot, editor: null,
       editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null, chat: null,
@@ -539,12 +544,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       return page;
     }
     element.append(...Object.values(views));
-    // Main on the left, full height; down the right, the workers in a list that scrolls once there are
-    // more than fit. The button that opens another one is in the title row, so it costs the list no row.
-    page.workers = document.createElement('div');
-    page.workers.className = 'workers';
-    views.terminals.append(page.workers);
-    for (const index of open) addPane(page, index);
+    fillTerminals(page, views.terminals, open);
     const editorId = terminalId(slot, EDITOR_INDEX);
     page.editor = buildPane(views.nvim, editorId, page, EDITOR_INDEX);
     panesById.set(editorId, page.editor);
@@ -567,12 +567,22 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onError: (message) => options.onError(`notes:${slot}`, message),
     });
     views.notes.append(page.notes.element);
-    // Main, the project's Claude session, in the terminals view's left column. Its history is read
-    // now, so it is there the first time you look.
+    return page;
+  }
+
+  // Main on the left, full height; down the right, the workers in a list that scrolls once there are
+  // more than fit. The button that opens another one is in the title row, so it costs the list no row.
+  // Main is the page's Claude session, its history read now so it is there the first time you look.
+  function fillTerminals(page: Page, view: HTMLElement, open: readonly number[]): void {
+    const { slot } = page;
+    page.workers = document.createElement('div');
+    page.workers.className = 'workers';
+    view.append(page.workers);
+    for (const index of open) addPane(page, index);
     const chat = createChatView({
       bridge: options.bridge,
       slot,
-      projectName: project.name,
+      projectName: page.project.name,
       paneId: terminalId(slot, MAIN_INDEX),
       onError: (message) => options.onError(`chat:${slot}`, message),
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
@@ -584,11 +594,17 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     main.className = 'main-chat';
     main.append(chat.element);
     main.addEventListener('focusin', () => arrived(page, MAIN_INDEX));
-    views.terminals.prepend(main);
+    view.prepend(main);
     chatsBySlot.set(slot, chat);
     chat.open();
-    return page;
   }
 
-  return { build: buildPage, syncPanes };
+  function addTerminals(page: Page): void {
+    const view = makeView('terminals', page.mode);
+    page.views.terminals = view;
+    page.element.append(view);
+    fillTerminals(page, view, []);
+  }
+
+  return { build: buildPage, syncPanes, addTerminals };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { closeRefusal, closingPanes, createProjectCloser, type ClosingPane, type ProjectCloserPorts } from './close-project';
 import type { Page } from './page';
 import type { PaneUse } from '../../shared/panes/pane-reading';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 // A shell sitting at its own prompt: nothing running in it, so it holds nothing open.
 const pane = (name: string, use: Partial<ClosingPane> = {}): ClosingPane => ({
@@ -72,7 +73,7 @@ describe('createProjectCloser', () => {
 
   // The manager at 0, then web and api; you stand on web unless a case says otherwise.
   function setUp(options: { readings?: PaneUse[][]; answer?: boolean; activeIndex?: number } = {}) {
-    const pages = [page(-1, 'manager'), page(4, 'web'), page(7, 'api')];
+    const pages = [page(MANAGER_SLOT, 'manager'), page(4, 'web'), page(7, 'api')];
     const readings = [...(options.readings ?? [[idle], [idle]])];
     const ports: ProjectCloserPorts = {
       readPanes: vi.fn(async () => readings.shift() ?? []),
@@ -135,7 +136,7 @@ describe('createProjectCloser', () => {
 
   it('leaves the manager and a slot with no page alone', async () => {
     const { ports, close } = setUp();
-    await close(-1);
+    await close(MANAGER_SLOT);
     await close(99);
     expect(ports.readPanes).not.toHaveBeenCalled();
   });

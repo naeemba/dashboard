@@ -59,9 +59,16 @@ describe('helpSections', () => {
   // project's own screens, off the manager page, where a manager-page key like section-previous is
   // listed nowhere and so is not checked; `manager`, `board`, `command` and `notes` are the manager's
   // own screens, where those keys are printed and must actually fire.
+  // The manager's terminals are a project's terminals in every key: its main is a Claude screen too,
+  // and the section keys are not heard there, so the dialog does not list them.
+  it('lists the manager\'s terminals as a project\'s, with no section keys', () => {
+    expect(titles('terminals', true)).toEqual(titles('terminals', false));
+    expect(rows('terminals', true).map((row) => row.action)).not.toContain('The section to the left, along the top');
+  });
+
   it('names only keys mapShortcut actually answers to', () => {
     const cases: readonly (readonly [Mode, boolean])[] = [
-      ['terminals', false], ['board', false],
+      ['terminals', false], ['board', false], ['terminals', true],
       ['manager', true], ['board', true], ['command', true], ['notes', true],
     ];
     for (const [mode, onManagerPage] of cases) {

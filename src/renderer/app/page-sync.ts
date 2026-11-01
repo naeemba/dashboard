@@ -1,5 +1,5 @@
 import type { OpenProjects, Project } from '../../shared/app/bridge';
-import { isProjectPage } from '../../shared/manager/manager';
+import { isProjectPage, openPanesOf } from '../../shared/manager/manager';
 import { discardPanes, type Page } from './page';
 import { hostTracker, landingAfterMoves } from './page-reconcile';
 
@@ -67,9 +67,9 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
           ports.setPage(move.project, move.slot, open.panes[move.slot] ?? []);
         }
       }
-      // A worker opening or closing changes no page, only what is on one. Every page is asked, since
-      // the list does not say which changed; one that already matches is left as it is.
-      for (const page of projectPages()) ports.syncPanes(page, open.panes[page.slot] ?? []);
+      // A worker opening or closing changes no page, only what is on one. Every page is asked, the
+      // manager's too, since the list does not say which changed; one that already matches is left as it is.
+      for (const page of pages) ports.syncPanes(page, openPanesOf(open, page.slot));
       const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
       if (landing.takeFocus) ports.landOn(landing.position);
       else {
