@@ -109,6 +109,12 @@
           "notes": "src refactoring audit, step 8. Plan: /tmp/claude-1000/src-audit.md (section 'Step 8').",
           "priority": "medium",
           "parent": null
+        },
+        {
+          "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
+          "title": "Spell out args in test-file locals and parameters",
+          "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
+          "priority": "low"
         }
       ]
     },
