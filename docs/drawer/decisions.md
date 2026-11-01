@@ -22,8 +22,9 @@ The index is `session-index.json` in the app's user data, keyed by project path,
 because sessions are one person's and `board.json` is tracked. Labels are
 `<project>-<n>`; F2 renames one.
 
-**Last used** moves when the token sweep finds the session running, and when the
-drawer resumes it.
+**Last used** moves when the drawer resumes a session, and when the token sweep
+finds it running and its last use is five minutes old: moving it every
+half-minute sweep would rewrite the file for an age no row can show.
 
 **A resume is always a new worker pane**, so it is never typed into a busy one.
 It is refused while the conversation runs anywhere the app can see — a pane, by

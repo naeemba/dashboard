@@ -14,7 +14,7 @@ import { drawerKey, drawerRows, sessionDetail, type DrawerRow } from './drawer-r
 // opened and closed by its button in the title row, beside the tabs, or by its key. Every rule with a
 // branch is drawer-rows.ts's; this is the DOM.
 
-export type DrawerPorts = {
+type DrawerPorts = {
   bridge: Pick<DashboardBridge, 'listDocs' | 'listSessions' | 'renameSession' | 'resumeSession'>;
   // The project page in front, or null on the manager and a project whose folder has gone.
   page(): Page | null;
@@ -26,7 +26,7 @@ export type DrawerPorts = {
   closed(): void;
 };
 
-export type Drawer = { button: HTMLButtonElement; element: HTMLElement; toggle(): void; render(): void };
+type Drawer = { button: HTMLButtonElement; element: HTMLElement; toggle(): void; render(): void };
 
 const NO_SESSIONS: SessionList = { rows: [], more: false };
 
@@ -55,6 +55,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   let sessions = NO_SESSIONS;
   let count = SESSION_PAGE_SIZE;
   let rows: DrawerRow[] = [];
+  let items: HTMLElement[] = [];
   let highlighted = 0;
   // Each load is numbered, so an answer that arrives after the drawer moved to another page is dropped.
   let loads = 0;
@@ -103,22 +104,35 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     const projectPath = shownFor.project.path;
     rows = drawerRows(docs, sessions, box.value, projectPath);
     highlighted = clampIndex(highlighted, rows.length - 1);
-    const items = rows.map((row, index) => rowElement(row, index, projectPath));
+    items = rows.map((row, index) => rowElement(row, index, projectPath));
     const docCount = rows.filter((row) => row.kind === 'doc').length;
+    const filtering = box.value !== '';
     list.replaceChildren(
-      ...heading('Docs', docCount === 0, box.value === '' ? 'No docs/ folder here' : 'No doc matches'),
+      ...heading('Docs', docCount === 0, filtering ? 'No doc matches' : 'No docs/ folder here'),
       ...items.slice(0, docCount),
-      ...heading('Sessions', rows.length === docCount, box.value === '' ? 'No sessions started here yet' : 'No session matches'),
+      ...heading('Sessions', rows.length === docCount, filtering ? 'No session matches' : 'No sessions started here yet'),
       ...items.slice(docCount),
     );
     items[highlighted]?.scrollIntoView({ block: 'nearest' });
   }
 
-  function load(): void {
+  // An arrow key moves the highlight between the rows already drawn and builds nothing.
+  function highlight(index: number): void {
+    items[highlighted]?.classList.remove('highlighted');
+    highlighted = index;
+    items[highlighted]?.classList.add('highlighted');
+    items[highlighted]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  // What the drawer lists, read again. The docs only on opening: Load more and a rename change sessions.
+  function load(withDocs: boolean): void {
     const page = shownFor;
     if (page === null) return;
     const load = ++loads;
-    Promise.all([ports.bridge.listDocs(page.project.path), ports.bridge.listSessions(page.project.path, count)]).then(
+    Promise.all([
+      withDocs ? ports.bridge.listDocs(page.project.path) : docs,
+      ports.bridge.listSessions(page.project.path, count),
+    ]).then(
       ([nextDocs, nextSessions]) => {
         if (load !== loads) return;
         docs = nextDocs;
@@ -137,9 +151,9 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     highlighted = 0;
     box.value = '';
     element.hidden = false;
-    button.classList.add('open');
+    button.classList.add('active');
     draw();
-    load();
+    load(true);
     box.focus();
   }
 
@@ -147,7 +161,12 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     shownFor = null;
     loads += 1;
     element.hidden = true;
-    button.classList.remove('open');
+    button.classList.remove('active');
+    docs = [];
+    sessions = NO_SESSIONS;
+    rows = [];
+    items = [];
+    list.replaceChildren();
   }
 
   function close(): void {
@@ -167,7 +186,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     if (page === null) return;
     if (row.kind === 'more') {
       count += SESSION_PAGE_SIZE;
-      return load();
+      return load(false);
     }
     if (row.kind === 'doc') {
       close();
@@ -182,16 +201,18 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function rename(row: DrawerRow): void {
     const page = shownFor;
     if (page === null || row.kind !== 'session') return;
-    void promptOverlay('Rename this session', row.session.label, row.session.label, 'Enter renames, Escape keeps the name')
-      .then(async (label) => {
-        if (label !== null) {
-          const reply = await ports.bridge.renameSession(page.project.path, row.session.id, label);
-          if (reply !== null) ports.report(reply.refused);
-          load();
-        }
-        if (shownFor === page) box.focus();
-      })
-      .catch((error: unknown) => ports.report(`Could not rename ${row.session.label}: ${failureText(error)}`));
+    void (async () => {
+      const label = await promptOverlay('Rename this session', row.session.label, row.session.label, 'Enter renames, Escape keeps the name');
+      if (shownFor === page) box.focus();
+      if (label === null) return;
+      try {
+        const reply = await ports.bridge.renameSession(page.project.path, row.session.id, label);
+        if (reply !== null) ports.report(reply.refused);
+        load(false);
+      } catch (error: unknown) {
+        ports.report(`Could not rename ${row.session.label}: ${failureText(error)}`);
+      }
+    })();
   }
 
   box.addEventListener('input', () => {
@@ -209,8 +230,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
       case 'next':
       case 'previous':
         if (rows.length === 0) return;
-        highlighted = (highlighted + (action === 'next' ? 1 : -1) + rows.length) % rows.length;
-        return draw();
+        return highlight((highlighted + (action === 'next' ? 1 : -1) + rows.length) % rows.length);
       case 'act': return act(row);
       case 'rename': return rename(row);
     }

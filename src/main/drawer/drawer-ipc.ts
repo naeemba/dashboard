@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import type { Channels } from '../app/channels';
 import { listDocs } from './docs-list';
-import { resumeRefusal } from '../workers/session-index';
+import { resumeChoice } from '../workers/session-index';
 import type { SessionIndexStore } from '../workers/session-index-store';
 import type { DrawerReply } from '../../shared/drawer/drawer';
 
@@ -24,12 +24,10 @@ export function registerDrawer(table: Channels, main: {
   table.handle('sessions:resume', (_screen, slot: number, id: string): DrawerReply => {
     const projectPath = main.projectPath(slot);
     if (projectPath === undefined) return { refused: 'That project is closed' };
-    const record = main.sessions.find(projectPath, id);
-    const refused = resumeRefusal(record, existsSync, main.sessions.runningIn(id));
-    if (refused !== null) return { refused };
+    const choice = resumeChoice(main.sessions.find(projectPath, id), existsSync, main.sessions.runningIn(id));
+    if ('refused' in choice) return choice;
     main.sessions.used(projectPath, id);
-    // Never the fallback: a missing record is refused above.
-    main.resumeInWorker(slot, id, record?.directory ?? projectPath);
+    main.resumeInWorker(slot, id, choice.record.directory);
     return null;
   });
 }

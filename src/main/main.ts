@@ -630,7 +630,7 @@ registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, windo
 const chats = registerChatSessions(table, {
   send: (slot, event) => sendToRenderer('chat:receive', slot, event),
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
-  conversation: (projectPath, id) => sessionIndex.mainIs(projectPath, id),
+  conversation: sessionIndex.mainIs,
 });
 // The manager's main, started at launch the way a project's starts when it opens: its workers report to
 // it. Its folder is made first, since a session cannot start in a folder that is not there.
@@ -883,7 +883,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
   mainsWorkerIn: (id) => mainsWorkers.has(id),
   shellCommand: () => shellCommand,
   openWorker,
-  newSession: (projectPath, directory, cardId) => sessionIndex.launched(projectPath, directory, cardId),
+  newSession: sessionIndex.launched,
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.

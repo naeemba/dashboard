@@ -1,4 +1,4 @@
-import { isPaneConversation } from './claude-resume';
+import { isPaneConversation, resumable } from './claude-resume';
 import { isRecord } from '../../shared/app/is-record';
 import type { SessionList, SessionRecord } from '../../shared/drawer/drawer';
 
@@ -54,23 +54,33 @@ export function withUse(index: SessionIndex, projectPath: string, id: string, at
   return withRow(index, projectPath, id, (row) => ({ ...row, lastUsedAt: Math.max(row.lastUsedAt, at) }));
 }
 
+// How stale a running session's last use may get before a sweep moves it. The sweep runs every half
+// minute and the drawer shows ages in minutes, so moving it every sweep would rewrite the file for
+// nothing a row could show.
+export const LIVE_USE_STEP_MS = 5 * 60_000;
+
 // The live sessions a token sweep found, each marked used now in whichever project holds it. The same
-// index back when none of them is one of the app's, so the caller can skip a write that changes nothing.
+// index back when no row moved, so the caller can skip a write that changes nothing.
 export function withLive(index: SessionIndex, live: Iterable<string>, at: number): SessionIndex {
   const ids = new Set(live);
-  let next = index;
-  for (const [projectPath, rows] of Object.entries(index)) {
-    for (const row of rows) if (ids.has(row.id) && row.lastUsedAt < at) next = withUse(next, projectPath, row.id, at);
-  }
-  return next;
+  const stale = (row: SessionRecord): boolean => ids.has(row.id) && at - row.lastUsedAt >= LIVE_USE_STEP_MS;
+  const moved = Object.entries(index).filter(([, rows]) => rows.some(stale));
+  if (moved.length === 0) return index;
+  return {
+    ...index,
+    ...Object.fromEntries(moved.map(([projectPath, rows]) => [projectPath, rows.map((row) => (stale(row) ? { ...row, lastUsedAt: at } : row))])),
+  };
 }
+
+const GONE = 'That session is not in this project any more';
 
 // A rename from the drawer, or the sentence saying why not.
 export function renamed(index: SessionIndex, projectPath: string, id: string, label: string): SessionIndex | string {
   const trimmed = label.trim();
   if (trimmed === '') return 'A session needs a name — Escape keeps the one it has';
-  if (!(index[projectPath] ?? []).some((row) => row.id === id)) return 'That session is not in this project any more';
-  return withRow(index, projectPath, id, (row) => ({ ...row, label: trimmed }));
+  // withRow hands the same index back only when it found no row to change.
+  const next = withRow(index, projectPath, id, (row) => ({ ...row, label: trimmed }));
+  return next === index ? GONE : next;
 }
 
 // The `count` most recently used, newest first, and whether older ones are left.
@@ -79,15 +89,18 @@ export function sessionPage(index: SessionIndex, projectPath: string, count: num
   return { rows: rows.slice(0, count), more: rows.length > count };
 }
 
-// Why a session cannot be resumed into a new worker, or null when it can. A resume of a conversation
-// still running would put two Claudes on one conversation, each writing its own turns into it.
-export function resumeRefusal(
+// The session to resume into a new worker, or why not. A resume of a conversation still running would
+// put two Claudes on one conversation, each writing its own turns into it. Whether its folder still
+// holds it is the launch's own rule, resumable in claude-resume.ts.
+export function resumeChoice(
   record: SessionRecord | undefined,
   folderExists: (directory: string) => boolean,
   runningIn: string | null,
-): string | null {
-  if (record === undefined) return 'That session is not in this project any more';
-  if (runningIn !== null) return `${record.label} is still running in ${runningIn}`;
-  if (!folderExists(record.directory)) return `${record.label} ran in ${record.directory}, which is gone`;
-  return null;
+): { record: SessionRecord } | { refused: string } {
+  if (record === undefined) return { refused: GONE };
+  if (runningIn !== null) return { refused: `${record.label} is still running in ${runningIn}` };
+  if (!resumable({ session: record.id, directory: record.directory }, folderExists)) {
+    return { refused: `${record.label} ran in ${record.directory}, which is gone` };
+  }
+  return { record };
 }

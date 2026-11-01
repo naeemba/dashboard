@@ -28,7 +28,7 @@ export function drawerRows(docs: readonly DocEntry[], sessions: SessionList, que
   return [...docRows, ...sessionRows, ...(sessions.more ? [{ kind: 'more' } as const] : [])];
 }
 
-export type DrawerKey = 'close' | 'next' | 'previous' | 'act' | 'rename' | 'swallow' | 'ignore';
+type DrawerKey = 'close' | 'next' | 'previous' | 'act' | 'rename' | 'swallow' | 'ignore';
 
 // What a keystroke in the drawer does. The drawer's own key closes it, read before the modifier guard
 // because it is a modified key (keys-rule-1); so is Tab, which would drop focus into the pane behind.

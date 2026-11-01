@@ -36,7 +36,7 @@ function readIndex(file: string): SessionIndex {
   }
 }
 
-export function sessionIndexStore(file: string, now: () => number = Date.now): SessionIndexStore {
+export function sessionIndexStore(file: string): SessionIndexStore {
   let index = readIndex(file);
   let livePanes = new Map<string, string>();
   const mains = new Map<string, string>();
@@ -52,7 +52,7 @@ export function sessionIndexStore(file: string, now: () => number = Date.now): S
   }
 
   const record = (projectPath: string, id: string, directory: string, card: string | null): void => (
-    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: now() }))
+    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now() }))
   );
 
   return {
@@ -78,7 +78,7 @@ export function sessionIndexStore(file: string, now: () => number = Date.now): S
       save(next);
       return null;
     },
-    used: (projectPath, id) => save(withUse(index, projectPath, id, now())),
+    used: (projectPath, id) => save(withUse(index, projectPath, id, Date.now())),
     runningIn(id) {
       if ([...mains.values()].includes(id)) return 'the Claude screen';
       const pane = livePanes.get(id);

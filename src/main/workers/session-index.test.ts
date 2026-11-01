@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSessionIndex, renamed, resumeRefusal, sessionPage, withLive, withSession, type SessionIndex } from './session-index';
+import { LIVE_USE_STEP_MS, parseSessionIndex, renamed, resumeChoice, sessionPage, withLive, withSession, type SessionIndex } from './session-index';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
@@ -37,10 +37,12 @@ describe('parseSessionIndex', () => {
 });
 
 describe('withLive', () => {
-  it('marks a running session used, and hands the same index back when nothing changed', () => {
+  it('marks a running session used once its last use is a step old, and hands the same index back otherwise', () => {
     const index = started({}, ID, 1);
-    expect(withLive(index, [ID], 9)[PROJECT][0].lastUsedAt).toBe(9);
-    expect(withLive(index, [OTHER], 9)).toBe(index);
+    const later = 1 + LIVE_USE_STEP_MS;
+    expect(withLive(index, [ID], later)[PROJECT][0].lastUsedAt).toBe(later);
+    expect(withLive(index, [ID], later - 1)).toBe(index);
+    expect(withLive(index, [OTHER], later)).toBe(index);
   });
 });
 
@@ -65,17 +67,17 @@ describe('sessionPage', () => {
   });
 });
 
-describe('resumeRefusal', () => {
+describe('resumeChoice', () => {
   const record = started({}, ID, 1)[PROJECT][0];
   const there = (): boolean => true;
 
   it('resumes a session that is not running and whose folder is there', () => {
-    expect(resumeRefusal(record, there, null)).toBeNull();
+    expect(resumeChoice(record, there, null)).toEqual({ record });
   });
 
   it('refuses one still running, one whose worktree is gone, and one it has no row for', () => {
-    expect(resumeRefusal(record, there, 'terminal 3')).toBe('dashboard-1 is still running in terminal 3');
-    expect(resumeRefusal(record, () => false, null)).toMatch(/which is gone$/);
-    expect(resumeRefusal(undefined, there, null)).toMatch(/not in this project/);
+    expect(resumeChoice(record, there, 'terminal 3')).toEqual({ refused: 'dashboard-1 is still running in terminal 3' });
+    expect(resumeChoice(record, () => false, null)).toEqual({ refused: `dashboard-1 ran in ${PROJECT}, which is gone` });
+    expect(resumeChoice(undefined, there, null)).toEqual({ refused: 'That session is not in this project any more' });
   });
 });
