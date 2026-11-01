@@ -285,5 +285,7 @@ export function searchOverlay<Choice>(options: {
 // dialog, and is any dialog up at all. It lives here because this is where a sheet gets its class, so
 // a new dialog opened through openOverlay is covered without a second list to keep in step.
 // .board-edit is spelled out: it is not a sheet, it is an input inside a card (board-view.ts). So is
-// .file-hints, the hint key's letters laid over a pane (file-hints.ts), which is no sheet either.
-export const OVERLAY_SELECTOR = `.${OVERLAY_CLASS}, .board-edit, .file-hints`;
+// .file-hints, the hint key's letters laid over a pane (file-hints.ts), which is no sheet either. The
+// drawer (drawer-view.ts) counts only while it has the keyboard: left open beside a pane you clicked
+// into, the pane's keys are the pane's.
+export const OVERLAY_SELECTOR = `.${OVERLAY_CLASS}, .board-edit, .file-hints, .drawer:focus-within`;

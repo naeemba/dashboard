@@ -1,0 +1,99 @@
+/* The drawer of a project's docs and sessions: laid over the left of the page, never beside it, so the
+   grid under it keeps its size. Above the pages, which come after it in #pages. */
+.drawer {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, 90%);
+  background: var(--surface-raised);
+  border-right: 1px solid var(--line);
+  box-shadow: 4px 0 16px rgb(0 0 0 / 35%);
+}
+
+/* display: flex beats the browser's own [hidden] (conventions-rule-3). */
+.drawer[hidden] {
+  display: none;
+}
+
+.drawer-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 6px 8px;
+  list-style: none;
+}
+
+.drawer-heading {
+  padding: 10px 10px 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.drawer-empty {
+  padding: 4px 10px;
+  color: var(--muted);
+}
+
+.drawer-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.drawer-row:hover {
+  background: var(--hover);
+}
+
+.drawer-row.highlighted {
+  background: var(--tint);
+}
+
+.drawer-row .icon {
+  flex: none;
+  color: var(--muted);
+}
+
+.drawer-name {
+  overflow: hidden;
+  color: var(--brightWhite);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-detail {
+  margin-left: auto;
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.drawer-keys {
+  margin: 0;
+  padding: 6px 12px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The drawer's button in the title row is a tab's shape, lit while the drawer is open. .project sets
+   display: inline-flex, which beats [hidden] on the manager's page. */
+.drawer-toggle {
+  flex: none;
+  margin-right: 6px;
+}
+
+.drawer-toggle.open {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--brightWhite);
+}
+
+.drawer-toggle[hidden] {
+  display: none;
+}
