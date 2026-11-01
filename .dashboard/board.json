@@ -80,6 +80,12 @@
           "title": "Move src into process and feature folders, no behaviour change",
           "notes": "src refactoring audit, step 1. Plan: /tmp/claude-1000/src-audit.md (section 'Step 1').",
           "priority": "medium"
+        },
+        {
+          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
+          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
+          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
+          "priority": "medium"
         }
       ]
     },
