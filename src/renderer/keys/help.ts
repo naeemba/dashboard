@@ -1,5 +1,6 @@
 import { type ActionGroup } from '../../shared/keys/actions';
 import { PDF_LIMIT_SHOWN } from '../../shared/chat/chat-pdf';
+import { IMAGE_LIMIT_SHOWN } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, STASH_KEPT } from '../../shared/chat/chat-history';
 import { FOLD_SHOWN_LINES } from '../chat/chat-fold';
 import { labelled } from '../app/icons';
@@ -301,7 +302,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'The boxes take the terminal\'s readline keys: deleting the word before the caret, back to the start of the line or on to its end keeps what went, and the yank key puts it back; kills one straight after another join into one, the yank-pop key straight after a yank swaps it for the kill before, and undo takes any of them back. '
     + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
     + 'working: the message waits grey under the conversation until the turn gets to it, and Up in the empty box takes the last one waiting back to edit. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '
-    + 'a thumbnail of each sits over the box, up to 5 MB of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
+    + 'a thumbnail of each sits over the box, up to ' + IMAGE_LIMIT_SHOWN + ' of images a prompt, and Backspace in an empty box takes the last one off. A click on an image, or the image key, shows it full size: the selected entry\'s first one, or with nothing selected the first one attached. Write @ and a path to '
     + 'point Claude at a file; @ opens a list of the project\'s files that narrows as you type, and Tab or Enter puts the one picked in the box. A PDF mentioned that way shows as a [PDF File] tile with its name, and so does one Claude reads, once its Read call is unfolded; a click or the image key opens it in the built-in PDF viewer, Escape puts it away, and one missing or over ' + PDF_LIMIT_SHOWN + ' says so on the tile. Up and Down on the box\'s first or last line bring back the prompts sent '
     + 'before, the stash key empties the box and Up brings the draft back first (the last ' + STASH_KEPT + ' stashed), and the history key searches every prompt sent in the project\'s ' + HISTORY_CONVERSATIONS + ' most recent conversations, the terminal\'s too, and puts the one picked in the box. After a turn Claude may suggest what you will ask next: it shows grey in the empty box, Tab puts it '
     + 'there to edit or send, and typing anything else replaces it. The editor key opens what is in the box in the project\'s nvim; '
