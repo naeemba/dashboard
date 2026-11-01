@@ -1,9 +1,11 @@
 import type { DashboardBridge } from './bridge';
 import { copyTarget, modelRows, namedModel, resumeRows } from './chat-commands';
+import { editsHeading, sessionEdits } from './chat-diff';
+import { diffBlock } from './chat-entries';
 import type { ChatEntry } from './chat-transcript';
 import type { ChatViewOptions } from './chat-view';
 import { failureText } from './failure';
-import { searchOverlay } from './overlay';
+import { searchOverlay, viewerOverlay } from './overlay';
 
 // The Claude screen's own commands that are a sheet or a call to main and nothing of the view's own,
 // the way /rewind is in chat-rewind-view.ts. Each one says what went wrong itself and resolves once it
@@ -68,4 +70,18 @@ export async function copyReply(entries: ChatEntry[], rest: string, say: Say): P
   } catch (error) {
     say.onError(`Reply not copied: ${failureText(error)}`);
   }
+}
+
+// /diff: every file Claude changed in the conversation, each under a line naming it, on a sheet to read.
+export function showEdits(entries: ChatEntry[], say: Say): void {
+  const files = sessionEdits(entries);
+  if (files.length === 0) return say.onNotice('Claude has not changed a file in this conversation.');
+  const review = document.createElement('div');
+  review.append(...files.flatMap((file) => {
+    const heading = document.createElement('div');
+    heading.className = 'chat-diff-file';
+    heading.textContent = editsHeading(file);
+    return [heading, diffBlock(file.lines)];
+  }));
+  viewerOverlay('diff-viewer', review);
 }

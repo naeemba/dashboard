@@ -28,5 +28,5 @@ project and wires every other feature into it.
 ## Open questions
 
 - `main.ts` is at the 600-line ceiling (599 code lines) and `renderer.ts` is past
-  it (608), left there while the chat-view.ts split landed; the next feature
-  wired through either needs a seam split out first (workflow-decision-1).
+  it (608); the next feature wired through either needs a seam split out first
+  (workflow-decision-1).

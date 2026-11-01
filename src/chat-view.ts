@@ -98,7 +98,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   prompt.placeholder = PLACEHOLDER;
   prompt.rows = 3;
   prompt.dir = 'auto';
-  const attachments = createAttachments(element, prompt, bridge, options.onNotice);
+  const attachments = createAttachments(element, prompt, bridge, options);
   const menu = createCommandMenu();
   const activity = document.createElement('div');
   activity.className = 'chat-working';
@@ -299,7 +299,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function send(): void {
     let text = prompt.value.trim();
-    if (!text && attachments.count() === 0) return;
+    if (!text && attachments.list().length === 0) return;
     stashed = stashed.filter((each) => each !== text);
     const own = screenCommand(text);
     if (own) {
@@ -395,7 +395,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // One at a time: an Up pressed again before main answers would ask to withdraw the same prompt.
   let withdrawing = false;
   function withdraw(): boolean {
-    const waiting = withdrawable(transcript.queued, prompt.value, attachments.count());
+    const waiting = withdrawable(transcript.queued, prompt.value, attachments.list().length);
     if (!waiting || withdrawing) return waiting !== null;
     withdrawing = true;
     bridge.chatWithdraw(slot, waiting.id).finally(() => { withdrawing = false; }).then((withdrawn) => {
@@ -622,11 +622,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const commandScreen: CommandScreen = {
     bridge, slot, options, prompt, configure, focus,
     transcript: () => transcript,
-    asks: () => asks.length,
+    askCount: () => asks.length,
     model: () => model,
     effort: () => effort,
     fast: () => fast,
-    images: () => attachments.count(),
+    imageCount: () => attachments.list().length,
   };
 
   return {

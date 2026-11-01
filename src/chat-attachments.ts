@@ -1,4 +1,5 @@
 import type { DashboardBridge } from './bridge';
+import type { Say } from './chat-screen-commands';
 import { droppedFiles, fileMention, mentionInsertion } from './chat-commands';
 import { imageDataUrl, imagesFit, isImageType, type ChatImage } from './chat-transcript';
 
@@ -10,14 +11,13 @@ import { imageDataUrl, imagesFit, isImageType, type ChatImage } from './chat-tra
 export type Attachments = {
   element: HTMLElement;
   list(): ChatImage[];
-  count(): number;
   add(more: ChatImage[]): void;
   dropLast(): void;
   clear(): void;
 };
 
 export function createAttachments(
-  screen: HTMLElement, prompt: HTMLTextAreaElement, bridge: DashboardBridge, onNotice: (message: string) => void,
+  screen: HTMLElement, prompt: HTMLTextAreaElement, bridge: DashboardBridge, say: Pick<Say, 'onNotice'>,
 ): Attachments {
   const element = document.createElement('div');
   element.className = 'chat-attached';
@@ -43,7 +43,7 @@ export function createAttachments(
       reader.onload = () => {
         const data = String(reader.result).split(',')[1] ?? '';
         if (!imagesFit([...images.map((picture) => picture.data.length), data.length])) {
-          onNotice('That image would put this prompt over 5 MB of images; Claude cannot take it.');
+          say.onNotice('That image would put this prompt over 5 MB of images; Claude cannot take it.');
           return;
         }
         add([{ mediaType: file.type, data }]);
@@ -78,14 +78,13 @@ export function createAttachments(
       // setRangeText fires no input event; the box's own handler forgets a recalled prompt and refreshes the command list.
       prompt.dispatchEvent(new Event('input'));
     }
-    if (refused) onNotice('Only PNG, JPEG, GIF, WEBP images or files on disk can be dropped here.');
+    if (refused) say.onNotice('Only PNG, JPEG, GIF, WEBP images or files on disk can be dropped here.');
     prompt.focus();
   });
 
   return {
     element,
     list: () => images,
-    count: () => images.length,
     add,
     // Backspace in an empty box takes the last one off.
     dropLast() {

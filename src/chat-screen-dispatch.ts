@@ -1,17 +1,15 @@
 import type { DashboardBridge } from './bridge';
 import { askAside } from './chat-btw-view';
 import { EFFORT_LEVELS, effortRows, namedEffort, namedFast, pickedModel, planSends, type ChosenEffort, type ScreenCommand } from './chat-commands';
-import { editsHeading, sessionEdits } from './chat-diff';
-import { diffBlock } from './chat-entries';
 import { exportConversation } from './chat-export-view';
 import { manageMcp } from './chat-mcp-view';
 import { renameConversation } from './chat-rename';
 import { rewind } from './chat-rewind-view';
-import { branch, chooseModel, copyReply, resume } from './chat-screen-commands';
+import { branch, chooseModel, copyReply, resume, showEdits } from './chat-screen-commands';
 import type { ChatPreferences } from './chat-sessions';
 import { working, type Transcript } from './chat-transcript';
 import type { ChatViewOptions } from './chat-view';
-import { searchOverlay, viewerOverlay } from './overlay';
+import { searchOverlay } from './overlay';
 
 // Where `send` in chat-view.ts hands a command typed into the box that is one of the screen's own
 // (screenCommand): each runs here, against what the view tells it of itself, instead of going to the
@@ -23,41 +21,40 @@ export type CommandScreen = {
   options: ChatViewOptions;
   prompt: HTMLTextAreaElement;
   transcript(): Transcript;
-  // How many questions the session is waiting on.
-  asks(): number;
+  askCount(): number;
   model(): string | null;
   effort(): ChosenEffort;
   fast(): boolean;
-  images(): number;
+  imageCount(): number;
   configure(change: ChatPreferences): void;
   focus(): void;
 };
 
 // The text `send` goes on to send to the session: what follows /plan, when there is something to send.
 // Null when the command was all of it.
-export function runScreenCommand(own: ScreenCommand, screen: CommandScreen): string | null {
+export function runScreenCommand(command: ScreenCommand, screen: CommandScreen): string | null {
   const { bridge, slot, options, focus } = screen;
-  switch (own.kind) {
+  switch (command.kind) {
     case 'resume': showResume(screen); break;
-    case 'diff': showDiff(screen); break;
+    case 'diff': showEdits(screen.transcript().entries, options); break;
     case 'rewind': showRewind(screen); break;
     case 'mcp': void manageMcp(bridge, slot, options).then(focus); break;
-    case 'model': showModels(screen, own.rest); break;
-    case 'branch': showBranch(screen, own.rest); break;
-    case 'effort': showEfforts(screen, own.rest); break;
-    case 'copy': void copyReply(screen.transcript().entries, own.rest, options); break;
+    case 'model': showModels(screen, command.rest); break;
+    case 'branch': showBranch(screen, command.rest); break;
+    case 'effort': showEfforts(screen, command.rest); break;
+    case 'copy': void copyReply(screen.transcript().entries, command.rest, options); break;
     case 'fast': {
-      const named = namedFast(own.rest, screen.fast());
-      if (named === undefined) options.onNotice(`Fast mode has no ${own.rest}. Try on or off.`);
+      const named = namedFast(command.rest, screen.fast());
+      if (named === undefined) options.onNotice(`Fast mode has no ${command.rest}. Try on or off.`);
       else screen.configure({ fast: named });
       break;
     }
-    case 'export': void exportConversation(bridge, slot, options, screen.transcript().entries, own.rest).then(focus); break;
-    case 'rename': renameConversation(bridge, slot, own.rest, options); break;
-    case 'btw': showAside(screen, own.rest); break;
+    case 'export': void exportConversation(bridge, slot, options, screen.transcript().entries, command.rest).then(focus); break;
+    case 'rename': renameConversation(bridge, slot, command.rest, options); break;
+    case 'btw': showAside(screen, command.rest); break;
     case 'plan':
       screen.configure({ permissionMode: 'plan' });
-      return planSends(own.rest, screen.images()) ? own.rest : null;
+      return planSends(command.rest, screen.imageCount()) ? command.rest : null;
   }
   return null;
 }
@@ -66,7 +63,7 @@ export function runScreenCommand(own: ScreenCommand, screen: CommandScreen): str
 // would end wherever the turn had got to. A conversation put back by /rewind holds its prompt in the
 // box again, ready to edit and send, unless something was typed there meanwhile.
 function refusedWhileWorking(screen: CommandScreen, then: string): boolean {
-  const busy = working(screen.transcript(), screen.asks());
+  const busy = working(screen.transcript(), screen.askCount());
   if (busy) screen.options.onNotice(`Claude is still working. Escape stops it; then ${then}.`);
   return busy;
 }
@@ -77,20 +74,6 @@ function showResume(screen: CommandScreen): void {
 
 function showBranch(screen: CommandScreen, title: string): void {
   if (!refusedWhileWorking(screen, 'branch')) void branch(screen.bridge, screen.slot, title, screen.options).then(screen.focus);
-}
-
-// Every file Claude changed in the conversation, each under a line naming it, on a sheet to read.
-function showDiff(screen: CommandScreen): void {
-  const files = sessionEdits(screen.transcript().entries);
-  if (files.length === 0) return screen.options.onNotice('Claude has not changed a file in this conversation.');
-  const review = document.createElement('div');
-  review.append(...files.flatMap((file) => {
-    const heading = document.createElement('div');
-    heading.className = 'chat-diff-file';
-    heading.textContent = editsHeading(file);
-    return [heading, diffBlock(file.lines)];
-  }));
-  viewerOverlay('diff-viewer', review);
 }
 
 function showRewind(screen: CommandScreen): void {
