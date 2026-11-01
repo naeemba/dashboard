@@ -19,7 +19,8 @@ export type SessionIndexStore = {
   // The main session's conversation, reported when it begins or changes; undefined when it has none.
   mainIs(projectPath: string, id: string | undefined): void;
   // The conversation main's next launch resumes, undefined for none. Taken as well, since main resumes
-  // it on the first prompt without asking: after a restart nothing is running yet.
+  // it without asking: between a project opening and its session's init, while the SDK loads, nothing
+  // is running yet, and after main's session ended (a crash, say) the next prompt resumes it.
   mainRemembers(projectPath: string, id: string | undefined): void;
   placed(placement: SessionPlacement): void;
   page(projectPath: string, count: number): SessionList;
@@ -28,6 +29,9 @@ export type SessionIndexStore = {
   used(projectPath: string, id: string): void;
   // Where the conversation runs now, as a person names it, or null.
   runningIn(id: string): string | null;
+  // The worker pane running the conversation now, as a person names it, or null: runningIn without
+  // the Claude screen, for the Claude screen's own /resume.
+  inPane(id: string): string | null;
 };
 
 function readIndex(file: string): SessionIndex {
@@ -53,6 +57,11 @@ export function sessionIndexStore(file: string): SessionIndexStore {
     } catch {
       // ponytail: a write that fails costs the rows since the last one on the next launch, nothing else.
     }
+  }
+
+  function inPane(id: string): string | null {
+    const pane = livePanes.get(id);
+    return pane === undefined ? null : paneLabel(paneFromId(pane).index);
   }
 
   const record = (projectPath: string, id: string, directory: string, card: string | null): void => (
@@ -90,8 +99,8 @@ export function sessionIndexStore(file: string): SessionIndexStore {
     used: (projectPath, id) => save(withUse(index, projectPath, id, Date.now())),
     runningIn(id) {
       if ([...mains.values(), ...mainsNext.values()].includes(id)) return 'the Claude screen';
-      const pane = livePanes.get(id);
-      return pane === undefined ? null : paneLabel(paneFromId(pane).index);
+      return inPane(id);
     },
+    inPane,
   };
 }

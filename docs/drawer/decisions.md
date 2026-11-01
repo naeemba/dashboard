@@ -33,8 +33,13 @@ It is refused while the conversation runs anywhere the app can see — a pane, b
 the sweep's reading, or the Claude screen — because two Claudes on one
 conversation each write their own turns into it. On the Claude screen means the
 conversation its session runs now, or the one it will resume on the next
-prompt (`chat-sessions.json`, read at launch and kept as it changes): after a
-restart nothing runs until a prompt, and that prompt resumes it without asking.
+prompt (`chat-sessions.json`, read at launch and kept as it changes). Main
+resumes that one without asking, and two windows leave it running nowhere yet:
+between a project opening and its session's init, while the SDK loads, and
+after main's session ended (a crash, say) and was not restarted, when the next
+prompt resumes it. The reverse holds too: the Claude screen's `/resume` refuses
+a conversation a worker pane runs, such as one of main's older ones the drawer
+resumed into a pane. Both ask `stillRunning` in `session-index.ts`.
 
 **No document pane.** The card waited on one built from the Claude screen's
 markdown renderer; that pane was never built. A doc opens where a path a pane

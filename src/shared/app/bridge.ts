@@ -276,7 +276,7 @@ export type DashboardBridge = {
   chatHistory(slot: number): Promise<string[][]>;
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
-  chatResume(slot: number, sessionId: string): void;
+  chatResume(slot: number, sessionId: string): Promise<{ refused: string } | null>;
   // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
   // False when there is no conversation yet to copy.
   chatBranch(slot: number, title: string): Promise<boolean>;

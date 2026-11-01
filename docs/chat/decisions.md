@@ -54,6 +54,9 @@ started with the project, so the list is there by the first slash.
 
 `/resume` lists the folder's conversations with `includeWorktrees: false`. A project's workers run in
 its worktrees, and with them in the list the project's own conversations are lost among theirs.
+A pick a worker pane runs is refused, answered as `{ refused }` for the status line: the drawer
+can resume one of main's older conversations into a pane in the project folder, and two Claudes on
+one conversation each write their own turns into it (drawer-decision-1).
 
 Plan mode is on the edits key, after accepting, the terminal's order. The plan arrives as the ask for
 `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with

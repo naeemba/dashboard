@@ -89,7 +89,7 @@ const bridge: DashboardBridge = {
   chatSessions: (slot) => ipcRenderer.invoke('chat-sessions:read', slot),
   readPdf: (slot, file) => ipcRenderer.invoke('pdf:read', slot, file),
   onViewerDismiss: (listener) => ipcRenderer.on('viewer:dismiss', () => listener()),
-  chatResume: (slot, sessionId) => ipcRenderer.send('chat:resume', slot, sessionId),
+  chatResume: (slot, sessionId) => ipcRenderer.invoke('chat:resume', slot, sessionId),
   chatBranch: (slot, title) => ipcRenderer.invoke('chat:branch', slot, title),
   chatRename: (slot, title) => ipcRenderer.invoke('chat:rename', slot, title),
   chatPrompts: (slot) => ipcRenderer.invoke('chat-prompts:read', slot),

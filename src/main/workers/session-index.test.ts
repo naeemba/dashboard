@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIVE_USE_STEP_MS, parseSessionIndex, renamed, resumeChoice, sessionPage, withLive, withSession, type SessionIndex } from './session-index';
+import { LIVE_USE_STEP_MS, parseSessionIndex, renamed, resumeChoice, sessionPage, stillRunning, withLive, withSession, type SessionIndex } from './session-index';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
@@ -79,5 +79,13 @@ describe('resumeChoice', () => {
     expect(resumeChoice(record, there, 'terminal 3')).toEqual({ refused: 'dashboard-1 is still running in terminal 3' });
     expect(resumeChoice(record, () => false, null)).toEqual({ refused: `dashboard-1 ran in ${PROJECT}, which is gone` });
     expect(resumeChoice(undefined, there, null)).toEqual({ refused: 'That session is not in this project any more' });
+  });
+});
+
+describe('stillRunning', () => {
+  it('names where a running conversation runs, by its label or without one, and passes one that is not', () => {
+    expect(stillRunning('dashboard-1', 'terminal 3')).toBe('dashboard-1 is still running in terminal 3');
+    expect(stillRunning(undefined, 'terminal 3')).toBe('That conversation is still running in terminal 3');
+    expect(stillRunning('dashboard-1', null)).toBeNull();
   });
 });

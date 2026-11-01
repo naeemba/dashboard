@@ -1,5 +1,6 @@
 import type { EffortLevel, ModelInfo, PermissionResult, Query, RewindFilesResult, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from '../workers/dispatch';
+import { stillRunning } from '../workers/session-index';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { execFile } from 'node:child_process';
@@ -44,8 +45,12 @@ export type ChatHost = {
   // a resume of the remembered one included, and undefined once it is cleared or the session ends.
   conversation(projectPath: string, id: string | undefined): void;
   // The conversation the next launch of the project's main session resumes, undefined for none: once
-  // per project at registration, and again whenever it changes. Main resumes it without asking anyone.
+  // per project at registration, and again whenever it changes. Main resumes it without asking anyone:
+  // when the session's init comes in after the project opens, and on the next prompt after the
+  // session ended (a crash, say) and nothing restarted it.
   remembered(projectPath: string, id: string | undefined): void;
+  // The worker pane running a conversation now, as a person names it, or null.
+  runningInPane(id: string): string | null;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -590,10 +595,15 @@ export function registerChatSessions(
   });
 
   // An earlier conversation picked in /resume: the running one is closed, the page remembers the picked
-  // one, and a session resuming it starts at once. Every screen reads it back.
-  table.on('chat:resume', (_screen, slot: number, sessionId: string) => {
+  // one, and a session resuming it starts at once. Every screen reads it back. One a worker pane runs
+  // is refused, as the drawer refuses one the Claude screen runs.
+  table.handle('chat:resume', (_screen, slot: number, sessionId: string): { refused: string } | null => {
     const projectPath = host.projectPath(slot);
-    if (projectPath !== undefined) carryOnIn(slot, projectPath, sessionId);
+    if (projectPath === undefined) return null;
+    const refused = stillRunning(undefined, host.runningInPane(sessionId));
+    if (refused !== null) return { refused };
+    carryOnIn(slot, projectPath, sessionId);
+    return null;
   });
 
   function carryOnIn(slot: number, projectPath: string, sessionId: string): void {

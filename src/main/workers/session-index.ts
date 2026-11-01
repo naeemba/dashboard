@@ -89,16 +89,23 @@ export function sessionPage(index: SessionIndex, projectPath: string, count: num
   return { rows: rows.slice(0, count), more: rows.length > count };
 }
 
-// The session to resume into a new worker, or why not. A resume of a conversation still running would
-// put two Claudes on one conversation, each writing its own turns into it. Whether its folder still
-// holds it is the launch's own rule, resumable in claude-resume.ts.
+// Why a conversation cannot be resumed, or null: `runningIn` names where it runs now. A resume of one
+// still running would put two Claudes on one conversation, each writing its own turns into it. The
+// drawer and the Claude screen's /resume both ask; a conversation the index has no row for has no label.
+export function stillRunning(label: string | undefined, runningIn: string | null): string | null {
+  return runningIn === null ? null : `${label ?? 'That conversation'} is still running in ${runningIn}`;
+}
+
+// The session to resume into a new worker, or why not. Whether its folder still holds it is the
+// launch's own rule, resumable in claude-resume.ts.
 export function resumeChoice(
   record: SessionRecord | undefined,
   folderExists: (directory: string) => boolean,
   runningIn: string | null,
 ): { record: SessionRecord } | { refused: string } {
   if (record === undefined) return { refused: GONE };
-  if (runningIn !== null) return { refused: `${record.label} is still running in ${runningIn}` };
+  const running = stillRunning(record.label, runningIn);
+  if (running !== null) return { refused: running };
   if (!resumable({ session: record.id, directory: record.directory }, folderExists)) {
     return { refused: `${record.label} ran in ${record.directory}, which is gone` };
   }
