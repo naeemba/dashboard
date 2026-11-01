@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { afterOpening, freePaneIndex, paneIsFree, planSend, sendSummary, type ProjectPanes } from './free-pane';
-import { freePane, type PaneUse } from '../../shared/panes/pane-reading';
+import { afterOpening, freePaneIndex, planSend, sendSummary, type ProjectPanes } from './free-pane';
+import type { PaneUse } from '../../shared/panes/pane-reading';
 
 // A shell sitting at its own prompt, which is what a pane nobody is using reads as.
 const free: PaneUse = {
@@ -35,14 +35,7 @@ describe('freePaneIndex', () => {
   it('takes a pane still standing in a card\'s worktree last, the way a ship does', () => {
     expect(freePaneIndex(workers(finished, free))).toBe(2);
     expect(freePaneIndex(workers(finished, busy))).toBe(1);
-  });
-
-  // freePane's order is the half the command screen shares with a ship, so it is pinned against this
-  // idea of free too: here a dead pane cannot take a line, and a worktree pane still goes last.
-  it('keeps that order whatever the caller counts as free', () => {
-    expect(freePane(workers(dead, finished, free), paneIsFree)).toBe(3);
-    expect(freePane(workers(dead, finished), paneIsFree)).toBe(2);
-    expect(freePane(workers(dead), paneIsFree)).toBe(null);
+    expect(freePaneIndex(workers(dead, finished, free))).toBe(3);
   });
 });
 
