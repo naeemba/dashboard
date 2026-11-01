@@ -1,11 +1,11 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { existingProjects, readRecentPaths, RECENTS_FILE } from '../app/projects';
 import { readSession, SESSION_FILE } from '../app/session';
-import { BOARD_DIRECTORY } from '../board/board-store';
 import { failureLine } from '../command/failure-line';
 import { type KnownFolders, runProjectCommand } from './project-cli';
+import { readProjectsFile } from './projects-file';
 
 // The folders `project init` starts from: the projects open at the app's last save and the recent
 // ones, each a folder that is still there. Both files are the app's own, in the userData folder main
@@ -23,14 +23,8 @@ function knownFolders(): KnownFolders {
 // The whole of the `project` program outside project-cli.ts: read ~/.dashboard/projects.yaml, write
 // it for init, print the answer. `dashboard project` is its one door.
 export function runProjectProgram(commandArguments: readonly string[]): number {
-  const filePath = join(homedir(), BOARD_DIRECTORY, 'projects.yaml');
   try {
-    let text: string | null = null;
-    try {
-      text = readFileSync(filePath, 'utf8');
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
+    const { text, filePath } = readProjectsFile();
     const answer = runProjectCommand(commandArguments, text, filePath, knownFolders, homedir());
     if (answer.ok && answer.file !== undefined) {
       mkdirSync(dirname(filePath), { recursive: true });

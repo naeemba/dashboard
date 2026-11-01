@@ -33,7 +33,8 @@ is not blocked by an empty file.
 
 Folders: `src/main/projects/`.
 
-- The file: `projects-file.ts`, `projects-file.test.ts`
+- The file: `projects-file.ts` (also reads it from disk), `projects-file.test.ts`
+- The project a word names: `project-named.ts`, `project-named.test.ts`
 - The first file `init` writes: `projects-first.ts`, `projects-first.test.ts`
 - The `project` command: `project-cli.ts`, `project-cli.test.ts`, `project-program.ts`
   (run as `dashboard project`, see [command](../command/README.md))
@@ -49,4 +50,5 @@ Folders: `src/main/projects/`.
 
 ## Open questions
 
-- `path` is printed as written; `~` is expanded only once something opens a project from it.
+- `path` is printed as written; `~` is expanded only once something opens a project from it
+  (`project-named.ts`, used by `pane claim --project`).

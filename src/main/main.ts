@@ -18,6 +18,7 @@ import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
+import { projectNamedInFile } from './projects/project-named';
 import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
@@ -520,6 +521,12 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
     if (canceled) return null;
     projectPath = filePaths[0];
   }
+  return openProject(projectPath);
+});
+// A project opened from its path, unless it is open already, and the slot it is in either way. The
+// picker's open and `pane claim --project` both come here, and so should anything else that opens a
+// project from main, so every way in starts its shells, watches its board and remembers it alike.
+function openProject(projectPath: string): { index: number; open: OpenProjects } {
   const picked = projectFromPath(projectPath);
   const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
@@ -537,7 +544,7 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
   const open = openProjects();
   sendToRenderer('projects:change', open);
   return { index, open };
-});
+}
 // Closing a project. Its panes and editor are killed and forgotten, and its slot is emptied. Nothing is
 // answered: whether anything was running in it was read off the panes themselves, which only the
 // renderer can see, and it has already refused or gone ahead by the time this arrives.
@@ -621,7 +628,9 @@ registerProjectFiles(table, boards, boardLog, tellOthers);
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
 // the day a slot means something other than an index into this array.
 function slotOfProject(projectPath: string): number {
-  return projects.findIndex((project) => project?.path === projectPath);
+  // Real paths, because projects.yaml may spell a project through a symlink the page was not opened by.
+  const wanted = realPath(projectPath);
+  return projects.findIndex((project) => project !== undefined && realPath(project.path) === wanted);
 }
 
 // The list every screen draws its tabs from, with the terminals each one has open, so a screen arriving
@@ -825,6 +834,13 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 const sessions = listenForSessions(sessionSocket, sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
+  openSlots: () => [MANAGER_SLOT, ...projects.keys()].flatMap((slot) => {
+    const project = projectIn(slot);
+    return project === undefined ? [] : [{ slot, name: project.name }];
+  }),
+  findProject: projectNamedInFile,
+  folderExists: (folder) => !projectFromPath(folder).missing,
+  openProject: (folder) => openProject(folder).index,
   openPanes,
   agentIn: (id) => runsAnAgent(terminalCommands.get(id)),
   busyWith(id) {

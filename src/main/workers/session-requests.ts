@@ -3,6 +3,7 @@ import { workerArguments, workerSessionName } from './dispatch';
 import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
+import type { ProjectNamed } from '../projects/project-named';
 import { parseSessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
@@ -15,6 +16,13 @@ export type SessionPorts = {
   // The open project a folder is in — its checkout or one of its worktrees — or -1.
   slotOf(directory: string): number;
   projectPath(slot: number): string | undefined;
+  // Every open project's slot and name, the manager's included, in page order.
+  openSlots(): readonly { slot: number; name: string }[];
+  // The project ~/.dashboard/projects.yaml gives that name or aka (project-named.ts's projectNamed).
+  findProject(word: string): ProjectNamed;
+  folderExists(path: string): boolean;
+  // Opens the project at the path unless it is open already, and answers with its slot either way.
+  openProject(path: string): number;
   // The project's open terminals, ascending, main first.
   openPanes(slot: number): readonly number[];
   agentIn(id: string): boolean;
@@ -61,18 +69,23 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   // because a worker run a second time has not finished the second task.
   const states = new Map<string, WorkerState>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
-  const throwaways = new Map<string, string>();
+  const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
   // running there is somebody else's — a dev server, a card a ship gave an agent — and release would
   // kill it. Main's worker always runs as the pane's agent, so a pane that is not running one is not it.
   const mainsWorker = (id: string): boolean => ports.agentIn(id) && ports.mainsWorkerIn(id);
+  // The slot that claimed each pane opened with --project on another project's page. That slot may run
+  // and release it as its own, and its main hears the worker's report. Slots are never reused, so an
+  // entry left by a project closed since names nobody.
+  const dispatchers = new Map<string, number>();
 
-  // A worker of the asking project that is open, or why it is not one. Main and the editor are never a
-  // worker: one is where the asking happens, the other holds nvim.
+  // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
+  // or one it claimed elsewhere. Main and the editor are never a worker: one is where the asking
+  // happens, the other holds nvim.
   function worker(id: string, slot: number): string | null {
     const { slot: paneSlot, index } = paneFromId(id);
-    if (paneSlot !== slot) return `${id} is not a pane of this project`;
-    if (!ports.openPanes(slot).includes(index)) return `${id} is not open — claim prints one that is`;
+    if (paneSlot !== slot && dispatchers.get(id) !== slot) return `${id} is not a pane of this project`;
+    if (!ports.openPanes(paneSlot).includes(index)) return `${id} is not open — claim prints one that is`;
     if (index === MAIN_INDEX) return `${id} is the main session, which is never a worker`;
     return null;
   }
@@ -86,15 +99,39 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     return states.get(id) ?? 'running';
   }
 
-  async function run(id: string, slot: number, projectPath: string, prompt: string, card: string | null, worktree: boolean): Promise<SessionReply> {
+  // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
+  // which is opened first if it is closed. Every claim settles who claimed the id, so a pane number
+  // claimed again never keeps the rights of whoever claimed it before. Only a claim or a release
+  // settles it: a claimed pane closed by hand and reopened by the new-terminal key stays the
+  // claimer's, as a project's own panes already are its main's.
+  function claim(slot: number, word: string | null): SessionReply {
+    let target = slot;
+    if (word !== null) {
+      const found = ports.findProject(word);
+      if (!found.ok) return refused(found.message);
+      if (!ports.folderExists(found.path)) return refused(`${found.name} is at ${found.path}, which is not a folder`);
+      target = ports.openProject(found.path);
+    }
+    const id = terminalId(target, ports.openWorker(target));
+    if (target === slot) dispatchers.delete(id);
+    else dispatchers.set(id, slot);
+    return answered(id);
+  }
+
+  // The pane's own project, which is where its worker works and whose cards and worktrees it takes.
+  const paneProject = (id: string): string | undefined => ports.projectPath(paneFromId(id).slot);
+
+  async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
+    const projectPath = paneProject(id);
+    if (projectPath === undefined) return refused(`${id} is not in a project open in Dashboard`);
     if (ports.agentIn(id)) return refused(`${id} already has a worker running — release it or claim another`);
     const program = ports.busyWith(id);
     if (program !== null) return refused(`${id} is running ${program} — claim another`);
     // One throwaway per pane, or release would forget the first.
     const held = throwaways.get(id);
-    if (worktree && held !== undefined) return refused(`${id} still holds ${held} — release it first`);
+    if (worktree && held !== undefined) return refused(`${id} still holds ${held.worktreePath} — release it first`);
     let directory = projectPath;
     if (card !== null) {
       const found = ports.cardWorktree(projectPath, card);
@@ -104,35 +141,42 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       directory = found.worktreePath;
     } else if (worktree) {
       directory = await ports.makeWorktree(projectPath, prompt);
-      throwaways.set(id, directory);
+      throwaways.set(id, { worktreePath: directory, projectPath });
     }
     const { index } = paneFromId(id);
     states.delete(id);
-    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt), card);
+    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath), card);
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}`);
   }
 
-  async function release(id: string, slot: number, projectPath: string): Promise<SessionReply> {
+  async function release(id: string, slot: number): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     const program = ports.busyWith(id);
     if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
+    dispatchers.delete(id);
     const throwaway = throwaways.get(id);
     throwaways.delete(id);
     if (throwaway === undefined) return answered(`released ${id}`);
-    const reason = await ports.unfinished(throwaway);
-    if (reason !== null) return answered(`released ${id}; kept ${throwaway}: ${reason}`);
-    await ports.removeWorktree(throwaway, projectPath);
-    return answered(`released ${id} and removed ${baseName(throwaway)}`);
+    const reason = await ports.unfinished(throwaway.worktreePath);
+    if (reason !== null) return answered(`released ${id}; kept ${throwaway.worktreePath}: ${reason}`);
+    await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
+    return answered(`released ${id} and removed ${baseName(throwaway.worktreePath)}`);
   }
 
-  function list(slot: number): SessionReply {
-    return answered(ports.openPanes(slot).map((index) => {
+  function paneLines(slot: number, prefix: string): string[] {
+    return ports.openPanes(slot).map((index) => {
       const id = terminalId(slot, index);
-      return `${id}\t${paneLabel(index)}\t${stateOf(id)}\t${ports.directoryOf(id) ?? ''}`;
-    }).join('\n'));
+      return `${prefix}${id}\t${paneLabel(index)}\t${stateOf(id)}\t${ports.directoryOf(id) ?? ''}`;
+    });
+  }
+
+  // --all puts the project's name first on each line, so the lines of two projects tell apart.
+  function list(slot: number, all: boolean): SessionReply {
+    if (!all) return answered(paneLines(slot, '').join('\n'));
+    return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
   return async (request) => {
@@ -153,10 +197,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     if (slot === -1 || projectPath === undefined) return refused(`${request.directory} is not in a project open in Dashboard`);
     try {
       switch (command.kind) {
-        case 'claim': return answered(terminalId(slot, ports.openWorker(slot)));
-        case 'list': return list(slot);
+        case 'claim': return claim(slot, command.project);
+        case 'list': return list(slot, command.all);
         case 'run': return await run(command.id, slot, projectPath, command.prompt, command.card, command.worktree);
-        case 'release': return await release(command.id, slot, projectPath);
+        case 'release': return await release(command.id, slot);
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);

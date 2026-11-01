@@ -1,5 +1,5 @@
 import { firstProjectsFile } from './projects-first';
-import { findProjects, readProjects, type Project } from './projects-file';
+import { findProjects, projectsListed, type Project } from './projects-file';
 
 // The `project` noun's decisions: which verb, and what it answers given the file's text and, for init,
 // the folders the app knows. The files themselves are project-program.ts's to read, so every branch
@@ -32,11 +32,10 @@ export function runProjectCommand(commandArguments: readonly string[], text: str
   if (verb === 'find' && word === '') return { ok: false, message: `find takes a word\n\n${PROJECT_USAGE}` };
   if (verb === 'list' && rest.length > 0) return { ok: false, message: `list takes no words\n\n${PROJECT_USAGE}` };
 
-  if (text === null) return { ok: false, message: `${filePath} does not exist yet; "dashboard project init" writes a first one from the open and recent projects` };
-  const read = readProjects(text, filePath);
-  if (!read.ok) return { ok: false, message: read.problems.join('\n') };
+  const listed = projectsListed(text, filePath);
+  if (!listed.ok) return listed;
 
-  const projects = verb === 'find' ? findProjects(read.projects, word) : read.projects;
+  const projects = verb === 'find' ? findProjects(listed.projects, word) : listed.projects;
   if (projects.length === 0) return { ok: false, message: verb === 'find' ? `no project matches ${word}` : `${filePath} lists no projects` };
   return { ok: true, output: projects.map(describeProject).join('\n\n') };
 }

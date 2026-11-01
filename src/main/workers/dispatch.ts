@@ -43,10 +43,13 @@ export function mainPrompt(projectPath: string): string {
       + ' need mid-task; those stay inline or in the Agent tool.',
     '',
     'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
-    '  claim                  open a worker pane; prints its id',
+    '  claim [--project <name|aka>]',
+    '                         open a worker pane; prints its id. --project opens it on the page of',
+    '                         the project of that name, opening the project if it is closed',
     '  run <id> [--card <card id> | --worktree] "<prompt>"',
     '                         start Claude in that pane with the prompt',
-    '  list                   every pane, and whether its worker is running, blocked or done',
+    '  list [--all]           every pane, and whether its worker is running, blocked or done;',
+    '                         --all across every open project',
     '  release <id>           close the pane once you have its report',
     '',
     'A card task takes --card: it runs in the worktree the board made when the card moved to Ship. Any'
@@ -78,13 +81,17 @@ export function workerSettings(id: string): string {
 }
 
 // The prompt is the argument, never typed into a session already running: what a live prompt box
-// does with pasted text depends on what it was doing when it arrived.
-export function workerArguments(shellCommand: string, projectPath: string, id: string, index: number, prompt: string): string[] {
+// does with pasted text depends on what it was doing when it arrived. `dispatcherPath` is the project
+// whose main dispatched it, which is another project's when the pane was claimed with --project: the
+// worker is named for the page it is on and reports to the main that asked.
+export function workerArguments(
+  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath: string,
+): string[] {
   return claudeArguments(shellCommand, [
     '--name', workerSessionName(projectPath, index),
     '--permission-mode', 'auto',
     '--settings', workerSettings(id),
-    `${prompt}\n\nSendMessage to ${mainSessionName(projectPath)} when done, saying what you did.`,
+    `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`,
   ]);
 }
 
