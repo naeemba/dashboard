@@ -1,24 +1,5 @@
-import { parseSessionCommand } from './session-cli';
-import { askApp } from './session-socket';
+import { runSessionProgram } from './session-program';
 
-// The whole of the `session` program outside session-cli.ts and the app: the arguments and the folder
-// out, a line back. A spelling mistake is answered here, without the app; everything else is the
-// app's to decide, because the panes are its.
-async function run(): Promise<number> {
-  const commandArguments = process.argv.slice(2);
-  const parsed = parseSessionCommand(commandArguments);
-  if (!parsed.ok) {
-    process.stderr.write(`${parsed.message}\n`);
-    return 1;
-  }
-  const socket = process.env.DASHBOARD_SOCKET;
-  if (!socket) {
-    process.stderr.write('DASHBOARD_SOCKET is not set — run this from a pane the Dashboard app opened\n');
-    return 1;
-  }
-  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments });
-  if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
-  return reply.ok ? 0 : 1;
-}
-
-void run().then((code) => { process.exitCode = code; });
+// The file DASHBOARD_SESSION names. Kept, with the same words, for every shell, skill and worker hook
+// that runs `node "$DASHBOARD_SESSION" <command>`; `dashboard pane <command>` is the same program.
+void runSessionProgram(process.argv.slice(2)).then((code) => { process.exitCode = code; });
