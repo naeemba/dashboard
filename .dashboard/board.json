@@ -241,6 +241,15 @@
           "parent": null,
           "createdAt": "2026-11-01T23:46:08.026Z",
           "updatedAt": "2026-11-01T23:46:08.026Z"
+        },
+        {
+          "id": "a000bfec-9a6a-4329-b215-817d0d729609",
+          "title": "Link dispatched worker panes from the Claude screen, and a workers popup in its status line",
+          "notes": "When main dispatches with pane claim/run, the Claude screen shows only the tool's text ('started dashboard-terminal-2 in 2:1'). The user wants to jump to that pane, most of all from the manager tab, whose workers live on other projects' pages.\n\n1. Links: every pane the screen mentions is a link. pane claim and pane run print a stable reference the renderer recognises (for example a dashboard://pane/<page>:<pane> url next to the human line), and the Claude screen's markdown renderer turns it into a link in tool output and in Claude's replies. Click or Enter on it switches to that pane's project page and focuses the pane. A pane already released shows as closed and does nothing but say so. Keyboard first: links are reachable from the transcript the way other links are.\n2. Workers popup: a button on the status line, between 'ready' and the context meter, shows a count of this session's workers by state, e.g. '3 workers: 2 working, 1 done'. A click or a key (a row in src/shared/keys/actions.ts) opens a small popup anchored to it: one row per pane this session dispatched (on the manager, across every project), with project, pane, card or prompt's first words, and status from what pane list already knows (working, blocked waiting for permission, done, idle). Arrow keys walk the rows, Enter focuses the pane, Esc closes. Released panes drop off. The state updates live while it is open.\n3. Which session dispatched a pane is recorded by main when pane run comes in over the socket; reuse what pane list and the session index already hold rather than a new store.\n\nRelated: card 0ee53751 (tell main when a worker finishes) uses the same pane state; build on each other's code, not two copies. The status decision (which states, how counted) and the link parsing are small modules with tests (workflow-rule-2). Help and docs/chat, docs/panes updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:48:56.818Z",
+          "updatedAt": "2026-11-01T23:48:56.818Z"
         }
       ]
     },
