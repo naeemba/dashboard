@@ -117,6 +117,12 @@
           "title": "Cap each help dialog blurb",
           "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
           "priority": "medium"
+        },
+        {
+          "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
+          "title": "Open a typed folder path from the project picker",
+          "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
+          "priority": "medium"
         }
       ]
     },
