@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
-          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
-          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "642730ed-cd79-496d-9410-3ef6631d157c",
           "title": "Drop the 18 exports nobody outside their file uses",
           "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
@@ -209,7 +202,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
+          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
+          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:21:23.439Z"
+        }
+      ]
     },
     {
       "name": "Review",
