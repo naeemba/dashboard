@@ -60,6 +60,123 @@
           "parent": null,
           "createdAt": "2026-11-01T19:56:29.756Z",
           "updatedAt": "2026-11-01T19:56:29.757Z"
+        },
+        {
+          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
+          "title": "Refresh button on each market card of the manager page",
+          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T20:23:46.345Z",
+          "updatedAt": "2026-11-01T20:25:59.478Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:25:59.478Z",
+              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
+            }
+          ]
+        },
+        {
+          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
+          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
+          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
+          "priority": "high"
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
+          "priority": "high"
+        },
+        {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
+          "priority": "high"
+        },
+        {
+          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
+          "title": "Write the board as operations against a fresh read in main",
+          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
+          "priority": "high"
+        },
+        {
+          "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
+          "title": "Tell main when a worker finishes",
+          "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
+          "priority": "medium"
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
+          "priority": "medium"
+        },
+        {
+          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
+          "title": "Cap each help dialog blurb",
+          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
+          "priority": "medium"
+        },
+        {
+          "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
+          "title": "Open a typed folder path from the project picker",
+          "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
+          "priority": "medium"
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium"
+        },
+        {
+          "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
+          "title": "Decide whether the review agent may merge without a person",
+          "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
+          "priority": "medium"
+        },
+        {
+          "id": "25239545-3706-4566-9ff7-8872f7afed83",
+          "title": "Make one rule say which column a finished card goes in",
+          "notes": "The global instructions and the work-card skill say Done; the project CLAUDE.md says Review. Have the skill read the project's rule. Change lives in dotfiles. (docs/review/2026-11-01.md W5)",
+          "priority": "low"
+        },
+        {
+          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
+          "title": "Mark history.md files merge=union",
+          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
+          "priority": "low"
+        },
+        {
+          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
+          "title": "Add a Content-Security-Policy to the window",
+          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
+          "priority": "medium"
+        },
+        {
+          "id": "a6b5043b-d275-46cc-95df-139b8dfbed89",
+          "title": "Stop chasing Claude Code parity on the Claude screen",
+          "notes": "36 PRs and 4,791 lines in four days re-implement TUI commands; two SDK calls are undeclared. Each new command must name what a CLI worker pane cannot do. Opinion. (docs/review/2026-11-01.md C1)",
+          "priority": "low"
+        },
+        {
+          "id": "9fd936d8-7edb-4d2e-844e-da312ce12f16",
+          "title": "Move the market cards off the top of the manager page",
+          "notes": "Four price/weather cards lead the page above what wants you. Move to the foot line or a section. Opinion. (docs/review/2026-11-01.md U4)",
+          "priority": "low"
+        },
+        {
+          "id": "e6f61bfb-9636-4f1f-b49c-767cf65bf107",
+          "title": "Check exact dependency pins with a test",
+          "notes": "The holds in app/README are not enforced; dc08326 had to re-pin electron, the SDK and marked. A vitest that fails on a caret for held dependencies. (docs/review/2026-11-01.md D1)",
+          "priority": "low"
+        },
+        {
+          "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
+          "title": "Decide whether Windows is a target and drop the installer dependencies if not",
+          "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
+          "priority": "low"
         }
       ]
     },
@@ -156,7 +273,13 @@
           "priority": "high",
           "parent": null,
           "createdAt": "2026-11-01T20:03:57.126Z",
-          "updatedAt": "2026-11-01T20:20:54.113Z"
+          "updatedAt": "2026-11-01T20:28:15.816Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:28:15.816Z",
+              "body": "Scope addition: every dependency in package.json, runtime and dev, not only the platform ones. For each: why it is there, its cost (size, maintenance, security record, upgrade breakage), whether stdlib, platform or a few lines would do, whether a better library exists. A Dependencies section in the report, same verdicts."
+            }
+          ]
         }
       ]
     },
