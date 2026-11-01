@@ -13,7 +13,8 @@ import { drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type Dr
 
 // The drawer on the left of a page: the project's docs as a tree and the Claude sessions the app started
 // for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own.
-// Open, it pushes the page to its right and the panes are measured again; closed it takes no room. It is opened and closed by its button in the title row, beside the tabs, or by its key.
+// Open, it pushes the page to its right and the panes are measured again; closed it takes no room.
+// It is opened and closed by its button in the title row, beside the tabs, or by its key.
 // A doc opens in the full-screen viewer (doc-viewer.ts), over the drawer, which is still there after.
 // Every rule with a branch is drawer-rows.ts's; this is the DOM.
 
