@@ -23,6 +23,7 @@ describe('fuzzyScore', () => {
 describe('ranked', () => {
   it('keeps every item in order for an empty query and the matches best first otherwise', () => {
     expect(ranked(['low', 'high', 'xhigh'], (each) => each, '')).toEqual(['low', 'high', 'xhigh']);
+    expect(ranked(['low', 'high'], (each) => each, '  ')).toEqual(['low', 'high']);
     expect(ranked(['xhigh', 'low', 'high'], (each) => each, 'hi')).toEqual(['xhigh', 'high']);
   });
 });

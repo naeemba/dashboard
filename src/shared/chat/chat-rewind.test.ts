@@ -43,6 +43,11 @@ describe('rewindRows', () => {
   it('keeps only what matches the search', () => {
     expect(rewindRows(points, 'build').map((row) => row.choice.id)).toEqual(['p1']);
   });
+
+  it('keeps prompts that match as tightly newest first', () => {
+    const more = [...points, { id: 'p3', before: 'a2', text: 'fixing the bug' }];
+    expect(rewindRows(more, 'fix').map((row) => row.choice.id)).toEqual(['p3', 'p1']);
+  });
 });
 
 describe('rewindChoices', () => {
