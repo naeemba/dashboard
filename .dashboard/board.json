@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
-          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
-          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
           "title": "Split renderer.ts under 600 code lines",
           "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
@@ -1737,6 +1730,22 @@
             {
               "at": "2026-11-01T01:37:25.799Z",
               "body": "Shipped in PR #137: board.test.ts split, shared board test builder reused in board-state.test.ts."
+            }
+          ]
+        },
+        {
+          "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
+          "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
+          "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:42:13.041Z",
+          "branch": "work-board-card-5c1e86d4-6467-41fb-8d3c-769",
+          "pullRequest": 134,
+          "comments": [
+            {
+              "at": "2026-11-01T01:42:13.041Z",
+              "body": "PR #134: eslint rules keep imports on their process side (main, renderer, preload, shared), pinned by eslint.config.test.ts. 3 review rounds, 6 threads fixed; merged main, version 2.32.7, 1845 tests pass."
             }
           ]
         }
