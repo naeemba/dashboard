@@ -625,9 +625,12 @@ registerProjectFiles(table, boards, boardLog, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
-// the day a slot means something other than an index into this array.
+// the day a slot means something other than an index into this array. Compared through realPath, as
+// projectOfFolder does for the session command, so a folder opened through a symlink and named in
+// projects.yaml by its real path is one project, not two pages on the same shells and board.
 function slotOfProject(projectPath: string): number {
-  return projects.findIndex((project) => project?.path === projectPath);
+  const real = realPath(projectPath);
+  return projects.findIndex((project) => project !== undefined && realPath(project.path) === real);
 }
 
 // The list every screen draws its tabs from, with the terminals each one has open, so a screen arriving
@@ -832,6 +835,7 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // the session command's and decides them.
 const sessions = listenForSessions(sessionSocket, projectRequests({
   slotOf: slotOfProject,
+  missingIn: (slot) => projects[slot]?.missing === true,
   folderExists: (projectPath) => !projectFromPath(projectPath).missing,
   open: openProjectFolder,
   // Named the way the close key names them, less any name you gave a pane: those are the screen's.

@@ -29,7 +29,10 @@ only comes close is refused with what it came close to. The path's leading `~`
 is the home folder. Close asks no question: the command has nobody at the
 keyboard to answer one, so an unsaved buffer in the project's editor, which
 the refusal never reads, goes with the rest. Both reach the app over the
-`pane` noun's socket, so they work only from a pane the app opened.
+`pane` noun's socket, so they work only from a pane the app opened. A page
+restored while its folder was gone is not open: `open` revives it once the
+folder is back, as the picker does. A project is found by its real path, so a
+folder opened through a symlink is the same project as its projects.yaml entry.
 
 ## Files
 
@@ -47,6 +50,8 @@ Folders: `src/main/projects/`.
 - Given two projects that share a name or aka, when any verb runs, then the second one's line is named as the problem.
 - Given no `~/.dashboard/projects.yaml`, when any verb runs, then it says the file does not exist yet and exits 1.
 - Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard project open crm` runs in a pane, then a new-crm page appears and it prints `opened new-crm`.
+- Given api restored reading `Directory not found` and its drive mounted since, when `dashboard project open api` runs, then the page comes back with its shells and it prints `opened api`.
+- Given new-crm opened from the picker as `~/ws/new-crm`, `ws` a symlink to `Workspace`, when `dashboard project close new-crm` runs, then that page closes.
 - Given new-crm open with `npm run dev` in terminal 2, when `dashboard project close new-crm` runs, then it prints `new-crm is still running in terminal 2 npm — stop it and close again`, exits 1 and the page stays.
 - Given new-crm open with every pane at a prompt, when `dashboard project close new-crm` runs, then the page goes with no dialog.
 - Given `dashboard project close cr`, when no project is named or aka'd `cr`, then it is refused naming the near matches and nothing closes.

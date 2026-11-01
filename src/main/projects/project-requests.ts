@@ -11,6 +11,8 @@ import { PROJECT_REQUEST } from './project-cli';
 export type ProjectRequestPorts = {
   // The slot a project folder is open in, or -1.
   slotOf(projectPath: string): number;
+  // Whether the project in that slot was restored with its folder gone: a dead page, not an open one.
+  missingIn(slot: number): boolean;
   folderExists(projectPath: string): boolean;
   // Opens the folder the way the project picker does: a page on every screen.
   open(projectPath: string): void;
@@ -33,7 +35,8 @@ export function projectRequests(
     const projectPath = resolve(folder);
     const slot = ports.slotOf(projectPath);
     if (verb === 'open') {
-      if (slot !== -1) return answered(`${name} is already open`);
+      // A dead page is opened over, as the picker revives it once its folder is back.
+      if (slot !== -1 && !ports.missingIn(slot)) return answered(`${name} is already open`);
       if (!ports.folderExists(projectPath)) return refused(`${name}'s folder, ${projectPath}, does not exist`);
       ports.open(projectPath);
       return answered(`opened ${name}`);

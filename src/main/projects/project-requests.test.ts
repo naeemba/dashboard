@@ -7,9 +7,10 @@ const idle = (index: number): ClosingPane => ({
   name: `terminal ${index + 1}`, index, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
 });
 
-function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)]) {
+function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], missingSlots: number[] = []) {
   const ports: ProjectRequestPorts = {
     slotOf: (projectPath) => open[projectPath] ?? -1,
+    missingIn: (slot) => missingSlots.includes(slot),
     folderExists: (projectPath) => projectPath !== '/gone',
     open: vi.fn(),
     panesOf: () => panes,
@@ -33,6 +34,20 @@ describe('projectRequests', () => {
     expect(ports.open).toHaveBeenCalledWith('/api');
     await expect(answer('open', '/web', 'web')).resolves.toEqual({ ok: true, output: 'web is already open' });
     expect(ports.open).toHaveBeenCalledOnce();
+  });
+
+  // Restored while its drive was unmounted, it sits in its slot reading Directory not found; answering
+  // "already open" would leave it dead with the command reporting success.
+  it('opens over a dead page whose folder is back, as the picker does', async () => {
+    const { ports, answer } = setup({ '/api': 2 }, [idle(1)], [2]);
+    await expect(answer('open', '/api', 'api')).resolves.toEqual({ ok: true, output: 'opened api' });
+    expect(ports.open).toHaveBeenCalledWith('/api');
+  });
+
+  it('refuses a dead page whose folder is still gone', async () => {
+    const { ports, answer } = setup({ '/gone': 2 }, [idle(1)], [2]);
+    await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: "gone's folder, /gone, does not exist" });
+    expect(ports.open).not.toHaveBeenCalled();
   });
 
   // Opened anyway, it would be a dead page reading Directory not found.
