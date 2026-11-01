@@ -99,6 +99,12 @@
           "title": "Write the board as operations against a fresh read in main",
           "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
           "priority": "high"
+        },
+        {
+          "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
+          "title": "Tell main when a worker finishes",
+          "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
+          "priority": "medium"
         }
       ]
     },
