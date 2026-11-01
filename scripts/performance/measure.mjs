@@ -164,7 +164,9 @@ const measurements = {
     await openWorkers(page, 4);
     await startStreams(page, 4, 200);
     const main = await connectMain();
-    await main.evaluate(`(() => { const { BrowserWindow, ipcMain } = process.mainModule.require('electron'); const contents = BrowserWindow.getAllWindows()[0].webContents;
+    await main.evaluate(`(() => { const { BrowserWindow, ipcMain } = process.mainModule.require('electron');
+      if (!(ipcMain._invokeHandlers instanceof Map)) throw new Error('ipcMain._invokeHandlers is gone; invoke traffic cannot be counted on this Electron');
+      const contents = BrowserWindow.getAllWindows()[0].webContents;
       const size = (value) => { try { return JSON.stringify(value)?.length ?? 0; } catch { return 0; } };
       globalThis.__ipc = {}; const count = (name, value) => { const entry = globalThis.__ipc[name] ??= { messages: 0, bytes: 0 }; entry.messages++; entry.bytes += size(value); };
       globalThis.__send = contents.send; contents.send = function (channel, ...values) { count('to renderer ' + channel, values); return globalThis.__send.call(this, channel, ...values); };
