@@ -1,7 +1,8 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { NO_USAGE, snapshotOf, usageDiffers, type FileUsage, type UsageSnapshot } from '../../shared/usage/usage';
-import { liveSessions, sweepUsage } from './usage-store';
+import { NO_USAGE, usageDiffers, type UsageSnapshot } from '../../shared/usage/usage';
+import { liveSessions } from './usage-store';
+import { usageThread } from './usage-thread';
 import type { SessionPlacement } from '../workers/resume-ledger';
 import { parentProcesses, sessionsByPane } from '../workers/pane-sessions';
 import { worktreesRoot } from '../ship/ship';
@@ -65,9 +66,9 @@ export type UsageSweep = {
 };
 
 export function usageSweep(ports: UsageSweepPorts): UsageSweep {
-  // Kept across sweeps, which is what makes every sweep after the first one nearly free: a log whose
-  // size has not moved is not opened at all.
-  const usageFiles = new Map<string, FileUsage>();
+  // The logs are read on a thread of their own, which keeps what each file has contributed across
+  // sweeps; usage-worker.ts says why.
+  const sweep = usageThread();
   let usage: UsageSnapshot = NO_USAGE;
 
   // One spelling of "which session is in which pane" for the sweep and for quit, so the two cannot
@@ -82,18 +83,16 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
 
   async function run(): Promise<void> {
     const now = Date.now();
-    // Two reads that need nothing from each other: the logs, and where each running session is.
-    const [, placement] = await Promise.all([sweepUsage(claudeLogs, usageFiles, now), placeSessions()]);
+    // Where each running session is comes first, since the thread needs it to say what each pane cost.
+    // It is a `ps` and a folder of small files, a few milliseconds beside the logs.
+    const placement = await placeSessions();
     if (placement !== null) ports.placed(placement);
-    const open = ports.openProjects().map((projectPath) => ({
-      path: projectPath, worktrees: worktreesRoot(projectPath),
-    }));
-    const next = snapshotOf(
-      usageFiles.values(),
-      open,
-      new Map([...(placement?.byPane ?? [])].map(([pane, live]) => [pane, live.session])),
+    const next = await sweep({
+      root: claudeLogs,
       now,
-    );
+      projects: ports.openProjects().map((projectPath) => ({ path: projectPath, worktrees: worktreesRoot(projectPath) })),
+      paneSessions: new Map([...(placement?.byPane ?? [])].map(([pane, live]) => [pane, live.session])),
+    });
     // Nothing crosses for a sweep that found the same figures. Whether that is worth a message is
     // usageDiffers's to say.
     const changed = usageDiffers(usage, next);
