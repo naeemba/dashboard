@@ -604,10 +604,11 @@ const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SE
 const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'));
 registerDrawer(table, {
   sessions: sessionIndex,
-  projectPath: (slot) => projectIn(slot)?.path,
+  projectPath: (slot) => projectIn(slot)?.path, openProjects: () => openProjects(),
   resumeInWorker(slot, session, directory) {
-    const id = terminalId(slot, openWorker(slot, directory));
-    shells.get(id)?.write(resumeLine({ session, directory }));
+    const index = openWorker(slot, directory);
+    shells.get(terminalId(slot, index))?.write(resumeLine({ session, directory }));
+    return index;
   },
 });
 // The resolved shell travels with the settings, because the renderer needs to know which family of

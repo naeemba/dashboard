@@ -117,6 +117,7 @@ const drawer = createDrawer({
   openDoc: (page, path) => openFileLink(page, MAIN_INDEX, { path, start: 0, end: 0 }),
   report: (message) => showError('drawer', message),
   closed: () => showPage(activeIndex),
+  resumed: (page, index, open) => { applyProjects(open); if (pages[activeIndex] === page) { setMode('terminals'); focusTerminal(index); } },
 });
 document.getElementById('title')?.append(drawer.button, tabStrip.element, addPaneButton.element);
 pagesElement.append(drawer.element);

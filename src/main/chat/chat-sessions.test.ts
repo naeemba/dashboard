@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, shownPreferences } from './chat-sessions';
+import { afterReport, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -134,4 +134,12 @@ describe('shownPreferences', () => {
     expect(shownPreferences({ fast: true }, undefined)).toEqual({ fast: true });
     expect(shownPreferences(undefined, undefined)).toEqual({});
   });
+});
+
+describe('runningConversation', () => {
+  it('reports a resume of the remembered conversation, which keeps its id', () => {
+    expect(runningConversation({ type: 'system', subtype: 'init', session_id: 'remembered' })).toBe('remembered');
+  });
+  it('reports none after a /clear', () => expect(runningConversation({ type: 'conversation_reset' })).toBeNull());
+  it('says nothing for any other message', () => expect(runningConversation({ type: 'assistant' })).toBeUndefined());
 });

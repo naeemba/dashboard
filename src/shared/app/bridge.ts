@@ -16,7 +16,7 @@ import type { Settings } from '../settings/settings';
 import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
 import type { FileLink } from '../panes/links';
-import type { DocEntry, DrawerReply, SessionList } from '../drawer/drawer';
+import type { DocEntry, DrawerReply, ResumeReply, SessionList } from '../drawer/drawer';
 
 export type Project = { name: string; path: string; missing: boolean };
 
@@ -135,7 +135,7 @@ export type DashboardBridge = {
   listDocs(projectPath: string): Promise<DocEntry[]>;
   listSessions(projectPath: string, count: number): Promise<SessionList>;
   renameSession(projectPath: string, id: string, label: string): Promise<DrawerReply>;
-  resumeSession(slot: number, id: string): Promise<DrawerReply>;
+  resumeSession(slot: number, id: string): Promise<ResumeReply>;
   // Ctrl+G: the Claude box written to a file and opened in the page's nvim, answering the way
   // openScrollback does; and the text saved there since the box last read it, or null.
   openPrompt(slot: number, text: string): Promise<Handover>;

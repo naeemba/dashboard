@@ -1,4 +1,4 @@
-import type { DashboardBridge } from '../../shared/app/bridge';
+import type { DashboardBridge, OpenProjects } from '../../shared/app/bridge';
 import { relativeAge } from '../../shared/app/age';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
@@ -24,6 +24,8 @@ type DrawerPorts = {
   report(message: string): void;
   // The keyboard back to the page once the drawer goes.
   closed(): void;
+  // A resume opened this worker on the page: the keyboard goes to it, on the terminals view.
+  resumed(page: Page, index: number, open: OpenProjects): void;
 };
 
 type Drawer = { button: HTMLButtonElement; element: HTMLElement; toggle(): void; render(): void };
@@ -45,6 +47,12 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   keys.className = 'drawer-keys';
   keys.textContent = '↑↓ choose · Enter opens · F2 renames a session · Escape closes';
   element.append(box, list, keys);
+  // A click anywhere in the drawer, on a row, a heading or empty space, leaves the keyboard in the box,
+  // so the arrows, Enter and Escape still work after Load more or a refused resume. A click in the box
+  // itself still places the caret.
+  element.addEventListener('mousedown', (event) => {
+    if (event.target !== box) event.preventDefault();
+  });
 
   const button = iconButton('project drawer-toggle', 'drawer', 'Docs & sessions', () => toggle());
   // A click leaves the keyboard where it was until the drawer takes it.
@@ -128,13 +136,13 @@ export function createDrawer(ports: DrawerPorts): Drawer {
   function load(withDocs: boolean): void {
     const page = shownFor;
     if (page === null) return;
-    const load = ++loads;
+    const ticket = ++loads;
     Promise.all([
       withDocs ? ports.bridge.listDocs(page.project.path) : docs,
       ports.bridge.listSessions(page.project.path, count),
     ]).then(
       ([nextDocs, nextSessions]) => {
-        if (load !== loads) return;
+        if (ticket !== loads) return;
         docs = nextDocs;
         sessions = nextSessions;
         draw();
@@ -193,7 +201,11 @@ export function createDrawer(ports: DrawerPorts): Drawer {
       return ports.openDoc(page, row.doc.path);
     }
     ports.bridge.resumeSession(page.slot, row.session.id).then(
-      (reply) => (reply === null ? close() : ports.report(reply.refused)),
+      (reply) => {
+        if ('refused' in reply) return ports.report(reply.refused);
+        hide();
+        ports.resumed(page, reply.index, reply.open);
+      },
       (error: unknown) => ports.report(`Could not resume ${row.session.label}: ${failureText(error)}`),
     );
   }

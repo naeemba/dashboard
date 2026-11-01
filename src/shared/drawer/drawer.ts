@@ -1,3 +1,5 @@
+import type { OpenProjects } from '../app/bridge';
+
 // What the drawer on a project's page lists, as main sends it: the project's docs and the Claude
 // conversations the app started for it. Both sides name these, so they live here.
 
@@ -25,3 +27,7 @@ export type DocEntry = { path: string; name: string };
 
 // A refusal answered as a value (errors-rule-2); null is the thing having happened.
 export type DrawerReply = { refused: string } | null;
+
+// A resume: the new worker's number and the list that has it on, so the screen can put the keyboard in
+// it, or the refusal.
+export type ResumeReply = { index: number; open: OpenProjects } | { refused: string };

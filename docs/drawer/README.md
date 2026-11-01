@@ -19,7 +19,8 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given the drawer is open, when you press Escape, Ctrl+Shift+D or the button, then it closes and takes no room at all.
 - Given the drawer, when you type, then the docs and the sessions are both narrowed to what matches; the arrows walk the rows and a click does what Enter does on the row it lands on.
 - Given a doc row, when you press Enter, then the file opens in the project's nvim.
-- Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in and `claude --resume <id>` is typed into it; a busy pane is never used.
+- Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in and `claude --resume <id>` is typed into it; the page goes to the terminals view with the keyboard in that pane; a busy pane is never used.
+- Given the drawer, when you click a row that leaves it open (Load more, a refused resume), then the keyboard stays in the drawer's filter box.
 - Given a session still running in a pane or on the Claude screen, when you press Enter on it, then it is refused and the status bar says where it runs.
 - Given a session row, when you press F2, then a box asks for its new name; an empty one is refused.
 - Given more than fifty sessions, when you reach the Load more row and press Enter, then fifty more are listed.
