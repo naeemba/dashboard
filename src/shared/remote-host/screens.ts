@@ -5,6 +5,12 @@ import type { PaneSize } from '../panes/terminals';
 // The host's own window is a screen like the others, named LOCAL_SCREEN.
 export const LOCAL_SCREEN = 'local';
 
+// Why a screen may not open the folder dialog, or null when it may. The dialog opens on the host's
+// desk, so only the host's own window gets one; any other screen types the path instead.
+export function folderDialogRefusal(screen: string): string | null {
+  return screen === LOCAL_SCREEN ? null : "Type the folder's path on the host";
+}
+
 // Whether the host's own window is told about a push a screen caused. Not when the window caused it
 // (it already has what it wrote), and not while it shows another host's session (main's ids collide
 // with that host's). Every other screen but the cause hears it from the host's broadcast.
