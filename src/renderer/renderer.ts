@@ -458,7 +458,7 @@ function setPage(project: Project, slot: number, open: readonly number[]): void 
 
 const { removePage, applyProjects, host } = createPageSync({
   pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
-  setPage, syncPanes: builder.syncPanes, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
+  setPage, syncPanes: builder.syncPanes, addTerminals: builder.addTerminals, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
   // While away every save went to the host, which keeps only its own window's, so main still holds this
   // machine's layout from before the connect. Saving is held until it is back on the pages: the bare
   // rebuild saved straight away would write every view, focus and name off to disk for good.

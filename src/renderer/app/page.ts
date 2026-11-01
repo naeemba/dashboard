@@ -599,7 +599,14 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     chat.open();
   }
 
+  // Called again on a page that has terminals, it drops them first: the manager's, on a host change.
   function addTerminals(page: Page): void {
+    if (page.views.terminals) {
+      discardPanes(page.slot);
+      page.views.terminals.remove();
+      page.panes = [];
+      page.focused = MAIN_INDEX;
+    }
     const view = makeView('terminals', page.mode);
     page.views.terminals = view;
     page.element.append(view);

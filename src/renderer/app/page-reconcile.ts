@@ -46,10 +46,12 @@ export function landingAfterMoves(
 // so and acted on with its first list, so the page you stood on lands on the new host's page of the
 // same slot, as one arrival, rather than on whatever was left in between. A repeat of the host the
 // pages already show changes nothing. `home` says the list brought this machine's own pages back, which
-// were rebuilt bare and get their layout back from session.json.
+// were rebuilt bare and get their layout back from session.json. `replacing` says the list came from a
+// different host than the pages, so what is not a project page — the manager's terminals — is filled
+// again too.
 export type HostTracker = {
   change(host: string): void;
-  movesFor(current: { slot: number; project: Project }[], open: OpenProjects): { moves: PageMove[]; home: boolean };
+  movesFor(current: { slot: number; project: Project }[], open: OpenProjects): { moves: PageMove[]; home: boolean; replacing: boolean };
   host(): string;
 };
 
@@ -65,9 +67,9 @@ export function hostTracker(): HostTracker {
     movesFor(current, open) {
       const replacing = stale;
       stale = false;
-      if (!replacing) return { moves: pageMoves(current, open), home: false };
+      if (!replacing) return { moves: pageMoves(current, open), home: false, replacing };
       const removals = current.map(({ slot }): PageMove => ({ kind: 'remove', slot }));
-      return { moves: [...removals, ...pageMoves([], open)], home: shown === LOCAL_SCREEN };
+      return { moves: [...removals, ...pageMoves([], open)], home: shown === LOCAL_SCREEN, replacing };
     },
     host: () => shown,
   };
