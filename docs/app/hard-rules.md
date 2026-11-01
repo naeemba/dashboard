@@ -6,7 +6,9 @@ The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
 
 The thing first, then what you do to it: `link:open`, `session:write`,
 `board:read`, `pty:resize`, `notification:show`. Every channel in
-`src/preload/preload.ts` follows it.
+`src/preload/preload.ts` follows it except `pty:data`, `log:appended` and
+`session:restored`, which end in a noun or a past participle and are not
+renamed yet; do not copy them.
 
 `notify:show` did not — two verbs, nothing named. Grep for the channels that
 touch notifications and it does not sort next to them, so the next person adds
@@ -16,6 +18,10 @@ touch notifications and it does not sort next to them, so the next person adds
 missing — and the next channel copied them as `chat:models`. They are
 `chat-commands:read` and `chat-sessions:read` now, beside `chat-models:read`:
 a list the page asks for is the list's name, then `read`.
+
+`projects:recent` had no verb either, and it sat beside `projects:open` and
+`projects:close`, so the next list on `projects` would have copied it. It is
+`recent-projects:read`.
 
 ## app-rule-2: Imports stay on their process's side
 
