@@ -353,14 +353,6 @@
           ]
         },
         {
-          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
-          "title": "Stamp the build's commit in its version instead of bumping on every card",
-          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:24:01.496Z"
-        },
-        {
           "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
           "title": "Mark history.md files merge=union",
           "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
@@ -462,6 +454,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:30:43.184Z",
+          "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
+          "pullRequest": 168
         }
       ]
     },
