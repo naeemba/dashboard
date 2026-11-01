@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentArguments, agentResumeArguments, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
+import { agentArguments, agentResumeArguments, droppedPathsText, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
 import { defaultSettings } from '../settings/settings';
 
 describe('pickShell', () => {
@@ -22,6 +22,21 @@ describe('pickShell', () => {
     const settings = { ...defaultSettings(true), shellCommand: '/opt/homebrew/bin/fish' };
     expect(pickShell(settings, { SHELL_COMMAND: '/bin/zsh', SHELL: '/bin/bash' }, 'darwin'))
       .toBe('/opt/homebrew/bin/fish');
+  });
+});
+
+describe('droppedPathsText', () => {
+  it('quotes each path and ends with a space', () => {
+    expect(droppedPathsText(['/a.md', '/my notes.md'], '/bin/zsh')).toBe("/a.md '/my notes.md' ");
+  });
+
+  it('skips a file with no path on disk', () => {
+    expect(droppedPathsText(['', '/a.md'], '/bin/zsh')).toBe('/a.md ');
+  });
+
+  it('types nothing when no dropped file has a path', () => {
+    expect(droppedPathsText([''], '/bin/zsh')).toBe('');
+    expect(droppedPathsText([], '/bin/zsh')).toBe('');
   });
 });
 

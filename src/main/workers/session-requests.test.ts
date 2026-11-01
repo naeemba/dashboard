@@ -7,7 +7,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const agents = new Set<string>(['2:0']);
   // Main's record of its workers, which main.ts keeps: added by a run, gone with the agent or the pane.
   const workers = new Set<string>();
-  const started: { id: string; directory: string; args: string[]; cardId: string | null }[] = [];
+  const started: { id: string; directory: string; agentArguments: string[]; cardId: string | null }[] = [];
   const closed: string[] = [];
   const marked: string[] = [];
   const removed: string[] = [];
@@ -25,10 +25,10 @@ function project(overrides: Partial<SessionPorts> = {}) {
       open.push(index);
       return index;
     },
-    startWorker: (id, directory, args, cardId) => {
+    startWorker: (id, directory, agentArguments, cardId) => {
       agents.add(id);
       workers.add(id);
-      started.push({ id, directory, args, cardId });
+      started.push({ id, directory, agentArguments, cardId });
     },
     closeWorker: (id) => {
       closed.push(id);
@@ -46,7 +46,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     removeWorktree: async (worktreePath) => { removed.push(worktreePath); },
     ...overrides,
   };
-  const ask = (args: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args });
+  const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
   return { ports, ask, open, agents, workers, started, closed, marked, removed };
 }
 
@@ -68,7 +68,7 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] }))
       .toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api' });
     expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api', cardId: null });
-    expect(started[0].args[1]).toContain('research the cache');
+    expect(started[0].agentArguments[1]).toContain('research the cache');
   });
 
   it('runs a card task in the card\'s worktree, and refuses a card with none or one being worked', async () => {

@@ -20,7 +20,7 @@ export const CLOSE_NO_HELLO = 4000;
 // is gone (a mac asleep, a wifi that dropped) even though its socket never closed, and is dropped.
 export const HEARTBEAT_MS = 10_000;
 // The largest frame the host reads. A screen's biggest is a whole board, a page of notes, or a Claude
-// prompt whose images chat-transcript.ts caps at 5 MB; ws's own default of 100 MB would let a
+// prompt whose images chat-transcript.ts caps (IMAGE_LIMIT); ws's own default of 100 MB would let a
 // connection that has not said hello make main parse that much.
 export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 

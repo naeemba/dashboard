@@ -13,13 +13,6 @@
           "updatedAt": "2026-10-29T11:44:11.602Z"
         },
         {
-          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
-          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
-          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -62,16 +55,9 @@
           "parent": null
         },
         {
-          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
-          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
-          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
-          "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
-          "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
-          "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
+          "id": "bf8b8d2d-cfb3-43c6-bf5e-915ae63d6df3",
+          "title": "Use ranked in resumeRows, fileRows and cardRows instead of hand-rolled fuzzy ranking",
+          "notes": "resumeRows (src/shared/chat/chat-commands.ts), fileRows (src/renderer/chat/chat-mentions.ts) and the title half of cardRows (src/renderer/board/card-search.ts) re-spell the score, filter and stable sort that ranked in src/shared/app/fuzzy.ts does, each with an extra tie-break that a pre-sort before ranked expresses (newest first, shorter path then name, board order), as rewindRows now reverses first. Cost: a change to how ranked breaks ties or skips an empty query reaches the picker, /model, /rewind and /effort but not /resume, the @ file list or the board search; the empty-query early return from #146 already does not reach fileRows, which scores and sorts every file when @ is typed alone.\n\nIssue: https://github.com/naeemba/dashboard/issues/150\nReview: https://github.com/naeemba/dashboard/pull/146#discussion_r4435526462",
           "priority": "low",
           "parent": null
         }
@@ -144,13 +130,6 @@
           "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
-          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
-          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
-          "priority": "low",
-          "parent": null
         }
       ]
     },
@@ -160,17 +139,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
-          "title": "Follow-up from #136: args locals and parameters in test files",
-          "notes": "https://github.com/naeemba/dashboard/issues/138",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:07:07.954Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -260,22 +229,6 @@
           ]
         },
         {
-          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
-          "title": "Terminal drop types '' for a file with no path on disk",
-          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:05:57.181Z",
-          "branch": "fix-github-issue-91-gh-issue-view-91-commen",
-          "pullRequest": 144,
-          "comments": [
-            {
-              "at": "2026-11-01T12:05:57.181Z",
-              "body": "PR #144: droppedPathsText skips empty paths, so a drop of a file with no path on disk types nothing. Version 2.32.11."
-            }
-          ]
-        },
-        {
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
@@ -305,12 +258,64 @@
           "updatedAt": "2026-11-01T12:10:37.524Z",
           "branch": "fix-github-issue-129-gh-issue-view-129-comm",
           "pullRequest": 149
+        },
+        {
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:15:47.271Z",
+          "branch": "fix-github-issue-145-gh-issue-view-145-comm",
+          "pullRequest": 151,
+          "comments": [
+            {
+              "at": "2026-11-01T12:15:47.226Z",
+              "body": "Shipped in #151: projects:recent renamed to recent-projects:read in main and preload, app-rule-1 entry updated, version 2.32.12."
+            }
+          ]
+        },
+        {
+          "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
+          "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
+          "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:18:52.346Z",
+          "branch": "fix-github-issue-148-gh-issue-view-148-comm",
+          "pullRequest": 152,
+          "comments": [
+            {
+              "at": "2026-11-01T12:18:52.307Z",
+              "body": "PR #152: help blurb built from LOG_FILE_COUNT and new LOG_FILE_LIMIT_SHOWN (tested); log-store comments name the constants; v2.32.13."
+            }
+          ]
         }
       ]
     },
     {
       "name": "Done",
       "cards": [
+        {
+          "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
+          "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
+          "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:11:33.587Z",
+          "branch": "fix-github-issue-80-gh-issue-view-80-commen",
+          "pullRequest": 142,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:33.515Z",
+              "body": "PR #142: mock returns rows as written; new visibleLinks test fails without bufferLine's trimEnd."
+            },
+            {
+              "at": "2026-11-01T12:11:33.587Z",
+              "body": "Shipped in PR #142 (https://github.com/naeemba/dashboard/pull/142). Version 2.32.12."
+            }
+          ]
+        },
         {
           "id": "7af68346-5bee-4566-b99c-13f9f02972e2",
           "title": "A failed board read is a failure, not an empty board",
@@ -1843,6 +1848,27 @@
           ]
         },
         {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:17:53.089Z",
+          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
+          "pullRequest": 147,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:13.460Z",
+              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
+            },
+            {
+              "at": "2026-11-01T12:17:53.089Z",
+              "body": "Shipped in PR #147: args locals and parameters in test files spelled out; merged main in, version 2.32.13."
+            }
+          ]
+        },
+        {
           "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
           "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
           "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
@@ -1853,6 +1879,42 @@
             {
               "at": "2026-11-01T12:11:02.555Z",
               "body": "Done in PR #141 (tracked there as card 5a6ac86c): chat:commands and chat:sessions renamed to chat-commands:read and chat-sessions:read."
+            }
+          ]
+        },
+        {
+          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
+          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
+          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:12:07.847Z",
+          "branch": "fix-github-issue-89-gh-issue-view-89-commen",
+          "pullRequest": 143,
+          "comments": [
+            {
+              "at": "2026-11-01T12:12:07.847Z",
+              "body": "Shipped in PR #143: the image-size notice on the Claude screen is built from IMAGE_LIMIT instead of restating 5 MB by hand."
+            }
+          ]
+        },
+        {
+          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+          "title": "Terminal drop types '' for a file with no path on disk",
+          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:15:58.666Z",
+          "branch": "fix-github-issue-91-gh-issue-view-91-commen",
+          "pullRequest": 144,
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:57.181Z",
+              "body": "PR #144: droppedPathsText skips empty paths, so a drop of a file with no path on disk types nothing. Version 2.32.11."
+            },
+            {
+              "at": "2026-11-01T12:15:58.666Z",
+              "body": "Shipped in PR #144: a dropped file with no path on disk is skipped instead of typing '' into the pane. Version 2.32.13."
             }
           ]
         }
