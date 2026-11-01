@@ -20,11 +20,6 @@ export type MarketsSnapshot = {
 };
 // Each card is read on its own, named by its field in the snapshot.
 export type MarketName = keyof MarketsSnapshot;
-const MARKET_NAMES: readonly MarketName[] = ['weather', 'btc', 'usdt', 'gold'];
-
-export function isMarketName(value: unknown): value is MarketName {
-  return MARKET_NAMES.includes(value as MarketName);
-}
 
 const DAY_MS = 86_400_000;
 

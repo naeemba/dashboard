@@ -144,7 +144,8 @@ export function createMarketsView(bridge: DashboardBridge): MarketsView {
 
   // The dates are there before the first answer, which can take a few seconds: a failed reading with
   // nothing to say draws them alone.
+  const refreshAll = (): void => refreshes.forEach((refresh) => refresh());
   drawDate({ ok: false, message: '' });
-  refreshes.forEach((refresh) => refresh());
-  return { element, refresh: () => refreshes.forEach((refresh) => refresh()) };
+  refreshAll();
+  return { element, refresh: refreshAll };
 }

@@ -1,6 +1,6 @@
 import { failureText } from '../../shared/errors/failure';
 import {
-  coinGeckoSeries, forecastOf, placeOf, quoteOf, wallexSeries, isMarketName, type MarketName, type MarketsSnapshot,
+  coinGeckoSeries, forecastOf, placeOf, quoteOf, wallexSeries, type MarketName, type MarketsSnapshot,
   type Place, type Reading,
 } from '../../shared/markets/markets';
 
@@ -56,8 +56,9 @@ const READS: { [K in keyof MarketsSnapshot]: (placeName: string) => Promise<Mark
   gold: () => reading(async () => quoteOf(coinGeckoSeries(await coinGecko('pax-gold')))),
 };
 
-// The name comes over IPC, so it is checked against the four rather than trusted.
+// The name comes over IPC, so it is checked against READS rather than trusted. Only a broken renderer
+// sends one that is not there, so it is a failure and throws.
 export async function readMarket(market: unknown, placeName: string): Promise<MarketsSnapshot[MarketName]> {
-  if (!isMarketName(market)) return { ok: false, message: `No market card called "${String(market)}"` };
-  return READS[market](placeName);
+  if (typeof market !== 'string' || !Object.hasOwn(READS, market)) throw new Error(`No market card called "${String(market)}"`);
+  return READS[market as MarketName](placeName);
 }
