@@ -257,16 +257,6 @@
           ]
         },
         {
-          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
-          "title": "Split renderer.ts under 600 code lines",
-          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:49:58.298Z",
-          "branch": "work-board-card-169de259-cfef-46a3-8e52-eca",
-          "pullRequest": 139
-        },
-        {
           "id": "a2de2be5-d7c3-402e-a96e-3893b9e4607c",
           "title": "Split main.ts: worktree bookkeeping into its own module",
           "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
@@ -1762,6 +1752,22 @@
             {
               "at": "2026-11-01T01:44:36.488Z",
               "body": "PR #134: eslint rules keep imports on their process side (main, renderer, preload, shared), pinned by eslint.config.test.ts. 3 review rounds, 6 threads fixed; merged main, version 2.32.8."
+            }
+          ]
+        },
+        {
+          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
+          "title": "Split renderer.ts under 600 code lines",
+          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T11:47:40.454Z",
+          "branch": "work-board-card-169de259-cfef-46a3-8e52-eca",
+          "pullRequest": 139,
+          "comments": [
+            {
+              "at": "2026-11-01T11:47:40.454Z",
+              "body": "Merged via PR #139."
             }
           ]
         }
