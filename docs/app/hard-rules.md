@@ -17,6 +17,10 @@ missing — and the next channel copied them as `chat:models`. They are
 `chat-commands:read` and `chat-sessions:read` now, beside `chat-models:read`:
 a list the page asks for is the list's name, then `read`.
 
+`projects:recent` had no verb either, and it sat beside `projects:open` and
+`projects:close`, so the next list on `projects` would have copied it. It is
+`recent-projects:read`.
+
 ## app-rule-2: Imports stay on their process's side
 
 `src/main/` runs in Node, `src/renderer/` in the window, `src/preload/` in the

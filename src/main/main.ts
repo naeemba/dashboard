@@ -494,7 +494,7 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
-table.handle('projects:recent', () =>
+table.handle('recent-projects:read', () =>
   readRecentPaths(recentsFile).map((entry) => projectFromPath(entry)).filter((project) => !project.missing));
 // A null path opens the folder dialog; a path from the picker skips it.
 table.handle('projects:open', async (screen, projectPath: string | null) => {
