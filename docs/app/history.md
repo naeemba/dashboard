@@ -14,4 +14,5 @@ One line per merged change: date, pull request, why.
 - 2026-10-25 #81 — An application log, five files of 5 MB
 - 2026-10-31 #98 — Screenshots in the README
 - 2026-11-01 #135 — slug.ts: one slug rule that main and renderer both import
+- 2026-11-01 #146 — Picker, /model and /rewind rank with the one shared ranked
 - 2026-11-01 #152 — The log screen's help blurb reads its caps from the log's constants

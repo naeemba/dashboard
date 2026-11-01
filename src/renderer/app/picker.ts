@@ -1,4 +1,4 @@
-import { fuzzyScore, type SearchRow } from '../../shared/app/fuzzy';
+import { ranked, type SearchRow } from '../../shared/app/fuzzy';
 import { searchOverlay } from './overlay';
 import type { Project } from '../../shared/app/bridge';
 
@@ -52,16 +52,11 @@ function hostRows(state: PickerState): Row[] {
 // With nothing typed, the host you last joined leads instead, so Ctrl+S and Enter takes you back to it;
 // a search still leads with its matches, so typing a name and pressing Enter opens that project.
 export function pickerRows(projects: Project[], query: string, state: PickerState): Row[] {
-  const matched: Row[] = projects
-    .map((project) => ({ project, score: fuzzyScore(`${project.name} ${project.path}`, query) }))
-    .filter((entry): entry is { project: Project; score: number } => entry.score !== null)
-    // Sorting is stable, so projects the search cannot separate stay in the order they were given.
-    .sort((first, second) => first.score - second.score)
-    .map((entry) => ({
-      name: entry.project.name,
-      detail: entry.project.path,
-      choice: { kind: 'open', path: entry.project.path },
-    }));
+  const matched: Row[] = ranked(projects, (project) => `${project.name} ${project.path}`, query).map((project) => ({
+    name: project.name,
+    detail: project.path,
+    choice: { kind: 'open', path: project.path },
+  }));
   // Always present, so a search that matches nothing still leaves something to press Enter on.
   const hosts = hostRows(state);
   if (query === '' && hosts[0].choice.kind === 'reconnect') return [hosts[0], ...matched, NEW_PROJECT, ...hosts.slice(1)];

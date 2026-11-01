@@ -58,17 +58,17 @@ describe('workerSettings', () => {
 
 describe('workerArguments', () => {
   it('hands the prompt over as the argument, ending with the message to main', () => {
-    const args = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests');
-    expect(args[1]).toContain('--name api-terminal-4 --permission-mode auto --settings ');
-    expect(args[1]).toMatch(/'fix the tests\n\nSendMessage to main-api when done, saying what you did\.'$/);
+    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests');
+    expect(agentArguments[1]).toContain('--name api-terminal-4 --permission-mode auto --settings ');
+    expect(agentArguments[1]).toMatch(/'fix the tests\n\nSendMessage to main-api when done, saying what you did\.'$/);
   });
 });
 
 describe('workerResumeArguments', () => {
   // Resumed into another pane after a restart, its hooks must report to that pane.
   it('resumes with the flags a worker starts with, reporting to the pane it is in now', () => {
-    const args = workerResumeArguments('/bin/zsh', '2:5', 'ccaaf965-c864-48db-8044-30bf27d93087');
-    expect(args[1]).toContain('--resume ccaaf965-c864-48db-8044-30bf27d93087 --permission-mode auto --settings ');
-    expect(args[1]).toContain(quoteForShell(workerSettings('2:5'), '/bin/zsh'));
+    const agentResumeArguments = workerResumeArguments('/bin/zsh', '2:5', 'ccaaf965-c864-48db-8044-30bf27d93087');
+    expect(agentResumeArguments[1]).toContain('--resume ccaaf965-c864-48db-8044-30bf27d93087 --permission-mode auto --settings ');
+    expect(agentResumeArguments[1]).toContain(quoteForShell(workerSettings('2:5'), '/bin/zsh'));
   });
 });

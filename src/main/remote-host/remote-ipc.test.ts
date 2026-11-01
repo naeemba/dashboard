@@ -29,9 +29,9 @@ function host(): Promise<string> {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
 
 function wired() {
-  const handlers = new Map<string, (...args: unknown[]) => unknown>();
+  const handlers = new Map<string, (...channelArguments: unknown[]) => unknown>();
   const sent: unknown[][] = [];
-  const table = { handle: (channel: string, handler: (...args: unknown[]) => unknown) => handlers.set(channel, handler) } as unknown as Channels;
+  const table = { handle: (channel: string, handler: (...channelArguments: unknown[]) => unknown) => handlers.set(channel, handler) } as unknown as Channels;
   const held: HeldForRemote = {
     table, version: '1', settings: () => ({ remote: {} }) as Settings, log: () => undefined,
     screenCopies: new Map([['0:1', { replay: () => 'copy', exitCode: () => undefined } as PaneScreenCopy]]),
@@ -149,7 +149,7 @@ describe('connectAtLaunch', () => {
     const held: string[] = [];
     const table = {
       on: (channel: string, listener: () => void) => listeners.set(channel, listener),
-      invoke: async (_screen: string, channel: string, args: unknown[]) => { connects.push([channel, ...args]); return 'refused'; },
+      invoke: async (_screen: string, channel: string, channelArguments: unknown[]) => { connects.push([channel, ...channelArguments]); return 'refused'; },
     } as unknown as Channels;
     const settings = () => ({ remote: { address: '10.0.0.2:7777', token: 't' } }) as Settings;
     connectAtLaunch(argv, settings, table, (message) => held.push(message));
@@ -173,7 +173,7 @@ describe('connectAtLaunch', () => {
     let address = '';
     const table = {
       on: (channel: string, listener: () => void) => listeners.set(channel, listener),
-      invoke: async (...args: unknown[]) => { connects.push(args); return ''; },
+      invoke: async (...invokeArguments: unknown[]) => { connects.push(invokeArguments); return ''; },
     } as unknown as Channels;
     connectAtLaunch(['--remote'], () => ({ remote: { address, token: 't' } }) as Settings, table, (message) => held.push(message));
     listeners.get('session:restored')!();
