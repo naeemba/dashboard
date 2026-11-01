@@ -32,6 +32,6 @@ export function docOverlay(name: string, text: string, edit: () => void, openLin
     close();
     edit();
   };
-  const close = viewerOverlay('doc-viewer', shown, undefined, editing);
+  const close = viewerOverlay('doc-viewer', shown, { enter: editing });
   row.addEventListener('click', editing);
 }

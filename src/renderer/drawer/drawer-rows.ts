@@ -63,9 +63,8 @@ export function treeStep(rows: readonly DrawerRow[], index: number, key: 'left' 
   if (row === undefined || (row.kind !== 'folder' && row.kind !== 'doc')) return stay;
   if (key === 'right') {
     if (row.kind !== 'folder') return stay;
-    if (!row.open) return { toggle: row.path, highlight: index };
-    const child = rows[index + 1];
-    return child !== undefined && 'depth' in child && child.depth > row.depth ? { toggle: null, highlight: index + 1 } : stay;
+    // An open folder always has a row under it: a folder is only listed for the docs inside it.
+    return row.open ? { toggle: null, highlight: index + 1 } : { toggle: row.path, highlight: index };
   }
   if (row.kind === 'folder' && row.open) return { toggle: row.path, highlight: index };
   for (let above = index - 1; above >= 0; above -= 1) {

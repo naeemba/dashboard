@@ -39,7 +39,7 @@ describe('isDoc', () => {
 });
 
 describe('inlineImages', () => {
-  const read = (image: string): Buffer | null => (image === '/p/docs/screenshots/board.png' ? Buffer.from('png') : null);
+  const read = new Map([['/p/docs/screenshots/board.png', Buffer.from('png')]]);
 
   it("carries an image inside the project inline, relative to the doc's folder", () => {
     expect(inlineImages('See ![the board](../screenshots/board.png).', '/p/docs/board/README.md', '/p', read))
@@ -54,12 +54,14 @@ describe('inlineImages', () => {
 });
 
 describe('readDoc', () => {
-  it('reads a doc and refuses a file outside the docs folder', async () => {
+  it('reads a doc with its images and refuses a file outside the docs folder', async () => {
     const project = mkdtempSync(path.join(tmpdir(), 'docs-read-'));
     mkdirSync(path.join(project, 'docs'));
-    writeFileSync(path.join(project, 'docs', 'README.md'), '# Docs');
+    writeFileSync(path.join(project, 'docs', 'README.md'), '# Docs ![a](a.png) ![b](gone.png)');
+    writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
     writeFileSync(path.join(project, 'secret.md'), 'no');
-    expect(await readDoc(project, path.join(project, 'docs', 'README.md'))).toEqual({ text: '# Docs' });
+    expect(await readDoc(project, path.join(project, 'docs', 'README.md')))
+      .toEqual({ text: `# Docs ![a](data:image/png;base64,${Buffer.from('png').toString('base64')}) ![b](gone.png)` });
     expect(await readDoc(project, path.join(project, 'secret.md'))).toHaveProperty('refused');
   });
 });

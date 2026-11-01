@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { imageDataUrl, isImageType } from '../../shared/chat/chat-transcript';
 import type { DocEntry, DocReply } from '../../shared/drawer/drawer';
+import { isInside } from '../panes/shell-directory';
 
 // The markdown files under a project's docs/ folder, which the drawer lists, and one of them read for
 // its viewer. A project with no docs/ lists none rather than failing.
@@ -28,39 +29,45 @@ export async function listDocs(projectPath: string): Promise<DocEntry[]> {
     .map((name) => ({ path: path.join(root, name), name }));
 }
 
-// The image types the Claude screen's markdown renderer shows inline, by extension.
-const IMAGE_TYPES: Record<string, string> = { '.png': 'png', '.jpg': 'jpeg', '.jpeg': 'jpeg', '.gif': 'gif', '.webp': 'webp' };
+// The media types of the images a doc points at, by extension; only those the Claude screen's renderer
+// shows inline count.
+const IMAGE_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
+const IMAGE_PATTERN = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
 
 // Whether a file is one of the project's docs, the only files the viewer reads: a path from anywhere
 // else is refused, so the channel cannot be asked for ~/.ssh/id_rsa.
 export function isDoc(projectPath: string, file: string): boolean {
-  const inside = path.relative(path.join(projectPath, 'docs'), file);
-  return inside !== '' && !inside.startsWith('..') && !path.isAbsolute(inside) && inside.toLowerCase().endsWith('.md');
+  const root = path.join(projectPath, 'docs');
+  return file !== root && isInside(file, root) && file.toLowerCase().endsWith('.md');
+}
+
+// The file an image in a doc names, relative to the doc's folder, when it is one the viewer carries:
+// inside the project, of a type the renderer shows, not an address on the web.
+function imageFile(source: string, file: string, projectPath: string): { image: string; mediaType: string } | null {
+  const mediaType = IMAGE_TYPES[path.extname(source).toLowerCase()];
+  if (mediaType === undefined || !isImageType(mediaType) || /^[a-z]+:/i.test(source)) return null;
+  const image = path.resolve(path.dirname(file), decodeURI(source));
+  return isInside(image, projectPath) ? { image, mediaType } : null;
 }
 
 // A doc's images, carried inline. The markdown renderer shows only an image carried inline and never
-// reads the disk (chat-markdown.ts says why), so a screenshot a doc points at is read here, from inside
-// the project only, and written into the text. One outside the project, missing, or of another type is
-// left as it was and prints as its alt text.
-export function inlineImages(text: string, file: string, projectPath: string, read: (image: string) => Buffer | null): string {
-  return text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (whole, alt: string, source: string) => {
-    const type = IMAGE_TYPES[path.extname(source).toLowerCase()];
-    if (type === undefined || /^[a-z]+:/i.test(source)) return whole;
-    const image = path.resolve(path.dirname(file), decodeURI(source));
-    if (path.relative(projectPath, image).startsWith('..')) return whole;
-    const bytes = read(image);
-    return bytes === null ? whole : `![${alt}](data:image/${type};base64,${bytes.toString('base64')})`;
+// reads the disk (chat-markdown.ts says why), so a screenshot a doc points at is read by main and
+// written into the text. `images` is what was read, by path; one not in it is left as it was and prints
+// as its alt text.
+export function inlineImages(text: string, file: string, projectPath: string, images: ReadonlyMap<string, Buffer>): string {
+  return text.replace(IMAGE_PATTERN, (whole, alt: string, source: string) => {
+    const found = imageFile(source, file, projectPath);
+    const bytes = found === null ? undefined : images.get(found.image);
+    if (found === null || bytes === undefined) return whole;
+    return `![${alt}](${imageDataUrl({ mediaType: found.mediaType, data: bytes.toString('base64') })})`;
   });
 }
 
 export async function readDoc(projectPath: string, file: string): Promise<DocReply> {
   if (!isDoc(projectPath, file)) return { refused: 'Only a file under the project\'s docs/ folder opens here' };
   const text = await readFile(file, 'utf8');
-  return { text: inlineImages(text, file, projectPath, (image) => {
-    try {
-      return readFileSync(image);
-    } catch {
-      return null;
-    }
-  }) };
+  const wanted = [...text.matchAll(IMAGE_PATTERN)].flatMap(([, , source]) => imageFile(source, file, projectPath)?.image ?? []);
+  const read = await Promise.all([...new Set(wanted)].map(async (image) => [image, await readFile(image).catch(() => null)] as const));
+  const images = new Map(read.flatMap(([image, bytes]) => (bytes === null ? [] : [[image, bytes] as const])));
+  return { text: inlineImages(text, file, projectPath, images) };
 }
