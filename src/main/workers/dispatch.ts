@@ -34,7 +34,7 @@ export function mainPrompt(projectPath: string): string {
     'Dispatch rule: a pane is for a task I asked for (do X, review X, research X), never for a lookup you'
       + ' need mid-task; those stay inline or in the Agent tool.',
     '',
-    'Dispatch with the session command, `node "$DASHBOARD_SESSION"`:',
+    'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
     '  claim                  open a worker pane; prints its id',
     '  run <id> [--card <card id> | --worktree] "<prompt>"',
     '                         start Claude in that pane with the prompt',

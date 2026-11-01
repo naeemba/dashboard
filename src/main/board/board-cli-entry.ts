@@ -1,48 +1,5 @@
-import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
-import { failureLine, homeDirectoryRefusal, runBoardCommandOnLatest } from './board-cli';
+import { runBoardProgram } from './board-program';
 
-// The whole of the `board` program outside board-cli.ts: the current directory in, a file and a line
-// of output out. Every decision it could make is made there instead, where a test can reach it.
-//
-// The current directory and nothing else to point it — no path to guess and no flag to get wrong;
-// `cd` is how you point this at a different project. projectRoot is what makes any depth inside the
-// project work, so an agent that has stepped into src/ still edits the project's one board.
-function run(): void {
-  if (isManagerHomeDirectory(process.cwd())) {
-    process.stderr.write(`${homeDirectoryRefusal()}\n`);
-    process.exit(1);
-  }
-
-  const project = projectRoot(process.cwd());
-  const read = openBoard(project);
-  if (read.brokenFile !== null) {
-    // The same salvage the app does, said out loud. Silence here would look like an empty board.
-    process.stderr.write(`board.json was damaged and has been kept as ${read.brokenFile}\n`);
-  }
-
-  const commandArguments = process.argv.slice(2);
-  // Run against the board as it stands a moment before the write, not the one opened above:
-  // runBoardCommandOnLatest says why.
-  const result = runBoardCommandOnLatest(read.board, commandArguments, () => readBoard(project).board);
-  if (!result.ok) {
-    process.stderr.write(`${result.message}\n`);
-    process.exit(1);
-  }
-
-  // Written before the line is printed, so a failed write is what you see rather than a success
-  // message about a change that is not on disk.
-  if (result.board !== null) writeBoard(project, result.board);
-  process.stdout.write(`${result.output}\n`);
-}
-
-// One door out for every failure: a line on stderr and exit 1, the same shape a refused command
-// already uses. The reads and the write are the paths that throw — a board that cannot be read, a
-// board that cannot be replaced — and without this those two are the only ones that answer an agent
-// with a node stack trace instead of a sentence. What the line says is failureLine's decision, in
-// board-cli.ts with the rest of them.
-try {
-  run();
-} catch (error: unknown) {
-  process.stderr.write(`${failureLine(error)}\n`);
-  process.exit(1);
-}
+// The file DASHBOARD_BOARD names. Kept, with the same words, for every shell and skill that runs
+// `node "$DASHBOARD_BOARD" <command>`; `dashboard board <command>` is the same program.
+process.exitCode = runBoardProgram(process.argv.slice(2));

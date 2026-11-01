@@ -19,6 +19,7 @@ commits cite the id.
 | [chat](chat/README.md) | The Claude screen: the project's main session as an Agent SDK chat |
 | [nvim](nvim/README.md) | The editor view, scrollback and file paths opened in it |
 | [board](board/README.md) | The kanban board and the `board` command |
+| [command](command/README.md) | The `dashboard` command: `board` and `pane` behind one entry |
 | [ship](ship/README.md) | A card into a worktree with an agent, the review, the worktree list |
 | [notes](notes/README.md) | One page of notes per project and one for the manager |
 | [manager](manager/README.md) | The first tab: what wants you, every board, the command runner |
