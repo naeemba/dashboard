@@ -27,8 +27,9 @@ module's test.
 
 `npx eslint .` holds the line (app-rule-2, rules in `eslint.config.mjs`): a file
 in `renderer/` imports nothing from `main/` or `preload/`, one in `main/` nothing
-from `renderer/`, one in `shared/` only from `shared/`; and a package that needs
-Node or the DOM is a value import only on its own side.
+from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
+`shared/`; and a package that needs Node or the DOM is a value import only on
+its own side. `eslint.config.test.ts` pins each of those.
 
 - Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`, `version.ts`
