@@ -16,7 +16,7 @@ describe('replaySession', () => {
       projects: () => ({ projects: [], panes: [] }),
       worktrees: () => ({ entries: [], paneDirectories: {} }),
       usage: () => 'usage' as never,
-    }, (channel, args) => sent.push([channel, ...args]));
+    }, (channel, channelArguments) => sent.push([channel, ...channelArguments]));
     expect(sent).toEqual([
       ['projects:change', { projects: [], panes: [] }],
       ['pty:data', '0:0', '\x1bcprompt'],
