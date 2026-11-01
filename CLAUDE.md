@@ -56,7 +56,7 @@ app.
   `blockingChanges` exempts `.dashboard/` on purpose; `changedFiles` does not.
   An error shown to a person goes through `failureText`. This prints nothing:
 
-      grep -rn "String(error)" src/ | grep -v 'failure.ts\|board-cli.ts\|board-view.ts\|notes-view.ts'
+      grep -rn "String(error)" src/ | grep -v 'failure.ts\|failure-line.ts\|board-view.ts\|notes-view.ts'
 
   `board-view.ts` and `notes-view.ts` are exempted only until fixed; adding a
   file to that list without fixing it is the rule being broken. (errors-rule-1)

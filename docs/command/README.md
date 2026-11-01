@@ -18,6 +18,7 @@ Folders: `src/main/command/`.
 
 - Which noun: `dashboard-cli.ts`, `dashboard-cli.test.ts`
 - The program: `dashboard-cli-entry.ts`, built by `vite.dashboard-cli.config.ts`
+- What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
 
 ## Scenarios
 

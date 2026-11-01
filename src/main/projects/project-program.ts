@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { BOARD_DIRECTORY } from '../board/board-store';
-import { failureLine } from '../board/board-cli';
+import { failureLine } from '../command/failure-line';
 import { runProjectCommand } from './project-cli';
 
 // The whole of the `project` program outside project-cli.ts: read ~/.dashboard/projects.yaml, print
