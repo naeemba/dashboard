@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { failureLine, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
+import { homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from '../../shared/board/board';
 
@@ -362,24 +362,5 @@ describe('homeDirectoryRefusal', () => {
   it('says the home directory is the manager\'s own folder', () => {
     expect(homeDirectoryRefusal()).toMatch(/home directory/);
     expect(homeDirectoryRefusal()).toMatch(/cd into a project/);
-  });
-});
-
-describe('failureLine', () => {
-  // A board that cannot be read is the terminal's problem, not a programming mistake: one sentence.
-  it('answers an fs failure with its sentence', () => {
-    const failure = Object.assign(new Error("EACCES: permission denied, open '.dashboard/board.json'"), { code: 'EACCES' });
-    expect(failureLine(failure)).toBe("EACCES: permission denied, open '.dashboard/board.json'");
-  });
-
-  // A bug in here is answered with the file and the line, or an agent has nothing to open.
-  it('keeps the stack of anything without an errno', () => {
-    const bug = new Error("Cannot read properties of undefined (reading 'title')");
-    expect(failureLine(bug)).toBe(bug.stack);
-  });
-
-  // Nothing thrown is required to be an Error, and a line is still owed.
-  it('falls back to what a non-Error prints as', () => {
-    expect(failureLine('board.json is gone')).toBe('board.json is gone');
   });
 });

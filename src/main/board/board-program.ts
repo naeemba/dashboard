@@ -1,5 +1,6 @@
 import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
-import { failureLine, homeDirectoryRefusal, runBoardCommandOnLatest } from './board-cli';
+import { failureLine } from '../command/failure-line';
+import { homeDirectoryRefusal, runBoardCommandOnLatest } from './board-cli';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
@@ -41,7 +42,7 @@ function run(commandArguments: readonly string[]): number {
 // already uses. The reads and the write are the paths that throw — a board that cannot be read, a
 // board that cannot be replaced — and without this those two are the only ones that answer an agent
 // with a node stack trace instead of a sentence. What the line says is failureLine's decision, in
-// board-cli.ts with the rest of them.
+// command/failure-line.ts, shared by every program the dashboard command runs.
 export function runBoardProgram(commandArguments: readonly string[]): number {
   try {
     return run(commandArguments);

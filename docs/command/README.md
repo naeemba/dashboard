@@ -8,6 +8,7 @@ own and parses its own verbs; this feature only picks the program.
 |---|---|---|
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment |
 | `pane` | the `session` command ([workers](../workers/README.md)) | claim, run, list, release, notify |
+| `project` | the `project` program ([projects](../projects/README.md)) | list, find |
 
 `session` is another name for `pane`.
 
@@ -17,6 +18,7 @@ Folders: `src/main/command/`.
 
 - Which noun: `dashboard-cli.ts`, `dashboard-cli.test.ts`
 - The program: `dashboard-cli-entry.ts`, built by `vite.dashboard-cli.config.ts`
+- What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
 
 ## Scenarios
 
@@ -27,7 +29,7 @@ Folders: `src/main/command/`.
 
 ## Adding to it
 
-- A new verb belongs to its noun's parser (`board-cli.ts`, `session-cli.ts`), never to `dashboard-cli.ts`.
+- A new verb belongs to its noun's parser (`board-cli.ts`, `session-cli.ts`, `project-cli.ts`), never to `dashboard-cli.ts`.
 - A new noun is a row in `NOUNS` and a line in `DASHBOARD_USAGE` in `dashboard-cli.ts`, a branch in
   `dashboard-cli-entry.ts`, and a program module beside its feature, like `board-program.ts`. The
   built file needs no packaging change: every `*-cli-entry.js` is unpacked.

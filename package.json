@@ -1,7 +1,7 @@
 {
   "name": "dashboard",
   "productName": "Dashboard",
-  "version": "2.34.0",
+  "version": "2.35.0",
   "description": "Keyboard-first terminal dashboard",
   "main": ".vite/build/main.cjs",
   "private": true,
@@ -54,6 +54,7 @@
     "lucide": "^1.52.0",
     "marked": "18.1.1",
     "node-pty": "^1.1.0",
-    "ws": "^8.22.0"
+    "ws": "^8.22.0",
+    "yaml": "2.9.1"
   }
 }
