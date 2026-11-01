@@ -27,13 +27,6 @@
           "parent": null
         },
         {
-          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
-          "title": "Terminal drop types '' for a file with no path on disk",
-          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -60,13 +53,6 @@
               "body": "Skipped: the SDK cannot carry a note on an allow. In @anthropic-ai/claude-agent-sdk 0.3.312, sdk.d.ts:2585 types PermissionResult allow as {behavior, updatedInput?, updatedPermissions?, toolUseID?, decisionClassification?}; only deny has message. The bundled CLI (claude-agent-sdk-linux-x64/claude) parses the SDK host answer with the same zod object (behavior: literal allow, updatedInput, updatedPermissions, toolUseID, decisionClassification), so an extra field is dropped. Claude Code's own Tab note on a yes is acceptFeedback, read only by its built-in permission dialog, not reachable from canUseTool. No PR opened. Revisit if a later SDK adds a message or feedback field to the allow result."
             }
           ]
-        },
-        {
-          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
-          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
-          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
-          "priority": "low",
-          "parent": null
         },
         {
           "id": "66f14bdd-63d4-44ae-99ae-106bb597be4f",
@@ -160,7 +146,30 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+          "title": "Terminal drop types '' for a file with no path on disk",
+          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:02:58.850Z"
+        },
+        {
+          "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
+          "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
+          "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:05:04.121Z",
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:04.121Z",
+              "body": "GitHub issue #119. Working on branch fix-github-issue-119-gh-issue-view-119-comm."
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "Review",
@@ -264,6 +273,17 @@
               "body": "PR #142: mock returns rows as written; new visibleLinks test fails without bufferLine's trimEnd."
             }
           ]
+        },
+        {
+          "id": "5a6ac86c-0e7f-4ee7-97d7-88f94adb09c0",
+          "title": "Rename chat:commands and chat:sessions IPC channels to <noun>:<verb> (#88)",
+          "notes": "https://github.com/naeemba/dashboard/issues/88 — shipped in PR #141: chat-commands:read and chat-sessions:read, matching chat-models:read.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:03:41.946Z",
+          "updatedAt": "2026-11-01T12:03:42.029Z",
+          "branch": "fix-github-issue-88-gh-issue-view-88-commen",
+          "pullRequest": 141
         }
       ]
     },
