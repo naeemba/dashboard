@@ -269,9 +269,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'card\'s worktree goes to that pane; the remove key '
     + 'or its Remove button asks before removing it, and asks again if it holds work. Beside the '
     + 'list, Recent activity is the cards changed last on every open board, newest first. '
-    + 'The last line on the page is the version of the build you are running, there to be '
-    + 'held up against the version on main: the same number and the copy you have installed has '
-    + 'everything that has been merged. Enter on a pane takes you '
+    + 'The last line on the page is the version of the build you are running and the commit it '
+    + 'was built from, there to be held up against main: the same commit and the copy you have '
+    + 'installed has everything that has been merged. Enter on a pane takes you '
     + 'straight there; a letter, digit or symbol is sent to it instead, which answers a menu without '
     + 'leaving this page and takes the mark off the pane. The highlight stays on it, so a second '
     + 'question from the same pane is answered without picking it again. '
@@ -367,9 +367,12 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'project opens. The new conversation key starts over; the old one stays in Claude Code\'s own '
     + 'history on disk. A very long conversation scrolls fine, but only the part near the screen is '
     + 'drawn properly at any moment, so fast scrolling shows plain text for a moment first.',
-  sections: 'The manager is five screens with one strip of names above them. These two keys walk it, '
+  sections: 'The manager is five screens with one strip of names above them. Two of these keys walk it, '
     + 'from any of the five. The arrows are deliberately not these keys: on the board they move '
-    + 'between cards, and in the notes they move the caret.',
+    + 'between cards, and in the notes they move the caret. Above the strip, four cards show the date '
+    + 'and weather, Bitcoin, Tether in toman and gold, each read again every half hour. The refresh key '
+    + 'reads all four now; the round arrow in a card\'s corner, clicked or reached with Tab and pressed with Enter, reads that card alone. '
+    + 'It spins while the read runs, and a card keeps its last good numbers on screen until the new ones land.',
   modes: 'A project is shown five ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The five are named along the foot of a project\'s page, the '
     + 'one you are on lit, and a click on a name goes there the way its key does. The manager has five '

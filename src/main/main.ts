@@ -27,7 +27,7 @@ import { makeThrowawayWorktree } from './ship/branch-worktree';
 import { folderDialogRefusal, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
 import { peekBoard, writeBoard } from './board/board-store';
-import { readMarkets } from './markets/markets-fetch';
+import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles, editorSocket, removeSocket } from './nvim/nvim-remote';
@@ -590,9 +590,9 @@ const tokenUsage = usageSweep({
 });
 tokenUsage.start();
 
-// The manager's four cards. The place is read from the settings main holds, so a change made on the
-// settings screen reaches the weather on the next read.
-table.handle('markets:read', () => readMarkets(settings.weatherPlace));
+// One of the manager's four cards. The place is read from the settings main holds, so a change made on
+// the settings screen reaches the weather on the next read.
+table.handle('markets:read', (_screen, market: unknown) => readMarket(market, settings.weatherPlace));
 
 // The renderer's first read. Everything after it arrives unasked on usage:change.
 table.handle('usage:read', () => tokenUsage.latest());
@@ -933,7 +933,7 @@ function createWindow(): void {
 // This machine's session, as the host serves it to a remote screen and as the local window gets it back
 // on leaving another host.
 const held: HeldByMain = {
-  table, screenCopies, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
+  table, screenCopies, shells, screens: paneScreens, version: __BUILD_VERSION__, settings: () => settings,
   projects: openProjects, worktrees: worktrees.list, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
@@ -947,7 +947,8 @@ registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 
 app.on('ready', () => {
-  logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
+  app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
+  logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
 });
 app.on('will-quit', () => {

@@ -69,20 +69,6 @@
           "parent": null
         },
         {
-          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
-          "title": "Let pane shells outlive the app",
-          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
-          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
-          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
           "title": "Write the board as operations against a fresh read in main",
           "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
@@ -232,6 +218,31 @@
           "notes": "Measured: Ctrl+1 is 88-184 ms input-to-paint vs 24-72 ms for project tabs; handler 27-37 ms. Where: src/renderer/manager/manager-view.ts:492 list.replaceChildren every render, each row reading the live xterm buffer. Fix (small): build rows once, update changed ones. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
+          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
+          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
+          "priority": "high",
+          "parent": null
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-01T23:46:08.026Z"
+        },
+        {
+          "id": "a000bfec-9a6a-4329-b215-817d0d729609",
+          "title": "Link dispatched worker panes from the Claude screen, and a workers popup in its status line",
+          "notes": "When main dispatches with pane claim/run, the Claude screen shows only the tool's text ('started dashboard-terminal-2 in 2:1'). The user wants to jump to that pane, most of all from the manager tab, whose workers live on other projects' pages.\n\n1. Links: every pane the screen mentions is a link. pane claim and pane run print a stable reference the renderer recognises (for example a dashboard://pane/<page>:<pane> url next to the human line), and the Claude screen's markdown renderer turns it into a link in tool output and in Claude's replies. Click or Enter on it switches to that pane's project page and focuses the pane. A pane already released shows as closed and does nothing but say so. Keyboard first: links are reachable from the transcript the way other links are.\n2. Workers popup: a button on the status line, between 'ready' and the context meter, shows a count of this session's workers by state, e.g. '3 workers: 2 working, 1 done'. A click or a key (a row in src/shared/keys/actions.ts) opens a small popup anchored to it: one row per pane this session dispatched (on the manager, across every project), with project, pane, card or prompt's first words, and status from what pane list already knows (working, blocked waiting for permission, done, idle). Arrow keys walk the rows, Enter focuses the pane, Esc closes. Released panes drop off. The state updates live while it is open.\n3. Which session dispatched a pane is recorded by main when pane run comes in over the socket; reuse what pane list and the session index already hold rather than a new store.\n\nRelated: card 0ee53751 (tell main when a worker finishes) uses the same pane state; build on each other's code, not two copies. The status decision (which states, how counted) and the link parsing are small modules with tests (workflow-rule-2). Help and docs/chat, docs/panes updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:48:56.818Z",
+          "updatedAt": "2026-11-01T23:48:56.818Z"
         }
       ]
     },
@@ -313,29 +324,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
-          "title": "Refresh button on each market card of the manager page",
-          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T20:23:46.345Z",
-          "updatedAt": "2026-11-01T23:24:01.442Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:25:59.478Z",
-              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
-            }
-          ]
-        },
-        {
-          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
-          "title": "Stamp the build's commit in its version instead of bumping on every card",
-          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:24:01.496Z"
-        },
-        {
           "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
           "title": "Move the board selection without rebuilding the whole board",
           "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -360,6 +348,22 @@
               "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
             }
           ]
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:43:36.000Z"
+        },
+        {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:52:57.025Z"
         }
       ]
     },
@@ -2412,6 +2416,33 @@
             {
               "at": "2026-11-01T23:34:48.288Z",
               "body": "Shipped in #167: .gitattributes marks docs/**/history.md merge=union (workflow-decision-2). Throwaway merge: with the attribute both appended lines land, without it the merge conflicts."
+            }
+          ]
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)\n\nShipped in #168: builds show <version>+<commit> stamped by vite.build-version.ts (manager foot, log, About panel, remote handshake). workflow-rule-3 now says cards leave package.json version alone; it moves only on a release.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:41:30.922Z",
+          "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
+          "pullRequest": 168
+        },
+        {
+          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
+          "title": "Refresh button on each market card of the manager page",
+          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.\n\nShipped in #169: a refresh button in each of the four cards' corner (date card reads the weather), spins while reading, ignores presses in flight, resets that card's half-hour timer; Alt+R refreshes all four from any manager section; Tab reaches each button and Enter/Space presses it. markets:read now reads one card.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T20:23:46.345Z",
+          "updatedAt": "2026-11-01T23:47:53.375Z",
+          "branch": "work-board-card-e857e0b7-d6be-4921-8825-0fc",
+          "pullRequest": 169,
+          "comments": [
+            {
+              "at": "2026-11-01T20:25:59.478Z",
+              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
             }
           ]
         }

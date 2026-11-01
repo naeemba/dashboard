@@ -16,6 +16,7 @@ import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
 import type { SectionStrip } from '../manager/section-strip';
+import type { MarketsView } from '../markets/markets-view';
 import type { Settings } from '../../shared/settings/settings';
 import { droppedPathsText } from '../../shared/panes/shell';
 import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from '../../shared/panes/terminals';
@@ -120,6 +121,8 @@ export type Page = {
   // them shows.
   command: CommandView | null;
   strip: SectionStrip | null;
+  // The four cards above the strip, also the manager's alone.
+  markets: MarketsView | null;
   // Only the manager has one: it is the app's log, not a project's.
   log: LogView | null;
   // The Claude screen. Null where the board is: the manager and a dead project have no folder to run
@@ -530,7 +533,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     };
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: MAIN_INDEX, workers: null, slot, editor: null,
-      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, log: null, chat: null,
+      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, markets: null, log: null, chat: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page

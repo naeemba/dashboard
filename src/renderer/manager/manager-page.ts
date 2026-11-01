@@ -150,8 +150,9 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   // Above the five views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);
   // Above the strip, and on screen whichever section is showing for the same reason the strip is.
+  const markets = createMarketsView(options.bridge);
   element.append(
-    createMarketsView(options.bridge), strip.element, manager.element, cards.element, command.element,
+    markets.element, strip.element, manager.element, cards.element, command.element,
     notesView, log.element,
   );
   const page: Page = {
@@ -161,7 +162,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
       log: log.element,
     },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes, manager, command, strip, log, chat: null, workers: null,
+    board: cards, notes, manager, command, strip, markets, log, chat: null, workers: null,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.

@@ -40,12 +40,17 @@ second half happens in is a decision, and `review-flow.test.ts` pins it.
 
 Wiring is exempt wherever it sits; a branch owes a test wherever it sits.
 
-## workflow-rule-3: Every merged card bumps the version
+## workflow-rule-3: A card does not bump the version
 
-`package.json`'s `version` is what the manager's foot line and the app itself
-show. A card that merges without moving it makes that number a lie: three more
-cards land, none touches the line, and the number on screen still says the
-build is current when it is three cards behind.
+The manager's foot line, the log's `started` line and the remote host's
+handshake all show `<package.json version>+<12-digit commit>`, stamped at build
+time by `vite.build-version.ts`. The commit is what tells an installed copy
+from main: the same commit and it has everything merged up to that point (the
+stamp is HEAD, so a build from a dirty tree says so nowhere). The remote host
+refuses a screen whose stamp differs, so both ends must be the same build.
 
-Bump it in the same pull request that merges the card — patch for a fix, minor
-for a new capability, major for a break.
+Every card used to bump `package.json` itself. With cards running in parallel
+that cost 13 `package.json` and 12 lockfile conflicts in one review window, and
+two cards that started on the same number still landed on the same number, so
+it told nothing apart anyway. Leave `version` alone in a card's pull request;
+move it only when cutting a release.
