@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
-          "title": "Let pane shells outlive the app",
-          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "4187f056-2471-4ea9-be8d-36104044bca0",
           "title": "Bind the remote host to localhost by default and compare tokens in constant time",
           "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
@@ -181,31 +174,6 @@
           "parent": null
         },
         {
-          "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
-          "title": "Stop the first usage sweep freezing main for a minute after launch",
-          "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T22:23:48.077Z",
-          "comments": [
-            {
-              "at": "2026-11-01T22:18:53.958Z",
-              "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
-            },
-            {
-              "at": "2026-11-01T22:23:48.077Z",
-              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
-            }
-          ]
-        },
-        {
-          "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
-          "title": "Move the board selection without rebuilding the whole board",
-          "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
           "title": "Start a page's Claude CLI only when it is needed",
           "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -257,6 +225,22 @@
           "notes": "Measured: Ctrl+1 is 88-184 ms input-to-paint vs 24-72 ms for project tabs; handler 27-37 ms. Where: src/renderer/manager/manager-view.ts:492 list.replaceChildren every render, each row reading the live xterm buffer. Fix (small): build rows once, update changed ones. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
+          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
+          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
+          "priority": "high",
+          "parent": null
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-01T23:46:08.026Z"
         }
       ]
     },
@@ -338,26 +322,38 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
-          "title": "Stamp the build's commit in its version instead of bumping on every card",
-          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)",
-          "priority": "medium",
+          "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
+          "title": "Move the board selection without rebuilding the whole board",
+          "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-01T23:24:01.496Z"
+          "updatedAt": "2026-11-01T23:36:36.976Z"
         },
         {
-          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
-          "title": "Mark history.md files merge=union",
-          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
-          "priority": "medium",
+          "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
+          "title": "Stop the first usage sweep freezing main for a minute after launch",
+          "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-01T23:24:01.543Z",
+          "updatedAt": "2026-11-01T23:36:51.612Z",
           "comments": [
             {
-              "at": "2026-11-01T20:46:57.707Z",
-              "body": "Raised to medium: history.md files show up in 72 conflicted merges."
+              "at": "2026-11-01T22:18:53.958Z",
+              "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
+            },
+            {
+              "at": "2026-11-01T22:23:48.077Z",
+              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
             }
           ]
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:43:36.000Z"
         }
       ]
     },
@@ -455,7 +451,7 @@
           "priority": "medium",
           "parent": null,
           "createdAt": "2026-11-01T20:23:46.345Z",
-          "updatedAt": "2026-11-01T23:32:33.306Z",
+          "updatedAt": "2026-11-01T23:47:12.051Z",
           "branch": "work-board-card-e857e0b7-d6be-4921-8825-0fc",
           "pullRequest": 169,
           "comments": [
@@ -2409,6 +2405,36 @@
           "createdAt": "2026-11-01T20:00:00.251Z",
           "updatedAt": "2026-11-01T22:26:46.244Z",
           "pullRequest": 166
+        },
+        {
+          "id": "b8ebaf6c-f468-45f6-9dc9-df5247e47fb3",
+          "title": "Mark history.md files merge=union",
+          "notes": "docs/*/history.md conflicted in 28 merges. One .gitattributes line keeps both appended lines. (docs/review/2026-11-01.md P1)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:34:48.288Z",
+          "branch": "work-board-card-b8ebaf6c-f468-45f6-9dc9-df5",
+          "pullRequest": 167,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.707Z",
+              "body": "Raised to medium: history.md files show up in 72 conflicted merges."
+            },
+            {
+              "at": "2026-11-01T23:34:48.288Z",
+              "body": "Shipped in #167: .gitattributes marks docs/**/history.md merge=union (workflow-decision-2). Throwaway merge: with the attribute both appended lines land, without it the merge conflicts."
+            }
+          ]
+        },
+        {
+          "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+          "title": "Stamp the build's commit in its version instead of bumping on every card",
+          "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)\n\nShipped in #168: builds show <version>+<commit> stamped by vite.build-version.ts (manager foot, log, About panel, remote handshake). workflow-rule-3 now says cards leave package.json version alone; it moves only on a release.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:41:30.922Z",
+          "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
+          "pullRequest": 168
         }
       ]
     }

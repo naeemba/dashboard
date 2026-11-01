@@ -933,7 +933,7 @@ function createWindow(): void {
 // This machine's session, as the host serves it to a remote screen and as the local window gets it back
 // on leaving another host.
 const held: HeldByMain = {
-  table, screenCopies, shells, screens: paneScreens, version: app.getVersion(), settings: () => settings,
+  table, screenCopies, shells, screens: paneScreens, version: __BUILD_VERSION__, settings: () => settings,
   projects: openProjects, worktrees: worktrees.list, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
@@ -947,7 +947,8 @@ registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 
 app.on('ready', () => {
-  logStore.log({ level: 'info', kind: 'app', message: `started v${app.getVersion()}` });
+  app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
+  logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
 });
 app.on('will-quit', () => {
