@@ -104,6 +104,12 @@
           "title": "Split renderer.ts under 600 code lines",
           "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
           "priority": "medium"
+        },
+        {
+          "id": "a2de2be5-d7c3-402e-a96e-3893b9e4607c",
+          "title": "Split main.ts: worktree bookkeeping into its own module",
+          "notes": "src refactoring audit, step 6. Plan: /tmp/claude-1000/src-audit.md (section 'Step 6').",
+          "priority": "medium"
         }
       ]
     },
