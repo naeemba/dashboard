@@ -76,13 +76,6 @@
           "parent": null
         },
         {
-          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
-          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
-          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "5c1e86d4-6467-41fb-8d3c-769d41471178",
           "title": "Lint the process boundaries between src/main, src/renderer and src/shared",
           "notes": "src refactoring audit, step 3. Plan: /tmp/claude-1000/src-audit.md (section 'Step 3').",
@@ -216,7 +209,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "cc9c87a6-2e96-4ff0-a144-397c27f6edc2",
+          "title": "Move the types that cross processes into src/shared and split chat-rename.ts",
+          "notes": "src refactoring audit, step 2. Plan: /tmp/claude-1000/src-audit.md (section 'Step 2').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T00:57:24.185Z"
+        }
+      ]
     },
     {
       "name": "Review",
