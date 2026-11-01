@@ -3,7 +3,7 @@ import type { DashboardBridge } from '../shared/app/bridge';
 
 const bridge: DashboardBridge = {
   platform: process.platform,
-  getRecentProjects: () => ipcRenderer.invoke('projects:recent'),
+  getRecentProjects: () => ipcRenderer.invoke('recent-projects:read'),
   openProject: (projectPath) => ipcRenderer.invoke('projects:open', projectPath),
   closeProject: (slot) => ipcRenderer.send('projects:close', slot),
   onProjectsChange: (listener) =>
