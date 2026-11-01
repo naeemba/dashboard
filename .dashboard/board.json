@@ -107,7 +107,8 @@
           "id": "8e6c6741-3dbc-44e7-bf0d-9eae15186857",
           "title": "Spell out args in test-file locals and parameters",
           "notes": "Test files beside the sources #136 renamed still name locals and parameters args (channels.test.ts, git.test.ts, board-cli.test.ts, remote-client.test.ts, remote-host.test.ts, remote-ipc.test.ts, session-replay.test.ts, session-requests.test.ts, dispatch.test.ts, finished-work.test.ts). Cost: the stub startWorker(id, directory, args, cardId) no longer matches the port's agentArguments, and the next naming audit flags them again. Frame literals { channel, args } stay (remote-host-decision-2). Issue: https://github.com/naeemba/dashboard/issues/138 Review: https://github.com/naeemba/dashboard/pull/136#discussion_r4434004883",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -280,22 +281,6 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
-            }
-          ]
-        },
-        {
-          "id": "a28da61b-64d4-4149-9e90-e8d61be4a461",
-          "title": "Split board.test.ts by describe block",
-          "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T01:28:58.627Z",
-          "branch": "work-board-card-a28da61b-64d4-4149-9e90-e8d",
-          "pullRequest": 137,
-          "comments": [
-            {
-              "at": "2026-11-01T01:28:58.583Z",
-              "body": "PR #137: board.test.ts split into board.columns.test.ts and board.tree.test.ts, shared builders in test-board.ts. 829 -> 261/366/209 code lines, 169 tests either way."
             }
           ]
         },
@@ -1719,6 +1704,26 @@
             {
               "at": "2026-11-01T01:28:55.677Z",
               "body": "PR #133 merged into main: 18 unused exports dropped. Review loop found nothing in one round; main merged in, 1818 tests pass, tsc and eslint clean."
+            }
+          ]
+        },
+        {
+          "id": "a28da61b-64d4-4149-9e90-e8d61be4a461",
+          "title": "Split board.test.ts by describe block",
+          "notes": "src refactoring audit, step 7. Plan: /tmp/claude-1000/src-audit.md (section 'Step 7').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T01:35:03.305Z",
+          "branch": "work-board-card-a28da61b-64d4-4149-9e90-e8d",
+          "pullRequest": 137,
+          "comments": [
+            {
+              "at": "2026-11-01T01:28:58.583Z",
+              "body": "PR #137: board.test.ts split into board.columns.test.ts and board.tree.test.ts, shared builders in test-board.ts. 829 -> 261/366/209 code lines, 169 tests either way."
+            },
+            {
+              "at": "2026-11-01T01:35:03.305Z",
+              "body": "Shipped in PR #137: board.test.ts split, shared board test builder reused in board-state.test.ts."
             }
           ]
         }
