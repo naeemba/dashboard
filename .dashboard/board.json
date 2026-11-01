@@ -98,6 +98,12 @@
           "title": "Drop the 18 exports nobody outside their file uses",
           "notes": "src refactoring audit, step 4. Plan: /tmp/claude-1000/src-audit.md (section 'Step 4').",
           "priority": "medium"
+        },
+        {
+          "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
+          "title": "Split renderer.ts under 600 code lines",
+          "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
+          "priority": "medium"
         }
       ]
     },
