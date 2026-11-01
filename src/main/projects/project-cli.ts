@@ -6,7 +6,7 @@ import { findProjects, readProjects, type Project } from './projects-file';
 export const PROJECT_USAGE = `project — the projects in ~/.dashboard/projects.yaml
 
   project list          every project
-  project find <word>   the projects whose name, aka or about match the word, best first`;
+  project find <word>   the projects whose name or aka match the word, then whose about contains it`;
 
 export type ProjectAnswer = { ok: true; output: string } | { ok: false; message: string };
 

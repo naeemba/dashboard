@@ -79,6 +79,26 @@ describe('readProjects', () => {
     expect(readProjects('- name: a\n  name: b\n  path: c\n').ok).toBe(false);
     expect(readProjects('- name: [a]\n  path: c\n')).toEqual({ ok: false, problems: ['projects.yaml:1: name must be one line of text'] });
   });
+
+  it('reads a key with nothing after it as absent', () => {
+    expect(projects('- name: a\n  path: /a\n  site:\n  about: ~\n  aka:\n  deploy: null\n')[0])
+      .toMatchObject({ site: '', about: '', aka: [], deploy: [] });
+    expect(readProjects('- name: a\n  path:\n')).toEqual({ ok: false, problems: ['projects.yaml:2: project a has no path'] });
+  });
+
+  it('refuses text on two lines and keeps a number as written', () => {
+    expect(readProjects('- name: a\n  path: /a\n  about: |\n    one\n    two\n'))
+      .toEqual({ ok: false, problems: ['projects.yaml:3: about must be one line of text'] });
+    expect(projects('- name: 0123\n  aka: [1.10]\n  path: /a\n')[0]).toMatchObject({ name: '0123', aka: ['1.10'] });
+  });
+
+  it('lets an entry repeat its own word and names a nameless earlier owner by its line', () => {
+    expect(projects('- name: crm\n  aka: [CRM]\n  path: /crm\n')[0]).toMatchObject({ name: 'crm', aka: ['CRM'] });
+    expect(readProjects('- path: /a\n  aka: [x]\n- name: b\n  path: /b\n  aka: [x]\n')).toEqual({ ok: false, problems: [
+      'projects.yaml:1: project has no name',
+      'projects.yaml:3: "x" already names the project on line 1',
+    ] });
+  });
 });
 
 describe('findProjects', () => {
@@ -94,5 +114,12 @@ describe('findProjects', () => {
   it('lists a project once, at its best match, and nothing for no match', () => {
     expect(names('crm')).toEqual(['new-crm']);
     expect(names('zzz')).toEqual([]);
+  });
+
+  it('matches about only where it contains the word, after name and aka', () => {
+    const photos = projects('- name: shop\n  path: /shop\n  about: Photo sharing app for a retail chain\n');
+    expect(findProjects(photos, 'pharia')).toEqual([]);
+    expect(findProjects(photos, 'SHARING').map((project) => project.name)).toEqual(['shop']);
+    expect(names('idle')).toEqual(['screensaver']);
   });
 });

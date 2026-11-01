@@ -59,10 +59,16 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
     return { ok: false, problems };
   }
 
-  // A text field: absent is '', anything but a plain value is a problem and null.
+  // A key written with nothing after it (`site:`, `site: ~`) parses as a scalar holding null, and
+  // reads the same as a key left out.
+  const isEmpty = (value: unknown): boolean => value == null || (isScalar(value) && value.value === null);
+
+  // A text field: absent is '', anything but a plain value on one line is a problem and null. A
+  // number is taken as written, so `name: 0123` stays 0123 instead of becoming 123.
   const oneLine = (value: unknown, key: string, line: number): string | null => {
-    if (value == null) return '';
-    if (isScalar(value) && ['string', 'number'].includes(typeof value.value)) return String(value.value).trim();
+    if (isEmpty(value)) return '';
+    if (isScalar(value) && typeof value.value === 'string' && !value.value.includes('\n')) return value.value.trim();
+    if (isScalar(value) && typeof value.value === 'number' && value.range) return text.slice(value.range[0], value.range[1]).trim();
     problem(line, `${key} must be one line of text`);
     return null;
   };
@@ -98,7 +104,7 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
   // An optional list: each item through `each`, anything but a list one problem on the field's line.
   const list = <T>(found: Fields, key: string, notAList: string, each: (item: unknown) => T | null): T[] => {
     const field = found.get(key);
-    if (field == null || field.value == null) return [];
+    if (field == null || isEmpty(field.value)) return [];
     if (!isSeq(field.value)) {
       problem(field.line, notAList);
       return [];
@@ -123,12 +129,12 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
       return { name: deployName, role, address };
     });
 
-    // One word, one project: find would otherwise have to guess which one you meant.
-    for (const word of [name, ...aka]) {
-      if (word === '') continue;
-      const key = word.toLowerCase();
+    // One word, one project: find would otherwise have to guess which one you meant. A word an entry
+    // repeats itself (`name: crm`, `aka: [CRM]`) is no clash with anyone, so it is counted once.
+    const words = new Map([name, ...aka].filter((word) => word !== '').map((word) => [word.toLowerCase(), word]));
+    for (const [key, word] of words) {
       const earlier = owner.get(key);
-      if (earlier) problem(entryLine, `"${word}" already names ${earlier.project} (line ${earlier.line})`);
+      if (earlier) problem(entryLine, `"${word}" already names ${earlier.project ? `${earlier.project} (line ${earlier.line})` : `the project on line ${earlier.line}`}`);
       else owner.set(key, { project: name, line: entryLine });
     }
 
@@ -137,11 +143,14 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
   return problems.length > 0 ? { ok: false, problems } : { ok: true, projects };
 }
 
-// The projects a word finds, best first. Each of name, every aka and about is matched on its own, so
-// a word cannot match by picking letters out of two fields at once; a project shows once, at its best.
+// The projects a word finds, best first. Name and every aka are fuzzy-matched each on its own, so a
+// word cannot match by picking letters out of two fields at once. About is a sentence, where almost
+// any short word's letters turn up in order, so it matches only when it contains the word, after
+// every name and aka match. A project shows once, at its best.
 export function findProjects(projects: readonly Project[], word: string): Project[] {
-  const texts = projects.flatMap((project) => [project.name, ...project.aka, project.about]
+  const texts = projects.flatMap((project) => [project.name, ...project.aka]
     .filter((text) => text !== '')
     .map((text) => ({ project, text })));
-  return [...new Set(ranked(texts, (each) => each.text, word).map((each) => each.project))];
+  const byAbout = projects.filter((project) => project.about.toLowerCase().includes(word.toLowerCase()));
+  return [...new Set([...ranked(texts, (each) => each.text, word).map((each) => each.project), ...byAbout])];
 }

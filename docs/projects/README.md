@@ -19,7 +19,7 @@ deploy needs all of `name`, `role` and `address`.
 | Verb | What it prints |
 |---|---|
 | `project list` | every project |
-| `project find <word>` | the projects whose name, aka or about match the word, best first |
+| `project find <word>` | the projects whose name or aka match the word, best first, then those whose about contains it |
 
 ## Files
 
