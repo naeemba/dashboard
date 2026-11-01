@@ -52,6 +52,12 @@
           "title": "Manager terminals: ask the dashboard about any project and dispatch work into it",
           "notes": "The manager tab gets the same terminals layout as a project (main Claude session plus worker panes), and that session can find any project by name or alias, open and close projects, and dispatch panes into them, getting results back as worker reports. Projects are described in ~/.dashboard/projects.yaml. Subtasks, in order: (1) projects.yaml + reader + dashboard project find/list, (2) one dashboard command with project/pane/board subcommands, board and session kept as aliases, (3) terminals in the manager, (4) cross-project pane claim --project and list --all, (5) project open/close, (6) first projects.yaml generated from open and recent projects. Decided: YAML not markdown; close refuses when any pane is busy and otherwise closes with no dialog; results come back as worker reports (SendMessage), no fetch-result command until reports prove not enough.",
           "priority": "high"
+        },
+        {
+          "id": "18fcec84-94e9-47d3-8e94-fef0be4c80e7",
+          "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
+          "priority": "high"
         }
       ]
     },
