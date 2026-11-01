@@ -216,16 +216,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "d80ab5c0-a82a-4d09-8d76-dd505e70967f",
-          "title": "Move src into process and feature folders, no behaviour change",
-          "notes": "src refactoring audit, step 1. Plan: /tmp/claude-1000/src-audit.md (section 'Step 1').",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T00:40:15.216Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -311,6 +302,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "d80ab5c0-a82a-4d09-8d76-dd505e70967f",
+          "title": "Move src into process and feature folders, no behaviour change",
+          "notes": "src refactoring audit, step 1. Plan: /tmp/claude-1000/src-audit.md (section 'Step 1').",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T00:46:14.518Z",
+          "branch": "work-board-card-d80ab5c0-a82a-4d09-8d76-dd5",
+          "pullRequest": 131,
+          "comments": [
+            {
+              "at": "2026-11-01T00:46:14.518Z",
+              "body": "PR #131: src moved into src/<process>/<feature>/ (337 pure renames, then imports, build entries, docs). Tests 132 files / 1819 pass before and after; tsc, eslint clean; npm run package builds. Version 2.32.2."
             }
           ]
         }
