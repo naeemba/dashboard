@@ -13,13 +13,6 @@
           "updatedAt": "2026-10-29T11:44:11.602Z"
         },
         {
-          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
-          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
-          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -1868,6 +1861,22 @@
             {
               "at": "2026-11-01T12:11:02.555Z",
               "body": "Done in PR #141 (tracked there as card 5a6ac86c): chat:commands and chat:sessions renamed to chat-commands:read and chat-sessions:read."
+            }
+          ]
+        },
+        {
+          "id": "04eb097b-7e81-4124-8c75-0f4eb5035408",
+          "title": "Image-size notice on the Claude screen restates IMAGE_LIMIT by hand",
+          "notes": "src/chat-view.ts:381 says 'over 5 MB of images' while the limit lives in IMAGE_LIMIT (src/chat-transcript.ts:32). That is a second copy of the refusal's condition, which CLAUDE.md's refusal rule forbids. Cost: change IMAGE_LIMIT and the notice keeps telling users the old cap. Fix: export a shown form of the limit from chat-transcript.ts and build the message from it. Issue: https://github.com/naeemba/dashboard/issues/89  Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419421816",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:12:07.847Z",
+          "branch": "fix-github-issue-89-gh-issue-view-89-commen",
+          "pullRequest": 143,
+          "comments": [
+            {
+              "at": "2026-11-01T12:12:07.847Z",
+              "body": "Shipped in PR #143: the image-size notice on the Claude screen is built from IMAGE_LIMIT instead of restating 5 MB by hand."
             }
           ]
         }

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+  afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, IMAGE_LIMIT_SHOWN, imagesFit, preferencesOf, withEarlier, working, type Transcript,
 } from './chat-transcript';
 
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
@@ -220,6 +220,7 @@ describe('imagesFit', () => {
   it('takes a screenshot under 5 MB', () => expect(imagesFit([4_000_000])).toBe(true));
   it('refuses one over it', () => expect(imagesFit([6_000_000])).toBe(false));
   it('counts a prompt\'s images together', () => expect(imagesFit([3_000_000, 3_000_000])).toBe(false));
+  it('says the limit it enforces', () => expect(IMAGE_LIMIT_SHOWN).toBe('5 MB'));
 });
 
 describe('the prompt event', () => {
