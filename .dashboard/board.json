@@ -74,6 +74,12 @@
           "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "fa4ead0f-b5f7-40d8-bf61-333eb59ad84e",
+          "title": "Log screen help blurb restates LOG_FILE_COUNT and LOG_FILE_LIMIT by hand",
+          "notes": "src/renderer/keys/help.ts:394 says 'five files of 5 MB' while LOG_FILE_COUNT and LOG_FILE_LIMIT live in src/shared/app/log-entry.ts and log-store.ts enforces them. Cost: change either constant and the help dialog keeps promising the old numbers. Fix: export LOG_FILE_LIMIT_SHOWN beside LOG_FILE_LIMIT (as chat-pdf.ts derives PDF_LIMIT_SHOWN) and build the blurb from it and LOG_FILE_COUNT. Issue: https://github.com/naeemba/dashboard/issues/148 Review: https://github.com/naeemba/dashboard/pull/143#discussion_r4435518511",
+          "priority": "low"
         }
       ]
     },
