@@ -215,22 +215,6 @@
           ]
         },
         {
-          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
-          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
-          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
-          "priority": "low",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:15:47.271Z",
-          "branch": "fix-github-issue-145-gh-issue-view-145-comm",
-          "pullRequest": 151,
-          "comments": [
-            {
-              "at": "2026-11-01T12:15:47.226Z",
-              "body": "Shipped in #151: projects:recent renamed to recent-projects:read in main and preload, app-rule-1 entry updated, version 2.32.12."
-            }
-          ]
-        },
-        {
           "id": "bf8b8d2d-cfb3-43c6-bf5e-915ae63d6df3",
           "title": "Use ranked in resumeRows, fileRows and cardRows instead of hand-rolled fuzzy ranking",
           "notes": "resumeRows (src/shared/chat/chat-commands.ts), fileRows (src/renderer/chat/chat-mentions.ts) and the title half of cardRows (src/renderer/board/card-search.ts) re-spell the score, filter and stable sort that ranked in src/shared/app/fuzzy.ts does, each with an extra tie-break that a pre-sort before ranked expresses (newest first, shorter path then name, board order), as rewindRows now reverses first. Cost: a change to how ranked breaks ties or skips an empty query reaches the picker, /model, /rewind and /effort but not /resume, the @ file list or the board search; the empty-query early return from #146 already does not reach fileRows, which scores and sorts every file when @ is typed alone.\n\nIssue: https://github.com/naeemba/dashboard/issues/150\nReview: https://github.com/naeemba/dashboard/pull/146#discussion_r4435526462",
@@ -1870,6 +1854,26 @@
             {
               "at": "2026-11-01T12:15:58.666Z",
               "body": "Shipped in PR #144: a dropped file with no path on disk is skipped instead of typing '' into the pane. Version 2.32.13."
+            }
+          ]
+        },
+        {
+          "id": "4e127d18-bb43-4d6f-a7e9-a18251979fa1",
+          "title": "Rename the projects:recent IPC channel to <noun>:<verb>",
+          "notes": "projects:recent (src/main/main.ts:497, src/preload/preload.ts:6) breaks app-rule-1: recent is an adjective, so the channel names a thing and no action, and docs/app/hard-rules.md's claim that every preload channel follows the rule stays untrue. Cost: the next list channel on projects copies the shape. Fix: rename to recent-projects:read in both files and name it in the app-rule-1 entry. Issue: https://github.com/naeemba/dashboard/issues/145 Review: https://github.com/naeemba/dashboard/pull/141#discussion_r4435507014",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:22:34.690Z",
+          "branch": "fix-github-issue-145-gh-issue-view-145-comm",
+          "pullRequest": 151,
+          "comments": [
+            {
+              "at": "2026-11-01T12:15:47.226Z",
+              "body": "Shipped in #151: projects:recent renamed to recent-projects:read in main and preload, app-rule-1 entry updated, version 2.32.12."
+            },
+            {
+              "at": "2026-11-01T12:22:34.690Z",
+              "body": "Shipped in #151: projects:recent IPC channel renamed to recent-projects:read; app-rule-1 docs name the pushed event channels it does not cover yet."
             }
           ]
         },
