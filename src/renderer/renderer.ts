@@ -16,7 +16,7 @@ import { openHelp } from './keys/help';
 import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
 import { createDrawer } from './drawer/drawer-view';
 import { matchesBinding } from '../shared/keys/binding';
-import { mapShortcut, type Action } from './keys/shortcuts';
+import { mapShortcut, pressesWalkedToButton, type Action } from './keys/shortcuts';
 import { failureText } from '../shared/errors/failure';
 import { createStatusError } from './errors/status-error';
 import { fileLinkOpener, showFileHints } from './nvim/file-hints';
@@ -707,6 +707,8 @@ window.addEventListener('keydown', (event) => {
   // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
   // inside none of them, so a pane keeps its shortcuts.
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
+  const walkedToButton = event.target instanceof HTMLButtonElement && event.target.matches(':focus-visible');
+  if (pressesWalkedToButton(event, walkedToButton)) return;
   const page = pages[activeIndex];
   const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page), chatFocused(page));
   if (!action) return;
