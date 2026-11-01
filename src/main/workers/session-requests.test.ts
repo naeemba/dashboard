@@ -29,6 +29,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
       open.push(index);
       return index;
     },
+    newSession: () => 'ccaaf965-c864-48db-8044-30bf27d93087',
     startWorker: (id, directory, agentArguments, cardId) => {
       agents.add(id);
       workers.add(id);
@@ -275,6 +276,7 @@ function pages() {
       return open.length - 1;
     },
     directoryOf: (id) => paths.get(Number(id.split(':')[0])),
+    newSession: () => 'ccaaf965-c864-48db-8044-30bf27d93087',
     startWorker: (id, directory, agentArguments) => { started.push({ id, directory, agentArguments }); },
     closeWorker: (id) => {
       const [slot, index] = id.split(':').map(Number);

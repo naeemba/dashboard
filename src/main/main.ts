@@ -42,6 +42,8 @@ import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from '../shar
 import { registerLog } from './app/log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
 import { SESSION_FILE } from './app/session';
+import { sessionIndexStore } from './workers/session-index-store';
+import { registerDrawer } from './drawer/drawer-ipc';
 import { sessionStore } from './app/session-store';
 import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation } from './workers/claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
@@ -579,7 +581,7 @@ const tokenUsage = usageSweep({
   openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
   processTree,
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
-  placed: (placement) => claudeSessions.placed(placement),
+  placed: (placement) => [claudeSessions, sessionIndex].forEach((store) => store.placed(placement)),
   // Held, not reported: a sweep that fails before a window has opened must not box and exit the
   // launch over a background job whose cost is already known and named — usage-sweep.ts says what it
   // is, "the numbers simply stop moving" — and failure.ts's own header says report() is not the answer
@@ -598,6 +600,16 @@ table.handle('usage:read', () => tokenUsage.latest());
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
 // so a crash loses at most the change you were making, or half a minute of sessions.
 const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SESSION_FILE), slotOfProject, (id) => mainsWorkers.has(id));
+// Every Claude the app starts, by project, for the drawer to list and resume.
+const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'));
+registerDrawer(table, {
+  sessions: sessionIndex,
+  projectPath: (slot) => projectIn(slot)?.path,
+  resumeInWorker(slot, session, directory) {
+    const id = terminalId(slot, openWorker(slot, directory));
+    shells.get(id)?.write(resumeLine({ session, directory }));
+  },
+});
 // The resolved shell travels with the settings, because the renderer needs to know which family of
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
@@ -618,6 +630,7 @@ registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, windo
 const chats = registerChatSessions(table, {
   send: (slot, event) => sendToRenderer('chat:receive', slot, event),
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
+  conversation: (projectPath, id) => sessionIndex.mainIs(projectPath, id),
 });
 // The manager's main, started at launch the way a project's starts when it opens: its workers report to
 // it. Its folder is made first, since a session cannot start in a folder that is not there.
@@ -659,10 +672,10 @@ function openPanes(slot: number): number[] {
 }
 
 // A worker that is a plain shell in the project, at the lowest number going.
-function openWorker(slot: number): number {
+function openWorker(slot: number, directory = projectIn(slot)?.path ?? ''): number {
   const index = nextPaneIndex(openPanes(slot));
   const id = terminalId(slot, index);
-  setPaneCommand(id, { args: [], directory: projectIn(slot)?.path ?? '' });
+  setPaneCommand(id, { args: [], directory });
   spawnTerminal(id);
   return index;
 }
@@ -753,7 +766,8 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
   }
   const pane = freePaneIn(slot);
   takePane(entry.projectPath, pane, entry.cardId);
-  startAgent(terminalId(slot, pane), entry.worktreePath, agentArguments(shellCommand, prompt));
+  const session = sessionIndex.launched(entry.projectPath, entry.worktreePath, entry.cardId);
+  startAgent(terminalId(slot, pane), entry.worktreePath, agentArguments(shellCommand, prompt, session));
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
@@ -869,6 +883,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
   mainsWorkerIn: (id) => mainsWorkers.has(id),
   shellCommand: () => shellCommand,
   openWorker,
+  newSession: (projectPath, directory, cardId) => sessionIndex.launched(projectPath, directory, cardId),
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.

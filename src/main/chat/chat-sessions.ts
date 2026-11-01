@@ -40,6 +40,8 @@ export type ChatHost = {
   // The environment every pane gets, so the agent's own shell can find the board command too.
   environment: Record<string, string>;
   userData: string;
+  // The main session's conversation whenever it changes, for the app's session index.
+  conversation(projectPath: string, id: string | undefined): void;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -203,6 +205,7 @@ export function registerChatSessions(
     rewound.delete(projectPath);
     if (id === undefined) delete remembered[projectPath];
     else remembered[projectPath] = id;
+    host.conversation(projectPath, id);
     try {
       replaceFile(file, JSON.stringify(remembered, null, 2));
     } catch {

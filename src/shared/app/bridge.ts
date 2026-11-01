@@ -16,6 +16,7 @@ import type { Settings } from '../settings/settings';
 import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
 import type { FileLink } from '../panes/links';
+import type { DocEntry, DrawerReply, SessionList } from '../drawer/drawer';
 
 export type Project = { name: string; path: string; missing: boolean };
 
@@ -129,6 +130,12 @@ export type DashboardBridge = {
   openScrollback(slot: number, index: number, text: string): Promise<Handover>;
   // A path a pane printed, opened in the project's nvim. Main finds the file; file-open.ts holds how.
   openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
+  // The drawer: the project's docs, the newest `count` of the Claude conversations the app started for
+  // it, a rename, and a resume into a new worker pane.
+  listDocs(projectPath: string): Promise<DocEntry[]>;
+  listSessions(projectPath: string, count: number): Promise<SessionList>;
+  renameSession(projectPath: string, id: string, label: string): Promise<DrawerReply>;
+  resumeSession(slot: number, id: string): Promise<DrawerReply>;
   // Ctrl+G: the Claude box written to a file and opened in the page's nvim, answering the way
   // openScrollback does; and the text saved there since the box last read it, or null.
   openPrompt(slot: number, text: string): Promise<Handover>;

@@ -73,8 +73,8 @@ describe('workerSettings', () => {
 
 describe('workerArguments', () => {
   it('hands the prompt over as the argument, ending with the message to main', () => {
-    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests', '/work/api');
-    expect(agentArguments[1]).toContain('--name api-terminal-4 --permission-mode auto --settings ');
+    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests', '/work/api', 'ccaaf965-c864-48db-8044-30bf27d93087');
+    expect(agentArguments[1]).toContain('--session-id ccaaf965-c864-48db-8044-30bf27d93087 --name api-terminal-4 --permission-mode auto --settings ');
     expect(agentArguments[1]).toMatch(/'fix the tests\n\nSendMessage to main-api when done, saying what you did\.'$/);
   });
 });
