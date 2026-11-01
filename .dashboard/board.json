@@ -58,6 +58,12 @@
           "title": "Manager terminals 1: ~/.dashboard/projects.yaml and a reader for it",
           "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Shape per project: name, aka (list of other names, e.g. the screensaver project is known as mandala), path, site, about (one line), deploy (list of name, role such as test or production, address; e.g. new-crm: test new-raxel, production armytech). Reader validates and names the line of a parse error. dashboard project find <word> matches name, aka and about; dashboard project list prints all. Depends on subtask 2 for the command name.",
           "priority": "high"
+        },
+        {
+          "id": "0fafa31b-55b6-4b3e-a5f9-2f406708a229",
+          "title": "Manager terminals 2: one dashboard command with project, pane and board subcommands",
+          "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Replaces the separate board and session commands with one 'dashboard <noun> <verb>' command (project, pane, board), short and scriptable for agents. 'board' and 'session' stay as aliases so every running shell and skill keeps working. One env var for the entry, the old ones kept.",
+          "priority": "high"
         }
       ]
     },
