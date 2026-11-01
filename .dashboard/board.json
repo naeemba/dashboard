@@ -155,14 +155,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
-          "title": "Terminal drop types '' for a file with no path on disk",
-          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T12:02:58.850Z"
-        },
-        {
           "id": "d9c6625c-941c-43d7-8784-06f3f4a043a1",
           "title": "Use ranked in pickerRows, modelRows and rewindRows instead of hand-rolled fuzzy ranking",
           "notes": "pickerRows (src/picker.ts), modelRows (src/chat-commands.ts) and rewindRows (src/chat-rewind.ts) re-spell the score, filter and stable sort that ranked in src/fuzzy.ts already does; effortRows uses it. Cost: a change to how ranked breaks ties reaches /effort but not the picker, /model or /rewind, so the lists drift apart. Each becomes one ranked(...) call (rewindRows over [...points].reverse()). Issue: https://github.com/naeemba/dashboard/issues/119 Review: https://github.com/naeemba/dashboard/pull/117#discussion_r4433600528",
@@ -275,6 +267,22 @@
           "updatedAt": "2026-11-01T12:03:42.029Z",
           "branch": "fix-github-issue-88-gh-issue-view-88-commen",
           "pullRequest": 141
+        },
+        {
+          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+          "title": "Terminal drop types '' for a file with no path on disk",
+          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:05:57.181Z",
+          "branch": "fix-github-issue-91-gh-issue-view-91-commen",
+          "pullRequest": 144,
+          "comments": [
+            {
+              "at": "2026-11-01T12:05:57.181Z",
+              "body": "PR #144: droppedPathsText skips empty paths, so a drop of a file with no path on disk types nothing. Version 2.32.11."
+            }
+          ]
         }
       ]
     },
