@@ -6,6 +6,8 @@ A project's views are `PROJECT_MODES`, one mode key each.
 
 ## Files
 
+Folders: `src/shared/keys/`, `src/renderer/keys/`.
+
 - Table and modes: `actions.ts`, `modes.ts`
 - Keystrokes: `binding.ts`, `shortcuts.ts`, `keycaps.ts`, `test-key.ts`
 - Help and strip: `help.ts`, `shortcut-rows.ts`, `which-key.ts`,

@@ -1,0 +1,1017 @@
+import '@xterm/xterm/css/xterm.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/700.css';
+// The app's look, a file per area, in the order they cascade: a later file wins a tie.
+import './app/app.css';
+import './app/chrome.css';
+import './board/board.css';
+import './app/dialogs.css';
+import './keys/which-key.css';
+import './app/index.css';
+import './ship/worktrees.css';
+import './usage/usage.css';
+import './manager/manager.css';
+import { openHelp } from './keys/help';
+import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
+import { mapShortcut, type Action } from './keys/shortcuts';
+import { failureText } from '../shared/errors/failure';
+import { createStatusError } from './errors/status-error';
+import { fileLinkOpener, showFileHints } from './nvim/file-hints';
+import { type Mode } from '../shared/keys/modes';
+import { openPicker } from './app/picker';
+import { isRemoteHost, showPicker as runPicker, typedHostFolder } from './remote-host/connect-flow';
+import { openWorktrees, type WorktreeDialog } from './ship/worktree-view';
+import { TITLE_BAR_HEIGHT } from '../shared/app/theme';
+import {
+  EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
+} from '../shared/panes/terminals';
+import { terminalStatus, type StatusPage } from './app/status';
+import type { Project } from '../main/app/projects';
+import type { Session } from '../main/app/session';
+import type { WorktreeEntry } from '../main/ship/worktree-store';
+import { WORKING_REPORT_MS } from '../shared/panes/working-panes';
+import type { WorktreeList } from '../shared/app/bridge';
+import { createPageSync } from './app/page-sync';
+import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
+import { defaultSettings, type Settings } from '../shared/settings/settings';
+import { openSettings } from './settings/settings-view';
+import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './app/overlay';
+import { anyWaiting, questionBell, waitingNames } from '../shared/panes/waiting';
+import {
+  isProjectPage, landingPosition, managerRows, positionAfterClose, projectPosition, type ManagerPane, type ManagerRow,
+} from '../shared/manager/manager';
+import { createManagerPage } from './manager/manager-page';
+import { closeRefusal, closingPanes } from './app/close-project';
+import { paneSends } from './panes/pane-sends';
+import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './panes/pane';
+import {
+  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, typedNames, type Page,
+} from './app/page';
+import { neighborPane, paneAtPosition, stepPane } from '../shared/panes/pane-layout';
+import { closePane, runPaneAction, type PanePorts } from './panes/pane-actions';
+import { whichKeyRows, whichKeyStep, type Held } from './keys/which-key';
+import { createWhichKey } from './keys/which-key-view';
+import { nextSectionMode } from '../shared/manager/manager-sections';
+import { actionByName } from '../shared/keys/actions';
+import { reportBoardWrites } from './board/board-writes';
+import { createJumps } from './panes/jumps';
+import { editFocusedBox } from './chat/chat-line-editing';
+
+// Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
+// is the seam it had named for itself. What is left is plumbing: which page is in front, what the
+// status bar says, what the session file holds, and where a key goes. The next feature that needs room
+// splits again, and the seam then is the group at the bottom that answers for panes somewhere else —
+// goToPane, jumpToWorktree, sendToPanes and answerPane.
+
+// board-writes.ts says why the app's own board writes are reported.
+const boardWrites = reportBoardWrites(window.dashboard);
+const bridge = boardWrites.bridge;
+const isMac = bridge.platform === 'darwin';
+// Replaced by the real file in start(), before any pane is built. Held here rather than passed down
+// because a settings change has to reach every pane on every page at once.
+let settings: Settings = defaultSettings(isMac);
+// What a dropped path is quoted for. Main decides it — pickShell weighs the settings file, SHELL_COMMAND,
+// SHELL and the platform — and hands the answer back here at launch and again on every save, so this
+// file never holds a second copy of that precedence to get out of step with.
+let shellCommand = '';
+
+document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
+
+// Every colour as a CSS custom property, which index.css styles the chrome from. Published for the
+// shipped theme immediately, at module load, before start() has awaited anything — a status bar
+// reporting a failed start needs its colours already on the document, since nothing later is
+// guaranteed to run.
+function publishTheme(theme: Settings['theme']): void {
+  for (const [name, value] of Object.entries(theme)) {
+    document.documentElement.style.setProperty(`--${name}`, value);
+  }
+}
+publishTheme(settings.theme);
+
+// Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
+document.documentElement.classList.toggle('mac', isMac);
+const statusElement = document.getElementById('status') as HTMLElement;
+// The open projects are tabs along the title row; the foot bar holds a project's views on the left and
+// the focused pane on the right, so the two are never read as one list.
+const tabStrip = createTabStrip((index) => showPage(index));
+const modeSwitch = createModeSwitch((mode) => setMode(mode));
+const statusTerminal = document.createElement('span');
+statusTerminal.className = 'terminal';
+const statusError = createStatusError(bridge);
+const showError = statusError.show;
+const showNotice = statusError.notice;
+statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
+
+const addPaneButton = createAddPaneButton(() => addPane(pages[activeIndex]));
+document.getElementById('title')?.append(tabStrip.element, addPaneButton.element);
+const pagesElement = document.getElementById('pages') as HTMLElement;
+const pages: Page[] = [];
+let activeIndex = 0;
+// Where Ctrl+O goes back to. Held as a slot, the one thing about a page that never changes:
+// Ctrl+Shift+digit moves its position, and reopening a project rebuilds the page object itself.
+let previousSlot: number | null = null;
+// Whether a close is already waiting on main for the panes it would take. closeProject says what a
+// second one costs.
+let closing = false;
+
+function projectPages(): Page[] {
+  return pages.filter(isProjectPage);
+}
+
+// Every worktree in flight, held here rather than on a board view: a card shipped from the manager's
+// stack of boards lands in a project whose own board may never have been opened, and its pane would
+// then sit in a worktree with the status bar calling it "terminal 2".
+let worktrees: WorktreeEntry[] = [];
+// The folder each pane's shell was started in, keyed by terminal id, which is what says whether a pane
+// is in a worktree. Main's copy, never a second one kept here, and it rides along with the records
+// because only main knows where a pane is. When a message carries it is setWorktrees' to say — see
+// main.ts, where that is decided.
+let paneDirectories: Record<string, string> = {};
+// What each project and each pane has cost in tokens. Main sweeps Claude Code's logs and sends this
+// every half minute; nothing here computes a figure, the way nothing here computes a worktree.
+let usage: UsageSnapshot = NO_USAGE;
+// The open worktree dialog, or null. Held so main's sweep can redraw it, the same way the board holds
+// the open card dialog: it reads the records live, but nothing tells it one of them has gone.
+let worktreeDialog: WorktreeDialog | null = null;
+// Only the status bar and the manager's rows read these, and renderStatus draws both — so one call is
+// the whole redraw, and on every other screen it is the status bar alone. It asks for the rows-only
+// redraw, which writes the figures into the rows already on screen — refreshRows says why.
+function applyUsage(next: UsageSnapshot): void {
+  usage = next;
+  renderStatus(true);
+}
+
+function applyWorktrees(list: WorktreeList): void {
+  worktrees = list.entries;
+  paneDirectories = list.paneDirectories;
+  renderStatus();
+  // The badges too, not only the status bar: a card whose worktree has gone would otherwise still read
+  // `shipped · <branch> · terminal 3` until you left the board and came back. The page in front is the
+  // only one that needs it — arriving at any other re-opens its board, and on the manager this one call
+  // is every project's board at once, since the stack of them is that page's board.
+  pages[activeIndex].board?.redraw();
+  // And the worktree dialog, if it is the thing on screen: it lists the records themselves, so a row
+  // whose folder has gone has to leave the list under you rather than wait to be pressed.
+  worktreeDialog?.redraw();
+}
+
+// Everything status.ts needs to say what the right-hand span says about this page, read off the module
+// state it cannot reach on its own.
+function statusPage(page: Page): StatusPage {
+  return {
+    mode: page.mode,
+    focused: page.focused,
+    // Main counted, so the bar names it on a project with no workers yet, as it does beside them.
+    paneCount: openIndices(page).length,
+    boardLabel: page.board?.statusLabel() ?? '',
+    hasProjects: projectPages().length > 0,
+    managerStatusLabel: page.manager?.statusLabel() ?? '',
+    commandStatusLabel: page.command?.statusLabel() ?? '',
+    pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
+    pickerDescription: actionByName('project-picker')?.description ?? '',
+    worktrees,
+    focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
+    focusedName: paneName(focusedPane(page) ?? {}),
+    editorName: paneName(page.editor ?? {}),
+    focusedTokens: usage.panes[terminalId(page.slot, page.focused)] ?? 0,
+  };
+}
+
+// The terminals and the editor, which rings its bell like any other pane.
+function allPanes(page: Page): Pane[] {
+  return page.editor === null ? page.panes : [...page.panes, page.editor];
+}
+
+// The same panes with what each is called right now. A pane's name moves — a program sets a title, you
+// type one — so it is worked out at the moment something asks rather than kept on the pane, and this is
+// the one place the asking happens: the manager's rows, the tab strip's waiting marks, the status bar's
+// list and the sentence that refuses to close a project all read it from here.
+//
+// No branch, which is the one thing the status bar adds for itself: it names a single pane and has the
+// room, where these are lists of six.
+function namedPanes(page: Page): (Pane & { name: string })[] {
+  return allPanes(page).map((pane) => ({ ...pane, name: paneLabel(pane.index, undefined, paneName(pane)) }));
+}
+
+// Main as the lists of panes read it. It is the Claude screen, not a pane, and rings by having a
+// question open, so a project whose main is asking is marked on the tab strip, named on the status
+// bar and listed on the manager like one whose pane rang. What it prints is the question's title, the
+// one line that says what it wants: its screen is not a terminal with a last line of its own.
+function mainEntry(page: Page): ManagerPane[] {
+  const chat = page.chat;
+  if (chat === null) return [];
+  return [{
+    index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(chat.question() !== null), exited: false,
+    lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
+    tail: () => {
+      const question = chat.question();
+      return question === null ? [] : [question];
+    },
+  }];
+}
+
+// Every open project as the manager lists it. Asked by its redraws and by the key that goes to the
+// next thing waiting, which works from any page.
+function currentManagerRows(): ManagerRow[] {
+  return managerRows(projectPages().map((entry) => ({
+    project: entry.project,
+    slot: entry.slot,
+    panes: [...mainEntry(entry), ...namedPanes(entry).map((pane) => ({
+      ...pane,
+      tail: () => paneTail(pane.terminal),
+      lastPrinted: () => paneLastLine(pane.terminal),
+    }))],
+  })), usage, worktrees);
+}
+
+// The manager page is pushed before the first call, so there is always a page to draw.
+// `rowsOnly` is the redraw asked for by the timer below and by a token sweep, which has nothing to
+// change on the manager but the handful of fields refreshRows writes. Everything else here runs either
+// way, so the status bar still reads the age off the selection and the tab strip is still the one this
+// function has always drawn.
+function renderStatus(rowsOnly = false): void {
+  const page = pages[activeIndex];
+  // Before the status bar reads its label off the selection. The rows are the pages themselves, so a
+  // bell, an exit or a project opening all reach the manager through the redraw they already cause —
+  // and only while you are looking at it, since arriving redraws too and typing a card title on a
+  // board should not rebuild a list nobody can see.
+  if (page.mode === 'manager') {
+    const rows = currentManagerRows();
+    if (rowsOnly) page.manager?.refreshRows(rows);
+    else page.manager?.render(rows);
+  }
+  // The open project is marked the way a tab strip marks one, and a project with a pane ringing its
+  // bell is marked again so you can see it from another page.
+  tabStrip.render(pages.map((entry, index) => ({
+    name: entry.project.name, active: index === activeIndex, waiting: anyWaiting([...mainEntry(entry), ...allPanes(entry)]),
+    manager: entry.manager !== null,
+  })));
+  modeSwitch.render(page.mode, page.manager === null && !page.project.missing);
+  addPaneButton.render(showsAddPane(page.mode, page.workers !== null));
+  statusTerminal.textContent = terminalStatus(statusPage(page), waitingNames([...mainEntry(page), ...namedPanes(page)]));
+  saveSession();
+}
+
+// Hung off renderStatus because the two answer the same question: everything that changes which project
+// is in front, which view it shows, or which pane has the keyboard already redraws the status bar.
+// True until restore() has put every project back, so the partial layouts it passes through on the
+// way are never the one on disk.
+let restoring = true;
+let lastSaved = '';
+function saveSession(): void {
+  // A restore opens the projects one at a time, and each one redraws. Saving those would leave the file
+  // holding two of your five projects for the whole of startup, so an app killed while it was still
+  // opening them would come back next time with the three missing for good.
+  if (restoring) return;
+  // A project whose folder went away is not written back. It stays on screen for this run — nothing
+  // closes a page — but the next launch starts without it, instead of reopening the same dead tab and
+  // saving it again forever. The project list already works this way: a missing project is neither
+  // offered by Ctrl+S nor remembered as a recent.
+  // The manager goes with it: it has no folder to name, and a page with no path is one parseSession
+  // throws away on the way back in, which would shift activeIndex past the project it points at.
+  const live = projectPages().filter((page) => !page.project.missing);
+  const session: Session = {
+    // Counted in the filtered list: a dead page sitting before the active one would otherwise shift it,
+    // and the active page may itself be the dead one, which lands on the first survivor.
+    activeIndex: Math.max(0, live.indexOf(pages[activeIndex])),
+    pages: live.map((page) => ({
+      path: page.project.path,
+      mode: page.mode,
+      focused: page.focused,
+      // The terminals, which are every pane a name can be typed into; see namePane.
+      names: typedNames(page),
+    })),
+  };
+  // Typing a card title redraws the status bar on every keystroke and changes nothing here.
+  const encoded = JSON.stringify(session);
+  if (encoded === lastSaved) return;
+  lastSaved = encoded;
+  bridge.saveSession(session);
+}
+
+// Every colour goes out twice: as a CSS custom property, which index.css styles the chrome from, and
+// into every pane's own palette. Both have to move together or the board sits on one background while
+// the shell beside it sits on another.
+//
+// The window's own background is not here. Main paints it before the renderer exists, so it keeps the
+// old colour until the next launch — visible only in the margin around the panes.
+function applyAppearance(): void {
+  publishTheme(settings.theme);
+  restylePanes(settings);
+  // The cell size changes with the font, so every pane has to be measured again or the grid keeps the
+  // old one and the last row is cut off.
+  fitAllPages();
+}
+
+// The terminal with this number, or the one the page last had when there is none — a worker the key
+// counted to that is not open, or one that closed while you were away.
+function focusTerminal(index: number | undefined): void {
+  const page = pages[activeIndex];
+  if (index !== undefined && openIndices(page).includes(index)) page.focused = index;
+  focusTerminals(page);
+  renderStatus();
+}
+
+// Main, the Claude screen, holds the keyboard on the terminals view: its keys are heard there.
+function chatFocused(page: Page): boolean {
+  return page.mode === 'terminals' && mainHasKeyboard(page);
+}
+
+function setMode(mode: Mode): void {
+  const page = pages[activeIndex];
+  // A page only switches to a view it has. A dead project has none, and the manager has only the four
+  // sections it was built with, so the keys for a view that was never built do nothing rather than
+  // leaving the status bar naming a view that is not on screen.
+  if (!page.views[mode]) return;
+  showMode(page, mode);
+  focusMode(page, true);
+  refreshWhichKey();
+}
+
+// nvim, running by the time this returns — started if it has never run, started again if it was quit.
+// The question and the answer together on purpose: with the condition left to the callers, the second
+// one wrote its own and got a different one, and the third would have copied whichever it read first.
+// What that looks like: quit nvim, press the scrollback key, and it waits fifteen seconds for a socket
+// nothing is going to create before telling you nvim did not start.
+function startEditor(page: Page): void {
+  if (!page.editor) return;
+  if (!startsEditor({ started: page.editorStarted, exited: page.editor.exited })) return;
+  page.editorStarted = true;
+  page.editor.exited = false;
+  // The same reset the Enter path in page.ts does. Without it the `[exited 0] press Enter to restart`
+  // line stays in the pane's scrollback and reappears the next time nvim drops the alt screen.
+  page.editor.terminal.reset();
+  bridge.restart(terminalId(page.slot, EDITOR_INDEX));
+}
+
+// `entering` is true for a genuine arrival at the page's current mode — switching modes, or switching to
+// a different page — and false for merely reclaiming the keyboard, such as the picker closing on the
+// page you never left. Only a genuine arrival may start nvim or re-read the board: re-opening the board
+// on every refocus would throw away its undo step each time, since board.open() resets it.
+function focusMode(page: Page, entering: boolean): void {
+  if (page.mode === 'manager') page.views.manager?.focus();
+  if (page.mode === 'command' && page.command) {
+    // Re-read on arrival, the way the board is: a project opened since you were last here needs a row.
+    if (entering) page.command.render();
+    page.command.focus();
+  }
+  if (page.mode === 'log' && page.log) {
+    if (entering) void page.log.open();
+    else page.log.focus();
+  }
+  if (page.mode === 'terminals') return focusTerminal(page.focused);
+  if (page.mode === 'nvim' && page.editor) {
+    // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
+    // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.
+    if (entering) startEditor(page);
+    page.editor.terminal.focus();
+  }
+  if (page.mode === 'notes' && page.notes) {
+    // Re-read on arrival, like the board: the file may have been edited in a pane, or by the agent
+    // working in a project's worktree, since you were last here. open() takes the keyboard itself.
+    if (entering) void page.notes.open();
+    else page.notes.element.focus();
+  }
+  if (page.mode === 'board' && page.board) {
+    // open() never rejects — a failed read reports itself through onError and still renders — so no
+    // report() wrapper is needed here.
+    if (entering) void page.board.open();
+    else page.board.element.focus();
+  }
+  renderStatus();
+}
+
+function positionOfSlot(slot: number | null): number {
+  return pages.findIndex((page) => page.slot === slot);
+}
+
+// Hidden pages keep their layout (visibility, not display), so every pane can be fit.
+function fitAllPages(): void {
+  for (const page of pages) fitPage(page);
+}
+
+// `arriving` forces the landing to count as a genuine arrival even when the page is already the active
+// one. Two callers pass it. The restore needs it: it lands on a page nobody has visited yet this run,
+// so nvim has to start and the board has to be read, exactly as if you had just switched to it. A
+// notification click passes it as insurance — the pane had to be running to ring, so nothing it would
+// start is not started already — and keeps the two landings on one path rather than two.
+function showPage(index: number, arriving = false): void {
+  const next = (index + pages.length) % pages.length;
+  // Landing back on the page you are already on — Escape closing the picker, a folder dialog cancelled —
+  // only needs its keyboard focus back, not a fresh arrival at its mode.
+  if (next === activeIndex) return focusMode(pages[activeIndex], arriving);
+  previousSlot = pages[activeIndex].slot;
+  landOn(next);
+}
+
+// Put this page on screen and every other one away, then give it the keyboard. Split out of showPage
+// for the one caller that cannot go through it: a close takes the page you are standing on out of the
+// list, so there is no page to come from and no previous tab to remember — the tab that took its place
+// simply has to appear.
+function landOn(index: number): void {
+  activeIndex = index;
+  pages.forEach((page, pageIndex) => {
+    page.element.hidden = pageIndex !== activeIndex;
+  });
+  focusMode(pages[activeIndex], true);
+  refreshWhichKey();
+}
+
+// The one page builder, handed the few things a pane needs from this file. Every one that can change
+// while the app runs is a function rather than a value — the settings and the shell do — so a pane built
+// an hour ago draws what is in force now. The bridge is the exception: it is the same object for the
+// life of the window.
+const builder = createPageBuilder({
+  bridge,
+  settings: () => settings,
+  shellCommand: () => shellCommand,
+  onChanged: () => renderStatus(),
+  onError: showError,
+  onNotice: showNotice,
+  managerInFront: () => pages[activeIndex].mode === 'manager',
+  worktrees: () => worktrees,
+  openFile: (page, index, link) => openFileLink(page, index, link),
+  showEditor: (page) => showEditor(page),
+  closePane: (page, index) => closePane(page, index, panePorts),
+});
+
+// The new-pane key and its button in the title row. Main opens it and answers with the list that has it
+// on, the way an open does, so the pane is on this page before it is given the keyboard.
+function addPane(page: Page): void {
+  void openWorker(page.slot).then((index) => {
+    if (index !== null && pages[activeIndex] === page) focusTerminal(index);
+  }, (error: unknown) => showError('pane', `No new pane: ${failureText(error)}`));
+}
+
+const panePorts: PanePorts = { closePane: (slot, index) => bridge.closePane(slot, index), onError: showError };
+
+// Builds the page for a slot, replacing whatever is there — a missing project's dead page becomes a
+// live one once the folder exists. A replacement keeps the old page's position in the list.
+function setPage(project: Project, slot: number, open: readonly number[]): void {
+  const page = builder.build(project, slot, open);
+  const existing = positionOfSlot(slot);
+  if (existing === -1) {
+    pagesElement.append(page.element);
+    pages.push(page);
+  } else {
+    pages[existing].element.replaceWith(page.element);
+    pages[existing] = page;
+  }
+  // The fit belongs to putting the page on screen, not to the callers. A pane can only be measured once
+  // it is in the document, and main has already spawned this page's shells at whatever size it last
+  // heard — so until this runs, every one of them is drawing at a width nobody chose.
+  fitPage(page);
+}
+
+const { removePage, applyProjects, host } = createPageSync({
+  pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
+  setPage, syncPanes: builder.syncPanes, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
+  // While away every save went to the host, which keeps only its own window's, so main still holds this
+  // machine's layout from before the connect. Saving is held until it is back on the pages: the bare
+  // rebuild saved straight away would write every view, focus and name off to disk for good.
+  comeHome(rebuild) {
+    restoring = true;
+    rebuild();
+    void bridge.getSession().then(applyLayout, () => undefined).finally(() => {
+      restoring = false;
+      landOn(activeIndex);
+      renderStatus();
+    });
+  },
+});
+
+// Asked twice — once before the question and once with the answer — so it is one function. What the
+// flags catch and what the sentence says are close-project.ts's; the reading itself is main's, over
+// `panes:read`, and this only puts the names to it.
+//
+// The terminals, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
+// for as long as the project is open, so on a reading of what the pty has in the foreground it is busy
+// from launch, and a close that counted it would refuse every time with `nvim` named as the thing in
+// the way. It was never much of a signal on the old reading either: it blocked a close only while its
+// bell was ringing or its screen happened to match an agent's spinner. What guards a half-finished
+// edit in nvim is the question below, which is asked whether or not anything is in the way.
+async function closeRefusalFor(page: Page): Promise<string> {
+  const uses = await bridge.readPanes(page.project.path);
+  return closeRefusal(page.project.name, closingPanes(uses, namedPanes(page)));
+}
+
+// Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
+// takes is gone for good — its shells, the editor, and whatever was running in them — so what can stop
+// it, and the sentence saying so, are close-project.ts's. A pane that has exited or is sitting at a
+// prompt stops nothing, so the question below is asked whether or not anything was in the way.
+// The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
+// pane id that named this project names nothing from here on.
+async function closeProject(slot: number): Promise<void> {
+  // One close at a time, the same guard runInPanes has and for the same reason: what stops a close is
+  // a question to main now, and nothing on screen changes while the answer is out. Two presses in that
+  // window build two confirm sheets. Answer the top one and the project closes correctly — the sheet
+  // underneath stays on screen with nothing focusing it, the page behind goes on taking every key
+  // because the window's guard only fires when focus is inside an overlay, and no key clears it.
+  if (closing) return;
+  const position = positionOfSlot(slot);
+  const page = pages[position];
+  // The manager holds a slot of its own and has no folder to close; a slot with no page is one that
+  // has already gone.
+  if (!page || !isProjectPage(page)) return;
+  closing = true;
+  let refusal: string;
+  try {
+    refusal = await closeRefusalFor(page);
+  } finally {
+    // In a finally, because readPanes is an IPC call and can reject: a flag left up by one failed
+    // round trip would make Ctrl+Q do nothing for the rest of the run. Nothing yields between here
+    // and the sheet below, so no keystroke can arrive in the gap.
+    closing = false;
+  }
+  if (refusal !== '') return showNotice('close', refusal);
+  // Nothing is in the way, so an earlier refusal is already false whatever the answer to the question
+  // is: cancelling the dialog leaves no path back here to clear it.
+  showNotice('close', '');
+  // Asked even when nothing is in the way, because that is exactly when the loss is invisible: a pane
+  // editing an unsaved file in vim rings no bell and prints nothing, so the refusal above sees a quiet
+  // project and lets it go. Deleting one card asks, and removing a worktree git can recreate asks
+  // twice; this takes every shell and an editor with no undo.
+  void confirmOverlay(
+    `Close ${page.project.name}?`,
+    'Enter closes it, its shells and its editor. Escape keeps it.',
+  ).then(async (confirmed) => {
+    // The keyboard back to the page first, for the same reason namePane does it: the sheet that held the
+    // focus has gone, so answering Escape here would otherwise leave you unable to type in any pane.
+    showPage(activeIndex);
+    if (!confirmed) return;
+    // Read again rather than reused: the dialog is open for as long as it takes to answer, and the page
+    // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
+    // found afresh here. Whatever page holds this slot is a project page, because the slot is the same
+    // one the check at the top answered for and isProjectPage reads nothing else.
+    const closingPage = pages[positionOfSlot(slot)];
+    if (!closingPage) return;
+    // Read again with the page and for the same reason: the answer was given over a quiet project, and
+    // a pane that took an agent or a question while the dialog was up is one the close refuses over.
+    const late = await closeRefusalFor(closingPage);
+    if (late !== '') return showNotice('close', late);
+    // The page's place in the list, found after that question rather than before it: asking main is a
+    // round trip, and a project closed from elsewhere while it was out shifts every page after it
+    // along. The index taken before would splice a different project out of the list.
+    const closingPosition = positionOfSlot(slot);
+    if (closingPosition === -1) return;
+    bridge.closeProject(slot);
+    removePage(slot);
+    // The page that went can be the one you were standing on, since the key closes the project you are
+    // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
+    // it was the last one, which is the manager at worst. A close from the manager's own list is the
+    // other case and needs none of this: the manager holds the first tab and never moves off it, so
+    // what leaves is always behind the page you are looking at.
+    if (closingPosition === activeIndex) landOn(positionAfterClose(closingPosition, pages.length));
+    // The row leaves the list, the tab leaves the strip, and the session file is written without it.
+    renderStatus();
+  });
+}
+
+// Moves the project on screen to a position, the way you would drag a tab. Slots and shells are
+// untouched; only the order you cycle and jump through changes. Where it may land, and whether the page
+// you are on may move at all, are manager.ts's to answer.
+function moveProject(index: number): void {
+  if (index >= pages.length || !isProjectPage(pages[activeIndex])) return;
+  const target = projectPosition(index);
+  pages.splice(target, 0, ...pages.splice(activeIndex, 1));
+  activeIndex = target;
+  renderStatus();
+}
+
+// Main owns the decision and answers with the whole list, which applyProjects makes true here. A null
+// path asks main for the folder dialog.
+async function openProject(requested: string | null): Promise<void> {
+  // Connected, "a new project" is a path typed for the host; the folder dialog would show this disk.
+  const remote = requested === null && isRemoteHost(host());
+  const projectPath = remote ? await typedHostFolder(host(), promptOverlay) : requested;
+  if (remote && projectPath === null) return showPage(activeIndex);
+  const opened = await bridge.openProject(projectPath);
+  if (!opened) return showPage(activeIndex);
+  applyProjects(opened.open);
+  const position = positionOfSlot(opened.index);
+  if (position !== -1) showPage(position);
+}
+
+const showPicker = () => runPicker({
+  bridge, projectPages, openProject, host, showNotice, pick: openPicker, prompt: promptOverlay,
+  settings: () => settings, setSettings: (next) => { settings = next; }, restore: () => showPage(activeIndex),
+});
+bridge.onHostReport((text) => showNotice('host', text));
+
+// Ctrl+`: the pane you are looking at, as a file in the project's nvim.
+//
+// Main is asked before the mode is switched, and the order matters on a cold editor: the switch is what
+// starts nvim, and main is already waiting on the socket by the time it does, so the file is handed over
+// the moment nvim is listening rather than a round trip later. On a warm editor it is the same tick
+// either way.
+function openScrollback(page: Page): void {
+  const pane = focusedPane(page);
+  if (!pane) return;
+  const sending = bridge.openScrollback(page.slot, page.focused, paneScrollback(pane.terminal));
+  setMode('nvim');
+  sending.then(
+    (answer) => showError('scrollback', answer.ok ? '' : answer.message),
+    (error: unknown) => showError('scrollback', `Could not open the scrollback: ${failureText(error)}`),
+  );
+}
+
+// A file path in a pane, by click or by the hint key; file-link-open.ts holds the order of it.
+const showEditor = (page: Page): void => { if (pages[activeIndex] === page) setMode('nvim'); };
+const openFileLink = fileLinkOpener(bridge, { startEditor, showEditor, report: (message) => showError('file', message) });
+
+// Naming the focused pane. What you type wins over the title the program in it sets, and an empty box
+// clears it back to following the title — the overlay's two answers, kept apart here: null is a cancel
+// and changes nothing.
+//
+// The grid's five only, and nothing here enforces that: the action's scope does. `terminals` names the
+// one view the editor is not on, so the key cannot be pressed while the editor has the keyboard.
+function namePane(page: Page): void {
+  const pane = focusedPane(page);
+  if (!pane) return;
+  // The placeholder is what the pane is called with no name of yours, so you can see what you are
+  // overriding — and, on a pane already saying something useful, that there is nothing worth typing.
+  void promptOverlay(
+    'Name this pane',
+    pane.typedName ?? '',
+    pane.title?.trim() || 'unnamed',
+    'Enter names it. An empty box goes back to following the title. Escape keeps what it has.',
+  ).then((answer) => {
+    // Stored as typed and trimmed on the way out, by paneName, which is where every name arrives.
+    if (answer !== null) pane.typedName = answer;
+    // The keyboard goes back to the pane whichever way the dialog went: the sheet that held it has been
+    // removed, so without this the keystrokes land on <body> and typing in the pane does nothing.
+    // showPage redraws the status on its way through, and that redraw writes the session file, which is
+    // what makes the name last a restart.
+    showPage(activeIndex);
+  });
+}
+
+function report(task: Promise<void>): void {
+  task.then(
+    // Clears its own message and no one else's: a project that opens says nothing about a board that
+    // could not be written.
+    () => showError('project', ''),
+    (error: unknown) => showError('project', `Failed to open project: ${failureText(error)}`),
+  );
+}
+
+// The keys for the screen in front of you. With no project open that screen is the manager, which is
+// a page like any other and has its own section in the dialog.
+function showHelp(): void {
+  const page = pages[activeIndex];
+  openHelp(page.mode, !isProjectPage(page), settings.keys, isMac)
+    .then(() => showPage(activeIndex));
+}
+
+function showSettings(): void {
+  openSettings(settings, isMac, (next) => {
+    settings = next;
+    void bridge.saveSettings(next).then((shell) => { shellCommand = shell; });
+    applyAppearance();
+  }).then(() => {
+    showPage(activeIndex);
+    // A rebinding changes what two lines of text say: the command screen's hint and the status bar's
+    // picker key. Neither is redrawn by landing back on the page you never left, so ask for both here.
+    pages[activeIndex].command?.render();
+    renderStatus();
+  });
+}
+
+function apply(action: Action): void {
+  if (action.kind === 'project-picker') return report(showPicker());
+  if (action.kind === 'help') return showHelp();
+  if (action.kind === 'settings') return showSettings();
+  if (action.kind === 'needs-you-next') return showNotice('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
+  if (action.kind === 'worktrees') {
+    worktreeDialog = openWorktrees(bridge, () => worktrees, jumpToWorktree);
+    return void worktreeDialog.closed.then(() => {
+      worktreeDialog = null;
+      // The same reclaim every other dialog does, and it is what keeps the keyboard on a pane Enter
+      // landed on: goToPane has already moved activeIndex, so this focuses where you were sent. A
+      // removal made in the dialog has already reached the boards on its own.
+      showPage(activeIndex);
+    });
+  }
+  const page = pages[activeIndex];
+  // The one key aimed at the page rather than at a row: on a project it closes the project you are on.
+  // The manager is not a project and has nothing of its own to close, so there it falls through to its
+  // list, where the highlight says which project is meant. Its other three sections — board, command
+  // and notes — have no highlight naming one project, so the key does nothing on them and Ctrl+H still
+  // lists it; CLAUDE.md's help section says why.
+  if (action.kind === 'project-close' && isProjectPage(page)) return void closeProject(page.slot);
+  switch (action.kind) {
+    case 'project-last': {
+      const position = positionOfSlot(previousSlot);
+      return position === -1 ? undefined : showPage(position);
+    }
+    case 'project-next': return showPage(activeIndex + 1);
+    case 'project-previous': return showPage(activeIndex - 1);
+    case 'project-jump':
+      if (action.index < pages.length) showPage(action.index);
+      return;
+    case 'project-move': return moveProject(action.index);
+    case 'mode-set': return setMode(action.mode);
+    case 'terminal-focus': return focusTerminal(paneAtPosition(openIndices(page), action.index));
+    case 'terminal-next': return focusTerminal(stepPane(openIndices(page), page.focused, 1));
+    case 'terminal-previous': return focusTerminal(stepPane(openIndices(page), page.focused, -1));
+    case 'terminal-move': return focusTerminal(neighborPane(openIndices(page), page.focused, action.direction));
+    case 'terminal-add': return addPane(page);
+    case 'terminal-scrollback': return openScrollback(page);
+    case 'terminal-name': return namePane(page);
+    case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));
+    // Straight to the focused shell: onData already routes it to the pty.
+    case 'terminal-input': return focusedPane(page)?.terminal.input(action.data);
+    case 'terminal-zoom':
+    case 'terminal-close':
+    case 'terminal-fold':
+    case 'terminal-copy':
+    case 'terminal-paste': return runPaneAction(page, action.kind, panePorts);
+    case 'section-move': return setMode(nextSectionMode(page.mode, action.direction));
+    case 'command-select':
+    case 'command-open':
+    case 'command-cancel': return page.command?.runAction(action);
+    case 'log-select':
+    case 'log-open':
+    case 'log-filter-reset': return page.log?.runAction(action);
+    case 'chat': return page.chat?.runCommand(action.command);
+    case 'chat-edit': return editFocusedBox(page.chat?.element, action.edit);
+    // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
+    // rather than from each view's own listener, so one lookup decides every key on every screen —
+    // and a fifth screen costs nothing but its mode.
+    default: return (page.mode === 'manager' ? page.manager : page.board)?.runAction(action);
+  }
+}
+
+const whichKey = createWhichKey();
+// The modifiers the strip last answered, null while it is down. which-key.ts decides what each
+// keystroke does to it; this is only where the answer is kept.
+let whichKeyHeld: Held | null = null;
+
+const dialogOpen = (): boolean => document.querySelector(OVERLAY_SELECTOR) !== null;
+
+function hideWhichKey(): void {
+  whichKeyHeld = null;
+  whichKey.hide();
+}
+
+// Every press and release, whether the strip is up or not: adding Shift to a held Ctrl is a different
+// question, and pressing a key that starts something is the answer being taken.
+function trackWhichKey(event: KeyboardEvent): void {
+  const step = whichKeyStep(event, dialogOpen, whichKeyHeld);
+  if (step.kind === 'unchanged') return;
+  if (step.kind === 'hide') return hideWhichKey();
+  whichKeyHeld = step.held;
+  refreshWhichKey();
+}
+
+// The rows are built from the page and the mode the modifier went down on, and nothing about holding a
+// modifier rebuilds them. Every key that changes the screen also takes the strip away, so from the
+// keyboard they cannot go stale; a click on a section name or on a manager row changes both while the
+// modifier is still down. So this is called wherever the screen changes, beside renderStatus.
+function refreshWhichKey(): void {
+  if (!whichKeyHeld) return;
+  const page = pages[activeIndex];
+  whichKey.show(whichKeyRows(whichKeyHeld, settings.keys, page.mode, !isProjectPage(page), isMac, chatFocused(page)));
+}
+
+// A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
+// listener, so the panel would sit there over a window nobody is typing into.
+window.addEventListener('blur', hideWhichKey);
+window.addEventListener('keyup', trackWhichKey, true);
+
+// Capture phase runs before xterm's own key handler, so the shell never sees these keys.
+window.addEventListener('keydown', (event) => {
+  trackWhichKey(event);
+  // A dialog that is up owns the keyboard; overlay.ts says what counts as one. xterm's textarea is
+  // inside none of them, so a pane keeps its shortcuts.
+  if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
+  const page = pages[activeIndex];
+  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page), chatFocused(page));
+  if (!action) return;
+  event.preventDefault();
+  event.stopPropagation();
+  apply(action);
+}, true);
+
+// Both halves of a drop have to be cancelled here, and cancelling them at the window covers every pane
+// too, since the events bubble. Without it a file dropped on the page navigates the window to it,
+// replacing the whole dashboard with the file's contents, and no pane ever gets a drop at all.
+window.addEventListener('dragover', (event) => event.preventDefault());
+window.addEventListener('drop', (event) => event.preventDefault());
+
+window.addEventListener('resize', fitAllPages);
+
+// Clicking the banner lands you on the pane that raised it. The page has to be put on the right view
+// and told which pane is focused before it is shown, because showPage lands on whatever the page was
+// already showing. A slot with no page any more — the project was closed while the banner sat there —
+// is nowhere to go.
+bridge.onNotificationClick((paneId) => {
+  // A dialog owns the keyboard while it is up. Move the page out from under one and the sheet stays
+  // drawn with the keystrokes going to a shell behind it.
+  if (document.querySelector(OVERLAY_SELECTOR)) return;
+  const { slot, index } = paneFromId(paneId);
+  goToPane(slot, index);
+});
+
+// Something other than the app wrote a board.json — the `board` command an agent runs, or a hand
+// edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and
+// a board that is not on screen has nothing to redraw. The manager's stack of boards is one of these
+// too, and finds the project the path belongs to itself.
+bridge.onBoardChange((projectPath) => {
+  const page = pages[activeIndex];
+  if (page.mode !== 'board') return;
+  page.board?.reload(projectPath);
+});
+
+// Another screen wrote a page of notes. The box in front reads its file again if the page is its own,
+// keeping anything typed here that has not been written yet. Any other box reads again when you
+// arrive at it.
+bridge.onNotesChange((projectPath) => {
+  const page = pages[activeIndex];
+  if (page.mode === 'notes') void page.notes?.reload(projectPath);
+});
+
+// jumps.ts says where each of these lands.
+const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
+
+// The command screen's lines into the shells, and the manager's answers into a pane; pane-sends.ts.
+const { sendToPanes, answerPane, openWorker } = paneSends({
+  projectPages, readPanes: bridge.readPanes, addPane: bridge.addPane, applyProjects, renderStatus,
+});
+
+bridge.onData((id, data) => {
+  const pane = panesById.get(id);
+  if (!pane) return;
+  pane.lastPrintedAt = Date.now();
+  pane.terminal.write(data);
+});
+
+// The manager's pane rows are the only thing on any screen that goes stale where it stands: every
+// other line is redrawn by whatever changed it, and a pane printing on quietly changes nothing that
+// calls a redraw. Without this you open the manager, read `Running 3 of 47 tests` · `just now`
+// against a pane, and it still says both an hour later while the pane is long finished.
+// Straight into renderStatus, which already draws the manager only when the manager is in front — a
+// second copy of that question here is one that could come to disagree with it. It is told the pane
+// rows are all it has to change, so the list is not rebuilt under someone who is reading it.
+const PANE_REFRESH_MS = 30_000;
+window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
+
+// Telling main which panes have an agent still working in them. It cannot see this for itself: it holds
+// the pty and so knows a process is there, and the pane runs `exec claude`, which sits at its prompt
+// when the card is done rather than exiting. The review sweep is what needs the answer — it takes a
+// card's worktree away, and `git worktree remove` kills every shell in that folder — and without this
+// it waits on an exit that only arrives when you close the pane by hand, so no review ever starts.
+//
+// paneLooksBusy is the reading, and it is the screen's, not main's — the one question about a pane
+// that a foreground process cannot answer, which is why it goes this way round while "is anything
+// running in this pane" goes the other. One report is a sample and not an answer, and what main makes
+// of a run of them is working-panes.ts's, which is also where the interval below comes from — the same
+// number the sweep that reads the reports ticks on, written once so halving one halves the other.
+//
+// Every pane, including the ones no card was ever shipped into, because working out which pane a
+// worktree record names means pairing its project with a slot and that pairing is main's. The cost is
+// one screen laid out per pane per five seconds; if it ever shows, the narrowing is to report only the
+// panes the records name.
+window.setInterval(() => {
+  const working: string[] = [];
+  for (const [id, pane] of panesById) if (paneLooksBusy(pane)) working.push(id);
+  bridge.reportWorkingPanes(working);
+}, WORKING_REPORT_MS);
+bridge.onExit((id, exitCode) => {
+  const pane = panesById.get(id);
+  if (!pane) return;
+  pane.exited = true;
+  // The title dies with the program that set it, which is here. Left standing, the bar names a file
+  // nothing has open: quit nvim and the pane still reads `nvim · board.json` until you press Enter and
+  // the next nvim prints its own. A typed name is untouched — that one is yours and survives a restart.
+  setPaneTitle(pane, undefined);
+  pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
+  // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
+  // find out about a pane on a project you are not on.
+  renderStatus();
+});
+
+// Results arrive one project at a time, from whichever run is going. The manager page is built before
+// the first one can land, so there is always a view to hand it to. Found the same way every other
+// listener here finds the manager page — the one page isProjectPage says no to — rather than a second
+// way of asking the same question.
+bridge.onTaskUpdate((result) => {
+  pages.find((page) => !isProjectPage(page))?.command?.update(result);
+});
+
+// Each open project's view, focused pane and typed names, as the session has them. By path, not
+// position: an entry that failed to open has no page, so the two lists no longer line up and index 3
+// would hand project 4's view to project 5.
+function applyLayout(session: Session): void {
+  for (const entry of session.pages) {
+    const page = pages.find((candidate) => candidate.project.path === entry.path);
+    // A folder that went away while the app was closed comes back as the same dead page it would have
+    // become had it gone away mid-run. There is no view on it to restore.
+    if (!page || page.project.missing) continue;
+    showMode(page, entry.mode);
+    page.focused = entry.focused;
+    // Only the names you typed come back. A title dies with the program that set it, so a restored
+    // pane says nothing until whatever starts in it speaks up.
+    for (const pane of page.panes) pane.typedName = entry.names[pane.index] ?? pane.typedName;
+  }
+}
+
+// Puts back what the last run was left on: the same projects in the same order, each on the view it was
+// showing, with the same pane focused. One at a time, because main hands out a slot per project in the
+// order they are opened and that order is the tab strip.
+async function restore(session: Session): Promise<void> {
+  // Best-effort: one project that cannot be opened at all — a folder you have lost read permission on,
+  // so the main process throws rather than reporting it missing — must not leave `restoring` set for
+  // the rest of the run. That would silently stop every later save, and a day's work would open
+  // tomorrow as yesterday's layout. Half the layout back and saving is better than neither.
+  try {
+    for (const entry of session.pages) {
+      // One folder you cannot stat must not cost you the projects saved behind it: the rest of the
+      // layout still opens, and only the one that threw is dropped from this run.
+      try {
+        await openProject(entry.path);
+      } catch (error: unknown) {
+        // Said out loud, because the save below rewrites session.json without this project: grant the
+        // folder back next week and it is not in the layout any more. Last failure wins the span, which
+        // is the difference between "it is gone" and "it is gone and I have no idea why".
+        showError('start', `Failed to open ${entry.path}: ${failureText(error)}`);
+      }
+    }
+    applyLayout(session);
+  } finally {
+    // Saving again from here on, so the landing below is what writes the restored layout back — with any
+    // project whose folder has gone missing already dropped from it.
+    restoring = false;
+    const activePath = session.pages[session.activeIndex]?.path;
+    const saved = pages.findIndex((page) => page.project.path === activePath);
+    showPage(landingPosition(saved, pages.findIndex(isProjectPage)), true);
+  }
+}
+
+// The window opens with whatever was open last time, behind the manager tab; with nothing saved, the
+// manager is all there is and the picker makes the first project.
+async function start(): Promise<void> {
+  // First, and before anything draws: the tab strip is `pages` in order, so this is what puts the
+  // manager at the front of it, and renderStatus below has a page to draw.
+  const manager = createManagerPage({
+    bridge,
+    projects: projectPages,
+    worktrees: () => worktrees,
+    binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
+    onChanged: renderStatus,
+    onError: showError,
+    onNotice: showNotice,
+    onJump: goToPane,
+    onJumpWorktree: jumpToWorktree,
+    onJumpNeed: jumpToNeed,
+    onAnswer: answerPane,
+    onClose: closeProject,
+    onSection: setMode,
+    onBoardWrite: boardWrites.onWrite,
+    runTask: (text, paths) => bridge.runTask(text, paths),
+    runInPanes: (text, paths) => sendToPanes(text, paths),
+    cancelTasks: () => bridge.cancelTasks(),
+  });
+  pagesElement.append(manager.element);
+  pages.push(manager);
+  renderStatus();
+  // Read once, then kept fresh by main, which owns the record and says when it changes — so nothing
+  // here polls for it. Both after the manager page is pushed, because drawing the status bar needs a
+  // page and the sweep for dead worktrees can land mid-launch.
+  // A failure to read the local record costs a branch name, never the screen.
+  void bridge.listWorktrees().then(applyWorktrees, () => undefined);
+  bridge.onWorktreeChange(applyWorktrees);
+  // The same arrangement for the token figures: read once, then pushed. A machine with no Claude Code
+  // logs on it answers with nothing and every row simply has no number against it.
+  void bridge.readUsage().then(applyUsage, () => undefined);
+  bridge.onUsageChange(applyUsage);
+  const loaded = await bridge.getSettings();
+  settings = loaded.settings;
+  shellCommand = loaded.shellCommand;
+  // Read before anything is on screen, because the first page to open starts saving over it.
+  const session = await bridge.getSession();
+  // xterm measures cell size when a pane opens, so both weights must be in before openProject()
+  // builds one, or the glyphs misalign. A font name the browser cannot parse — anything typed into
+  // the settings screen, which does not check — rejects here instead of resolving; xterm falls back
+  // to Menlo on its own, so losing the preload must cost only that fallback, not the whole session.
+  try {
+    await Promise.all([
+      document.fonts.load(`${settings.font.size}px "${settings.font.name}"`),
+      document.fonts.load(`bold ${settings.font.size}px "${settings.font.name}"`),
+    ]);
+  } catch {
+    // Fallen through to whatever xterm renders instead.
+  }
+  applyAppearance();
+  // Said whether or not the restore threw: a launch with `--remote` joins its host only after this.
+  await restore(session).finally(() => bridge.sessionRestored());
+}
+
+start().catch((error: unknown) => {
+  showError('start', `Failed to start: ${failureText(error)}`);
+  // A launch that stopped before restore() ran left this set for the rest of the run, and saveSession
+  // answers to it: open five projects by hand afterwards, quit, and the app comes back on the layout
+  // from the day before with all five gone, because nothing had been written since. Half a layout on
+  // screen and saving is better than a whole one that never reaches disk.
+  restoring = false;
+});

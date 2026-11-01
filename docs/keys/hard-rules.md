@@ -45,16 +45,16 @@ If a handler reads a modified key anywhere else, it is stealing it.
 
 A new project view is a row in `PROJECT_MODES`, a row in `ACTIONS`, a view built
 in `page.ts`, a branch in `focusMode`, a branch in `modeLabel`, and a name and
-blurb in `src/help.ts`.
+blurb in `src/renderer/keys/help.ts`.
 
 ## keys-rule-2: The help dialog is part of the change
 
 **Every task that adds, removes or changes a key, a mode, or what a screen does
-updates `src/help.ts` in the same change.** Ctrl+H is where anyone finds out what
+updates `src/renderer/keys/help.ts` in the same change.** Ctrl+H is where anyone finds out what
 this app can do; a dialog describing the version before yours is worse than no
 dialog, because it is believed.
 
-- The keys. Every row prints from the one table in `src/actions.ts`, so adding a
+- The keys. Every row prints from the one table in `src/shared/keys/actions.ts`, so adding a
   shortcut means adding a row there and nothing else — the handler, the help
   dialog, the settings screen and the which-key strip all read it.
 - The blurb. Each section opens with a sentence saying what that screen is. If a

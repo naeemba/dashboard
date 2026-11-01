@@ -47,7 +47,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Settings | Ctrl+, |
 | Jump to project N | Ctrl+1..9 |
 
-Every other key is in Ctrl+H, printed from the one table in `src/actions.ts`, so that dialog is always
+Every other key is in Ctrl+H, printed from the one table in `src/shared/keys/actions.ts`, so that dialog is always
 current where this file might not be: the screen in front of you first, then the modes, then the
 projects. Each section opens with a sentence saying what that screen is. Escape or Enter closes it. It
 is the one shortcut no mode passes through, so Ctrl+H no longer reaches a shell or nvim as a backspace.

@@ -1,0 +1,33 @@
+import { allCards, type Board } from '../../shared/board/board';
+import { filterSummary, isFilterActive, type BoardFilter } from './board-filter';
+import { icon, iconButton } from '../app/icons';
+
+// The two controls the board draws around its cards: the strip over the columns saying what the
+// filter keeps, and the sort button on each column's heading. DOM only; the view decides what they do.
+
+// Says the board is narrowed and by what, with the way back. Not drawn while every card is shown.
+export function filterBar(filter: BoardFilter, visible: number[][], board: Board, onReset: () => void): HTMLElement | null {
+  if (!isFilterActive(filter)) return null;
+  const bar = document.createElement('div');
+  bar.className = 'board-filter-bar';
+  const shown = visible.flat().length;
+  const total = allCards(board).length;
+  const summary = document.createElement('span');
+  summary.className = 'board-filter-summary';
+  summary.textContent = filterSummary(filter);
+  const count = document.createElement('span');
+  count.className = 'board-filter-count';
+  count.textContent = `${shown} of ${total} cards`;
+  bar.append(icon('filter'), summary, count, iconButton('board-filter-reset', 'reset', 'Reset', onReset));
+  return bar;
+}
+
+export function sortButton(onClick: () => void): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'board-sort';
+  button.title = 'Sort by priority, urgent first';
+  button.append(icon('sort'));
+  button.addEventListener('click', onClick);
+  return button;
+}

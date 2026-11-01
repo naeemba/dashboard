@@ -82,12 +82,12 @@ const config: ForgeConfig = {
       build: [
         {
           // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
-          entry: 'src/main.ts',
+          entry: 'src/main/main.ts',
           config: 'vite.main.config.ts',
           target: 'main',
         },
         {
-          entry: 'src/preload.ts',
+          entry: 'src/preload/preload.ts',
           config: 'vite.preload.config.ts',
           target: 'preload',
         },
@@ -96,14 +96,14 @@ const config: ForgeConfig = {
         // `vite.board-cli.config.ts` extends main's config and owns the entry and the file name, so
         // `entry` here is only the label Forge prints while building; move the file there, not here.
         {
-          entry: 'src/board-cli-entry.ts',
+          entry: 'src/main/board/board-cli-entry.ts',
           config: 'vite.board-cli.config.ts',
           target: 'main',
         },
         // The `session` command, the main session's way to dispatch into worker panes. Built the same
         // way and for the same reason as `board`.
         {
-          entry: 'src/session-cli-entry.ts',
+          entry: 'src/main/workers/session-cli-entry.ts',
           config: 'vite.session-cli.config.ts',
           target: 'main',
         },

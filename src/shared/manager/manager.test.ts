@@ -1,0 +1,525 @@
+import { describe, expect, it } from 'vitest';
+import {
+  MANAGER_PROJECT, MANAGER_SLOT, alertSummary, canOpen, groupOpenings, isPrinted, stateLabel, isAlerting, isManagerPath, isProjectPage, landingPosition, lineKey,
+  managerLines, managerRows, paneAge, positionAfterClose, projectPosition, removableWorktree, slotOfLine, tailLines,
+  takesAnswer, answerTarget, projectWorktrees, queueRefresh, withQueue,
+  type ManagerLine, type PaneSummary,
+} from './manager';
+import type { Need } from './needs-you';
+import { NO_DAYS, NO_TOTALS } from '../usage/usage';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { Bell } from '../panes/waiting';
+
+// The rows carry `tail` and `lastPrinted` as functions, so both are called before a row is compared
+// with one written out.
+const drawn = (panes: readonly PaneSummary[]) => panes.map((pane) => (
+  { ...pane, tail: pane.tail(), lastPrinted: pane.lastPrinted() }
+));
+
+const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary => ({
+  index: 0,
+  name: 'terminal 1',
+  state,
+  lastPrintedAt: 0,
+  tokens: 0,
+  tail: () => tail,
+  lastPrinted: () => tail.at(-1) ?? '',
+});
+
+const worktree = (projectPath: string, worktreePath: string, startedAt: string): WorktreeEntry => ({
+  cardId: 'card', title: 'Fix it', projectPath, branch: 'fix-it', worktreePath, pane: 2, startedAt, reviewing: false,
+});
+
+describe('isProjectPage', () => {
+  it('says the manager is not one, so it never moves and is never saved', () => {
+    expect(isProjectPage({ slot: MANAGER_SLOT })).toBe(false);
+  });
+
+  it('says every project is one, whatever slot it was handed', () => {
+    expect(isProjectPage({ slot: 0 })).toBe(true);
+    expect(isProjectPage({ slot: 4 })).toBe(true);
+  });
+});
+
+describe('projectPosition', () => {
+  it('never lands a project in front of the manager', () => {
+    expect(projectPosition(0)).toBe(1);
+  });
+
+  it('leaves every position behind the manager alone', () => {
+    expect(projectPosition(1)).toBe(1);
+    expect(projectPosition(4)).toBe(4);
+  });
+});
+
+describe('landingPosition', () => {
+  it('opens on the project the last run was left on', () => {
+    expect(landingPosition(3, 1)).toBe(3);
+  });
+
+  it('falls to the first project when the one it was left on is gone', () => {
+    expect(landingPosition(-1, 2)).toBe(2);
+  });
+
+  it('lands on the manager only when no project survived', () => {
+    expect(landingPosition(-1, -1)).toBe(0);
+  });
+});
+
+// `remaining` is how many projects are left once the closed one is spliced out, so the first three
+// cases open four pages — the manager and three projects — and the last opens two.
+describe('positionAfterClose', () => {
+  it('lands on the project that slid into the closed tab', () => {
+    expect(positionAfterClose(1, 3)).toBe(1);
+  });
+
+  it('does the same for a project closed from the middle', () => {
+    expect(positionAfterClose(2, 3)).toBe(2);
+  });
+
+  it('lands on the tab to the left when the last project is closed', () => {
+    expect(positionAfterClose(3, 3)).toBe(2);
+  });
+
+  it('lands on the manager when the only project is closed', () => {
+    expect(positionAfterClose(1, 1)).toBe(0);
+  });
+});
+
+describe('managerRows', () => {
+  // Panes are numbered in the order given, the way an unbroken run of them is.
+  const page = (
+    name: string, slot: number,
+    panes: {
+      name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+      tail(): string[]; lastPrinted(): string;
+    }[],
+  ) => ({ project: { name, path: `/work/${name}` }, slot, panes: panes.map((entry, index) => ({ index, ...entry })) });
+  const pane = (
+    name: string, bell: Bell = 'quiet', exited = false, tail: string[] = [], lastPrintedAt = 0,
+  ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });
+
+  it('gives a project one row with every pane on it, whatever they are doing', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
+    expect(rows.map((row) => ({ slot: row.slot, name: row.name }))).toEqual([{ slot: 3, name: 'api' }]);
+    expect(drawn(rows[0].panes)).toEqual([
+      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
+      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
+    ]);
+  });
+
+  it('names the panes that are asking and the panes that have died', () => {
+    const rows = managerRows([page('api', 0, [
+      pane('terminal 1'),
+      pane('terminal 2', 'waiting'),
+      pane('terminal 3', 'quiet', true),
+      pane('nvim', 'notified'),
+    ])]);
+    expect(rows[0].panes.map((entry) => entry.state)).toEqual([
+      'quiet', 'waiting', 'exited', 'waiting',
+    ]);
+  });
+
+  it('puts the project’s three figures on its row and each agent’s on its pane', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])], {
+      projects: { '/work/api': { fiveHours: 10, week: 20, allTime: 30 } },
+      days: {},
+      panes: { '3:1': 4_000 },
+    });
+    expect(rows[0].tokens).toEqual({ fiveHours: 10, week: 20, allTime: 30 });
+    expect(rows[0].panes.map((entry) => entry.tokens)).toEqual([0, 4_000]);
+  });
+
+  it('gives a project the sweep has not reached yet nought rather than nothing at all', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1')])]);
+    expect(rows[0].tokens).toEqual(NO_TOTALS);
+    expect(rows[0].panes[0].tokens).toBe(0);
+  });
+
+  it('carries what each pane printed and when, so the row can say how long ago', () => {
+    const rows = managerRows([page('api', 0, [pane('terminal 1', 'quiet', false, ['ok'], 1_000)])]);
+    expect(drawn(rows[0].panes)).toEqual([
+      {
+        index: 0, name: 'terminal 1', state: 'quiet', tail: ['ok'], lastPrinted: 'ok',
+        lastPrintedAt: 1_000, tokens: 0,
+      },
+    ]);
+  });
+
+  // A project nobody has opened draws none of its panes, and reading a live terminal for a row that is
+  // not on screen is thirty screens laid out on every keystroke to print none of them.
+  it('does not read a pane’s screen until the row is drawn', () => {
+    let reads = 0;
+    const counted = {
+      name: 'terminal 1',
+      bell: 'quiet' as Bell,
+      exited: false,
+      lastPrintedAt: 0,
+      tail: () => {
+        reads += 1;
+        return [];
+      },
+      lastPrinted: () => {
+        reads += 1;
+        return '';
+      },
+    };
+    const rows = managerRows([page('api', 0, [counted])]);
+    expect(reads).toBe(0);
+    rows[0].panes[0].tail();
+    rows[0].panes[0].lastPrinted();
+    expect(reads).toBe(2);
+  });
+
+  it('calls a pane that died while it was asking dead, since restarting it is what it needs', () => {
+    const rows = managerRows([page('api', 0, [pane('terminal 1', 'waiting', true)])]);
+    expect(rows[0].panes[0].state).toBe('exited');
+  });
+
+  it('keeps a project with no panes at all, so a dead project still has a row', () => {
+    expect(managerRows([page('gone', 2, [])])).toEqual([
+      { slot: 2, name: 'gone', path: '/work/gone', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] },
+    ]);
+  });
+
+  it("gives each project its own worktrees and not another project's, newest first", () => {
+    const worktrees = [
+      worktree('/work/api', '/work/api.worktrees/old', '2026-09-01T00:00:00Z'),
+      worktree('/work/web', '/work/web.worktrees/x', '2026-09-02T00:00:00Z'),
+      worktree('/work/api', '/work/api.worktrees/new', '2026-09-03T00:00:00Z'),
+    ];
+    const rows = managerRows([page('api', 0, [])], undefined, worktrees);
+    expect(rows[0].worktrees.map((entry) => entry.worktreePath))
+      .toEqual(['/work/api.worktrees/new', '/work/api.worktrees/old']);
+  });
+
+  it("carries the project's week of spend for its trend", () => {
+    const days = [1, 2, 3, 0, 0, 0, 0];
+    const rows = managerRows([page('api', 0, [])], { projects: {}, days: { '/work/api': days }, panes: {} });
+    expect(rows[0].days).toEqual(days);
+  });
+});
+
+describe('paneAge', () => {
+  const now = Date.parse('2026-09-08T12:00:00.000Z');
+
+  it('says how long ago the pane last printed', () => {
+    expect(paneAge(now - 41 * 60 * 1000, now)).toBe('41 minutes ago');
+  });
+
+  // A shell that has not drawn its prompt yet. The epoch would read as quiet since 1970.
+  it('says nothing about a pane that has printed nothing', () => {
+    expect(paneAge(0, now)).toBe('');
+  });
+});
+
+describe('alertSummary', () => {
+  const pane = summary;
+
+  it('says so when nothing on the project wants anything', () => {
+    expect(alertSummary([])).toBe('nothing waiting');
+  });
+
+  // The five shells are five whatever they are doing, so counting them says nothing.
+  it('says nothing is waiting for a project whose panes are all getting on with it', () => {
+    expect(alertSummary([pane('quiet'), pane('quiet')])).toBe('nothing waiting');
+  });
+
+  it('counts each kind, asking first', () => {
+    expect(alertSummary([pane('exited'), pane('quiet'), pane('waiting'), pane('waiting')]))
+      .toBe('2 waiting · 1 exited');
+  });
+
+  it('leaves out the kind that has none', () => {
+    expect(alertSummary([pane('exited')])).toBe('1 exited');
+  });
+});
+
+describe('stateLabel', () => {
+  // A busy agent is `quiet` too, so printing the word would call it idle.
+  it('prints nothing for a pane that wants nothing', () => {
+    expect(stateLabel(summary('quiet'))).toBe('');
+  });
+
+  it('names the states that want something', () => {
+    expect(stateLabel(summary('waiting'))).toBe('waiting');
+    expect(stateLabel(summary('exited'))).toBe('exited');
+  });
+});
+
+describe('isPrinted', () => {
+  it('keeps a line with words on it', () => {
+    expect(isPrinted('  1. Yes')).toBe(true);
+    expect(isPrinted('ساخت')).toBe(true);
+  });
+
+  // A prompt drawn in box characters says nothing, and beside a pane's name it looks broken.
+  it('skips a line of nothing but spaces and symbols', () => {
+    expect(isPrinted('   ')).toBe(false);
+    expect(isPrinted('└> ┘')).toBe(false);
+  });
+});
+
+describe('managerLines', () => {
+  const row = (slot: number, name: string, panes: PaneSummary[] = [], worktrees: WorktreeEntry[] = []) => (
+    { slot, name, path: `/work/${name}`, panes, tokens: NO_TOTALS, days: NO_DAYS, worktrees }
+  );
+  const pane = { ...summary('waiting'), index: 1, name: 'terminal 2' };
+
+  it('lists the projects and nothing else while every row is shut', () => {
+    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set(), () => []);
+    expect(lines).toEqual([
+      { kind: 'project', row: row(0, 'api', [pane]), open: false },
+      { kind: 'project', row: row(1, 'web'), open: false },
+    ]);
+  });
+
+  it('puts an open project’s panes under it', () => {
+    const lines = managerLines([row(0, 'api', [pane]), row(1, 'web')], new Set([0]), () => []);
+    expect(lines).toEqual([
+      { kind: 'project', row: row(0, 'api', [pane]), open: true },
+      { kind: 'pane', slot: 0, pane },
+      { kind: 'project', row: row(1, 'web'), open: false },
+    ]);
+  });
+
+  it('shows a project with no panes as shut however it was left, since it has nothing to show', () => {
+    const lines = managerLines([row(1, 'web')], new Set([1]), () => []);
+    expect(lines).toEqual([{ kind: 'project', row: row(1, 'web'), open: false }]);
+  });
+
+  // A worktree is a folder on disk. Hidden behind Enter, it is the one you forget to clean up.
+  it("draws a project's worktrees under it whether the row is open or shut, after its panes", () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+    const api = row(0, 'api', [pane], [entry]);
+    expect(managerLines([api], new Set(), () => []).map((line) => line.kind)).toEqual(['project', 'worktree']);
+    expect(managerLines([api], new Set([0]), () => []).map((line) => line.kind)).toEqual(['project', 'pane', 'worktree']);
+  });
+});
+
+describe('projectWorktrees', () => {
+  const recorded = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+  const api = { slot: 0, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [recorded] };
+
+  // An agent session's worktree, or one made by hand, is a folder on disk like any card's.
+  it('lists the worktrees git found beside the recorded ones, each once', () => {
+    const found = [
+      { projectPath: '/work/api', worktreePath: '/work/api.worktrees/fix', branch: 'fix-it', dirty: false, unreadable: false, bytes: 2048 },
+      { projectPath: '/work/api', worktreePath: '/work/api/.claude/worktrees/agent', branch: 'agent/x', dirty: true, unreadable: false, bytes: null },
+    ];
+    expect(projectWorktrees(api, found)).toEqual([
+      { title: recorded.title, projectPath: '/work/api', worktreePath: '/work/api.worktrees/fix', branch: 'fix-it', entry: recorded, bytes: 2048 },
+      { title: 'agent', projectPath: '/work/api', worktreePath: '/work/api/.claude/worktrees/agent', branch: 'agent/x', entry: null, bytes: null },
+    ]);
+  });
+
+  it('draws the recorded ones before git has been asked', () => {
+    expect(projectWorktrees(api, []).map((found) => found.entry)).toEqual([recorded]);
+  });
+
+  // Removing one with no card asks about it by its folder's name, and asks git from its project.
+  it('gives the removal key a found worktree, named by its folder', () => {
+    const found = { projectPath: '/work/api', worktreePath: '/work/api/.claude/worktrees/agent', branch: 'agent/x', dirty: false, unreadable: false, bytes: null };
+    const [, agent] = projectWorktrees(api, [found]);
+    expect(removableWorktree({ kind: 'worktree', slot: 0, worktree: agent }))
+      .toMatchObject({ title: 'agent', branch: 'agent/x', worktreePath: found.worktreePath, projectPath: '/work/api' });
+  });
+});
+
+describe('groupOpenings', () => {
+  const row = (slot: number, name: string, panes: PaneSummary[] = [], worktrees: WorktreeEntry[] = []) => (
+    { slot, name, path: `/work/${name}`, panes, tokens: NO_TOTALS, days: NO_DAYS, worktrees }
+  );
+  const first = { ...summary('quiet'), index: 0, name: 'terminal 1' };
+  const second = { ...summary('quiet'), index: 1, name: 'terminal 2' };
+  const fix = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+  const docs = worktree('/work/api', '/work/api.worktrees/docs', '2026-09-02T00:00:00Z');
+
+  it('names the terminals once, above the first of them', () => {
+    const lines = managerLines([row(0, 'api', [first, second])], new Set([0]), () => []);
+    expect([...groupOpenings(lines)]).toEqual([1]);
+  });
+
+  it('names the worktrees once, above the first of them, when there are no terminals', () => {
+    const lines = managerLines([row(0, 'api', [], [fix, docs])], new Set(), () => []);
+    expect([...groupOpenings(lines)]).toEqual([1]);
+  });
+
+  it('names the terminals and the worktrees each above their own group', () => {
+    const lines = managerLines([row(0, 'api', [first, second], [fix, docs])], new Set([0]), () => []);
+    expect(lines.map((line) => line.kind)).toEqual(['project', 'pane', 'pane', 'worktree', 'worktree']);
+    expect([...groupOpenings(lines)]).toEqual([1, 3]);
+  });
+
+  // The project row between them starts the names over, so the second project gets its own.
+  it('names each project’s groups again, however they follow one another', () => {
+    const lines = managerLines(
+      [row(0, 'api', [first], [fix]), row(1, 'web', [first], [docs])],
+      new Set([0, 1]),
+      () => [],
+    );
+    expect([...groupOpenings(lines)]).toEqual([1, 2, 4, 5]);
+  });
+
+  it('names nothing over a list of shut projects with nothing under them', () => {
+    expect(groupOpenings(managerLines([row(0, 'api', [first]), row(1, 'web')], new Set(), () => [])).size).toBe(0);
+  });
+});
+
+describe('lineKey', () => {
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+
+  it('tells a project from the panes under it', () => {
+    expect(lineKey({ kind: 'project', row, open: false })).toBe('2');
+    expect(lineKey({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe('2:0');
+  });
+
+  it('names a worktree by its folder, so a redraw finds it again wherever it moved', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix', '2026-09-01T00:00:00Z');
+    expect(lineKey({ kind: 'worktree', slot: 2, worktree: { ...entry, entry, bytes: null } })).toBe('worktree:/work/api.worktrees/fix');
+  });
+});
+
+describe('slotOfLine', () => {
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+
+  it('gives a pane row the project it sits under, which is what the close key is aimed at', () => {
+    expect(slotOfLine({ kind: 'project', row, open: false })).toBe(2);
+    expect(slotOfLine({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBe(2);
+  });
+});
+
+describe('removableWorktree', () => {
+  const row = { slot: 2, name: 'api', path: '/work/api', panes: [], tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+
+  // The key removes a folder, so a row that does not name one gives it nothing to act on.
+  it('gives the removal key a worktree row\'s worktree, and nothing on a project or a pane', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix-it', '2026-01-01T00:00:00Z');
+    const line = { ...entry, entry, bytes: null };
+    expect(removableWorktree({ kind: 'worktree', slot: 2, worktree: line })).toBe(line);
+    expect(removableWorktree({ kind: 'project', row, open: false })).toBeNull();
+    expect(removableWorktree({ kind: 'pane', slot: 2, pane: summary('waiting') })).toBeNull();
+  });
+
+  it('gives it the worktree a leftover queue item is about, though Enter on it goes to the card', () => {
+    const entry = worktree('/work/api', '/work/api.worktrees/fix-it', '2026-01-01T00:00:00Z');
+    const leftover: ManagerLine = {
+      kind: 'need',
+      need: { kind: 'leftover', slot: 2, project: 'api', projectPath: '/work/api', subject: 'x', since: 0, target: { kind: 'card', cardId: 'card' }, worktree: entry },
+    };
+    expect(removableWorktree(leftover)).toBe(entry);
+    expect(removableWorktree(queued('review', { kind: 'card', cardId: 'a' }))).toBeNull();
+  });
+});
+
+const queued = (kind: Need['kind'], target: Need['target']): ManagerLine => ({
+  kind: 'need', need: { kind, slot: 2, project: 'api', projectPath: '/work/api', subject: 'x', since: 0, target },
+});
+
+describe('answerTarget', () => {
+  it('sends a typed character from an asking queue item to its pane, as from the pane\'s own row', () => {
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 3 }))).toEqual({ slot: 2, index: 3 });
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 3 } })).toEqual({ slot: 2, index: 3 });
+  });
+
+  it('takes nothing on a line that is not a question', () => {
+    expect(answerTarget(queued('stalled', { kind: 'pane', index: 3 }))).toBeNull();
+    expect(answerTarget(queued('review', { kind: 'card', cardId: 'a' }))).toBeNull();
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: summary('quiet') })).toBeNull();
+  });
+
+  // Main is the Claude screen: a typed character has no terminal to go to, so Enter is the way in.
+  it('takes nothing on main\'s row or its queue item, asking or not', () => {
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }))).toBeNull();
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 0 } })).toBeNull();
+  });
+});
+
+describe('queueRefresh', () => {
+  const pane = (index: number): ManagerLine => ({ kind: 'pane', slot: 2, pane: { ...summary('quiet'), index } });
+  const asking = queued('asking', { kind: 'pane', index: 0 });
+  const review = queued('review', { kind: 'card', cardId: 'a' });
+
+  it('writes into the rows as they stand when nothing moved', () => {
+    expect(queueRefresh([asking, pane(0)], [asking, pane(0)])).toBe('rows');
+  });
+
+  it('rebuilds only the queue when only its items changed', () => {
+    expect(queueRefresh([asking, pane(0)], [review, asking, pane(0)])).toBe('queue');
+    expect(queueRefresh([asking, pane(0)], [pane(0)])).toBe('queue');
+  });
+
+  it('leaves it to a full render when the list under the queue changed', () => {
+    expect(queueRefresh([asking, pane(0)], [asking, pane(0), pane(1)])).toBe('render');
+  });
+});
+
+describe('withQueue', () => {
+  it('keeps every row under the queue in its place, so a row\'s figures stay on that row', () => {
+    expect(withQueue(['old need', 'pane 0', 'pane 1'], 1, ['new need', 'second need'])).toEqual(
+      ['new need', 'second need', 'pane 0', 'pane 1'],
+    );
+  });
+});
+
+describe('canOpen', () => {
+  it('refuses a project with nothing to list, so no row wears a marker over nothing', () => {
+    const base = { slot: 0, name: 'api', path: '/work/api', tokens: NO_TOTALS, days: NO_DAYS, worktrees: [] };
+    expect(canOpen({ ...base, panes: [] })).toBe(false);
+    expect(canOpen({ ...base, panes: [summary('quiet')] })).toBe(true);
+  });
+});
+
+describe('isAlerting', () => {
+  it('says a pane asking or dead wants something, and a pane at work does not', () => {
+    expect(isAlerting(summary('waiting'))).toBe(true);
+    expect(isAlerting(summary('exited'))).toBe(true);
+    expect(isAlerting(summary('quiet'))).toBe(false);
+  });
+});
+
+describe('tailLines', () => {
+  it('takes the last few lines and leaves the rest of the screen behind', () => {
+    const screen = ['one', 'two', 'three', 'four', 'five', 'six', 'seven'];
+    expect(tailLines(screen)).toEqual(['three', 'four', 'five', 'six', 'seven']);
+  });
+
+  // The blank lines a menu is spaced out with are what would push the question off the top.
+  it('drops the blank ones rather than counting them, so the whole question survives', () => {
+    const screen = [
+      'noise', '', 'Allow this?', '', '1. Yes', '   ', '2. No', '', '3. No, and tell it why', '', '',
+    ];
+    expect(tailLines(screen))
+      .toEqual(['noise', 'Allow this?', '1. Yes', '2. No', '3. No, and tell it why']);
+  });
+
+  it('gives back what there is when the pane has printed less than that', () => {
+    expect(tailLines(['$ ls', '', '└> ┘'])).toEqual(['$ ls']);
+    expect(tailLines([])).toEqual([]);
+  });
+});
+
+describe('takesAnswer', () => {
+  const pane = summary;
+
+  it('sends a keystroke to a pane that is asking', () => {
+    expect(takesAnswer(pane('waiting'))).toBe(true);
+  });
+
+  it('refuses a pane that has died, which needs Enter in the pane rather than an answer', () => {
+    expect(takesAnswer(pane('exited'))).toBe(false);
+  });
+
+  // A pane getting on with its work is on the list now. A character typed at it would land in the
+  // middle of whatever it is running, from a page that was not showing you what it is running.
+  it('refuses a pane that is not asking anything', () => {
+    expect(takesAnswer(pane('quiet'))).toBe(false);
+  });
+});
+
+describe('isManagerPath', () => {
+  it('is true for the manager page\'s path and for no project\'s', () => {
+    expect(isManagerPath(MANAGER_PROJECT.path)).toBe(true);
+    expect(isManagerPath('/work/api')).toBe(false);
+  });
+});

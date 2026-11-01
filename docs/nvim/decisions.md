@@ -4,7 +4,7 @@ Settled questions. Read the entry before re-litigating it.
 
 ## nvim-decision-1: A file path in a pane opens in nvim
 
-A path a pane prints — `src/main.ts:42`, `./notes.md`, `~/.zshrc` — underlines
+A path a pane prints — `src/main/main.ts:42`, `./notes.md`, `~/.zshrc` — underlines
 like a URL does, and clicking it opens the file in the project's nvim at that
 line. The hint key (Alt+O) is the keyboard's way to the same thing: a letter
 over every path on the screen, one keystroke to open it. Both read their paths

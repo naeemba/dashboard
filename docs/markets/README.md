@@ -5,6 +5,8 @@ weather, Bitcoin, Tether in toman, and gold.
 
 ## Files
 
+Folders: `src/main/markets/`, `src/shared/markets/`, `src/renderer/markets/`.
+
 - `markets.ts`, `markets-fetch.ts`, `markets-view.ts`, `markets.css`
 
 ## Scenarios

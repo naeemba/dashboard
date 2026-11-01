@@ -1,0 +1,211 @@
+import {
+  addCard,
+  addComment,
+  branchFrom,
+  cardAt,
+  isTitle,
+  selectionOf,
+  deleteCard,
+  emptyBoard,
+  hasSubtasks,
+  pullRequestFrom,
+  renameCard,
+  setBranch,
+  setNotes,
+  setPullRequest,
+  type Board,
+  type Change,
+  type Selection,
+} from '../../shared/board/board';
+import { clampIndex } from '../../shared/app/clamp-index';
+
+// One step back, held in memory. `d` deletes on a single keystroke, so there has to be a way back
+// from a mis-hit; anything deeper is a feature nobody asked for. The selection is kept with the
+// board so undo puts the cursor back where the mis-hit happened, not at the top of the column.
+type Step = { board: Board; selection: Selection };
+
+export type BoardState = {
+  board: Board;
+  selection: Selection;
+  previous: Step | null;
+  // Whether the change coming next is the app finishing something you already started, rather than a
+  // keystroke with an undo step of its own. `n` sets it: adding the blank card and committing the
+  // typed title are two changes that have to undo as one, so only the first spends the step.
+  nextChangeIsAutomatic: boolean;
+  // Whether these cards came from the file. A board starts as emptyBoard(), which looks exactly like a
+  // project nobody has made a card in — so a read that fails leaves a screen saying there is nothing
+  // here, and a screen the keys are live on is one `n` away from saving that nothing over the forty
+  // cards still on disk. The notes page calls the same fact showsTheFile.
+  showsTheFile: boolean;
+};
+
+export function initialBoardState(): BoardState {
+  return {
+    board: emptyBoard(),
+    selection: { column: 0, card: 0 },
+    previous: null,
+    nextChangeIsAutomatic: false,
+    // The lie is manufactured here — this empty board is not the project's — so this is where it owns up.
+    showsTheFile: false,
+  };
+}
+
+// Only a board that was shown the file may be written over it. Asked here rather than read off the
+// field at each gesture, so the refusal and the sentence the status bar says about it cannot come apart.
+export function mayEdit(state: BoardState): boolean {
+  return state.showsTheFile;
+}
+
+// The board is not taking anything at this moment: a box is open, a read is in flight and the board on
+// screen is about to be replaced, or these cards never came from the file. Applying a gesture to any of
+// those would be applying it to cards you are not looking at.
+//
+// The last two look like one fact and are not. `readInFlight` says a read has not landed, which a read
+// that threw has — it finished. mayEdit outlives the read, and only a read that works can make it true.
+// Collapse them and the first failed read goes live again.
+export function boardIsBusy(state: BoardState, editing: boolean, readInFlight: boolean): boolean {
+  return editing || !mayEdit(state) || readInFlight;
+}
+
+// The one bounce worth a sentence, out of the three above: these cards never came from the file and no
+// read is on its way to bring them, so the board stays empty until you leave the screen and come back.
+//
+// The read in flight is why this is not simply `!mayEdit`. During the very first read both facts are
+// true at once — nothing has been read yet, and a read is out — and a `n` typed into that gap would be
+// told the board was never read a moment before the read lands and fills it.
+export function isUnreadForGood(state: BoardState, readInFlight: boolean): boolean {
+  return !mayEdit(state) && !readInFlight;
+}
+
+// Every operation in board.ts returns the same board object, unchanged, when it has nothing to do —
+// moving the last card further down, deleting from an empty column. This hands back the same state
+// object for those, so a no-op neither burns the undo step nor rewrites the file: a real change made
+// just before it stays recoverable.
+export function applyChange(state: BoardState, next: Change): BoardState {
+  if (next.board === state.board) return state;
+  return {
+    ...state,
+    board: next.board,
+    selection: next.selection,
+    previous: state.nextChangeIsAutomatic ? state.previous : { board: state.board, selection: state.selection },
+    nextChangeIsAutomatic: false,
+  };
+}
+
+// The other way in to the same rule, for a change nothing marked in advance: the ship's move-back
+// lands whenever git finishes, so there was no keystroke of yours before it to set the flag. The board
+// moves and is written like any other change, and your undo step is left pointing where it pointed.
+//
+// It also leaves the flag alone, which is the whole reason the flag is a field and not an argument.
+// Press `n`, start typing, and let a ship you began a minute ago land: it goes through here, and if it
+// cleared the flag your Enter would spend a step of its own. `u` would then leave the untitled card
+// sitting in the column instead of putting back the board from before `n`.
+//
+// Built on applyChange rather than beside it, so the no-op ruling stays in one place: the identity
+// check is what stops apply() rewriting the file for a change that moved nothing.
+export function applyAutomaticChange(state: BoardState, next: Change): BoardState {
+  const applied = applyChange(state, next);
+  if (applied === state) return state;
+  return { ...applied, previous: state.previous, nextChangeIsAutomatic: state.nextChangeIsAutomatic };
+}
+
+export function undoChange(state: BoardState): BoardState {
+  if (state.previous === null) return state;
+  return { ...state, ...state.previous, previous: null, nextChangeIsAutomatic: false };
+}
+
+export function addBlankCard(state: BoardState, id: string): BoardState {
+  return { ...applyChange(state, addCard(state.board, state.selection, id, '')), nextChangeIsAutomatic: true };
+}
+
+// Enter and Escape both commit: what you typed is what you meant. A card left with an empty title is
+// dropped rather than kept as a blank row, which is the only way `n` can leave one behind. Opening a
+// title and closing it unchanged is not a change at all — otherwise reading a card would spend the
+// undo step that the move you just made is sitting in.
+//
+// A card with subtasks is the exception: blanking its title is two keystrokes with no confirmation,
+// unlike `d`, and dropping the card would leave every subtask pointing at an id no longer on the
+// board. So this hands the state back unchanged instead, and the title stays whatever it was.
+export function commitTitle(state: BoardState, title: string): BoardState {
+  const trimmed = title.trim();
+  if (!isTitle(trimmed)) {
+    if (hasSubtasks(state.board, state.selection)) return state;
+    return applyChange(state, deleteCard(state.board, state.selection));
+  }
+  // Both sides trimmed: parseCard keeps a title exactly as it is written, so a hand-edited
+  // `"title": "Ship it "` would otherwise never compare equal, and merely opening that card would spend
+  // the undo step belonging to the move you made just before it.
+  if (trimmed === cardAt(state.board, state.selection)?.title.trim()) return state;
+  return applyChange(state, renameCard(state.board, state.selection, trimmed));
+}
+
+// Escape commits, because Enter is a newline in a description. An empty one is allowed and simply
+// clears the card's notes — unlike a title, a card with no description is an ordinary card. Closing a
+// description unchanged is not a change, for the same reason reading a title is not.
+export function commitNotes(state: BoardState, notes: string): BoardState {
+  // Trimmed for the comparison only. setNotes is what decides what a card's notes look like once
+  // written, so the command line and this box cannot store the same text two ways.
+  if (notes.trim() === cardAt(state.board, state.selection)?.notes.trim()) return state;
+  return applyChange(state, setNotes(state.board, state.selection, notes));
+}
+
+// Escape commits, as with a description: Enter is a newline in a comment. Unlike the four above there
+// is nothing to compare against — a comment is appended rather than replacing a field — so the no-op
+// ruling is entirely addComment's: it hands back the same board for a blank body, and applyChange
+// leaves the state alone for a board that did not move.
+export function commitComment(state: BoardState, body: string): BoardState {
+  return applyChange(state, addComment(state.board, state.selection, body));
+}
+
+// A board read from disk starts fresh: nothing on it can be undone back to what was in memory. The
+// column is kept if the new board still has one there, since switching away and back should not
+// jump you to the left-hand column.
+export function loadBoard(state: BoardState, board: Board): BoardState {
+  return {
+    board,
+    selection: { column: clampIndex(state.selection.column, board.columns.length - 1), card: 0 },
+    previous: null,
+    nextChangeIsAutomatic: false,
+    // This board is the file's. Every other way a state is built spreads one of these, so a read is the
+    // only thing that can make it true and no failure path has to remember to leave it false.
+    showsTheFile: true,
+  };
+}
+
+// The same board arriving from disk while you are looking at it, because something else wrote the
+// file — the command line, or a hand edit. Unlike loadBoard this keeps the selection on the card it
+// was on, wherever that card has moved to: an agent setting a pull request number on its own card
+// must not slide your cursor to the top of a column while you are reading.
+//
+// A card that is no longer on the board leaves the selection where it was sitting, clamped, which is
+// the same place the next card up has moved into.
+export function reloadBoard(state: BoardState, board: Board): BoardState {
+  // Everything but the selection is an arrival's ruling, including losing the undo step: the board in
+  // front of you is not the one that step was taken from any more.
+  const arrived = loadBoard(state, board);
+  const selected = cardAt(state.board, state.selection);
+  const moved = selected === undefined ? null : selectionOf(board, selected.id);
+  const column = arrived.selection.column;
+  return {
+    ...arrived,
+    selection: moved ?? { column, card: clampIndex(state.selection.card, board.columns[column].cards.length - 1) },
+  };
+}
+
+// Enter and Escape both commit, as with a title. An empty box means the card has no branch, which is
+// an ordinary state for a card — so it clears the field rather than refusing.
+export function commitBranch(state: BoardState, branch: string): BoardState {
+  const next = branchFrom(branch);
+  if ((next ?? '') === (cardAt(state.board, state.selection)?.branch ?? '')) return state;
+  return applyChange(state, setBranch(state.board, state.selection, next));
+}
+
+// An empty box clears the number, the same as a branch. Anything else that is not a pull request
+// number leaves the card as it was — the view asks pullRequestFrom on the same text and says why, so
+// what is refused here and what is explained there cannot come apart.
+export function commitPullRequest(state: BoardState, text: string): BoardState {
+  const current = cardAt(state.board, state.selection)?.pullRequest;
+  const number = text.trim() === '' ? undefined : pullRequestFrom(text);
+  if (number === null || number === current) return state;
+  return applyChange(state, setPullRequest(state.board, state.selection, number));
+}

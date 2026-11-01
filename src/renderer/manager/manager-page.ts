@@ -1,0 +1,171 @@
+import type { CardsPage } from './cards';
+import { createCardsView } from './cards-view';
+import { createCommandView } from './command-view';
+import type { DashboardBridge } from '../../shared/app/bridge';
+import type { SendPlan } from '../panes/free-pane';
+import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
+import { createLogView } from './log-view';
+import { createManagerReads } from './manager-reads';
+import { createManagerView } from './manager-view';
+import { createMarketsView } from '../markets/markets-view';
+import type { Mode } from '../../shared/keys/modes';
+import type { Need } from '../../shared/manager/needs-you';
+import { createNotesView } from '../notes/notes-view';
+import { showMode, type Page } from '../app/page';
+import { createSectionStrip } from './section-strip';
+import { removeWorktreeAsking } from '../ship/worktree-removal';
+import type { WorktreeEntry } from '../../main/ship/worktree-store';
+import type { JumpToWorktree } from '../ship/worktree-view';
+
+// The one page with no folder behind it, so none of what page.ts's builder makes: no shells and no
+// editor. It has five views — the list of what every project's panes want, a board of its own above
+// every project's board, the command screen, a page of notes, and the app's log — and the mode keys for the two it
+// does not have do nothing here.
+//
+// Its board is a board like any other as far as the renderer is concerned: same field, same mode,
+// same four functions. What is behind it is one real board per open project, and one more over the
+// one path that names no project, which dashboard-folder.ts reads as the home directory. Its notes
+// are the same trick again: the same view a project has, over that same path.
+//
+// Out of renderer.ts beside page.ts and for the same reason: that file reached its 600-line ceiling
+// again, and a page builder is the seam it had already been split along once. What is left there is
+// the plumbing — which page is in front, what the status bar says — and neither builder is any of it.
+
+export type ManagerPageOptions = {
+  // Handed over like everything else here rather than read off the window, so nothing in this file
+  // reaches for a global.
+  bridge: DashboardBridge;
+  // Every open project and the page it is on, read on every arrival rather than handed over once, so
+  // a project opened since you were last here has a board and a row.
+  projects(): readonly CardsPage[];
+  // A ship leaves a new worktree behind, and the board's badges are drawn from the list of them.
+  worktrees(): readonly WorktreeEntry[];
+  // What a key is bound to now, so the command screen's prompt names the key in force rather than a
+  // copy taken when the page was built.
+  binding(actionName: string): string;
+  // Redraws the status bar and, when it is in front, the manager's list.
+  onChanged(): void;
+  // The status bar's error span, which only the owner that wrote a message may clear.
+  onError(owner: string, message: string): void;
+  // The same span for what is not a failure, which the log leaves out. status-error.ts says why.
+  onNotice(owner: string, message: string): void;
+  // The four things the renderer alone can do: land on a pane, answer one, close a project, and show
+  // another section of this page. Their shapes are the views' own — this file passes them straight
+  // through rather than putting a second spelling of each in front of the ones over in manager-view.
+  onJump(slot: number, index: number): void;
+  onJumpWorktree: JumpToWorktree;
+  onJumpNeed(need: Need): string;
+  onAnswer(slot: number, index: number, key: string): void;
+  onClose(slot: number): void;
+  onSection(mode: Mode): void;
+  // The app's own board writes, which main does not report back as a change.
+  onBoardWrite(listener: (projectPath: string) => void): void;
+  // One typed command across the marked projects: as its own process, or typed into a free pane. The
+  // second answers with what it did to each — which panes took the line and which had none free — and
+  // the command screen is what says so.
+  runTask(command: string, projectPaths: string[]): void;
+  runInPanes(command: string, projectPaths: string[]): Promise<SendPlan>;
+  cancelTasks(): void;
+};
+
+export function createManagerPage(options: ManagerPageOptions): Page {
+  const element = document.createElement('section');
+  // The modifier is what index.css uses to push this page's views down below the section strip —
+  // a project's page has no strip, so it keeps the plain .page rule and needs none of that.
+  element.className = 'page page-manager';
+  // Every open project's board and the worktrees' dirtiness, read for the list's counts, its
+  // activity and its worktree rows. An answer landing redraws the page like anything else does.
+  const reads = createManagerReads({
+    peekBoard: (projectPath) => options.bridge.peekBoard(projectPath),
+    scanWorktrees: (projectPaths) => options.bridge.scanWorktrees(projectPaths),
+    onRead: options.onChanged,
+    now: () => Date.now(),
+  });
+  // Its own listener rather than the renderer's: that one only tells the page in front while it
+  // shows a board, and the list's counts go stale just the same while it shows the list.
+  options.bridge.onBoardChange(reads.boardChanged);
+  options.onBoardWrite(reads.boardChanged);
+  const manager = createManagerView({
+    onJump: options.onJump,
+    onJumpWorktree: options.onJumpWorktree,
+    onJumpNeed: options.onJumpNeed,
+    onAnswer: options.onAnswer,
+    onClose: options.onClose,
+    onChanged: options.onChanged,
+    onNotice: (message) => options.onNotice('manager', message),
+    binding: options.binding,
+    reads,
+    // The removal gives the keyboard back to the list after each question, and asks for the records
+    // again after it: the sweep that drops the removed one comes back through the renderer's copy,
+    // and the dirty check is thrown away so the next draw asks git again.
+    onRemoveWorktree: (entry) => {
+      void removeWorktreeAsking(options.bridge, entry, () => manager.element.focus()).then(async () => {
+        reads.forgetDirtiness();
+        await options.bridge.listWorktrees();
+        options.onChanged();
+      });
+    },
+  });
+  const cards = createCardsView({
+    bridge: options.bridge,
+    projects: options.projects,
+    onChanged: options.onChanged,
+    // A slot each, and a different owner from the same project's own board, so the two screens reading
+    // one file never clear each other's message.
+    onError: (slot, message) => options.onError(`cards:${slot}`, message),
+    onNotice: (slot, message) => options.onNotice(`cards:${slot}`, message),
+    worktrees: options.worktrees,
+  });
+  const command = createCommandView({
+    projects: () => options.projects().map((entry) => ({
+      name: entry.project.name, path: entry.project.path,
+    })),
+    runTask: options.runTask,
+    runInPanes: options.runInPanes,
+    cancelTasks: options.cancelTasks,
+    binding: options.binding,
+    onChanged: options.onChanged,
+  });
+  const notes = createNotesView({
+    bridge: options.bridge,
+    // The manager page's own path, which is empty because the page has no folder. dashboard-folder.ts
+    // is where that is read as the home directory, and handing over the page's path rather than an
+    // empty string written out here is what keeps this file from holding a second copy of that rule.
+    projectPath: MANAGER_PROJECT.path,
+    placeholder: 'Notes about no project in particular. Saved to .dashboard/notes.md in your home '
+      + 'folder as you type.',
+    // A slot of its own, like every project's, so the manager's notes never clear a project's failure
+    // or have one cleared by it. MANAGER_SLOT is a number no project is ever given.
+    onError: (message) => options.onError(`notes:${MANAGER_SLOT}`, message),
+  });
+  // The notes view is the box and nothing else, so the wrapper a project's page builds in page.ts is
+  // built here too: `.view` is what the stylesheet positions and hides, and `.page-manager .view` is
+  // what pushes it down below the strip.
+  const notesView = document.createElement('div');
+  notesView.className = 'view view-notes';
+  notesView.append(notes.element);
+  const log = createLogView({
+    bridge: options.bridge,
+    onError: (message) => options.onError('log', message),
+  });
+  // Above the five views rather than inside one, so it is on screen whichever section is showing.
+  const strip = createSectionStrip(options.onSection);
+  // Above the strip, and on screen whichever section is showing for the same reason the strip is.
+  element.append(
+    createMarketsView(options.bridge), strip.element, manager.element, cards.element, command.element,
+    notesView, log.element,
+  );
+  const page: Page = {
+    project: MANAGER_PROJECT, element,
+    views: {
+      manager: manager.element, board: cards.element, command: command.element, notes: notesView,
+      log: log.element,
+    },
+    mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
+    board: cards, notes, manager, command, strip, log, chat: null, workers: null,
+  };
+  // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
+  // set together — including here, where the page has not been arrived at yet.
+  showMode(page, 'manager');
+  return page;
+}

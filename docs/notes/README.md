@@ -5,6 +5,8 @@ for the manager page kept in the home directory.
 
 ## Files
 
+Folders: `src/main/notes/`, `src/renderer/notes/`.
+
 - `notes-state.ts`, `notes-store.ts`, `notes-view.ts`
 
 ## Scenarios

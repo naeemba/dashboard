@@ -6,6 +6,8 @@ main; what it printed is read for links, bells, a name and whether it is busy.
 
 ## Files
 
+Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
+
 - Pane: `pane.ts`, `pane-actions.ts`, `pane-channels.ts`, `pane-layout.ts`,
   `pane-openers.ts`, `pane-reading.ts`, `pane-screen-copy.ts`, `pane-sends.ts`,
   `terminals.ts`, `jumps.ts`

@@ -7,6 +7,8 @@ worktree list shows every git worktree of a project and removes them.
 
 ## Files
 
+Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
+
 - Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`, `branch-worktree.ts`
 - Review: `review.ts`, `review-flow.ts`
 - Worktrees: `worktree-store.ts`, `git-worktrees.ts`, `worktree-scan.ts`,

@@ -7,6 +7,8 @@ after a restart.
 
 ## Files
 
+Folders: `src/main/workers/`.
+
 - Dispatch: `dispatch.ts`, `worker-channels.ts`, `finished-work.ts`
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-socket.ts`, `session-requests.ts`
