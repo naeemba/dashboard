@@ -160,17 +160,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
-          "title": "Follow-up from #136: args locals and parameters in test files",
-          "notes": "https://github.com/naeemba/dashboard/issues/138",
-          "priority": "low",
-          "parent": null,
-          "createdAt": "2026-11-01T12:07:07.954Z",
-          "updatedAt": "2026-11-01T12:07:07.954Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -305,6 +295,23 @@
           "updatedAt": "2026-11-01T12:10:37.524Z",
           "branch": "fix-github-issue-129-gh-issue-view-129-comm",
           "pullRequest": 149
+        },
+        {
+          "id": "350ca982-2ed1-44a7-88af-d539860d141e",
+          "title": "Follow-up from #136: args locals and parameters in test files",
+          "notes": "https://github.com/naeemba/dashboard/issues/138",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-01T12:07:07.954Z",
+          "updatedAt": "2026-11-01T12:11:13.460Z",
+          "branch": "fix-github-issue-138-gh-issue-view-138-comm",
+          "pullRequest": 147,
+          "comments": [
+            {
+              "at": "2026-11-01T12:11:13.460Z",
+              "body": "PR #147: test locals and parameters renamed from args to the names their sources use; wire fields stay args."
+            }
+          ]
         }
       ]
     },
