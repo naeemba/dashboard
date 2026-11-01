@@ -16,7 +16,7 @@ export async function runSessionProgram(commandArguments: readonly string[]): Pr
     process.stderr.write('DASHBOARD_SOCKET is not set — run this from a pane the Dashboard app opened\n');
     return 1;
   }
-  const reply = await askApp(socket, { directory: process.cwd(), args: [...commandArguments] });
+  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments });
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }

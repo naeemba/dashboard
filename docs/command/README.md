@@ -29,7 +29,8 @@ Folders: `src/main/command/`.
 
 - A new verb belongs to its noun's parser (`board-cli.ts`, `session-cli.ts`), never to `dashboard-cli.ts`.
 - A new noun is a row in `NOUNS` and a line in `DASHBOARD_USAGE` in `dashboard-cli.ts`, a branch in
-  `dashboard-cli-entry.ts`, and a program module beside its feature, like `board-program.ts`.
+  `dashboard-cli-entry.ts`, and a program module beside its feature, like `board-program.ts`. The
+  built file needs no packaging change: every `*-cli-entry.js` is unpacked.
 
 ## Open questions
 
