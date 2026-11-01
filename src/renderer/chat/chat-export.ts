@@ -2,6 +2,7 @@ import { localDate, pad } from './chat-stamp';
 import type { ChatEntry } from '../../shared/chat/chat-transcript';
 import { toolSummary } from './chat-tools';
 import { ranked, type SearchRow } from '../../shared/app/fuzzy';
+import { slug } from '../../shared/app/slug';
 
 // /export: the conversation on the Claude screen as plain text, the way Claude Code's /export writes
 // it — a prompt behind `>`, Claude's text as it came, each tool call one `⏺ Name(what)` line — copied
@@ -47,6 +48,6 @@ export function exportFileName(typed: string, entries: ChatEntry[], now: Date): 
   if (typed !== '') return /\.[^./\\]+$/.test(typed) ? typed : `${typed}.txt`;
   const stamp = `${localDate(now)}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const first = entries.find((entry) => entry.kind === 'user')?.text ?? '';
-  const words = (first.toLowerCase().match(/[a-z0-9]+/g) ?? []).join('-').slice(0, 50).replace(/-+$/, '');
+  const words = slug(first).slice(0, 50).replace(/-+$/, '');
   return `${stamp}${words ? `-${words}` : ''}.txt`;
 }

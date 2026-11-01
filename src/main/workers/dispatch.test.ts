@@ -13,6 +13,21 @@ describe('session names', () => {
   it('names a worker after its project and the pane it is in', () => {
     expect(workerSessionName('/work/api', 2)).toBe('api-terminal-3');
   });
+
+  it('collapses punctuation and trims the hyphens off both ends', () => {
+    expect(mainSessionName('/work/--My  "API" v2!--')).toBe('main-my-api-v2');
+  });
+
+  // A branch name is cut to fit a shell prompt; a session name is not.
+  it('keeps a long project name whole', () => {
+    const long = 'a'.repeat(60);
+    expect(mainSessionName(`/work/${long}`)).toBe(`main-${long}`);
+  });
+
+  it('falls back to project when the name leaves nothing behind', () => {
+    expect(mainSessionName('/work/پروژه')).toBe('main-project');
+    expect(workerSessionName('/work/!!!', 2)).toBe('project-terminal-3');
+  });
 });
 
 describe('mainPrompt', () => {
