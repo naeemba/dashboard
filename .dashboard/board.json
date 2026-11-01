@@ -236,23 +236,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "772e8753-c12b-4a42-9e31-3e0f61c3eded",
-          "title": "Drawer stays open across project switches until closed",
-          "notes": "Bug from using 2.41.0: open the drawer, switch to another project, come back, and the drawer is closed.\n\nFix: the drawer's open state is one app-wide value, not per page. Open it and it stays open on every tab, the manager's too, until the button or Ctrl+Shift+D closes it. Switching tabs shows that tab's docs and sessions in the open drawer, and keeps each project's open folders and selection as today. Focus after a switch goes where it goes today (the page), not into the drawer. Not persisted across an app restart.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-11-01T19:52:21.649Z",
-          "updatedAt": "2026-11-01T19:57:11.014Z",
-          "branch": "work-board-card-772e8753-c12b-4a42-9e31-3e0",
-          "pullRequest": 164,
-          "comments": [
-            {
-              "at": "2026-11-01T19:57:11.014Z",
-              "body": "PR #164: open state is app-wide; a tab switch lists the page in front instead of closing the drawer. drawerFollows decides, tested. drawer-decision-4. 2.41.1. Not checked by hand in the app."
-            }
-          ]
         }
       ]
     },
@@ -2154,6 +2137,23 @@
           "updatedAt": "2026-11-01T19:17:54.923Z",
           "branch": "work-board-card-f4c2ee18-66a4-4987-8c93-fee",
           "pullRequest": 163
+        },
+        {
+          "id": "772e8753-c12b-4a42-9e31-3e0f61c3eded",
+          "title": "Drawer stays open across project switches until closed",
+          "notes": "Bug from using 2.41.0: open the drawer, switch to another project, come back, and the drawer is closed.\n\nFix: the drawer's open state is one app-wide value, not per page. Open it and it stays open on every tab, the manager's too, until the button or Ctrl+Shift+D closes it. Switching tabs shows that tab's docs and sessions in the open drawer, and keeps each project's open folders and selection as today. Focus after a switch goes where it goes today (the page), not into the drawer. Not persisted across an app restart.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-01T19:52:21.649Z",
+          "updatedAt": "2026-11-01T20:01:46.702Z",
+          "branch": "work-board-card-772e8753-c12b-4a42-9e31-3e0",
+          "pullRequest": 164,
+          "comments": [
+            {
+              "at": "2026-11-01T19:57:11.014Z",
+              "body": "PR #164: open state is app-wide; a tab switch lists the page in front instead of closing the drawer. drawerFollows decides, tested. drawer-decision-4. 2.41.1. Not checked by hand in the app."
+            }
+          ]
         }
       ]
     }
