@@ -27,13 +27,6 @@
           "parent": null
         },
         {
-          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
-          "title": "Terminal drop types '' for a file with no path on disk",
-          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "2f3a9d1c-f129-4c9f-9fff-94048780adae",
           "title": "View and edit permission rules from the Claude pane",
           "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
@@ -167,7 +160,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+          "title": "Terminal drop types '' for a file with no path on disk",
+          "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-01T12:02:58.850Z"
+        }
+      ]
     },
     {
       "name": "Review",
