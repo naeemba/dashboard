@@ -22,8 +22,10 @@ export type SessionList = { rows: SessionRecord[]; more: boolean };
 // How many rows the drawer asks for at first, and how many more each Load more adds.
 export const SESSION_PAGE_SIZE = 50;
 
-// A markdown file under the project's docs/ folder: where it is, and the path the row prints.
-export type DocEntry = { path: string; name: string };
+// A markdown file the drawer lists: where it is, and the path the row prints, under the project's docs/
+// or, on the manager's page, under the home folder. `folder` marks a folder the manager's tree lists
+// before anything in it is read; a project's folders are read off its docs' paths.
+export type DocEntry = { path: string; name: string; folder?: true };
 
 // A doc's text for the viewer with its images carried inline as data URLs, by the address the doc
 // gives each, or why it was not read (errors-rule-2).

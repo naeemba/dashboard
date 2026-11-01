@@ -109,10 +109,7 @@ let activeIndex = 0;
 // pages aside while open.
 const drawer = createDrawer({
   bridge,
-  page: () => {
-    const page = pages[activeIndex];
-    return isProjectPage(page) && !page.project.missing ? page : null;
-  },
+  page: () => (pages[activeIndex].project.missing ? null : pages[activeIndex]),
   isToggle: (event) => matchesBinding(event, settings.keys['project-drawer'] ?? null),
   // The viewer's Edit: a doc opens where a path a pane printed opens, the project's nvim.
   openDoc: (page, path) => openFileLink(page, MAIN_INDEX, { path, start: 0, end: 0 }),

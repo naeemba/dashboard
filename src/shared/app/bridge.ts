@@ -132,7 +132,8 @@ export type DashboardBridge = {
   openFile(slot: number, index: number, link: FileLink): Promise<Handover>;
   // The drawer: the project's docs and one of them read for its viewer, the newest `count` of the
   // Claude conversations the app started for it, a rename, and a resume into a new worker pane.
-  listDocs(projectPath: string): Promise<DocEntry[]>;
+  // `open` is the folders the tree has open, which the manager's page reads one at a time.
+  listDocs(projectPath: string, open: readonly string[]): Promise<DocEntry[]>;
   readDoc(projectPath: string, file: string): Promise<DocReply>;
   listSessions(projectPath: string, count: number): Promise<SessionList>;
   renameSession(projectPath: string, id: string, label: string): Promise<DrawerReply>;

@@ -111,6 +111,15 @@ export function iconButton(className: string, glyph: IconName, text: string, onC
   return button;
 }
 
+// The same button with its icon alone, the words its tooltip and the name a screen reader reads.
+export function iconOnlyButton(className: string, glyph: IconName, text: string, onClick: () => void): HTMLButtonElement {
+  const button = iconButton(className, glyph, text, onClick);
+  button.lastElementChild?.remove();
+  button.title = text;
+  button.setAttribute('aria-label', text);
+  return button;
+}
+
 // A board column's glyph, by what the column means rather than where it sits. Column names are free
 // text, so a column this list does not know gets the plain board icon.
 const COLUMN_GLYPHS: Record<string, IconName> = {

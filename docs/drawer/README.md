@@ -1,8 +1,10 @@
 # Drawer
 
-A drawer on the left of a project's page listing the project's docs, as a tree,
-and the Claude conversations the app started for it. Open, it pushes the page to
-its right; closed, it takes no room. A doc opens rendered in a full-screen viewer.
+A drawer on the left of a page listing the project's docs, as a tree, and the
+Claude conversations the app started for it; on the manager's page, the markdown
+under `~/.dashboard` and `~/.claude` and the manager's own conversations. Open,
+it pushes the page to its right; closed, it takes no room. A doc opens rendered
+in a full-screen viewer.
 
 ## Files
 
@@ -17,6 +19,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 
 ## Scenarios
 
+- Given any page, the manager's included, then the drawer's button, its icon alone with "Docs & sessions" as its tooltip, is at the left of the title row, so the row does not move between tabs.
 - Given a project page, when you click the drawer's button at the left of the title row or press Ctrl+Shift+D, then the drawer opens at the left and the page moves to its right, the panes resized to the room left.
 - Given the drawer is open, when you press Escape, Ctrl+Shift+D or the button, then it closes and takes no room at all.
 - Given the drawer, when you type, then the docs and the sessions are both narrowed to what matches; the arrows walk the rows and a click does what Enter does on the row it lands on.
@@ -34,7 +37,10 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given a conversation the drawer resumed into a worker pane, when you pick it in the Claude screen's `/resume`, then it is refused and the status line says which pane runs it.
 - Given a session row, when you press F2, then a box asks for its new name; an empty one is refused.
 - Given more than fifty sessions, when you reach the Load more row and press Enter, then fifty more are listed.
-- Given the manager page, when you press the drawer's key, then the status bar says to go to a project; the button is not shown there.
+- Given the manager page, when you open the drawer, then its docs are two closed folders, `.dashboard` and `.claude`; opening one reads that folder alone, its markdown files and its folders, and the filter finds only files in folders read so far.
+- Given the manager page, when you press Enter on a doc, then it is shown in the viewer with no Edit row, and Enter or Escape closes it; the manager has no nvim.
+- Given the manager page, then its sessions are the manager's own conversations, or none with a line saying so.
+- Given a read asked from the manager page for a file that is not markdown under `~/.dashboard` or `~/.claude`, then it is refused, answered as a value.
 
 ## Open questions
 
@@ -42,3 +48,5 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
   keeps only links that open in the browser (drawer-decision-2).
 - A Claude typed into a shell by hand is not the app's launch and is not
   listed (drawer-decision-1).
+- On the manager's page the filter does not find a doc in a folder never
+  opened (drawer-decision-3).
