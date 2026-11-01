@@ -4,15 +4,20 @@ import { createMarketRefresh } from './market-refresh';
 const INTERVAL = 1_000;
 
 // A read that stays open until the test lets it finish.
-function pendingReads(): { read: () => Promise<void>; count: () => number; finish: () => Promise<void> } {
-  const waiting: (() => void)[] = [];
+function pendingReads(): {
+  read: () => Promise<void>; count: () => number; finish: () => Promise<void>; fail: () => Promise<void>;
+} {
+  const waiting: { resolve: () => void; reject: (error: Error) => void }[] = [];
+  const settle = async (how: 'resolve' | 'reject'): Promise<void> => {
+    const next = waiting.shift();
+    if (how === 'resolve') next?.resolve(); else next?.reject(new Error('read failed'));
+    await vi.advanceTimersByTimeAsync(0);
+  };
   return {
-    read: () => new Promise<void>((resolve) => { waiting.push(resolve); }),
+    read: () => new Promise<void>((resolve, reject) => { waiting.push({ resolve, reject }); }),
     count: () => waiting.length,
-    finish: async () => {
-      waiting.shift()?.();
-      await vi.advanceTimersByTimeAsync(0);
-    },
+    finish: () => settle('resolve'),
+    fail: () => settle('reject'),
   };
 }
 
@@ -51,6 +56,18 @@ describe('createMarketRefresh', () => {
     await vi.advanceTimersByTimeAsync(INTERVAL - 10);
     card.refresh();
     await reads.finish();
+    await vi.advanceTimersByTimeAsync(INTERVAL - 1);
+    expect(reads.count()).toBe(0);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reads.count()).toBe(1);
+  });
+
+  it('ends the spin and schedules the next read when a read rejects', async () => {
+    const reads = pendingReads();
+    const busy: boolean[] = [];
+    createMarketRefresh(reads.read, INTERVAL, (value) => busy.push(value)).refresh();
+    await reads.fail();
+    expect(busy).toEqual([true, false]);
     await vi.advanceTimersByTimeAsync(INTERVAL - 1);
     expect(reads.count()).toBe(0);
     await vi.advanceTimersByTimeAsync(1);

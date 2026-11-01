@@ -18,7 +18,9 @@ export function createMarketRefresh(
     busy = true;
     clearTimeout(timer);
     onBusy(true);
-    void read().finally(() => {
+    // A rejected read is the card's own business to draw; here it only has to end the spin and
+    // schedule the next read, or the card would spin and never read again.
+    void read().catch(() => {}).finally(() => {
       busy = false;
       onBusy(false);
       timer = setTimeout(refresh, intervalMs);

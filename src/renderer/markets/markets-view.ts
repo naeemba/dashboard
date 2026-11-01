@@ -10,7 +10,9 @@ import {
 import { createMarketRefresh } from './market-refresh';
 
 // The row of four cards across the top of the manager page. Each card's corner holds a refresh button,
-// reached with Tab; the manager-page refresh key presses all four. What the numbers mean is
+// pointer-only like the add-pane button: Tab skips it and a click leaves the keyboard where it was, so
+// a waiting pane or a half-typed command still gets the next key. The manager-page refresh key is the
+// keyboard path, and presses all four. What the numbers mean is
 // markets.ts's, and when each card reads again is market-refresh.ts's.
 
 // Often enough for a price you glance at, rare enough to stay far inside every source's free limit.
@@ -132,6 +134,8 @@ export function createMarketsView(bridge: DashboardBridge): MarketsView {
   // read is the weather's.
   function refresher<T>(target: Card<T>, read: () => Promise<void>): () => void {
     const { refresh } = createMarketRefresh(read, REFRESH_MS, (busy) => target.button.classList.toggle('busy', busy));
+    target.button.tabIndex = -1;
+    target.button.addEventListener('mousedown', (event) => event.preventDefault());
     target.button.addEventListener('click', refresh);
     return refresh;
   }
