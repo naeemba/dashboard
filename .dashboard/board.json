@@ -165,6 +165,12 @@
           "title": "Move the market cards off the top of the manager page",
           "notes": "Four price/weather cards lead the page above what wants you. Move to the foot line or a section. Opinion. (docs/review/2026-11-01.md U4)",
           "priority": "low"
+        },
+        {
+          "id": "e6f61bfb-9636-4f1f-b49c-767cf65bf107",
+          "title": "Check exact dependency pins with a test",
+          "notes": "The holds in app/README are not enforced; dc08326 had to re-pin electron, the SDK and marked. A vitest that fails on a caret for held dependencies. (docs/review/2026-11-01.md D1)",
+          "priority": "low"
         }
       ]
     },
