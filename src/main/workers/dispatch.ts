@@ -1,7 +1,7 @@
 import { baseName } from '../../shared/app/base-name';
 import { claudeArguments } from '../../shared/panes/shell';
 import { paneLabel } from '../../shared/panes/terminals';
-import { slug } from '../ship/ship';
+import { slug } from '../../shared/app/slug';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not

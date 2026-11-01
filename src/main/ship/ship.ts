@@ -1,5 +1,6 @@
 import { basename, dirname, join } from 'node:path';
 import { BOARD_DIRECTORY } from '../board/board-store';
+import { slug } from '../../shared/app/slug';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
 // commands; what to call things and what counts as being in the way is here, where a test can pin it.
@@ -17,12 +18,6 @@ const ID_LENGTH = 4;
 // by then the id suffix is already decided. So it reserves the hyphen and the id up front and cuts to
 // that shorter length always, not only on the collision path.
 const BASE_LIMIT = BRANCH_LIMIT - (ID_LENGTH + 1);
-
-// Lower-case Latin letters and digits, every other run turned into one hyphen, none at either end.
-// No length cut here: a session name is not cut short, only a branch is.
-export function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
 
 function branchSlug(title: string): string {
   return slug(title)
