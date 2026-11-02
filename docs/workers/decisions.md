@@ -84,9 +84,10 @@ listed by nobody and reports to its own page's main.
 **A pane reference is an address, not a bare id.** `pane run` and the done report print
 `dashboard://pane/<slot>:<index>`; the screen links only that, so `2:1` in a reply about a time or a
 ratio is never a link. It names the number, not the worker: numbers are reused, so an old link lands
-on whatever holds the number now, and a link to a number nothing holds says the pane is not open. `pane claim` still prints the bare id: main pipes it into `run`, and a second
-token there would be one more thing to strip. A link is drawn from text nodes only, so an address in
-an attribute stays text.
+on whatever holds the number now, and a link to a number nothing holds says the pane is not open.
+`pane claim` still prints the bare id: main pipes it into `run`, and a second token there would be
+one more thing to strip. A link is drawn from text nodes only, so an address in an attribute stays
+text.
 
 **The popup is the search dialog, not a box anchored to the count.** It is the same dialog every
 picker uses, with the arrows, Enter and Escape already right, and it now takes a `watch` so it reads

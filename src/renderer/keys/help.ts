@@ -349,7 +349,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'While Claude works, a line over the box says whether it is thinking, for how long and roughly '
     + 'how many tokens have come down, and its answer flows in a few characters at a time. What it '
     + 'thought is folded to a Thinking line in the conversation, unfolding to a summary of it. '
-    + 'A pane named in the conversation — what pane run printed, a worker\'s report — is a link: a click lands on that pane, on its own project\'s page, or says it is closed once its worker was released. '
+    + 'A pane named in the conversation — what pane run printed, a worker\'s report — is a link: a click lands on that pane, on its own project\'s page, or says the pane is not open; numbers are reused, so a link to a pane closed and opened again lands on whatever holds the number now. '
     + 'When a worker this session dispatched finishes its turn, the app tells Claude so in the conversation, queued behind whatever it is doing. '
     + 'While the session has workers open the foot counts them by how they stand, working, blocked, done or idle; a click on the count or the workers key opens a list of them, the manager\'s across every project, that keeps up while it is open: the arrows walk it, Enter lands on the pane and Escape closes it. Above the working line, '
     + 'a strip lists the agents, workflows and background commands Claude has running, each under the '

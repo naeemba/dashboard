@@ -102,9 +102,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // entry left by a project closed since names nobody.
   const dispatchers = new Map<string, number>();
   // Each worker a session run started, until it is released, its number claimed again, or main forgets
-  // it (its pane closed or given to something else): the slot whose
-  // main ran it, which hears its report, and what it was asked. Kept apart from `dispatchers`, which is
-  // who may run the pane, not who did.
+  // it (its pane closed or given to something else): the slot whose main ran it, which hears its
+  // report, and what it was asked. Kept apart from `dispatchers`, which is who may run the pane, not
+  // who did.
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
 
   // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
