@@ -41,7 +41,8 @@ const config: ForgeConfig = {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
     // Every *-cli-entry.js (board, session, dashboard) and pane-host-entry.js is unpacked for a different reason: they are run by
     // `node`, not by Electron, and node cannot read a file inside an asar. main.ts points agents at the
-    // unpacked copies. Every *-worker.js is unpacked because a worker thread is started from a path on
+    // unpacked copies. create-task-cli-entry.js is never run from the bundle: main copies it to
+    // ~/.claude, and it is unpacked only because main finds it beside boardCommand. Every *-worker.js is unpacked because a worker thread is started from a path on
     // disk; usage-thread.ts points at the unpacked copy.
     asar: { unpack: '{**/node_modules/node-pty/**,**/node_modules/@anthropic-ai/claude-agent-sdk-*/**,**/.vite/build/*-cli-entry.js,**/.vite/build/pane-host-entry.js,**/.vite/build/*-worker.js}' },
     // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,
@@ -125,6 +126,13 @@ const config: ForgeConfig = {
         {
           entry: 'src/main/command/dashboard-cli-entry.ts',
           config: 'vite.dashboard-cli.config.ts',
+          target: 'main',
+        },
+        // The create-task program, which the app copies into ~/.claude/skills/create-task at launch
+        // (create-task-install.ts) so /create-task and claude-pr-loop reach it at one fixed path.
+        {
+          entry: 'src/main/board/create-task-cli-entry.ts',
+          config: 'vite.create-task-cli.config.ts',
           target: 'main',
         },
         // The pane host every pane's shell runs in, so the shells outlive the app (panes-decision-1).

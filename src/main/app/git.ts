@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { defaultBranch, noDefaultBranchMessage } from './default-branch';
 
 const runCommand = promisify(execFile);
 
@@ -33,22 +34,15 @@ export async function projectFiles(projectPath: string): Promise<string[]> {
   }, () => []);
 }
 
-// origin/HEAD, then main, then master. The same three-step guess create-task.js makes, and for the
-// same reason: origin/HEAD is not set in every clone.
+// origin's default branch, by defaultBranch's rule: origin/HEAD is not set in every clone.
 export async function baseBranch(projectPath: string): Promise<string> {
-  try {
-    const head = await git(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], projectPath);
-    return head.replace(/^origin\//, '');
-  } catch {
-    // Not set in this clone; try the usual names.
-  }
-  for (const candidate of ['main', 'master']) {
-    try {
-      await git(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${candidate}`], projectPath);
-      return candidate;
-    } catch {
-      // Try the next one.
-    }
-  }
-  throw new Error('cannot tell which branch on origin is the main one');
+  const answer = (gitArguments: string[]) => git(gitArguments, projectPath).then((out) => out, () => null);
+  const [head, main, master] = await Promise.all([
+    answer(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
+    answer(['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/main']),
+    answer(['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/master']),
+  ]);
+  const branch = defaultBranch('origin', head, (name) => (name === 'main' ? main : master) !== null);
+  if (branch === null) throw new Error(noDefaultBranchMessage('origin'));
+  return branch;
 }

@@ -28,6 +28,7 @@ import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
+import { installCreateTask } from './board/create-task-install';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
 import { peekBoard, writeBoard } from './board/board-store';
@@ -904,6 +905,13 @@ app.on('ready', () => {
   app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
   logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
+  // After the window, since nothing on screen needs it: /create-task and its program under ~/.claude,
+  // refreshed from this build (create-task-install.ts). The installed app only: every Claude session
+  // on the machine runs that copy, and a dev run from a half-done branch would hand them its program.
+  if (app.isPackaged) {
+    const notInstalled = installCreateTask(app.getPath('home'), path.join(path.dirname(boardCommand), 'create-task-cli-entry.js'));
+    if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
+  }
 });
 app.on('will-quit', () => {
   remoteHost?.close();
