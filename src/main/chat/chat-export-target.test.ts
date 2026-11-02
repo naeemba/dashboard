@@ -10,6 +10,8 @@ describe('exportTarget', () => {
   posixOnly('keeps the file inside the project folder', () => {
     expect(exportTarget('/work/app', 'notes/a.txt', none)).toEqual({ path: '/work/app/notes/a.txt' });
     expect(exportTarget('/work/app', '..notes.txt', none)).toEqual({ path: '/work/app/..notes.txt' });
+  });
+  it('refuses a file outside the project folder', () => {
     expect(exportTarget('/work/app', '../a.txt', none)).toEqual({ refused: "../a.txt is outside the project's folder." });
     expect(exportTarget('/work/app', '/etc/a.txt', none)).toEqual({ refused: "/etc/a.txt is outside the project's folder." });
   });

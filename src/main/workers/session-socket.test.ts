@@ -42,8 +42,9 @@ describe('sessionSocketPath', () => {
 });
 
 describe('listenForSessions and askApp', () => {
-  // Skipped on Windows: over a named pipe the command's end() closes both halves, so the answer never
-  // comes back. That is the session command broken on Windows, not only its test.
+  // Skipped on Windows: over a named pipe the command reads an empty answer, or none at all. Likely the
+  // pipe not staying half open after the command's end(); not yet confirmed. Either way the session
+  // command is broken on Windows, not only its test.
   const halfOpenOnly = it.skipIf(process.platform === 'win32');
   halfOpenOnly('carries a request to the app and its answer back', async () => {
     const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);

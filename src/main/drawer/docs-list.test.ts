@@ -63,10 +63,13 @@ describe('docScope', () => {
 
   posixOnly('takes only markdown under the docs folder', () => {
     expect(docScope('/p', '/p/docs/board/README.md', [])).toEqual({ root: '/p/docs', images: '/p' });
-    expect(docScope('/p', '/p/docs/../secret.md', [])).toBeNull();
-    expect(docScope('/p', '/home/me/.ssh/id_rsa', [])).toBeNull();
     expect(docScope('/p', '/p/docs/shot.png', [])).toBeNull();
     expect(docScope('/p', '/h/.claude/CLAUDE.md', ROOTS)).toBeNull();
+  });
+
+  it('refuses a file outside the docs folder', () => {
+    expect(docScope('/p', '/p/docs/../secret.md', [])).toBeNull();
+    expect(docScope('/p', '/home/me/.ssh/id_rsa', [])).toBeNull();
   });
 
   it("on the manager's page takes only markdown under ~/.dashboard and ~/.claude", () => {
