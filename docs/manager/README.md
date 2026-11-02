@@ -85,14 +85,14 @@ and the Projects screen, docs/projects/README.md, says both.
 
 ### The manager's sections
 
-The manager is five screens with one strip of names above them. The previous
-and next section keys walk it, from any of the five. The arrows are deliberately
-not those keys: on the board they move between cards, and in the notes they move the caret.
-Above the strip, four cards show the date and weather, Bitcoin, Tether in toman
-and gold, each read again every half hour. The refresh key reads all four now;
-the round arrow in a card's corner, clicked or reached with Tab and pressed with
-Enter, reads that card alone. It spins while the read runs, and a card keeps its
-last good numbers on screen until the new ones land.
+The manager is five screens with one strip of names above them. The previous and
+next section keys walk it, from any of the five. The arrows are deliberately not
+those keys: on the board they move between cards, and in the notes they move the
+caret. Above the strip, four cards show the date and weather, Bitcoin, Tether in
+toman and gold, each read again every half hour. The refresh key reads all four
+now; the round arrow in a card's corner, clicked or reached with Tab and pressed
+with Enter, reads that card alone. It spins while the read runs, and a card
+keeps its last good numbers on screen until the new ones land.
 
 ## Files
 

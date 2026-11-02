@@ -43,9 +43,9 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'Needs you lists what waits on you across the open projects, oldest first; under it, every '
     + 'project with its panes, token figures and worktrees. A letter, digit or symbol answers the '
     + 'selected waiting pane without leaving the page.',
-  command: 'One command, run in the projects you mark. Enter gives each its own process and shows '
-    + 'how it exited and the last line it printed; the other key types it into a free shell in each '
-    + 'instead, where it prints as it goes. The last line is a guess, and the command and its results '
+  command: 'One command, run in the projects you mark. The open key gives each its own process and shows '
+    + 'how it exited and the last line it printed; the other key types it into a free shell in each, '
+    + 'where it prints as it goes. The last line is a guess, and the command and its results '
     + 'are gone on restart.',
   claude: 'A Claude Code conversation drawn as a page: tables, highlighted code, diffs, and tool calls '
     + 'folded to a line the unfold key opens. It runs as the project\'s main session with the '

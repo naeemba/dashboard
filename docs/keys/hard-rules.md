@@ -68,6 +68,9 @@ dialog, because it is believed.
   terminals blurb reached 1,129 words and Ctrl+H showed four screens of prose
   before the first key. A blurb names a bound key as "the X key", never by its
   spelling: the key can be rebound, and the blurb is a fixed string.
+  `help.test.ts` fails a blurb that names one of its own group's keys by its
+  default spelling. The command blurb said "Enter gives each its own process";
+  rebind it to Ctrl+O and Ctrl+H still said Enter runs the command.
 
 A change is not done until Ctrl+H would tell the truth about it.
 

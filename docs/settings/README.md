@@ -19,8 +19,8 @@ list narrows to what that one reaches; let it go and the list widens again.
 Press the key and it does the thing, as though the panel had never been there.
 Shift on its own does not open it — Shift is how you write a capital.
 
-Every key in Ctrl+H can be changed, and so can the colours, the font, the
-shell and the place the manager's weather is for. They are kept in
+Every key the settings screen lists can be changed, and so can the colours, the
+font, the shell and the place the manager's weather is for. They are kept in
 ~/.config/dashboard/settings.json, which you can also edit by hand. It holds
 only what you changed; anything you left alone follows the app's default,
 including when that default moves. The app tidies the file each time it starts,

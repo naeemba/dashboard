@@ -45,6 +45,21 @@ describe('helpSections', () => {
     }
   });
 
+  // A blurb is a fixed string and the user can rebind any action, so a blurb naming a bound key by its
+  // default spelling tells someone with their own bindings to press a key that does nothing.
+  it('never names one of its own group\'s bound keys by its default spelling', () => {
+    for (const [name, blurb] of Object.entries(BLURBS)) {
+      for (const entry of ACTIONS.filter((action) => action.group === name)) {
+        for (const spelling of new Set([entry.mac, entry.other].filter((value) => value !== null))) {
+          const escaped = spelling.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Case-blind, since `f filters` is the F key; an apostrophe before it is a possessive, not a key.
+          const named = new RegExp(`(?<![\\w+'])${escaped}(?![\\w+])`, 'i');
+          expect(blurb, `${name}: ${entry.name}`).not.toMatch(named);
+        }
+      }
+    }
+  });
+
   // A screen with no keys of its own still answers "what can I press here". An empty list under the
   // heading reads as a dialog that broke rather than as an answer.
   it('never prints a screen with an empty key list', () => {
