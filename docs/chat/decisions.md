@@ -171,3 +171,17 @@ leftwards; the workers count on the left would grow rightwards from the same cod
 cover each other's anchor. The workers popup is still the centred search sheet; `anchored-popup.ts`
 takes rows with a choice, so moving it over is a change of caller, not of the popup.
 
+
+## chat-decision-11: A streaming reply is cut at a paragraph break, and drawn whole when it cannot be
+
+The streaming block draws the text before its last cut once, as it settles, and redraws only what
+follows each frame (`chat-live-view.ts`). A cut (`chat-live-cut.ts`) is the start of a line after a
+blank line, outside a code fence, that cannot carry on the block above it: not indented, not a list
+item, not a quote. Markdown drawn in two pieces there is the same HTML as drawn whole, which the
+test checks for every prefix of a reply holding a table, fences, a loose list and a link across a
+line break.
+
+A reply holding a link definition (`[name]: url`) or a line opening raw HTML is drawn whole every
+frame, as before: a definition applies to links anywhere in the text, and an HTML block can run on
+past a blank line. Telling those cases apart from a safe cut costs more code than they are worth;
+Claude rarely writes either. The finished reply is an entry and is always drawn whole.

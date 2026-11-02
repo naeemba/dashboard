@@ -13,7 +13,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
-  `chat-stamp.ts`
+  `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
@@ -61,6 +61,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given Up showing an earlier prompt over a half-written draft, when you press Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question keeps the keyboard.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
 - Given Claude has replied, when you send `/copy`, then the reply's markdown, all Claude wrote since the turn began (a prompt, or a message such as a background task finishing that starts a turn of its own) with its tool calls left out, is on the clipboard; `/copy 2` takes the reply before it, and a count past the first reply is refused.
+- Given Claude is streaming a long reply with tables, code blocks and links, when it finishes, then it is drawn exactly as a reply that arrived at once; while it streams, only the text after the last paragraph break outside a code fence is redrawn each frame.
 - Given an MCP server failed to connect, when you type /mcp and pick it, then Reconnect tries it again and Disable turns it off; a disabled one offers only Enable.
 - Given a conversation is on the screen, when you send `/rename Board drag fix`, then it is renamed and `/resume` lists it by that name; with no name or no conversation yet, it is refused.
 - Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.
