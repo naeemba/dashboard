@@ -199,6 +199,15 @@
           "parent": null,
           "createdAt": "2026-11-02T00:40:52.538Z",
           "updatedAt": "2026-11-02T00:40:52.538Z"
+        },
+        {
+          "id": "d32e5609-ed23-4ead-acca-0a308334fccf",
+          "title": "Finish what the pane host left: stale session socket, editor, orphans",
+          "notes": "The pane host (panes-decision-1) keeps worker shells across a restart. Left for this card: (1) a kept shell's DASHBOARD_SOCKET names the dead run's session socket, so `dashboard pane …` from a kept pane says the app quit; give the session socket a stable path in user data. (2) The editor runs in the app and starts fresh after a restart, because nvim's socket is named after the pid and slot (nvim-remote.ts); name it by pane key and keep it in the host like any pane. (3) Kept shells of a project not reopened run unseen; offer them or kill them once the restore is done. (4) A protocol-version change orphans the old host's shells. (5) Efficiency: every byte is parsed by two headless xterms (host and app), the survivors' screens sit in main until adopted, and data goes one JSON line per pty read. (6) workflow-rule-1 can be relaxed once 1 and the Claude screens' restart cost are settled. See docs/panes/README.md Open questions.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T00:44:04.385Z",
+          "updatedAt": "2026-11-02T00:44:04.385Z"
         }
       ]
     },
@@ -279,14 +288,6 @@
     {
       "name": "Doing",
       "cards": [
-        {
-          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
-          "title": "Let pane shells outlive the app",
-          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:43:36.000Z"
-        },
         {
           "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
           "title": "Take the single-instance lock and write session.json atomically",
@@ -2497,6 +2498,16 @@
               "body": "Shipped in #176: dashboard://pane links on the Claude screen, foot workers count, Alt+W popup that stays live. Popup is the shared search dialog, not anchored; links are mouse only; agent exit alone does not refresh the count."
             }
           ]
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Shipped in #174: worker pane shells run in a pane host (a detached node process holding the ptys) and come back in their panes after a quit, crash or update, screen and job intact. tmux -C weighed and turned down in panes-decision-1. Left for Backlog card \"Finish what the pane host left\": stale DASHBOARD_SOCKET in kept shells, keeping the editor, orphaned shells, protocol-version orphans, double screen parse.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:44:04.552Z",
+          "branch": "work-board-card-ed9656aa-b40e-4d13-9843-7ee",
+          "pullRequest": 174
         }
       ]
     }
