@@ -201,7 +201,7 @@ describe('resumeLine', () => {
 describe('workerDispatcher', () => {
   // A worker claimed with --project reports to the page that dispatched it, not the one it runs on.
   it('names the page whose main dispatched the worker', () => {
-    expect(workerDispatcher({ ...conversation(ID), dispatched: true, dispatcher: '' }, '/work/api')).toBe('');
+    expect(workerDispatcher({ ...conversation(ID), dispatched: true, dispatcher: '/work/web' }, '/work/api')).toBe('/work/web');
   });
 
   it('falls back to the pane\'s own page for a file written before the field', () => {

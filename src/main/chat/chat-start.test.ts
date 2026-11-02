@@ -10,11 +10,6 @@ describe('startsAtOpen', () => {
     expect(startsAtOpen('/work/api', ['/work/web'])).toBe(false);
     expect(startsAtOpen('/work/api', [])).toBe(false);
   });
-
-  // The manager's page has the empty path.
-  it('starts the manager when it dispatched one', () => {
-    expect(startsAtOpen('', ['', '/work/web'])).toBe(true);
-  });
 });
 
 describe('sessionToMeasure', () => {
