@@ -152,7 +152,13 @@
           "priority": "low",
           "parent": null,
           "createdAt": "2026-11-02T00:40:52.538Z",
-          "updatedAt": "2026-11-02T00:40:52.538Z"
+          "updatedAt": "2026-11-02T08:53:07.402Z",
+          "comments": [
+            {
+              "at": "2026-11-02T08:53:07.402Z",
+              "body": "Seen in use: the 'has finished its turn' prompt to main fires on every Stop of the worker, including mid-task pauses (pr-loop waiting on subagents, CI waits), and the pane is back to running moments later. Main gets woken for nothing. Report only when the worker stays stopped (a short grace period, re-checked) or when it sent its own report."
+            }
+          ]
         },
         {
           "id": "d32e5609-ed23-4ead-acca-0a308334fccf",
