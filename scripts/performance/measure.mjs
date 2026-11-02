@@ -30,9 +30,14 @@ async function startStreams(page, count, rate) {
   for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, `${stream} ${rate}`); }
 }
 
-// The highest line number each worker on the page in front has drawn: build-log-stream.sh numbers its
-// lines, so a pane that came back showing what it printed while hidden reads higher than when it left.
+// The highest line number each worker on screen has drawn: build-log-stream.sh numbers its lines, so a
+// pane that came back showing what it printed while hidden reads higher than when it left. A worker
+// scrolled out of the list is off screen too, so xterm draws it only once it is scrolled back into view.
 const DRAWN_LINES = `[...document.querySelectorAll('.page:not([hidden]) .view:not([hidden]) .workers .xterm-rows')]
+  .filter((rows) => {
+    const box = rows.getBoundingClientRect(), list = rows.closest('.workers').getBoundingClientRect();
+    return box.bottom > list.top && box.top < list.bottom;
+  })
   .map((rows) => Math.max(0, ...(rows.textContent.match(/\\d{6}/g) ?? []).map(Number)))`;
 
 // GC first, then what the renderer and main hold: heap, DOM, listeners, private memory per process.

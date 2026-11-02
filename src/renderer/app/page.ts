@@ -15,6 +15,7 @@ import { PANE_SCROLLBACK, paneScreen } from '../panes/pane';
 import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
+import { pauseSelectionRedraws } from '../panes/paused-selection';
 import type { SectionStrip } from '../manager/section-strip';
 import type { MarketsView } from '../markets/markets-view';
 import type { Settings } from '../../shared/settings/settings';
@@ -372,6 +373,8 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       ]),
     });
     terminal.open(container);
+    // Off screen, xterm stops drawing the terminal; paused-selection.ts closes the one path that kept drawing.
+    pauseSelectionRedraws(terminal);
 
     const pane: Pane = {
       index, element: container, terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths,
