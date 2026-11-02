@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCard, addComment, deleteCard, dropCard, moveCardToColumn, renameCard, selectionOf, setBranch, type Board } from './board';
+import { addCard, addComment, deleteCard, dropCard, moveCard, moveCardToColumn, renameCard, selectionOf, setBranch, type Board } from './board';
 import { rebaseBoardChange, sameBoard } from './board-merge';
 import { board, titles } from './test-board';
 
@@ -84,6 +84,21 @@ describe('rebaseBoardChange', () => {
     const latest = moved(base, 'b', 2);
     const next = dropCard(base, selectionOf(base, 'c')!, 0, 1).board;
     expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['a', 'c'], [], ['b']]);
+  });
+
+  // A reorder in the screen's column is no move of the card the agent took out of it.
+  it('keeps a move the command made while the screen moved another card up past it', () => {
+    const base = board(['a', 'b'], [], []);
+    const latest = moved(base, 'a', 2);
+    const next = moveCard(base, selectionOf(base, 'b')!, 'up').board;
+    expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['b'], [], ['a']]);
+  });
+
+  it('keeps a move the command made while the screen moved it down past another card', () => {
+    const base = board(['a', 'b'], [], []);
+    const latest = moved(base, 'b', 2);
+    const next = moveCard(base, selectionOf(base, 'a')!, 'down').board;
+    expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['a'], [], ['b']]);
   });
 
   // The dropped card goes beside its neighbours in the screen's column, not beside one the agent took away.

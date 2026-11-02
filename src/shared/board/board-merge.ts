@@ -41,8 +41,11 @@ export function rebaseBoardChange(base: Board, next: Board, latest: Board | null
       // Deleted on disk since the screen read it: the deletion is the newer word.
       if (was && !found) continue;
       const edited = was && onDisk ? editedCard(was.card, card, onDisk) : card;
+      // A reorder never beats a column change. Swap `a` and `b` while an agent takes `a` to Review, and
+      // both see a new stayed card above them; counting `a` as moved would pull it back into Todo.
+      const leftOnDisk = found !== null && result.columns[found.column].name !== column.name;
       const moved = !was || was.column !== column.name
-        || stayedAbove(baseOrder, card.id, stayed) !== stayedAbove(order, card.id, stayed);
+        || (!leftOnDisk && stayedAbove(baseOrder, card.id, stayed) !== stayedAbove(order, card.id, stayed));
       if (found && !moved) {
         result.columns[found.column].cards[found.card] = edited;
         continue;
