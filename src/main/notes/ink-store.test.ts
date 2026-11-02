@@ -1,6 +1,6 @@
-import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY } from '../board/board-store';
 import { INK_FILE, inkPath, readInk, writeInk } from './ink-store';
@@ -38,11 +38,18 @@ describe('the ink file', () => {
     expect(() => readInk(projectPath)).toThrow();
   });
 
-  it('leaves the old page whole when the rename cannot land', () => {
+  it('leaves the old page whole when the new one cannot be written', () => {
     const projectPath = project();
     writeInk(projectPath, 'the page that was there\n');
-    mkdirSync(`${inkPath(projectPath)}.tmp`, { recursive: true });
-    expect(() => writeInk(projectPath, 'half a p')).toThrow();
+    // A folder that takes no new file: the temporary file cannot be made, so nothing replaces
+    // the ink file and what was there is still all of it.
+    const folder = dirname(inkPath(projectPath));
+    chmodSync(folder, 0o500);
+    try {
+      expect(() => writeInk(projectPath, 'half a p')).toThrow();
+    } finally {
+      chmodSync(folder, 0o700);
+    }
     expect(readInk(projectPath)).toBe('the page that was there\n');
   });
 });
