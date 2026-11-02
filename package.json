@@ -6,10 +6,11 @@
   "main": ".vite/build/main.cjs",
   "private": true,
   "scripts": {
-    "prestart": "./scripts/node-pty-built.sh",
+    "prestart": "node scripts/node-pty-built.mjs",
     "start": "electron-forge start",
-    "prepackage": "./scripts/no-running-app.sh && ./scripts/node-pty-built.sh",
+    "prepackage": "node scripts/no-running-app.mjs && node scripts/node-pty-built.mjs",
     "package": "electron-forge package",
+    "premake": "node scripts/no-running-app.mjs && node scripts/node-pty-built.mjs",
     "make": "electron-forge make",
     "release": "electron-forge release",
     "lint": "eslint .",

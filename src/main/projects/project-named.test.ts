@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { projectNamed } from './project-named';
 
+// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
+
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: ~/Workspace/new-crm\n- name: new-shop\n  path: /shop\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
 const named = (word: string, text: string | null = FILE) => projectNamed(text, 'projects.yaml', word, '/home/me');
 
 describe('projectNamed', () => {
-  it('finds a project by its exact name or aka, in any case, with ~ expanded', () => {
+  posixPathsOnly('finds a project by its exact name or aka, in any case, with ~ expanded', () => {
     expect(named('CRM')).toEqual({ ok: true, name: 'new-crm', path: '/home/me/Workspace/new-crm' });
     expect(named('screensaver')).toEqual({ ok: true, name: 'screensaver', path: '/screensaver' });
   });

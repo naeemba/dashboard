@@ -12,6 +12,6 @@ export HOME="$demo/home" XDG_CONFIG_HOME="$demo/home/.config" WAYLAND_DISPLAY=wl
 unset DISPLAY AI_AGENT
 for name in $(env | grep -o '^\(CLAUDE\|DASHBOARD\|ANTHROPIC\)[A-Z_]*'); do unset "$name"; done
 cd "$repo"
-./scripts/node-pty-built.sh
+node scripts/node-pty-built.mjs
 exec ./node_modules/.bin/electron . --user-data-dir="$demo/userdata" --ozone-platform=wayland \
   --remote-debugging-port=9433 --inspect=9434

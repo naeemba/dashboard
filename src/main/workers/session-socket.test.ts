@@ -18,7 +18,9 @@ afterEach(() => {
 
 describe('sessionSocketPath', () => {
   // The folder is the lock: only you can enter it, so only you can reach the socket inside.
-  it('puts the socket in a fresh folder only this user can enter', () => {
+  // Skipped on Windows, which has no POSIX file modes to read back.
+  const posixModesOnly = it.skipIf(process.platform === 'win32');
+  posixModesOnly('puts the socket in a fresh folder only this user can enter', () => {
     const temporary = folder('socket-test-');
     const socket = sessionSocketPath('linux', temporary, 42);
     expect(path.basename(socket)).toBe('session.sock');
@@ -54,7 +56,7 @@ describe('listenForSessions and askApp', () => {
   });
 
   // An answer that throws, or a request of the wrong shape, still gets the command a reply.
-  it('answers a request it cannot handle rather than leaving the command waiting', async () => {
+  halfOpenOnly('answers a request it cannot handle rather than leaving the command waiting', async () => {
     const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
     const server = listenForSessions(socket, async () => { throw new Error('no such pane'); }, () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));

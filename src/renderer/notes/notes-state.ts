@@ -63,8 +63,15 @@ export function isStranded(state: NotesState, boxText: string): boolean {
 // while a box holding a page a failed re-read left behind reads again once it matches that page. The
 // same fact both predicates above read — whether anything is known about the file — says which it is,
 // so the view asks here rather than keeping a second copy of it.
-export function strandedMessage(state: NotesState): string {
-  return state.savedText === undefined
-    ? 'Notes were typed before the file was read: nothing here is saved. Copy it out, then empty the box to read the file.'
-    : 'Notes were typed after a failed read: nothing here is saved. Copy it out, then undo back to the page that was here.';
+export type StrandedWords = { neverRead: string; afterFailedRead: string };
+
+// The text box's words. The handwriting page has no text to copy out and its own keys for emptying and
+// undoing, so it hands in its own.
+export const TEXT_STRANDED: StrandedWords = {
+  neverRead: 'Notes were typed before the file was read: nothing here is saved. Copy it out, then empty the box to read the file.',
+  afterFailedRead: 'Notes were typed after a failed read: nothing here is saved. Copy it out, then undo back to the page that was here.',
+};
+
+export function strandedMessage(state: NotesState, words: StrandedWords): string {
+  return state.savedText === undefined ? words.neverRead : words.afterFailedRead;
 }

@@ -13,7 +13,7 @@ const nodePty = '/node_modules/node-pty';
 const agentSdk = '/node_modules/@anthropic-ai/claude-agent-sdk';
 const agentBinary = `${agentSdk}-${process.platform}-${process.arch}`;
 // build/Release, not prebuilds/: it is the one directory node-pty looks in first, and the copy
-// there has spawn-helper's exec bit, without which posix_spawnp fails. scripts/node-pty-built.sh
+// there has spawn-helper's exec bit, without which posix_spawnp fails. scripts/node-pty-built.mjs
 // is what puts it there in a checkout npm left with prebuilds/ alone.
 const keep = [
   '/.vite',
@@ -22,6 +22,14 @@ const keep = [
   `${nodePty}/lib`,
   `${nodePty}/build/Release/pty.node`,
   `${nodePty}/build/Release/spawn-helper`,
+  // What Windows loads instead of spawn-helper: conpty, with winpty behind pty.node as its fallback.
+  // Named one by one rather than keeping build/Release whole, which on Linux holds the compiler's
+  // object files too.
+  `${nodePty}/build/Release/conpty.node`,
+  `${nodePty}/build/Release/conpty_console_list.node`,
+  `${nodePty}/build/Release/conpty`,
+  `${nodePty}/build/Release/winpty.dll`,
+  `${nodePty}/build/Release/winpty-agent.exe`,
   agentSdk,
   agentBinary,
   // npm installs this one instead on a musl Linux; a path in `keep` that is not there costs nothing.
@@ -69,7 +77,11 @@ const config: ForgeConfig = {
       file !== '' &&
       !keep.some((path) => file.startsWith(path + '/') || (path + '/').startsWith(file + '/')),
   },
-  rebuildConfig: {},
+  // Windows rebuilds nothing. Rebuilding node-pty there needs Visual Studio's C++ tools, and a failed
+  // rebuild deletes build/Release on its way out, leaving no binary at all; the prebuilt one
+  // node-pty-built.mjs copies is N-API and loads under Electron as it is. A mac and Linux keep the
+  // rebuild they always had — Linux has no prebuilt binary to fall back on.
+  rebuildConfig: process.platform === 'win32' ? { onlyModules: [] } : {},
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),

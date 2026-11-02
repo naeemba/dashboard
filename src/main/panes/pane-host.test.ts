@@ -148,7 +148,8 @@ describe('hostCommand', () => {
   });
 });
 
-describe('paneHost over a socket', () => {
+// Skipped on Windows, which has no unix sockets: listening on host.sock fails with EACCES there.
+describe.skipIf(process.platform === 'win32')('paneHost over a socket', () => {
   let folder = '';
   // Every connection the test host took, ended before its folder goes.
   const accepted: net.Socket[] = [];

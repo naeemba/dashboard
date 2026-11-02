@@ -63,8 +63,14 @@ export type Action =
   | { kind: 'log-select'; direction: 'up' | 'down' }
   | { kind: 'log-open' }
   | { kind: 'log-filter-reset' }
+  | { kind: 'notes-ink-toggle' }
+  | { kind: 'ink'; command: InkCommand }
   | { kind: 'chat'; command: ChatCommand }
   | { kind: 'chat-edit'; edit: LineEdit };
+
+// What the handwriting page's own keys ask of it. One action kind for all of them, answered by the ink
+// view, so the renderer passes them on without a case each.
+export type InkCommand = 'pen' | 'eraser' | 'color' | 'width' | 'undo' | 'clear';
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
@@ -79,7 +85,12 @@ export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'co
 // may name only one scope — two rows sharing a binding is what this app already treats as a
 // hand-edited settings file. It cannot be answered from the mode alone, because `board` is a mode the
 // manager shares with every project, so `hears` is told which page you are on.
-export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'claude' | 'manager-page';
+//
+// `notes` is a mode, heard on the notes screen of a project and of the manager alike. `ink` is not: it
+// is the handwriting page of that screen, heard only while that page is the one showing, which only the
+// renderer knows — the same way it alone knows whether the Claude screen holds the keyboard.
+export type ActionScope =
+  'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'notes' | 'claude' | 'manager-page' | 'ink';
 
 // Whether two actions can be heard at the same moment, which is the whole of what "these two want the
 // same key" means. Exported because two places ask it and they must not each hold their own idea of
@@ -91,6 +102,12 @@ export type ActionScope = 'global' | 'terminals' | 'board' | 'manager' | 'comman
 // five modes the manager shows.
 export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
   if (one === 'global' || other === 'global' || one === other) return true;
+  // The handwriting page is part of the notes screen, which the manager shows as a section too, so it
+  // is heard beside a notes key and a manager-page key, and beside no other screen's.
+  if (one === 'ink' || other === 'ink') {
+    const rest = one === 'ink' ? other : one;
+    return rest === 'notes' || rest === 'manager-page';
+  }
   // Asked of SECTIONS rather than through isSection, which takes a Mode: a scope is not a mode, and a
   // cast between the two sets would answer `false` by luck for the next scope that is neither.
   const covers = (scope: ActionScope): boolean => SECTIONS.some((section) => section.mode === scope);
@@ -102,7 +119,7 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.
 export type ActionGroup =
-  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'claude' | 'sections';
+  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'notes' | 'manager' | 'command' | 'log' | 'claude' | 'sections';
 
 export type ActionEntry = {
   // It is the key in settings.json, so renaming one is renaming a line in the user's file. A rename
@@ -476,6 +493,45 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'manager-remove', description: 'Remove the selected worktree',
     group: 'manager', scope: 'manager', action: { kind: 'manager-remove' },
     mac: 'Backspace', other: 'Backspace',
+  },
+  // The notes screen's two pages. The toggle is heard on the text page and the handwriting page alike,
+  // which is why it is `notes` scope and not `ink`: a box you are typing into has to be able to leave
+  // for the other page. Shift for the reason mode-notes gives, and H for handwriting because D is the
+  // drawer's. Their own group, so the help dialog and the settings screen list them under Notes.
+  {
+    name: 'notes-ink-toggle', description: 'Switch the notes between the text page and the handwriting page',
+    group: 'notes', scope: 'notes', action: { kind: 'notes-ink-toggle' },
+    mac: 'Ctrl+Shift+H', other: 'Ctrl+Shift+H',
+  },
+  // Drawing is pointer input by nature, the way typing is keys (notes-decision-3), and everything around
+  // it is a key: the tool, the colour, the width, undo and clear. Bare keys, because the handwriting page
+  // has no box that takes characters — and `ink` scope, heard only while that page is showing, so none
+  // of them reach the text page, where P and E are letters in a sentence.
+  {
+    name: 'ink-pen', description: 'Draw with the pen',
+    group: 'notes', scope: 'ink', action: { kind: 'ink', command: 'pen' }, mac: 'P', other: 'P',
+  },
+  {
+    name: 'ink-eraser', description: 'Erase whole strokes',
+    group: 'notes', scope: 'ink', action: { kind: 'ink', command: 'eraser' }, mac: 'E', other: 'E',
+  },
+  {
+    name: 'ink-color', description: 'Next ink colour',
+    group: 'notes', scope: 'ink', action: { kind: 'ink', command: 'color' }, mac: 'C', other: 'C',
+  },
+  {
+    name: 'ink-width', description: 'Next pen width',
+    group: 'notes', scope: 'ink', action: { kind: 'ink', command: 'width' }, mac: 'W', other: 'W',
+  },
+  {
+    name: 'ink-undo', description: 'Undo the last stroke, erase or clear',
+    group: 'notes', scope: 'ink', action: { kind: 'ink', command: 'undo' }, mac: 'Z', other: 'Z',
+  },
+  // Shift so that it is not one slip of the finger from a page of writing — and a plain key at all
+  // only because clear is a step undo takes back (ink-history.ts).
+  {
+    name: 'ink-clear', description: 'Clear the page (undo brings it back)',
+    group: 'notes', scope: 'ink', action: { kind: 'ink', command: 'clear' }, mac: 'Shift+X', other: 'Shift+X',
   },
   // The strip along the top of the manager page. manager-page scope, because they have to work on all
   // five sections and two of those — board and notes — are modes every project also has, and a

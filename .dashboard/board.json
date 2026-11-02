@@ -104,13 +104,6 @@
           "parent": null
         },
         {
-          "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
-          "title": "Decide whether Windows is a target and drop the installer dependencies if not",
-          "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "0fc819e5-7dd5-46b0-a5cf-246ac3f168cc",
           "title": "Turn off the terminal cursor blink that costs idle CPU",
           "notes": "Measured: focused terminal, nothing happening: renderer 3.7-5% CPU, ~70 style recalcs/s, +1% main, +1% GPU; 0.1% with xterm's animation off. Where: cursorBlink: true at src/renderer/app/page.ts:318; xterm DOM renderer blinks via CSS keyframes on background-color. Fix (small): cursorBlink off, or a setting defaulting off. Rerun: measure.mjs keys (last step). From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -190,6 +183,34 @@
           "title": "After a restart, a cross-project worker's done notice goes to the wrong main",
           "notes": "session-requests.ts tells dispatched.get(id)?.dispatcher ?? slot, and dispatched/dispatchers are only in memory. A worker that project A's main (or the manager) dispatched into project X with pane claim --project comes back after a restart in X, so its done notice goes to X's main, which never dispatched it, and A hears nothing. Fix: persist the dispatcher with the worker mark in session.json; the same record fixes which main starts at open (PR #186). Issue: https://github.com/naeemba/dashboard/issues/187 Review: https://github.com/naeemba/dashboard/pull/186#discussion_r4438204842",
           "priority": "medium",
+          "parent": null
+        },
+        {
+          "id": "73b08c71-d792-4eab-b927-172365c242a4",
+          "title": "Use Promise.withResolvers in tests instead of hand-written deferred helpers",
+          "notes": "newest-read.test.ts:5, manager-reads.test.ts:8 and ship.test.ts:125 each hand-write a deferred promise helper that Promise.withResolvers() already provides (it typechecks and runs here: target ESNext, Node 24). Replace each copy with it. Cost if left: every new test that needs to control when a promise settles writes another copy under another name. Issue: https://github.com/naeemba/dashboard/issues/192 Review: https://github.com/naeemba/dashboard/pull/190#discussion_r4441187097",
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "25055404-20ba-465a-8a82-7965f85967f7",
+          "title": "The pane host never runs on Windows, so panes do not survive a restart",
+          "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
+          "priority": "high",
+          "parent": null
+        },
+        {
+          "id": "12dcfdf3-6cfa-4445-a592-6400ea498d37",
+          "title": "The session command gets no answer over the Windows named pipe",
+          "notes": "The comment says it: the `session` command is broken on Windows, not just its test. Both tests here drive the real `askApp` against the real `listenForSessions`, so the empty reply or timeout they get on `windows-latest` is what a worker pane gets when it runs `session ...` on Windows. The main session asks a worker to report back, and the call either says \"the app answered with something that was not a reply\" or hangs until it times out.\n\nTagged medium, not high, because the cause (the pipe not staying half open after the client's `end()`) is inferred and not yet reproduced outside CI. A likely fix, outside this PR, is to stop relying on half-close: the client writes the request followed by a newline and keeps its side open, and the server answers once it has read one line. That works the same over a unix socket and a named pipe. Then drop `halfOpenOnly`.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551443",
+          "priority": "medium",
+          "parent": null
+        },
+        {
+          "id": "43ceddd8-1f20-4512-9578-37eaaaa6952a",
+          "title": "Make the POSIX path-literal tests portable instead of skipping them on Windows",
+          "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
+          "priority": "low",
           "parent": null
         }
       ]
@@ -2606,6 +2627,37 @@
             {
               "at": "2026-11-01T20:46:57.620Z",
               "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
+            }
+          ]
+        },
+        {
+          "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
+          "title": "Decide whether Windows is a target and drop the installer dependencies if not",
+          "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-02T10:26:20.142Z",
+          "comments": [
+            {
+              "at": "2026-11-02T10:26:20.083Z",
+              "body": "Answered by PR #191 (Sana, merged): Windows is a target. The installer dependencies stay. A Windows CI job is its own card."
+            }
+          ]
+        },
+        {
+          "id": "efbe3e2d-88b1-41c0-98e2-7d806e390e03",
+          "title": "Run CI on Windows",
+          "notes": "Windows is a target since PR #191. CI runs on Ubuntu only, so a change can break Windows start or packaging unseen. Add a windows-latest job to the CI workflow: npm ci (node-pty builds there), npm test, npx tsc --noEmit, and a make of the Windows installer (Forge squirrel maker) without publishing. Mark tests that need a POSIX shell or unix sockets so they skip on win32 with a reason, rather than failing; list them in the PR.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T10:26:20.200Z",
+          "updatedAt": "2026-11-02T11:07:30.932Z",
+          "branch": "work-board-card-efbe3e2d-88b1-41c0-98e2-7d8",
+          "pullRequest": 197,
+          "comments": [
+            {
+              "at": "2026-11-02T11:07:30.932Z",
+              "body": "Shipped in #197: windows-latest CI job (npm ci, tsc, tests, Squirrel make, no publish); premake runs the running-app guard and node-pty copy; .dashboard/*.md checked out LF; 39 POSIX-only tests skip on win32 with reasons. Not done: pane host and session pipe Windows bugs (#198), portable path fixtures (Backlog card)."
             }
           ]
         }

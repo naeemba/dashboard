@@ -21,5 +21,5 @@ Folders: `src/shared/errors/`, `src/renderer/errors/`.
 
 - The bar holds one line; a thing that fails on every tick writes over
   whatever was there, every tick (errors-decision-3).
-- `board-view.ts` and `notes-view.ts` still print `String(error)` and are
+- `board-view.ts` still prints `String(error)` and is
   exempted from the check until fixed (errors-rule-1).

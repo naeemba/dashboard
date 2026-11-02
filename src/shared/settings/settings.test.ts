@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
+  bindingName, bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
 } from './settings';
 import { ACTIONS, scopesOverlap } from '../keys/actions';
 import { THEME } from '../app/theme';
@@ -205,6 +205,16 @@ describe('holderOfBinding, across overlapping scopes', () => {
     // heard there at once.
     expect(scopesOverlap('manager-page', 'board')).toBe(true);
     expect(scopesOverlap('board', 'manager-page')).toBe(true);
+    // The handwriting page is part of the notes screen, which the manager shows as a section: it is heard
+    // beside the notes keys and the manager's, and beside nothing else's.
+    expect(scopesOverlap('ink', 'notes')).toBe(true);
+    expect(scopesOverlap('notes', 'ink')).toBe(true);
+    expect(scopesOverlap('ink', 'manager-page')).toBe(true);
+    expect(scopesOverlap('ink', 'global')).toBe(true);
+    expect(scopesOverlap('ink', 'board')).toBe(false);
+    expect(scopesOverlap('ink', 'terminals')).toBe(false);
+    expect(scopesOverlap('ink', 'manager')).toBe(false);
+    expect(scopesOverlap('notes', 'manager-page')).toBe(true);
   });
 
   it('sees two screens that are never on at once as free of each other', () => {
@@ -268,5 +278,11 @@ describe('resetAll', () => {
     expect(reset.host).toEqual({ port: null, token: 'abc', bind: '127.0.0.1' });
     expect(reset.remote).toEqual(settings.remote);
     expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
+  });
+
+  it('names the key an action is on, and an unbound one as Nothing', () => {
+    const settings = defaultSettings(true);
+    expect(bindingName(settings, 'project-picker')).toBe(settings.keys['project-picker']);
+    expect(bindingName(bindKey(settings, 'project-picker', null), 'project-picker')).toBe('Nothing');
   });
 });

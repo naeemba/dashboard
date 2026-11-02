@@ -30,7 +30,7 @@ turned down:
 
 Two things made the host possible without changing the build. node-pty's binary
 is N-API, so the copy in `app.asar.unpacked` loads under the system `node`
-(`scripts/node-pty-built.sh` says the same). Electron's own binary could not be
+(`scripts/node-pty-built.mjs` says the same). Electron's own binary could not be
 the host: the `RunAsNode` fuse is off in `forge.config.ts`, and turning it on to
 run the app's binary as node was not worth it.
 

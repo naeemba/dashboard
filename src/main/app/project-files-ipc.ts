@@ -5,6 +5,7 @@ import { rebaseBoardChange } from '../../shared/board/board-merge';
 import type { BoardChanges } from '../board/board-changes';
 import type { BoardWatchers } from '../board/board-watch';
 import { readNotes, writeNotes } from '../notes/notes-store';
+import { readInk, writeInk } from '../notes/ink-store';
 
 // The two files a project keeps in its .dashboard folder, read and written for the renderer. Main-process
 // wiring only, out of main.ts because main had reached its 600-line ceiling; what a board or a page of
@@ -55,6 +56,14 @@ export function registerProjectFiles(
   table.handle('notes:write', (screen, projectPath: string, text: string) => {
     writeNotes(projectPath, text);
     tellOthers(screen, 'notes:change', projectPath);
+  });
+
+  // The handwriting page of the same notes, in its own file and with its own channels so a stroke never
+  // makes the text box read again, nor a sentence the ink page. Same shape as notes:read and notes:write.
+  table.handle('ink:read', (_screen, projectPath: string) => readInk(projectPath));
+  table.handle('ink:write', (screen, projectPath: string, text: string) => {
+    writeInk(projectPath, text);
+    tellOthers(screen, 'ink:change', projectPath);
   });
 }
 

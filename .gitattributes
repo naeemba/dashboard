@@ -1,2 +1,4 @@
 # See workflow-decision-2 in docs/workflow/decisions.md.
 docs/**/history.md merge=union
+# The seeded .dashboard docs are compared byte for byte with the text the app seeds, which has LF.
+.dashboard/*.md text eol=lf
