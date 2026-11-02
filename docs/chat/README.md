@@ -20,7 +20,9 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-screen-dispatch.ts`, `chat-attachments.ts`,
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
-  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`
+  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
+  `chat-context.ts`, `chat-context-view.ts`; the popup it opens is `src/renderer/app/anchored-popup.ts`
+  with `popup-placement.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -40,6 +42,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
 - Given main ran `pane run`, when its output or a reply names `dashboard://pane/<slot>:<index>`, then it is drawn as a `pane <id>` link; a click lands on that pane on its own project's page, and on a pane no longer open says so and goes nowhere. Pane numbers are reused, so a link to a pane closed and opened again lands on whatever holds that number now.
 - Given main has workers open, when the foot is drawn, then between what Claude is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a click on it or Alt+W opens a list of them (the manager's across every project) that updates while open, the arrows walk it, Enter lands on the pane and Escape closes it.
+- Given a turn has been measured, when you click the context meter, press Alt+U or send `/context`, then a popup opens just above the meter, lined up with its right edge, listing each part of the window (system prompt, tools, memory files, skills, messages, free space and the rest) with its tokens, share and a bar in its colour, then the memory files and the MCP tools biggest first, five each and an `N more` row; deferred tool schemas are left out. Its heading says when the numbers were measured, it follows a new measure while open, the arrows walk its rows and Escape puts the keyboard back in the box (chat-decision-10). Before any measure it says so instead of opening.
 - Given a worker main dispatched finishes its turn, when the hook reports it, then the conversation gets a prompt naming the worker and its pane link, queued behind the turn if one is running (workers-decision-1).
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.

@@ -417,6 +417,33 @@
 }
 .chat-foot-workers:hover { color: var(--white); }
 
+/* The context meter opens the context popup on a click, the same way. */
+.chat-foot-context { cursor: pointer; }
+.chat-foot-context:hover .chat-meter-label { color: var(--white); }
+
+/* A row of the context popup: what it is, a thin bar in its colour filled to its share of the window,
+   its tokens and that share. The columns line up from row to row. */
+.chat-context-dialog .anchored-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 60px 52px 48px;
+}
+.chat-context-name {
+  overflow: hidden;
+  color: var(--brightWhite);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-context-detail { color: var(--muted); }
+.chat-context-dialog .chat-meter-bar {
+  width: auto;
+  height: 3px;
+}
+.chat-context-tokens, .chat-context-share {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* A meter: its name, a short bar filled to how much is used, the percentage in the same colour, then
    anything else worth saying, quieter. */
 .chat-meter {

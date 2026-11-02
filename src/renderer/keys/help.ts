@@ -363,7 +363,10 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'the box holds what Claude Code\'s status line does: on the left the model, whether edits are '
     + 'asked about or accepted, the effort level (default effort until one is picked: the level in your settings), or ultrathink while such a turn runs, and whether Claude is working; on the right meters for the context, '
     + 'the plan\'s five-hour limit and when it resets, and the seven-day limit, each green, then yellow '
-    + 'from 70 and red from 90, and the version. The model key walks the models and the '
+    + 'from 70 and red from 90, and the version. A click on the context meter, the context key or /context opens a popup over the meter listing what fills the window: '
+    + 'each part (the system prompt, tools, memory files, skills, messages, free space and the rest) with its tokens, its share of the window and a bar in its colour, '
+    + 'then the memory files and the MCP tools, biggest first; tool schemas held back out of the window are left out. The numbers are from the last measure, after each turn; '
+    + 'the popup says when they were taken and follows a new one while it is open. The arrows walk its rows and Escape closes it. The model key walks the models and the '
     + 'edits key walks asking, accepting, planning and auto, both for the next thing Claude does; the foot '
     + 'follows a mode Claude moves to by itself, such as accepting edits once a plan is approved. A second '
     + 'screen on the same page shows the same conversation, questions and choices, and either can answer. '
@@ -428,7 +431,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'you search, the host you last connected to leads the list as Reconnect, so the list and Enter '
     + 'take you back to it. Opening '
     + 'a new project while connected asks for a folder path on the host, since a folder dialog here '
-    + 'would show this machine\'s disk.',
+    + 'would show this machine\'s disk. Type a path that starts with /, \\, ~ or a drive letter and a row opens '
+    + 'that folder, here or on the host, without the folder dialog; it follows a recent whose path '
+    + 'contains it, and leads otherwise. One that is not a folder is refused.',
   log: 'What the app did and what went wrong, newest first: errors, panes and agents exiting, cards '
     + 'moving, ships, worktrees, projects opening and closing. Type in the box to filter — every word '
     + 'must appear, so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s '

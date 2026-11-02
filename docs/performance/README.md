@@ -78,7 +78,7 @@ instance:
 | `measure.mjs startup $D [runs] [chat-sessions-long.json]` | Launch to app ready, first paint, every restored project, and alpha's long chat drawn |
 | `measure.mjs boot $D` | Main-process CPU profile of the first 3 s, into `$D/boot-main.cpuprofile` |
 | `measure.mjs lag $D [seconds]` | Every time main's event loop is more than 50 ms late after launch, with typing in a worker throughout |
-| `measure.mjs streams $D [lines/s]` | Four workers on alpha streaming: CPU with alpha shown, then hidden behind gamma, typing beside them, a main profile, memory |
+| `measure.mjs streams $D [lines/s]` | Four workers on alpha streaming: CPU with alpha shown, then hidden behind gamma, typing beside them, the last line each worker on screen drew before leaving alpha and after coming back, a main profile, memory |
 | `measure.mjs flood $D [shown\|hidden] [host\|no-host]` | One worker runs `seq 1 inf` flat out. CPU of Electron's processes and the pane host, main and renderer profiles, then Ctrl+C, how long the pane keeps printing, and whether it stopped. `no-host` puts a file where the pane host's socket folder goes, so the app runs the pty itself |
 | `measure.mjs chat $D [characters] [per delta] [ms]` | A long answer streamed into alpha's Claude screen as SDK `text_delta` events sent from main; no model call |
 | `measure.mjs keys $D` | Input to next paint for board arrows and tab switches, then idle CPU with a terminal focused (cursor blink) |

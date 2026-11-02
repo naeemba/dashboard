@@ -69,20 +69,6 @@
           "parent": null
         },
         {
-          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
-          "title": "Write the board as operations against a fresh read in main",
-          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
-          "priority": "high",
-          "parent": null
-        },
-        {
-          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
-          "title": "Cap each help dialog blurb",
-          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
           "title": "Decide whether the review agent may merge without a person",
           "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
@@ -122,20 +108,6 @@
           "title": "Decide whether Windows is a target and drop the installer dependencies if not",
           "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
           "priority": "low",
-          "parent": null
-        },
-        {
-          "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
-          "title": "Start a page's Claude CLI only when it is needed",
-          "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
-          "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
-          "title": "Render only the tail of a streaming Claude reply",
-          "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "medium",
           "parent": null
         },
         {
@@ -190,6 +162,22 @@
           "parent": null,
           "createdAt": "2026-11-02T00:44:04.385Z",
           "updatedAt": "2026-11-02T00:44:04.385Z"
+        },
+        {
+          "id": "108cae37-1920-49da-98d3-53e21813ee21",
+          "title": "Hold focus inside confirmOverlay and promptOverlay so Shift+Tab cannot leave them",
+          "notes": "confirmOverlay and promptOverlay in src/renderer/app/overlay.ts hold no focus: Shift+Tab is a modified key, so answerKeys lets it through, and focus moves to the last focusable element before the overlay (a prompt box or a pane) while the sheet stays up. An Escape meant to cancel the dialog then reaches the page behind it. Fix with a shared focus hold in overlay.ts, as viewerOverlay does with its focusin listener; no key handling changes, so keys-rule-1 is untouched.\n\nIssue: https://github.com/naeemba/dashboard/issues/182\nReview: https://github.com/naeemba/dashboard/pull/180#discussion_r4438105899",
+          "priority": "medium",
+          "parent": null
+        },
+        {
+          "id": "6bc82ed1-40f3-491a-b1fd-e415d264f3c5",
+          "title": "Skip xterm's selection redraw on scroll when nothing is selected",
+          "notes": "Left over from PR #179. On a shown terminal, every scroll asks the selection to redraw and the DOM renderer rebuilds every row, even with no selection. Skipping it when nothing is selected should cut shown renderer CPU while panes stream. Build on src/renderer/panes/paused-selection.ts; measure with docs/performance/ tooling before and after.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-02T01:02:00.310Z",
+          "updatedAt": "2026-11-02T01:02:00.310Z"
         }
       ]
     },
@@ -285,45 +273,6 @@
           ]
         },
         {
-          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
-          "title": "Stop hidden projects laying out and painting their terminals",
-          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:13:45.382Z"
-        },
-        {
-          "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
-          "title": "Open a typed folder path from the project picker",
-          "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:20:52.873Z"
-        },
-        {
-          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
-          "title": "Show what fills the context window from the Claude screen's context meter",
-          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T23:46:08.026Z",
-          "updatedAt": "2026-11-02T00:40:52.580Z"
-        },
-        {
-          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
-          "title": "Add a Content-Security-Policy to the window",
-          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:41:46.404Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.579Z",
-              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
-            }
-          ]
-        },
-        {
           "id": "69800344-8134-4450-bafc-e045518a0cd5",
           "title": "Make Ctrl+C stop a flooding pane at once and spare main's core",
           "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -340,6 +289,38 @@
               "body": "Confirmed with seq 1 inf (PR #166): the pane stops, but 3.2 s after Ctrl+C."
             }
           ]
+        },
+        {
+          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
+          "title": "Write the board as operations against a fresh read in main",
+          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:49:53.539Z"
+        },
+        {
+          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
+          "title": "Cap each help dialog blurb",
+          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:02:00.351Z"
+        },
+        {
+          "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
+          "title": "Start a page's Claude CLI only when it is needed",
+          "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:04:43.806Z"
+        },
+        {
+          "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
+          "title": "Render only the tail of a streaming Claude reply",
+          "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:11:02.341Z"
         }
       ]
     },
@@ -2508,6 +2489,63 @@
           "updatedAt": "2026-11-02T00:44:04.552Z",
           "branch": "work-board-card-ed9656aa-b40e-4d13-9843-7ee",
           "pullRequest": 174
+        },
+        {
+          "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
+          "title": "Open a typed folder path from the project picker",
+          "notes": "Shipped in PR #178: a path typed into the project picker (starting with / or ~) leads with a row that opens it, on a remote screen too; main refuses a relative path or one that is not a folder with 'No folder at …'. (docs/review/2026-11-01.md U3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:47:55.996Z",
+          "branch": "work-board-card-a52024cf-46b1-4ace-a786-bc6",
+          "pullRequest": 178
+        },
+        {
+          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
+          "title": "Stop hidden projects laying out and painting their terminals",
+          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:59:28.857Z",
+          "branch": "work-board-card-3dcdeb41-9283-457f-b2b4-526",
+          "pullRequest": 179,
+          "comments": [
+            {
+              "at": "2026-11-02T00:59:28.857Z",
+              "body": "Shipped in #179: hidden pages and views translate off screen so xterm pauses them, and paused-selection.ts holds xterm's selection redraw (which bypassed the pause) until the terminal is back. Hidden renderer CPU 15.5-19.0% to 7.2-10.9%, layouts per 10 s 192-356 to 1. Not done: the same redraw still rebuilds shown terminals on every scroll."
+            }
+          ]
+        },
+        {
+          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
+          "title": "Add a Content-Security-Policy to the window",
+          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:02:17.432Z",
+          "branch": "work-board-card-a912d6fe-5157-4785-8ba2-df5",
+          "pullRequest": 181,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.579Z",
+              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
+            },
+            {
+              "at": "2026-11-02T01:02:17.432Z",
+              "body": "Shipped in #181: meta CSP in index.html (default-src 'self', script-src 'self', inline styles, data: images and fonts, connect-src data: and frame-src blob: for the PDF viewer, object-src/base-uri/form-action 'none'), docs/app/README.md section, index.html.test.ts guard. Checked in a demo instance: terminals, chat image, PDF tile, doc viewer image, market cards, zero violations. Not checked: npm start dev server."
+            }
+          ]
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-02T01:09:02.367Z",
+          "branch": "work-board-card-5b208bbb-e210-4ceb-bfce-216",
+          "pullRequest": 180
         }
       ]
     }

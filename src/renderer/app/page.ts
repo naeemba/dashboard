@@ -16,6 +16,7 @@ import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
 import { writeFlow } from '../panes/write-flow';
+import { pauseSelectionRedraws } from '../panes/paused-selection';
 import type { SectionStrip } from '../manager/section-strip';
 import type { MarketsView } from '../markets/markets-view';
 import type { Settings } from '../../shared/settings/settings';
@@ -375,6 +376,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       ]),
     });
     terminal.open(container);
+    pauseSelectionRedraws(terminal);
 
     const pane: Pane = {
       index, element: container, terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths,

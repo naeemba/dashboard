@@ -31,8 +31,8 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 `shared/`; and a package that needs Node or the DOM is a value import only on
 its own side. `eslint.config.test.ts` pins each of those.
 
-- Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
-  `channels.ts`, `app-window.ts`
+- Process and window: `index.html` and its test, `main.ts`, `renderer.ts`,
+  `preload.ts`, `bridge.ts`, `channels.ts`, `app-window.ts`
 - Build: `vite.build-version.ts` and its test at the repository root, declared
   in `forge.env.d.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
@@ -56,6 +56,12 @@ with its reason and the condition that lifts it.
   changelog: the chat code reaches SDK methods its types leave out
   (`cancelAsyncMessage`, `askSideQuestion`), so a caret range would let a
   release that drops them in with tests still green.
+- `@xterm/xterm` stays on 6.0.0 exactly: `src/renderer/panes/paused-selection.ts`
+  reaches its private render service. A bump checks those fields still exist
+  and reruns `measure.mjs streams` (docs/performance/), since a rename turns the
+  patch off silently and hidden projects go back to drawing every line.
+  The hold and `paused-selection.ts` both go once
+  `RenderService.handleSelectionChanged` checks `_isPaused` upstream.
 - `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
   keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
   when typescript-eslint supports TypeScript 7.
@@ -69,16 +75,55 @@ with its reason and the condition that lifts it.
   Version 11 removed `makeRe`, `AST` and `Minimatch#matchOne`; before any bump
   of those consumers, check that none of them calls one.
 
+## Content-Security-Policy
+
+`index.html` carries the window's policy as a `<meta>` tag. Replies, and docs
+from a cloned repository, are drawn as `innerHTML`; the markdown renderer
+escapes raw HTML, and the policy is the line behind it. Without one, a
+renderer bug that let markup through (a highlight.js grammar emitting raw
+HTML, say) would run the reply's script with the preload bridge in reach,
+which can type into any pane.
+
+No inline script, no inline handlers, no `eval` and nothing from the
+network runs (`script-src 'self'`, no `'unsafe-inline'`, no `'unsafe-eval'`).
+That is not "only the bundle": the packaged app loads the page with
+`loadFile`, and on a `file:` page Chromium matches `'self'` by scheme, so any
+`file:` URL on the disk counts as self, for scripts and images alike.
+Everything else allowed is there because a feature needs it:
+
+| Directive | Needed by | Without it |
+|---|---|---|
+| `style-src 'unsafe-inline'` | xterm and every view set `style` and add `<style>` | Views and panes draw unstyled |
+| `img-src data:` | Images in a reply or a doc, carried inline (`safeImage`) | Images show broken |
+| `font-src data:` | The build inlines the smaller font files as `data:` URLs | Those font files are refused |
+| `connect-src data:` | A PDF tile turns its base64 into a Blob with `fetch` | The PDF tile opens nothing |
+| `frame-src blob:` | The PDF viewer is an iframe on that Blob's URL | The PDF viewer opens blank |
+
+`object-src 'none'`, `base-uri 'none'` and `form-action 'none'` close what
+`default-src` does not cover. The PDF viewer still draws under
+`object-src 'none'`: Chromium's viewer is not an `<object>` of the page.
+
+A feature that loads something new (a remote image, a worker, a WebSocket)
+adds its directive to `index.html` and a row to this table in the same
+change. A violation is silent in the app: open DevTools and look for
+`Refused to` in the console. `index.html.test.ts` fails if `script-src` or
+`object-src` widens, `img-src` lets in the network (the path `safeImage`
+guards against a reply sending a secret out), or the PDF viewer's two
+directives go.
+
 ## Scenarios
 
 - Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
 - Given a shell is running a task, when you close the window, then the app asks before it closes.
 - Given the picker is open, when you type part of a folder's name, then the list narrows to the folders whose letters appear in that order.
+- Given the picker is open, when you type a path starting with `/`, `\`, `~` or a drive letter, then a row opens that folder, on a remote screen too, where `~` is the host's home; it comes after the recents when one of their paths contains it, so Enter on `/api` opens `/code/api`, and is the first row otherwise, so Enter on a new folder that only loosely matches a recent opens what was typed.
+- Given a typed path that is not a folder, when you press Enter on its row, then the project is not opened and the status bar says `No folder at` the path.
 - Given a pane in a project is running a program, when you close the project, then it refuses and the status bar names the pane.
+- Given a reply carries markup that gets past the markdown renderer, when it is drawn, then no script in it runs.
 
 ## Open questions
 
-- Neither entry file is at the 600-line ceiling: `main.ts` is at 571 code lines, and `renderer.ts` is
-  at 566 since the close flow moved into `close-project.ts` and the which-key
-  strip's tracking into `which-key-tracking.ts`. A feature that would push
-  either past 600 needs a seam split out first (workflow-decision-1).
+- `main.ts` is at the 600-line ceiling, at 600 code lines, and `renderer.ts` is
+  at 591, even after the close flow moved into `close-project.ts` and the which-key
+  strip's tracking into `which-key-tracking.ts`. A feature that adds code to
+  `main.ts`, or would push `renderer.ts` past 600, needs a seam split out first (workflow-decision-1).
