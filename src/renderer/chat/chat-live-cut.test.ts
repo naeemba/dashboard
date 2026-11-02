@@ -29,6 +29,25 @@ describe('liveCut', () => {
     expect(cuts).toBeGreaterThan(REPLY.length / 2);
   });
 
+  it('draws every prefix the same cut as whole when a fence or definition sits in a container', () => {
+    const replies = [
+      '- ```\n  x\n  ```\n\npara\n\n```\ncode\n\nmore\n```\n\nend',
+      '1. Run:\n   ```py\n   x = 1\n\ny = 2\n   ```\n\npara\n\nend',
+      'see [a]\n\nmore\n\n- [a]: https://example.com',
+      'see [a]\n\nmore\n\n> [a]: https://example.com',
+      '``` a`b\n\npara\n\n```\ncode\n\nmore\n```\n\nend',
+    ];
+    for (const reply of replies) {
+      for (let length = 1; length <= reply.length; length++) {
+        const text = reply.slice(0, length);
+        const cut = liveCut(text);
+        if (cut) expect(renderMarkdown(text.slice(0, cut)) + renderMarkdown(text.slice(cut)), text).toBe(renderMarkdown(text));
+      }
+    }
+    expect(liveCut(replies[2])).toBeNull();
+    expect(liveCut(replies[3])).toBeNull();
+  });
+
   it('never cuts inside an open fence', () => {
     expect(liveCut('a\n\n```\nx\n\ny\n\nz')).toBe(3);
   });

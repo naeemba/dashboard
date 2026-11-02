@@ -5,18 +5,23 @@
 // same HTML as drawn whole.
 //
 // Null means do not cut this reply at all and draw it whole every frame, as before: a link definition
-// (`[name]: url`) applies to the whole text, so a link above it would show unlinked; a comment or a
-// `<pre>`, `<script>`, `<style>` or `<textarea>` block runs on past a blank line.
+// (`[name]: url`), even in a list item or a quote, applies to the whole text, so a link above it would
+// show unlinked; a comment or a `<pre>`, `<script>`, `<style>` or `<textarea>` block runs on past a
+// blank line. A fence opened in a list item or a quote, or a fenced line less indented than its
+// opener, is one this scanner cannot follow: the container may close it where a top-level fence runs on.
 //
 // `from` is an earlier cut, or 0, so each frame reads only the text past the part already drawn.
 
-const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-const WHOLE = /^ {0,3}(\[[^\]]+\]:|<(!|\?|(script|pre|style|textarea)(\s|>|$)))/i;
+// A backtick fence's info string cannot hold a backtick.
+const FENCE = /^ {0,3}(`{3,}(?=[^`]*$)|~{3,})/;
+const WHOLE = /^ {0,3}((\s*([-*+]|\d+[.)])\s+|\s*>\s?)*\[[^\]]+\]:|<(!|\?|(script|pre|style|textarea)(\s|>|$)))/i;
+const CONTAINED_FENCE = /^(\s*([-*+]|\d+[.)])\s+|\s*>\s?)+(`{3,}|~{3,})/;
 // A digit carries on even alone: half arrived, it may yet be `2.`.
 const CARRIES_ON = /^(\s|>|\d|[-*+](\s|$))/;
 
 export function liveCut(text: string, from = 0): number | null {
   let fence = '';
+  let fenceIndent = 0;
   let afterBlank = false;
   let cut = from;
   for (let start = from; start < text.length;) {
@@ -24,13 +29,18 @@ export function liveCut(text: string, from = 0): number | null {
     const end = newline === -1 ? text.length : newline;
     const line = text.slice(start, end);
     const marker = FENCE.exec(line)?.[1];
+    const indent = line.length - line.trimStart().length;
     if (fence) {
+      if (line.trim() !== '' && indent < fenceIndent) return null;
       if (line.trim() === marker && marker[0] === fence[0] && marker.length >= fence.length) fence = '';
     } else {
-      if (WHOLE.test(line)) return null;
+      if (WHOLE.test(line) || CONTAINED_FENCE.test(line)) return null;
       const blank = line.trim() === '';
       if (afterBlank && !blank && !CARRIES_ON.test(line)) cut = start;
-      if (marker) fence = marker;
+      if (marker) {
+        fence = marker;
+        fenceIndent = indent;
+      }
       afterBlank = blank;
     }
     start = end + 1;

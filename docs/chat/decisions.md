@@ -171,7 +171,6 @@ leftwards; the workers count on the left would grow rightwards from the same cod
 cover each other's anchor. The workers popup is still the centred search sheet; `anchored-popup.ts`
 takes rows with a choice, so moving it over is a change of caller, not of the popup.
 
-
 ## chat-decision-11: A streaming reply is cut at a paragraph break, and drawn whole when it cannot be
 
 The streaming block draws the text before its last cut once, as it settles, and redraws only what
@@ -181,10 +180,12 @@ item, not a quote. Markdown drawn in two pieces there is the same HTML as drawn 
 test checks for every prefix of a reply holding a table, fences, a loose list and a link across a
 line break.
 
-A reply holding a link definition (`[name]: url`), an HTML comment, or a `<pre>`, `<script>`,
-`<style>` or `<textarea>` line is drawn whole every frame, as before: a definition applies to links
-anywhere in the text, and those HTML blocks run on past a blank line. Other HTML lines end at one, so
-they still cut. Telling the refused cases apart from a safe cut costs more code than they are worth;
+A reply holding a link definition (`[name]: url`, also in a list item or a quote), an HTML comment,
+or a `<pre>`, `<script>`, `<style>` or `<textarea>` line is drawn whole every frame, as before: a
+definition applies to links anywhere in the text, and those HTML blocks run on past a blank line.
+Other HTML lines end at one, so they still cut. So is a reply with a fence opened in a list item or a
+quote, or a fenced line less indented than its opener: the scanner follows top-level fences only, and
+the container can end a fence where it would run on. Telling the refused cases apart from a safe cut costs more code than they are worth;
 Claude rarely writes either. The finished reply is an entry and is always drawn whole.
 
 What is still redrawn every frame: an open code fence, highlighted whole each frame until it closes,
