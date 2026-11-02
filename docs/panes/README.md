@@ -18,6 +18,8 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Pane host: `pane-host-protocol.ts`, `pane-host-server.ts`,
   `pane-host-entry.ts`, `pane-host-client.ts`, `pane-shell.ts`, `pane-shells.ts`,
   `adopted-pane.ts`, and `vite.pane-host.config.ts` at the root
+- Output no faster than it draws: `output-pauses.ts`, and `write-flow.ts` in
+  the renderer
 - Links in output: `links.ts`, `wrapped-links.ts`, `print-widths.ts`
 
 ## Scenarios
@@ -25,6 +27,8 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given a pane you are not looking at, when it rings its bell, then the pane is marked and a notification click takes you to it.
 - Given a link wrapped onto the next row, when you click it, then the whole link opens in the browser.
 - Given a worker pane is focused, when you zoom it, then it fills the page, and zooming again puts the layout back.
+- Given a pane printing flat out, when you press Ctrl+C, then it stops printing within a fraction of a second, with or without the pane host.
+- Given the window reloads or goes to show another host while a pane is paused for drawing, when a second passes, then the pane's shell is read again.
 - Given a pane on Linux, when you press Ctrl+Shift+C and Ctrl+Shift+V, then the selection is copied and the clipboard pasted.
 - Given a pane link on the Claude screen, when you click it, then the page holding the pane comes forward with the pane focused, the way a notification click lands (see [chat](../chat/README.md)).
 - Given a shell that has finished what it ran, when anything asks whether the pane is busy, then one answer says it is free.

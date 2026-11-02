@@ -5,6 +5,39 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-02: a flooding pane reads no faster than it draws (finding 7)
+
+Same machine and compositor as the first profile, on top of the pane host
+(panes-decision-1). `measure.mjs flood $D <shown|hidden> <host|no-host>`, one
+run each; "before" is this branch without the change, built the same day.
+
+| | before | after |
+|---|---|---|
+| Main CPU, pane host | 106% shown, 115% hidden | 48%, 45% |
+| Main CPU, no pane host | 102%, 112% | 40%, 51% |
+| Pane host CPU | 91%, 105% | 68%, 69% |
+| Renderer CPU | 114–131% | 112–119% |
+| Renderer heap while flooding | 96–186 MB | 20–40 MB |
+| Kept printing after Ctrl+C, pane host | 3.3 s shown, 4.4 s hidden | 0.11 s, 0.12 s |
+| Kept printing after Ctrl+C, no pane host | 2.7 s, 2.6 s | 0.11 s, 0.11 s |
+
+Main's profile, no pane host, hidden: busy 851 ms of 5.1 s, most of it the
+IPC `send` to the renderer (500 ms). The headless copy is gone from it; before,
+main was busy 3.9 s of 5 s with 2.3 s in the copy.
+
+- What changed: main's headless copy of a pane (`pane-screen-copy.ts`) is fed
+  only while `host.port` is set or the window shows another host
+  (`screenCopyWhile`). The renderer counts what each terminal has queued and,
+  past 100,000 characters, asks main to stop reading that pane's pty until it
+  is under 10,000 (`write-flow.ts`, `output-pauses.ts`). The pane host pauses
+  its pty the same way. A pause lapses after a second unless asked again, so a
+  window that reloads or leaves cannot leave a shell blocked.
+- With the pane host, the host process now does the copying main used to: it
+  still keeps its own copy of every shell so a restart can redraw it, at 68%
+  of a core during a flood. The renderer, drawing, is what limits the rate.
+- Not measured: a remote screen joined, where main keeps the copy as before and
+  a remote screen's pauses are ignored.
+
 ## 2026-11-02: usage sweep on its own thread
 
 Same machine, logs and tooling as the first profile below. Fixes its finding 1:
