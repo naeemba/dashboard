@@ -280,15 +280,6 @@
           ]
         },
         {
-          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
-          "title": "Show what fills the context window from the Claude screen's context meter",
-          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T23:46:08.026Z",
-          "updatedAt": "2026-11-02T00:40:52.580Z"
-        },
-        {
           "id": "69800344-8134-4450-bafc-e045518a0cd5",
           "title": "Make Ctrl+C stop a flooding pane at once and spare main's core",
           "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -2543,6 +2534,17 @@
               "body": "Shipped in #181: meta CSP in index.html (default-src 'self', script-src 'self', inline styles, data: images and fonts, connect-src data: and frame-src blob: for the PDF viewer, object-src/base-uri/form-action 'none'), docs/app/README.md section, index.html.test.ts guard. Checked in a demo instance: terminals, chat image, PDF tile, doc viewer image, market cards, zero violations. Not checked: npm start dev server."
             }
           ]
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-02T01:09:02.367Z",
+          "branch": "work-board-card-5b208bbb-e210-4ceb-bfce-216",
+          "pullRequest": 180
         }
       ]
     }

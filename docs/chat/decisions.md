@@ -151,3 +151,23 @@ The stash is a list Up walks rather than a slot a second press restores: Up from
 the newest stashed draft first, then the older ones, then the prompts sent. The last 10 are kept,
 for as long as the app runs, across new conversations; a draft leaves the stash when it is sent.
 Images attached to the box are not stashed, and stay attached.
+
+## chat-decision-10: The context popup reads the measure the meter already has, and sits above the meter
+
+The breakdown comes from the same `getContextUsage({ detail: 'summary' })` answer the status line's
+meter reads after each turn, so opening the popup asks main for nothing: it shows the last measure and
+says when it was taken. `/context` is the screen's own command and never reaches the session, which
+would answer it as text in the conversation.
+
+A row is classified on the SDK's `kind` and coloured by its `id`, never by its English name. A
+`deferred` row, and an MCP tool with `isLoaded: false`, is a tool schema that is not in the window, so
+it is left out rather than shown apart: the popup answers what fills the window. The SDK's `color` is
+a key of Claude Code's terminal theme, not a colour a page can paint, so each id takes one of the
+app's theme colours instead.
+
+The popup is drawn above what opened it, lined up with whichever of its edges faces the middle of the
+window (`popup-placement.ts`). The context meter sits on the right of the foot, so its popup grows
+leftwards; the workers count on the left would grow rightwards from the same code, so the two never
+cover each other's anchor. The workers popup is still the centred search sheet; `anchored-popup.ts`
+takes rows with a choice, so moving it over is a change of caller, not of the popup.
+

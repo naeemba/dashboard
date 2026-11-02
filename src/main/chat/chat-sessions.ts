@@ -541,7 +541,7 @@ export function registerChatSessions(
       session.query.supportedModels(),
       session.query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }).catch(() => null),
     ]);
-    return measureOf(context, models, usage);
+    return measureOf(context, models, usage, Date.now());
   });
 
   // The conversation this page would resume, read back from its transcript, as far as a /rewind left it.
