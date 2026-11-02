@@ -26,6 +26,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
 - Given an agent ran `board move` after the board last read the file, when you rename another card before the reload arrives, then the file keeps both: the agent's move and your rename.
+- Given an agent ran `board move`, when you rename a card twice and the board's re-read lands between the two writes, then the board reads again and shows the second rename.
 - Given a card with subtasks, when you blank its title, then it is refused and the status bar says to delete it with `d`.
 - Given you deleted a card, when you undo, then it comes back where it was.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.

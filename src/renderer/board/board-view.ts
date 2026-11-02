@@ -137,7 +137,7 @@ const COMMITS: Record<EditableField, (state: BoardState, value: string) => Board
 export const SELECTED_CARD = '.board-card.selected';
 
 // What one read of the file came to, held until it is known whether that read is still the newest.
-type ReadOutcome = { fresh: boolean; next: BoardState; message: string; readWorked: boolean };
+type ReadOutcome = { fresh: boolean; next: BoardState; message: string; readWorked: boolean; mark: number };
 
 export function createBoardView(options: BoardOptions): BoardView {
   const element = document.createElement('div');
@@ -215,6 +215,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     let message = '';
     let next = state;
     let readWorked = false;
+    const mark = saves.mark();
     const boardRead = options.bridge.readBoard(options.projectPath);
     try {
       const read = await boardRead;
@@ -225,12 +226,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     } catch (error: unknown) {
       message = `Board not opened: ${String(error)}`;
     }
-    return { fresh, next, message, readWorked };
+    return { fresh, next, message, readWorked, mark };
   }
 
   // Runs only for the newest read; one another read overtook says nothing, since the newer one is the
   // board you asked for.
-  function landRead({ fresh, next, message, readWorked }: ReadOutcome): boolean {
+  function landRead({ fresh, next, message, readWorked, mark }: ReadOutcome): boolean {
     // An arrival closes any open box: you asked to come here, and this is a different board. A file
     // that changed under you does not close it — what you have half typed is yours, and reloadBoard
     // has already followed your card to wherever the write put it. The redraw throws the box away and
@@ -255,6 +256,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     // The open card dialog reads this board on every key, so it has to be drawn from it too. It closes
     // itself if the write took its card away, and carries a half-typed subtask across if it did not.
     detail?.redraw();
+    // A save went out after this read was taken, so the file is newer than the board just drawn.
+    if (readWorked && saves.sentSince(mark)) void readAgain(false);
     return readWorked;
   }
 

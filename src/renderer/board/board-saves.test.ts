@@ -126,4 +126,20 @@ describe('createBoardSaves', () => {
     await tick();
     expect(calls[0].base).toBe(second);
   });
+
+  // A read taken while a save waits behind another is older than the file once that save goes out.
+  it('says a save went out since a mark only once one was sent to main', async () => {
+    const { calls, write } = recording();
+    const saves = createBoardSaves(write, first);
+    const one = saves.save(second);
+    void saves.save(third);
+    await tick();
+    const mark = saves.mark();
+    expect(saves.sentSince(mark)).toBe(false);
+    calls[0].settle(null);
+    await one;
+    await tick();
+    expect(calls).toHaveLength(2);
+    expect(saves.sentSince(mark)).toBe(true);
+  });
 });
