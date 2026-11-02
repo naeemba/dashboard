@@ -278,15 +278,6 @@
               "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
             }
           ]
-        },
-        {
-          "id": "ef9cab97-05b2-426a-9212-54f6e7fd014a",
-          "title": "Show whether the Claude prompt cache is warm, and for how long",
-          "notes": "The user wants a cache status like the one in their screenshot: a 'WARM 42m left' pill (and 'COLD' once it has expired) beside the usage meters.\n\nWhat it means: Anthropic's prompt cache lives for a fixed time after its last use, 5 minutes or 1 hour depending on how it was written; each request that reads it starts the clock again. A warm cache makes the next prompt cheap and fast; a cold one re-sends the whole context at full price.\n\nHow to know it, without new calls: every assistant message's usage carries cache_creation.ephemeral_5m_input_tokens and ephemeral_1h_input_tokens, and cache_read_input_tokens. The tier is the one the session last wrote (1h if ephemeral_1h_input_tokens > 0, else 5m); the cache is warm until the time of the last request that wrote or read it plus that tier. The SDK screen gets usage on its result and assistant messages; for CLI panes, the session's transcript lines carry the same fields (the usage sweep already reads them).\n\nWhere:\n- The Claude screen's status line, beside the context meter: 'warm 42m' in green, turning yellow under 5 minutes, 'cold' in plain once expired. It counts down live (once a minute is enough; once a second only in the last minute), with no timer running while the page is hidden.\n- Each worker pane's row in the workers popup (Alt+W) shows its own warm or cold.\n- Keep it to these two places; no new manager strip unless the user asks.\n\nThe rule (tier from usage, expiry from last use, the tone thresholds) is a small module with a test (workflow-rule-2). Help blurb stays under BLURB_WORD_LIMIT; detail in docs/chat README. No version bump (workflow-rule-3).",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-02T08:38:59.158Z",
-          "updatedAt": "2026-11-02T08:38:59.158Z"
         }
       ]
     },
@@ -376,6 +367,17 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "ef9cab97-05b2-426a-9212-54f6e7fd014a",
+          "title": "Show whether the Claude prompt cache is warm, and for how long",
+          "notes": "The user wants a cache status like the one in their screenshot: a 'WARM 42m left' pill (and 'COLD' once it has expired) beside the usage meters.\n\nWhat it means: Anthropic's prompt cache lives for a fixed time after its last use, 5 minutes or 1 hour depending on how it was written; each request that reads it starts the clock again. A warm cache makes the next prompt cheap and fast; a cold one re-sends the whole context at full price.\n\nHow to know it, without new calls: every assistant message's usage carries cache_creation.ephemeral_5m_input_tokens and ephemeral_1h_input_tokens, and cache_read_input_tokens. The tier is the one the session last wrote (1h if ephemeral_1h_input_tokens > 0, else 5m); the cache is warm until the time of the last request that wrote or read it plus that tier. The SDK screen gets usage on its result and assistant messages; for CLI panes, the session's transcript lines carry the same fields (the usage sweep already reads them).\n\nWhere:\n- The Claude screen's status line, beside the context meter: 'warm 42m' in green, turning yellow under 5 minutes, 'cold' in plain once expired. It counts down live (once a minute is enough; once a second only in the last minute), with no timer running while the page is hidden.\n- Each worker pane's row in the workers popup (Alt+W) shows its own warm or cold.\n- Keep it to these two places; no new manager strip unless the user asks.\n\nThe rule (tier from usage, expiry from last use, the tone thresholds) is a small module with a test (workflow-rule-2). Help blurb stays under BLURB_WORD_LIMIT; detail in docs/chat README. No version bump (workflow-rule-3).",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T08:38:59.158Z",
+          "updatedAt": "2026-11-02T08:54:45.606Z",
+          "branch": "work-board-card-ef9cab97-05b2-426a-9212-54f",
+          "pullRequest": 189
         }
       ]
     },
