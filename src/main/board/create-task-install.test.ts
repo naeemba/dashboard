@@ -21,7 +21,8 @@ describe('installCreateTask', () => {
     expect(readFileSync(script, 'utf8')).toBe('program');
     const skill = readFileSync(join(home, '.claude', 'skills', 'create-task', 'SKILL.md'), 'utf8');
     expect(skill).toMatch(/^---\nname: create-task\n/);
-    expect(skill).toContain(`node "${script}" --title`);
+    expect(skill).toContain(`node '${script}' --title '<title>'`);
+    expect(readFileSync(join(home, '.claude', 'skills', 'create-task', 'package.json'), 'utf8')).toBe('{"type":"commonjs"}\n');
   });
 
   it('leaves a file whose bytes already match untouched', () => {

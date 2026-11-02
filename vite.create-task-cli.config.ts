@@ -1,8 +1,8 @@
 import { defineConfig, mergeConfig } from 'vite';
 import mainConfig from './vite.main.config';
 
-// The create-task program. A .js name, like the board command's, so the copy the app installs under
-// ~/.claude runs under plain `node` as CommonJS wherever it sits.
+// The create-task program. A .js name, like the board command's; the copy the app installs under
+// ~/.claude runs under plain `node` as CommonJS because a package.json saying so is installed beside it.
 export default mergeConfig(
   mainConfig,
   defineConfig({

@@ -20,7 +20,7 @@ export type CreateTaskOptions = {
   dryRun: boolean;
 };
 
-export const DEFAULT_REMOTE = 'origin';
+const DEFAULT_REMOTE = 'origin';
 const DEFAULT_PRIORITY: Priority = 'medium';
 
 export function parseCreateTaskArguments(argv: readonly string[]): { options: CreateTaskOptions } | { message: string } {
@@ -84,4 +84,11 @@ export function noBoardMessage(remote: string, branch: string): string {
 
 export function commitMessage(title: string): string {
   return `board: add "${title}"`;
+}
+
+// Whether a refused push lost a race to another writer, which a fresh fetch fixes: git's own words
+// for the remote moving under it, before the push (fetch first, non-fast-forward) or during it
+// (incorrect old value provided). A protected branch, a declined hook or a missing right is not.
+export function lostRace(gitMessage: string): boolean {
+  return /\((fetch first|non-fast-forward|incorrect old value provided)\)/.test(gitMessage);
 }

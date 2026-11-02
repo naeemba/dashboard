@@ -906,9 +906,12 @@ app.on('ready', () => {
   logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
   // After the window, since nothing on screen needs it: /create-task and its program under ~/.claude,
-  // refreshed from this build (create-task-install.ts).
-  const notInstalled = installCreateTask(app.getPath('home'), path.join(path.dirname(boardCommand), 'create-task-cli-entry.js'));
-  if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
+  // refreshed from this build (create-task-install.ts). The installed app only: every Claude session
+  // on the machine runs that copy, and a dev run from a half-done branch would hand them its program.
+  if (app.isPackaged) {
+    const notInstalled = installCreateTask(app.getPath('home'), path.join(path.dirname(boardCommand), 'create-task-cli-entry.js'));
+    if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
+  }
 });
 app.on('will-quit', () => {
   remoteHost?.close();

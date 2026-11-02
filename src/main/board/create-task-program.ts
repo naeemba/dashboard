@@ -6,7 +6,7 @@ import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
 import { runBoardCommand } from './board-cli';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
-import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
+import { boardAddArguments, commitMessage, lostRace, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
 
 // The whole of the create-task program outside create-task.ts: git, the throwaway worktree, the
 // file and the terminal. The card goes onto the remote's default branch through a worktree of it
@@ -36,6 +36,11 @@ function git(directory: string, commandArguments: readonly string[]): string {
   }
 }
 
+// The project's hooks are for its code, not for one card in a temp folder: a pre-push `npm test` there
+// has no node_modules and fails, a post-checkout `npm install` costs a full install per card. Passed
+// to the three calls that write; a local push does not carry it to the remote's own hooks.
+const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];
+
 function gitOrNull(directory: string, commandArguments: readonly string[]): string | null {
   try {
     return git(directory, commandArguments);
@@ -46,8 +51,8 @@ function gitOrNull(directory: string, commandArguments: readonly string[]): stri
 
 // --seed with no board on the default branch: this checkout's copy when it has one, otherwise the
 // empty board readBoard answers with. Returns the note the printed line ends with.
-function seedBoard(top: string, boardFile: string, branch: string): string {
-  const local = join(top, BOARD_FILE_PATH);
+function seedBoard(repositoryRoot: string, boardFile: string, branch: string): string {
+  const local = join(repositoryRoot, BOARD_FILE_PATH);
   if (!existsSync(local)) return ` — ${BOARD_FILE_PATH} created on ${branch}`;
   mkdirSync(dirname(boardFile), { recursive: true });
   copyFileSync(local, boardFile);
@@ -59,15 +64,15 @@ function seedBoard(top: string, boardFile: string, branch: string): string {
 //
 // ponytail: a full checkout of the default branch per card. Fine for this repo's size; a sparse
 // checkout of .dashboard/ is the next rung if a big repo makes it slow.
-function fileOnce(top: string, branch: string, options: CreateTaskOptions): Outcome {
+function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOptions): Outcome {
   const worktree = mkdtempSync(join(tmpdir(), 'create-task-'));
   try {
-    git(top, ['worktree', 'add', '--quiet', '--detach', worktree, `${options.remote}/${branch}`]);
+    git(repositoryRoot, [...NO_HOOKS, 'worktree', 'add', '--quiet', '--detach', worktree, `${options.remote}/${branch}`]);
     const boardFile = join(worktree, BOARD_FILE_PATH);
     let seedNote = '';
     if (!existsSync(boardFile)) {
       if (!options.seed) return { refusal: noBoardMessage(options.remote, branch) };
-      seedNote = seedBoard(top, boardFile, branch);
+      seedNote = seedBoard(repositoryRoot, boardFile, branch);
     }
     const read = readBoard(worktree);
     // readBoard has moved a damaged file aside and answered with an empty board. Writing that back
@@ -81,16 +86,21 @@ function fileOnce(top: string, branch: string, options: CreateTaskOptions): Outc
     if (options.dryRun) return { line: `${text}\n(dry run) would add ${result.output} on ${branch}${seedNote}` };
 
     git(worktree, ['add', BOARD_FILE_PATH]);
-    // --no-verify: the project's commit hooks are for its code, and this commit is one card.
-    git(worktree, ['commit', '--quiet', '--no-verify', '-m', commitMessage(options.title)]);
-    if (gitOrNull(worktree, ['push', '--quiet', options.remote, `HEAD:refs/heads/${branch}`]) === null) return 'retry';
+    git(worktree, [...NO_HOOKS, 'commit', '--quiet', '-m', commitMessage(options.title)]);
+    try {
+      git(worktree, [...NO_HOOKS, 'push', '--quiet', options.remote, `HEAD:refs/heads/${branch}`]);
+    } catch (error: unknown) {
+      // Only a lost race is worth a fresh fetch; anything else is git's own sentence.
+      if (error instanceof ExpectedFailure && lostRace(error.message)) return 'retry';
+      throw error;
+    }
     const commit = git(worktree, ['rev-parse', '--short=8', 'HEAD']);
     return { line: `${result.output}  on ${branch} (${commit})${seedNote}` };
   } finally {
     // remove takes the folder and git's record of it; when it fails (the add never ran), both go by hand.
-    if (gitOrNull(top, ['worktree', 'remove', '--force', worktree]) === null) {
+    if (gitOrNull(repositoryRoot, ['worktree', 'remove', '--force', worktree]) === null) {
       rmSync(worktree, { recursive: true, force: true });
-      gitOrNull(top, ['worktree', 'prune']);
+      gitOrNull(repositoryRoot, ['worktree', 'prune']);
     }
   }
 }
@@ -105,19 +115,19 @@ function run(commandArguments: readonly string[], directory: string): number {
   if ('message' in parsed) return refuse(parsed.message);
   const { options } = parsed;
   const { remote } = options;
-  const top = git(directory, ['rev-parse', '--show-toplevel']);
+  const repositoryRoot = git(directory, ['rev-parse', '--show-toplevel']);
   const branch = defaultBranch(
     remote,
-    gitOrNull(top, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`]),
-    (name) => gitOrNull(top, ['rev-parse', '--verify', '--quiet', `refs/remotes/${remote}/${name}`]) !== null,
+    gitOrNull(repositoryRoot, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`]),
+    (name) => gitOrNull(repositoryRoot, ['rev-parse', '--verify', '--quiet', `refs/remotes/${remote}/${name}`]) !== null,
   );
   if (branch === null) return refuse(noDefaultBranchMessage(remote));
 
   // Two tries: somebody else pushing to the default branch between the fetch and the push is the
   // one failure worth retrying, and fetching again fixes it.
   for (let tries = 0; tries < 2; tries += 1) {
-    git(top, ['fetch', '--quiet', remote, branch]);
-    const outcome = fileOnce(top, branch, options);
+    git(repositoryRoot, ['fetch', '--quiet', remote, branch]);
+    const outcome = fileOnce(repositoryRoot, branch, options);
     if (outcome === 'retry') continue;
     if ('refusal' in outcome) return refuse(outcome.refusal);
     process.stdout.write(`${outcome.line}\n`);

@@ -37,15 +37,17 @@ Capture this as a card on the project board: $ARGUMENTS
 
 Run exactly one command:
 
-    node "${script}" --title "<title>" --notes "<notes>" --priority <priority>
+    node '${script}' --title '<title>' --notes '<notes>' --priority <priority>
 
+- Single-quote every value, so a backtick or \`$\` in it is text, not a command.
+  Write a \`'\` inside one as \`'\\''\`.
 - \`--title\` is one line, plain, saying what needs doing. You write it — do not
   paste my words in verbatim if they do not read as a title.
-- \`--notes\` is the detail I gave, tidied up. If I gave none, pass \`--notes ""\`.
+- \`--notes\` is the detail I gave, tidied up. If I gave none, pass \`--notes ''\`.
   Do not invent detail.
 - \`--priority\` is \`urgent\`, \`high\`, \`medium\` or \`low\`. Judge it from how I said
   it; \`medium\` when I gave no signal. It colours the card and sorts the column.
-- Add \`--column "<name>"\` only if I named a column. The default is Backlog.
+- Add \`--column '<name>'\` only if I named a column. The default is Backlog.
 - Add \`--remote <name>\` only on a repo whose board lives on a remote other than
   \`origin\` (a GitLab remote beside a GitHub \`origin\`).
 
@@ -87,6 +89,9 @@ export function installCreateTask(home: string, builtScript: string): string | n
     const script = createTaskScript(home);
     writeIfChanged(script, readFileSync(builtScript, 'utf8'));
     writeIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(script));
+    // Node reads a .js as ESM when the nearest package.json above it says "type": "module", and one
+    // in ~/.claude or ~ would make the CommonJS program fail with `require is not defined`.
+    writeIfChanged(path.join(createTaskFolder(home), 'package.json'), '{"type":"commonjs"}\n');
     return null;
   } catch (error: unknown) {
     return `create-task not installed: ${failureLine(error)}`;

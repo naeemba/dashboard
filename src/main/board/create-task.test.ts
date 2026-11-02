@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boardAddArguments, parseCreateTaskArguments } from './create-task';
+import { boardAddArguments, lostRace, parseCreateTaskArguments } from './create-task';
 
 function options(argv: string[]) {
   const parsed = parseCreateTaskArguments(argv);
@@ -40,6 +40,18 @@ describe('boardAddArguments', () => {
     expect(boardAddArguments(options(['--title', 't', '--notes', '', '--priority', 'low']))).toEqual(
       ['add', 't', '--notes', '', '--priority', 'low'],
     );
-    expect(boardAddArguments(options(['--title', 't', '--column', 'Todo']))).toContain('Todo');
+    expect(boardAddArguments(options(['--title', 't', '--column', 'Todo']))).toEqual(
+      ['add', 't', '--notes', '', '--priority', 'medium', '--column', 'Todo'],
+    );
+  });
+});
+
+describe('lostRace', () => {
+  it('retries only the rejections a fresh fetch fixes', () => {
+    expect(lostRace(' ! [rejected]        HEAD -> main (fetch first)')).toBe(true);
+    expect(lostRace(' ! [rejected]        HEAD -> main (non-fast-forward)')).toBe(true);
+    expect(lostRace(' ! [remote rejected] HEAD -> main (incorrect old value provided)')).toBe(true);
+    expect(lostRace(' ! [remote rejected] HEAD -> main (pre-receive hook declined)')).toBe(false);
+    expect(lostRace('remote: error: GH006: Protected branch update failed for refs/heads/main.')).toBe(false);
   });
 });
