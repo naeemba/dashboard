@@ -97,20 +97,6 @@
           "parent": null
         },
         {
-          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
-          "title": "Add a Content-Security-Policy to the window",
-          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T20:46:57.579Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.579Z",
-              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
-            }
-          ]
-        },
-        {
           "id": "a6b5043b-d275-46cc-95df-139b8dfbed89",
           "title": "Stop chasing Claude Code parity on the Claude screen",
           "notes": "36 PRs and 4,791 lines in four days re-implement TUI commands; two SDK calls are undeclared. Each new command must name what a CLI worker pane cannot do. Opinion. (docs/review/2026-11-01.md C1)",
@@ -339,6 +325,20 @@
           "parent": null,
           "createdAt": "2026-11-01T23:46:08.026Z",
           "updatedAt": "2026-11-02T00:40:52.580Z"
+        },
+        {
+          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
+          "title": "Add a Content-Security-Policy to the window",
+          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:41:46.404Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.579Z",
+              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
+            }
+          ]
         }
       ]
     },
