@@ -544,3 +544,57 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* A popup opened from something on screen (anchored-popup.ts): the sheet stays, so a click beside the
+   popup closes it, but clear, and the box sits where the code placed it, just above what opened it. */
+.overlay.anchored-sheet {
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.anchored-dialog {
+  position: fixed;
+  width: min(440px, calc(100vw - 12px));
+}
+
+.anchored-heading,
+.anchored-section {
+  margin: 0;
+  padding: 8px 14px 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.anchored-heading {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.anchored-body {
+  overflow-y: auto;
+  padding-bottom: 6px;
+}
+
+.anchored-list {
+  margin: 0;
+  padding: 2px 6px;
+  list-style: none;
+}
+
+.anchored-list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.anchored-list li:hover {
+  background: var(--hover);
+}
+
+.anchored-list li.highlighted {
+  background: var(--tint);
+}
