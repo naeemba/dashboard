@@ -1,5 +1,6 @@
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { basename, join, resolve } from 'node:path';
 import type { Project } from '../../shared/app/bridge';
 
 function isDirectory(path: string): boolean {
@@ -11,6 +12,17 @@ function isDirectory(path: string): boolean {
 export function projectFromPath(path: string, directoryExists: (path: string) => boolean = isDirectory): Project {
   const directory = resolve(path);
   return { name: basename(directory), path: directory, missing: !directoryExists(directory) };
+}
+
+// A path the picker sends: a recent, a folder from the dialog, or one typed. `~` is the home of this
+// machine, which is the host even for a remote screen. One that is not a folder is refused rather than
+// opened as a dead page, since a typo would otherwise leave a tab nothing can run in.
+export function pickedFolder(
+  path: string, home: string = homedir(), directoryExists: (path: string) => boolean = isDirectory,
+): { path: string } | { refused: string } {
+  const expanded = path === '~' || path.startsWith('~/') ? join(home, path.slice(1)) : path;
+  const directory = resolve(expanded);
+  return directoryExists(directory) ? { path: directory } : { refused: `No folder at ${directory}` };
 }
 
 // The projects among these paths whose folder is still there, so neither the picker nor `project init`

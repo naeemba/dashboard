@@ -60,7 +60,16 @@ export function pickerRows(projects: Project[], query: string, state: PickerStat
   // Always present, so a search that matches nothing still leaves something to press Enter on.
   const hosts = hostRows(state);
   if (query === '' && hosts[0].choice.kind === 'reconnect') return [hosts[0], ...matched, NEW_PROJECT, ...hosts.slice(1)];
-  return [...matched, NEW_PROJECT, ...hosts];
+  return [...typedPathRows(query), ...matched, NEW_PROJECT, ...hosts];
+}
+
+// A query that is a path leads with a row that opens it, so a folder that is not a recent yet opens
+// from the keyboard, and from a remote screen, which has no folder dialog. Whether it is a folder only
+// main can say, on the machine the project opens on: it refuses one that is not.
+function typedPathRows(query: string): Row[] {
+  const typed = query.trim();
+  if (!/^(\/|~(\/|$))/.test(typed)) return [];
+  return [{ name: typed, detail: 'open this folder', choice: { kind: 'open', path: typed } }];
 }
 
 function glyphFor(row: Row): 'folderPlus' | 'folder' | 'plug' {

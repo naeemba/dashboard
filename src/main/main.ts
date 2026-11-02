@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
-import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
+import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
 import { realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
@@ -514,7 +514,8 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
 table.handle('recent-projects:read', () => existingProjects(readRecentPaths(recentsFile)));
-// A null path opens the folder dialog; a path from the picker skips it. A refusal is answered, not
+// A null path opens the folder dialog; a path from the picker skips it, and is refused unless it is a
+// folder (pickedFolder). A refusal is answered, not
 // thrown: a throw reaches the screen behind Electron's "Error invoking remote method" prefix.
 table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
   if (projectPath === null) {
@@ -524,7 +525,8 @@ table.handle('projects:open', async (screen, projectPath: string | null): Promis
     if (canceled) return null;
     projectPath = filePaths[0];
   }
-  return openProject(projectPath);
+  const folder = pickedFolder(projectPath);
+  return 'refused' in folder ? folder : openProject(folder.path);
 });
 // A project opened from its path, unless it is open already, and the slot it is in either way. The
 // picker's open, `pane claim --project` and `project open` all come here, and so should anything else

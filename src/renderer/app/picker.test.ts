@@ -64,3 +64,20 @@ describe('connect rows', () => {
     expect(rows.map((row) => row.choice)).toEqual([{ kind: 'open', path: null }, { kind: 'connect' }]);
   });
 });
+
+describe('typed path row', () => {
+  it('leads with a row opening a typed path', () => {
+    const rows = pickerRows([project('api', '/code/api')], ' /code/api ', none);
+    expect(rows[0]).toMatchObject({ name: '/code/api', choice: { kind: 'open', path: '/code/api' } });
+    expect(rows[1].choice).toEqual({ kind: 'open', path: '/code/api' });
+  });
+
+  it('takes a path from the home folder', () => {
+    expect(pickerRows([], '~/code/new', none)[0].choice).toEqual({ kind: 'open', path: '~/code/new' });
+    expect(pickerRows([], '~', none)[0].choice).toEqual({ kind: 'open', path: '~' });
+  });
+
+  it('offers no path row for a name', () => {
+    expect(pickerRows([], '~api', none).map((row) => row.choice)).toEqual([{ kind: 'open', path: null }, { kind: 'connect' }]);
+  });
+});
