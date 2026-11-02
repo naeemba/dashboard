@@ -14,3 +14,4 @@ One line per merged change: date, pull request, why.
 - 2026-09-16 #49 — A fifth column, Review, for a card with a pull request open (board-rule-2)
 - 2026-09-20 #57 — Search cards on the board
 - 2026-10-14 #73 — Backlog column, board filter and a sort button
+- 2026-11-02 #171 — An arrow key moves the highlight instead of rebuilding the board

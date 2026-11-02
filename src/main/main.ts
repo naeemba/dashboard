@@ -29,7 +29,7 @@ import { makeThrowawayWorktree } from './ship/branch-worktree';
 import { folderDialogRefusal, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
 import { peekBoard, writeBoard } from './board/board-store';
-import { readMarkets } from './markets/markets-fetch';
+import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
@@ -553,9 +553,9 @@ const tokenUsage = usageSweep({
 });
 tokenUsage.start();
 
-// The manager's four cards. The place is read from the settings main holds, so a change made on the
-// settings screen reaches the weather on the next read.
-table.handle('markets:read', () => readMarkets(settings.weatherPlace));
+// One of the manager's four cards. The place is read from the settings main holds, so a change made on
+// the settings screen reaches the weather on the next read.
+table.handle('markets:read', (_screen, market: unknown) => readMarket(market, settings.weatherPlace));
 
 // The renderer's first read. Everything after it arrives unasked on usage:change.
 table.handle('usage:read', () => tokenUsage.latest());

@@ -69,24 +69,10 @@
           "parent": null
         },
         {
-          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
-          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
           "title": "Write the board as operations against a fresh read in main",
           "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
           "priority": "high",
-          "parent": null
-        },
-        {
-          "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
-          "title": "Tell main when a worker finishes",
-          "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
-          "priority": "medium",
           "parent": null
         },
         {
@@ -102,20 +88,6 @@
           "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
           "priority": "medium",
           "parent": null
-        },
-        {
-          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
-          "title": "Take the single-instance lock and write session.json atomically",
-          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T20:46:57.620Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.620Z",
-              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
-            }
-          ]
         },
         {
           "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
@@ -232,6 +204,22 @@
           "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
           "priority": "high",
           "parent": null
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-01T23:46:08.026Z"
+        },
+        {
+          "id": "7c3bd72f-85ac-4faa-8d52-9c0b44f110a2",
+          "title": "Split board-view.ts along its drag-and-drop seam",
+          "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -313,29 +301,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
-          "title": "Refresh button on each market card of the manager page",
-          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T20:23:46.345Z",
-          "updatedAt": "2026-11-01T23:24:01.442Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:25:59.478Z",
-              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
-            }
-          ]
-        },
-        {
-          "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
-          "title": "Move the board selection without rebuilding the whole board",
-          "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:36:36.976Z"
-        },
-        {
           "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
           "title": "Stop the first usage sweep freezing main for a minute after launch",
           "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -360,6 +325,37 @@
           "priority": "high",
           "parent": null,
           "updatedAt": "2026-11-01T23:43:36.000Z"
+        },
+        {
+          "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
+          "title": "Tell main when a worker finishes",
+          "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:02:42.610Z"
+        },
+        {
+          "id": "a000bfec-9a6a-4329-b215-817d0d729609",
+          "title": "Link dispatched worker panes from the Claude screen, and a workers popup in its status line",
+          "notes": "When main dispatches with pane claim/run, the Claude screen shows only the tool's text ('started dashboard-terminal-2 in 2:1'). The user wants to jump to that pane, most of all from the manager tab, whose workers live on other projects' pages.\n\n1. Links: every pane the screen mentions is a link. pane claim and pane run print a stable reference the renderer recognises (for example a dashboard://pane/<page>:<pane> url next to the human line), and the Claude screen's markdown renderer turns it into a link in tool output and in Claude's replies. Click or Enter on it switches to that pane's project page and focuses the pane. A pane already released shows as closed and does nothing but say so. Keyboard first: links are reachable from the transcript the way other links are.\n2. Workers popup: a button on the status line, between 'ready' and the context meter, shows a count of this session's workers by state, e.g. '3 workers: 2 working, 1 done'. A click or a key (a row in src/shared/keys/actions.ts) opens a small popup anchored to it: one row per pane this session dispatched (on the manager, across every project), with project, pane, card or prompt's first words, and status from what pane list already knows (working, blocked waiting for permission, done, idle). Arrow keys walk the rows, Enter focuses the pane, Esc closes. Released panes drop off. The state updates live while it is open.\n3. Which session dispatched a pane is recorded by main when pane run comes in over the socket; reuse what pane list and the session index already hold rather than a new store.\n\nRelated: card 0ee53751 (tell main when a worker finishes) uses the same pane state; build on each other's code, not two copies. The status decision (which states, how counted) and the link parsing are small modules with tests (workflow-rule-2). Help and docs/chat, docs/panes updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:48:56.818Z",
+          "updatedAt": "2026-11-02T00:02:42.653Z"
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:09:21.437Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.620Z",
+              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
+            }
+          ]
         }
       ]
     },
@@ -2424,6 +2420,43 @@
           "updatedAt": "2026-11-01T23:41:30.922Z",
           "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
           "pullRequest": 168
+        },
+        {
+          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
+          "title": "Refresh button on each market card of the manager page",
+          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.\n\nShipped in #169: a refresh button in each of the four cards' corner (date card reads the weather), spins while reading, ignores presses in flight, resets that card's half-hour timer; Alt+R refreshes all four from any manager section; Tab reaches each button and Enter/Space presses it. markets:read now reads one card.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T20:23:46.345Z",
+          "updatedAt": "2026-11-01T23:47:53.375Z",
+          "branch": "work-board-card-e857e0b7-d6be-4921-8825-0fc",
+          "pullRequest": 169,
+          "comments": [
+            {
+              "at": "2026-11-01T20:25:59.478Z",
+              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
+            }
+          ]
+        },
+        {
+          "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
+          "title": "Move the board selection without rebuilding the whole board",
+          "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:00:45.805Z",
+          "branch": "work-board-card-7236dc86-df9e-44c4-a855-55e",
+          "pullRequest": 171
+        },
+        {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)\n\nShipped in #173: the remote host listens on 127.0.0.1 unless host.bind in settings.json names another interface (hand-written only, documented in docs/remote-host/README.md and remote-host-decision-3); tokens compared with timingSafeEqual after a byte-length check. Not done: wss:// for a network bind (needs a certificate design).",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:07:36.975Z",
+          "branch": "work-board-card-4187f056-2471-4ea9-be8d-361",
+          "pullRequest": 173
         }
       ]
     }

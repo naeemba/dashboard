@@ -365,9 +365,12 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'project opens. The new conversation key starts over; the old one stays in Claude Code\'s own '
     + 'history on disk. A very long conversation scrolls fine, but only the part near the screen is '
     + 'drawn properly at any moment, so fast scrolling shows plain text for a moment first.',
-  sections: 'The manager is five screens with one strip of names above them. These two keys walk it, '
+  sections: 'The manager is five screens with one strip of names above them. Two of these keys walk it, '
     + 'from any of the five. The arrows are deliberately not these keys: on the board they move '
-    + 'between cards, and in the notes they move the caret.',
+    + 'between cards, and in the notes they move the caret. Above the strip, four cards show the date '
+    + 'and weather, Bitcoin, Tether in toman and gold, each read again every half hour. The refresh key '
+    + 'reads all four now; the round arrow in a card\'s corner, clicked or reached with Tab and pressed with Enter, reads that card alone. '
+    + 'It spins while the read runs, and a card keeps its last good numbers on screen until the new ones land.',
   modes: 'A project is shown five ways and remembers which one you left it on, so jumping to it '
     + 'lands you back in the same view. The five are named along the foot of a project\'s page, the '
     + 'one you are on lit, and a click on a name goes there the way its key does. The manager has five '
@@ -437,7 +440,11 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'matches the default is taken out again. '
     + 'Delete it and everything is back to how it shipped. '
     + 'The Host rows make this Dashboard reachable from another: a port, read at the next launch, and '
-    + 'the token the other machine pastes once. Reset everything to defaults keeps that token and the '
+    + 'the token the other machine pastes once. The port opens on 127.0.0.1 only, so the other machine '
+    + 'reaches it through an SSH tunnel (ssh -L 7777:127.0.0.1:7777 host) and connects to 127.0.0.1:7777. '
+    + 'To open it to the network instead, write "bind" under "host" in settings.json — 0.0.0.0 for every '
+    + 'interface, or one address such as a Tailscale one; the wire is not encrypted, and the token is '
+    + 'the only thing between that network and your shells. Reset everything to defaults keeps that token and the '
     + 'host this window last connected to. The laptop must not sleep on lid close; that is the '
     + 'operating system\'s setting. '
     + 'The worktree list — its key is on this page — holds every card that has been shipped, its '
