@@ -44,12 +44,13 @@ function server() {
 }
 
 describe('lineReader', () => {
-  it('parses a message cut across two chunks once its line is whole', () => {
+  it('parses a message cut across three chunks once its line is whole', () => {
     const heard: unknown[] = [];
     const read = lineReader((message) => heard.push(message));
     read('{"a":1}\n{"b"');
     expect(heard).toEqual([{ a: 1 }]);
-    read(':2}\n');
+    read(':');
+    read('2}\n');
     expect(heard).toEqual([{ a: 1 }, { b: 2 }]);
   });
 });
@@ -130,17 +131,16 @@ describe('paneHost over a socket', () => {
     const lost: string[] = [];
     const client = paneHost({ socket: socketPath, launch: () => undefined, lost: (message) => lost.push(message) });
     await client.ready;
-    expect(client.survivors('/elsewhere')).toEqual([]);
-    const [survivor] = client.survivors('/project');
-    const shell = client.adopt(survivor.key);
-    expect(shell?.pid).toBe(100);
-    const heard = await new Promise<string>((resolve) => shell?.onData(resolve));
+    expect(client.adopt('/elsewhere')).toEqual([]);
+    const [{ shell }] = client.adopt('/project');
+    expect(shell.pid).toBe(100);
+    const heard = await new Promise<string>((resolve) => shell.onData(resolve));
     expect(heard).toContain('before the restart');
-    expect(client.keeps(shell as PaneShell)).toBe(true);
-    shell?.write('ls\r');
+    expect(shell.kept).toBe(true);
+    shell.write('ls\r');
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(spawned[0].written).toEqual(['ls\r']);
-    expect(client.survivors('/project')).toEqual([]);
+    expect(client.adopt('/project')).toEqual([]);
     listener.close();
     expect(lost).toEqual([]);
   });
@@ -154,7 +154,7 @@ describe('paneHost over a socket', () => {
     expect(launched).toBe(1);
     expect(lost).toHaveLength(1);
     const shell = client.spawn({ ...request(paneKey('/project', 1)), file: '/bin/sh', args: ['-c', 'exit 3'], cwd: folder, env: { PATH: process.env.PATH ?? '' } });
-    expect(client.keeps(shell)).toBe(false);
+    expect(shell.kept).toBeUndefined();
     const code = await new Promise<number>((resolve) => shell.onExit(({ exitCode }) => resolve(exitCode)));
     expect(code).toBe(3);
   }, 10_000);

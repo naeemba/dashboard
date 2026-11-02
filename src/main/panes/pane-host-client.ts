@@ -1,8 +1,8 @@
 import { spawn as spawnProcess } from 'node:child_process';
 import net from 'node:net';
-import * as pty from 'node-pty';
 import { line, lineReader, paneOfKey, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
-import type { PaneShell } from './pane-shell';
+import { spawnShell, type PaneShell } from './pane-shell';
+import { posixQuoted, taskArguments } from '../../shared/panes/shell';
 
 // The app's half of the pane host: the shells main asks for, run in the host when there is one and in
 // this process when there is not. panes-decision-1 says why, and what costs what.
@@ -11,11 +11,8 @@ export type PaneHost = {
   // project opened before this would start fresh shells beside the ones it already has.
   ready: Promise<void>;
   spawn(request: SpawnRequest): PaneShell;
-  // The shells the host kept for this project that nothing has taken back yet.
-  survivors(projectPath: string): Survivor[];
-  adopt(key: string): PaneShell | undefined;
-  // Whether the host runs this shell, which quitting leaves alone.
-  keeps(shell: PaneShell): boolean;
+  // Takes back the shells the host kept for this project, each once.
+  adopt(projectPath: string): { survivor: Survivor; shell: PaneShell }[];
 };
 
 type HostShell = PaneShell & { hear(message: FromHost): void; lose(): void };
@@ -37,28 +34,35 @@ export function paneHost(options: {
   const shells = new Map<string, HostShell>();
   const send = (message: ToHost): void => { connection?.write(line(message)); };
 
+  // The host's socket, starting the host when nothing answers on it.
+  async function reachHost(): Promise<net.Socket | null> {
+    let socket = await attempt(options.socket);
+    if (socket !== null) return socket;
+    options.launch();
+    for (let tries = 0; socket === null && tries < CONNECT_TRIES; tries += 1) {
+      await new Promise((resolve) => setTimeout(resolve, CONNECT_PAUSE_MS));
+      socket = await attempt(options.socket);
+    }
+    return socket;
+  }
+
   async function connect(): Promise<void> {
     if (process.platform === 'win32') return;
-    let socket = await attempt(options.socket);
-    if (socket === null) {
-      options.launch();
-      for (let tries = 0; socket === null && tries < CONNECT_TRIES; tries += 1) {
-        await new Promise((resolve) => setTimeout(resolve, CONNECT_PAUSE_MS));
-        socket = await attempt(options.socket);
-      }
-    }
-    if (socket === null) {
+    const open = await reachHost();
+    if (open === null) {
       options.lost(`No pane host answered at ${options.socket}; shells die with the app this run`);
       return;
     }
-    const open = socket;
     await new Promise<void>((resolve) => {
       open.setEncoding('utf8');
       open.on('data', lineReader<FromHost>((message) => {
-        if (message.type !== 'panes') return shells.get(message.key)?.hear(message);
-        kept = message.panes;
-        connection = open;
-        resolve();
+        if (message.type === 'panes') {
+          kept = message.panes;
+          connection = open;
+          return resolve();
+        }
+        shells.get(message.key)?.hear(message);
+        if (message.type === 'exit') shells.delete(message.key);
       }));
       open.on('close', () => {
         options.lost('The pane host stopped; every pane it ran has ended');
@@ -79,22 +83,15 @@ export function paneHost(options: {
   return {
     ready: connect(),
     spawn(request) {
-      if (connection === null) {
-        return pty.spawn(request.file, request.args, {
-          name: 'xterm-256color', cols: request.cols, rows: request.rows, cwd: request.cwd, env: request.env,
-        });
-      }
+      if (connection === null) return spawnShell(request);
       send({ type: 'spawn', ...request });
       return track(request.key, hostShell(request.key, { pid: 0, cols: request.cols, rows: request.rows, foreground: '' }, '', send));
     },
-    survivors: (projectPath) => kept.filter((survivor) => paneOfKey(survivor.key).projectPath === projectPath),
-    adopt(key) {
-      const survivor = kept.find((candidate) => candidate.key === key);
-      if (survivor === undefined) return undefined;
-      kept = kept.filter((candidate) => candidate !== survivor);
-      return track(key, hostShell(key, survivor, survivor.screen, send));
+    adopt(projectPath) {
+      const taken = kept.filter((survivor) => paneOfKey(survivor.key).projectPath === projectPath);
+      kept = kept.filter((survivor) => !taken.includes(survivor));
+      return taken.map((survivor) => ({ survivor, shell: track(survivor.key, hostShell(survivor.key, survivor, survivor.screen, send)) }));
     },
-    keeps: (shell) => [...shells.values()].includes(shell as HostShell),
   };
 }
 
@@ -137,6 +134,7 @@ export function hostShell(
     get process() { return foreground; },
     get cols() { return cols; },
     get rows() { return rows; },
+    kept: true,
     write: (data) => send({ type: 'write', key, data }),
     resize(nextCols, nextRows) {
       cols = nextCols;
@@ -171,12 +169,11 @@ export function hostShell(
 // N-API, so the copy the app ships loads there too. No shell to ask means no host.
 export function launchPaneHost(shell: string | undefined, entry: string, socket: string, home: string): void {
   if (!shell) return;
-  const child = spawnProcess(shell, ['-ilc', hostCommand(entry, socket)], { detached: true, stdio: 'ignore', cwd: home });
+  const child = spawnProcess(shell, taskArguments(shell, hostCommand(entry, socket)), { detached: true, stdio: 'ignore', cwd: home });
   child.on('error', () => undefined);
   child.unref();
 }
 
 export function hostCommand(entry: string, socket: string): string {
-  const quoted = (text: string): string => `'${text.replaceAll("'", "'\\''")}'`;
-  return `exec node ${quoted(entry)} ${quoted(socket)}`;
+  return `exec node ${posixQuoted(entry)} ${posixQuoted(socket)}`;
 }

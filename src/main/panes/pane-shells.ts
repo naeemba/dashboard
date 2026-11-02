@@ -4,7 +4,7 @@ import { editorSocket, removeSocket } from '../nvim/nvim-remote';
 import { paneKey } from './pane-host-protocol';
 import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
-import type { PaneShell } from './pane-shell';
+import { foregroundName, type PaneShell } from './pane-shell';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
 import type { Screens } from '../../shared/remote-host/screens';
 
@@ -86,10 +86,7 @@ export function paneShells(main: {
     shells.set(id, shell);
   }
 
-  // What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty
-  // can go between a shell dying and its exit arriving here, and a pane with nothing running in it is
-  // the right answer for a shell that has just died anyway — so a reading that fails is not one that
-  // takes a ship down with it.
+  // What the pty says is in the foreground of a pane, or nothing when the pane has no shell.
   //
   // Unix only, which is why win32 answers nothing at all. `IPty.process` is a real foreground reading
   // on unix — node-pty's UnixTerminal calls tcgetpgrp(fd) and names whoever holds the terminal — but
@@ -100,12 +97,7 @@ export function paneShells(main: {
   // behaviour, and what a ship there can take out from under you is the same corner runsAProgram
   // names, one pane wider.
   function foregroundOf(id: string): string | undefined {
-    if (process.platform === 'win32') return undefined;
-    try {
-      return shells.get(id)?.process;
-    } catch {
-      return undefined;
-    }
+    return process.platform === 'win32' ? undefined : foregroundName(shells.get(id));
   }
 
   // A pane let go of for good. Out of the map before the kill: the exit arrives afterwards and is

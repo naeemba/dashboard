@@ -1,21 +1,16 @@
 import { chmodSync, mkdirSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import * as pty from 'node-pty';
 import { line, lineReader, type ToHost } from './pane-host-protocol';
 import { paneHostServer } from './pane-host-server';
+import { spawnShell } from './pane-shell';
 
 // The pane host: a node process the app starts detached, so the shells in it outlive the app.
 // pane-host-server.ts holds what it does; this is its socket. Run as `node pane-host-entry.js <socket>`.
 const socketPath = process.argv[2];
 const FOREGROUND_POLL_MS = 500;
 
-const server = paneHostServer(
-  (request) => pty.spawn(request.file, request.args, {
-    name: 'xterm-256color', cols: request.cols, rows: request.rows, cwd: request.cwd, env: request.env,
-  }),
-  () => process.exit(0),
-);
+const server = paneHostServer(spawnShell, () => process.exit(0));
 let current: net.Socket | null = null;
 
 // The app starts a host only when nothing answered on the socket, so a file already there is one a

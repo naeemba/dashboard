@@ -413,14 +413,12 @@ function spawnProject(project: Project, projectIndex: number): void {
 // The shells the pane host kept for this project through a restart, back in their panes as they were.
 // adopted-pane.ts says what each comes back as. Before the resumes, which skip the panes taken here.
 function adoptSurvivors(slot: number, projectPath: string): void {
-  for (const survivor of shellHost.survivors(projectPath)) {
+  for (const { survivor, shell } of shellHost.adopt(projectPath)) {
     const { index } = paneOfKey(survivor.key);
     const id = terminalId(slot, index);
-    const shell = shellHost.adopt(survivor.key);
-    if (shell === undefined) continue;
     const saved = claudeSessions.takeResume(projectPath, index, id);
     const pane = adoptedPane(survivor, saved, worktrees.entries(), agentPanesBeforeLaunch, realPath);
-    if (!pane.kept) {
+    if (pane === undefined) {
       shell.kill();
       continue;
     }
@@ -922,7 +920,7 @@ app.on('will-quit', () => {
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   // The pane host's shells stay up for the next launch to take back; only one this process runs itself
   // dies with it.
-  for (const shellProcess of shells.values()) if (!shellHost.keeps(shellProcess)) shellProcess.kill();
+  for (const shellProcess of shells.values()) if (!shellProcess.kept) shellProcess.kill();
   chats.stopAll();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.

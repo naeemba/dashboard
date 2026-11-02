@@ -1,6 +1,6 @@
 import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
 import type { FromHost, SpawnRequest, Survivor, ToHost } from './pane-host-protocol';
-import type { PaneShell } from './pane-shell';
+import { foregroundName, type PaneShell } from './pane-shell';
 
 // The pane host's half: the shells themselves, kept running whether or not an app is connected. One
 // app at a time; pane-host-entry.ts is the socket around it.
@@ -11,14 +11,6 @@ type Entry = { shell: PaneShell; request: SpawnRequest; copy: PaneScreenCopy; fo
 export function paneHostServer(spawn: Spawn, idle: () => void) {
   const entries = new Map<string, Entry>();
   let send: ((message: FromHost) => void) | null = null;
-
-  function foregroundOf(shell: PaneShell): string {
-    try {
-      return shell.process;
-    } catch {
-      return '';
-    }
-  }
 
   function start(request: SpawnRequest): void {
     // A spawn for a key that is still running replaces it. The app kills a pane's shell before it
@@ -61,7 +53,7 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
       send = sender;
       const panes: Survivor[] = [...entries].map(([key, { shell, request, copy }]) => ({
         key, pid: shell.pid, file: request.file, args: request.args, cwd: request.cwd,
-        cols: shell.cols, rows: shell.rows, foreground: foregroundOf(shell), screen: copy.replay(),
+        cols: shell.cols, rows: shell.rows, foreground: foregroundName(shell) ?? '', screen: copy.replay(),
       }));
       sender({ type: 'panes', panes });
     },
@@ -82,8 +74,9 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
     // (main.ts's foregroundOf), so it has to be there already when asked.
     // ponytail: polled, so a reading can be one tick stale; push from the data event if a ship ever races it.
     pollForeground(): void {
+      if (send === null) return;
       for (const [key, entry] of entries) {
-        const name = foregroundOf(entry.shell);
+        const name = foregroundName(entry.shell) ?? '';
         if (name === entry.foreground) continue;
         entry.foreground = name;
         send?.({ type: 'foreground', key, name });

@@ -65,12 +65,19 @@ export type FromHost =
 
 // Cuts a stream into its lines and hands each one on parsed. A chunk ends wherever the socket put it,
 // often in the middle of a message, so the unfinished end is kept for the next chunk.
+// Only the new chunk is searched: the host's first answer is one line holding every kept pane's
+// screen, megabytes long, and rescanning what is already held on every chunk would be quadratic in it.
 export function lineReader<T>(message: (value: T) => void): (chunk: string) => void {
-  let unfinished = '';
+  let unfinished: string[] = [];
   return (chunk) => {
-    const lines = (unfinished + chunk).split('\n');
-    unfinished = lines.pop() ?? '';
-    for (const line of lines) if (line !== '') message(JSON.parse(line) as T);
+    let start = 0;
+    for (let end = chunk.indexOf('\n'); end !== -1; end = chunk.indexOf('\n', start)) {
+      const line = unfinished.join('') + chunk.slice(start, end);
+      unfinished = [];
+      start = end + 1;
+      if (line !== '') message(JSON.parse(line) as T);
+    }
+    if (start < chunk.length) unfinished.push(chunk.slice(start));
   };
 }
 

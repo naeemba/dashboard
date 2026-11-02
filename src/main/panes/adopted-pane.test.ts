@@ -20,25 +20,25 @@ const same = (folder: string): string => folder;
 describe('adoptedPane', () => {
   it('keeps a plain shell as it was spawned', () => {
     expect(adoptedPane(survivor(2, '/project'), null, [], new Map(), same))
-      .toEqual({ kept: true, command: { args: [], directory: '/project' }, card: undefined, worker: false });
+      .toEqual({ command: { args: [], directory: '/project' }, card: undefined, worker: false });
   });
 
   it('names the pane on the card whose agent is still running in it', () => {
     const pane = adoptedPane(survivor(2, card.worktreePath, ['-c', 'claude']), null, [card], new Map([['card', 2]]), same);
-    expect(pane).toMatchObject({ kept: true, card });
+    expect(pane).toMatchObject({ card });
   });
 
   it('leaves the card alone when its agent ran in another pane before the restart', () => {
     const pane = adoptedPane(survivor(3, card.worktreePath), null, [card], new Map([['card', 2]]), same);
-    expect(pane).toMatchObject({ kept: true, card: undefined });
+    expect(pane).toMatchObject({ card: undefined });
   });
 
   it("gives a worker main dispatched back to main", () => {
     const saved = { session: SESSION, directory: '/project', dispatched: true };
-    expect(adoptedPane(survivor(1, '/project'), saved, [], new Map(), same)).toMatchObject({ kept: true, worker: true });
+    expect(adoptedPane(survivor(1, '/project'), saved, [], new Map(), same)).toMatchObject({ worker: true });
   });
 
   it('does not keep the editor, whose socket is named after a page the project may no longer be on', () => {
-    expect(adoptedPane(survivor(EDITOR_INDEX, '/project'), null, [], new Map(), same)).toEqual({ kept: false });
+    expect(adoptedPane(survivor(EDITOR_INDEX, '/project'), null, [], new Map(), same)).toBeUndefined();
   });
 });
