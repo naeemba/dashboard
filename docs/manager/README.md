@@ -81,13 +81,13 @@ waiting beside its name, and still opens to show what its panes are up to.
 The close key works from here too, and this is the one screen where it needs a
 highlight: there is no project behind this page, so what it takes is the project
 the selection is on. What it takes and what stops it are the same everywhere,
-and the Projects section below says both.
+and the Projects screen, docs/projects/README.md, says both.
 
 ### The manager's sections
 
-The manager is five screens with one strip of names above them. Two of these
-keys walk it, from any of the five. The arrows are deliberately not these keys:
-on the board they move between cards, and in the notes they move the caret.
+The manager is five screens with one strip of names above them. The previous
+and next section keys walk it, from any of the five. The arrows are deliberately
+not those keys: on the board they move between cards, and in the notes they move the caret.
 Above the strip, four cards show the date and weather, Bitcoin, Tether in toman
 and gold, each read again every half hour. The refresh key reads all four now;
 the round arrow in a card's corner, clicked or reached with Tab and pressed with

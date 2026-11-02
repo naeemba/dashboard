@@ -17,9 +17,9 @@ reached with the terminals key: its main is main-manager, working with its
 workers in ~/.dashboard, where projects.yaml describes every project, and the
 board key or a click on the strip leaves it.
 
-Main is Claude Code drawn as a page rather than a terminal (the Claude keys
-below are its own), started as soon as the project opens and told to dispatch
-the tasks you give it — do this, review that, research the other — into workers
+Main is Claude Code drawn as a page rather than a terminal (the Claude
+screen's keys in Ctrl+H are its own), started as soon as the project opens and
+told to dispatch the tasks you give it — do this, review that, research the other — into workers
 rather than run them itself. It does that with DASHBOARD_COMMAND, a command
 every pane carries: run `node "$DASHBOARD_COMMAND" pane` to see what it takes
 (DASHBOARD_SESSION, the older path to the same program, still works). Its
@@ -51,7 +51,7 @@ it, and it scrolls to keep the pane you are in in sight.
 
 The panes keep running while you are on another project or another view, so a
 long job is still going when you come back. Ctrl+C in a pane is the shell's
-interrupt, so off a mac copy and paste have keys of their own, listed below; a
+interrupt, so off a mac copy and paste have keys of their own, listed in Ctrl+H; a
 mac copies and pastes with Cmd as anywhere.
 
 One of them at a time can be zoomed to fill the page and put back; while one is

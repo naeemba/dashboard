@@ -34,8 +34,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',
   board: 'A kanban board in .dashboard/board.json, written on every change: no save key, undo is '
     + 'the way back. Another writer\'s change shows while you look. A card moved into Ship goes to an '
-    + 'agent in its own worktree; the app puts it in Review once a pull request is open. / searches, f '
-    + 'filters.',
+    + 'agent in its own worktree; the app puts it in Review once a pull request is open.',
   notes: 'One page of free text in .dashboard/notes.md: the project\'s, or for the manager a folder '
     + 'in your home directory. For what is not a card. No save key: it is written a moment after you '
     + 'stop typing, and read only when you arrive, so an edit made elsewhere shows next time. Plain '
@@ -51,7 +50,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
   claude: 'A Claude Code conversation drawn as a page: tables, highlighted code, diffs, and tool calls '
     + 'folded to a line the unfold key opens. It runs as the project\'s main session with the '
     + 'project\'s own CLAUDE.md, skills and MCP servers. Enter sends, Shift+Enter starts a line, a '
-    + 'slash lists commands, @ mentions a file, and Escape stops Claude.',
+    + 'slash lists commands, @ mentions a file, and the interrupt key stops Claude.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',

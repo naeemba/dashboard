@@ -45,8 +45,8 @@ It is a plain box and nothing more: nothing parses the markdown and nothing
 renders it. The name is there so the file is worth opening in an editor or
 reading on a forge.
 
-This screen has no keys of its own — everything that is not one of the keys
-below is a character in the box. Tab is the one thing it stops: the box is the
+This screen has no keys of its own — everything that is not one of the app's own
+keys is a character in the box. Tab is the one thing it stops: the box is the
 whole screen, so Tab would take the keyboard somewhere you cannot see, and it
 does nothing here instead.
 

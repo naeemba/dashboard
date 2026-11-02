@@ -6,7 +6,7 @@
 // The largest PDF main reads. Its bytes go back to the screen as base64, a third bigger, and a
 // second screen gets them in one frame under the host's 8 MB limit (MAX_FRAME_BYTES).
 export const PDF_LIMIT = 5 * 1024 * 1024;
-// The limit as the tile and the help dialog say it.
+// The limit as the tile says it.
 const PDF_LIMIT_SHOWN = `${PDF_LIMIT / 1024 / 1024} MB`;
 
 function isPdfPath(file: string): boolean {

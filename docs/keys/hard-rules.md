@@ -66,7 +66,8 @@ dialog, because it is believed.
   changes what a screen does, the blurb is stale too; the full account goes under
   "On screen" in that feature's `docs/<feature>/README.md`. Uncapped, the
   terminals blurb reached 1,129 words and Ctrl+H showed four screens of prose
-  before the first key.
+  before the first key. A blurb names a bound key as "the X key", never by its
+  spelling: the key can be rebound, and the blurb is a fixed string.
 
 A change is not done until Ctrl+H would tell the truth about it.
 
