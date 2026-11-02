@@ -241,7 +241,8 @@ body *:not(.pane, .pane *) {
 .ink-surface {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  /* Both ways: the canvas is as wide as its ink, which can be wider than this window. */
+  overflow: auto;
   /* What currentColor means on the page: the theme's text colour. */
   color: var(--white);
 }
@@ -250,7 +251,6 @@ body *:not(.pane, .pane *) {
    keyboard's way to the lower page is a stroke's own room below, and the mouse wheel. */
 .ink-canvas {
   display: block;
-  width: 100%;
   touch-action: none;
   cursor: crosshair;
 }

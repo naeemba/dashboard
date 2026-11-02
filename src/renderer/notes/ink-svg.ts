@@ -38,8 +38,9 @@ export function serializeInk(strokes: readonly Stroke[]): string {
   const drawn = strokes.filter((stroke) => stroke.points.length > 0);
   if (drawn.length === 0) return '';
   const all = drawn.flatMap((stroke) => rounded(stroke.points));
-  const width = Math.ceil(Math.max(...all.map((point) => point.x)) + MARGIN);
-  const height = Math.ceil(Math.max(...all.map((point) => point.y)) + MARGIN);
+  // reduce, not Math.max(...): a long page holds more points than one call takes arguments.
+  const width = Math.ceil(all.reduce((most, point) => Math.max(most, point.x), -Infinity) + MARGIN);
+  const height = Math.ceil(all.reduce((most, point) => Math.max(most, point.y), -Infinity) + MARGIN);
   const paths = drawn.map((stroke) => {
     const points = rounded(stroke.points);
     const data = points.map((point) => `${point.x},${point.y},${point.pressure}`).join(' ');

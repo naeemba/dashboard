@@ -1,6 +1,6 @@
 import type { Stroke } from './ink-geometry';
 
-// The page's strokes and the pages before the last few changes, as plain values so the rules for which
+// The page's strokes and every page before it since the history was started (never trimmed), as plain values so the rules for which
 // change is one undo step can be tested without a canvas. Immutable: every change answers a new
 // history, and a change that would do nothing answers the same one, so a caller can tell by identity
 // whether anything happened (and whether there is anything to save).
@@ -10,7 +10,7 @@ import type { Stroke } from './ink-geometry';
 // costs an array, not a copy of the ink.
 export type InkHistory = { strokes: Stroke[]; past: Stroke[][] };
 
-// A page as it was read: whatever it holds, and nothing to undo. Undo is for this session's own
+// A page as another writer left it: whatever it holds, and nothing to undo. Undo is for this page's own
 // changes; going back past the page you were shown would be undoing someone else's writing.
 export function startHistory(strokes: Stroke[] = []): InkHistory {
   return { strokes, past: [] };

@@ -144,6 +144,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     bridge: options.bridge,
     projectPath: MANAGER_PROJECT.path,
     onError: (message) => options.onError(`ink:${MANAGER_SLOT}`, message),
+    binding: options.binding,
   });
   ink.element.hidden = true;
   // The notes view is the box and the page beside it, so the wrapper a project's page builds in page.ts is

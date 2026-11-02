@@ -33,6 +33,11 @@ describe('serializeInk', () => {
   it('leaves out a stroke with no points', () => {
     expect(serializeInk([{ ...dot, points: [] }])).toBe('');
   });
+
+  it('sizes a page with more points than one call takes arguments', () => {
+    const points = Array.from({ length: 200_000 }, (_unused, index) => ({ x: index % 500, y: index / 1000, pressure: 0.5 }));
+    expect(serializeInk([{ ...dot, points }])).toContain('viewBox="0 0 515 216"');
+  });
 });
 
 describe('parseInk', () => {

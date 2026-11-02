@@ -4,4 +4,4 @@ One line per merged change: date, pull request, why.
 
 - 2026-09-16 #43 — A fourth mode: notes, one page per project
 - 2026-09-21 #59 — Notes on the manager page, kept in the home directory
-- 2026-11-02 — A second notes page for handwriting, kept in notes-ink.svg
+- 2026-11-02 #190 — A second notes page for handwriting, kept in notes-ink.svg

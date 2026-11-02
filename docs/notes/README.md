@@ -67,12 +67,14 @@ heard only while this page is showing. P is the pen and E the eraser, which
 removes a whole stroke it is dragged across — one drag is one step. C is the next
 colour (the theme's text colour, red, blue, green) and W the next width. Z undoes
 the last stroke, erase or clear, and Shift+X clears the page; undo brings it
-back. Undo is for this session: a page you have just arrived at has nothing to
-undo, so you cannot undo past what you were shown. A pen's pressure changes the
+back. Undo survives leaving the page and coming back; it starts again only when
+another screen changed the file, so you cannot undo past what someone else wrote. A pen's pressure changes the
 width of the line, and the eraser end of a pen erases whichever tool is picked.
 A mouse and a finger draw at the chosen width.
 
-The page scrolls, and always has a screen of room below the lowest stroke.
+The page scrolls, and always has a screen of room below the lowest stroke. It
+is as wide as its ink, so a page written on a wide window scrolls sideways on a
+narrow one. The strip names the keys as they are bound now.
 
 It is written a moment after a stroke ends, read only on arrival and guarded the
 way the text page is: a page never read is never written over, and a file this
@@ -90,6 +92,8 @@ Folders: `src/main/notes/`, `src/renderer/notes/`.
 - `ink-svg.ts`: the file's format, written and read
 - `ink-geometry.ts`: a stroke's outline and whether the eraser touches it
 - `ink-history.ts`: strokes and the undo steps
+- `ink-pointer.ts`: what a press of a pointer means — draw, erase or nothing
+- `saved-page.ts`: the wait, the flush and the read and write rules both pages share
 
 ## Scenarios
 
@@ -101,8 +105,9 @@ Folders: `src/main/notes/`, `src/renderer/notes/`.
 - Given the handwriting page, when you draw with the pen and stop, then the page is written to .dashboard/notes-ink.svg a moment later.
 - Given a drag of the eraser across three strokes, when you press Z, then all three come back.
 - Given you cleared the page, when you press Z, then the page is back.
+- Given you cleared the page and toggled to the text and back, when you press Z, then the page is back.
 - Given a notes-ink.svg this page cannot read, when you arrive and draw, then the file is never written over and the status bar says it was not read.
 
 ## Open questions
 
-- `notes-view.ts` still prints `String(error)` (errors-rule-1).
+None.
