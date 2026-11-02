@@ -7,7 +7,7 @@
 // second screen gets them in one frame under the host's 8 MB limit (MAX_FRAME_BYTES).
 export const PDF_LIMIT = 5 * 1024 * 1024;
 // The limit as the tile and the help dialog say it.
-export const PDF_LIMIT_SHOWN = `${PDF_LIMIT / 1024 / 1024} MB`;
+const PDF_LIMIT_SHOWN = `${PDF_LIMIT / 1024 / 1024} MB`;
 
 function isPdfPath(file: string): boolean {
   return /\.pdf$/i.test(file);

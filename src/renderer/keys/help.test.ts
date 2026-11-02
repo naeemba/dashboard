@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BLURB_WORD_LIMIT, MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
+import { BLURBS, BLURB_WORD_LIMIT, MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
 import type { Shortcut } from './shortcut-rows';
 import { mapShortcut } from './shortcuts';
 import { ACTIONS, actionByName } from '../../shared/keys/actions';
@@ -38,16 +38,10 @@ describe('helpSections', () => {
     }
   });
 
-  // A blurb that grows a sentence with every change pushes the keys off the dialog's first screen.
-  // The rest of what a screen does goes in its feature's README.
+  // Checked on the table rather than through helpSections, so a blurb no screen shows yet is held too.
   it(`keeps every blurb to ${BLURB_WORD_LIMIT} words, so the keys start on the first screen`, () => {
-    for (const mode of SCREENS) {
-      for (const onManagerPage of [false, true]) {
-        for (const section of helpSections(mode, onManagerPage, mac, true)) {
-          const words = section.blurb.split(/\s+/).filter(Boolean).length;
-          expect(words, `${mode}: ${section.title}`).toBeLessThanOrEqual(BLURB_WORD_LIMIT);
-        }
-      }
+    for (const [name, blurb] of Object.entries(BLURBS)) {
+      expect(blurb.split(/\s+/).filter(Boolean).length, name).toBeLessThanOrEqual(BLURB_WORD_LIMIT);
     }
   });
 
