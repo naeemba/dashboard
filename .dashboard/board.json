@@ -270,22 +270,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
-          "title": "Take the single-instance lock and write session.json atomically",
-          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:09:21.437Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.620Z",
-              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
-            }
-          ]
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -2606,6 +2591,21 @@
             {
               "at": "2026-11-02T09:07:27.407Z",
               "body": "Shipped in PR #189: warm/cold prompt cache pill on the Claude screen's status line (counts down, stops off view) and per-worker warm/cold in the workers popup; rule in src/shared/usage/cache-warmth.ts with tests; TTL facts cited in chat-decision-12. Hand check in the app not done."
+            }
+          ]
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T09:42:16.413Z",
+          "pullRequest": 175,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.620Z",
+              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
             }
           ]
         }
