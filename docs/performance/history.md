@@ -5,6 +5,40 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-02: hidden projects stop drawing their terminals (finding 4)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs
+streams <demo> 200`: four workers at 200 lines/s each. "Before" is this branch
+without the fix, rebuilt and measured the same day, 2 runs; "after" is 5 runs.
+
+| | before | after |
+|---|---|---|
+| Renderer CPU, alpha hidden | 15.5–19.0% | 7.2–10.9% |
+| Layouts per 10 s, alpha hidden | 192–356 | 1 |
+| Renderer task time, alpha hidden | 12.2–18.1% | 4.9–7.0% |
+| Renderer CPU, alpha shown | 19.8–23.6% | 24.2–27.9% |
+| Typing in another project, median | 25–28 ms | 23–27 ms |
+
+- Two causes, both needed. Hidden pages were only `visibility: hidden`, which
+  still intersects the viewport, so xterm never paused them; `.page[hidden]`
+  and `.view[hidden]` now also translate off screen (`index.css`). And every
+  scroll, which is every new line at the bottom, asks xterm's selection to
+  redraw, which rebuilds every row without asking whether the terminal is
+  paused. `paused-selection.ts` holds that redraw until the terminal is back.
+- On return each worker on screen showed the line it was printing then: after
+  20 s hidden, about 3,700 lines on from where it left. A worker scrolled out
+  of the list is off screen as well and catches up when scrolled into view.
+- The shown number did not fall. The after runs sit 1–4 points above the
+  same day's before runs, inside the first profile's own spread (23.8–26.9%)
+  but for one run; nothing in the change runs on a shown terminal beyond one
+  check of the pause. What is left hidden is xterm parsing the bytes into the
+  buffer, which it must do to keep the scrollback.
+
+Not done: the same selection redraw rebuilds every row of a shown terminal on
+every scroll as well, on top of the regular redraw, even with nothing
+selected. Skipping it when no selection exists before or after would cut the
+shown cost too.
+
 ## 2026-11-02: usage sweep on its own thread
 
 Same machine, logs and tooling as the first profile below. Fixes its finding 1:
