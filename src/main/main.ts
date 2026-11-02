@@ -244,7 +244,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
   temporary: app.getPath('temp'), shellCommand: () => shellCommand, projectPath: (slot) => projectIn(slot)?.path,
-  send: sendToRenderer,
+  send: sendToRenderer, keepsScreens: () => remoteHost !== null || !remote.reachesWindow(),
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
