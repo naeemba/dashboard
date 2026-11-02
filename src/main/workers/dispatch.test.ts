@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
 } from './dispatch';
-import { quoteForShell } from '../../shared/panes/shell';
+import { quoteForShell, windowsPowerShellWraps } from '../../shared/panes/shell';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
 
 describe('session names', () => {
@@ -68,6 +68,14 @@ describe('workerSettings', () => {
     const settings = JSON.parse(workerSettings('2:3'));
     expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
     expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
+  });
+
+  // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when
+  // it finds one outside: without this one the JSON reached claude cut at each space, claude took the
+  // first piece for a settings file that was not there, and the worker's pane never started.
+  it('has a space outside its strings, so Windows PowerShell hands it over whole', () => {
+    expect(workerSettings('2:3').startsWith('{ "hooks":')).toBe(true);
+    expect(windowsPowerShellWraps(workerSettings('2:3'))).toBe(true);
   });
 });
 
