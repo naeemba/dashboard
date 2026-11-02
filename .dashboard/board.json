@@ -183,7 +183,8 @@
           "id": "4a4edc6b-0e3a-4a3f-8519-fa1c6065f067",
           "title": "After a restart, a cross-project worker's done notice goes to the wrong main",
           "notes": "session-requests.ts tells dispatched.get(id)?.dispatcher ?? slot, and dispatched/dispatchers are only in memory. A worker that project A's main (or the manager) dispatched into project X with pane claim --project comes back after a restart in X, so its done notice goes to X's main, which never dispatched it, and A hears nothing. Fix: persist the dispatcher with the worker mark in session.json; the same record fixes which main starts at open (PR #186). Issue: https://github.com/naeemba/dashboard/issues/187 Review: https://github.com/naeemba/dashboard/pull/186#discussion_r4438204842",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
         }
       ]
     },
@@ -319,14 +320,6 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-02T01:04:43.806Z"
-        },
-        {
-          "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
-          "title": "Render only the tail of a streaming Claude reply",
-          "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T01:11:02.341Z"
         }
       ]
     },
@@ -416,6 +409,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
+          "title": "Render only the tail of a streaming Claude reply",
+          "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:31:35.604Z",
+          "branch": "work-board-card-adf42c92-bd82-482c-88c7-5da",
+          "pullRequest": 188
         }
       ]
     },
