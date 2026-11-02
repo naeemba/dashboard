@@ -332,14 +332,6 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-02T00:13:45.382Z"
-        },
-        {
-          "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
-          "title": "Open a typed folder path from the project picker",
-          "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:20:52.873Z"
         }
       ]
     },
@@ -429,6 +421,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
+          "title": "Open a typed folder path from the project picker",
+          "notes": "The picker only filters recents; a new project needs the OS folder dialog, and a remote screen cannot open a new folder at all. Add a row for a typed existing folder. Cost small. (docs/review/2026-11-01.md U3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:27:27.208Z",
+          "branch": "work-board-card-a52024cf-46b1-4ace-a786-bc6",
+          "pullRequest": 178
         }
       ]
     },
