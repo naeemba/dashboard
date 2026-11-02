@@ -25,8 +25,7 @@ export type HostPorts = {
 // `except` is a screen that is not told, because it is the one that caused the push.
 export type RemoteHost = { broadcast(channel: string, channelArguments: unknown[], except?: string): void; close(): void };
 
-// `bind` is the interface it listens on: 127.0.0.1 unless the settings file says otherwise, because a
-// joined screen can type into every shell and the wire is plain ws (remote-host-decision-3).
+// `bind` is the interface it listens on, host.bind in the settings (remote-host-decision-3).
 // heartbeatMs exists for the test of a screen that stops answering.
 export function startRemoteHost(
   port: number, bind: string, ports: HostPorts, heartbeatMs: number = HEARTBEAT_MS,

@@ -1,6 +1,6 @@
 import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from '../keys/actions';
 import { formatBinding, parseBinding } from '../keys/binding';
-import { isRecord } from '../app/is-record';
+import { isRecord, stringOrEmpty } from '../app/is-record';
 import { THEME } from '../app/theme';
 
 // Everything the settings file holds. `keys` always has an entry for every action after parsing, so
@@ -17,9 +17,7 @@ export type Settings = {
   // geocoder whenever it changes, so it is never blank.
   weatherPlace: string;
   // The port a second Dashboard joins this one on (null: do not listen), the token it must show, and the
-  // interface the port is opened on. `bind` is written by hand only, never by the settings screen: the
-  // default keeps the port on this machine, and anything wider is a choice made in the file on purpose
-  // (remote-host-decision-3).
+  // interface the port opens on, written in the file by hand only (remote-host-decision-3).
   host: { port: number | null; token: string; bind: string };
   // The host this Dashboard last joined, remembered by the connect dialog. Not a settings screen row.
   remote: { address: string; token: string };
@@ -33,9 +31,7 @@ const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 
 export const DEFAULT_WEATHER_PLACE = 'Tehran';
 
-// Loopback: a second screen on another machine reaches it through an SSH tunnel unless the file says
-// otherwise.
-export const DEFAULT_HOST_BIND = '127.0.0.1';
+const DEFAULT_HOST_BIND = '127.0.0.1';
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -152,8 +148,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     host: {
       port: typeof storedHost.port === 'number' && isPort(storedHost.port) ? storedHost.port : null,
       token: typeof storedHost.token === 'string' ? storedHost.token : '',
-      bind: typeof storedHost.bind === 'string' && storedHost.bind.trim() !== ''
-        ? storedHost.bind.trim() : defaults.host.bind,
+      bind: stringOrEmpty(storedHost.bind).trim() || defaults.host.bind,
     },
     remote: {
       address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',

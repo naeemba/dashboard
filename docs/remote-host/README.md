@@ -17,9 +17,9 @@ hand. The settings screen has no row for it, so it is never set by accident:
     "host": { "port": 7777, "bind": "0.0.0.0" }
 
 `0.0.0.0` is every interface; one address, such as the host's Tailscale
-address, opens only that one. The wire is plain `ws://`, so anyone on that
-network who sees a hello has the token, and the token is a shell on the host
-(remote-host-decision-3). The log says which address it listens on.
+address, opens only that one. The wire is plain `ws://`: see
+remote-host-decision-3 before widening it. The log says which address it
+listens on.
 
 ## Files
 

@@ -72,11 +72,9 @@ export function isReply(frame: Frame): frame is Reply {
   return 'id' in frame && !('channel' in frame);
 }
 
-// The token is the only gate to a shell on the host, so it is compared in constant time: a !== stops at
-// the first wrong byte, and how long the refusal takes tells a guesser how many leading bytes were right.
-// timingSafeEqual throws on buffers of different lengths, so the length is checked first; that leaks
-// only the token's length, which every generated token shares.
-export function sameToken(token: string, expectedToken: string): boolean {
+// Constant time (remote-host-decision-3). Byte lengths first: timingSafeEqual throws on unequal ones, and
+// 'é' is one character but two bytes.
+function sameToken(token: string, expectedToken: string): boolean {
   const given = Buffer.from(token);
   const expected = Buffer.from(expectedToken);
   return given.length === expected.length && timingSafeEqual(given, expected);

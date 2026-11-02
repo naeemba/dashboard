@@ -11,7 +11,7 @@ export type HeldByMain = HeldForRemote & { shells: Map<string, pty.IPty>; screen
 
 // After the join replay a screen gets the same pushes as everyone. A screen that leaves stops voting
 // on pane sizes, so the shells are resized to whoever is left. No port in the settings means the host
-// is off, and nothing listens; a port alone listens on 127.0.0.1 only.
+// is off, and nothing listens.
 export function startHost(held: HeldByMain): RemoteHost | null {
   const { port, bind } = held.settings().host;
   return port === null ? null : startRemoteHost(port, bind, {
