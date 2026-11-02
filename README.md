@@ -18,6 +18,10 @@ The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run
     npm install
     npm start
 
+While the installed app is running, `npm start` on its own only brings that app's window to the front and
+exits: one app runs per userData folder. "One app at a time" in `docs/app/README.md` says how to run a
+development copy beside it.
+
 ## Install
 
     scripts/rebuild.sh

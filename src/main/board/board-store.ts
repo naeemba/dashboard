@@ -1,10 +1,11 @@
-import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
 import { dashboardFolder } from '../app/dashboard-folder';
+import { replaceFile } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import {
   DEFAULT_PRIORITY,
@@ -361,36 +362,8 @@ function readStoredBoard(projectPath: string): BoardRead {
   }
 }
 
-// How every file the dashboard keeps about a project is written: to a temporary file beside it first,
-// then renamed over it. A rename within a directory is atomic on every platform this app runs on, so a
-// crash or a full disk mid-write leaves either the old file or the new one, never a truncated one.
-// The temporary file is flushed to disk before the rename: without that, a power cut can land the
-// rename before the bytes, and the next launch finds the new name on an empty file.
-// Without it the app itself would be the main producer of the corruption the salvage path in readBoard
-// exists to clean up after, and the notes would come back with the second half of a page missing.
-//
-// The folder is made on the way, because the first write to a project is what creates .dashboard.
-export function replaceFile(filePath: string, text: string): void {
-  mkdirSync(dirname(filePath), { recursive: true });
-  const temporaryPath = `${filePath}.tmp`;
-  const descriptor = openSync(temporaryPath, 'w');
-  try {
-    writeFileSync(descriptor, text);
-    fsyncSync(descriptor);
-  } finally {
-    closeSync(descriptor);
-  }
-  try {
-    renameSync(temporaryPath, filePath);
-  } catch (error: unknown) {
-    try {
-      unlinkSync(temporaryPath);
-    } catch {
-      // Best effort: the rename error below is the one that matters.
-    }
-    throw error;
-  }
-}
+// The app's one atomic write lives in app/replace-file.ts; the stores outside app/ import it from here.
+export { replaceFile };
 
 // Answers with the bytes it wrote. Main keeps the last of them per project and compares them against
 // what the folder watcher finds, which is how the app's own saves are told apart from the command

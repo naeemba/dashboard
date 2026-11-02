@@ -1,6 +1,6 @@
-import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY } from '../board/board-store';
 import { NOTES_FILE, notesPath, readNotes, writeNotes } from './notes-store';
@@ -46,10 +46,15 @@ describe('the notes file', () => {
   it('leaves the old page whole when the rename cannot land', () => {
     const projectPath = project();
     writeNotes(projectPath, 'the page that was there\n');
-    // A folder where the temporary file has to go: the write fails before the rename, so nothing
-    // replaces notes.md and what was there is still all of it.
-    mkdirSync(`${notesPath(projectPath)}.tmp`, { recursive: true });
-    expect(() => writeNotes(projectPath, 'half a p')).toThrow();
+    // A folder that takes no new file: the temporary file cannot be made, so nothing replaces
+    // notes.md and what was there is still all of it.
+    const folder = dirname(notesPath(projectPath));
+    chmodSync(folder, 0o500);
+    try {
+      expect(() => writeNotes(projectPath, 'half a p')).toThrow();
+    } finally {
+      chmodSync(folder, 0o700);
+    }
     expect(readNotes(projectPath)).toBe('the page that was there\n');
   });
 });

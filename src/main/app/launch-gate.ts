@@ -13,8 +13,12 @@ if (started) app.quit();
 // `--user-data-dir` (the performance demo) takes a lock of its own and runs beside the installed app.
 // settings.json is not in userData (settings-store.ts) and such a copy still shares it, which is why the
 // demo also runs with a HOME of its own.
-// app.exit, not app.quit: quit waits for the event loop, and main.ts would run in the meantime.
-if (!app.requestSingleInstanceLock()) app.exit(0);
+// app.exit, not app.quit: quit waits for the event loop, and main.ts would run in the meantime. The line
+// on stderr is for `npm start` while the installed app runs, which otherwise only brings that window up.
+if (!app.requestSingleInstanceLock()) {
+  console.error(`Dashboard is already running on ${app.getPath('userData')}; brought it to the front. Start another copy with --user-data-dir.`);
+  app.exit(0);
+}
 
 // The launch that lost the lock hands its command line to the one that holds it, which brings its window
 // to the front and reads the arguments with the same reader it used for its own (connectAtLaunch in

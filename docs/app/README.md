@@ -39,6 +39,7 @@ its own side. `eslint.config.test.ts` pins each of those.
   `projects.ts`, `picker.ts`, `close-project.ts`, `close-refusal.ts` (in `src/shared/panes/`, since
   `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
+- Atomic write: `replace-file.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`
 - Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,
@@ -60,11 +61,14 @@ The lock is keyed on the userData folder, so a copy started with its own
 not in userData, so such a copy also needs a `HOME` and `XDG_CONFIG_HOME` of
 its own to stay off the app you are using; `scripts/performance/launch-demo.sh`
 sets all three. Without `--user-data-dir`, `npm start` while the installed app
-is running only focuses the installed app's window.
+is running only focuses the installed app's window, and says so on stderr.
 
-`session.json` and `recents.json` are written through `replaceFile`, a
-temporary file flushed to disk and renamed over the old one, so a crash or a
-power cut mid-write leaves the old file or the new one, never half of one.
+`session.json` and `recents.json` are written through `replaceFile`
+(`replace-file.ts`), a temporary file flushed to disk and renamed over the old
+one, so a crash or a power cut mid-write leaves the old file or the new one,
+never half of one. The temporary file has a new name on every write, so two
+writers never share one. The flush runs on main's thread: on a busy disk a save
+can hold main for a moment, chosen over losing the file.
 
 ## Dependency holds
 

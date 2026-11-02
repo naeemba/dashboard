@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
-import { replaceFile } from '../board/board-store';
+import { replaceFile } from './replace-file';
 import type { Project } from '../../shared/app/bridge';
 
 function isDirectory(path: string): boolean {

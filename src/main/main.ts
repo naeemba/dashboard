@@ -940,7 +940,7 @@ const remote = registerRemote(held, {
 });
 // Before registerWithIpc, which only answers the channels already in the table.
 // A second launch is read the way this one was, once it has brought the window forward.
-whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold));
+whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold, remote.joinedTo));
 registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 

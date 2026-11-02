@@ -143,7 +143,7 @@ describe('registerRemote', () => {
 });
 
 describe('connectAtLaunch', () => {
-  function launched(argv: string[]) {
+  function launched(argv: string[], joinedTo: string | null = null) {
     const listeners = new Map<string, () => void>();
     const connects: unknown[][] = [];
     const held: string[] = [];
@@ -152,7 +152,7 @@ describe('connectAtLaunch', () => {
       invoke: async (_screen: string, channel: string, channelArguments: unknown[]) => { connects.push([channel, ...channelArguments]); return 'refused'; },
     } as unknown as Channels;
     const settings = () => ({ remote: { address: '10.0.0.2:7777', token: 't' } }) as Settings;
-    const launchedAgain = connectAtLaunch(argv, settings, table, (message) => held.push(message));
+    const launchedAgain = connectAtLaunch(argv, settings, table, (message) => held.push(message), () => joinedTo);
     return { restored: () => listeners.get('session:restored')!(), launchedAgain, connects, held };
   }
 
@@ -175,7 +175,7 @@ describe('connectAtLaunch', () => {
       on: (channel: string, listener: () => void) => listeners.set(channel, listener),
       invoke: async (...invokeArguments: unknown[]) => { connects.push(invokeArguments); return ''; },
     } as unknown as Channels;
-    connectAtLaunch(['--remote'], () => ({ remote: { address, token: 't' } }) as Settings, table, (message) => held.push(message));
+    connectAtLaunch(['--remote'], () => ({ remote: { address, token: 't' } }) as Settings, table, (message) => held.push(message), () => null);
     listeners.get('session:restored')!();
     address = '10.0.0.2:7777';
     listeners.get('session:restored')!();
@@ -207,6 +207,14 @@ describe('connectAtLaunch', () => {
     launch.restored();
     await settle();
     expect(launch.connects).toEqual([['host:connect', '10.0.0.2:7777', 't']]);
+  });
+
+  it('stays joined on a second launch with --remote while already on the remembered host', async () => {
+    const launch = launched([], '10.0.0.2:7777');
+    launch.restored();
+    launch.launchedAgain(['--remote']);
+    await settle();
+    expect(launch.connects).toEqual([]);
   });
 
   it('joins nothing on a second launch without --remote', async () => {

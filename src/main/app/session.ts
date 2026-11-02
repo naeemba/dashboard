@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { replaceFile } from '../board/board-store';
+import { replaceFile } from './replace-file';
 import { isPaneConversation, type PaneConversation } from '../workers/claude-resume';
 import { PROJECT_MODES, type Mode } from '../../shared/keys/modes';
 import type { SessionPage } from '../../shared/app/bridge';
