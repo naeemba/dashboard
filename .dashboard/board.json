@@ -153,13 +153,6 @@
           "parent": null
         },
         {
-          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
-          "title": "Stop hidden projects laying out and painting their terminals",
-          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
           "title": "Render only the tail of a streaming Claude reply",
           "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -338,6 +331,14 @@
               "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
             }
           ]
+        },
+        {
+          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
+          "title": "Stop hidden projects laying out and painting their terminals",
+          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:13:45.382Z"
         }
       ]
     },
