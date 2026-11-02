@@ -211,7 +211,8 @@
           "id": "b96468cf-e580-4b57-8471-e4fb0b528869",
           "title": "Move replaceFile out of board-store into src/main/app/replace-file.ts",
           "notes": "replaceFile is the app's general atomic write but lives in board/board-store.ts. notes-store.ts, worktree-store.ts, session-index-store.ts and chat-sessions.ts import a file helper from the board's store, and its comment (\"every file the dashboard keeps about a project\") no longer describes what it writes. Cost: anyone looking for how the app writes a file finds it under the board, and a change to it reads as a board change. Move it to src/main/app/replace-file.ts with its .tmp test beside it; writeBoard keeps calling it.\n\nIssue: https://github.com/naeemba/dashboard/issues/177\nReview: https://github.com/naeemba/dashboard/pull/175#discussion_r4437993801",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -418,27 +419,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
-          "title": "Tell main when a worker finishes",
-          "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:22:05.075Z",
-          "branch": "work-board-card-0ee53751-f5f2-4a73-9f61-3fd",
-          "pullRequest": 176
-        },
-        {
-          "id": "a000bfec-9a6a-4329-b215-817d0d729609",
-          "title": "Link dispatched worker panes from the Claude screen, and a workers popup in its status line",
-          "notes": "When main dispatches with pane claim/run, the Claude screen shows only the tool's text ('started dashboard-terminal-2 in 2:1'). The user wants to jump to that pane, most of all from the manager tab, whose workers live on other projects' pages.\n\n1. Links: every pane the screen mentions is a link. pane claim and pane run print a stable reference the renderer recognises (for example a dashboard://pane/<page>:<pane> url next to the human line), and the Claude screen's markdown renderer turns it into a link in tool output and in Claude's replies. Click or Enter on it switches to that pane's project page and focuses the pane. A pane already released shows as closed and does nothing but say so. Keyboard first: links are reachable from the transcript the way other links are.\n2. Workers popup: a button on the status line, between 'ready' and the context meter, shows a count of this session's workers by state, e.g. '3 workers: 2 working, 1 done'. A click or a key (a row in src/shared/keys/actions.ts) opens a small popup anchored to it: one row per pane this session dispatched (on the manager, across every project), with project, pane, card or prompt's first words, and status from what pane list already knows (working, blocked waiting for permission, done, idle). Arrow keys walk the rows, Enter focuses the pane, Esc closes. Released panes drop off. The state updates live while it is open.\n3. Which session dispatched a pane is recorded by main when pane run comes in over the socket; reuse what pane list and the session index already hold rather than a new store.\n\nRelated: card 0ee53751 (tell main when a worker finishes) uses the same pane state; build on each other's code, not two copies. The status decision (which states, how counted) and the link parsing are small modules with tests (workflow-rule-2). Help and docs/chat, docs/panes updated.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T23:48:56.818Z",
-          "updatedAt": "2026-11-02T00:22:05.112Z",
-          "branch": "work-board-card-0ee53751-f5f2-4a73-9f61-3fd",
-          "pullRequest": 176
         }
       ]
     },
@@ -2473,6 +2453,39 @@
             {
               "at": "2026-11-02T00:11:07.543Z",
               "body": "Shipped in #172: the usage sweep runs on its own worker thread. Main's longest hold during the first sweep of 4.57 GB went from 148-165 ms to 1-2 ms; in the app, 6-8 stalls over 50 ms after launch went to 0. Not done: counts are not saved between launches, so each launch still reads every log, off main's thread."
+            }
+          ]
+        },
+        {
+          "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
+          "title": "Tell main when a worker finishes",
+          "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:38:32.791Z",
+          "branch": "work-board-card-0ee53751-f5f2-4a73-9f61-3fd",
+          "pullRequest": 176,
+          "comments": [
+            {
+              "at": "2026-11-02T00:38:32.791Z",
+              "body": "Shipped in #176: a done from main's own worker queues a prompt naming the worker and its pane link into the dispatching main's session."
+            }
+          ]
+        },
+        {
+          "id": "a000bfec-9a6a-4329-b215-817d0d729609",
+          "title": "Link dispatched worker panes from the Claude screen, and a workers popup in its status line",
+          "notes": "When main dispatches with pane claim/run, the Claude screen shows only the tool's text ('started dashboard-terminal-2 in 2:1'). The user wants to jump to that pane, most of all from the manager tab, whose workers live on other projects' pages.\n\n1. Links: every pane the screen mentions is a link. pane claim and pane run print a stable reference the renderer recognises (for example a dashboard://pane/<page>:<pane> url next to the human line), and the Claude screen's markdown renderer turns it into a link in tool output and in Claude's replies. Click or Enter on it switches to that pane's project page and focuses the pane. A pane already released shows as closed and does nothing but say so. Keyboard first: links are reachable from the transcript the way other links are.\n2. Workers popup: a button on the status line, between 'ready' and the context meter, shows a count of this session's workers by state, e.g. '3 workers: 2 working, 1 done'. A click or a key (a row in src/shared/keys/actions.ts) opens a small popup anchored to it: one row per pane this session dispatched (on the manager, across every project), with project, pane, card or prompt's first words, and status from what pane list already knows (working, blocked waiting for permission, done, idle). Arrow keys walk the rows, Enter focuses the pane, Esc closes. Released panes drop off. The state updates live while it is open.\n3. Which session dispatched a pane is recorded by main when pane run comes in over the socket; reuse what pane list and the session index already hold rather than a new store.\n\nRelated: card 0ee53751 (tell main when a worker finishes) uses the same pane state; build on each other's code, not two copies. The status decision (which states, how counted) and the link parsing are small modules with tests (workflow-rule-2). Help and docs/chat, docs/panes updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:48:56.818Z",
+          "updatedAt": "2026-11-02T00:38:32.830Z",
+          "branch": "work-board-card-0ee53751-f5f2-4a73-9f61-3fd",
+          "pullRequest": 176,
+          "comments": [
+            {
+              "at": "2026-11-02T00:38:32.830Z",
+              "body": "Shipped in #176: dashboard://pane links on the Claude screen, foot workers count, Alt+W popup that stays live. Popup is the shared search dialog, not anchored; links are mouse only; agent exit alone does not refresh the count."
             }
           ]
         }
