@@ -270,17 +270,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "efbe3e2d-88b1-41c0-98e2-7d806e390e03",
-          "title": "Run CI on Windows",
-          "notes": "Windows is a target since PR #191. CI runs on Ubuntu only, so a change can break Windows start or packaging unseen. Add a windows-latest job to the CI workflow: npm ci (node-pty builds there), npm test, npx tsc --noEmit, and a make of the Windows installer (Forge squirrel maker) without publishing. Mark tests that need a POSIX shell or unix sockets so they skip on win32 with a reason, rather than failing; list them in the PR.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-02T10:26:20.200Z",
-          "updatedAt": "2026-11-02T10:31:28.321Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -368,6 +358,17 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "efbe3e2d-88b1-41c0-98e2-7d806e390e03",
+          "title": "Run CI on Windows",
+          "notes": "Windows is a target since PR #191. CI runs on Ubuntu only, so a change can break Windows start or packaging unseen. Add a windows-latest job to the CI workflow: npm ci (node-pty builds there), npm test, npx tsc --noEmit, and a make of the Windows installer (Forge squirrel maker) without publishing. Mark tests that need a POSIX shell or unix sockets so they skip on win32 with a reason, rather than failing; list them in the PR.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T10:26:20.200Z",
+          "updatedAt": "2026-11-02T10:53:56.204Z",
+          "branch": "work-board-card-efbe3e2d-88b1-41c0-98e2-7d8",
+          "pullRequest": 197
         }
       ]
     },
