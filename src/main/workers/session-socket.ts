@@ -25,24 +25,35 @@ export function sessionSocketFolder(platform: string, socketPath: string): strin
   return platform === 'win32' ? null : path.dirname(socketPath);
 }
 
-// One JSON request per connection, read to its end, then one JSON answer. A request that is not JSON is
-// answered as a refusal rather than dropped, so the command says what went wrong, and so is one of the
-// wrong shape or an answer that throws: either would otherwise leave the command waiting for good.
+// What ends a request: one line. JSON.stringify writes a newline inside a string as `\n`, so the first
+// real one is the end of the request. Not the command closing its side, which is what said it before:
+// a Windows named pipe does not stay half open, so closing one side closed both, and the answer was
+// written into a pipe nobody was reading — every `pane` command came back with an empty reply.
+const REQUEST_END = '\n';
+
+// One JSON request per connection, read to its first newline, then one JSON answer, after which the app
+// closes the connection and that is the command's sign the answer is whole. A request that is not JSON
+// is answered as a refusal rather than dropped, so the command says what went wrong, and so is one of
+// the wrong shape, one cut off before its newline, or an answer that throws: any of them would
+// otherwise leave the command waiting for good.
 export function listenForSessions(
   socketPath: string,
   answer: (request: SessionRequest) => Promise<SessionReply>,
   failed: (error: Error) => void,
 ): net.Server {
-  // Half open, because the command ends its side to say the request is whole, and the answer goes back
-  // after that over the half still open.
+  // Half open only for the refusal below: a command that closed its side before the newline would
+  // otherwise have the socket's own write shut before the refusal is written. A whole request needs
+  // none of it — the answer goes back over a connection both sides still hold open.
   const server = net.createServer({ allowHalfOpen: true }, (connection) => {
     let text = '';
-    connection.setEncoding('utf8');
-    connection.on('data', (chunk: string) => { text += chunk; });
-    connection.on('end', () => {
+    // One request per connection: anything after its newline, or a close after it, is not another.
+    let read = false;
+    function handle(line: string | undefined): void {
+      if (read) return;
+      read = true;
       let request: SessionRequest | undefined;
       try {
-        request = JSON.parse(text) as SessionRequest;
+        request = line === undefined ? undefined : JSON.parse(line) as SessionRequest;
       } catch {
         request = undefined;
       }
@@ -53,7 +64,15 @@ export function listenForSessions(
       void answer(request)
         .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }))
         .then((reply) => connection.end(JSON.stringify(reply)));
+    }
+    connection.setEncoding('utf8');
+    connection.on('data', (chunk: string) => {
+      text += chunk;
+      const end = text.indexOf(REQUEST_END);
+      if (end !== -1) handle(text.slice(0, end));
     });
+    // Closed before the newline: a request that never finished arriving.
+    connection.on('end', () => handle(undefined));
     // A command killed mid-answer is nobody's to tell.
     connection.on('error', () => undefined);
   });
@@ -75,12 +94,13 @@ export async function askAppFromPane(commandArguments: readonly string[]): Promi
   return reply.ok ? 0 : 1;
 }
 
-// The command's half: the request out, the answer back. A socket nobody is listening on is the app
-// that opened this pane having quit, which is worth saying in those words.
+// The command's half: the request out as one line, with the connection left open for the answer, and
+// the answer read until the app closes it. A socket nobody is listening on is the app that opened this
+// pane having quit, which is worth saying in those words.
 export function askApp(socketPath: string, request: SessionRequest): Promise<SessionReply> {
   return new Promise((resolve) => {
     let text = '';
-    const connection = net.connect(socketPath, () => connection.end(JSON.stringify(request)));
+    const connection = net.connect(socketPath, () => connection.write(JSON.stringify(request) + REQUEST_END));
     connection.setEncoding('utf8');
     connection.on('data', (chunk: string) => { text += chunk; });
     connection.on('end', () => {

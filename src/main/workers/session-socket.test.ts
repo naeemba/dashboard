@@ -1,4 +1,5 @@
 import { mkdtempSync, rmSync, statSync } from 'node:fs';
+import net from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -56,6 +57,38 @@ describe('listenForSessions and askApp', () => {
     await new Promise((resolve) => server.once('listening', resolve));
     expect(await askApp(socket, { directory: '/work/api', args: ['claim'] })).toEqual({ ok: false, output: 'no such pane' });
     expect(await askApp(socket, { directory: 7, args: 'claim' } as never)).toMatchObject({ ok: false });
+    server.close();
+  });
+
+  // A Windows named pipe does not stay half open: a command that ended its side to say the request was
+  // whole closed the whole pipe, the answer went nowhere, and every `pane` command printed "the app
+  // answered with something that was not a reply". The real pipe, since a socket file cannot show it.
+  it.runIf(process.platform === 'win32')('carries a request and its answer over a Windows named pipe', async () => {
+    const socket = sessionSocketPath('win32', tmpdir(), process.pid);
+    const server = listenForSessions(socket, async (request) => ({ ok: true, output: request.args.join(' ') }), () => undefined);
+    await new Promise((resolve) => server.once('listening', resolve));
+    try {
+      expect(await askApp(socket, { directory: 'C:\\work\\api', args: ['pane', 'list'] })).toEqual({ ok: true, output: 'pane list' });
+    } finally {
+      server.close();
+    }
+  });
+
+  // A command killed halfway through writing its request closes before the newline. It is refused like
+  // any request the app cannot read, not answered from half a line. Only where a socket stays half open
+  // is there anyone left to read the refusal, so a Windows pipe skips this.
+  it.skipIf(process.platform === 'win32')('refuses a request cut off before its newline', async () => {
+    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const server = listenForSessions(socket, async () => ({ ok: true, output: 'answered' }), () => undefined);
+    await new Promise((resolve) => server.once('listening', resolve));
+    const reply = await new Promise<string>((resolve) => {
+      let text = '';
+      const connection = net.connect({ path: socket, allowHalfOpen: true }, () => connection.end('{"directory":"/work/api","ar'));
+      connection.setEncoding('utf8');
+      connection.on('data', (chunk: string) => { text += chunk; });
+      connection.on('end', () => resolve(text));
+    });
+    expect(JSON.parse(reply)).toEqual({ ok: false, output: 'the request was not one the app could read' });
     server.close();
   });
 
