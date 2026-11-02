@@ -10,25 +10,30 @@ export const LOW_WATER = 10_000;
 
 export type WriteFlow = { queued(length: number): void; parsed(length: number): void };
 
-// main's pause is a lease that lapses (output-pauses.ts), so a terminal still past the high mark asks
-// again, at most every half lease rather than on every chunk.
+// main's pause is a lease that lapses a lease after the last ask (output-pauses.ts), so a terminal still
+// behind asks again, at most every half lease rather than on every chunk. Nothing new arrives while the
+// pty is paused, so the renewal rides on the backlog drawing (parsed), not only on new chunks (queued).
 export const RENEW_MS = PAUSE_LEASE_MS / 2;
 
 export function writeFlow(ask: (paused: boolean) => void, now: () => number = Date.now): WriteFlow {
   let pending = 0;
   let paused = false;
   let askedAt = -Infinity;
+  function pause(): void {
+    if (paused && now() - askedAt < RENEW_MS) return;
+    paused = true;
+    askedAt = now();
+    ask(true);
+  }
   return {
     queued(length) {
       pending += length;
-      if (pending <= HIGH_WATER || (paused && now() - askedAt < RENEW_MS)) return;
-      paused = true;
-      askedAt = now();
-      ask(true);
+      if (pending > HIGH_WATER) pause();
     },
     parsed(length) {
       pending -= length;
-      if (!paused || pending >= LOW_WATER) return;
+      if (!paused) return;
+      if (pending >= LOW_WATER) return pause();
       paused = false;
       ask(false);
     },

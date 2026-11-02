@@ -198,11 +198,11 @@ export async function memory() {
   return { electron, children: childProcesses(main.pid, new Set(electron.map((entry) => entry.pid))) };
 }
 
-// The demo's pane host, the node process outside Electron that runs the worker panes' ptys
-// (docs/panes, panes-decision-1), or nothing when this run has none.
 // The folder the demo's pane host listens in: src/main/panes/pane-host-protocol.ts's paneHostSocket.
 export const paneHostFolder = (demo) => path.resolve(demo, 'userdata', 'pane-host');
 
+// The demo's pane host, the node process outside Electron that runs the worker panes' ptys
+// (docs/panes, panes-decision-1), or nothing when this run has none.
 export function paneHostPids(demo) {
   const socketFolder = paneHostFolder(demo);
   return readdirSync('/proc').filter((entry) => /^\d+$/.test(entry)).flatMap((pid) => {

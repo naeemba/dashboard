@@ -27,4 +27,16 @@ describe('writeFlow', () => {
     flow.parsed(LOW_WATER - 1);
     expect(asked).toEqual([true, true, false]);
   });
+
+  it('renews while the backlog draws, though nothing new arrives', () => {
+    const asked: boolean[] = [];
+    let clock = 0;
+    const flow = writeFlow((paused) => asked.push(paused), () => clock);
+    flow.queued(HIGH_WATER + 1);
+    flow.parsed(1);
+    expect(asked).toEqual([true]);
+    clock = RENEW_MS;
+    flow.parsed(1);
+    expect(asked).toEqual([true, true]);
+  });
 });

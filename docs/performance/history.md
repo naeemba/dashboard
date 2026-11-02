@@ -40,6 +40,7 @@ main was busy 3.9 s of 5 s with 2.3 s in the copy.
 - Not measured: a remote screen joined, where main keeps the copy as before and
   a remote screen's pauses are ignored. With `host.port` set and the pane host
   running, the same output is parsed twice, once in each process.
+
 ## 2026-11-02: hidden projects stop drawing their terminals (finding 4)
 
 Same machine, compositor and tooling as the first profile, `measure.mjs
@@ -106,6 +107,7 @@ one past 0.5 s.
 Not done: the counts are still kept only in memory, so every launch reads
 every log again, now on the thread. Saving them in userData would cut the
 CPU too.
+
 ## 2026-11-02: board arrows move the highlight only (finding 2)
 
 Same machine, compositor and tooling as the first profile, `measure.mjs keys`.

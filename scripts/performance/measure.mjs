@@ -153,7 +153,8 @@ const measurements = {
       }
       print('ctrl-c', { keptPrintingMs: changedAt - pressedAt, stopped: Date.now() - changedAt >= 2000, lastLine: previous });
       print('after', await cpuWindow(5, others));
-    });
+    // The placeholder would keep every later run, of any measurement, from starting the pane host.
+    }).finally(() => { if (host === 'no-host') rmSync(socketFolder, { force: true }); });
   },
 
   // A long answer streamed into alpha's Claude screen as the SDK's text_delta events, sent from main the
