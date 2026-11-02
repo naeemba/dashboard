@@ -21,6 +21,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given a link wrapped onto the next row, when you click it, then the whole link opens in the browser.
 - Given a worker pane is focused, when you zoom it, then it fills the page, and zooming again puts the layout back.
 - Given a pane on Linux, when you press Ctrl+Shift+C and Ctrl+Shift+V, then the selection is copied and the clipboard pasted.
+- Given a pane link on the Claude screen, when you click it, then the page holding the pane comes forward with the pane focused, the way a notification click lands (see [chat](../chat/README.md)).
 - Given a shell that has finished what it ran, when anything asks whether the pane is busy, then one answer says it is free.
 
 ## Open questions

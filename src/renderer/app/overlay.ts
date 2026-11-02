@@ -1,5 +1,5 @@
 import { icon, type IconName } from './icons';
-import { clampIndex } from '../../shared/app/clamp-index';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 import { isModified } from '../keys/shortcuts';
 import type { SearchRow } from '../../shared/app/fuzzy';
 
@@ -196,12 +196,17 @@ export function searchOverlay<Choice>(options: {
   empty?: string;
   // The icon each row leads with, by what the row is.
   glyph: (row: SearchRow<Choice>) => IconName;
+  // For a list that changes while it is open: called once with the way to ask for the rows again,
+  // and answers with the way to stop, which closing the dialog calls.
+  watch?: (changed: () => void) => () => void;
 }): Promise<Choice | undefined> {
   let rows: SearchRow<Choice>[] = [];
   let highlighted = 0;
+  let unwatch: (() => void) | undefined;
 
   return new Promise<Choice | undefined>((resolve) => {
     function finish(choice: Choice | undefined): void {
+      unwatch?.();
       remove();
       resolve(choice);
     }
@@ -281,6 +286,13 @@ export function searchOverlay<Choice>(options: {
       }
     });
     search();
+    // A refresh can reorder the rows, so the highlight follows the row it was on, not its place.
+    unwatch = options.watch?.(() => {
+      const was = rows[highlighted]?.choice;
+      rows = options.rows(box.value);
+      highlighted = heldIndex(rows.map((row) => row.choice), was, highlighted);
+      draw();
+    });
   });
 }
 

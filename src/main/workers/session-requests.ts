@@ -7,6 +7,8 @@ import type { ProjectNamed } from '../projects/project-named';
 import { parseSessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
+import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
+import { paneLink } from '../../shared/workers/pane-link';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
@@ -42,6 +44,8 @@ export type SessionPorts = {
   startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null): void;
   closeWorker(id: string): void;
   mark(id: string, state: WorkerState): void;
+  // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
+  tell(slot: number, text: string): void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
@@ -63,10 +67,27 @@ export function projectOfFolder(
   ));
 }
 
+// What main is told when a worker it dispatched ends its turn: which worker, and that the worker's own
+// report, if it wrote one, says what it did. The hook knows nothing of what the worker did.
+export function doneReport(name: string, id: string): string {
+  return `${name} in pane ${id} (${paneLink(id)}) has finished its turn. If it sent you a report, that says what it did;`
+    + ' `pane list` shows where every worker stands.';
+}
+
 export const answered = (output: string): SessionReply => ({ ok: true, output });
 export const refused = (output: string): SessionReply => ({ ok: false, output });
 
-export function sessionRequests(ports: SessionPorts): (request: SessionRequest) => Promise<SessionReply> {
+export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
+  // Every worker a session run started that is still open, in the order they ran, each naming the slot
+  // whose main ran it: one read serves every page's status line and popup.
+  workers(): DispatchedWorker[];
+  // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
+  // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
+  // called when only the agent exits: that worker stays listed, idle, until it is released.
+  forget(id: string): void;
+};
+
+export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
   // because a worker run a second time has not finished the second task.
   const states = new Map<string, WorkerState>();
@@ -80,6 +101,11 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   // and release it as its own, and its main hears the worker's report. Slots are never reused, so an
   // entry left by a project closed since names nobody.
   const dispatchers = new Map<string, number>();
+  // Each worker a session run started, until it is released, its number claimed again, or main forgets
+  // it (its pane closed or given to something else): the slot whose main ran it, which hears its
+  // report, and what it was asked. Kept apart from `dispatchers`, which is who may run the pane, not
+  // who did.
+  const dispatched = new Map<string, { dispatcher: number; about: string }>();
 
   // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
   // or one it claimed elsewhere. Main and the editor are never a worker: one is where the asking
@@ -115,6 +141,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       target = ports.openProject(found.path);
     }
     const id = terminalId(target, ports.openWorker(target));
+    dispatched.delete(id);
     if (target === slot) dispatchers.delete(id);
     else dispatchers.set(id, slot);
     return answered(id);
@@ -149,7 +176,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     states.delete(id);
     const session = ports.newSession(projectPath, directory, card);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card);
-    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}`);
+    dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
+    // As its hooks would say it, so a status line counting the asker's workers counts this one now.
+    ports.mark(id, 'running');
+    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory} ${paneLink(id)}`);
   }
 
   async function release(id: string, slot: number): Promise<SessionReply> {
@@ -160,6 +190,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     ports.closeWorker(id);
     states.delete(id);
     dispatchers.delete(id);
+    dispatched.delete(id);
     const throwaway = throwaways.get(id);
     throwaways.delete(id);
     if (throwaway === undefined) return answered(`released ${id}`);
@@ -182,7 +213,21 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
-  return async (request) => {
+  function workers(): DispatchedWorker[] {
+    if (dispatched.size === 0) return [];
+    const slots = new Map(ports.openSlots().map((each) => [each.slot, { name: each.name, open: ports.openPanes(each.slot) }]));
+    return [...dispatched].flatMap(([id, { dispatcher, about }]) => {
+      const { slot, index } = paneFromId(id);
+      const page = slots.get(slot);
+      if (page === undefined || !page.open.includes(index)) return [];
+      return [{
+        id, dispatcher, project: page.name, name: workerSessionName(ports.projectPath(slot) ?? '', index),
+        about, status: workerStatus(mainsWorker(id), states.get(id)),
+      }];
+    });
+  }
+
+  return Object.assign(async (request: SessionRequest): Promise<SessionReply> => {
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
@@ -193,6 +238,12 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       if (command.state === 'running') states.delete(command.id);
       else states.set(command.id, command.state);
       ports.mark(command.id, command.state);
+      // Only a worker main started: a card's agent a ship started reports through the board, and a
+      // Claude opened by hand reports to nobody. The main that claimed it hears, which is another
+      // project's when it was claimed with --project.
+      if (command.state === 'done' && mainsWorker(command.id)) {
+        ports.tell(dispatched.get(command.id)?.dispatcher ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), command.id));
+      }
       return answered('');
     }
     const slot = ports.slotOf(request.directory);
@@ -208,5 +259,5 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
     }
-  };
+  }, { workers, forget: (id: string) => { dispatched.delete(id); } });
 }

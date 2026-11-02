@@ -6,7 +6,8 @@ import started from 'electron-squirrel-startup';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
-import { realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
+import { realPath } from './ship/worktree-scan';
+import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
 import { paneScreenCopy, type PaneScreenCopy } from './panes/pane-screen-copy';
@@ -38,7 +39,7 @@ import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
 import { registerWorkerChannels } from './workers/worker-channels';
 import { channels, registerWithIpc } from './app/channels';
-import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from '../shared/app/log-entry';
+import { agentStartEntry, paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
 import { SESSION_FILE } from './app/session';
@@ -74,7 +75,7 @@ import type { Settings } from '../shared/settings/settings';
 import { reviewSweep } from './ship/review-flow';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
-import type { OpenProjects, ProjectOpen, ShipRequest, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
+import type { OpenProjects, ProjectOpen, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
 
 if (started) app.quit();
@@ -500,6 +501,7 @@ const mainsWorkers = new Set<string>();
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
 function startAgent(id: string, worktreePath: string, agentArguments: string[]): void {
   mainsWorkers.delete(id);
+  workerAnswers.forget(id);
   setPaneCommand(id, { args: agentArguments, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
@@ -691,6 +693,7 @@ function setPaneCommand(id: string, command: PaneCommand): void {
 // dropped by the check in spawnTerminal, so no pty:exit goes out for a pane already off the screen.
 function dropPane(id: string): void {
   mainsWorkers.delete(id);
+  workerAnswers.forget(id);
   const terminalProcess = shells.get(id);
   shells.delete(id);
   terminalProcess?.kill();
@@ -802,46 +805,7 @@ const shipCard = shipFlow({
   forgetReview: (cardId) => reviews.forget(cardId),
   queue: shipInProject,
 });
-table.handle('worktree:create', async (_screen, request: ShipRequest) => {
-  const result = await shipCard(request);
-  logStore.log(shipEntry(request, result));
-  return result;
-});
-
-// The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
-// a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
-table.handle('worktree:list', () => {
-  worktrees.dropDead();
-  return worktrees.list();
-});
-
-// A channel of its own rather than riding along on worktree:list and worktree:change, which reach the
-// renderer at launch and after every ship, removal and project close. A `git status` per worktree
-// behind all of those would be that many process spawns for an answer only the worktree dialog shows.
-//
-// worktreeState is git's own answer rather than the ship's narrower one, because git is what refuses
-// the removal this row's `d` is about to ask for. Run concurrently — this is main, and every pane's
-// bytes flow through it.
-table.handle('worktree:check', async () => {
-  const results = await Promise.all(worktrees.entries().map(async (entry) => (
-    { worktreePath: entry.worktreePath, ...await worktreeState(entry.worktreePath) }
-  )));
-  return {
-    dirty: results.filter((result) => result.dirty).map((result) => result.worktreePath),
-    unreadable: results.filter((result) => result.unreadable).map((result) => result.worktreePath),
-  };
-});
-
-// Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
-table.handle('worktree:scan', (_screen, projectPaths: string[]) => (
-  scanWorktrees(projectPaths, worktrees.entries())
-));
-
-table.handle('worktree:remove', async (_screen, worktreePath: string, force: boolean, projectPath: string) => {
-  const result = await worktrees.remove(worktreePath, force, projectPath);
-  logStore.log(removalEntry(projectPath, worktreePath, result));
-  return result;
-});
+registerWorktreeChannels(table, { worktrees, shipCard, log: (draft) => logStore.log(draft) });
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
@@ -853,15 +817,7 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
 // the session command's and decides them.
 const folderExists = (folder: string) => !projectFromPath(folder).missing;
-const sessions = listenForSessions(sessionSocket, projectRequests({
-  slotOf: slotOfProject,
-  missingIn: (slot) => projects[slot]?.missing === true,
-  folderExists,
-  open: openProject,
-  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
-  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
-  close: closeProjectSlot,
-}, sessionRequests({
+const workerAnswers = sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
   openSlots: () => [MANAGER_SLOT, ...projects.keys()].flatMap((slot) => {
@@ -897,6 +853,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
   },
   closeWorker,
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
+  tell: chats.tell,
   cardWorktree(projectPath, cardId) {
     const entry = entryForCard(worktrees.entries(), cardId);
     if (entry?.projectPath !== projectPath) return undefined;
@@ -910,7 +867,18 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
     const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
-})), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+});
+// The workers each main ran, for its status line and workers popup (worker-roster.ts).
+table.handle('workers:read', () => workerAnswers.workers());
+const sessions = listenForSessions(sessionSocket, projectRequests({
+  slotOf: slotOfProject,
+  missingIn: (slot) => projects[slot]?.missing === true,
+  folderExists,
+  open: openProject,
+  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
+  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
+  close: closeProjectSlot,
+}, workerAnswers), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
 
 function createWindow(): void {
   mainWindow = openAppWindow({
