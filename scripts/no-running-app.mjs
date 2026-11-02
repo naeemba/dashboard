@@ -10,23 +10,17 @@ import { execFileSync } from 'node:child_process';
 import { realpathSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runningFromRepository } from './running-app.mjs';
 
-// Forward slashes on every platform, so one pattern reads a Windows command line and a POSIX one.
-const slashes = (text) => text.replaceAll('\\', '/');
-const repo = slashes(realpathSync(join(dirname(fileURLToPath(import.meta.url)), '..')));
+const repositoryPath = realpathSync(join(dirname(fileURLToPath(import.meta.url)), '..'));
 
 function commandLines() {
   if (process.platform !== 'win32') return execFileSync('ps', ['-Ao', 'command='], { encoding: 'utf8' }).split('\n');
-  const script = 'Get-CimInstance Win32_Process | ForEach-Object { $_.CommandLine }';
+  const script = '[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-CimInstance Win32_Process | ForEach-Object { $_.CommandLine }';
   return execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8' }).split(/\r?\n/);
 }
 
-// Windows paths are not case sensitive, and a command line may spell the drive either way.
-const fold = process.platform === 'win32' ? (text) => text.toLowerCase() : (text) => text;
-const running = commandLines().filter((line) => {
-  const command = fold(slashes(line));
-  return command.includes(fold(`${repo}/`)) && /\/(out|\.vite)\/|\/node_modules\/electron\//.test(command);
-});
+const running = runningFromRepository(commandLines(), repositoryPath, process.platform);
 if (running.length === 0) process.exit(0);
 
 console.error('Stopped: an app is running out of this repo, and building would delete the files it is');
