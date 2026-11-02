@@ -54,9 +54,12 @@ export function workerCount(workers: readonly DispatchedWorker[]): string {
 // session has used the prompt cache says whether it is still warm, from `caches` (the usage sweep's).
 export function workerRows(workers: DispatchedWorker[], query: string, caches: Readonly<Record<string, CacheUse>>, now: number): SearchRow<string>[] {
   const byState = (one: DispatchedWorker, other: DispatchedWorker) => ORDER.indexOf(one.status) - ORDER.indexOf(other.status);
-  return ranked(workers, (worker) => `${worker.project} ${worker.name} ${worker.about}`, query, byState).map((worker) => ({
-    name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
-    detail: [worker.status, caches[worker.id] && cacheWarmth(caches[worker.id], now).text, worker.about].filter(Boolean).join(' · '),
-    choice: worker.id,
-  }));
+  return ranked(workers, (worker) => `${worker.project} ${worker.name} ${worker.about}`, query, byState).map((worker) => {
+    const cache = caches[worker.id];
+    return {
+      name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
+      detail: [worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
+      choice: worker.id,
+    };
+  });
 }

@@ -18,10 +18,14 @@ let listening = false;
 
 const ofSlot = (slot: number): DispatchedWorker[] => roster.filter((worker) => worker.dispatcher === slot);
 
+function tellWatchers(): void {
+  for (const each of watchers) each();
+}
+
 function read(bridge: DashboardBridge): void {
   bridge.workers().then((list) => {
     roster = list;
-    for (const each of watchers) each();
+    tellWatchers();
   }, () => undefined);
 }
 
@@ -30,12 +34,12 @@ function watch(bridge: DashboardBridge, changed: () => void): () => void {
     listening = true;
     bridge.onPaneMark(() => read(bridge));
     bridge.onProjectsChange(() => read(bridge));
-    const cachesOf = (usage: UsageSnapshot) => {
+    const takeCaches = (usage: UsageSnapshot) => {
       caches = usage.caches;
-      for (const each of watchers) each();
+      tellWatchers();
     };
-    bridge.onUsageChange(cachesOf);
-    bridge.readUsage().then(cachesOf, () => undefined);
+    bridge.onUsageChange(takeCaches);
+    bridge.readUsage().then(takeCaches, () => undefined);
   }
   watchers.add(changed);
   return () => watchers.delete(changed);

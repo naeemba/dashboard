@@ -235,5 +235,6 @@ What it gets wrong, on purpose: the time is when the reply was written, not when
 so a long reply reads up to its own length too warm. A request that mixed tiers counts as 1h, though
 its 5m part goes cold first. An SDK message with no `timestamp` (an older Claude Code) is not counted,
 rather than stamped with when it arrived. The pill redraws once a minute, once a second in the last
-minute, and sets no timer while the screen is off view; showing it again redraws it. The workers
+minute. A tick that finds the screen off view redraws nothing and sets no further timer; showing the
+screen again wakes the clock and redraws it. The workers
 popup reads the time when its rows are drawn and does not count down while open.

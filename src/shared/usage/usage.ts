@@ -82,7 +82,7 @@ export type FileUsage = {
   allTime: number;
   samples: Sample[];
   // The last of the session's own replies that wrote or read the prompt cache (cache-warmth.ts).
-  cache?: CacheUse;
+  cache?: CacheUse | null;
 };
 
 function sum(samples: readonly Sample[], from: number): number {

@@ -657,6 +657,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     // look at runs no CLI.
     shown() {
       measures.shown();
+      cacheClock.wake();
       drawFoot();
     },
     focus,

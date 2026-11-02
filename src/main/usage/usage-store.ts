@@ -121,7 +121,7 @@ function countInto(usage: FileUsage, text: string): void {
     usage.allTime += tokens;
     usage.samples.push({ at, tokens });
     // A subagent's replies are its own cache, not the pane's conversation's.
-    if (parsed.isSidechain !== true) usage.cache = cacheUseOf(block, at, usage.cache ?? null) ?? undefined;
+    if (parsed.isSidechain !== true) usage.cache = cacheUseOf(block, at, usage.cache ?? null);
   }
 }
 
@@ -157,7 +157,7 @@ export async function sweepUsage(
         if (appended.size < usage.size) {
           usage.allTime = 0;
           usage.samples = [];
-          usage.cache = undefined;
+          usage.cache = null;
         }
         countInto(usage, appended.text);
         usage.size = appended.size;

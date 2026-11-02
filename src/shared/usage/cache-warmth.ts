@@ -3,23 +3,24 @@
 // what it read from it, and the cache lives a fixed time after the last request that did either
 // (docs/chat/decisions.md, chat-decision-12, quotes Anthropic's prompt caching page on this).
 
+import type { TokenUsage } from './usage';
+import { isRecord } from '../app/is-record';
+
 export type CacheTier = '5m' | '1h';
 
 // The last request that wrote or read the cache, and the lifetime the session last wrote with.
 export type CacheUse = { at: number; tier: CacheTier };
 
-// The cache counters on a reply's usage, spelled as the API spells them. All optional: an older
-// Claude Code writes only the flat creation count, without the per-tier breakdown.
-export type CacheCounters = {
+// The flat counters plus the per-tier breakdown of what was written. An older Claude Code writes
+// only the flat creation count.
+type CacheCounters = TokenUsage & {
   cache_creation?: { ephemeral_5m_input_tokens?: number; ephemeral_1h_input_tokens?: number } | null;
-  cache_creation_input_tokens?: number;
-  cache_read_input_tokens?: number;
 };
-
-const TIER_MS: Record<CacheTier, number> = { '5m': 5 * 60_000, '1h': 60 * 60_000 };
 
 const MINUTE = 60_000;
 const SECOND = 1_000;
+
+const TIER_MS: Record<CacheTier, number> = { '5m': 5 * MINUTE, '1h': 60 * MINUTE };
 
 // Under this much left the pill turns yellow: the next prompt had better come soon.
 const SOON_MS = 5 * MINUTE;
@@ -34,7 +35,7 @@ const count = (value: unknown): number => (typeof value === 'number' ? value : 0
 // ponytail: the lifetime runs from the start of the request, and `at` is when the reply was written,
 // so a long reply reads up to its own length too warm. Track the request's start if that shows.
 export function cacheUseOf(usage: unknown, at: number | undefined, previous: CacheUse | null): CacheUse | null {
-  if (at === undefined || typeof usage !== 'object' || usage === null) return previous;
+  if (at === undefined || !isRecord(usage)) return previous;
   if (previous && at < previous.at) return previous;
   const counters = usage as CacheCounters;
   const wroteHour = count(counters.cache_creation?.ephemeral_1h_input_tokens);
@@ -55,6 +56,6 @@ export function cacheWarmth(use: CacheUse, now: number): CacheWarmth {
   const left = use.at + TIER_MS[use.tier] - now;
   if (left <= 0) return { text: 'cold', tone: 'plain', changesIn: null };
   const tone = left < SOON_MS ? 'yellow' : 'green';
-  if (left > MINUTE) return { text: `warm ${Math.ceil(left / MINUTE)}m`, tone, changesIn: ((left - 1) % MINUTE) + 1 };
-  return { text: `warm ${Math.ceil(left / SECOND)}s`, tone, changesIn: ((left - 1) % SECOND) + 1 };
+  const [unit, suffix] = left > MINUTE ? [MINUTE, 'm'] : [SECOND, 's'];
+  return { text: `warm ${Math.ceil(left / unit)}${suffix}`, tone, changesIn: ((left - 1) % unit) + 1 };
 }
