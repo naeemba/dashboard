@@ -1,3 +1,5 @@
+import type { CacheUse } from './cache-warmth';
+
 // What Claude Code's own logs say a reply cost, and the three totals the app shows from them.
 //
 // Nothing here reads a file or knows where the logs are: usage-store.ts does that, and main.ts does
@@ -79,6 +81,8 @@ export type FileUsage = {
   session: string;
   allTime: number;
   samples: Sample[];
+  // The last of the session's own replies that wrote or read the prompt cache (cache-warmth.ts).
+  cache?: CacheUse;
 };
 
 function sum(samples: readonly Sample[], from: number): number {
@@ -165,10 +169,14 @@ export function formatTokens(total: number): string {
 // A pane gets its session's whole cost rather than the three windows. The question a pane row answers
 // is "what has this agent cost me", and an agent that has been going for six hours would read as
 // nought against a five-hour window it started before.
+//
+// `caches` is each pane's session's last use of the prompt cache, for the workers popup's warm or cold;
+// a pane whose session has not used it is left out.
 export type UsageSnapshot = {
   projects: Record<string, Totals>;
   days: Record<string, number[]>;
   panes: Record<string, number>;
+  caches: Record<string, CacheUse>;
 };
 
 export function snapshotOf(
@@ -179,7 +187,12 @@ export function snapshotOf(
 ): UsageSnapshot {
   const all = [...files];
   const bySession = new Map<string, number>();
-  for (const file of all) bySession.set(file.session, (bySession.get(file.session) ?? 0) + file.allTime);
+  const cacheBySession = new Map<string, CacheUse>();
+  for (const file of all) {
+    bySession.set(file.session, (bySession.get(file.session) ?? 0) + file.allTime);
+    const known = cacheBySession.get(file.session);
+    if (file.cache && (!known || file.cache.at > known.at)) cacheBySession.set(file.session, file.cache);
+  }
   // Each project's files picked out once and used for both answers: the filter runs over every log on
   // the machine, every half minute.
   const ran = projects.map((project) => ({
@@ -190,10 +203,14 @@ export function snapshotOf(
     projects: Object.fromEntries(ran.map(({ path, files }) => [path, totalsOf(files, now)])),
     days: Object.fromEntries(ran.map(({ path, files }) => [path, dailyTotals(files, now)])),
     panes: Object.fromEntries([...paneSessions].map(([pane, session]) => [pane, bySession.get(session) ?? 0])),
+    caches: Object.fromEntries([...paneSessions].flatMap(([pane, session]) => {
+      const cache = cacheBySession.get(session);
+      return cache ? [[pane, cache]] : [];
+    })),
   };
 }
 
-export const NO_USAGE: UsageSnapshot = { projects: {}, days: {}, panes: {} };
+export const NO_USAGE: UsageSnapshot = { projects: {}, days: {}, panes: {}, caches: {} };
 
 // Whether a sweep found anything worth telling the screen about. Almost every sweep reads the same
 // numbers back — nobody is working in most of the open projects — and a message for those is a redraw

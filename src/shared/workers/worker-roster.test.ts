@@ -13,9 +13,15 @@ describe('worker roster', () => {
 
   it('lists rows by state, keeping the order they came in within each', () => {
     const workers = [worker('2:1', 'idle'), worker('2:2', 'done'), worker('2:3', 'blocked'), worker('2:4', 'done')];
-    expect(workerRows(workers, '').map((row) => row.choice)).toEqual(['2:3', '2:2', '2:4', '2:1']);
-    expect(workerRows(workers, '')[0]).toEqual({ name: 'api · terminal 4', detail: 'blocked · go', choice: '2:3' });
-    expect(workerRows(workers, 'api-2:4').map((row) => row.choice)).toEqual(['2:4']);
+    expect(workerRows(workers, '', {}, 0).map((row) => row.choice)).toEqual(['2:3', '2:2', '2:4', '2:1']);
+    expect(workerRows(workers, '', {}, 0)[0]).toEqual({ name: 'api · terminal 4', detail: 'blocked · go', choice: '2:3' });
+    expect(workerRows(workers, 'api-2:4', {}, 0).map((row) => row.choice)).toEqual(['2:4']);
+  });
+
+  it("says whether a worker's prompt cache is warm, and nothing for one that has not used it", () => {
+    const workers = [worker('2:1', 'working'), worker('2:2', 'working'), worker('2:3', 'working')];
+    const caches = { '2:1': { at: 0, tier: '1h' as const }, '2:2': { at: 0, tier: '5m' as const } };
+    expect(workerRows(workers, '', caches, 18 * 60_000).map((row) => row.detail)).toEqual(['working · warm 42m · go', 'working · cold · go', 'working · go']);
   });
 
   it('says idle once the agent is gone, whatever its hooks last said', () => {

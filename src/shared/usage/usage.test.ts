@@ -166,6 +166,16 @@ describe('snapshotOf', () => {
     expect(snapshot.panes).toEqual({ '0-1': 17 });
   });
 
+  it("gives a pane its session's latest use of the prompt cache, and leaves out one with none", () => {
+    const files = [
+      { ...fileIn(project, 'a', 1), cache: { at: 5, tier: '1h' as const } },
+      { ...fileIn(project, 'a', 1), cache: { at: 9, tier: '5m' as const } },
+      fileIn(project, 'b', 1),
+    ];
+    const snapshot = snapshotOf(files, [], new Map([['0-1', 'a'], ['0-2', 'b']]), MONDAY_MORNING);
+    expect(snapshot.caches).toEqual({ '0-1': { at: 9, tier: '5m' } });
+  });
+
   it('gives a pane whose session has written nothing yet a nought rather than nothing', () => {
     const snapshot = snapshotOf([], [], new Map([['0-1', 'a']]), MONDAY_MORNING);
     expect(snapshot.panes).toEqual({ '0-1': 0 });
@@ -233,15 +243,15 @@ describe('usageDiffers', () => {
 
   it('says no to a sweep that read the same figures back', () => {
     expect(usageDiffers(
-      { projects: { '/p': totals }, days: {}, panes: { '0-1': 5 } },
-      { projects: { '/p': { ...totals } }, days: {}, panes: { '0-1': 5 } },
+      { projects: { '/p': totals }, days: {}, panes: { '0-1': 5 }, caches: {} },
+      { projects: { '/p': { ...totals } }, days: {}, panes: { '0-1': 5 }, caches: {} },
     )).toBe(false);
   });
 
   it('says yes to a figure that moved, and to a pane that came or went', () => {
     expect(usageDiffers(
-      { projects: { '/p': totals }, days: {}, panes: {} },
-      { projects: { '/p': { ...totals, fiveHours: 2 } }, days: {}, panes: {} },
+      { projects: { '/p': totals }, days: {}, panes: {}, caches: {} },
+      { projects: { '/p': { ...totals, fiveHours: 2 } }, days: {}, panes: {}, caches: {} },
     )).toBe(true);
     expect(usageDiffers(NO_USAGE, { ...NO_USAGE, panes: { '0-1': 0 } })).toBe(true);
   });
