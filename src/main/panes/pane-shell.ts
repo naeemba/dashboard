@@ -14,6 +14,10 @@ export type PaneShell = {
   write(data: string): void;
   resize(cols: number, rows: number): void;
   kill(): void;
+  // Stop and start reading the pty, so a program printing faster than its pane can draw blocks on its
+  // own writes: output-pauses.ts.
+  pause(): void;
+  resume(): void;
   onData(listener: (data: string) => void): unknown;
   onExit(listener: (event: { exitCode: number }) => void): unknown;
 };

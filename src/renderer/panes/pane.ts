@@ -1,6 +1,7 @@
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { PrintWidths } from './print-widths';
+import type { WriteFlow } from './write-flow';
 import { isPrinted, tailLines } from '../../shared/manager/manager';
 import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
 
@@ -47,6 +48,7 @@ export type Pane = {
   bellTimer?: number;
   lastPrintedAt: number;
   printWidths: PrintWidths;
+  flow: WriteFlow;
 };
 
 // What these read off, written structurally rather than as xterm's Terminal, so the walk in

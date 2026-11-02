@@ -15,6 +15,7 @@ import { PANE_SCROLLBACK, paneScreen } from '../panes/pane';
 import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
+import { writeFlow } from '../panes/write-flow';
 import type { SectionStrip } from '../manager/section-strip';
 import type { MarketsView } from '../markets/markets-view';
 import type { Settings } from '../../shared/settings/settings';
@@ -377,6 +378,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
 
     const pane: Pane = {
       index, element: container, terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths,
+      flow: writeFlow((paused) => (paused ? options.bridge.pauseOutput(id) : options.bridge.resumeOutput(id))),
     };
     terminal.onData((data) => {
       if (!pane.exited) {

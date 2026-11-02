@@ -18,6 +18,8 @@ function fakeShell(pid: number) {
     write: (data) => { written.push(data); },
     resize: () => undefined,
     kill: () => { killed += 1; },
+    pause: () => { written.push('<pause>'); },
+    resume: () => { written.push('<resume>'); },
     onData: (listener) => listeners.data.push(listener),
     onExit: (listener) => listeners.exit.push(listener),
   };
@@ -96,6 +98,15 @@ describe('paneHostServer', () => {
     expect(idle()).toBe(0);
     spawned[0].exit(0);
     expect(idle()).toBe(1);
+  });
+
+  it('pauses and resumes reading a shell when the app asks', () => {
+    const { host, spawned } = server();
+    host.connect(() => undefined);
+    host.receive({ type: 'spawn', ...request('k') });
+    host.receive({ type: 'pause', key: 'k' });
+    host.receive({ type: 'resume', key: 'k' });
+    expect(spawned[0].written).toEqual(['<pause>', '<resume>']);
   });
 
   it('answers a shell that cannot start with the exit a missing shell gives', () => {

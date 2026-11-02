@@ -769,7 +769,8 @@ bridge.onData((id, data) => {
   const pane = panesById.get(id);
   if (!pane) return;
   pane.lastPrintedAt = Date.now();
-  pane.terminal.write(data);
+  pane.flow.queued(data.length);
+  pane.terminal.write(data, () => pane.flow.parsed(data.length));
 });
 
 // The manager's pane rows are the only thing on any screen that goes stale where it stands: every

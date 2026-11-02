@@ -1,7 +1,8 @@
 import { Notification, type BrowserWindow } from 'electron';
 import type { Channels } from '../app/channels';
+import { outputPauses } from './output-pauses';
 import type { PaneShell } from './pane-shell';
-import type { Screens } from '../../shared/remote-host/screens';
+import { LOCAL_SCREEN, type Screens } from '../../shared/remote-host/screens';
 
 // What a pane sends the main process: its keystrokes, its size, a request to restart its shell, and a
 // banner for it. Main-process wiring only, out of main.ts because main had reached its 600-line
@@ -44,6 +45,11 @@ export function registerPaneChannels(table: Channels, main: {
     main.screens.resize(screen, id, { cols, rows });
     fitShell(main.shells, main.screens, id);
   });
+  // Only this machine's window. A remote screen's resume would undo the window's pause and the other way
+  // round, so a slower screen keeps the backlog it had before.
+  const pauses = outputPauses(main.shells);
+  table.on('pty:pause', (screen, id: string) => { if (screen === LOCAL_SCREEN) pauses.pause(id); });
+  table.on('pty:resume', (screen, id: string) => { if (screen === LOCAL_SCREEN) pauses.resume(id); });
   table.on('pty:restart', (_screen, id: string) => {
     if (!main.shells.has(id)) main.spawnTerminal(id);
   });

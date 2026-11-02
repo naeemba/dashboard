@@ -70,6 +70,8 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
       if (message.type === 'write') shell?.write(message.data);
       if (message.type === 'resize') shell?.resize(message.cols, message.rows);
       if (message.type === 'kill') shell?.kill();
+      if (message.type === 'pause') shell?.pause();
+      if (message.type === 'resume') shell?.resume();
     },
     // What is in the foreground of each pane, sent when it changes. The app reads it synchronously
     // (pane-shells.ts's foregroundOf), so it has to be there already when asked.
