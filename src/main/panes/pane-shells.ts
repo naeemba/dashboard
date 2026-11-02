@@ -2,7 +2,7 @@ import { editorArguments } from '../../shared/panes/shell';
 import { EDITOR_INDEX, paneFromId, sizeOfPane } from '../../shared/panes/terminals';
 import { editorSocket, removeSocket } from '../nvim/nvim-remote';
 import { paneKey } from './pane-host-protocol';
-import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
+import { screenCopyWhile, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
 import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
@@ -21,6 +21,8 @@ export function paneShells(main: {
   shellCommand(): string;
   projectPath(slot: number): string | undefined;
   send(channel: string, ...payload: unknown[]): void;
+  // Whether anything will read a pane's screen copy: pane-screen-copy.ts's screenCopyWhile.
+  keepsScreens(): boolean;
   // A pane's own shell ended: what main logs and releases for it.
   ended(id: string, exitCode: number): void;
 }) {
@@ -73,7 +75,7 @@ export function paneShells(main: {
   // comes through here, so the one line recording what it started with covers every pane there is.
   function listenTo(id: string, shell: PaneShell, shellUsed: string): void {
     startedWith.set(id, shellUsed);
-    const copy = paneScreenCopy(() => shell);
+    const copy = screenCopyWhile(main.keepsScreens, () => shell);
     screenCopies.set(id, copy);
     shell.onData((data) => { copy.push(data); main.send('pty:data', id, data); });
     shell.onExit(({ exitCode }) => {

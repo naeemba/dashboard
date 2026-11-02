@@ -40,4 +40,14 @@ Folders: `src/main/remote-host/`, `src/shared/remote-host/`, `src/renderer/remot
 - Given two screens draw one pane, when they report sizes, then the shell gets the smallest columns and rows, the way tmux does.
 - Given a screen opens a project, when the host pushes `projects:change`, then every screen's pages match the host's list.
 - Given a screen asks the host for the folder dialog, when the host refuses, then that screen's status bar says to type the path on the host (errors-rule-2).
+- Given no `host.port` and the window never away, when a pane prints, then main keeps no screen copy of it.
 - Given a mac screen on a Linux host, when it reads its keys, then it keeps its own Cmd keys.
+
+## Open questions
+
+- With no `host.port`, main copies a pane's screen only while this window
+  shows another host (`screenCopyWhile` in `pane-screen-copy.ts`). Coming
+  home, a pane shows only what it printed while you were away, and one that
+  printed nothing is blank until it next prints. Seeding the copy from the
+  pane host's own when the window leaves would fix it, at the cost of a
+  protocol message.
