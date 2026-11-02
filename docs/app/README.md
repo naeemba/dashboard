@@ -56,17 +56,15 @@ launch's command line the way it read its own (app-decision-1). Today that is
 `--remote` only.
 
 The lock is keyed on the userData folder, so a copy started with its own
-`--user-data-dir` runs beside the installed app. That is how the performance
-demo and any test run of a build stay off the app you are using:
-
-    ./node_modules/.bin/electron . --user-data-dir=/tmp/dashboard-try
-
-Without it, `npm start` while the installed app is running only focuses the
-installed app's window.
+`--user-data-dir` runs beside the installed app. `settings.json` and `.env` are
+not in userData, so such a copy also needs a `HOME` and `XDG_CONFIG_HOME` of
+its own to stay off the app you are using; `scripts/performance/launch-demo.sh`
+sets all three. Without `--user-data-dir`, `npm start` while the installed app
+is running only focuses the installed app's window.
 
 `session.json` and `recents.json` are written through `replaceFile`, a
-temporary file renamed over the old one, so a crash or a power cut mid-write
-leaves the old file or the new one, never half of one.
+temporary file flushed to disk and renamed over the old one, so a crash or a
+power cut mid-write leaves the old file or the new one, never half of one.
 
 ## Dependency holds
 

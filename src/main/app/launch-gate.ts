@@ -7,10 +7,12 @@ import started from 'electron-squirrel-startup';
 
 if (started) app.quit();
 
-// One app per userData folder. A second copy on the same folder would share settings.json, session.json,
-// recents.json and worktrees.json with the first, and whichever wrote last would win. The lock is
+// One app per userData folder. A second copy on the same folder would share session.json, recents.json,
+// worktrees.json and session-index.json with the first, and whichever wrote last would win. The lock is
 // Electron's, and Electron keys it on the userData folder, so a copy started with its own
 // `--user-data-dir` (the performance demo) takes a lock of its own and runs beside the installed app.
+// settings.json is not in userData (settings-store.ts) and such a copy still shares it, which is why the
+// demo also runs with a HOME of its own.
 // app.exit, not app.quit: quit waits for the event loop, and main.ts would run in the meantime.
 if (!app.requestSingleInstanceLock()) app.exit(0);
 

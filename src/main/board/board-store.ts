@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
@@ -364,6 +364,8 @@ function readStoredBoard(projectPath: string): BoardRead {
 // How every file the dashboard keeps about a project is written: to a temporary file beside it first,
 // then renamed over it. A rename within a directory is atomic on every platform this app runs on, so a
 // crash or a full disk mid-write leaves either the old file or the new one, never a truncated one.
+// The temporary file is flushed to disk before the rename: without that, a power cut can land the
+// rename before the bytes, and the next launch finds the new name on an empty file.
 // Without it the app itself would be the main producer of the corruption the salvage path in readBoard
 // exists to clean up after, and the notes would come back with the second half of a page missing.
 //
@@ -371,7 +373,13 @@ function readStoredBoard(projectPath: string): BoardRead {
 export function replaceFile(filePath: string, text: string): void {
   mkdirSync(dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.tmp`;
-  writeFileSync(temporaryPath, text);
+  const descriptor = openSync(temporaryPath, 'w');
+  try {
+    writeFileSync(descriptor, text);
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
   try {
     renameSync(temporaryPath, filePath);
   } catch (error: unknown) {

@@ -129,9 +129,7 @@ export function connectAtLaunch(argv: string[], settings: () => Settings, table:
   };
   table.on('session:restored', () => {
     restored = true;
-    if (!waiting) return;
-    waiting = false;
-    connect();
+    if (waiting) { waiting = false; connect(); }
   });
   return (laterArgv) => {
     if (!laterArgv.includes('--remote')) return;
