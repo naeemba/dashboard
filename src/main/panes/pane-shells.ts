@@ -8,8 +8,8 @@ import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
 import type { Screens } from '../../shared/remote-host/screens';
 
-// Every pane's shell as main holds it: spawned through the pane host, or taken back from it after a
-// restart, and listened to the one way either way. Main-process spawning, out of main.ts because main
+// Every pane's shell as main holds it: a worker's spawned through the pane host or taken back from it
+// after a restart, the editor's spawned in this process, and listened to the one way every way. Main-process spawning, out of main.ts because main
 // had reached its 600-line ceiling; main hands over what only it has.
 export function paneShells(main: {
   host: PaneHost;

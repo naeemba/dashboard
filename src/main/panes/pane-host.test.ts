@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { hostCommand, paneHost } from './pane-host-client';
-import { line, lineReader, paneHostSocket, paneKey, type FromHost, type SpawnRequest, type ToHost } from './pane-host-protocol';
-import { paneHostServer } from './pane-host-server';
+import { line, lineReader, paneHostSocket, paneKey, type FromHost, type SpawnRequest } from './pane-host-protocol';
+import { acceptApps, paneHostServer } from './pane-host-server';
 import type { PaneShell } from './pane-shell';
 
 // A shell that does what the test tells it, in place of node-pty.
@@ -137,14 +137,12 @@ describe('paneHost over a socket', () => {
     rmSync(folder, { recursive: true, force: true });
   });
 
-  // The host's socket, with the server above behind it, as pane-host-entry.ts puts it.
+  // The host's socket, with the server above behind it, wired the way pane-host-entry.ts wires it.
   function listen(host: ReturnType<typeof paneHostServer>, socketPath: string): Promise<net.Server> {
+    const accept = acceptApps(host);
     const listener = net.createServer((socket) => {
       accepted.push(socket);
-      socket.setEncoding('utf8');
-      socket.on('data', lineReader<ToHost>((message) => host.receive(message)));
-      socket.on('close', () => host.disconnect());
-      host.connect((message) => socket.write(line(message)));
+      accept(socket);
     });
     return new Promise((resolve) => listener.listen(socketPath, () => resolve(listener)));
   }
@@ -201,6 +199,25 @@ describe('paneHost over a socket', () => {
     const next = client.spawn({ ...request(paneKey('/project', 1)), file: '/bin/sh', args: ['-c', 'exit 0'], cwd: folder, env: { PATH: process.env.PATH ?? '' } });
     expect(next.kept).toBeUndefined();
     await new Promise((resolve) => next.onExit(resolve));
+    listener.close();
+  });
+
+  it('turns a second app away while one is connected, and the first keeps hearing its shells', async () => {
+    folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
+    const socketPath = path.join(folder, 'host.sock');
+    const { host, spawned } = server();
+    host.receive({ type: 'spawn', ...request(paneKey('/project', 2)) });
+    const listener = await listen(host, socketPath);
+    const first = paneHost({ socket: socketPath, launch: () => undefined, lost: () => undefined });
+    await first.ready;
+    const [{ shell }] = first.adopt('/project');
+    const lost: string[] = [];
+    const second = paneHost({ socket: socketPath, launch: () => undefined, lost: (message) => lost.push(message) });
+    await second.ready;
+    expect(lost[0]).toContain('Another Dashboard');
+    const heard = new Promise<string>((resolve) => shell.onData((data) => { if (data.includes('still here')) resolve(data); }));
+    spawned[0].print('still here');
+    expect(await heard).toContain('still here');
     listener.close();
   });
 

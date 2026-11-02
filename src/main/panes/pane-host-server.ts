@@ -1,5 +1,6 @@
+import type net from 'node:net';
 import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
-import type { FromHost, SpawnRequest, Survivor, ToHost } from './pane-host-protocol';
+import { line, lineReader, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
 import { foregroundName, type PaneShell } from './pane-shell';
 
 // The pane host's half: the shells themselves, kept running whether or not an app is connected. One
@@ -82,5 +83,30 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
         send?.({ type: 'foreground', key, name });
       }
     },
+  };
+}
+
+// What the host's socket does with each app that connects, here rather than in pane-host-entry.ts so
+// the test drives the same wiring the host runs.
+export function acceptApps(server: ReturnType<typeof paneHostServer>): (socket: net.Socket) => void {
+  let current: net.Socket | null = null;
+  return (socket) => {
+    socket.on('error', () => undefined);
+    // One app at a time. An app that went has had its end closed by the kernel, so a second one arriving
+    // while one is connected is a second Dashboard on the same user data: it is turned away and runs
+    // its shells itself, rather than taking the first one's panes out from under it.
+    if (current !== null) {
+      socket.end(line({ type: 'busy' }));
+      return;
+    }
+    current = socket;
+    socket.setEncoding('utf8');
+    socket.on('data', lineReader<ToHost>((message) => server.receive(message)));
+    socket.on('close', () => {
+      if (current !== socket) return;
+      current = null;
+      server.disconnect();
+    });
+    server.connect((message) => socket.write(line(message)));
   };
 }
