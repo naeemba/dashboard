@@ -30,6 +30,11 @@ It packages the app and installs it to `/Applications/Dashboard.app` on a mac or
 
 On a mac, building signs the app with a self-signed certificate named `Dashboard Local` in the login keychain, and fails without it. Create it once in Keychain Access → Certificate Assistant → Create a Certificate…, Identity Type *Self Signed Root*, Certificate Type *Code Signing*. Recreating it makes macOS ask for folder access once more.
 
+Every launch also installs the `/create-task` skill for Claude Code, rewriting a file only when this build's copy differs:
+
+- `~/.claude/skills/create-task/SKILL.md`: the `/create-task` command
+- `~/.claude/skills/create-task/create-task.js`: the program it runs, at a path that does not move. Point `PR_LOOP_CARD_SCRIPT` at it; it takes `--title`, `--notes`, `--priority` and, for a board on a remote other than `origin`, `--remote <name>`. It works outside a Dashboard pane. [Board](docs/board/README.md#create-task) has the rest.
+
 The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 
 The window opens on the projects the last run was left on — the same order, each on the view it was showing, with the same pane focused; the layout lives in `session.json` under the app's data directory, next to `recents.json`. A project whose folder has since gone away comes back once as a dead tab and is then forgotten, so it costs you the tab on one launch rather than every launch. With nothing saved the window opens empty. Ctrl+S lists the projects you opened before and offers a folder dialog for a new one.

@@ -150,6 +150,9 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   onto the file as it is now)
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
   `board-usage.ts` (also `dashboard board`, see [command](../command/README.md))
+- `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
+  `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
+  (what the app writes under `~/.claude` at launch), each beside its `.test.ts`
 - Screen: `board-view.ts`, `board-detail.ts`, `board-toolbar.ts`,
   `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`, `card-editor.ts`,
   `board-saves.ts` (the screen's saves, one at a time, each beside the board it replays from)
@@ -157,6 +160,31 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - Styles: `board.css`
 - Tests: `test-board.ts` (helpers), `board.test.ts`, `board.columns.test.ts`,
   `board.tree.test.ts`
+
+## /create-task
+
+Quick capture from any Claude session: `/create-task <what the task is>` files one card on the
+project's board on the default branch of its remote and pushes it, leaving the branch, HEAD, index
+and working tree it is run from alone. It needs no Dashboard pane and no `DASHBOARD_BOARD`, so a
+plain terminal, another project or a headless review agent runs it the same.
+
+At every launch the app writes two files, and rewrites them only when this build's copy differs:
+
+- `~/.claude/skills/create-task/SKILL.md`, the `/create-task` skill
+- `~/.claude/skills/create-task/create-task.js`, the program it runs
+
+The program's path is fixed: `claude-pr-loop` calls it through `PR_LOOP_CARD_SCRIPT` with
+`--title`, `--notes` and `--priority`, and `--remote <name>` on a repo whose board lives on a
+remote other than `origin`. `--column <name>` picks the column (Backlog otherwise), `--seed`
+creates a board missing from the default branch, from this checkout's copy when it has one, and
+`--dry-run` prints the file instead of pushing it.
+
+The card is written by the `board` command's own `add`, in a worktree of `<remote>/<default>`
+made for that one commit in the system temp folder and removed after, so it carries the same
+fields as one added on the board. The commit is `board: add "<title>"`, made with `--no-verify`
+since the project's hooks are for its code. A push that loses a race fetches and tries once more.
+It refuses, and pushes nothing, when the default branch has no board (it names `--seed`), when the
+board there does not parse, and when it cannot tell which branch on the remote is the default.
 
 ## Scenarios
 
@@ -169,3 +197,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.
 - Given a card's pull request is open, when its agent finishes, then the card goes in Review, not Done.
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
+- Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
+- Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs, then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
+- Given the default branch has no `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
+- Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then neither is rewritten.

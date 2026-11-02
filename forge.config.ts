@@ -127,6 +127,13 @@ const config: ForgeConfig = {
           config: 'vite.dashboard-cli.config.ts',
           target: 'main',
         },
+        // The create-task program, which the app copies into ~/.claude/skills/create-task at launch
+        // (create-task-install.ts) so /create-task and claude-pr-loop reach it at one fixed path.
+        {
+          entry: 'src/main/board/create-task-cli-entry.ts',
+          config: 'vite.create-task-cli.config.ts',
+          target: 'main',
+        },
         // The pane host every pane's shell runs in, so the shells outlive the app (panes-decision-1).
         // Run by `node` like the commands above.
         {
