@@ -74,13 +74,13 @@ with its reason and the condition that lifts it.
 - Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
 - Given a shell is running a task, when you close the window, then the app asks before it closes.
 - Given the picker is open, when you type part of a folder's name, then the list narrows to the folders whose letters appear in that order.
-- Given the picker is open, when you type a path starting with `/` or `~`, then its first row opens that folder, on a remote screen too, where `~` is the host's home.
+- Given the picker is open, when you type a path starting with `/`, `~` or a drive letter, then a row opens that folder, on a remote screen too, where `~` is the host's home; it is the first row when no recent matches, and comes after the recents that do, so Enter on a path opens the recent it names.
 - Given a typed path that is not a folder, when you press Enter on its row, then the project is not opened and the status bar says `No folder at` the path.
 - Given a pane in a project is running a program, when you close the project, then it refuses and the status bar names the pane.
 
 ## Open questions
 
-- Neither entry file is at the 600-line ceiling: `main.ts` is at 572 code lines, and `renderer.ts` is
-  at 566 since the close flow moved into `close-project.ts` and the which-key
-  strip's tracking into `which-key-tracking.ts`. A feature that would push
-  either past 600 needs a seam split out first (workflow-decision-1).
+- `main.ts` is at the 600-line ceiling, at 600 code lines, and `renderer.ts` is
+  at 591, even after the close flow moved into `close-project.ts` and the which-key
+  strip's tracking into `which-key-tracking.ts`. A feature that adds code to
+  `main.ts`, or would push `renderer.ts` past 600, needs a seam split out first (workflow-decision-1).

@@ -1,5 +1,6 @@
 import { ranked, type SearchRow } from '../../shared/app/fuzzy';
 import { searchOverlay } from './overlay';
+import { isWholePath } from '../../shared/app/whole-path';
 import type { Project } from '../../shared/app/bridge';
 
 // What the picker settles on. Opening carries a path, or null for "a new project"; the host choices
@@ -50,7 +51,9 @@ function hostRows(state: PickerState): Row[] {
 
 // What the picker shows for a query: the matches, tightest first, then the rows that are not projects.
 // With nothing typed, the host you last joined leads instead, so Ctrl+S and Enter takes you back to it;
-// a search still leads with its matches, so typing a name and pressing Enter opens that project.
+// a search still leads with its matches, so typing a name and pressing Enter opens that project. That
+// holds for a path too: a typed path's own row follows the recents it matches, and leads only when
+// nothing matched, so Enter on a path opens the recent it names, and a new folder when there is none.
 export function pickerRows(projects: Project[], query: string, state: PickerState): Row[] {
   const matched: Row[] = ranked(projects, (project) => `${project.name} ${project.path}`, query).map((project) => ({
     name: project.name,
@@ -60,15 +63,17 @@ export function pickerRows(projects: Project[], query: string, state: PickerStat
   // Always present, so a search that matches nothing still leaves something to press Enter on.
   const hosts = hostRows(state);
   if (query === '' && hosts[0].choice.kind === 'reconnect') return [hosts[0], ...matched, NEW_PROJECT, ...hosts.slice(1)];
-  return [...typedPathRows(query), ...matched, NEW_PROJECT, ...hosts];
+  return [...matched, ...typedPathRows(query, matched), NEW_PROJECT, ...hosts];
 }
 
-// A query that is a path leads with a row that opens it, so a folder that is not a recent yet opens
-// from the keyboard, and from a remote screen, which has no folder dialog. Whether it is a folder only
-// main can say, on the machine the project opens on: it refuses one that is not.
-function typedPathRows(query: string): Row[] {
+// A query that is a path gets a row that opens it, so a folder that is not a recent yet opens from the
+// keyboard, and from a remote screen, which has no folder dialog. None when a recent already is that
+// path, so one folder is never two rows. Whether it is a folder only main can say, on the machine the
+// project opens on: it refuses one that is not.
+function typedPathRows(query: string, matched: Row[]): Row[] {
   const typed = query.trim();
-  if (!/^(\/|~(\/|$))/.test(typed)) return [];
+  if (!isWholePath(typed)) return [];
+  if (matched.some((row) => row.choice.kind === 'open' && row.choice.path === typed)) return [];
   return [{ name: typed, detail: 'open this folder', choice: { kind: 'open', path: typed } }];
 }
 

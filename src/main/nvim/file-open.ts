@@ -1,6 +1,7 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { directoriesOf } from '../panes/shell-directory-lookup';
+import { isWholePath } from '../../shared/app/whole-path';
 
 // Where a path printed in a pane points. A relative path is relative to whatever printed it, which is
 // the folder the pane's shell is standing in now — a `cd` since the pane opened included, and the card's
@@ -8,12 +9,13 @@ import { directoriesOf } from '../panes/shell-directory-lookup';
 // was started in, then the project; the first that holds a file wins.
 
 // `~`, `~/` and an absolute path name one place whatever folder the pane is in; a relative path names none
-// yet. Both fileCandidates and findPaneFile ask this, so the pane's folder is looked up exactly when it
-// is used. projects.yaml's paths are read by it too, in project-named.ts.
+// yet (isWholePath, which the picker asks too). Both fileCandidates and findPaneFile ask this, so the
+// pane's folder is looked up exactly when it is used. projects.yaml's paths are read by it too, in
+// project-named.ts, and a folder typed into the picker, in projects.ts.
 export function wholePath(filePath: string, home: string): string | undefined {
+  if (!isWholePath(filePath)) return undefined;
   if (filePath === '~') return home;
-  if (filePath.startsWith('~/')) return path.join(home, filePath.slice(2));
-  return path.isAbsolute(filePath) ? filePath : undefined;
+  return filePath.startsWith('~/') ? path.join(home, filePath.slice(2)) : filePath;
 }
 
 // Every place the path could be, in the order they are tried.

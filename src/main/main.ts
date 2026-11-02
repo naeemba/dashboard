@@ -515,8 +515,8 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
 table.handle('recent-projects:read', () => existingProjects(readRecentPaths(recentsFile)));
 // A null path opens the folder dialog; a path from the picker skips it, and is refused unless it is a
-// folder (pickedFolder). A refusal is answered, not
-// thrown: a throw reaches the screen behind Electron's "Error invoking remote method" prefix.
+// folder (pickedFolder). A refusal is answered, not thrown: a throw reaches the screen behind Electron's
+// "Error invoking remote method" prefix.
 table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
   if (projectPath === null) {
     const refused = folderDialogRefusal(screen);
