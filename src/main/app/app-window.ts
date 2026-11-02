@@ -13,7 +13,8 @@ export type AppWindowOptions = {
   beforeQuit(): Promise<void>;
   // The page has loaded and can be sent a message.
   loaded(): void;
-  // Some pane's shell runs in the app this time (no host answered, another Dashboard holds it, or it died) and quitting kills it.
+  // Some pane's shell runs in the app this time (no host answered, another Dashboard holds it, or it
+  // died) and quitting kills it.
   shellsDieAtQuit(): boolean;
 };
 
@@ -80,9 +81,9 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   // stacks a question per keypress and you answer the same one five times.
   let askingToQuit = false;
   // Closing the window stops every Claude screen and the editor. The worker panes' shells are the pane
-  // host's and go on running for the next launch (panes-decision-1); one the app runs itself, because
-  // there was no host, is killed, and the question says so. Cancel is the default button, so Enter and Escape both mean
-  // "I hit that by accident".
+  // host's and go on running for the next launch (panes-decision-1); one the app runs itself this time
+  // (no host, another Dashboard holds it, or it died) is killed, and the question says so. Cancel is
+  // the default button, so Enter and Escape both mean "I hit that by accident".
   // Asked without blocking: showMessageBoxSync stops the whole main process, so anything already
   // waiting there — a folder panel, a board write — can never finish while the question is up. The
   // close is stopped every time; destroy() is what actually goes, and it raises no close to answer.

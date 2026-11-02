@@ -9,8 +9,9 @@ import type { PaneCommand } from '../../shared/panes/pane-reading';
 import type { Screens } from '../../shared/remote-host/screens';
 
 // Every pane's shell as main holds it: a worker's spawned through the pane host or taken back from it
-// after a restart, the editor's spawned in this process, and listened to the one way every way. Main-process spawning, out of main.ts because main
-// had reached its 600-line ceiling; main hands over what only it has.
+// after a restart, the editor's spawned in this process, and listened to the one way every way.
+// Main-process spawning, out of main.ts because main had reached its 600-line ceiling; main hands
+// over what only it has.
 export function paneShells(main: {
   host: PaneHost;
   commands: ReadonlyMap<string, PaneCommand>;
@@ -114,7 +115,8 @@ export function paneShells(main: {
   }
 
   // Whether quitting now kills a shell you could lose work in: a worker pane running in this process
-  // because there was no host. The editor is always one, and starts fresh either way.
+  // this time (no host, another Dashboard holds it, or it died). The editor is always one, and starts
+  // fresh either way.
   function workDiesAtQuit(): boolean {
     return [...shells].some(([id, shell]) => diesAtQuit(shell) && paneFromId(id).index !== EDITOR_INDEX);
   }
