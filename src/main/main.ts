@@ -76,6 +76,7 @@ import { reviewSweep } from './ship/review-flow';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
 import type { OpenProjects, ProjectOpen, ShipRequest, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
+import { unpacked } from './app/unpacked';
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
 const environmentFile = app.isPackaged
@@ -199,11 +200,8 @@ const paneShells = new Map<string, string>();
 // file is seeded into every project the app touches.
 //
 // Unpacked, because node is what runs it and node cannot read a file inside an asar. In a packaged
-// app getAppPath() ends in app.asar and forge puts this one file in app.asar.unpacked beside it; in
-// development there is no asar in the path and the replace does nothing.
-const boardCommand = path
-  .join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.js')
-  .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+// app getAppPath() ends in app.asar and forge puts this one file in app.asar.unpacked beside it.
+const boardCommand = unpacked(path.join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.js'));
 // The `session` command, built and unpacked the same way, and the socket it reaches this app on.
 // session-socket.ts says why the socket is this run's own.
 const sessionCommand = path.join(path.dirname(boardCommand), 'session-cli-entry.js');
