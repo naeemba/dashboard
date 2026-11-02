@@ -75,29 +75,6 @@ export function boardAddArguments(options: CreateTaskOptions): string[] {
   ];
 }
 
-// Which branch on the remote is its default. `<remote>/HEAD` when it is set, otherwise the usual
-// names; null when it is neither, which noDefaultBranchMessage says. `symbolicHead` answers null when
-// the remote has no HEAD; `hasBranch` whether a ref exists. Both are handed the remote, so a caller
-// cannot ask about one remote and answer for `origin`.
-export function defaultBranch(
-  remote: string,
-  symbolicHead: (remote: string) => string | null,
-  hasBranch: (remote: string, branch: string) => boolean,
-): string | null {
-  const head = symbolicHead(remote);
-  // The ref is always `<remote>/<branch>`; slice the prefix rather than match it, since a `.` in a
-  // remote name is any character to a regexp.
-  if (head !== null && head.startsWith(`${remote}/`)) return head.slice(remote.length + 1);
-  for (const candidate of ['main', 'master']) {
-    if (hasBranch(remote, candidate)) return candidate;
-  }
-  return null;
-}
-
-export function noDefaultBranchMessage(remote: string): string {
-  return `cannot work out which branch on ${remote} is the main one`;
-}
-
 // A board missing from the default branch is far more likely a bad merge than an invitation to
 // publish whatever stale copy sits in this worktree, so seeding one is a flag of its own.
 export function noBoardMessage(remote: string, branch: string): string {

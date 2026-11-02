@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
 import { BOARD_FILE_PATH, writeBoard } from './board-store';
 import { runCreateTask } from './create-task-program';
@@ -16,10 +16,6 @@ beforeAll(() => {
     GIT_AUTHOR_NAME: 'Test', GIT_AUTHOR_EMAIL: 'test@example.com',
     GIT_COMMITTER_NAME: 'Test', GIT_COMMITTER_EMAIL: 'test@example.com',
   });
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
 });
 
 function git(directory: string, ...commandArguments: string[]): string {

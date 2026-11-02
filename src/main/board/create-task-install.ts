@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { failureLine } from '../command/failure-line';
+import { replaceFile } from '../app/replace-file';
 
 // What the app puts under ~/.claude for Claude Code to find, written at every launch so an upgrade
 // reaches it with no step of its own. Today that is one skill: /create-task and the program it runs.
@@ -13,7 +14,7 @@ import { failureLine } from '../command/failure-line';
 //
 // A file is written only when its bytes differ, so a launch with nothing new leaves both alone.
 
-export function createTaskFolder(home: string): string {
+function createTaskFolder(home: string): string {
   return path.join(home, '.claude', 'skills', 'create-task');
 }
 
@@ -23,7 +24,7 @@ export function createTaskScript(home: string): string {
 
 // The skill's text. The script's path is written in absolute, so it runs from any shell on any
 // platform without `~` having to expand.
-export function createTaskSkill(script: string): string {
+function createTaskSkill(script: string): string {
   return `---
 name: create-task
 description: Capture a task on the project board and push it to main, without touching the branch I am on
@@ -67,13 +68,15 @@ When the script prints its line, repeat that line and stop.
 `;
 }
 
-function writeIfChanged(file: string, contents: string | Buffer): void {
+// Through replaceFile, so a create-task.js that claude-pr-loop starts mid-launch is the old file or
+// the new one, never half of one.
+function writeIfChanged(file: string, contents: string): void {
   try {
-    if (readFileSync(file).equals(Buffer.from(contents))) return;
+    if (readFileSync(file, 'utf8') === contents) return;
   } catch {
     // Not there yet.
   }
-  writeFileSync(file, contents);
+  replaceFile(file, contents);
 }
 
 // `builtScript` is the create-task-cli-entry.js this build carries; a copy, not a link, so the
@@ -81,9 +84,9 @@ function writeIfChanged(file: string, contents: string | Buffer): void {
 // log when it could not write, or null: a failure here costs the skill, never the launch.
 export function installCreateTask(home: string, builtScript: string): string | null {
   try {
-    mkdirSync(createTaskFolder(home), { recursive: true });
-    writeIfChanged(createTaskScript(home), readFileSync(builtScript));
-    writeIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(createTaskScript(home)));
+    const script = createTaskScript(home);
+    writeIfChanged(script, readFileSync(builtScript, 'utf8'));
+    writeIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(script));
     return null;
   } catch (error: unknown) {
     return `create-task not installed: ${failureLine(error)}`;

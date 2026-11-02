@@ -904,10 +904,11 @@ const remoteHost = startHost(held);
 app.on('ready', () => {
   app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
   logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
-  // /create-task and its program under ~/.claude, refreshed from this build: create-task-install.ts.
+  createWindow();
+  // After the window, since nothing on screen needs it: /create-task and its program under ~/.claude,
+  // refreshed from this build (create-task-install.ts).
   const notInstalled = installCreateTask(app.getPath('home'), path.join(path.dirname(boardCommand), 'create-task-cli-entry.js'));
   if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
-  createWindow();
 });
 app.on('will-quit', () => {
   remoteHost?.close();

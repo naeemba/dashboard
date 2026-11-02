@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boardAddArguments, defaultBranch, noBoardMessage, parseCreateTaskArguments } from './create-task';
+import { boardAddArguments, parseCreateTaskArguments } from './create-task';
 
 function options(argv: string[]) {
   const parsed = parseCreateTaskArguments(argv);
@@ -42,23 +42,4 @@ describe('boardAddArguments', () => {
     );
     expect(boardAddArguments(options(['--title', 't', '--column', 'Todo']))).toContain('Todo');
   });
-});
-
-describe('defaultBranch', () => {
-  const none = () => null;
-  it('takes <remote>/HEAD, sliced rather than matched', () => {
-    expect(defaultBranch('a.b', () => 'a.b/trunk', () => false)).toBe('trunk');
-  });
-
-  it('falls back to main, then master, on the remote it was handed', () => {
-    expect(defaultBranch('gitlab', none, (remote, branch) => remote === 'gitlab' && branch === 'master')).toBe('master');
-  });
-
-  it('answers null when the remote has neither', () => {
-    expect(defaultBranch('gitlab', none, (remote) => remote === 'origin')).toBeNull();
-  });
-});
-
-it('says how to seed a board missing from the default branch', () => {
-  expect(noBoardMessage('origin', 'main')).toMatch(/^origin\/main has no \.dashboard\/board\.json\. Re-run with --seed/);
 });
