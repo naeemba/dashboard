@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentArguments, agentResumeArguments, droppedPathsText, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments } from './shell';
+import { agentArguments, agentResumeArguments, droppedPathsText, editorArguments, locateCommand, pickShell, quoteForShell, taskArguments, windowsPowerShellWraps } from './shell';
 import { defaultSettings } from '../settings/settings';
 
 describe('pickShell', () => {
@@ -153,6 +153,38 @@ describe('agentArguments', () => {
     expect(agentArguments('powershell.exe', "/work-card it's here", SESSION))
       .toEqual(['-Command', `claude --session-id ${SESSION} '/work-card it''s here'`]);
   });
+
+  // Windows PowerShell writes a double quote inside a word through to the program bare, and the program
+  // splits the word there and drops the quote: a worker's --settings JSON arrived with none of its
+  // quotes and Claude refused to start. The backslash is what makes Windows read the quote as a quote.
+  it('escapes a double quote for the program when Windows PowerShell will pass it on', () => {
+    expect(agentArguments('powershell.exe', 'fix the "login" bug', SESSION))
+      .toEqual(['-Command', `claude --session-id ${SESSION} 'fix the \\"login\\" bug'`]);
+    expect(agentArguments('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', '{"a":1}', SESSION)[1])
+      .toContain(`'{\\"a\\":1}'`);
+  });
+
+  // Backslashes are plain characters to Windows unless a quote follows them. Before a quote they escape
+  // it, so the ones already there are doubled; at the end of a word with a space in it PowerShell adds
+  // the closing quote, so those are doubled too.
+  it('keeps backslashes the program would otherwise read as escapes', () => {
+    expect(agentArguments('powershell.exe', 'say \\"hi', SESSION)[1]).toContain(`'say \\\\\\"hi'`);
+    expect(agentArguments('powershell.exe', 'look in C:\\work\\', SESSION)[1]).toContain(`'look in C:\\work\\\\'`);
+    expect(agentArguments('powershell.exe', 'C:\\work\\', SESSION)[1]).toContain(`'C:\\work\\'`);
+  });
+
+  // The escape holds only inside the quotes PowerShell adds, and it adds none to a word whose spaces are
+  // all between quotes. A leading space is whitespace before any quote, which it always wraps.
+  it('starts a word Windows PowerShell would not wrap with a space, so it does', () => {
+    expect(agentArguments('powershell.exe', '"only quoted words"', SESSION)[1])
+      .toContain(`' \\"only quoted words\\"'`);
+  });
+
+  // pwsh 7.3 and later escape the quotes themselves; a second escape would reach claude as a backslash.
+  it('leaves the escaping to pwsh, which does its own', () => {
+    expect(agentArguments('pwsh', 'fix the "login" bug', SESSION))
+      .toEqual(['-Command', `claude --session-id ${SESSION} 'fix the "login" bug'`]);
+  });
 });
 
 describe('taskArguments', () => {
@@ -163,5 +195,20 @@ describe('taskArguments', () => {
 
   it('uses PowerShell’s own flag where that is the shell', () => {
     expect(taskArguments('pwsh', 'npm audit')).toEqual(['-Command', 'npm audit']);
+  });
+});
+
+describe('windowsPowerShellWraps', () => {
+  // Windows PowerShell wraps a word for a program when it finds whitespace outside quotes, counting
+  // every double quote and taking no notice of a backslash before one.
+  it('wraps a word with a space outside quotes', () => {
+    expect(windowsPowerShellWraps('fix the bug')).toBe(true);
+    expect(windowsPowerShellWraps('fix the \\"login\\" bug')).toBe(true);
+  });
+
+  it('does not wrap a word whose spaces are all between quotes, or one with no space', () => {
+    expect(windowsPowerShellWraps('{"command":"node notify done"}')).toBe(false);
+    expect(windowsPowerShellWraps('\\"odd count and spaces after')).toBe(false);
+    expect(windowsPowerShellWraps('C:\\work')).toBe(false);
   });
 });

@@ -55,6 +55,50 @@ export function quoteForShell(value: string, shellCommand: string): string {
   return posixQuoted(value);
 }
 
+// Windows PowerShell 5.1, the one Windows ships, and not pwsh. It is the only shell here that hands a
+// program its arguments wrong: it wraps a word holding a space in double quotes and writes any double
+// quote inside it through bare, so the program splits the word there and drops the quote. A worker's
+// --settings is JSON, every key of it in double quotes, and arrived as `{hooks:{Stop:...` — not JSON,
+// so Claude refused it and the pane never started. pwsh 7.3 and later escape the quotes themselves,
+// and escaping them here as well would hand claude a backslash before every one.
+const WINDOWS_POWERSHELL = /^powershell(\.exe)?$/i;
+
+// Whether Windows PowerShell will wrap the word in double quotes on its way to the program. It looks
+// for whitespace outside quotes, counting every double quote as opening or closing one — a backslash
+// before it changes nothing to PowerShell, though it is what makes the program read it as a quote.
+// So a word whose whitespace all sits between quotes, like JSON whose only spaces are inside its
+// strings, goes out unwrapped and the program splits it at every space.
+export function windowsPowerShellWraps(word: string): boolean {
+  let quotes = 0;
+  for (const character of word) {
+    if (character === '"') quotes += 1;
+    else if (/\s/.test(character) && quotes % 2 === 0) return true;
+  }
+  return false;
+}
+
+// A word for a program's command line, past the shell: escaped the way Windows splits a command line
+// back into words, so it arrives as the word it was. Each double quote gets a backslash, and the
+// backslashes right before it are doubled so they stay backslashes rather than escaping it. Trailing
+// backslashes are doubled too when the word holds whitespace, because that is when PowerShell adds the
+// closing quote they would otherwise escape.
+//
+// That escape only holds inside the quotes PowerShell adds, so a word with whitespace that it would
+// not wrap starts with a space instead: whitespace before any quote, which it always wraps. A prompt
+// does not mind one; JSON says it with workerSettings' space after its brace rather than reach here.
+//
+// Only for a program's words — claude's and nvim's. A path typed at the prompt may go to a cmdlet,
+// which PowerShell hands its words untouched, and there the backslashes would be part of the path.
+function programWord(value: string, shellCommand: string): string {
+  if (!WINDOWS_POWERSHELL.test(baseName(shellCommand))) return quoteForShell(value, shellCommand);
+  let escaped = value.replace(/(\\*)"/g, (_match, slashes: string) => `${slashes}${slashes}\\"`);
+  if (/\s/.test(value)) {
+    escaped = escaped.replace(/(\\+)$/, '$1$1');
+    if (!windowsPowerShellWraps(escaped)) escaped = ` ${escaped}`;
+  }
+  return quoteForShell(escaped, shellCommand);
+}
+
 // What a drop on a terminal pane types: each path quoted, then the trailing space every terminal
 // appends so a second drop starts a new word. A dropped file with no path on disk (an image dragged
 // out of a web page) comes back from getPathForFile as '', and quoting that would type `'' ` into the
@@ -88,8 +132,8 @@ export function droppedPathsText(paths: string[], shellCommand: string): string 
 // the file's tail, so the pane reads `nvim · board.json`. `-c` runs after the user's config, so it
 // wins over a config that left 'title' off or set a titlestring of its own.
 export function editorArguments(shellCommand: string, socket: string): string[] {
-  return asPaneProcess(shellCommand, `nvim --listen ${quoteForShell(socket, shellCommand)} `
-    + `-c ${quoteForShell('set title titlestring=%t', shellCommand)}`);
+  return asPaneProcess(shellCommand, `nvim --listen ${programWord(socket, shellCommand)} `
+    + `-c ${programWord('set title titlestring=%t', shellCommand)}`);
 }
 
 // A program run as a pane's only process, through a login and interactive shell. One spelling for the
@@ -115,7 +159,7 @@ export function agentArguments(shellCommand: string, prompt: string, session: st
 // The same start with any words after `claude`, each quoted on its own: the main session and its
 // workers carry flags as well as a prompt, and a flag's value is text nobody here wrote.
 export function claudeArguments(shellCommand: string, words: readonly string[]): string[] {
-  const quoted = words.map((word) => quoteForShell(word, shellCommand));
+  const quoted = words.map((word) => programWord(word, shellCommand));
   return asPaneProcess(shellCommand, ['claude', ...quoted].join(' '));
 }
 
