@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addStroke, clearAll, eraseStrokes, startHistory, undo } from './ink-history';
+import { addStroke, clearAll, eraseStrokes, readInto, startHistory, undo } from './ink-history';
 import type { Stroke } from './ink-geometry';
 
 const stroke = (x: number): Stroke => ({ color: 'currentColor', width: 2, points: [{ x, y: 0, pressure: 0.5 }] });
@@ -39,6 +39,17 @@ describe('the ink history', () => {
 
   it('starts a read page with nothing to undo', () => {
     expect(undo(startHistory([stroke(1)])).strokes).toEqual([stroke(1)]);
+  });
+
+  it('keeps the undo steps when a read brings back the page already showing', () => {
+    const cleared = clearAll(addStroke(startHistory(), stroke(1)));
+    expect(readInto(cleared, [])).toBe(cleared);
+    expect(undo(readInto(cleared, [])).strokes).toEqual([stroke(1)]);
+  });
+
+  it('starts the undo steps again when a read brings back a different page', () => {
+    const one = addStroke(startHistory(), stroke(1));
+    expect(readInto(one, [stroke(2)])).toEqual({ strokes: [stroke(2)], past: [] });
   });
 
   it('does not change the history it was given', () => {

@@ -1,7 +1,7 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import type { InkCommand } from '../../shared/keys/actions';
 import { strokeHit, strokeOutline, type InkPoint, type Stroke } from './ink-geometry';
-import { addStroke, clearAll, eraseStrokes, startHistory, undo, type InkHistory } from './ink-history';
+import { addStroke, clearAll, eraseStrokes, readInto, startHistory, undo, type InkHistory } from './ink-history';
 import { pointerAction, pointerPressure, type InkTool } from './ink-pointer';
 import { INK_COLORS, INK_WIDTHS, parseInk, serializeInk } from './ink-svg';
 import { createSavedPage } from './saved-page';
@@ -141,17 +141,15 @@ export function createInkView(options: InkOptions): InkView {
     show: (text) => {
       const strokes = parseInk(text);
       if (strokes === undefined) return undefined;
+      const read = readInto(history, strokes);
+      if (read !== history) {
+        history = read;
+        render();
+      }
       // The canonical form of what was read, so the comparison mayRead makes later is between two
       // strings this page made, and a file that is only differently spaced does not look like unsaved
       // work.
-      const canonical = serializeInk(strokes);
-      // A read that brings back the page already showing is your own arrival, and keeps the undo
-      // steps; only a page another writer changed starts them again.
-      if (canonical !== serializeInk(history.strokes)) {
-        history = startHistory(strokes);
-        render();
-      }
-      return canonical;
+      return serializeInk(strokes);
     },
     load: () => options.bridge.readInk(options.projectPath),
     save: (text) => options.bridge.writeInk(options.projectPath, text),

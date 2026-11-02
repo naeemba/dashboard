@@ -1,4 +1,5 @@
 import type { Stroke } from './ink-geometry';
+import { serializeInk } from './ink-svg';
 
 // The page's strokes and every page before it since the history was started (never trimmed), as plain values so the rules for which
 // change is one undo step can be tested without a canvas. Immutable: every change answers a new
@@ -14,6 +15,13 @@ export type InkHistory = { strokes: Stroke[]; past: Stroke[][] };
 // changes; going back past the page you were shown would be undoing someone else's writing.
 export function startHistory(strokes: Stroke[] = []): InkHistory {
   return { strokes, past: [] };
+}
+
+// A page that was read. One that brings back the page already showing is your own arrival, and keeps
+// the undo steps, so a clear followed by a trip away and back can still be undone; only a page another
+// writer changed starts them again. Answers the same history when nothing changed, like the rest.
+export function readInto(history: InkHistory, strokes: Stroke[]): InkHistory {
+  return serializeInk(strokes) === serializeInk(history.strokes) ? history : startHistory(strokes);
 }
 
 export function addStroke(history: InkHistory, stroke: Stroke): InkHistory {
