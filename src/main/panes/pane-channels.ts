@@ -1,6 +1,6 @@
 import { Notification, type BrowserWindow } from 'electron';
 import type { Channels } from '../app/channels';
-import type * as pty from 'node-pty';
+import type { PaneShell } from './pane-shell';
 import type { Screens } from '../../shared/remote-host/screens';
 
 // What a pane sends the main process: its keystrokes, its size, a request to restart its shell, and a
@@ -8,7 +8,7 @@ import type { Screens } from '../../shared/remote-host/screens';
 // ceiling. Main hands over what only it holds — the live shells, the recorded sizes, how to spawn one,
 // and the way to the renderer.
 export function registerPaneChannels(table: Channels, main: {
-  shells: Map<string, pty.IPty>;
+  shells: Map<string, PaneShell>;
   screens: Screens;
   spawnTerminal(id: string): void;
   window(): BrowserWindow | undefined;
@@ -51,14 +51,14 @@ export function registerPaneChannels(table: Channels, main: {
 
 // A screen that leaves stops voting on the size of every pane it drew, so each shell goes to what the
 // screens still looking at it ask for. A pane nobody has measured keeps the size it has.
-export function resizeShellsToScreens(shells: Map<string, pty.IPty>, screens: Screens): void {
+export function resizeShellsToScreens(shells: Map<string, PaneShell>, screens: Screens): void {
   for (const id of shells.keys()) fitShell(shells, screens, id);
 }
 
 // Puts a shell at the size the screens agree on. A size it already has is not sent again: every resize
 // is a SIGWINCH, and a full-screen program in the pane redraws on each one, so a second screen
 // reporting the same size, or one leaving that did not hold the smallest, would flash every pane.
-function fitShell(shells: Map<string, pty.IPty>, screens: Screens, id: string): void {
+function fitShell(shells: Map<string, PaneShell>, screens: Screens, id: string): void {
   const shell = shells.get(id);
   const size = screens.sizeOf(id);
   if (!shell || !size || (shell.cols === size.cols && shell.rows === size.rows)) return;
