@@ -220,6 +220,15 @@
           "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "062f7db2-5857-4dec-ae16-7109146f253d",
+          "title": "Finish what the pane host left: stale session socket, editor, orphans",
+          "notes": "The pane host (panes-decision-1) keeps worker shells across a restart. Left for this card: (1) a kept shell's DASHBOARD_SOCKET names the dead run's session socket, so `dashboard pane …` from a kept pane says the app quit; give the session socket a stable path in user data. (2) The editor is killed on adoption because nvim's socket is named after the pid and slot (nvim-remote.ts); name it by pane key and adopt it like any pane. (3) Kept shells of a project not reopened run unseen; offer them or kill them once the restore is done. (4) A protocol-version change orphans the old host's shells. (5) Efficiency: every byte is parsed by two headless xterms (host and app), the survivors' screens sit in main until adopted, and data goes one JSON line per pty read. (6) workflow-rule-1 can be relaxed once 1 and the Claude screens' restart cost are settled. See docs/panes/README.md Open questions.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T00:12:48.054Z",
+          "updatedAt": "2026-11-02T00:12:48.054Z"
         }
       ]
     },
