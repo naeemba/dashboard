@@ -1,7 +1,7 @@
 import { neighbourRow, selectionOf, type Board, type Card, type CardComment, type Selection } from './board';
 
 // The app's save, replayed onto the board as it is on disk now. The screen changes the board it last
-// read or wrote (`base`) into `next`; between that read and this write the `board` command may have
+// read or sent (`base`) into `next`; between that read and this write the `board` command may have
 // moved a card, set a branch or added a comment. Writing `next` whole would put the board from before
 // that command back over it: an agent moves its card to Review while you rename another one, and a
 // second later the card is in Doing again with nothing on screen saying why.
