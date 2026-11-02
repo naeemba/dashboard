@@ -192,15 +192,6 @@
           "parent": null
         },
         {
-          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
-          "title": "Show what fills the context window from the Claude screen's context meter",
-          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T23:46:08.026Z",
-          "updatedAt": "2026-11-01T23:46:08.026Z"
-        },
-        {
           "id": "7c3bd72f-85ac-4faa-8d52-9c0b44f110a2",
           "title": "Split board-view.ts along its drag-and-drop seam",
           "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
@@ -213,6 +204,15 @@
           "notes": "replaceFile is the app's general atomic write but lives in board/board-store.ts. notes-store.ts, worktree-store.ts, session-index-store.ts and chat-sessions.ts import a file helper from the board's store, and its comment (\"every file the dashboard keeps about a project\") no longer describes what it writes. Cost: anyone looking for how the app writes a file finds it under the board, and a change to it reads as a board change. Move it to src/main/app/replace-file.ts with its .tmp test beside it; writeBoard keeps calling it.\n\nIssue: https://github.com/naeemba/dashboard/issues/177\nReview: https://github.com/naeemba/dashboard/pull/175#discussion_r4437993801",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "5f5b62b8-9eb1-4a1b-a9ed-9ea8b94e271c",
+          "title": "Workers popup follow-ups: anchor it to the count, keyboard pane links, live refresh",
+          "notes": "Left over from PR #176. (1) The workers list opens in the shared search dialog; the user asked for a small popup anchored to the count in the status line. (2) dashboard://pane links work by mouse only; reach them from the keyboard like other transcript links. (3) The count does not refresh when a worker's agent exits until the next hook mark or pane change. (4) The done report does not carry the worker's last message. (5) pane claim prints the bare id with no link.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-02T00:40:52.538Z",
+          "updatedAt": "2026-11-02T00:40:52.538Z"
         }
       ]
     },
@@ -330,6 +330,15 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-02T00:20:52.873Z"
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-02T00:40:52.580Z"
         }
       ]
     },
