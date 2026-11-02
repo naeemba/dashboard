@@ -28,6 +28,12 @@ export const THEME: ITheme = {
   brightWhite: '#eaeaea',
 };
 
+// The names of the sixteen terminal colours the shipped theme always carries, each published as a CSS
+// custom property of the same name, for something that paints with one by name.
+export type ThemeColour =
+  | 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white'
+  | 'brightBlack' | 'brightRed' | 'brightGreen' | 'brightYellow' | 'brightBlue' | 'brightMagenta' | 'brightCyan' | 'brightWhite';
+
 // Height of the title row. Main needs it to place the traffic lights inside the row; the renderer
 // publishes it as a custom property so chrome.css sizes the row from the same number.
 export const TITLE_BAR_HEIGHT = 36;

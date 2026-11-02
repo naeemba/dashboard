@@ -38,12 +38,19 @@ export function anchoredPopup<Choice>(options: {
 
   return new Promise<Choice | undefined>((resolve) => {
     function finish(choice: Choice | undefined): void {
+      document.removeEventListener('focusin', hold);
       unwatch?.();
       remove();
       resolve(choice);
     }
 
     const { dialog, remove } = openOverlay(options.name, () => finish(undefined));
+    // Shift+Tab is left to the page, as every modified key is, and would walk focus back out to the
+    // pane behind while the popup stays up. Focus that leaves the popup comes back to it.
+    function hold(event: FocusEvent): void {
+      if (!(event.target instanceof Node && dialog.contains(event.target))) dialog.focus();
+    }
+    document.addEventListener('focusin', hold);
     dialog.parentElement?.classList.add('anchored-sheet');
     dialog.classList.add('anchored-dialog');
     // Placed once, when it opens: the anchor is part of a row that is rebuilt as it changes, but it

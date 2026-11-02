@@ -34,6 +34,13 @@ describe('contextBreakdown', () => {
     const rows = breakdown.mcpTools;
     expect(rows).toHaveLength(LIST_CAP + 1);
     expect(rows[0]).toMatchObject({ name: `tool${LIST_CAP + 1}`, detail: 'server' });
-    expect(rows.at(-1)).toMatchObject({ key: 'more', name: '2 more', tokens: 300, percentage: 0.15 });
+    expect(rows.at(-1)).toMatchObject({ key: 'more:mcpTools', name: '2 more', tokens: 300, percentage: 0.15 });
+  });
+
+  it('keys every row of every list apart, so the popup keeps its highlight on the right one', () => {
+    const files = Array.from({ length: LIST_CAP + 2 }, (_, index) => ({ path: `/f${index}.md`, type: 'Project', tokens: 10 }));
+    const both = contextBreakdown({ ...usage, memoryFiles: files });
+    const keys = [...both.categories, ...both.memoryFiles, ...both.mcpTools].map((row) => row.key);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
