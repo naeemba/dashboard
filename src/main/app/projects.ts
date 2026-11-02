@@ -1,6 +1,7 @@
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, resolve } from 'node:path';
+import { replaceFile } from './replace-file';
 import type { Project } from '../../shared/app/bridge';
 import { wholePath } from '../nvim/file-open';
 
@@ -65,7 +66,7 @@ export function readRecentPaths(file: string): string[] {
 
 export function rememberRecentPath(file: string, projectPath: string): void {
   try {
-    writeFileSync(file, JSON.stringify(withRecentPath(readRecentPaths(file), projectPath)));
+    replaceFile(file, JSON.stringify(withRecentPath(readRecentPaths(file), projectPath)));
   } catch {
     // No history entry this time.
   }

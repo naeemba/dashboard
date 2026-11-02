@@ -44,7 +44,7 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 `shared/`; and a package that needs Node or the DOM is a value import only on
 its own side. `eslint.config.test.ts` pins each of those.
 
-- Process and window: `index.html` and its test, `main.ts`, `renderer.ts`,
+- Process and window: `index.html` and its test, `main.ts`, `launch-gate.ts`, `renderer.ts`,
   `preload.ts`, `bridge.ts`, `channels.ts`, `app-window.ts`
 - Build: `vite.build-version.ts` and its test at the repository root, declared
   in `forge.env.d.ts`
@@ -52,12 +52,36 @@ its own side. `eslint.config.test.ts` pins each of those.
   `projects.ts`, `picker.ts`, `close-project.ts`, `close-refusal.ts` (in `src/shared/panes/`, since
   `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
+- Atomic write: `replace-file.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`
 - Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,
   `clamp-index.ts`, `fuzzy.ts`, `is-record.ts`, `base-name.ts`, `slug.ts`, `age.ts`,
   `stale.ts`, `theme.ts`, `icons.ts`
 - Styles: `index.css`, `app.css`, `chrome.css`, `dialogs.css`
+
+## One app at a time
+
+The app takes Electron's single-instance lock in `launch-gate.ts`, which
+`main.ts` imports before anything else. A second launch on the same userData
+folder exits before it opens a socket or writes a file, and the running app
+brings its window to the front (restoring it if minimized) and reads the second
+launch's command line the way it read its own (app-decision-1). Today that is
+`--remote` only.
+
+The lock is keyed on the userData folder, so a copy started with its own
+`--user-data-dir` runs beside the installed app. `settings.json` and `.env` are
+not in userData, so such a copy also needs a `HOME` and `XDG_CONFIG_HOME` of
+its own to stay off the app you are using; `scripts/performance/launch-demo.sh`
+sets all three. Without `--user-data-dir`, `npm start` while the installed app
+is running only focuses the installed app's window, and says so on stderr.
+
+`session.json` and `recents.json` are written through `replaceFile`
+(`replace-file.ts`), a temporary file flushed to disk and renamed over the old
+one, so a crash or a power cut mid-write leaves the old file or the new one,
+never half of one. The temporary file has a new name on every write, so two
+writers never share one. The flush runs on main's thread: on a busy disk a save
+can hold main for a moment, chosen over losing the file.
 
 ## Dependency holds
 
@@ -132,11 +156,14 @@ directives go.
 - Given the picker is open, when you type a path starting with `/`, `\`, `~` or a drive letter, then a row opens that folder, on a remote screen too, where `~` is the host's home; it comes after the recents when one of their paths contains it, so Enter on `/api` opens `/code/api`, and is the first row otherwise, so Enter on a new folder that only loosely matches a recent opens what was typed.
 - Given a typed path that is not a folder, when you press Enter on its row, then the project is not opened and the status bar says `No folder at` the path.
 - Given a pane in a project is running a program, when you close the project, then it refuses and the status bar names the pane.
+- Given the app is running, when it is launched again, then no second window opens and the running window comes to the front.
+- Given the app is running, when it is launched again with `--user-data-dir` on another folder, then that copy runs on its own.
+- Given the app is killed while it writes `session.json`, when it next launches, then it opens the projects of the last whole write.
 - Given a reply carries markup that gets past the markdown renderer, when it is drawn, then no script in it runs.
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling, at 600 code lines, and `renderer.ts` is
+- `main.ts` is at the 600-line ceiling, at 599 code lines, and `renderer.ts` is
   at 591, even after the close flow moved into `close-project.ts` and the which-key
   strip's tracking into `which-key-tracking.ts`. A feature that adds code to
   `main.ts`, or would push `renderer.ts` past 600, needs a seam split out first (workflow-decision-1).

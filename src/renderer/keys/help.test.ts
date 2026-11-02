@@ -117,7 +117,10 @@ describe('helpSections', () => {
             });
             // The Claude section's keys are heard while main, the Claude screen, has the keyboard.
             const chatFocused = section.title === 'Claude';
-            expect(mapShortcut(pressed, mac, mode, onManagerPage, chatFocused), `${mode}: ${text}`).not.toBeNull();
+            // The notes screen lists the handwriting page's keys too, heard while that page is showing.
+            const inkShowing = mode === 'notes';
+            expect(mapShortcut(pressed, mac, mode, onManagerPage, chatFocused, inkShowing), `${mode}: ${text}`)
+              .not.toBeNull();
           }
         }
       }
