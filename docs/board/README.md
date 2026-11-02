@@ -174,8 +174,7 @@ build's copy differs. A dev run (`npm start`) installs nothing; run a branch's p
 
 - `~/.claude/skills/create-task/SKILL.md`, the `/create-task` skill
 - `~/.claude/skills/create-task/create-task.js`, the program it runs, with a
-  `#!/usr/bin/env node` line and mode 0755 so it runs as a command (the mode is set again on a
-  copy whose bytes match but whose mode does not; on Windows it means nothing)
+  `#!/usr/bin/env node` line and mode 0755 so it runs as a command
 - `~/.claude/skills/create-task/package.json`, `{"type":"commonjs"}`, so a `"type": "module"`
   package.json in `~/.claude` or `~` cannot make node read the program as ESM
 
