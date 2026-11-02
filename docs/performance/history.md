@@ -169,9 +169,12 @@ installed app was never touched.
    - You notice: five projects take about 0.9 GB, two thirds of it idle CLIs
      for Claude screens you may not open that day. Typing in the first second
      after the window appears lags.
-   - Fixed 2026-11-02 (section above). Fix (medium): start a page's session the first time its Claude screen is
-     shown or a worker reports to it, and stop one that has been idle for a
-     while. Workers reporting to main is the constraint to design around.
+   - Lazy start fixed 2026-11-02 (section above); idle stop not done, see
+     "A started session is not stopped when idle" in `docs/chat/decisions.md`.
+     Fix proposed (medium): start a page's session the first time its Claude
+     screen is shown or a worker reports to it, and stop one that has been
+     idle for a while. Workers reporting to main is the constraint to design
+     around.
 4. **Hidden projects keep laying out and painting their terminals.**
    - Measured: four workers at 200 lines/s each. With their project shown, the
      renderer runs at 23.8–26.9% CPU and 230–275 layouts per 10 s. With it
