@@ -15,8 +15,9 @@ import { replaceFile } from '../app/replace-file';
 // as everywhere.
 //
 // A file is written only when its bytes differ, so a launch with nothing new leaves both alone. A
-// program whose bytes match but whose mode does not (one installed before it carried a mode) is
-// chmodded, not rewritten.
+// program whose bytes match but whose mode does not (its execute bit dropped by a chmod, a restore or
+// a sync; one installed before the `#!` line differs in bytes and is rewritten) is chmodded, not
+// rewritten.
 
 function createTaskFolder(home: string): string {
   return path.join(home, '.claude', 'skills', 'create-task');
