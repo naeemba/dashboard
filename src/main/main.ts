@@ -1,19 +1,22 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import * as pty from 'node-pty';
 import started from 'electron-squirrel-startup';
 import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
-import { realPath, scanWorktrees, worktreeState } from './ship/worktree-scan';
+import { realPath } from './ship/worktree-scan';
+import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
-import { paneScreenCopy, type PaneScreenCopy } from './panes/pane-screen-copy';
-import { agentArguments, agentResumeArguments, editorArguments, pickShell } from '../shared/panes/shell';
+import { launchPaneHost, paneHost } from './panes/pane-host-client';
+import { paneHostSocket, paneOfKey } from './panes/pane-host-protocol';
+import { diesAtQuit, paneShells } from './panes/pane-shells';
+import { adoptedPane } from './panes/adopted-pane';
+import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, sizeOfPane, terminalId } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, terminalId } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
@@ -30,7 +33,7 @@ import { peekBoard, writeBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
-import { dropWrittenFiles, editorSocket, removeSocket } from './nvim/nvim-remote';
+import { dropWrittenFiles } from './nvim/nvim-remote';
 import { registerPaneChannels } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
@@ -38,7 +41,7 @@ import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
 import { registerWorkerChannels } from './workers/worker-channels';
 import { channels, registerWithIpc } from './app/channels';
-import { agentStartEntry, paneExitEntry, removalEntry, shipEntry } from '../shared/app/log-entry';
+import { agentStartEntry, paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
 import { SESSION_FILE } from './app/session';
@@ -74,7 +77,7 @@ import type { Settings } from '../shared/settings/settings';
 import { reviewSweep } from './ship/review-flow';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
-import type { OpenProjects, ProjectOpen, ShipRequest, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
+import type { OpenProjects, ProjectOpen, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
 
 if (started) app.quit();
@@ -141,8 +144,9 @@ const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
 // Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
 // flight forever with nothing able to clear it.
 //
-// Every pane comes back null with it. No shell outlives the app, so nothing this file says was in
-// pane 2 is in pane 2 a moment after launch: that pane is a plain shell in the project, and a record
+// Every pane comes back null with it. A shell the pane host kept is put back in its pane when its
+// project opens, and adoptSurvivors names it on its card again; any other pane is a plain shell in
+// the project a moment after launch, and a record
 // still naming it would put a branch name under the status bar of a checkout the pane is not in —
 // which is the wrong-checkout mistake the branch is printed there to prevent. A card's agent that a
 // restart resumes is in that pane again, and resumeIn names it on the record again. Clearing it also gives
@@ -184,18 +188,10 @@ let settings = keepHostToken(readSettings(settingsFile, isMac), (made) => writeS
 // purpose. What the file holds and what survives is tidySettingsFile's to say, not this line's.
 tidySettingsFile(settingsFile, isMac);
 let shellCommand = pickShell(settings, process.env, process.platform);
-const shells = new Map<string, pty.IPty>();
-const screenCopies = new Map<string, PaneScreenCopy>();
 // How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
 const paneScreens = screens();
-// The shell each pane was actually spawned with, written when the pty starts. Not the shellCommand
-// above: that is the live setting, and changing it leaves every already-running pane on the shell it
-// started with — which is what the settings screen tells you. A ship reads what the pty says is in the
-// foreground against this, so switching the setting cannot make five panes sitting at prompts read as
-// running a program and refuse every ship after it.
-const paneShells = new Map<string, string>();
 // The `board` command, handed to every pane as DASHBOARD_BOARD so an agent in any project can move
 // its own card without hand-editing JSON. .dashboard/CLAUDE.md is where it is documented, and that
 // file is seeded into every project the app touches.
@@ -221,6 +217,15 @@ const paneEnvironment = {
   // Where session.json and recents.json are, for `dashboard project init`.
   DASHBOARD_USER_DATA: app.getPath('userData'),
 } as Record<string, string>;
+// Where every pane's shell runs, so it outlives this process: pane-host-client.ts and panes-decision-1.
+// Built and unpacked beside the commands above, since `node` is what runs it.
+const paneHostEntry = path.join(path.dirname(boardCommand), 'pane-host-entry.js');
+const paneSocket = paneHostSocket(app.getPath('userData'));
+const shellHost = paneHost({
+  socket: paneSocket,
+  launch: () => launchPaneHost(process.env.SHELL, paneHostEntry, paneSocket, app.getPath('home')),
+  lost: failures.hold,
+});
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
 const boards = boardWatchers((projectPath) => {
@@ -235,6 +240,18 @@ const boards = boardWatchers((projectPath) => {
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
+// Every pane's shell, pane-shells.ts's to spawn and listen to.
+const panes = paneShells({
+  host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
+  temporary: app.getPath('temp'), shellCommand: () => shellCommand, projectPath: (slot) => projectIn(slot)?.path,
+  send: sendToRenderer,
+  ended(id, exitCode) {
+    const { slot, index } = paneFromId(id);
+    logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
+    releaseAgentPane(id);
+  },
+});
+const { shells, screenCopies } = panes;
 
 // The one place that answers whether there is a window a message can reach. Both senders ask it, so
 // there is never a second copy of that question to drift from this one.
@@ -248,28 +265,6 @@ function sendToRenderer(channel: string, ...payload: unknown[]): void { tellOthe
 function tellOthers(screen: string, channel: string, ...payload: unknown[]): void {
   if (windowHears(screen, remote.reachesWindow())) liveWindow()?.webContents.send(channel, ...payload);
   remoteHost?.broadcast(channel, payload, screen);
-}
-
-// What the pty says is in the foreground of a pane, or nothing when the pane has no shell. The tty can
-// go between a shell dying and its exit arriving here, and a pane with nothing running in it is the
-// right answer for a shell that has just died anyway — so a reading that fails is not one that takes a
-// ship down with it.
-//
-// Unix only, which is why win32 answers nothing at all. `IPty.process` is a real foreground reading on
-// unix — node-pty's UnixTerminal calls tcgetpgrp(fd) and names whoever holds the terminal — but
-// WindowsTerminal's getter hands back the pty's *name*, which is the `xterm-256color` spawnTerminal
-// asked for and never changes. Passing that on would have every pane on Windows read as running a
-// program called xterm-256color from launch, every ship refused with five of them listed, and no
-// gesture that clears it. Nothing is read there, so nothing is in the way: Windows gets the
-// lowest-free-pane behaviour, and what a ship there can take out from under you is the same corner
-// runsAProgram names below, one pane wider.
-function foregroundOf(id: string): string | undefined {
-  if (process.platform === 'win32') return undefined;
-  try {
-    return shells.get(id)?.process;
-  } catch {
-    return undefined;
-  }
 }
 
 // Whether an agent is running in this card's pane. One spelling of it, because two things ask: the ship
@@ -387,60 +382,6 @@ registerPaneOpeners(table, {
   },
 });
 
-function spawnTerminal(id: string): void {
-  const entry = terminalCommands.get(id);
-  if (entry === undefined) return;
-  // The editor's socket is named after the slot, so the pane that is restarted listens where the same
-  // pane listened before and nothing has to be told the name again. Anything left behind by a previous
-  // run — a crash, a kill -9 — is cleared first: nvim refuses to listen on a path that already exists,
-  // and the pane would show a one-line error instead of an editor.
-  let paneArguments = entry.args;
-  if (paneArguments === 'editor') {
-    const socket = editorSocket(app.getPath('temp'), paneFromId(id).slot);
-    removeSocket(socket);
-    paneArguments = editorArguments(shellCommand, socket);
-  }
-  let terminalProcess: pty.IPty;
-  try {
-    const { cols, rows } = sizeOfPane(paneScreens, id);
-    terminalProcess = pty.spawn(shellCommand, paneArguments, {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd: entry.directory,
-      env: paneEnvironment,
-    });
-  } catch {
-    // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
-    // a dead shell shows, rather than the spawn taking the window down. A missing nvim is not this case:
-    // the shell starts, fails to find it, and exits 127 on its own.
-    screenCopies.get(id)?.exit(127);
-    sendToRenderer('pty:exit', id, 127);
-    return;
-  }
-  // What this pane is running from now on, whatever the setting moves to afterwards. Written here
-  // because here is the only place a pty is spawned — the ship's, the editor's and a restart all come
-  // through this function, so one line covers every pane that exists.
-  paneShells.set(id, shellCommand);
-  const copy = paneScreenCopy(() => terminalProcess);
-  screenCopies.set(id, copy);
-  terminalProcess.onData((data) => { copy.push(data); sendToRenderer('pty:data', id, data); });
-  terminalProcess.onExit(({ exitCode }) => {
-    // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and starts
-    // the agent in the same tick, and the killed shell's exit arrives after that: without the check it
-    // would drop the agent out of the map, leaving nothing for your keystrokes to reach, and tell the
-    // renderer a pane that is busy working had died.
-    if (shells.get(id) !== terminalProcess) return;
-    shells.delete(id);
-    const { slot, index } = paneFromId(id);
-    logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
-    releaseAgentPane(id);
-    copy.exit(exitCode);
-    sendToRenderer('pty:exit', id, exitCode);
-  });
-  shells.set(id, terminalProcess);
-}
-
 // A project starts with its main session, plus a worker for each pane that was running Claude Code when
 // the app last quit — session-store.ts says when it was. Whether the conversation saved for pane 0 is
 // main's to carry on is mainResume's; one that was not main's comes back in a worker after the rest.
@@ -448,6 +389,7 @@ function spawnTerminal(id: string): void {
 // with its own swap files, that you never asked for.
 function spawnProject(project: Project, projectIndex: number): void {
   if (project.missing) return;
+  adoptSurvivors(projectIndex, project.path);
   const mainId = terminalId(projectIndex, MAIN_INDEX);
   const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, mainId), project.path, realPath);
   // Main is the Claude screen in the terminals view's left column, run through the Agent SDK, not a pane.
@@ -467,6 +409,25 @@ function spawnProject(project: Project, projectIndex: number): void {
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
 }
 
+// The shells the pane host kept for this project through a restart, back in their panes as they were.
+// adopted-pane.ts says what each comes back as. Before the resumes, which skip the panes taken here.
+function adoptSurvivors(slot: number, projectPath: string): void {
+  for (const { survivor, shell } of shellHost.adopt(projectPath)) {
+    const { index } = paneOfKey(survivor.key);
+    const id = terminalId(slot, index);
+    const saved = claudeSessions.takeResume(projectPath, index, id);
+    const pane = adoptedPane(survivor, saved, worktrees.entries(), agentPanesBeforeLaunch, realPath);
+    if (pane === undefined) {
+      shell.kill();
+      continue;
+    }
+    setPaneCommand(id, pane.command);
+    panes.listenTo(id, shell, survivor.file);
+    if (pane.card !== undefined) recordWorktree({ ...pane.card, pane: index });
+    if (pane.worker) mainsWorkers.add(id);
+  }
+}
+
 // A session that ran as a card's agent comes back as it, exactly as the ship started it; agentToResume
 // says which sessions those are. Its record names the pane again, so the status bar prints the branch,
 // a second ship of the card is refused, and the review sweep waits for it rather than starting beside
@@ -477,7 +438,7 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
   if (card !== undefined) recordWorktree({ ...card, pane: paneFromId(id).index });
   if (comesBackAs === 'shell') {
     terminalCommands.set(id, { args: [], directory: resume.directory });
-    spawnTerminal(id);
+    panes.spawn(id);
     shells.get(id)?.write(resumeLine(resume));
     return;
   }
@@ -500,6 +461,7 @@ const mainsWorkers = new Set<string>();
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
 function startAgent(id: string, worktreePath: string, agentArguments: string[]): void {
   mainsWorkers.delete(id);
+  workerAnswers.forget(id);
   setPaneCommand(id, { args: agentArguments, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
@@ -509,7 +471,7 @@ function startAgent(id: string, worktreePath: string, agentArguments: string[]):
   logStore.log(agentStartEntry(projectIn(slot)?.path, index));
   shells.get(id)?.kill();
   shells.delete(id);
-  spawnTerminal(id);
+  panes.spawn(id);
 }
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
@@ -518,6 +480,9 @@ table.handle('recent-projects:read', () => existingProjects(readRecentPaths(rece
 // folder (pickedFolder). A refusal is answered, not thrown: a throw reaches the screen behind Electron's
 // "Error invoking remote method" prefix.
 table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
+  // The launch's restore opens every project here, and one opened before the pane host has said what it
+  // kept would start fresh shells in panes that already have one.
+  await shellHost.ready;
   if (projectPath === null) {
     const refused = folderDialogRefusal(screen);
     if (refused !== null) return { refused };
@@ -625,7 +590,7 @@ table.handle('settings:write', (_screen, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal, window: liveWindow });
+registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal: panes.spawn, window: liveWindow });
 // The Claude screen's sessions. chat-sessions.ts holds what one is; main hands over the way to every
 // screen and which project a slot holds.
 const chats = registerChatSessions(table, {
@@ -638,6 +603,8 @@ const chats = registerChatSessions(table, {
 try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
+  // The manager has no project to open, so its kept shells are taken back once the host has answered.
+  void shellHost.ready.then(() => adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER));
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }
@@ -677,7 +644,7 @@ function openWorker(slot: number, directory = projectIn(slot)?.path ?? ''): numb
   const index = nextPaneIndex(openPanes(slot));
   const id = terminalId(slot, index);
   setPaneCommand(id, { args: [], directory });
-  spawnTerminal(id);
+  panes.spawn(id);
   return index;
 }
 
@@ -689,17 +656,13 @@ function setPaneCommand(id: string, command: PaneCommand): void {
   if (opening) panesChanged();
 }
 
-// One pane let go of for good. Out of the map before the kill: the exit arrives afterwards and is
-// dropped by the check in spawnTerminal, so no pty:exit goes out for a pane already off the screen.
+// One pane let go of for good.
 function dropPane(id: string): void {
   mainsWorkers.delete(id);
-  const terminalProcess = shells.get(id);
-  shells.delete(id);
-  terminalProcess?.kill();
+  workerAnswers.forget(id);
+  panes.drop(id);
   terminalCommands.delete(id);
   paneScreens.drop(id);
-  screenCopies.delete(id);
-  paneShells.delete(id);
 }
 
 // A worker closed on purpose. A card's record naming it gives it up, so the card is not counted as
@@ -744,8 +707,8 @@ function paneReadingsIn(slot: number): PaneReading[] {
     const command = terminalCommands.get(id);
     return {
       index,
-      foreground: foregroundOf(id),
-      shell: paneShells.get(id),
+      foreground: panes.foregroundOf(id),
+      shell: panes.startedWith.get(id),
       command,
       inWorktree: command !== undefined && command.directory !== projectPath,
     };
@@ -804,46 +767,7 @@ const shipCard = shipFlow({
   forgetReview: (cardId) => reviews.forget(cardId),
   queue: shipInProject,
 });
-table.handle('worktree:create', async (_screen, request: ShipRequest) => {
-  const result = await shipCard(request);
-  logStore.log(shipEntry(request, result));
-  return result;
-});
-
-// The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
-// a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
-table.handle('worktree:list', () => {
-  worktrees.dropDead();
-  return worktrees.list();
-});
-
-// A channel of its own rather than riding along on worktree:list and worktree:change, which reach the
-// renderer at launch and after every ship, removal and project close. A `git status` per worktree
-// behind all of those would be that many process spawns for an answer only the worktree dialog shows.
-//
-// worktreeState is git's own answer rather than the ship's narrower one, because git is what refuses
-// the removal this row's `d` is about to ask for. Run concurrently — this is main, and every pane's
-// bytes flow through it.
-table.handle('worktree:check', async () => {
-  const results = await Promise.all(worktrees.entries().map(async (entry) => (
-    { worktreePath: entry.worktreePath, ...await worktreeState(entry.worktreePath) }
-  )));
-  return {
-    dirty: results.filter((result) => result.dirty).map((result) => result.worktreePath),
-    unreadable: results.filter((result) => result.unreadable).map((result) => result.worktreePath),
-  };
-});
-
-// Every worktree git knows of in each project, for the manager. worktree-scan.ts says what is in it.
-table.handle('worktree:scan', (_screen, projectPaths: string[]) => (
-  scanWorktrees(projectPaths, worktrees.entries())
-));
-
-table.handle('worktree:remove', async (_screen, worktreePath: string, force: boolean, projectPath: string) => {
-  const result = await worktrees.remove(worktreePath, force, projectPath);
-  logStore.log(removalEntry(projectPath, worktreePath, result));
-  return result;
-});
+registerWorktreeChannels(table, { worktrees, shipCard, log: (draft) => logStore.log(draft) });
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
@@ -855,15 +779,7 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
 // the session command's and decides them.
 const folderExists = (folder: string) => !projectFromPath(folder).missing;
-const sessions = listenForSessions(sessionSocket, projectRequests({
-  slotOf: slotOfProject,
-  missingIn: (slot) => projects[slot]?.missing === true,
-  folderExists,
-  open: openProject,
-  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
-  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
-  close: closeProjectSlot,
-}, sessionRequests({
+const workerAnswers = sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
   openSlots: () => [MANAGER_SLOT, ...projects.keys()].flatMap((slot) => {
@@ -899,6 +815,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
   },
   closeWorker,
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
+  tell: chats.tell,
   cardWorktree(projectPath, cardId) {
     const entry = entryForCard(worktrees.entries(), cardId);
     if (entry?.projectPath !== projectPath) return undefined;
@@ -912,7 +829,25 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
     const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
-})), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+});
+// The workers each main ran, for its status line and workers popup (worker-roster.ts).
+table.handle('workers:read', () => workerAnswers.workers());
+const answerSession = projectRequests({
+  slotOf: slotOfProject,
+  missingIn: (slot) => projects[slot]?.missing === true,
+  folderExists,
+  open: openProject,
+  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
+  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
+  close: closeProjectSlot,
+}, workerAnswers);
+// Every answer waits for the pane host, for the reason projects:open does: `project open` and
+// `pane claim --project` open projects too.
+const sessions = listenForSessions(
+  sessionSocket,
+  (request) => shellHost.ready.then(() => answerSession(request)),
+  (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`),
+);
 
 function createWindow(): void {
   mainWindow = openAppWindow({
@@ -924,6 +859,7 @@ function createWindow(): void {
       if (placement !== null) claudeSessions.placed(placement);
     },
     loaded: () => failures.drain(),
+    shellsDieAtQuit: panes.workDiesAtQuit,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.
@@ -958,7 +894,9 @@ app.on('will-quit', () => {
   const socketFolder = sessionSocketFolder(process.platform, sessionSocket);
   if (socketFolder !== null) rmSync(socketFolder, { recursive: true, force: true });
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
-  for (const shellProcess of shells.values()) shellProcess.kill();
+  // The pane host's shells stay up for the next launch to take back; only one this process runs itself
+  // dies with it.
+  for (const shellProcess of shells.values()) if (diesAtQuit(shellProcess)) shellProcess.kill();
   chats.stopAll();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.
