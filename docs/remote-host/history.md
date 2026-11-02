@@ -6,4 +6,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #136 — Locals and parameters say channelArguments; the frame field stays args (remote-host-decision-2)
 - 2026-11-01 #147 — Test files spell out args locals and parameters too (channelArguments, agentArguments, commandArguments, gitArguments, programArguments); frame fields stay args (remote-host-decision-2)
 - 2026-11-01 #149 — A screen refused the folder dialog is told to type the path on the host (errors-rule-2)
-- 2026-11-02 — The host listens on 127.0.0.1 unless host.bind says otherwise, and compares tokens in constant time (remote-host-decision-3)
+- 2026-11-02 #173 — The host listens on 127.0.0.1 unless host.bind says otherwise, and compares tokens in constant time (remote-host-decision-3)

@@ -1,4 +1,5 @@
-import { createServer } from 'node:net';
+import { connect, createServer } from 'node:net';
+import { networkInterfaces } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 import { channels } from '../app/channels';
@@ -16,6 +17,19 @@ function freePort(): Promise<number> {
       const { port } = probe.address() as { port: number };
       probe.close(() => resolve(port));
     });
+  });
+}
+
+// One of this machine's non-loopback IPv4 addresses, the one a machine on the same network would dial.
+const networkAddress = Object.values(networkInterfaces()).flat()
+  .find((entry) => entry?.family === 'IPv4' && !entry.internal)?.address;
+
+// Whether a plain TCP connection to the address is accepted.
+function reachable(address: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = connect(port, address);
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('error', () => resolve(false));
   });
 }
 
@@ -100,5 +114,18 @@ describe('startRemoteHost', () => {
     await settle();
     clash.close();
     expect(second.held).toEqual([expect.stringContaining(`Not listening on 127.0.0.1:${port}`)]);
+  });
+
+  // A machine on the network cannot connect to the default bind; host.bind 0.0.0.0 lets it.
+  it.skipIf(networkAddress === undefined)('listens only on the interface host.bind names', async () => {
+    const port = await freePort();
+    host = startRemoteHost(port, '127.0.0.1', hosted().ports);
+    await settle();
+    await expect(reachable(networkAddress as string, port)).resolves.toBe(false);
+    host.close();
+    const open = await freePort();
+    host = startRemoteHost(open, '0.0.0.0', hosted().ports);
+    await settle();
+    await expect(reachable(networkAddress as string, open)).resolves.toBe(true);
   });
 });
