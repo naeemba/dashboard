@@ -464,6 +464,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.chat-foot-cache {
+  color: var(--tone);
+  font-variant-numeric: tabular-nums;
+}
+
 .chat-meter-detail, .chat-foot-version {
   opacity: 0.75;
 }
