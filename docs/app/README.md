@@ -56,6 +56,10 @@ with its reason and the condition that lifts it.
   changelog: the chat code reaches SDK methods its types leave out
   (`cancelAsyncMessage`, `askSideQuestion`), so a caret range would let a
   release that drops them in with tests still green.
+- `@xterm/xterm` stays on 6.0.0 exactly: `src/renderer/panes/paused-selection.ts`
+  reaches its private render service. A bump checks those fields still exist
+  and reruns `measure.mjs streams` (docs/performance/), since a rename turns the
+  patch off silently and hidden projects go back to drawing every line.
 - `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
   keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
   when typescript-eslint supports TypeScript 7.

@@ -24,10 +24,11 @@ export type RenderServiceInternals = {
   handleSelectionChanged(start: Point, end: Point, columnSelectMode: boolean): void;
 }
 
-export function pauseSelectionRedraws(terminal: object): boolean {
+export function pauseSelectionRedraws(terminal: object): void {
   const service = (terminal as { _core?: { _renderService?: Partial<RenderServiceInternals> } })._core?._renderService;
   if (!service || typeof service.handleSelectionChanged !== 'function' || typeof service._isPaused !== 'boolean'
-    || !service._selectionState) return false;
+    || typeof service._needsFullRefresh !== 'boolean' || typeof service._needsSelectionRefresh !== 'boolean'
+    || !service._selectionState) return;
   const render = service as RenderServiceInternals;
   const redraw = render.handleSelectionChanged.bind(render);
   render.handleSelectionChanged = (start, end, columnSelectMode) => {
@@ -36,5 +37,4 @@ export function pauseSelectionRedraws(terminal: object): boolean {
     render._needsSelectionRefresh = true;
     render._needsFullRefresh = true;
   };
-  return true;
 }

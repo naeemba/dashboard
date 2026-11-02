@@ -373,7 +373,6 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       ]),
     });
     terminal.open(container);
-    // Off screen, xterm stops drawing the terminal; paused-selection.ts closes the one path that kept drawing.
     pauseSelectionRedraws(terminal);
 
     const pane: Pane = {

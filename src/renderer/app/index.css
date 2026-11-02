@@ -69,12 +69,9 @@ body *:not(.pane, .pane *) {
    board's own grid and flex rules, a view that ever dropped its layout declaration would fall back to
    the browser's own `display: none` for [hidden] the moment it was hidden, and its panes would measure
    zero. A pane measured at zero comes back as an 80x24 terminal in a full-width window.
-   The translate moves what is hidden out of the window at the same size. xterm stops drawing a
-   terminal only when its IntersectionObserver sees it leave the viewport, and an element that is
-   only invisible still intersects: a project behind another one kept laying out every line its panes
-   printed. Off screen, xterm still writes every line into the buffer and redraws the whole screen when
-   the page comes back (paused-selection.ts closes the one path that drew anyway). Off to the left, so
-   the window never grows a scrollbar for it. */
+   The translate moves it out of the window at the same size: xterm pauses a terminal only once it
+   leaves the viewport, and an invisible element still intersects it (paused-selection.ts has the
+   rest). Off to the left, so the window never grows a scrollbar for it. */
 .page[hidden], .view[hidden] {
   visibility: hidden;
   translate: -100vw 0;

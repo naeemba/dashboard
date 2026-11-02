@@ -16,7 +16,7 @@ function fakeTerminal() {
 describe('pauseSelectionRedraws', () => {
   it('draws the selection at once while the terminal is on screen', () => {
     const { terminal, service, drawn } = fakeTerminal();
-    expect(pauseSelectionRedraws(terminal)).toBe(true);
+    pauseSelectionRedraws(terminal);
     service.handleSelectionChanged([0, 1], [4, 1], false);
     expect(drawn).toHaveBeenCalledWith([0, 1], [4, 1], false);
     expect(service._needsFullRefresh).toBe(false);
@@ -34,7 +34,10 @@ describe('pauseSelectionRedraws', () => {
   });
 
   it('changes nothing on a terminal whose internals are not the ones it knows', () => {
-    expect(pauseSelectionRedraws({})).toBe(false);
-    expect(pauseSelectionRedraws({ _core: { _renderService: { handleSelectionChanged: () => {} } } })).toBe(false);
+    expect(() => pauseSelectionRedraws({})).not.toThrow();
+    const original = () => {};
+    const service = { handleSelectionChanged: original };
+    pauseSelectionRedraws({ _core: { _renderService: service } });
+    expect(service.handleSelectionChanged).toBe(original);
   });
 });
