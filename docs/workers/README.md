@@ -20,6 +20,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 ## Scenarios
 
 - Given a project is open, when main dispatches a task, then a worker pane opens in the list on the right and runs it.
+- Given Dashboard on Windows, when a pane runs `node "$DASHBOARD_COMMAND" pane list`, then the app's answer comes back over the named pipe rather than an empty reply.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose prompt holds double quotes, then the worker starts with its --settings JSON and its prompt exactly as they were written.
 - Given a worker's agent stops, when its Stop hook runs `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
 - Given main dispatched a worker, when the worker's Stop hook runs `session notify <id> done`, then the main that dispatched it (the claimer's main for a pane claimed with `--project`) gets a prompt naming the worker and its pane, queued behind its turn if it is busy; a card's agent or a Claude opened by hand tells nobody (workers-decision-1).
