@@ -25,8 +25,11 @@ it too, as before.
 
 A worker's SendMessage needs a running session to arrive at (workers-decision-1). A worker main
 dispatched in this run had main running already, since main dispatched it. One that came back after a
-restart has not, so a page with one of main's workers on it starts its session at open
-(`chat-start.ts`).
+restart has not, so a page whose main dispatched a worker that came back starts its session at open
+(`chat-start.ts`). That is the dispatcher's page, which is another page than the worker's when the
+pane was claimed with `--project`: the worker SendMessages the main that dispatched it.
+`session.json` keeps the dispatcher's path with the worker's mark, since nothing else that survives a
+restart knows it.
 
 A started session is not stopped when idle. It may have background tasks or a worker still to report,
 and nothing here knows when both are over. Launch is what cost the memory; a session you opened stays

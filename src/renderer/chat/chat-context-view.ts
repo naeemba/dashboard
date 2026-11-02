@@ -4,6 +4,7 @@ import { clockTime, statusMeters, type ChatMeasure } from '../../shared/chat/cha
 import { formatTokens } from '../../shared/usage/usage';
 import { anchoredPopup, type PopupRow, type PopupSection } from '../app/anchored-popup';
 import { piece } from './chat-foot-view';
+import { firstShow } from './chat-first-show';
 
 // The Claude screen's measure of its session, and the context popup that breaks it down. The view
 // asks for a measure when the screen is first shown, a turn ends or a model is picked; the latest one asked
@@ -52,7 +53,7 @@ function heading(measure: ChatMeasure): string {
 export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () => void, say: (message: string) => void): Measures {
   let measured: ChatMeasure | null = null;
   let asked = 0;
-  let shownOnce = false;
+  const firstShown = firstShow();
   // The open popup's way to read the measure again; one popup is up at a time.
   let redraw: (() => void) | undefined;
 
@@ -72,14 +73,12 @@ export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () 
     latest: () => measured,
     take: () => take(),
     shown() {
-      if (shownOnce) return;
-      shownOnce = true;
-      take(true);
+      if (firstShown.take()) take(true);
     },
     forget() {
       measured = null;
       asked++;
-      shownOnce = false;
+      firstShown.rearm();
     },
     unname() {
       if (measured) measured = { ...measured, model: null };

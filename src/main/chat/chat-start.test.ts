@@ -1,17 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { startsAtOpen } from './chat-start';
+import { sessionToMeasure, startsAtOpen } from './chat-start';
 
 describe('startsAtOpen', () => {
-  it('starts a page that has one of main\'s workers', () => {
-    expect(startsAtOpen(2, new Set(['1:3', '2:4']))).toBe(true);
+  it('starts a page whose main dispatched a worker, wherever the worker runs', () => {
+    expect(startsAtOpen('/work/api', ['/work/web', '/work/api'])).toBe(true);
   });
 
-  it('waits on a page whose workers are on other pages, or that has none', () => {
-    expect(startsAtOpen(2, new Set(['1:3', '12:4']))).toBe(false);
-    expect(startsAtOpen(2, new Set([]))).toBe(false);
+  it('waits on a page whose main dispatched none of the workers', () => {
+    expect(startsAtOpen('/work/api', ['/work/web'])).toBe(false);
+    expect(startsAtOpen('/work/api', [])).toBe(false);
   });
 
-  it('reads the manager\'s negative slot', () => {
-    expect(startsAtOpen(-2, new Set(['-2:3']))).toBe(true);
+  // The manager's page has the empty path.
+  it('starts the manager when it dispatched one', () => {
+    expect(startsAtOpen('', ['', '/work/web'])).toBe(true);
+  });
+});
+
+describe('sessionToMeasure', () => {
+  const running = Promise.resolve('running');
+
+  it('starts the session for a first show', async () => {
+    let started = 0;
+    await expect(sessionToMeasure(true, () => { started++; return Promise.resolve('new'); }, undefined)).resolves.toBe('new');
+    expect(started).toBe(1);
+  });
+
+  // A model picked after the session crashed must not start another CLI.
+  it('reads the running session, or none, without starting one', () => {
+    let started = 0;
+    const starting = (): Promise<string> => { started++; return Promise.resolve('new'); };
+    expect(sessionToMeasure(false, starting, running)).toBe(running);
+    expect(sessionToMeasure(false, starting, undefined)).toBeUndefined();
+    expect(started).toBe(0);
   });
 });

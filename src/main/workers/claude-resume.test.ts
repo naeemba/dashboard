@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agentToResume, isPaneConversation, mainResume, resumable, resumedAs, resumeLine, sessionToWrite, withClaude, type PaneConversation,
+  agentToResume, isPaneConversation, mainResume, resumable, resumedAs, resumeLine, sessionToWrite, withClaude, workerDispatcher,
+  type PaneConversation,
 } from './claude-resume';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
 const conversation = (session: string, directory = '/work/api'): PaneConversation => ({ session, directory });
-const none = (): boolean => false;
+const none = (): undefined => undefined;
 
 describe('isPaneConversation', () => {
   it('keeps a session id and the folder it ran in', () => {
@@ -71,10 +72,10 @@ describe('withClaude', () => {
   });
 
   // Only main knows which panes hold its workers, and only those come back as its workers.
-  it('marks the panes holding main\'s workers, and no others', () => {
+  it('marks the panes holding main\'s workers with whose main dispatched them, and no others', () => {
     const held = new Map([['0:1', conversation(ID)], ['0:2', conversation(OTHER)]]);
-    expect(withClaude(layout, slotOf, held, (id) => id === '0:1').pages[0].claude)
-      .toEqual([null, { ...conversation(ID), dispatched: true }, conversation(OTHER)]);
+    expect(withClaude(layout, slotOf, held, (id) => (id === '0:1' ? '/work/web' : undefined)).pages[0].claude)
+      .toEqual([null, { ...conversation(ID), dispatched: true, dispatcher: '/work/web' }, conversation(OTHER)]);
   });
 
   it('gives a page whose project has no slot no sessions rather than throwing', () => {
@@ -197,3 +198,13 @@ describe('resumeLine', () => {
   });
 });
 
+describe('workerDispatcher', () => {
+  // A worker claimed with --project reports to the page that dispatched it, not the one it runs on.
+  it('names the page whose main dispatched the worker', () => {
+    expect(workerDispatcher({ ...conversation(ID), dispatched: true, dispatcher: '' }, '/work/api')).toBe('');
+  });
+
+  it('falls back to the pane\'s own page for a file written before the field', () => {
+    expect(workerDispatcher({ ...conversation(ID), dispatched: true }, '/work/api')).toBe('/work/api');
+  });
+});

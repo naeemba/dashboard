@@ -14,6 +14,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
+import { sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
@@ -28,7 +29,7 @@ import { unpacked } from '../app/unpacked';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started the first time the page's Claude screen is shown (its measure asks), on the
-// first prompt or worker report, at open for a page one of main's workers came back on (chat-start.ts),
+// first prompt or worker report, at open for a page whose main dispatched a worker that came back (chat-start.ts),
 // and again after a new conversation or a /resume. Once started it is
 // kept open in streaming input mode, so every prompt goes into the same process and a worker's
 // SendMessage has somewhere to arrive. The renderer draws; everything here is the session and the
@@ -540,7 +541,7 @@ export function registerChatSessions(
   table.handle('chat:measure', async (_screen, slot: number, start: boolean): Promise<ChatMeasure | null> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return null;
-    const session = start ? await running(slot, projectPath) : await sessions.get(slot);
+    const session = await sessionToMeasure(start, () => running(slot, projectPath), sessions.get(slot));
     if (!session) return null;
     const [context, models, usage] = await Promise.all([
       session.query.getContextUsage({ detail: 'summary' }),

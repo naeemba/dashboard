@@ -10,8 +10,16 @@ import type { Session, WorktreeEntry } from '../../shared/app/bridge';
 // started in a worktree pane is not found from the project's own checkout.
 //
 // `dispatched` marks a worker main's `session run` started, the only kind main may release, so it comes
-// back as main's after a restart and no other conversation does.
-export type PaneConversation = { session: string; directory: string; dispatched?: boolean };
+// back as main's after a restart and no other conversation does. `dispatcher` is the path of the page
+// whose main dispatched it, which is another page's when the pane was claimed with --project: that main
+// is the one the worker SendMessages when done, so it is the one a restart has to start (chat-start.ts).
+export type PaneConversation = { session: string; directory: string; dispatched?: boolean; dispatcher?: string };
+
+// The page whose main a worker coming back after a restart reports to. A file written before
+// `dispatcher` existed names none, and the pane's own page is the best guess left.
+export function workerDispatcher(conversation: PaneConversation, projectPath: string): string {
+  return typeof conversation.dispatcher === 'string' ? conversation.dispatcher : projectPath;
+}
 
 // The id is typed into a shell, so it is held to the shape Claude Code gives it. Anything else in a
 // hand-edited or damaged file would be a command run in the pane.
@@ -27,7 +35,7 @@ export function isPaneConversation(value: unknown): value is PaneConversation {
 // way the restore matches them, and a page with no open slot gets no sessions rather than another
 // project's. Only the fields a resume needs are copied: the live reading carries the pid as well.
 // The list runs to the highest-numbered terminal holding one, since workers have no fixed count.
-// `dispatched` says which panes hold main's worker now, which only main knows. Workers only: the
+// `dispatcherOf` says which panes hold main's worker now, and whose main dispatched it, which only main knows. Workers only: the
 // editor runs nvim, and main is the Claude screen, which keeps its own conversation. Pane 0's saved one
 // is taken once, on the launch that hands the terminal main over, and written back it would be handed
 // over again on the next, over whatever main has moved on to.
@@ -35,7 +43,7 @@ export function withClaude(
   layout: Session,
   slotOf: (projectPath: string) => number,
   held: ReadonlyMap<string, PaneConversation>,
-  dispatched: (id: string) => boolean,
+  dispatcherOf: (id: string) => string | undefined,
 ): SavedSession {
   return {
     ...layout,
@@ -47,7 +55,8 @@ export function withClaude(
         const pane = paneFromId(id);
         if (pane.slot !== slot || !isWorker(pane.index)) continue;
         while (claude.length <= pane.index) claude.push(null);
-        claude[pane.index] = { session: found.session, directory: found.directory, ...(dispatched(id) ? { dispatched: true } : {}) };
+        const dispatcher = dispatcherOf(id);
+        claude[pane.index] = { session: found.session, directory: found.directory, ...(dispatcher !== undefined ? { dispatched: true, dispatcher } : {}) };
       }
       return { ...page, claude };
     }),
@@ -61,11 +70,11 @@ export function sessionToWrite(
   layout: Session | null,
   slotOf: (projectPath: string) => number,
   held: ReadonlyMap<string, PaneConversation>,
-  dispatched: (id: string) => boolean,
+  dispatcherOf: (id: string) => string | undefined,
   lastWritten: string,
 ): { session: SavedSession; encoded: string } | null {
   if (layout === null) return null;
-  const session = withClaude(layout, slotOf, held, dispatched);
+  const session = withClaude(layout, slotOf, held, dispatcherOf);
   const encoded = JSON.stringify(session);
   return encoded === lastWritten ? null : { session, encoded };
 }
