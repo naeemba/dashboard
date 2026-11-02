@@ -90,20 +90,6 @@
           "parent": null
         },
         {
-          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
-          "title": "Take the single-instance lock and write session.json atomically",
-          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T20:46:57.620Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.620Z",
-              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
-            }
-          ]
-        },
-        {
           "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
           "title": "Decide whether the review agent may merge without a person",
           "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
@@ -323,14 +309,6 @@
           "updatedAt": "2026-11-01T23:43:36.000Z"
         },
         {
-          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
-          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:52:57.025Z"
-        },
-        {
           "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
           "title": "Tell main when a worker finishes",
           "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
@@ -346,6 +324,20 @@
           "parent": null,
           "createdAt": "2026-11-01T23:48:56.818Z",
           "updatedAt": "2026-11-02T00:02:42.653Z"
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:09:21.437Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.620Z",
+              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
+            }
+          ]
         }
       ]
     },
@@ -2439,12 +2431,22 @@
           "pullRequest": 171
         },
         {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)\n\nShipped in #173: the remote host listens on 127.0.0.1 unless host.bind in settings.json names another interface (hand-written only, documented in docs/remote-host/README.md and remote-host-decision-3); tokens compared with timingSafeEqual after a byte-length check. Not done: wss:// for a network bind (needs a certificate design).",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:07:36.975Z",
+          "branch": "work-board-card-4187f056-2471-4ea9-be8d-361",
+          "pullRequest": 173
+        },
+        {
           "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
           "title": "Stop the first usage sweep freezing main for a minute after launch",
           "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-02T00:09:04.559Z",
+          "updatedAt": "2026-11-02T00:11:07.543Z",
           "branch": "work-board-card-504767c6-333d-464f-84fe-51b",
           "pullRequest": 172,
           "comments": [
@@ -2457,7 +2459,7 @@
               "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
             },
             {
-              "at": "2026-11-02T00:09:04.559Z",
+              "at": "2026-11-02T00:11:07.543Z",
               "body": "Shipped in #172: the usage sweep runs on its own worker thread. Main's longest hold during the first sweep of 4.57 GB went from 148-165 ms to 1-2 ms; in the app, 6-8 stalls over 50 ms after launch went to 0. Not done: counts are not saved between launches, so each launch still reads every log, off main's thread."
             }
           ]
