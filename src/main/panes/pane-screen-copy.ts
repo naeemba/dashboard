@@ -62,20 +62,16 @@ export function paneScreenCopy(size: () => { cols: number; rows: number }): Pane
 // ponytail: the window coming home shows only what each pane printed while it was away, and a quiet pane
 // comes back blank until it next prints. Seed the copy from the pane host's own when it starts if that matters.
 export function screenCopyWhile(wanted: () => boolean, size: () => { cols: number; rows: number }): PaneScreenCopy {
-  let copy = paneScreenCopy(size);
-  let fed = false;
+  let copy: PaneScreenCopy | undefined;
+  let exitCode: number | undefined;
   return {
     push(data) {
-      if (wanted() !== fed) {
-        const exitCode = copy.exitCode();
-        copy = paneScreenCopy(size);
-        if (exitCode !== undefined) copy.exit(exitCode);
-        fed = !fed;
-      }
-      if (fed) copy.push(data);
+      const want = wanted();
+      if (want !== (copy !== undefined)) copy = want ? paneScreenCopy(size) : undefined;
+      copy?.push(data);
     },
-    replay: () => copy.replay(),
-    exit: (code) => copy.exit(code),
-    exitCode: () => copy.exitCode(),
+    replay: () => copy?.replay() ?? '',
+    exit(code) { exitCode = code; },
+    exitCode: () => exitCode,
   };
 }

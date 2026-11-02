@@ -1,3 +1,5 @@
+import { PAUSE_LEASE_MS } from '../../shared/panes/pause-lease';
+
 // How much a pane's terminal has been handed and not yet parsed, and when to ask main to stop reading
 // its pty and start again: xterm.js's own flow-control pattern (its "Flow control" guide), counted in
 // characters. Without it a program printing flat out fills xterm's write queue with seconds of output,
@@ -8,16 +10,20 @@ export const LOW_WATER = 10_000;
 
 export type WriteFlow = { queued(length: number): void; parsed(length: number): void };
 
-// Every chunk queued past the high mark asks again, not only the first: main's pause is a lease that
-// lapses, and a terminal still behind when it does has to renew it.
-export function writeFlow(ask: (paused: boolean) => void): WriteFlow {
+// main's pause is a lease that lapses (output-pauses.ts), so a terminal still past the high mark asks
+// again, at most every half lease rather than on every chunk.
+export const RENEW_MS = PAUSE_LEASE_MS / 2;
+
+export function writeFlow(ask: (paused: boolean) => void, now: () => number = Date.now): WriteFlow {
   let pending = 0;
   let paused = false;
+  let askedAt = -Infinity;
   return {
     queued(length) {
       pending += length;
-      if (pending <= HIGH_WATER) return;
+      if (pending <= HIGH_WATER || (paused && now() - askedAt < RENEW_MS)) return;
       paused = true;
+      askedAt = now();
       ask(true);
     },
     parsed(length) {

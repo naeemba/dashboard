@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { outputPauses, PAUSE_LEASE_MS } from './output-pauses';
+import { PAUSE_LEASE_MS } from '../../shared/panes/pause-lease';
+import { outputPauses } from './output-pauses';
 import type { PaneShell } from './pane-shell';
 
 function shell() {

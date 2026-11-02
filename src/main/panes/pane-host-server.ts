@@ -62,6 +62,9 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
     // reason to stay up, and the next app starts its own.
     disconnect(): void {
       send = null;
+      // A pause is the app's window asking to draw first (output-pauses.ts). With the app gone nothing
+      // will ask to resume, and a paused shell would block on its next write until the next launch.
+      for (const { shell } of entries.values()) shell.resume();
       if (entries.size === 0) idle();
     },
     receive(message: ToHost): void {

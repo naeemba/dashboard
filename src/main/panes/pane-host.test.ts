@@ -109,6 +109,15 @@ describe('paneHostServer', () => {
     expect(spawned[0].written).toEqual(['<pause>', '<resume>']);
   });
 
+  it('resumes every shell when the app goes, since nothing is left to ask', () => {
+    const { host, spawned } = server();
+    host.connect(() => undefined);
+    host.receive({ type: 'spawn', ...request('k') });
+    host.receive({ type: 'pause', key: 'k' });
+    host.disconnect();
+    expect(spawned[0].written).toEqual(['<pause>', '<resume>']);
+  });
+
   it('answers a shell that cannot start with the exit a missing shell gives', () => {
     const sent: FromHost[] = [];
     const host = paneHostServer(() => { throw new Error('ENOENT'); }, () => undefined);

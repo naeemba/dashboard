@@ -13,12 +13,12 @@ run each; "before" is this branch without the change, built the same day.
 
 | | before | after |
 |---|---|---|
-| Main CPU, pane host | 106% shown, 115% hidden | 48%, 45% |
-| Main CPU, no pane host | 102%, 112% | 40%, 51% |
-| Pane host CPU | 91%, 105% | 68%, 69% |
-| Renderer CPU | 114–131% | 112–119% |
-| Renderer heap while flooding | 96–186 MB | 20–40 MB |
-| Kept printing after Ctrl+C, pane host | 3.3 s shown, 4.4 s hidden | 0.11 s, 0.12 s |
+| Main CPU, pane host | 106% shown, 115% hidden | 38%, 35% |
+| Main CPU, no pane host | 102%, 112% | 51%, 46% |
+| Pane host CPU | 91%, 105% | 65%, 71% |
+| Renderer CPU | 114–131% | 112–117% |
+| Renderer heap while flooding | 96–186 MB | 21–38 MB |
+| Kept printing after Ctrl+C, pane host | 3.3 s shown, 4.4 s hidden | 0.11 s, 0.11 s |
 | Kept printing after Ctrl+C, no pane host | 2.7 s, 2.6 s | 0.11 s, 0.11 s |
 
 Main's profile, no pane host, hidden: busy 851 ms of 5.1 s, most of it the
@@ -30,13 +30,16 @@ main was busy 3.9 s of 5 s with 2.3 s in the copy.
   (`screenCopyWhile`). The renderer counts what each terminal has queued and,
   past 100,000 characters, asks main to stop reading that pane's pty until it
   is under 10,000 (`write-flow.ts`, `output-pauses.ts`). The pane host pauses
-  its pty the same way. A pause lapses after a second unless asked again, so a
-  window that reloads or leaves cannot leave a shell blocked.
+  its pty the same way. A pause lapses after a second unless the renderer
+  renews it (every half second while still behind), so a window that reloads
+  or leaves cannot leave a shell blocked, and the pane host resumes every
+  shell when the app disconnects.
 - With the pane host, the host process now does the copying main used to: it
   still keeps its own copy of every shell so a restart can redraw it, at 68%
   of a core during a flood. The renderer, drawing, is what limits the rate.
 - Not measured: a remote screen joined, where main keeps the copy as before and
-  a remote screen's pauses are ignored.
+  a remote screen's pauses are ignored. With `host.port` set and the pane host
+  running, the same output is parsed twice, once in each process.
 
 ## 2026-11-02: usage sweep on its own thread
 

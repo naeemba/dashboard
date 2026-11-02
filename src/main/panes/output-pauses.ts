@@ -1,3 +1,4 @@
+import { PAUSE_LEASE_MS } from '../../shared/panes/pause-lease';
 import type { PaneShell } from './pane-shell';
 
 // A pane's pty stops being read while the window's terminal for it has more than it can draw queued
@@ -7,8 +8,7 @@ import type { PaneShell } from './pane-shell';
 //
 // Each pause is a lease. A window that reloads, crashes, or goes to show another host never sends the
 // resume, and a shell left paused would block forever on its next write: a build you cannot see,
-// stopped. So a pause lapses on its own; a window still behind asks again with its next chunk.
-export const PAUSE_LEASE_MS = 1000;
+// stopped. So a pause lapses on its own; a window still behind renews it.
 
 export function outputPauses(shells: ReadonlyMap<string, PaneShell>) {
   const leases = new Map<string, ReturnType<typeof setTimeout>>();

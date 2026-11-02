@@ -200,12 +200,15 @@ export async function memory() {
 
 // The demo's pane host, the node process outside Electron that runs the worker panes' ptys
 // (docs/panes, panes-decision-1), or nothing when this run has none.
+// The folder the demo's pane host listens in: src/main/panes/pane-host-protocol.ts's paneHostSocket.
+export const paneHostFolder = (demo) => path.resolve(demo, 'userdata', 'pane-host');
+
 export function paneHostPids(demo) {
-  const socketFolder = path.resolve(demo, 'userdata', 'pane-host');
+  const socketFolder = paneHostFolder(demo);
   return readdirSync('/proc').filter((entry) => /^\d+$/.test(entry)).flatMap((pid) => {
     try {
-      const commandLine = readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-      return commandLine.includes('pane-host-entry') && commandLine.includes(socketFolder) ? [{ pid: Number(pid), name: 'pane-host' }] : [];
+      const [, entry, socket] = readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0');
+      return entry?.endsWith('/pane-host-entry.js') && path.dirname(socket ?? '') === socketFolder ? [{ pid: Number(pid), name: 'pane-host' }] : [];
     } catch { return []; }
   });
 }

@@ -7,7 +7,7 @@ import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { bytesPerSource, ownerOf } from './calculations.mjs';
 import {
-  connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, paneHostPids, press, retry, run, wait, withInstance,
+  connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, paneHostFolder, paneHostPids, press, retry, run, wait, withInstance,
 } from './demo-instance.mjs';
 
 const [measurement, demo, ...rest] = process.argv.slice(2);
@@ -102,7 +102,7 @@ const measurements = {
   // `no-host` puts a file where the pane host's socket folder goes, so the host cannot listen and the
   // app runs the pty itself, as it does with no `node` on the login shell's PATH.
   flood: (where = 'shown', host = 'host') => {
-    const socketFolder = path.join(demo, 'userdata', 'pane-host');
+    const socketFolder = paneHostFolder(demo);
     rmSync(socketFolder, { recursive: true, force: true });
     if (host === 'no-host') writeFileSync(socketFolder, '');
     return withInstance(demo, {}, async ({ page }) => {
