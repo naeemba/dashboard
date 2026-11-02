@@ -5,6 +5,29 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-02: a page's Claude CLI starts when its screen is shown (finding 3)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs
+memory <demo>` (five projects restored, four workers opened on the page in
+front) and `measure.mjs boot <demo>`. "Before" is this branch without the fix,
+rebuilt and measured the same day.
+
+| | before (2 runs) | after (3 runs) |
+|---|---|---|
+| Agent SDK CLIs running | 6 | 1 |
+| CLI private memory | 621–622 MB | 188–194 MB |
+| Main private memory | 290–295 MB | 210–308 MB |
+| Main busy in the first 3 s (1 run) | 242 ms | 182 ms |
+| Agent SDK frames in the boot profile | 15+3+3 ms | none |
+
+- The one CLI left is the page in front, whose Claude screen the measurement
+  shows; it is alpha, resuming the 31 MB conversation, so it is larger than
+  the 97–112 MB of an idle one.
+- Main's private memory moves with the transient peak of reading the long
+  conversations (finding "Startup" below), not with this change.
+- Not measured: a restored worker of main's, which starts its page's session
+  at open, and the SendMessage it makes to an SDK session at all; the demo has
+  no credentials to run a turn.
 ## 2026-11-02: a flooding pane reads no faster than it draws (finding 7)
 
 Same machine and compositor as the first profile, on top of the pane host
@@ -182,9 +205,12 @@ installed app was never touched.
    - You notice: five projects take about 0.9 GB, two thirds of it idle CLIs
      for Claude screens you may not open that day. Typing in the first second
      after the window appears lags.
-   - Fix (medium): start a page's session the first time its Claude screen is
-     shown or a worker reports to it, and stop one that has been idle for a
-     while. Workers reporting to main is the constraint to design around.
+   - Lazy start fixed 2026-11-02 (section above); idle stop not done, see
+     "A started session is not stopped when idle" in `docs/chat/decisions.md`.
+     Fix proposed (medium): start a page's session the first time its Claude
+     screen is shown or a worker reports to it, and stop one that has been
+     idle for a while. Workers reporting to main is the constraint to design
+     around.
 4. **Hidden projects keep laying out and painting their terminals.**
    - Measured: four workers at 200 lines/s each. With their project shown, the
      renderer runs at 23.8–26.9% CPU and 230–275 layouts per 10 s. With it

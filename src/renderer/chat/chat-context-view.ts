@@ -4,15 +4,19 @@ import { clockTime, statusMeters, type ChatMeasure } from '../../shared/chat/cha
 import { formatTokens } from '../../shared/usage/usage';
 import { anchoredPopup, type PopupRow, type PopupSection } from '../app/anchored-popup';
 import { piece } from './chat-foot-view';
+import { firstShow } from './chat-first-show';
 
 // The Claude screen's measure of its session, and the context popup that breaks it down. The view
-// asks for a measure when the screen opens, a turn ends or a model is picked; the latest one asked
+// asks for a measure when the screen is first shown, a turn ends or a model is picked; the latest one asked
 // for is the one kept, the foot draws it, and an open popup reads it again when it lands. How the
 // rows are shaped is chat-context.ts's; this only asks main and draws.
 
 export type Measures = {
   latest(): ChatMeasure | null;
   take(): void;
+  // The screen came into view: the first time in a conversation it measures with `start`, which starts
+  // the page's session. Only once, so a session that fails to start waits for a prompt, not a visit.
+  shown(): void;
   // A new conversation: nothing is measured until the next answer, and one still on its way is dropped.
   forget(): void;
   // A model was picked, which shows over the measured name until the next measure names it.
@@ -49,25 +53,32 @@ function heading(measure: ChatMeasure): string {
 export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () => void, say: (message: string) => void): Measures {
   let measured: ChatMeasure | null = null;
   let asked = 0;
+  const firstShown = firstShow();
   // The open popup's way to read the measure again; one popup is up at a time.
   let redraw: (() => void) | undefined;
 
+  // Shown, a turn ending and a model picked each measure, and the answers can come back out of order:
+  // only the latest one asked is kept.
+  function take(start = false): void {
+    const ask = ++asked;
+    bridge.chatMeasure(slot, start).then((reading) => {
+      if (ask !== asked) return;
+      if (reading !== null) measured = reading;
+      drawn();
+      redraw?.();
+    }, () => undefined);
+  }
+
   return {
     latest: () => measured,
-    // Open, a turn ending and a model picked each measure, and the answers can come back out of
-    // order: only the latest one asked is kept.
-    take() {
-      const ask = ++asked;
-      bridge.chatMeasure(slot).then((reading) => {
-        if (ask !== asked) return;
-        if (reading !== null) measured = reading;
-        drawn();
-        redraw?.();
-      }, () => undefined);
+    take: () => take(),
+    shown() {
+      if (firstShown.take()) take(true);
     },
     forget() {
       measured = null;
       asked++;
+      firstShown.rearm();
     },
     unname() {
       if (measured) measured = { ...measured, model: null };

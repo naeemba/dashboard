@@ -22,7 +22,8 @@ log — as its first 6 lines and a row counting the rest, opened the same way
 from the web is a link, so nothing is fetched until you click it), an edit as a
 diff. It runs in the project's folder with the project's own CLAUDE.md,
 settings, skills, hooks and MCP servers, the same as claude typed in a pane, as
-the project's main session. It starts when the project opens.
+the project's main session. It starts the first time you show this screen, or
+when a worker reports to it, so a project you never look at runs no Claude.
 
 The boxes take the terminal's readline keys: deleting the word before the caret,
 back to the start of the line or on to its end keeps what went, and the yank key
@@ -151,7 +152,7 @@ second screen on the same page shows the same conversation, questions and
 choices, and either can answer.
 
 The conversation outlives the app: the next launch shows it again and carries on
-from it as the project opens. The new conversation key starts over; the old one
+from it once the screen is shown. The new conversation key starts over; the old one
 stays in Claude Code's own history on disk. A very long conversation scrolls
 fine, but only the part near the screen is drawn properly at any moment, so fast
 scrolling shows plain text for a moment first.
@@ -161,7 +162,8 @@ scrolling shows plain text for a moment first.
 Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
 - Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
-  `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`
+  `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`,
+  `chat-start.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-stamp.ts`
@@ -172,7 +174,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
   `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
-  `chat-context.ts`, `chat-context-view.ts`; the popup it opens is `src/renderer/app/anchored-popup.ts`
+  `chat-context.ts`, `chat-context-view.ts`, `chat-first-show.ts`; the popup it opens is `src/renderer/app/anchored-popup.ts`
   with `popup-placement.ts`
 - Styles: `chat.css`
 
@@ -182,6 +184,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given an MCP server asks for a form or a sign-in link, when the session passes it on, then the same box walks the form a field at a time, or opens the link, and every step can decline; a yes or no or a pick opens on the server's default, a typed answer outside the field's bounds keeps the box open saying what it takes, a required multi-select or a link that is not http(s) can only be declined, an optional multi-select can also be skipped, and Escape or the session ending reaches the server as a cancel, not a decline; the server's other dialogs are not declared, so Claude Code keeps its own fallback.
 - Given a turn is running, when you press Escape, then the turn is interrupted and any pending question is given up on: a tool call is declined, a server form cancelled.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
+- Given the app launches with five projects, when you have shown none of their Claude screens, then no project runs a `claude` CLI; showing one starts that page's session and its status line fills in, and a page one of main's workers came back on starts at launch so the worker's report has somewhere to arrive.
 - Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
 - Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.

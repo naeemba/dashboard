@@ -18,7 +18,7 @@ workers in ~/.dashboard, where projects.yaml describes every project, and the
 board key or a click on the strip leaves it.
 
 Main is Claude Code drawn as a page rather than a terminal (the Claude screen's
-keys in Ctrl+H are its own), started as soon as the project opens and told to
+keys in Ctrl+H are its own), started the first time you show it and told to
 dispatch the tasks you give it — do this, review that, research the other — into
 workers rather than run them itself. It does that with DASHBOARD_COMMAND, a
 command every pane carries: run `node "$DASHBOARD_COMMAND" pane` to see what it

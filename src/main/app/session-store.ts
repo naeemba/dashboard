@@ -27,9 +27,10 @@ type ClaudeSessions = {
   placed(placement: SessionPlacement): void;
 };
 
-// `dispatched` is main's record of the panes holding its workers, saved so a restart knows them again.
+// `dispatcherOf` is main's record of the panes holding its workers and whose main dispatched each, saved
+// so a restart knows them again.
 export function sessionStore(
-  table: Channels, file: string, slotOf: (projectPath: string) => number, dispatched: (id: string) => boolean,
+  table: Channels, file: string, slotOf: (projectPath: string) => number, dispatcherOf: (id: string) => string | undefined,
 ): ClaudeSessions {
   const saved = readSession(file);
   const ledger = resumeLedger(saved.pages, existsSync);
@@ -37,7 +38,7 @@ export function sessionStore(
   let lastWritten = '';
 
   function write(): void {
-    const next = sessionToWrite(layout, slotOf, ledger.held(), dispatched, lastWritten);
+    const next = sessionToWrite(layout, slotOf, ledger.held(), dispatcherOf, lastWritten);
     if (next === null) return;
     lastWritten = next.encoded;
     writeSession(file, next.session);
