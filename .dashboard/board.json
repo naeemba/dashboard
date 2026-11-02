@@ -315,14 +315,6 @@
           "updatedAt": "2026-11-02T00:49:53.539Z"
         },
         {
-          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
-          "title": "Cap each help dialog blurb",
-          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T01:02:00.351Z"
-        },
-        {
           "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
           "title": "Start a page's Claude CLI only when it is needed",
           "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -418,6 +410,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
+          "title": "Cap each help dialog blurb",
+          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:09:21.337Z",
+          "branch": "work-board-card-79b80d8d-7fe8-4b96-8ad1-ef0",
+          "pullRequest": 184
         }
       ]
     },
