@@ -212,6 +212,15 @@
           "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
+          "title": "pane commands hang forever when the CLI is newer than the running app",
+          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-02T12:59:21.133Z",
+          "updatedAt": "2026-11-02T12:59:21.133Z"
         }
       ]
     },
