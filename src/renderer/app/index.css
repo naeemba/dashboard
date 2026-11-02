@@ -68,9 +68,15 @@ body *:not(.pane, .pane *) {
    inside it. `display: block` above is what makes this work — left to view-terminals, view-nvim and
    board's own grid and flex rules, a view that ever dropped its layout declaration would fall back to
    the browser's own `display: none` for [hidden] the moment it was hidden, and its panes would measure
-   zero. A pane measured at zero comes back as an 80x24 terminal in a full-width window. */
+   zero. A pane measured at zero comes back as an 80x24 terminal in a full-width window.
+   The translate moves what is hidden out of the window at the same size. xterm stops drawing a
+   terminal only when its IntersectionObserver sees it leave the viewport, and an element that is
+   only invisible still intersects: a project behind another one kept laying out every line its panes
+   printed. Off screen, xterm still writes every line into the buffer and redraws the whole screen when
+   the page comes back. Off to the left, so the window never grows a scrollbar for it. */
 .page[hidden], .view[hidden] {
   visibility: hidden;
+  translate: -100vw 0;
 }
 
 /* The main session on the left, full height, and the workers in a list down the right. Each placed by
