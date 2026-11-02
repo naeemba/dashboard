@@ -2579,10 +2579,10 @@
         {
           "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
           "title": "Render only the tail of a streaming Claude reply",
-          "notes": "Shipped in PR #188: a streaming Claude reply draws its settled part once and redraws only the tail after the last paragraph break outside a code fence. 16k reply: renderer 66% to 51% CPU, script 8% to 2.2%. Replies with a link definition, a fence inside a list item or quote, or an HTML comment/pre block are still drawn whole each frame. Remaining cost is layout of the conversation above the block.",
+          "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.\n\nShipped in PR #188: a streaming Claude reply draws its settled part once and redraws only the tail after the last paragraph break outside a code fence. 16k reply: renderer 66% to 51% CPU, script 8% to 2.2%. Replies with a link definition, a fence inside a list item or quote, or an HTML comment/pre block are still drawn whole each frame. Remaining cost is layout of the conversation above the block.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-02T01:55:09.053Z",
+          "updatedAt": "2026-11-02T01:55:22.389Z",
           "branch": "work-board-card-adf42c92-bd82-482c-88c7-5da",
           "pullRequest": 188
         }
