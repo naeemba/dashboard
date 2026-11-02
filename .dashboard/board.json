@@ -206,6 +206,12 @@
           "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "b96468cf-e580-4b57-8471-e4fb0b528869",
+          "title": "Move replaceFile out of board-store into src/main/app/replace-file.ts",
+          "notes": "replaceFile is the app's general atomic write but lives in board/board-store.ts. notes-store.ts, worktree-store.ts, session-index-store.ts and chat-sessions.ts import a file helper from the board's store, and its comment (\"every file the dashboard keeps about a project\") no longer describes what it writes. Cost: anyone looking for how the app writes a file finds it under the board, and a change to it reads as a board change. Move it to src/main/app/replace-file.ts with its .tmp test beside it; writeBoard keeps calling it.\n\nIssue: https://github.com/naeemba/dashboard/issues/177\nReview: https://github.com/naeemba/dashboard/pull/175#discussion_r4437993801",
+          "priority": "low"
         }
       ]
     },
