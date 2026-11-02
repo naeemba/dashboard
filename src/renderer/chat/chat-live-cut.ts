@@ -5,14 +5,15 @@
 // same HTML as drawn whole.
 //
 // Null means do not cut this reply at all and draw it whole every frame, as before: a link definition
-// (`[name]: url`) applies to the whole text, so a link above it would show unlinked; a line opening
-// raw HTML can run on past a blank line.
+// (`[name]: url`) applies to the whole text, so a link above it would show unlinked; a comment or a
+// `<pre>`, `<script>`, `<style>` or `<textarea>` block runs on past a blank line.
 //
 // `from` is an earlier cut, or 0, so each frame reads only the text past the part already drawn.
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
-const WHOLE = /^ {0,3}(<|\[[^\]]+\]:)/;
-const CARRIES_ON = /^(\s|[-*+>]|\d)/;
+const WHOLE = /^ {0,3}(\[[^\]]+\]:|<(!|\?|(script|pre|style|textarea)(\s|>|$)))/i;
+// A digit carries on even alone: half arrived, it may yet be `2.`.
+const CARRIES_ON = /^(\s|>|\d|[-*+](\s|$))/;
 
 export function liveCut(text: string, from = 0): number | null {
   let fence = '';
@@ -24,9 +25,7 @@ export function liveCut(text: string, from = 0): number | null {
     const line = text.slice(start, end);
     const marker = FENCE.exec(line)?.[1];
     if (fence) {
-      const closes = marker !== undefined && marker[0] === fence[0] && marker.length >= fence.length
-        && line.slice(line.indexOf(marker) + marker.length).trim() === '';
-      if (closes) fence = '';
+      if (line.trim() === marker && marker[0] === fence[0] && marker.length >= fence.length) fence = '';
     } else {
       if (WHOLE.test(line)) return null;
       const blank = line.trim() === '';
@@ -37,4 +36,23 @@ export function liveCut(text: string, from = 0): number | null {
     start = end + 1;
   }
   return cut;
+}
+
+export type LiveStep = {
+  // The text drawn once is no longer a start of this one: a new block, or one that cannot be cut.
+  clear: boolean;
+  // Newly settled text to draw once, after what was settled before.
+  settle: string;
+  // What is redrawn this frame.
+  tail: string;
+  settled: number;
+};
+
+// One frame of the streaming block, given the text shown last frame and how much of it is settled.
+export function liveStep(shown: string, settled: number, text: string): LiveStep {
+  const from = text.startsWith(shown) ? settled : 0;
+  const cut = liveCut(text, from);
+  const start = cut === null ? 0 : from;
+  const end = cut ?? 0;
+  return { clear: start !== settled, settle: text.slice(start, end), tail: text.slice(Math.max(start, end)), settled: Math.max(start, end) };
 }

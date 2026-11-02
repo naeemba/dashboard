@@ -181,7 +181,11 @@ item, not a quote. Markdown drawn in two pieces there is the same HTML as drawn 
 test checks for every prefix of a reply holding a table, fences, a loose list and a link across a
 line break.
 
-A reply holding a link definition (`[name]: url`) or a line opening raw HTML is drawn whole every
-frame, as before: a definition applies to links anywhere in the text, and an HTML block can run on
-past a blank line. Telling those cases apart from a safe cut costs more code than they are worth;
+A reply holding a link definition (`[name]: url`), an HTML comment, or a `<pre>`, `<script>`,
+`<style>` or `<textarea>` line is drawn whole every frame, as before: a definition applies to links
+anywhere in the text, and those HTML blocks run on past a blank line. Other HTML lines end at one, so
+they still cut. Telling the refused cases apart from a safe cut costs more code than they are worth;
 Claude rarely writes either. The finished reply is an entry and is always drawn whole.
+
+What is still redrawn every frame: an open code fence, highlighted whole each frame until it closes,
+and a list still growing, since a blank line between items cannot be cut.

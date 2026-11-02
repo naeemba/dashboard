@@ -93,7 +93,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
   log.className = 'chat-log';
   const live = document.createElement('div');
   live.className = 'chat-entry chat-text chat-live';
-  live.hidden = true;
   log.append(live);
   const drawLive = createLiveBlock(live);
   const ask = createAskPanel((id, result) => {
@@ -242,7 +241,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
   function reveal(): void {
     revealing = 0;
     paintedLive = revealed(paintedLive, transcript.live);
-    live.hidden = paintedLive === '';
     drawLive(paintedLive);
     if (pinned) log.scrollTop = log.scrollHeight;
     if (paintedLive !== transcript.live) revealing = requestAnimationFrame(reveal);
