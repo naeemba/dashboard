@@ -221,7 +221,7 @@ describe('holderOfBinding, across overlapping scopes', () => {
 describe('host and remote', () => {
   it('defaults to no port, no token and no remote', () => {
     const settings = parseSettings({}, true);
-    expect(settings.host).toEqual({ port: null, token: '' });
+    expect(settings.host).toEqual({ port: null, token: '', bind: '127.0.0.1' });
     expect(settings.remote).toEqual({ address: '', token: '' });
   });
 
@@ -230,6 +230,13 @@ describe('host and remote', () => {
     expect(parseSettings({ host: { port: 0 } }, true).host.port).toBeNull();
     expect(parseSettings({ host: { port: 70000 } }, true).host.port).toBeNull();
     expect(parseSettings({ host: { port: '7777' } }, true).host.port).toBeNull();
+  });
+
+  it('binds loopback unless the file names an interface', () => {
+    expect(parseSettings({ host: { port: 7777 } }, true).host.bind).toBe('127.0.0.1');
+    expect(parseSettings({ host: { bind: '  ' } }, true).host.bind).toBe('127.0.0.1');
+    expect(parseSettings({ host: { bind: 7 } }, true).host.bind).toBe('127.0.0.1');
+    expect(parseSettings({ host: { bind: ' 0.0.0.0 ' } }, true).host.bind).toBe('0.0.0.0');
   });
 
   it('keeps a token and a remote as written', () => {
@@ -253,12 +260,12 @@ describe('isPort', () => {
 });
 
 describe('resetAll', () => {
-  it('keeps the token and the remote, and resets the port', () => {
+  it('keeps the token and the remote, and resets the port and the bind to loopback', () => {
     const settings = parseSettings({
-      host: { port: 7777, token: 'abc' }, remote: { address: '10.0.0.2:7777', token: 'xyz' }, weatherPlace: 'Oslo',
+      host: { port: 7777, token: 'abc', bind: '0.0.0.0' }, remote: { address: '10.0.0.2:7777', token: 'xyz' }, weatherPlace: 'Oslo',
     }, true);
     const reset = resetAll(settings, true);
-    expect(reset.host).toEqual({ port: null, token: 'abc' });
+    expect(reset.host).toEqual({ port: null, token: 'abc', bind: '127.0.0.1' });
     expect(reset.remote).toEqual(settings.remote);
     expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
   });

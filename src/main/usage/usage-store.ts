@@ -7,9 +7,10 @@ import { retainFrom, tokensOf, type FileUsage } from '../../shared/usage/usage';
 // arithmetic: how much of a file has been counted.
 //
 // The logs are ~/.claude/projects/<folder>/<session>.jsonl, with a subagent's own file one or two
-// folders deeper under the session it was spawned from. Half a gigabyte of them reads in about two
-// seconds, so the first sweep can simply read the lot; every sweep after it reads only what has been
-// appended, which is nothing at all for all but the handful of sessions running right now.
+// folders deeper under the session it was spawned from. The first sweep reads the lot — 4.5 GB took 18
+// seconds on one machine, which is why it runs on a thread of its own (usage-worker.ts) — and every
+// sweep after it reads only what has been appended, which is nothing at all for all but the handful of
+// sessions running right now.
 
 const LOG_SUFFIX = '.jsonl';
 
@@ -123,9 +124,11 @@ function countInto(usage: FileUsage, text: string): void {
 // One pass over the logs, folded into what the last pass found. `known` is kept across sweeps and
 // edited in place: that is what makes every sweep after the first one cheap, since a file whose size
 // has not moved is not opened at all.
-// ponytail: stats every log every sweep — about a hundred milliseconds for four thousand files, on
-// the thread every pane's bytes flow through. If that starts showing, narrow the walk to the folders
-// of the projects that are open rather than reading faster.
+// ponytail: reads every log whole again on each launch, since the counts live only in memory — 18
+// CPU-seconds for 4.5 GB, off main's thread. If launches start feeling it, save each file's size and
+// counts in userData so a launch reads only what was appended since the last run.
+// ponytail: stats every log every sweep — about a hundred milliseconds for four thousand files. If
+// that starts showing, narrow the walk to the folders of the projects that are open.
 export async function sweepUsage(
   root: string,
   known: Map<string, FileUsage>,
@@ -141,7 +144,7 @@ export async function sweepUsage(
       // Stat first, and open nothing at all for a log that has not moved — which is every log but the
       // handful being written to right now. This is the whole of what makes a sweep cheap: without it
       // a quarter of a second goes on opening four thousand files to find that none of them has
-      // anything new in it, every half minute, on the thread every pane's bytes flow through.
+      // anything new in it, every half minute.
       const { size } = await stat(file);
       const appended = size === usage.size ? null : await readAppended(file, usage.size, size);
       if (appended !== null) {
