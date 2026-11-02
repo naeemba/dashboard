@@ -41,3 +41,4 @@ Folders: `src/main/remote-host/`, `src/shared/remote-host/`, `src/renderer/remot
 - Given a screen opens a project, when the host pushes `projects:change`, then every screen's pages match the host's list.
 - Given a screen asks the host for the folder dialog, when the host refuses, then that screen's status bar says to type the path on the host (errors-rule-2).
 - Given a mac screen on a Linux host, when it reads its keys, then it keeps its own Cmd keys.
+- Given the app is running, when it is launched again with `--remote`, then the running app joins the remembered host, once its window has restored.
