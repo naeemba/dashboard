@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { chmodSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { failureLine } from '../command/failure-line';
 import { replaceFile } from '../app/replace-file';
@@ -9,10 +9,15 @@ import { replaceFile } from '../app/replace-file';
 // A skill, not a file in ~/.claude/commands: commands/ is often a link into a dotfiles repo, and
 // writing there would edit somebody's dotfiles. skills/<name>/ is a folder of its own, and it keeps
 // the program beside the text that runs it, at one path that never moves:
-// ~/.claude/skills/create-task/create-task.js. claude-pr-loop calls that path through
-// PR_LOOP_CARD_SCRIPT, so it is part of the interface.
+// ~/.claude/skills/create-task/create-task.js. claude-pr-loop runs that path through
+// PR_LOOP_CARD_SCRIPT as an executable, not under `node`, so the path, the `#!` line and mode 0755 are
+// all part of the interface. On Windows the mode means nothing; the skill runs it under `node` there
+// as everywhere.
 //
-// A file is written only when its bytes differ, so a launch with nothing new leaves both alone.
+// A file is written only when its bytes differ, so a launch with nothing new leaves both alone. A
+// program whose bytes match but whose mode does not (its execute bit dropped by a chmod, a restore or
+// a sync; one installed before the `#!` line differs in bytes and is rewritten) is chmodded, not
+// rewritten.
 
 function createTaskFolder(home: string): string {
   return path.join(home, '.claude', 'skills', 'create-task');
@@ -72,14 +77,19 @@ When the script prints its line, repeat that line and stop.
 
 // Through replaceFile, so a create-task.js that claude-pr-loop starts mid-launch is the old file or
 // the new one, never half of one.
-function writeIfChanged(file: string, contents: string): void {
+function writeIfChanged(file: string, contents: string, mode?: number): void {
+  let current: string | null = null;
   try {
-    if (readFileSync(file, 'utf8') === contents) return;
+    current = readFileSync(file, 'utf8');
   } catch {
     // Not there yet.
   }
-  replaceFile(file, contents);
+  if (current !== contents) replaceFile(file, contents, mode);
+  else if (mode !== undefined && (statSync(file).mode & 0o777) !== mode) chmodSync(file, mode);
 }
+
+const EXECUTABLE = 0o755;
+const SHEBANG = '#!/usr/bin/env node\n';
 
 // `builtScript` is the create-task-cli-entry.js this build carries; a copy, not a link, so the
 // installed one keeps working while the app is being swapped for a new build. Answers the line to
@@ -87,7 +97,7 @@ function writeIfChanged(file: string, contents: string): void {
 export function installCreateTask(home: string, builtScript: string): string | null {
   try {
     const script = createTaskScript(home);
-    writeIfChanged(script, readFileSync(builtScript, 'utf8'));
+    writeIfChanged(script, SHEBANG + readFileSync(builtScript, 'utf8'), EXECUTABLE);
     writeIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(script));
     // Node reads a .js as ESM when the nearest package.json above it says "type": "module", and one
     // in ~/.claude or ~ would make the CommonJS program fail with `require is not defined`.

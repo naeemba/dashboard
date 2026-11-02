@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { closeSync, fchmodSync, fsyncSync, mkdirSync, openSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 // How every file the dashboard keeps is written, in a project's .dashboard folder and in userData alike:
@@ -21,7 +21,10 @@ import { dirname } from 'node:path';
 // With one fixed name the second writer's open truncates the file the first is about to rename.
 //
 // The folder is made on the way, because the first write to a project is what creates .dashboard.
-export function replaceFile(filePath: string, text: string): void {
+//
+// `mode`, when given, is set on the temporary file before the rename, so the file is never seen under
+// its name without it. Set with fchmod rather than through open, which the umask would narrow.
+export function replaceFile(filePath: string, text: string, mode?: number): void {
   mkdirSync(dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   const descriptor = openSync(temporaryPath, 'w');
@@ -30,6 +33,7 @@ export function replaceFile(filePath: string, text: string): void {
   try {
     try {
       writeFileSync(descriptor, text);
+      if (mode !== undefined) fchmodSync(descriptor, mode);
       fsyncSync(descriptor);
     } finally {
       closeSync(descriptor);
