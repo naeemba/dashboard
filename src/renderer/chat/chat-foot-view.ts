@@ -2,8 +2,9 @@ import type { CacheWarmth } from '../../shared/usage/cache-warmth';
 import { modelTone, statusMeters, type ChatMeasure, type StatusTone, type FootState } from '../../shared/chat/chat-status';
 
 // The row under the Claude screen's box as DOM: on the left the model, the mode, the effort, what
-// Claude is doing and how its workers stand; on the right the meters Claude Code's status line carries, whether the prompt cache is warm, then the version. What
-// the meters say is chat-status.ts's; this only builds the elements.
+// Claude is doing and how its workers stand; on the right the meters Claude Code's status line
+// carries, whether the prompt cache is warm, then the version. What the meters say is
+// chat-status.ts's; this only builds the elements.
 
 const STATE_LABELS: Record<FootState, string> = { ready: 'ready', working: 'working', waiting: 'waiting on you' };
 

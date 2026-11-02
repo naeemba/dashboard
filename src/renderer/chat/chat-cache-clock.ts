@@ -9,18 +9,19 @@ export type CacheClock = {
   wake(): void;
 };
 
-export function createCacheClock(foot: HTMLElement, redraw: () => void): CacheClock {
-  let timer = 0;
+export function createCacheClock(visible: () => boolean, redraw: () => void): CacheClock {
+  let pending = false;
   let asleep = false;
   return {
     read(use) {
       const warmth = use ? cacheWarmth(use, Date.now()) : null;
       // Every paint reads, a streamed token included: one timer pending is enough, and a reply landing
       // meanwhile costs one early redraw, which sets the timer it needs.
-      if (timer || asleep || warmth?.changesIn == null) return warmth;
-      timer = window.setTimeout(() => {
-        timer = 0;
-        asleep = !foot.checkVisibility();
+      if (pending || asleep || warmth?.changesIn == null) return warmth;
+      pending = true;
+      setTimeout(() => {
+        pending = false;
+        asleep = !visible();
         if (!asleep) redraw();
       }, warmth.changesIn);
       return warmth;

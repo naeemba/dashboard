@@ -163,9 +163,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
 
   // One row under the box: on the left the model, the mode and what Claude is doing; on the right
-  // the meters Claude Code's status line carries, then the version.
+  // the meters Claude Code's status line carries, whether the prompt cache is warm, then the
+  // version.
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
-  const cacheClock = createCacheClock(foot, () => drawFoot());
+  const cacheClock = createCacheClock(() => foot.checkVisibility(), () => drawFoot());
   let drawnFoot = '';
   let drawnMeasure: ChatMeasure | null = null;
   function drawFoot(): void {
