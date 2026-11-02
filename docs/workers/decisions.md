@@ -72,7 +72,9 @@ Which slot claimed a pane is kept in memory only, so after a restart the pane is
 ## workers-decision-3: Who dispatched a worker, and the screen's links and popup
 
 `session-requests.ts` keeps one record per worker a `pane run` started: the slot whose main ran it and
-the first words of its prompt, until it is released or its number is claimed again. It sits beside the
+the first words of its prompt, until it is released, its number is claimed again, or its pane closes
+or something else starts in it (main.ts calls `forget` where it drops its own mark). An agent that
+only exits keeps its record and is listed idle. It sits beside the
 hook states `pane list` already reads, so the done report, the foot's count and the workers popup all
 read the one record rather than a store of their own. It is not `dispatchers`, which says who may run a
 pane, not who did: a project's own main may run a pane the manager claimed on its page, and then its
@@ -81,7 +83,8 @@ listed by nobody and reports to its own page's main.
 
 **A pane reference is an address, not a bare id.** `pane run` and the done report print
 `dashboard://pane/<slot>:<index>`; the screen links only that, so `2:1` in a reply about a time or a
-ratio is never a link. `pane claim` still prints the bare id: main pipes it into `run`, and a second
+ratio is never a link. It names the number, not the worker: numbers are reused, so an old link lands
+on whatever holds the number now, and a link to a number nothing holds says the pane is not open. `pane claim` still prints the bare id: main pipes it into `run`, and a second
 token there would be one more thing to strip. A link is drawn from text nodes only, so an address in
 an attribute stays text.
 

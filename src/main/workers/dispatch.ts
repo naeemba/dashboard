@@ -57,8 +57,8 @@ export function mainPrompt(projectPath: string): string {
       + ' committed, pushed and opened its pull request, and kept otherwise. Research takes neither and'
       + ' reads this checkout.',
     '',
-    `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. A worker`
-      + ' whose turn ends without doing so is marked done anyway, and the app tells you it has finished.',
+    `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
+      + " worker's turn ends the app also tells you it has finished, whether or not it wrote, and `list` says done.",
   ].join('\n');
 }
 

@@ -286,7 +286,16 @@ export function searchOverlay<Choice>(options: {
       }
     });
     search();
-    unwatch = options.watch?.(search);
+    // A refresh can reorder the rows, so the highlight follows the row it was on, not its place.
+    unwatch = options.watch?.(() => {
+      const was = rows[highlighted]?.choice;
+      search();
+      const at = rows.findIndex((row) => row.choice === was);
+      if (at !== -1 && at !== highlighted) {
+        highlighted = at;
+        draw();
+      }
+    });
   });
 }
 

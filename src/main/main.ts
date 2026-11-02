@@ -501,6 +501,7 @@ const mainsWorkers = new Set<string>();
 // that reviews the pull request the first one opened, and either of them resumed after a restart.
 function startAgent(id: string, worktreePath: string, agentArguments: string[]): void {
   mainsWorkers.delete(id);
+  workerAnswers.forget(id);
   setPaneCommand(id, { args: agentArguments, directory: worktreePath });
   // Working from this instant, rather than from the first report that catches its spinner. The reports
   // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
@@ -692,6 +693,7 @@ function setPaneCommand(id: string, command: PaneCommand): void {
 // dropped by the check in spawnTerminal, so no pty:exit goes out for a pane already off the screen.
 function dropPane(id: string): void {
   mainsWorkers.delete(id);
+  workerAnswers.forget(id);
   const terminalProcess = shells.get(id);
   shells.delete(id);
   terminalProcess?.kill();

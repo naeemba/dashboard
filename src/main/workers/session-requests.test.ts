@@ -160,6 +160,32 @@ describe('sessionRequests', () => {
     expect(answer.workers()).toEqual([]);
   });
 
+  // Pane numbers are reused, so the record goes with the pane: closed by hand and claimed again, or
+  // forgotten when main closes it or starts something else there, the number is nobody's worker.
+  it('drops a worker from the list once its pane is claimed again or forgotten', async () => {
+    const { ports } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
+    ports.closeWorker('2:1');
+    expect(await answer({ directory: '/work/api', args: ['claim'] })).toEqual({ ok: true, output: '2:1' });
+    expect(answer.workers()).toEqual([]);
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
+    answer.forget('2:1');
+    expect(answer.workers()).toEqual([]);
+  });
+
+  // A worker resumed at launch has no run behind it, so its own page's main hears it.
+  it('tells the pane\'s own main when a resumed worker no run started is done', async () => {
+    const { ports, open, agents, workers, told } = project();
+    open.push(1);
+    agents.add('2:1');
+    workers.add('2:1');
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+  });
+
   it('tells main when a worker it started is done, and not when anything else in a pane is', async () => {
     const { ports, agents, told } = project();
     const answer = sessionRequests(ports);

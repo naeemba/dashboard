@@ -81,6 +81,10 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // Every worker a session run started that is still open, in the order they ran, each naming the slot
   // whose main ran it: one read serves every page's status line and popup.
   workers(): DispatchedWorker[];
+  // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
+  // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
+  // called when only the agent exits: that worker stays listed, idle, until it is released.
+  forget(id: string): void;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -97,7 +101,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // and release it as its own, and its main hears the worker's report. Slots are never reused, so an
   // entry left by a project closed since names nobody.
   const dispatchers = new Map<string, number>();
-  // Each worker a session run started, until it is released or its number claimed again: the slot whose
+  // Each worker a session run started, until it is released, its number claimed again, or main forgets
+  // it (its pane closed or given to something else): the slot whose
   // main ran it, which hears its report, and what it was asked. Kept apart from `dispatchers`, which is
   // who may run the pane, not who did.
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
@@ -254,5 +259,5 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
     }
-  }, { workers });
+  }, { workers, forget: (id: string) => { dispatched.delete(id); } });
 }

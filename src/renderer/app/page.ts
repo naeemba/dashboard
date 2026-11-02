@@ -595,7 +595,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       showEditor: () => options.showEditor(page),
       goToPane(id) {
         if (panesById.has(id)) options.goToPane(id);
-        else options.onNotice(`chat:${slot}`, `Pane ${id} is closed: its worker was released.`);
+        else options.onNotice(`chat:${slot}`, `Pane ${id} is not open.`);
       },
     });
     page.chat = chat;
