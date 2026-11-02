@@ -1,7 +1,8 @@
 import { app, BrowserWindow, dialog } from 'electron';
+// First: a launch that is not going to be the app stops inside it, before any line below runs.
+import { whenLaunchedAgain } from './app/launch-gate';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import started from 'electron-squirrel-startup';
 import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
@@ -80,8 +81,6 @@ import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
 import type { OpenProjects, ProjectOpen, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
-
-if (started) app.quit();
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
 const environmentFile = app.isPackaged
@@ -896,7 +895,8 @@ const remote = registerRemote(held, {
   saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
 });
 // Before registerWithIpc, which only answers the channels already in the table.
-connectAtLaunch(process.argv, () => settings, table, failures.hold);
+// A second launch is read the way this one was, once it has brought the window forward.
+whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold, remote.joinedTo));
 registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 
