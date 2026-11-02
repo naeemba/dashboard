@@ -1,4 +1,4 @@
-import { selectionOf, type Board, type Card, type CardComment, type Selection } from './board';
+import { neighbourRow, selectionOf, type Board, type Card, type CardComment, type Selection } from './board';
 
 // The app's save, replayed onto the board as it is on disk now. The screen changes the board it last
 // read or wrote (`base`) into `next`; between that read and this write the `board` command may have
@@ -28,6 +28,12 @@ export function rebaseBoardChange(base: Board, next: Board, latest: Board | null
   }
 
   for (const column of next.columns) {
+    const order = column.cards.map((card) => card.id);
+    const baseOrder = base.columns.find((entry) => entry.name === column.name)?.cards.map((card) => card.id) ?? [];
+    // The cards in this column on both boards. A neighbour the save added, deleted or took to another
+    // column does not make the card beside it a move: an agent moves `b` to Review while you delete the
+    // `a` above it, and `b` still goes to Review.
+    const stayed = new Set(order.filter((id) => before.get(id)?.column === column.name));
     for (const [index, card] of column.cards.entries()) {
       const was = before.get(card.id);
       const found = selectionOf(result, card.id);
@@ -35,14 +41,19 @@ export function rebaseBoardChange(base: Board, next: Board, latest: Board | null
       // Deleted on disk since the screen read it: the deletion is the newer word.
       if (was && !found) continue;
       const edited = was && onDisk ? editedCard(was.card, card, onDisk) : card;
-      const predecessor = column.cards[index - 1]?.id ?? null;
-      const moved = !was || was.column !== column.name || was.predecessor !== predecessor;
+      const moved = !was || was.column !== column.name
+        || stayedAbove(baseOrder, card.id, stayed) !== stayedAbove(order, card.id, stayed);
       if (found && !moved) {
         result.columns[found.column].cards[found.card] = edited;
         continue;
       }
       if (found) removeAt(result, found);
-      insertAfter(result, column.name, nearestKept(result, column.cards, index), edited);
+      // A column the disk no longer has keeps nothing: the boards share one set of column names, so
+      // this is a hand-edited file, and the card goes in the first column rather than off the board.
+      const target = result.columns.find((entry) => entry.name === column.name) ?? result.columns[0];
+      if (!target) continue;
+      const ids = target.cards.map((entry) => entry.id);
+      target.cards.splice(neighbourRow(ids, order, card.id) ?? Math.min(index, ids.length), 0, edited);
     }
   }
   return result;
@@ -53,14 +64,12 @@ export function sameBoard(first: Board, second: Board): boolean {
   return JSON.stringify(first) === JSON.stringify(second);
 }
 
-type Placed = { card: Card; column: string; predecessor: string | null };
+type Placed = { card: Card; column: string };
 
 function cardsById(board: Board): Map<string, Placed> {
   const placed = new Map<string, Placed>();
   for (const column of board.columns) {
-    for (const [index, card] of column.cards.entries()) {
-      placed.set(card.id, { card, column: column.name, predecessor: column.cards[index - 1]?.id ?? null });
-    }
+    for (const card of column.cards) placed.set(card.id, { card, column: column.name });
   }
   return placed;
 }
@@ -83,21 +92,10 @@ function editedCard(was: Card, now: Card, onDisk: Card): Card {
   return merged as Card;
 }
 
-// The closest card above this one on the screen's board that is still on the merged one, or null for
-// the top of the column.
-function nearestKept(board: Board, cards: readonly Card[], index: number): string | null {
-  for (let at = index - 1; at >= 0; at -= 1) {
-    if (selectionOf(board, cards[at].id)) return cards[at].id;
+// The nearest card above `id` in `ids` that is one of `stayed`, or null for none.
+function stayedAbove(ids: readonly string[], id: string, stayed: ReadonlySet<string>): string | null {
+  for (let at = ids.indexOf(id) - 1; at >= 0; at -= 1) {
+    if (stayed.has(ids[at])) return ids[at];
   }
   return null;
-}
-
-// A column the disk no longer has keeps nothing: the boards share one set of column names, so this is
-// a hand-edited file, and the card goes in the first column rather than off the board.
-function insertAfter(board: Board, columnName: string, predecessor: string | null, card: Card): void {
-  const column = board.columns.find((entry) => entry.name === columnName) ?? board.columns[0];
-  if (!column) return;
-  // -1 for a null predecessor too, which is the top of the column.
-  const at = column.cards.findIndex((entry) => entry.id === predecessor);
-  column.cards.splice(at + 1, 0, card);
 }

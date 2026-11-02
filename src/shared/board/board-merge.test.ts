@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCard, addComment, deleteCard, moveCardToColumn, renameCard, selectionOf, setBranch, type Board } from './board';
+import { addCard, addComment, deleteCard, dropCard, moveCardToColumn, renameCard, selectionOf, setBranch, type Board } from './board';
 import { rebaseBoardChange, sameBoard } from './board-merge';
 import { board, titles } from './test-board';
 
@@ -63,6 +63,35 @@ describe('rebaseBoardChange', () => {
     const latest = deleteCard(base, selectionOf(base, 'b')!).board;
     const next = renameCard(base, selectionOf(base, 'b')!, 'renamed').board;
     expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['a']]);
+  });
+
+  // The card above the agent's changed, not the agent's card: that is no move of the agent's card.
+  it('keeps a move the command made while the screen deleted the card above it', () => {
+    const base = board(['a', 'b'], [], []);
+    const latest = moved(base, 'b', 2);
+    const next = deleteCard(base, selectionOf(base, 'a')!).board;
+    expect(titles(rebaseBoardChange(base, next, latest))).toEqual([[], [], ['b']]);
+  });
+
+  it('keeps a move the command made while the screen moved the card above it', () => {
+    const base = board(['a', 'b'], [], []);
+    const latest = moved(base, 'b', 2);
+    expect(titles(rebaseBoardChange(base, moved(base, 'a', 1), latest))).toEqual([[], ['a'], ['b']]);
+  });
+
+  it('keeps a move the command made while the screen added a card above it', () => {
+    const base = board(['a', 'b'], ['c'], []);
+    const latest = moved(base, 'b', 2);
+    const next = dropCard(base, selectionOf(base, 'c')!, 0, 1).board;
+    expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['a', 'c'], [], ['b']]);
+  });
+
+  // The dropped card goes beside its neighbours in the screen's column, not beside one the agent took away.
+  it('places a dropped card among the cards still in its column', () => {
+    const base = board(['x', 'a', 'b'], ['c'], []);
+    const latest = moved(base, 'a', 2);
+    const next = dropCard(base, selectionOf(base, 'c')!, 0, 2).board;
+    expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['x', 'c', 'b'], [], ['a']]);
   });
 });
 
