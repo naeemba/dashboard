@@ -328,14 +328,6 @@
           ]
         },
         {
-          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
-          "title": "Let pane shells outlive the app",
-          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:43:36.000Z"
-        },
-        {
           "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
           "title": "Tell main when a worker finishes",
           "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
@@ -454,6 +446,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+          "title": "Let pane shells outlive the app",
+          "notes": "Every pty is a child of Electron main and dies on restart, rebuild or crash. Host ptys in tmux -C or a small pty daemon and reattach. Makes workflow-rule-1 and the resume code largely unnecessary. Cost large. (docs/review/2026-11-01.md R1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:13:15.576Z",
+          "branch": "work-board-card-ed9656aa-b40e-4d13-9843-7ee",
+          "pullRequest": 174
         }
       ]
     },
