@@ -2550,7 +2550,7 @@
           "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-02T01:33:22.027Z",
+          "updatedAt": "2026-11-02T01:33:38.468Z",
           "branch": "work-board-card-69800344-8134-4450-bafc-e04",
           "pullRequest": 185,
           "comments": [
@@ -2561,6 +2561,10 @@
             {
               "at": "2026-11-01T22:23:48.118Z",
               "body": "Confirmed with seq 1 inf (PR #166): the pane stops, but 3.2 s after Ctrl+C."
+            },
+            {
+              "at": "2026-11-02T01:33:38.468Z",
+              "body": "Shipped in PR #185: main keeps a pane's screen copy only while host.port is set or the window shows another host; the renderer pauses a pane's pty past 100k queued characters (1 s lease, renewed every 0.5 s); the pane host resumes every shell when the app disconnects. Flood: main 102-115% -> 35-51%, Ctrl+C 2.6-4.4 s -> 0.11 s, with and without the pane host."
             }
           ]
         }
