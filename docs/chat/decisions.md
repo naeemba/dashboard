@@ -208,3 +208,32 @@ costs more code than they are worth; Claude rarely writes any of these. The fini
 
 What is still redrawn every frame: an open code fence, highlighted whole each frame until it closes,
 and a list still growing, since a blank line between items cannot be cut.
+
+## chat-decision-12: Warm or cold is worked out from each reply's usage, with no call of its own
+
+Checked against Anthropic's prompt caching page
+(https://platform.claude.com/docs/en/build-with-claude/prompt-caching) on 2026-11-02:
+
+- "By default, the cache has a 5-minute lifetime. The cache is refreshed for no additional cost each
+  time the cached content is used."
+- "If you find that 5 minutes is too short, Anthropic also offers a 1-hour cache duration", asked for
+  with `"ttl": "1h"` in `cache_control`.
+- "The lifetime is measured from the start of the request that writes or reads the cache entry, not
+  from the end of its response."
+- The usage block's `cache_creation` object carries `ephemeral_5m_input_tokens` and
+  `ephemeral_1h_input_tokens`, and "`cache_read_input_tokens`: Number of tokens retrieved from the
+  cache for this request".
+
+So `cache-warmth.ts` takes, from each of a conversation's own replies, the last one that wrote or read
+the cache. Its tier is the one the session last wrote: 1h if any of a write went to the hour-long
+cache, else 5m; a read keeps the tier, and with no write seen it guesses 5m, the shorter. The cache is
+warm until that reply's time plus the tier. The Claude screen reads the SDK's assistant messages
+(`chat-transcript.ts`); a worker pane's comes from its transcript lines, which the usage sweep already
+reads (`usage-store.ts`). A subagent's replies are left out of both: it runs its own cache.
+
+What it gets wrong, on purpose: the time is when the reply was written, not when its request started,
+so a long reply reads up to its own length too warm. A request that mixed tiers counts as 1h, though
+its 5m part goes cold first. An SDK message with no `timestamp` (an older Claude Code) is not counted,
+rather than stamped with when it arrived. The pill redraws once a minute, once a second in the last
+minute, and sets no timer while the screen is off view; showing it again redraws it. The workers
+popup reads the time when its rows are drawn and does not count down while open.

@@ -9,6 +9,7 @@ Folders: `src/main/usage/`, `src/shared/usage/`, `src/renderer/usage/`.
 
 - `usage.ts`, `usage-store.ts`, `usage-sweep.ts`, `usage-thread.ts`,
   `usage-worker.ts`, `usage.css`
+- Whether a prompt cache is warm: `cache-warmth.ts` (chat-decision-12)
 - `vite.usage-worker.config.ts` at the root builds the worker beside main.
 
 The logs are read on a worker thread of its own (`usage-worker.ts`), which
@@ -24,5 +25,6 @@ every launch reads everything again, off main's thread.
 
 - Given Claude Code has written session logs for a project, when the sweep runs, then the manager's row shows its five-hour, week and all-time totals.
 - Given a pane runs Claude Code, when its replies cost tokens, then the pane's own figure moves.
+- Given a pane's session wrote or read the prompt cache, when the sweep runs, then the snapshot carries that pane's last use of it and the tier it last wrote, for the workers popup; a subagent's replies are left out.
 - Given the logs are read, when the sweep runs, then nothing in them is written to.
 - Given years of logs, when the app launches, then typing and pane output do not stall while the first sweep reads them.

@@ -29,6 +29,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given main runs a worker, when `pane run` answers, then the line ends with `dashboard://pane/<id>`, which the Claude screen draws as a link to the pane; `pane claim` still prints the bare id, since main passes it straight to `run`.
 - Given several open projects, when `pane list --all` runs, then every open page's panes are listed, the manager's first, each line led by its project's name.
 - Given main dispatches a worker or a card is shipped, when its Claude starts, then it starts with `--session-id` the app chose and the app's session index has its row first (drawer-decision-1).
+- Given a worker's session has used the prompt cache, when the workers popup (Alt+W) is drawn, then the worker's row says `warm 42m` or `cold` for its own session, from the usage sweep (chat-decision-12).
 - Given a throwaway worktree with uncommitted work, when the worker is released, then the worktree is kept and the reply says why.
 
 ## Open questions
