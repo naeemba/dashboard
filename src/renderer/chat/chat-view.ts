@@ -271,9 +271,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // Shown, a turn ending and a model picked each measure, and the answers can come back out of order:
   // only the latest one asked is kept.
   let measures = 0;
-  function measure(): void {
+  // Whether this conversation's first-show measure went, so a page whose session fails to start is
+  // not started again on every visit; a prompt retries it. A reset clears it.
+  let shownOnce = false;
+  function measure(start = false): void {
     const asked = ++measures;
-    bridge.chatMeasure(slot).then((reading) => {
+    bridge.chatMeasure(slot, start).then((reading) => {
       if (asked !== measures) return;
       if (reading !== null) measured = reading;
       drawFoot();
@@ -612,6 +615,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     asks = [];
     measured = null;
     measures++;
+    shownOnce = false;
     recalled = null;
     draft = '';
     showAsk();
@@ -661,7 +665,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
     // The screen on view: measured if it has no reading yet. Main starts the page's session for the
     // asking, so a page you never look at runs no CLI.
     shown() {
-      if (measured === null) measure();
+      if (shownOnce) return;
+      shownOnce = true;
+      measure(true);
     },
     focus,
     receive(event) {

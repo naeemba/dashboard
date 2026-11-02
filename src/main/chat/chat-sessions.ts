@@ -535,11 +535,13 @@ export function registerChatSessions(
   // What the status line shows: how full the context window is, read from the last response rather
   // than counted again, the model by its shown name, and the plan's limits. The limits come from an
   // experimental call; a release that drops it leaves the line without them and nothing else. A screen
-  // asks the first time it is shown, so asking is what starts a page's session that has not started.
-  table.handle('chat:measure', async (_screen, slot: number): Promise<ChatMeasure | null> => {
+  // shown for the first time asks with `start`, which is what starts a page's session; any other
+  // measure, a model picked after the session ended say, reads null rather than starting a CLI.
+  table.handle('chat:measure', async (_screen, slot: number, start: boolean): Promise<ChatMeasure | null> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return null;
-    const session = await running(slot, projectPath);
+    const session = start ? await running(slot, projectPath) : await sessions.get(slot);
+    if (!session) return null;
     const [context, models, usage] = await Promise.all([
       session.query.getContextUsage({ detail: 'summary' }),
       session.query.supportedModels(),

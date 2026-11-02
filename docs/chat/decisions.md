@@ -16,9 +16,11 @@ The two projects the card pointed at were read first and neither is copied. opco
 
 The session starts the first time the page's Claude screen is shown, not when the project opens. Each
 idle CLI holds about 100 MB, and six of them at launch were 600 MB for screens you might not open that
-day (performance finding 3). Showing the screen asks for its status-line measure, and `chat:measure`
-starts the session to answer, so the first reading is there as soon as it starts; the renderer skips it
-while a restore lands on each page in turn. A prompt or a worker report through the app (`tell`) starts
+day (performance finding 3). Showing the screen the first time in a conversation asks for its
+status-line measure with `start`, and `chat:measure` starts the session to answer, so the first reading
+is there as soon as it starts; the renderer skips it while a restore lands on each page in turn. Every
+other measure reads null from a page with no session, so a model picked after a crash does not start a
+CLI, and a session that fails to start is not started again on each visit. A prompt or a worker report through the app (`tell`) starts
 it too, as before.
 
 A worker's SendMessage needs a running session to arrive at (workers-decision-1). A worker main
