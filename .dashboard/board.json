@@ -191,15 +191,6 @@
           "notes": "newest-read.test.ts:5, manager-reads.test.ts:8 and ship.test.ts:125 each hand-write a deferred promise helper that Promise.withResolvers() already provides (it typechecks and runs here: target ESNext, Node 24). Replace each copy with it. Cost if left: every new test that needs to control when a promise settles writes another copy under another name. Issue: https://github.com/naeemba/dashboard/issues/192 Review: https://github.com/naeemba/dashboard/pull/190#discussion_r4441187097",
           "priority": "low",
           "parent": null
-        },
-        {
-          "id": "efbe3e2d-88b1-41c0-98e2-7d806e390e03",
-          "title": "Run CI on Windows",
-          "notes": "Windows is a target since PR #191. CI runs on Ubuntu only, so a change can break Windows start or packaging unseen. Add a windows-latest job to the CI workflow: npm ci (node-pty builds there), npm test, npx tsc --noEmit, and a make of the Windows installer (Forge squirrel maker) without publishing. Mark tests that need a POSIX shell or unix sockets so they skip on win32 with a reason, rather than failing; list them in the PR.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-02T10:26:20.200Z",
-          "updatedAt": "2026-11-02T10:26:20.200Z"
         }
       ]
     },
@@ -279,7 +270,17 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "efbe3e2d-88b1-41c0-98e2-7d806e390e03",
+          "title": "Run CI on Windows",
+          "notes": "Windows is a target since PR #191. CI runs on Ubuntu only, so a change can break Windows start or packaging unseen. Add a windows-latest job to the CI workflow: npm ci (node-pty builds there), npm test, npx tsc --noEmit, and a make of the Windows installer (Forge squirrel maker) without publishing. Mark tests that need a POSIX shell or unix sockets so they skip on win32 with a reason, rather than failing; list them in the PR.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T10:26:20.200Z",
+          "updatedAt": "2026-11-02T10:31:28.321Z"
+        }
+      ]
     },
     {
       "name": "Review",
