@@ -36,6 +36,7 @@ import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
 import { registerPaneChannels } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
+import { startsAtOpen } from './chat/chat-start';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
@@ -382,7 +383,7 @@ registerPaneOpeners(table, {
   },
 });
 
-// A project starts with its main session, plus a worker for each pane that was running Claude Code when
+// A project opens with its main session, plus a worker for each pane that was running Claude Code when
 // the app last quit — session-store.ts says when it was. Whether the conversation saved for pane 0 is
 // main's to carry on is mainResume's; one that was not main's comes back in a worker after the rest.
 // The editor is registered but not started: opening nine projects should not launch nine editors, each
@@ -393,6 +394,7 @@ function spawnProject(project: Project, projectIndex: number): void {
   const mainId = terminalId(projectIndex, MAIN_INDEX);
   const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, mainId), project.path, realPath);
   // Main is the Claude screen in the terminals view's left column, run through the Agent SDK, not a pane.
+  // It starts when first shown, unless one of its workers comes back below (chat-start.ts).
   chats.open(projectIndex, first.session);
   for (const index of claudeSessions.owedResumes(project.path)) {
     const id = terminalId(projectIndex, index);
@@ -407,6 +409,7 @@ function spawnProject(project: Project, projectIndex: number): void {
     resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+  if (startsAtOpen(projectIndex, mainsWorkers)) chats.start(projectIndex);
 }
 
 // The shells the pane host kept for this project through a restart, back in their panes as they were.
@@ -598,13 +601,17 @@ const chats = registerChatSessions(table, {
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
 });
-// The manager's main, started at launch the way a project's starts when it opens: its workers report to
-// it. Its folder is made first, since a session cannot start in a folder that is not there.
+// The manager's main, opened at launch the way a project's is when it opens, and started the same way:
+// shown, told something, or one of its workers kept through a restart. Its folder is made first, since
+// a session cannot start in a folder that is not there.
 try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
-  void shellHost.ready.then(() => adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER));
+  void shellHost.ready.then(() => {
+    adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER);
+    if (startsAtOpen(MANAGER_SLOT, mainsWorkers)) chats.start(MANAGER_SLOT);
+  });
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }

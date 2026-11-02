@@ -14,8 +14,21 @@ The two projects the card pointed at were read first and neither is copied. opco
 `query()` per message and handles a refused tool by sending the message again with the tool added to
 `allowedTools`, which runs the turn twice. Both trade the question away; this screen exists to ask it.
 
-The session starts when the project opens, as the terminal main did: the screen is the project's main
-session now (workers-decision-1), and a worker's SendMessage needs a running session to arrive at.
+The session starts the first time the page's Claude screen is shown, not when the project opens. Each
+idle CLI holds about 100 MB, and six of them at launch were 600 MB for screens you might not open that
+day (performance finding 3). Showing the screen asks for its status-line measure, and `chat:measure`
+starts the session to answer, so the first reading is there as soon as it starts; the renderer skips it
+while a restore lands on each page in turn. A prompt or a worker report through the app (`tell`) starts
+it too, as before.
+
+A worker's SendMessage needs a running session to arrive at (workers-decision-1). A worker main
+dispatched in this run had main running already, since main dispatched it. One that came back after a
+restart has not, so a page with one of main's workers on it starts its session at open
+(`chat-start.ts`).
+
+A started session is not stopped when idle. It may have background tasks or a worker still to report,
+and nothing here knows when both are over. Launch is what cost the memory; a session you opened stays
+until the project closes.
 
 The app keeps the conversation's id per project in `chat-sessions.json` in the app's data folder,
 never in `.dashboard/`, since a conversation is personal and the board is tracked. The id is the one

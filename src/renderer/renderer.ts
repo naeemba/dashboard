@@ -370,7 +370,12 @@ function focusMode(page: Page, entering: boolean): void {
     if (entering) void page.log.open();
     else page.log.focus();
   }
-  if (page.mode === 'terminals') return focusTerminal(page.focused);
+  if (page.mode === 'terminals') {
+    // Main's session starts the first time its Claude screen is shown, as nvim does below. Not while
+    // a restore lands on each page in turn: only the page it ends on is shown.
+    if (entering && !restoring) page.chat?.shown();
+    return focusTerminal(page.focused);
+  }
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
     // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.

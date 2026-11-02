@@ -313,7 +313,7 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'typed and a block of what it printed, a message Claude Code put in the conversation itself — an agent finishing, a subagent\'s report — as one folded line that a click or the unfold key opens, a long message you sent — a pasted log — as its first ' + FOLD_SHOWN_LINES + ' lines and a row counting the rest, opened the same way (Claude still gets all of it), an image Claude carried inline drawn inline (one from the web is a link, so '
     + 'nothing is fetched until you click it), an edit as a diff. It runs in the project\'s folder with the '
     + 'project\'s own CLAUDE.md, settings, skills, hooks and MCP servers, the same as claude typed in '
-    + 'a pane, as the project\'s main session. It starts when the project opens. '
+    + 'a pane, as the project\'s main session. It starts the first time you show this screen, or when a worker reports to it, so a project you never look at runs no Claude. '
     + 'The boxes take the terminal\'s readline keys: deleting the word before the caret, back to the start of the line or on to its end keeps what went, and the yank key puts it back; kills one straight after another join into one, the yank-pop key straight after a yank swaps it for the kill before, and undo takes any of them back. '
     + 'Enter sends what is in the box and Shift+Enter starts a new line; you can send while Claude is '
     + 'working: the message waits grey under the conversation until the turn gets to it, and Up in the empty box takes the last one waiting back to edit. Paste an image or drop one on the screen to attach it; any other file or folder dropped goes in the box as an @ mention, so Claude reads it — '

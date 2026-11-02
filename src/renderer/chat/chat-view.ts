@@ -56,6 +56,8 @@ export type ChatViewOptions = {
 export type ChatView = {
   element: HTMLElement;
   open(): void;
+  // The screen came into view; the first time, it measures, which starts the page's session.
+  shown(): void;
   focus(): void;
   receive(event: ChatEvent): void;
   runCommand(command: ChatCommand): void;
@@ -266,7 +268,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     });
   }
 
-  // Open, a turn ending and a model picked each measure, and the answers can come back out of order:
+  // Shown, a turn ending and a model picked each measure, and the answers can come back out of order:
   // only the latest one asked is kept.
   let measures = 0;
   function measure(): void {
@@ -652,10 +654,14 @@ export function createChatView(options: ChatViewOptions): ChatView {
   return {
     element,
     question: () => (asks.length > 0 ? permissionTitle(asks[0]) : null),
-    // Reads the conversation in and measures it; the page calls it once, when it is built.
+    // Reads the conversation in; the page calls it once, when it is built.
     open() {
       readEarlier();
-      measure();
+    },
+    // The screen on view: measured if it has no reading yet. Main starts the page's session for the
+    // asking, so a page you never look at runs no CLI.
+    shown() {
+      if (measured === null) measure();
     },
     focus,
     receive(event) {
