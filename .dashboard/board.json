@@ -178,6 +178,12 @@
           "parent": null,
           "createdAt": "2026-11-02T01:02:00.310Z",
           "updatedAt": "2026-11-02T01:02:00.310Z"
+        },
+        {
+          "id": "4a4edc6b-0e3a-4a3f-8519-fa1c6065f067",
+          "title": "After a restart, a cross-project worker's done notice goes to the wrong main",
+          "notes": "session-requests.ts tells dispatched.get(id)?.dispatcher ?? slot, and dispatched/dispatchers are only in memory. A worker that project A's main (or the manager) dispatched into project X with pane claim --project comes back after a restart in X, so its done notice goes to X's main, which never dispatched it, and A hears nothing. Fix: persist the dispatcher with the worker mark in session.json; the same record fixes which main starts at open (PR #186). Issue: https://github.com/naeemba/dashboard/issues/187 Review: https://github.com/naeemba/dashboard/pull/186#discussion_r4438204842",
+          "priority": "medium"
         }
       ]
     },
