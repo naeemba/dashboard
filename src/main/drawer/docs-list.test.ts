@@ -4,6 +4,9 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 
+// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
+
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
     const names = ['board/decisions.md', 'app/README.md', 'board/README.md', 'README.md', 'app/history.md'];
@@ -58,12 +61,15 @@ describe('listDocs', () => {
 describe('docScope', () => {
   const ROOTS = ['/h/.dashboard', '/h/.claude'];
 
-  it('takes only markdown under the docs folder', () => {
+  posixPathsOnly('takes only markdown under the docs folder', () => {
     expect(docScope('/p', '/p/docs/board/README.md', [])).toEqual({ root: '/p/docs', images: '/p' });
-    expect(docScope('/p', '/p/docs/../secret.md', [])).toBeNull();
-    expect(docScope('/p', '/home/me/.ssh/id_rsa', [])).toBeNull();
     expect(docScope('/p', '/p/docs/shot.png', [])).toBeNull();
     expect(docScope('/p', '/h/.claude/CLAUDE.md', ROOTS)).toBeNull();
+  });
+
+  it('refuses a file outside the docs folder', () => {
+    expect(docScope('/p', '/p/docs/../secret.md', [])).toBeNull();
+    expect(docScope('/p', '/home/me/.ssh/id_rsa', [])).toBeNull();
   });
 
   it("on the manager's page takes only markdown under ~/.dashboard and ~/.claude", () => {
@@ -79,7 +85,7 @@ describe('imageUrls', () => {
   const read = new Map([['/p/docs/screenshots/board.png', Buffer.from('png')]]);
   const url = `data:image/png;base64,${Buffer.from('png').toString('base64')}`;
 
-  it("carries an image inside the project inline, by its address, relative to the doc's folder", () => {
+  posixPathsOnly("carries an image inside the project inline, by its address, relative to the doc's folder", () => {
     expect(imageUrls('See ![the board](../screenshots/board.png "t").', '/p/docs/board/README.md', '/p', read))
       .toEqual({ '../screenshots/board.png': url });
   });
