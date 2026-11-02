@@ -23,11 +23,10 @@ import {
   type Card,
   type Change,
   type MoveGesture,
+  type Board,
   type Selection,
   type ShipHome,
 } from '../../shared/board/board';
-import { sameBoard } from '../../shared/board/board-merge';
-import type { Board } from '../../shared/board/board';
 import type { Action } from '../../shared/keys/actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import {
@@ -279,7 +278,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         options.onError('');
         // Main kept a change the screen had not seen — a card the `board` command moved a moment ago.
         // Read it in, unless a newer save is already on its way: that one's answer will.
-        if (!sameBoard(written, sent) && state.board === sent) void readAgain(false);
+        if (written !== null && state.board === sent) void readAgain(false);
         return true;
       },
       (error: unknown) => {

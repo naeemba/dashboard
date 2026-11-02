@@ -34,18 +34,16 @@ export function registerProjectFiles(
   // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
   // The screen sends the board it last read or wrote beside its new one, and the change between them
   // is replayed onto the file as it is now, so a card the `board` command moved in the meantime stays
-  // moved: rebaseBoardChange says what that costs otherwise. What was written goes back, since it can
-  // hold a move the screen has not seen yet. The bytes are kept so the watcher can tell this write from
+  // moved (board-merge.ts says why). What was written goes back when it holds a change the screen has not
+  // seen. The bytes are kept so the watcher can tell this write from
   // somebody else's. Every other screen is told here instead, since to the watcher this write is the
   // app's own: a board left open on the laptop would otherwise never see the cards moved from the mac.
   table.handle('board:write', (screen, projectPath: string, base: Board, board: Board) => {
-    // A file that is gone or will not parse has nothing to keep, and the screen's board is written as
-    // it is; replaying onto an empty one would drop every card the screen did not touch.
-    const onDisk = peekBoard(projectPath);
-    const written = onDisk === null ? board : rebaseBoardChange(base, board, onDisk);
+    const written = rebaseBoardChange(base, board, peekBoard(projectPath));
     changes.wrote(projectPath, written, () => boards.wrote(projectPath, writeBoard(projectPath, written)));
     tellOthers(screen, 'board:change', projectPath);
-    return written;
+    // Null when the board went out as sent, so the common save carries nothing back.
+    return written === board ? null : written;
   });
 
   // The project's page of notes. No watcher and no seeding: a project that has never had any has no

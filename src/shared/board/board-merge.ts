@@ -1,4 +1,4 @@
-import type { Board, Card, CardComment } from './board';
+import { selectionOf, type Board, type Card, type CardComment, type Selection } from './board';
 
 // The app's save, replayed onto the board as it is on disk now. The screen changes the board it last
 // read or wrote (`base`) into `next`; between that read and this write the `board` command may have
@@ -11,32 +11,37 @@ import type { Board, Card, CardComment } from './board';
 // runBoardCommandOnLatest on the command's side. Whatever the save did not touch stays as `latest`
 // has it. Where both touched the same field the save wins, since it is the newer of the two.
 //
+// A `latest` of null is a file that is gone or will not parse: nothing on disk to keep, so `next` is
+// written as it is. Replaying onto an empty board instead would drop every card the save did not touch.
+//
 // ponytail: field-level, last writer wins, with no lock between the read and the write. A card deleted
 // on one side and edited on the other stays deleted.
-export function rebaseBoardChange(base: Board, next: Board, latest: Board): Board {
-  if (sameBoard(base, latest)) return next;
+export function rebaseBoardChange(base: Board, next: Board, latest: Board | null): Board {
+  if (latest === null || sameBoard(base, latest)) return next;
   const result: Board = { columns: latest.columns.map((column) => ({ ...column, cards: [...column.cards] })) };
   const before = cardsById(base);
   const after = cardsById(next);
 
   for (const id of before.keys()) {
-    if (!after.has(id)) removeCard(result, id);
+    const found = after.has(id) ? null : selectionOf(result, id);
+    if (found) removeAt(result, found);
   }
 
   for (const column of next.columns) {
     for (const [index, card] of column.cards.entries()) {
       const was = before.get(card.id);
-      const found = locate(result, card.id);
+      const found = selectionOf(result, card.id);
+      const onDisk = found && result.columns[found.column].cards[found.card];
       // Deleted on disk since the screen read it: the deletion is the newer word.
       if (was && !found) continue;
-      const edited = was && found ? editedCard(was.card, card, found.card) : card;
+      const edited = was && onDisk ? editedCard(was.card, card, onDisk) : card;
       const predecessor = column.cards[index - 1]?.id ?? null;
       const moved = !was || was.column !== column.name || was.predecessor !== predecessor;
       if (found && !moved) {
-        result.columns[found.column].cards[found.index] = edited;
+        result.columns[found.column].cards[found.card] = edited;
         continue;
       }
-      if (found) removeCard(result, card.id);
+      if (found) removeAt(result, found);
       insertAfter(result, column.name, nearestKept(result, column.cards, index), edited);
     }
   }
@@ -60,17 +65,8 @@ function cardsById(board: Board): Map<string, Placed> {
   return placed;
 }
 
-function locate(board: Board, id: string): { column: number; index: number; card: Card } | null {
-  for (const [column, entry] of board.columns.entries()) {
-    const index = entry.cards.findIndex((card) => card.id === id);
-    if (index !== -1) return { column, index, card: entry.cards[index] };
-  }
-  return null;
-}
-
-function removeCard(board: Board, id: string): void {
-  const found = locate(board, id);
-  if (found) board.columns[found.column].cards.splice(found.index, 1);
+function removeAt(board: Board, at: Selection): void {
+  board.columns[at.column].cards.splice(at.card, 1);
 }
 
 // The fields the save changed, laid over the card as it is on disk. Comments are appended and never
@@ -91,7 +87,7 @@ function editedCard(was: Card, now: Card, onDisk: Card): Card {
 // the top of the column.
 function nearestKept(board: Board, cards: readonly Card[], index: number): string | null {
   for (let at = index - 1; at >= 0; at -= 1) {
-    if (locate(board, cards[at].id)) return cards[at].id;
+    if (selectionOf(board, cards[at].id)) return cards[at].id;
   }
   return null;
 }
@@ -101,6 +97,7 @@ function nearestKept(board: Board, cards: readonly Card[], index: number): strin
 function insertAfter(board: Board, columnName: string, predecessor: string | null, card: Card): void {
   const column = board.columns.find((entry) => entry.name === columnName) ?? board.columns[0];
   if (!column) return;
-  const at = predecessor === null ? -1 : column.cards.findIndex((entry) => entry.id === predecessor);
+  // -1 for a null predecessor too, which is the top of the column.
+  const at = column.cards.findIndex((entry) => entry.id === predecessor);
   column.cards.splice(at + 1, 0, card);
 }
