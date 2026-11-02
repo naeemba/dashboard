@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
+import { doneReport, projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
 
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
 
@@ -13,6 +13,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const closed: string[] = [];
   const marked: string[] = [];
   const removed: string[] = [];
+  const told: string[] = [];
   const ports: SessionPorts = {
     slotOf: (directory) => (directory.startsWith('/work/api') ? 2 : -1),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
@@ -44,6 +45,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
       open.splice(open.indexOf(Number(id.split(':')[1])), 1);
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
+    tell: (slot, text) => { told.push(`${slot} ${text}`); },
     cardWorktree: (_projectPath, cardId) => ({
       'card-1': { worktreePath: '/work/api.worktrees/card-one', working: false },
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
@@ -54,7 +56,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
-  return { ports, ask, open, agents, workers, started, closed, marked, removed };
+  return { ports, ask, open, agents, workers, started, closed, marked, removed, told };
 }
 
 describe('sessionRequests', () => {
@@ -136,6 +138,23 @@ describe('sessionRequests', () => {
     expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n').map((line) => line.split('\t')[2]))
       .toEqual(['main', 'blocked', 'idle']);
     expect(await answer({ directory: '/work/api', args: ['notify', '2:7', 'done'] })).toMatchObject({ ok: false });
+  });
+
+  it('tells main when a worker it started is done, and not when anything else in a pane is', async () => {
+    const { ports, agents, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'blocked'] });
+    expect(told).toEqual([]);
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+    // A Claude opened by hand in the other pane runs the same hooks only if somebody gave it them; its
+    // done is still nobody's report to main.
+    agents.add('2:2');
+    await answer({ directory: '/anywhere', args: ['notify', '2:2', 'done'] });
+    expect(told).toHaveLength(1);
   });
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.
@@ -256,8 +275,9 @@ function pages() {
   const panes = new Map<number, number[]>([[-2, [0]], [2, [0]]]);
   const started: { id: string; directory: string; agentArguments: string[] }[] = [];
   const opened: string[] = [];
+  const working = new Set<string>();
   const known: Record<string, string> = { api: '/work/api', shop: '/work/shop', gone: '/work/gone' };
-  const { ports } = project({
+  const { ports, told } = project({
     slotOf: (directory) => [...paths].find(([, folder]) => directory.startsWith(folder))?.[0] ?? -1,
     projectPath: (slot) => paths.get(slot),
     openSlots: () => [...paths].map(([slot, folder]) => ({ slot, name: folder.split('/')[2] })),
@@ -279,15 +299,21 @@ function pages() {
     },
     directoryOf: (id) => paths.get(Number(id.split(':')[0])),
     newSession: () => SESSION,
-    startWorker: (id, directory, agentArguments) => { started.push({ id, directory, agentArguments }); },
+    agentIn: (id) => working.has(id),
+    mainsWorkerIn: (id) => working.has(id),
+    startWorker: (id, directory, agentArguments) => {
+      working.add(id);
+      started.push({ id, directory, agentArguments });
+    },
     closeWorker: (id) => {
       const [slot, index] = id.split(':').map(Number);
       panes.set(slot, (panes.get(slot) ?? []).filter((each) => each !== index));
+      working.delete(id);
     },
   });
   const answer = sessionRequests(ports);
   const ask = (words: string[], directory = '/work/desk') => answer({ directory, args: words });
-  return { ask, ports, started, opened };
+  return { ask, ports, started, opened, told };
 }
 
 describe('sessionRequests across projects', () => {
@@ -300,6 +326,14 @@ describe('sessionRequests across projects', () => {
     expect(started[0].agentArguments[1]).toContain('SendMessage to main-desk when done');
     expect(await ask(['release', '2:1'])).toEqual({ ok: true, output: 'released 2:1' });
     expect(await ask(['release', '2:1'])).toMatchObject({ ok: false });
+  });
+
+  it('tells the main that claimed a pane on another page when its worker is done', async () => {
+    const { ask, told } = pages();
+    await ask(['claim', '--project', 'api']);
+    await ask(['run', '2:1', 'fix the tests']);
+    await ask(['notify', '2:1', 'done'], '/anywhere');
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
   it('opens a closed project before claiming a pane on its page', async () => {

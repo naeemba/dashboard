@@ -213,7 +213,7 @@ export function mainSessionStart(
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
-): { open(slot: number, adopt?: string): void; stop(slot: number): void; stopAll(): void } {
+): { open(slot: number, adopt?: string): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): void } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -371,8 +371,9 @@ export function registerChatSessions(
     return session;
   }
 
-  // A prompt for this page's session, stamped with the uuid the session's queue reports it by.
-  table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
+  // A prompt for this page's session, stamped with the uuid the session's queue reports it by. One sent
+  // mid-turn waits in that queue (chat-decision-7), so it never cuts into what the session is doing.
+  function send(slot: number, content: ChatContent): void {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
     const id = randomUUID();
@@ -381,7 +382,8 @@ export function registerChatSessions(
       (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
-  });
+  }
+  table.on('chat:send', (_screen, slot: number, content: ChatContent) => send(slot, content));
 
   // The slash commands the session would run, for the menu. The list is the CLI's, and only a running
   // session has it; one that has ended is started again by the asking, as a prompt would.
@@ -682,5 +684,7 @@ export function registerChatSessions(
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
     stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
+    // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
+    tell: (slot, text) => send(slot, [{ type: 'text', text }]),
   };
 }

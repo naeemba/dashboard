@@ -20,6 +20,7 @@ Folders: `src/main/workers/`.
 
 - Given a project is open, when main dispatches a task, then a worker pane opens in the list on the right and runs it.
 - Given a worker's agent stops, when its Stop hook runs `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
+- Given main dispatched a worker, when the worker's Stop hook runs `session notify <id> done`, then the main that dispatched it (the claimer's main for a pane claimed with `--project`) gets a prompt naming the worker and its pane, queued behind its turn if it is busy; a card's agent or a Claude opened by hand tells nobody (workers-decision-1).
 - Given a worker ran Claude Code, when the app restarts, then the pane comes back resumed as main's worker with the worker's flags.
 - Given a project folder called `My API`, when its sessions start, then main is `main-my-api` and its workers `my-api-terminal-<n>` (lower-case, every other run one hyphen, none at either end, never cut short); a folder name with no Latin letters gives `main-project`, and the manager's folder `~/.dashboard` gives `main-manager` (manager-decision-2).
 - Given the manager's main, when it runs `pane claim --project crm` and `crm` is an exact name or aka in `~/.dashboard/projects.yaml`, then a worker opens on that project's page (the project opened first if it was closed, its `~` expanded) and its id is printed; a word that is not an exact name or aka is refused with the projects it could be (workers-decision-2).

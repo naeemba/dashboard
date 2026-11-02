@@ -42,6 +42,8 @@ export type SessionPorts = {
   startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null): void;
   closeWorker(id: string): void;
   mark(id: string, state: WorkerState): void;
+  // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
+  tell(slot: number, text: string): void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
@@ -61,6 +63,13 @@ export function projectOfFolder(
   return projectPaths.findIndex((projectPath) => (
     projectPath !== undefined && ranInProject(real, realPath(projectPath), realPath(worktreesRoot(projectPath)))
   ));
+}
+
+// What main is told when a worker it dispatched ends its turn: which worker, and that the worker's own
+// report, if it wrote one, says what it did. The hook knows nothing of what the worker did.
+export function doneReport(name: string, id: string): string {
+  return `${name} in pane ${id} has finished its turn. If it sent you a report, that says what it did;`
+    + ' `pane list` shows where every worker stands.';
 }
 
 export const answered = (output: string): SessionReply => ({ ok: true, output });
@@ -193,6 +202,12 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       if (command.state === 'running') states.delete(command.id);
       else states.set(command.id, command.state);
       ports.mark(command.id, command.state);
+      // Only a worker main started: a card's agent a ship started reports through the board, and a
+      // Claude opened by hand reports to nobody. The main that claimed it hears, which is another
+      // project's when it was claimed with --project.
+      if (command.state === 'done' && mainsWorker(command.id)) {
+        ports.tell(dispatchers.get(command.id) ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), command.id));
+      }
       return answered('');
     }
     const slot = ports.slotOf(request.directory);

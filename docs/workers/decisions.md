@@ -31,11 +31,16 @@ the eighth, Alt+J/K walk the list.
 **Main is called `main-<project>`, not `main`.** Every open project has a main session, and a worker's
 SendMessage to `main` with two of them open names two sessions. dispatch.ts spells it.
 
-**The Stop hook marks the pane instead of messaging main.** A hook is a shell command, and Claude Code
-has no command that sends a message to a named session; the mailbox under `~/.claude/sessions` is its
-own undocumented business. So the hook runs `session notify <id> done`: the pane gets a green edge and
-`session list` says `done`, which is what main reads for a worker that forgot to write or died before
-it could. The worker's own prompt still ends by telling it to SendMessage main.
+**The Stop hook goes through the app, not to main directly.** A hook is a shell command, and Claude
+Code has no command that sends a message to a named session; the mailbox under `~/.claude/sessions` is
+its own undocumented business. So the hook runs `session notify <id> done`: the pane gets a green edge,
+`session list` says `done`, and for a pane main's worker is in, the app queues a short prompt into the
+session of the main that dispatched it (the claimer's, for a pane claimed with `--project`): the
+worker's name, its pane, and that its own report says what it did. It goes through the session's own
+queue (chat-decision-7), so a main mid-turn reads it after the turn. That is the report main can count
+on when a worker forgot to write or died before it could. The worker's own prompt still ends by telling
+it to SendMessage main, since the hook knows nothing of what the worker did. A card's agent a ship
+started and a Claude opened by hand never tell main: neither is main's worker.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and

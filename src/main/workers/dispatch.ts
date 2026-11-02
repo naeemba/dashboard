@@ -58,7 +58,7 @@ export function mainPrompt(projectPath: string): string {
       + ' reads this checkout.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. A worker`
-      + ' whose turn ends without doing so is marked done anyway, and `list` says so.',
+      + ' whose turn ends without doing so is marked done anyway, and the app tells you it has finished.',
   ].join('\n');
 }
 

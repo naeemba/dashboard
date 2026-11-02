@@ -861,6 +861,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
   },
   closeWorker,
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
+  tell: chats.tell,
   cardWorktree(projectPath, cardId) {
     const entry = entryForCard(worktrees.entries(), cardId);
     if (entry?.projectPath !== projectPath) return undefined;
