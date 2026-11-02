@@ -29,7 +29,7 @@ keystroke would redraw the board under your cursor thirty times a minute.
 Two writers through one file still overwrite each other unless each writes only
 what it changed. The command re-runs itself on a fresh read just before it
 writes (`runBoardCommandOnLatest`). The app sends `board:write` the board it
-last read or wrote beside its new one, and main replays the difference onto
+last read or sent beside its new one, and main replays the difference onto
 the file as it is then (`rebaseBoardChange` in `board-merge.ts`), and answers
 with what it wrote. The screen sends its saves one at a time
 (`board-saves.ts`), so a save that failed is still inside the next one's

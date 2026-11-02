@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createBoardSaves } from './board-saves';
-import { board } from '../../shared/board/test-board';
+import { board, titles } from '../../shared/board/test-board';
+import { moveCardToColumn, renameCard, selectionOf } from '../../shared/board/board';
+import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
 import type { Board } from '../../shared/board/board';
 
 type Call = { base: Board; board: Board; settle(result: Board | null | Error): void };
@@ -32,17 +34,32 @@ describe('createBoardSaves', () => {
     expect(calls[1].base).toBe(second);
   });
 
-  it('sends the board main wrote as the next base when it kept a change', async () => {
+  it('sends the board it sent as the next base even when main kept a change', async () => {
     const { calls, write } = recording();
     const saves = createBoardSaves(write, first);
-    const merged = board(['merged']);
     const one = saves.save(second);
     await tick();
-    calls[0].settle(merged);
+    calls[0].settle(board(['merged']));
     await one;
     void saves.save(third);
     await tick();
-    expect(calls[1].base).toBe(merged);
+    expect(calls[1].base).toBe(second);
+  });
+
+  // The agent's move lands between the screen's read and its saves; two saves go out before the re-read.
+  it('keeps a move the command made across two saves sent before the re-read', async () => {
+    const start = board(['a', 'b'], [], []);
+    let disk = moveCardToColumn(start, selectionOf(start, 'b')!, 2).board;
+    const saves = createBoardSaves(async (base, next) => {
+      const written = rebaseBoardChange(base, next, disk);
+      disk = written;
+      return sameBoard(written, next) ? null : written;
+    }, start);
+    const renamed = renameCard(start, selectionOf(start, 'a')!, 'renamed').board;
+    const again = renameCard(renamed, selectionOf(renamed, 'a')!, 'renamed again').board;
+    void saves.save(renamed);
+    await saves.save(again);
+    expect(titles(disk)).toEqual([['renamed again'], [], ['b']]);
   });
 
   it('keeps the base of a failed save, so the next one carries its change', async () => {

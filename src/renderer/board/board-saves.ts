@@ -8,6 +8,12 @@ import type { Board } from '../../shared/board/board';
 // that fails leaves the file as it was, so the next one has to carry that change too. Sent side by
 // side, the second would go out on the first's board before the first had failed, and you rename a
 // card, move another, the first write hits a busy file, and the rename is quietly gone.
+//
+// A save that lands makes the board it sent the next base, never the board main answered with. The
+// screen builds its next board from the one it sent, so main's merged answer as base would read the
+// change main kept as one the screen undid: an agent moves `b` to Review, you rename `a` twice before
+// the re-read lands, and the second save puts `b` back in Todo. The answer reaches the screen through
+// the re-read, and `read` makes it the base then.
 export type BoardSaves = {
   // A board just read from the file.
   read(board: Board): void;
@@ -26,7 +32,7 @@ export function createBoardSaves(
     read: (board) => { onDisk = board; },
     save: (board) => {
       const sent = previous.then(() => write(onDisk, board));
-      previous = sent.then((written) => { onDisk = written ?? board; }, () => undefined);
+      previous = sent.then(() => { onDisk = board; }, () => undefined);
       return sent;
     },
   };
