@@ -2,12 +2,12 @@
 // instance, printed as one JSON line per step. docs/performance/README.md lists them and what each found.
 /* global process, performance, console, URL, setInterval, clearInterval */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { bytesPerSource, ownerOf } from './calculations.mjs';
 import {
-  connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, press, retry, run, wait, withInstance,
+  connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, paneHostFolder, paneHostPids, press, retry, run, wait, withInstance,
 } from './demo-instance.mjs';
 
 const [measurement, demo, ...rest] = process.argv.slice(2);
@@ -29,6 +29,16 @@ async function openWorkers(page, count = 1) {
 async function startStreams(page, count, rate) {
   for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, `${stream} ${rate}`); }
 }
+
+// The highest line number each worker on screen has drawn: build-log-stream.sh numbers its lines, so a
+// pane that came back showing what it printed while hidden reads higher than when it left. A worker
+// scrolled out of the list is off screen too, so xterm draws it only once it is scrolled back into view.
+const DRAWN_LINES = `[...document.querySelectorAll('.page:not([hidden]) .view:not([hidden]) .workers .xterm-rows')]
+  .filter((rows) => {
+    const box = rows.getBoundingClientRect(), list = rows.closest('.workers').getBoundingClientRect();
+    return box.bottom > list.top && box.top < list.bottom;
+  })
+  .map((rows) => Math.max(0, ...(rows.textContent.match(/\\d{6}/g) ?? []).map(Number)))`;
 
 // GC first, then what the renderer and main hold: heap, DOM, listeners, private memory per process.
 async function heldMemory(page, main) {
@@ -85,10 +95,17 @@ const measurements = {
     print('four-streams-shown', await cpuWindow(10));
     await keys(page, 'Ctrl+Shift+T'); await wait(1500); await keys(page, 'Alt+6'); await wait(500);
     print('typing-beside-four-streams', await echoLatency(page));
+    const drawnWhenLeft = await page.evaluate(DRAWN_LINES);
+    const leftAt = Date.now();
     await keys(page, 'Ctrl+4'); await wait(1000);
     await openWorkers(page); await wait(500);
     print('four-streams-hidden', await cpuWindow(10));
     print('typing-other-project', await echoLatency(page));
+    await keys(page, 'Ctrl+2'); await wait(300);
+    const drawnOnReturn = await page.evaluate(DRAWN_LINES);
+    // Every pane should have moved on by about <rate> lines per second it was away.
+    print('back-on-alpha', { hiddenSeconds: Math.round((Date.now() - leftAt) / 1000), drawnWhenLeft, drawnOnReturn });
+    await keys(page, 'Ctrl+4'); await wait(500);
     const main = await connectMain();
     await main.send('Profiler.enable'); await main.send('Profiler.start');
     await wait(10000);
@@ -99,36 +116,46 @@ const measurements = {
 
   // One worker running `seq` flat out, shown or hidden; then Ctrl+C and how long the pane keeps printing.
   // `seq 1 inf` never ends on its own, so a pane that stops printing is one the interrupt reached.
-  flood: (where = 'shown') => withInstance(demo, {}, async ({ page }) => {
-    const lastLine = String.raw`(() => { const page = document.querySelectorAll('.page')[1]; for (const rows of page.querySelectorAll('.xterm-rows')) { const lines = [...rows.children].map((row) => row.textContent.trim()).filter(Boolean); if (lines.some((line) => /^\d{3,}$/.test(line))) return lines.at(-1); } return ''; })()`;
-    await openWorkers(page);
-    await run(page, 'seq 1 inf');
-    if (where === 'hidden') await keys(page, 'Ctrl+4');
-    await wait(2000);
-    // CPU first with nothing attached, then profiles over a window of their own, so sampling does not
-    // add to the CPU figures.
-    print(`flood-${where}`, await cpuWindow(5));
-    const main = await connectMain();
-    await main.send('Profiler.enable'); await page.send('Profiler.enable');
-    await main.send('Profiler.start'); await page.send('Profiler.start');
-    await wait(5000);
-    writeFileSync(path.join(demo, `flood-${where}-main.cpuprofile`), JSON.stringify((await main.send('Profiler.stop')).profile));
-    writeFileSync(path.join(demo, `flood-${where}-renderer.cpuprofile`), JSON.stringify((await page.send('Profiler.stop')).profile));
-    main.close();
-    if (where === 'hidden') await keys(page, 'Ctrl+2');
-    await keys(page, 'Alt+2');
-    const pressedAt = Date.now();
-    await press(page, 'Ctrl+C');
-    let previous = await page.evaluate(lastLine);
-    let changedAt = Date.now();
-    while (Date.now() - changedAt < 2000 && Date.now() - pressedAt < 120000) {
-      await wait(100);
-      const now = await page.evaluate(lastLine);
-      if (now !== previous) { previous = now; changedAt = Date.now(); }
-    }
-    print('ctrl-c', { keptPrintingMs: changedAt - pressedAt, stopped: Date.now() - changedAt >= 2000, lastLine: previous });
-    print('after', await cpuWindow(5));
-  }),
+  // `no-host` puts a file where the pane host's socket folder goes, so the host cannot listen and the
+  // app runs the pty itself, as it does with no `node` on the login shell's PATH.
+  flood: (where = 'shown', host = 'host') => {
+    const socketFolder = paneHostFolder(demo);
+    rmSync(socketFolder, { recursive: true, force: true });
+    if (host === 'no-host') writeFileSync(socketFolder, '');
+    return withInstance(demo, {}, async ({ page }) => {
+      const lastLine = String.raw`(() => { const page = document.querySelectorAll('.page')[1]; for (const rows of page.querySelectorAll('.xterm-rows')) { const lines = [...rows.children].map((row) => row.textContent.trim()).filter(Boolean); if (lines.some((line) => /^\d{3,}$/.test(line))) return lines.at(-1); } return ''; })()`;
+      await openWorkers(page);
+      await run(page, 'seq 1 inf');
+      if (where === 'hidden') await keys(page, 'Ctrl+4');
+      await wait(2000);
+      const others = paneHostPids(demo);
+      print('pane-host', { running: others.length > 0, wanted: host });
+      // CPU first with nothing attached, then profiles over a window of their own, so sampling does not
+      // add to the CPU figures.
+      print(`flood-${where}`, await cpuWindow(5, others));
+      const main = await connectMain();
+      await main.send('Profiler.enable'); await page.send('Profiler.enable');
+      await main.send('Profiler.start'); await page.send('Profiler.start');
+      await wait(5000);
+      writeFileSync(path.join(demo, `flood-${where}-main.cpuprofile`), JSON.stringify((await main.send('Profiler.stop')).profile));
+      writeFileSync(path.join(demo, `flood-${where}-renderer.cpuprofile`), JSON.stringify((await page.send('Profiler.stop')).profile));
+      main.close();
+      if (where === 'hidden') await keys(page, 'Ctrl+2');
+      await keys(page, 'Alt+2');
+      const pressedAt = Date.now();
+      await press(page, 'Ctrl+C');
+      let previous = await page.evaluate(lastLine);
+      let changedAt = Date.now();
+      while (Date.now() - changedAt < 2000 && Date.now() - pressedAt < 120000) {
+        await wait(100);
+        const now = await page.evaluate(lastLine);
+        if (now !== previous) { previous = now; changedAt = Date.now(); }
+      }
+      print('ctrl-c', { keptPrintingMs: changedAt - pressedAt, stopped: Date.now() - changedAt >= 2000, lastLine: previous });
+      print('after', await cpuWindow(5, others));
+    // The placeholder would keep every later run, of any measurement, from starting the pane host.
+    }).finally(() => { if (host === 'no-host') rmSync(socketFolder, { force: true }); });
+  },
 
   // A long answer streamed into alpha's Claude screen as the SDK's text_delta events, sent from main the
   // way chat-sessions.ts relays them. No model is called. 600 characters a second by default.

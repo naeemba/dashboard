@@ -5,7 +5,9 @@ import path from 'node:path';
 
 // In the socket's name, so an app built against another shape of these messages never talks to a host
 // that would misread them. It starts a host of its own instead, and the old host's shells run on
-// unseen until they exit. Bump it with any change to the types below.
+// unseen until they exit. Bump it with any change to the types below that an older host would misread.
+// A message type it has never heard of it drops (pane-host-server.ts's receive), so adding one, as
+// pause and resume were, keeps the running host and its shells: an older host just never pauses.
 const PROTOCOL_VERSION = 1;
 
 // In a folder of its own, made private before the socket is: anyone who can reach the socket can type
@@ -42,7 +44,9 @@ export type ToHost =
   | ({ type: 'spawn' } & SpawnRequest)
   | { type: 'write'; key: string; data: string }
   | { type: 'resize'; key: string; cols: number; rows: number }
-  | { type: 'kill'; key: string };
+  | { type: 'kill'; key: string }
+  | { type: 'pause'; key: string }
+  | { type: 'resume'; key: string };
 
 // A shell the host is running, as it is told to an app arriving. `screen` is the pane's screen as
 // pane-screen-copy.ts replays it, so the pane draws as it was rather than blank.

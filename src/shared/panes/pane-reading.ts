@@ -73,7 +73,8 @@ export type PaneUse = PaneReading & { exited: boolean };
 // which is what this change exists to remove. Telling a prompt's daemon from a job you started means
 // reading the process group rather than the parent, and that is its own piece of work.
 //
-// help.ts says both out loud, because the ship's blurb is where someone learns what a ship can take.
+// docs/board/README.md says both out loud, in the paragraph on what counts as running, because that
+// is where someone learns what a ship can take.
 function runsAProgram(foreground: string | undefined, shell: string | undefined): boolean {
   // No shell recorded means no pty was ever spawned, which is the same nothing-is-running answer an
   // undefined foreground gives.

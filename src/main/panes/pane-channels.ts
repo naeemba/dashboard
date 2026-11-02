@@ -1,5 +1,6 @@
 import { Notification, type BrowserWindow } from 'electron';
 import type { Channels } from '../app/channels';
+import { outputPauses } from './output-pauses';
 import type { PaneShell } from './pane-shell';
 import type { Screens } from '../../shared/remote-host/screens';
 
@@ -44,6 +45,9 @@ export function registerPaneChannels(table: Channels, main: {
     main.screens.resize(screen, id, { cols, rows });
     fitShell(main.shells, main.screens, id);
   });
+  const pauses = outputPauses(main.shells);
+  table.on('pty:pause', pauses.pause);
+  table.on('pty:resume', pauses.resume);
   table.on('pty:restart', (_screen, id: string) => {
     if (!main.shells.has(id)) main.spawnTerminal(id);
   });

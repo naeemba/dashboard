@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
+import { BLURBS, BLURB_WORD_LIMIT, MODE_NAMES, UNBOUND_SHORTCUTS, helpSections } from './help';
 import type { Shortcut } from './shortcut-rows';
 import { mapShortcut } from './shortcuts';
 import { ACTIONS, actionByName } from '../../shared/keys/actions';
@@ -34,6 +34,28 @@ describe('helpSections', () => {
     for (const mode of SCREENS) {
       for (const section of helpSections(mode, false, mac, true)) {
         expect(section.blurb.length, `${mode}: ${section.title}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  // Checked on the table rather than through helpSections, so a blurb no screen shows yet is held too.
+  it(`keeps every blurb to ${BLURB_WORD_LIMIT} words, so the keys start on the first screen`, () => {
+    for (const [name, blurb] of Object.entries(BLURBS)) {
+      expect(blurb.split(/\s+/).filter(Boolean).length, name).toBeLessThanOrEqual(BLURB_WORD_LIMIT);
+    }
+  });
+
+  // A blurb is a fixed string and the user can rebind any action, so a blurb naming a bound key by its
+  // default spelling tells someone with their own bindings to press a key that does nothing.
+  it('never names one of its own group\'s bound keys by its default spelling', () => {
+    for (const [name, blurb] of Object.entries(BLURBS)) {
+      for (const entry of ACTIONS.filter((action) => action.group === name)) {
+        for (const spelling of new Set([entry.mac, entry.other].filter((value) => value !== null))) {
+          const escaped = spelling.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Case-blind, since `f filters` is the F key; an apostrophe before it is a possessive, not a key.
+          const named = new RegExp(`(?<![\\w+'])${escaped}(?![\\w+])`, 'i');
+          expect(blurb, `${name}: ${entry.name}`).not.toMatch(named);
+        }
       }
     }
   });

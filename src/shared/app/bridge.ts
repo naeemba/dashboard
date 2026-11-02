@@ -146,6 +146,10 @@ export type DashboardBridge = {
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;
+  // Stop and start reading a pane's pty while its terminal has too much queued to draw:
+  // renderer/panes/write-flow.ts.
+  pauseOutput(id: string): void;
+  resumeOutput(id: string): void;
   // Every pane with an agent still working in it, sent on a timer and read by the review sweep. The
   // same direction as openScrollback and for the same reason: main has the pty, which is the bytes
   // going past, not the screen they built — and "still working" is a thing you can only see on the

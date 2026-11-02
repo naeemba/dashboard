@@ -152,6 +152,8 @@ export function hostShell(
       send({ type: 'resize', key, cols, rows });
     },
     kill: () => send({ type: 'kill', key }),
+    pause: () => send({ type: 'pause', key }),
+    resume: () => send({ type: 'resume', key }),
     onData(listener) {
       dataListener = listener;
       setImmediate(flush);

@@ -6,3 +6,4 @@ One line per merged change: date, pull request, why.
 - 2026-09-06 #9 — Ctrl+H lists the keys for the screen you are on (keys-rule-2)
 - 2026-09-15 #38 — Ctrl with a digit: what macOS does with it, written where defaults are picked
 - 2026-09-18 #50 — Hold a modifier and see what it starts (keys-decision-4)
+- 2026-11-02 #184 — Each help blurb capped at 60 words, detail moved to the feature READMEs (keys-rule-2)

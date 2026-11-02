@@ -27,7 +27,7 @@ import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
-import { folderDialogRefusal, screens, windowHears } from '../shared/remote-host/screens';
+import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
 import { peekBoard, writeBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
@@ -244,7 +244,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
   temporary: app.getPath('temp'), shellCommand: () => shellCommand, projectPath: (slot) => projectIn(slot)?.path,
-  send: sendToRenderer,
+  send: sendToRenderer, keepsScreens: () => keepsScreenCopies(remoteHost !== null, remote.reachesWindow()),
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));

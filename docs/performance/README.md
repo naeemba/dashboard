@@ -20,7 +20,7 @@ Folder: `scripts/performance/`.
   9434 (main).
 - `demo-instance.mjs`: what the measurements are built from. It covers the
   DevTools protocol client, key presses, CPU and private memory per process from
-  `/proc`, keystroke-echo latency, and input-to-paint from the Event Timing API.
+  `/proc` (the pane host's too, found by its socket folder), keystroke-echo latency, and input-to-paint from the Event Timing API.
   `withInstance` refuses to start while anything answers on 9433 or 9434, which
   would be an earlier run's instance, or another process's inspector, with
   every number read off it. Afterwards it
@@ -62,7 +62,10 @@ Start a headless compositor of its own. Nothing appears on your screen:
 
 Stage the demo. The two transcripts are any long Claude Code conversations;
 the first run used this repository's longest, 8,084 lines (31 MB) and 1,955
-lines (8 MB):
+lines (8 MB). Keep `$D` short: the pane host's socket is
+`$D/userdata/pane-host/panes-1.sock`, and a unix socket's path past about a
+hundred bytes cannot be listened on, so a long folder quietly runs every
+measurement without the pane host:
 
     D=/tmp/dashboard-performance
     scripts/performance/stage-demo.sh $D ~/.claude/projects/<slug>/<long>.jsonl ~/.claude/projects/<slug>/<second>.jsonl
@@ -75,8 +78,8 @@ instance:
 | `measure.mjs startup $D [runs] [chat-sessions-long.json]` | Launch to app ready, first paint, every restored project, and alpha's long chat drawn |
 | `measure.mjs boot $D` | Main-process CPU profile of the first 3 s, into `$D/boot-main.cpuprofile` |
 | `measure.mjs lag $D [seconds]` | Every time main's event loop is more than 50 ms late after launch, with typing in a worker throughout |
-| `measure.mjs streams $D [lines/s]` | Four workers on alpha streaming: CPU with alpha shown, then hidden behind gamma, typing beside them, a main profile, memory |
-| `measure.mjs flood $D [shown\|hidden]` | One worker runs `seq 1 inf` flat out. Main and renderer profiles, then Ctrl+C, how long the pane keeps printing, and whether it stopped |
+| `measure.mjs streams $D [lines/s]` | Four workers on alpha streaming: CPU with alpha shown, then hidden behind gamma, typing beside them, the last line each worker on screen drew before leaving alpha and after coming back, a main profile, memory |
+| `measure.mjs flood $D [shown\|hidden] [host\|no-host]` | One worker runs `seq 1 inf` flat out. CPU of Electron's processes and the pane host, main and renderer profiles, then Ctrl+C, how long the pane keeps printing, and whether it stopped. `no-host` puts a file where the pane host's socket folder goes, so the app runs the pty itself |
 | `measure.mjs chat $D [characters] [per delta] [ms]` | A long answer streamed into alpha's Claude screen as SDK `text_delta` events sent from main; no model call |
 | `measure.mjs keys $D` | Input to next paint for board arrows and tab switches, then idle CPU with a terminal focused (cursor blink) |
 | `measure.mjs ipc $D [seconds]` | Messages and bytes per IPC channel with four streams running: `send` and `invoke` to main, `invoke` replies, and everything main sends |
