@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { paneScreenCopy } from './pane-screen-copy';
+import { paneScreenCopy, screenCopyWhile } from './pane-screen-copy';
 
 const size = { cols: 20, rows: 5 };
 const parsed = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 50));
@@ -36,5 +36,41 @@ describe('paneScreenCopy', () => {
     expect(replay).toContain('\x1b[?1000h');
     expect(replay).toContain('\x1b[?2004h');
     expect(replay).toContain('line 19999');
+  });
+});
+
+describe('screenCopyWhile', () => {
+  it('keeps nothing while nobody will read it', () => {
+    const copy = screenCopyWhile(() => false, () => size);
+    copy.push('flood');
+    expect(copy.replay()).toBe('');
+  });
+
+  it('starts from the first byte after it is wanted, without what came before', () => {
+    let wanted = false;
+    const copy = screenCopyWhile(() => wanted, () => size);
+    copy.push('before ');
+    wanted = true;
+    copy.push('after');
+    expect(copy.replay()).toBe('\x1bcafter');
+  });
+
+  it('holds its screen for a replay asked before the next byte, and drops it at the byte after it stops being wanted', () => {
+    let wanted = true;
+    const copy = screenCopyWhile(() => wanted, () => size);
+    copy.push('away');
+    wanted = false;
+    expect(copy.replay()).toBe('\x1bcaway');
+    copy.push('home');
+    expect(copy.replay()).toBe('');
+  });
+
+  it('keeps how its shell ended across a change', () => {
+    let wanted = false;
+    const copy = screenCopyWhile(() => wanted, () => size);
+    copy.exit(3);
+    wanted = true;
+    copy.push('x');
+    expect(copy.exitCode()).toBe(3);
   });
 });

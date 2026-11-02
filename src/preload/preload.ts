@@ -29,6 +29,8 @@ const bridge: DashboardBridge = {
   sendInput: (id, data) => ipcRenderer.send('pty:input', id, data),
   resize: (id, cols, rows) => ipcRenderer.send('pty:resize', id, cols, rows),
   restart: (id) => ipcRenderer.send('pty:restart', id),
+  pauseOutput: (id) => ipcRenderer.send('pty:pause', id),
+  resumeOutput: (id) => ipcRenderer.send('pty:resume', id),
   reportWorkingPanes: (ids) => ipcRenderer.send('panes:report', ids),
   readPanes: (projectPath) => ipcRenderer.invoke('panes:read', projectPath),
   addPane: (slot) => ipcRenderer.invoke('pane:add', slot),
@@ -41,7 +43,7 @@ const bridge: DashboardBridge = {
   sessionRestored: () => ipcRenderer.send('session:restored'),
   readBoard: (projectPath) => ipcRenderer.invoke('board:read', projectPath),
   peekBoard: (projectPath) => ipcRenderer.invoke('board:peek', projectPath),
-  writeBoard: (projectPath, board) => ipcRenderer.invoke('board:write', projectPath, board),
+  writeBoard: (projectPath, base, board) => ipcRenderer.invoke('board:write', projectPath, base, board),
   onBoardChange: (listener) =>
     ipcRenderer.on('board:change', (_event, projectPath) => listener(projectPath)),
   onNotesChange: (listener) =>
@@ -79,7 +81,7 @@ const bridge: DashboardBridge = {
   chatBackgroundTasks: (slot, toolUseId) => ipcRenderer.invoke('chat-task:background', slot, toolUseId),
   chatAnswer: (slot, id, result) => ipcRenderer.send('chat:answer', slot, id, result),
   chatConfigure: (slot, change) => ipcRenderer.invoke('chat:configure', slot, change),
-  chatMeasure: (slot) => ipcRenderer.invoke('chat:measure', slot),
+  chatMeasure: (slot, start) => ipcRenderer.invoke('chat:measure', slot, start === true),
   chatRead: (slot) => ipcRenderer.invoke('chat:read', slot),
   chatReset: (slot) => ipcRenderer.send('chat:reset', slot),
   chatCommands: (slot) => ipcRenderer.invoke('chat-commands:read', slot),
@@ -98,6 +100,7 @@ const bridge: DashboardBridge = {
   chatMcpServers: (slot) => ipcRenderer.invoke('chat-mcp:read', slot),
   chatChangeMcpServer: (slot, name, action) => ipcRenderer.invoke('chat-mcp:change', slot, name, action),
   chatSideQuestion: (slot, question) => ipcRenderer.invoke('chat-side-question:ask', slot, question),
+  workers: () => ipcRenderer.invoke('workers:read'),
   onChat: (listener) => ipcRenderer.on('chat:receive', (_event, slot, chatEvent) => listener(slot, chatEvent)),
 };
 

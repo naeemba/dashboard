@@ -47,6 +47,8 @@ import {
 } from './board-filter';
 import { createDropMarker } from './drop-marker';
 import { createCardAim } from './card-aim';
+import { createBoardSaves } from './board-saves';
+import { cardEditor, MULTILINE, type EditableField } from './card-editor';
 import { putEditBack, takeEdit } from '../app/carried-edit';
 import { bringHome, shipsAway } from '../ship/ships-away';
 import {
@@ -73,7 +75,6 @@ import { columnIcon, icon, labelled } from '../app/icons';
 import { filterBar, sortButton } from './board-toolbar';
 import { openFilterDialog } from './filter-dialog';
 import { createNewestRead } from '../app/newest-read';
-import { isModified } from '../keys/shortcuts';
 import { paneLabel } from '../../shared/panes/terminals';
 
 export type BoardOptions = {
@@ -120,10 +121,6 @@ export type BoardView = {
   close(): void;
 };
 
-// Read off the action rather than spelled out again: a field the table can ask for and this file has
-// never heard of would otherwise be a key that does nothing.
-type EditableField = Extract<Action, { kind: 'board-edit' }>['field'];
-
 // Which commit rule each field ends on. Every one of them hands back the same state when nothing
 // changed, which is what keeps opening a field and closing it from spending the undo step.
 const COMMITS: Record<EditableField, (state: BoardState, value: string) => BoardState> = {
@@ -134,18 +131,13 @@ const COMMITS: Record<EditableField, (state: BoardState, value: string) => Board
   pullRequest: commitPullRequest,
 };
 
-// Which fields are typed over more than one line. They get a textarea, Enter makes a newline in them
-// and Escape is what commits — the other three are one line and end on Enter. Listed once, because a
-// field added to the textarea half and forgotten in the commit half is a box you cannot get out of.
-const MULTILINE: readonly EditableField[] = ['notes', 'comment'];
-
 // The card the keys are on. Exported because the manager's board, which stacks several of these in one
 // scroller, has to find it too — and a name that lives in one place cannot be renamed here and left
 // behind there, where nothing would fail and the selection would simply stop being scrolled to.
 export const SELECTED_CARD = '.board-card.selected';
 
 // What one read of the file came to, held until it is known whether that read is still the newest.
-type ReadOutcome = { fresh: boolean; next: BoardState; message: string; readWorked: boolean };
+type ReadOutcome = { fresh: boolean; next: BoardState; message: string; readWorked: boolean; mark: number };
 
 export function createBoardView(options: BoardOptions): BoardView {
   const element = document.createElement('div');
@@ -189,6 +181,10 @@ export function createBoardView(options: BoardOptions): BoardView {
   let visible: number[][] = [];
   // The card the last change landed on, kept drawn while the selection is on it.
   let changedCardId: string | null = null;
+  const saves = createBoardSaves(
+    (base, board) => options.bridge.writeBoard(options.projectPath, base, board),
+    state.board,
+  );
 
   // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
   // step is gone, which is what entering a board means. Without it the file simply changed under you
@@ -219,6 +215,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     let message = '';
     let next = state;
     let readWorked = false;
+    const mark = saves.mark();
     const boardRead = options.bridge.readBoard(options.projectPath);
     try {
       const read = await boardRead;
@@ -229,12 +226,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     } catch (error: unknown) {
       message = `Board not opened: ${String(error)}`;
     }
-    return { fresh, next, message, readWorked };
+    return { fresh, next, message, readWorked, mark };
   }
 
   // Runs only for the newest read; one another read overtook says nothing, since the newer one is the
   // board you asked for.
-  function landRead({ fresh, next, message, readWorked }: ReadOutcome): boolean {
+  function landRead({ fresh, next, message, readWorked, mark }: ReadOutcome): boolean {
     // An arrival closes any open box: you asked to come here, and this is a different board. A file
     // that changed under you does not close it — what you have half typed is yours, and reloadBoard
     // has already followed your card to wherever the write put it. The redraw throws the box away and
@@ -243,6 +240,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const wasEditing = editingCardId();
     const carried = editing === null ? null : takeEdit(editorInput());
     state = next;
+    if (readWorked) saves.read(next.board);
     // The box only goes back on the card it was opened on. A write that drops that card leaves the
     // selection on the row it held, which is now the next card down — and a box drawn there would be
     // that card's box with your text in it, so pressing Enter renames a card you never opened.
@@ -258,16 +256,22 @@ export function createBoardView(options: BoardOptions): BoardView {
     // The open card dialog reads this board on every key, so it has to be drawn from it too. It closes
     // itself if the write took its card away, and carries a half-typed subtask across if it did not.
     detail?.redraw();
+    // A save went out after this read was taken, so the file is newer than the board just drawn.
+    if (readWorked && saves.sentSince(mark)) void readAgain(false);
     return readWorked;
   }
 
   // True when the write landed, so a caller with something to say after it knows the status bar is
   // not holding a failure it would be talking over.
   function save(): Promise<boolean> {
-    return options.bridge.writeBoard(options.projectPath, state.board).then(
+    const sent = state.board;
+    return saves.save(sent).then(
       // A write that lands clears the failure it replaces; nothing else knows the message is stale.
-      () => {
+      (written) => {
         options.onError('');
+        // Main kept a change the screen had not seen — a card the `board` command moved a moment ago.
+        // Read it in, unless a newer save is already on its way: that one's answer will.
+        if (written !== null && state.board === sent) void readAgain(false);
         return true;
       },
       (error: unknown) => {
@@ -371,32 +375,8 @@ export function createBoardView(options: BoardOptions): BoardView {
     element.focus();
   }
 
-  // Both editors are the same control with a different tag and a different commit key, so they are one
-  // function: a title is one line and Enter ends it, a description is many and Enter is a newline in it.
   function renderEditor(field: EditableField, value: string): HTMLElement {
-    const input: HTMLInputElement | HTMLTextAreaElement =
-      MULTILINE.includes(field) ? document.createElement('textarea') : document.createElement('input');
-    input.className = 'board-edit';
-    input.value = value;
-    // The comment box is the one that opens empty, so it is the one that has to say what it is. The
-    // others open holding the field they edit.
-    if (field === 'comment') input.placeholder = 'Comment';
-    // A title or a description typed in Persian turns the box round as you type.
-    input.dir = 'auto';
-    // onkeydown rather than addEventListener: both tags declare it as taking a KeyboardEvent, which the
-    // union of the two does not do for the listener overloads.
-    input.onkeydown = (event) => {
-      // Returning without preventDefault, so Cmd+A and Cmd+V still do what they do in any text box.
-      if (isModified(event)) return;
-      const commits = MULTILINE.includes(field) ? event.key === 'Escape' : event.key === 'Enter' || event.key === 'Escape';
-      if (!commits) return;
-      event.preventDefault();
-      commitEditing(field, input.value);
-    };
-    input.onblur = () => {
-      if (editing === field) commitEditing(field, input.value);
-    };
-    return input;
+    return cardEditor(field, value, (typed) => commitEditing(field, typed), () => editing === field);
   }
 
   function renderCard(card: Card, selected: boolean): HTMLElement {

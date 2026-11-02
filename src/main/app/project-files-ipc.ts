@@ -1,6 +1,7 @@
 import type { Channels } from './channels';
 import type { Board } from '../../shared/board/board';
 import { openBoard, peekBoard, writeBoard } from '../board/board-store';
+import { rebaseBoardChange } from '../../shared/board/board-merge';
 import type { BoardChanges } from '../board/board-changes';
 import type { BoardWatchers } from '../board/board-watch';
 import { readNotes, writeNotes } from '../notes/notes-store';
@@ -31,13 +32,18 @@ export function registerProjectFiles(
     }
   });
   // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
-  // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
-  // the renderer: it already has the board it just sent. Every other screen is told here instead,
-  // since to the watcher this write is the app's own: a board left open on the laptop would otherwise
-  // never see the cards moved from the mac, and its next save would put them back.
-  table.handle('board:write', (screen, projectPath: string, board: Board) => {
-    changes.wrote(projectPath, board, () => boards.wrote(projectPath, writeBoard(projectPath, board)));
+  // The screen sends the board it last read or sent beside its new one, and the change between them
+  // is replayed onto the file as it is now, so a card the `board` command moved in the meantime stays
+  // moved (board-merge.ts says why). What was written goes back when it holds a change the screen has not
+  // seen. The bytes are kept so the watcher can tell this write from somebody else's. Every other screen
+  // is told here instead, since to the watcher this write is the app's own: a board left open on the
+  // laptop would otherwise never see the cards moved from the mac.
+  table.handle('board:write', (screen, projectPath: string, base: Board, board: Board) => {
+    const written = rebaseBoardChange(base, board, peekBoard(projectPath));
+    changes.wrote(projectPath, written, () => boards.wrote(projectPath, writeBoard(projectPath, written)));
     tellOthers(screen, 'board:change', projectPath);
+    // Null when the board went out as sent, so the common save carries nothing back.
+    return written === board ? null : written;
   });
 
   // The project's page of notes. No watcher and no seeding: a project that has never had any has no

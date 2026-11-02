@@ -5,6 +5,131 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-02: a streaming reply redraws only its tail (finding 5)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs chat
+<demo> <characters>` at 600 chars/s (12 characters every 20 ms). "Before" is
+`origin/main`'s `chat-view.ts` built the same day, "after" this branch; two
+runs each, alternated.
+
+| | before | after |
+|---|---|---|
+| Renderer CPU, 2k reply | 42.0–43.5% | 43.0–47.3% |
+| Renderer CPU, 8k reply | 54.5–63.3% | 44.9–49.4% |
+| Renderer CPU, 16k reply | 65.7–66.2% | 50.6–50.7% |
+| Script time, 16k | 7.9–8.1% | 2.2% |
+| Layout time, 16k | 28.3–28.4% | 20.0–20.1% |
+| Style time, 16k | 3.1% | 0.8% |
+| DOM nodes at the end, 16k | 28,179–31,434 | 8,575–8,598 |
+
+- The text before the last paragraph break outside a code fence is drawn once
+  as it settles (`chat-live-view.ts`, `chat-live-cut.ts`); each frame redraws
+  only what follows. The finished reply is still drawn whole as an entry.
+- The 2k reply did not move: most of it is one tail until the first breaks
+  arrive, and what is left is the cost of the frame itself.
+- The same day's before runs put 16k at 66%, not the first profile's 100%: the
+  demo's `answer.md` differs from the one first used. The after column is
+  measured against the same day's before.
+- What is left is layout, about 60 a second, and it is near the same at 2k as
+  at 16k, so it is the long conversation above the block being laid out each
+  frame, not the reply. Not done here: finding out what each frame dirties
+  there.
+- Still redrawn every frame: an open code fence, highlighted whole until it
+  closes, and a list whose items are blank-separated. A reply with a link
+  definition or an HTML comment or `<pre>` block is drawn whole, as before.
+## 2026-11-02: a page's Claude CLI starts when its screen is shown (finding 3)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs
+memory <demo>` (five projects restored, four workers opened on the page in
+front) and `measure.mjs boot <demo>`. "Before" is this branch without the fix,
+rebuilt and measured the same day.
+
+| | before (2 runs) | after (3 runs) |
+|---|---|---|
+| Agent SDK CLIs running | 6 | 1 |
+| CLI private memory | 621–622 MB | 188–194 MB |
+| Main private memory | 290–295 MB | 210–308 MB |
+| Main busy in the first 3 s (1 run) | 242 ms | 182 ms |
+| Agent SDK frames in the boot profile | 15+3+3 ms | none |
+
+- The one CLI left is the page in front, whose Claude screen the measurement
+  shows; it is alpha, resuming the 31 MB conversation, so it is larger than
+  the 97–112 MB of an idle one.
+- Main's private memory moves with the transient peak of reading the long
+  conversations (finding "Startup" below), not with this change.
+- Not measured: a restored worker of main's, which starts its page's session
+  at open, and the SendMessage it makes to an SDK session at all; the demo has
+  no credentials to run a turn.
+## 2026-11-02: a flooding pane reads no faster than it draws (finding 7)
+
+Same machine and compositor as the first profile, on top of the pane host
+(panes-decision-1). `measure.mjs flood $D <shown|hidden> <host|no-host>`, one
+run each; "before" is this branch without the change, built the same day.
+
+| | before | after |
+|---|---|---|
+| Main CPU, pane host | 106% shown, 115% hidden | 38%, 35% |
+| Main CPU, no pane host | 102%, 112% | 51%, 46% |
+| Pane host CPU | 91%, 105% | 65%, 71% |
+| Renderer CPU | 114–131% | 112–117% |
+| Renderer heap while flooding | 96–186 MB | 21–38 MB |
+| Kept printing after Ctrl+C, pane host | 3.3 s shown, 4.4 s hidden | 0.11 s, 0.11 s |
+| Kept printing after Ctrl+C, no pane host | 2.7 s, 2.6 s | 0.11 s, 0.11 s |
+
+Main's profile, no pane host, hidden: busy 851 ms of 5.1 s, most of it the
+IPC `send` to the renderer (500 ms). The headless copy is gone from it; before,
+main was busy 3.9 s of 5 s with 2.3 s in the copy.
+
+- What changed: main's headless copy of a pane (`pane-screen-copy.ts`) is fed
+  only while `host.port` is set or the window shows another host
+  (`screenCopyWhile`). The renderer counts what each terminal has queued and,
+  past 100,000 characters, asks main to stop reading that pane's pty until it
+  is under 10,000 (`write-flow.ts`, `output-pauses.ts`). The pane host pauses
+  its pty the same way. A pause lapses after a second unless the renderer
+  renews it (every half second while still behind), so a window that reloads
+  or leaves cannot leave a shell blocked, and the pane host resumes every
+  shell when the app disconnects.
+- With the pane host, the host process now does the copying main used to: it
+  still keeps its own copy of every shell so a restart can redraw it, at 68%
+  of a core during a flood. The renderer, drawing, is what limits the rate.
+- Not measured: a remote screen joined, where main keeps the copy as before and
+  a remote screen's pauses are ignored. With `host.port` set and the pane host
+  running, the same output is parsed twice, once in each process.
+
+## 2026-11-02: hidden projects stop drawing their terminals (finding 4)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs
+streams <demo> 200`: four workers at 200 lines/s each. "Before" is this branch
+without the fix, rebuilt and measured the same day, 2 runs; "after" is 5 runs.
+
+| | before | after |
+|---|---|---|
+| Renderer CPU, alpha hidden | 15.5–19.0% | 7.2–10.9% |
+| Layouts per 10 s, alpha hidden | 192–356 | 1 |
+| Renderer task time, alpha hidden | 12.2–18.1% | 4.9–7.0% |
+| Renderer CPU, alpha shown | 19.8–23.6% | 24.2–27.9% |
+| Typing in another project, median | 25–28 ms | 23–27 ms |
+
+- Two causes, both needed. Hidden pages were only `visibility: hidden`, which
+  still intersects the viewport, so xterm never paused them; `.page[hidden]`
+  and `.view[hidden]` now also translate off screen (`index.css`). And every
+  scroll, which is every new line at the bottom, asks xterm's selection to
+  redraw, which rebuilds every row without asking whether the terminal is
+  paused. `paused-selection.ts` holds that redraw until the terminal is back.
+- On return each worker on screen showed the line it was printing then: after
+  20 s hidden, about 3,700 lines on from where it left. A worker scrolled out
+  of the list is off screen as well and catches up when scrolled into view.
+- The shown number did not fall. The after runs sit 1–4 points above the
+  same day's before runs, inside the first profile's own spread (23.8–26.9%)
+  but for one run; nothing in the change runs on a shown terminal beyond one
+  check of the pause. What is left hidden is xterm parsing the bytes into the
+  buffer, which it must do to keep the scrollback.
+
+Not done: the same selection redraw rebuilds every row of a shown terminal on
+every scroll as well, on top of the regular redraw, even with nothing
+selected. Skipping it when no selection exists before or after would cut the
+shown cost too.
+
 ## 2026-11-02: usage sweep on its own thread
 
 Same machine, logs and tooling as the first profile below. Fixes its finding 1:
@@ -37,6 +162,7 @@ one past 0.5 s.
 Not done: the counts are still kept only in memory, so every launch reads
 every log again, now on the thread. Saving them in userData would cut the
 CPU too.
+
 ## 2026-11-02: board arrows move the highlight only (finding 2)
 
 Same machine, compositor and tooling as the first profile, `measure.mjs keys`.
@@ -111,9 +237,12 @@ installed app was never touched.
    - You notice: five projects take about 0.9 GB, two thirds of it idle CLIs
      for Claude screens you may not open that day. Typing in the first second
      after the window appears lags.
-   - Fix (medium): start a page's session the first time its Claude screen is
-     shown or a worker reports to it, and stop one that has been idle for a
-     while. Workers reporting to main is the constraint to design around.
+   - Lazy start fixed 2026-11-02 (section above); idle stop not done, see
+     "A started session is not stopped when idle" in `docs/chat/decisions.md`.
+     Fix proposed (medium): start a page's session the first time its Claude
+     screen is shown or a worker reports to it, and stop one that has been
+     idle for a while. Workers reporting to main is the constraint to design
+     around.
 4. **Hidden projects keep laying out and painting their terminals.**
    - Measured: four workers at 200 lines/s each. With their project shown, the
      renderer runs at 23.8–26.9% CPU and 230–275 layouts per 10 s. With it

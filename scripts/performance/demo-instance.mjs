@@ -198,9 +198,25 @@ export async function memory() {
   return { electron, children: childProcesses(main.pid, new Set(electron.map((entry) => entry.pid))) };
 }
 
+// The folder the demo's pane host listens in: src/main/panes/pane-host-protocol.ts's paneHostSocket.
+export const paneHostFolder = (demo) => path.resolve(demo, 'userdata', 'pane-host');
+
+// The demo's pane host, the node process outside Electron that runs the worker panes' ptys
+// (docs/panes, panes-decision-1), or nothing when this run has none.
+export function paneHostPids(demo) {
+  const socketFolder = paneHostFolder(demo);
+  return readdirSync('/proc').filter((entry) => /^\d+$/.test(entry)).flatMap((pid) => {
+    try {
+      const [, entry, socket] = readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0');
+      return entry?.endsWith('/pane-host-entry.js') && path.dirname(socket ?? '') === socketFolder ? [{ pid: Number(pid), name: 'pane-host' }] : [];
+    } catch { return []; }
+  });
+}
+
 // CPU % per Electron process over a window, with the renderer's own split of where its time went.
-export async function cpuWindow(seconds) {
-  const processes = await electronPids();
+// `others` are processes outside Electron to count beside them, such as the pane host.
+export async function cpuWindow(seconds, others = []) {
+  const processes = [...(await electronPids()), ...others];
   const page = await connectRenderer();
   await page.send('Performance.enable');
   await page.evaluate(`window.__longTasks = []; window.__longTaskObserver?.disconnect(); window.__longTaskObserver = new PerformanceObserver((list) => { for (const entry of list.getEntries()) window.__longTasks.push(Math.round(entry.duration)); }); window.__longTaskObserver.observe({ type: 'longtask' }); true`);

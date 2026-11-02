@@ -5,6 +5,7 @@ import { baseName } from '../../shared/app/base-name';
 import { pdfMentions, pdfOfTool } from '../../shared/chat/chat-pdf';
 import { foldedMessage } from './chat-fold';
 import { stampText } from './chat-stamp';
+import { linkPanes } from './chat-pane-links';
 import { imageDataUrl, type ChatEntry, type ChatImage, type Stamp, type ToolResult } from '../../shared/chat/chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
@@ -84,6 +85,7 @@ function withCopy(pre: HTMLElement): HTMLElement {
 // Markdown drawn into an element, each code block with its copy button.
 function markdownInto(element: HTMLElement, text: string): void {
   element.innerHTML = renderMarkdown(text);
+  linkPanes(element);
   element.querySelectorAll('pre').forEach(withCopy);
 }
 
@@ -91,6 +93,7 @@ function preformatted(className: string, text: string): HTMLPreElement {
   const pre = document.createElement('pre');
   pre.className = className;
   pre.textContent = text;
+  linkPanes(pre);
   return pre;
 }
 
@@ -239,6 +242,7 @@ function stamped(element: HTMLElement, stamp: Stamp, previousAt: number | undefi
 function paragraph(text: string): HTMLParagraphElement {
   const said = document.createElement('p');
   said.textContent = text;
+  linkPanes(said);
   return said;
 }
 

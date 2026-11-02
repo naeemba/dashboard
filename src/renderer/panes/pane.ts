@@ -1,6 +1,7 @@
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { PrintWidths } from './print-widths';
+import type { WriteFlow } from './write-flow';
 import { isPrinted, tailLines } from '../../shared/manager/manager';
 import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
 
@@ -27,7 +28,8 @@ import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
 // because paneScrollback is what the size is for: the scrollback key hands the whole buffer to nvim,
 // and an agent that has been working for an hour is well past a thousand lines — at the default the
 // file opens with the top silently missing and nothing saying where it was cut. page.ts builds the
-// terminal with it and the help dialog names it, so the two cannot say different numbers.
+// terminal with it. docs/panes/README.md repeats the number by hand (the scrollback key paragraph,
+// "the last 10000 lines"), so a change here changes that line too.
 export const PANE_SCROLLBACK = 10000;
 
 // `index` is which pane this is — main, a worker's number, or the editor's — since workers come and go
@@ -47,6 +49,7 @@ export type Pane = {
   bellTimer?: number;
   lastPrintedAt: number;
   printWidths: PrintWidths;
+  flow: WriteFlow;
 };
 
 // What these read off, written structurally rather than as xterm's Terminal, so the walk in

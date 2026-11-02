@@ -14,8 +14,26 @@ The two projects the card pointed at were read first and neither is copied. opco
 `query()` per message and handles a refused tool by sending the message again with the tool added to
 `allowedTools`, which runs the turn twice. Both trade the question away; this screen exists to ask it.
 
-The session starts when the project opens, as the terminal main did: the screen is the project's main
-session now (workers-decision-1), and a worker's SendMessage needs a running session to arrive at.
+The session starts the first time the page's Claude screen is shown, not when the project opens. Each
+idle CLI holds about 100 MB, and six of them at launch were 600 MB for screens you might not open that
+day (performance finding 3). Showing the screen the first time in a conversation asks for its
+status-line measure with `start`, and `chat:measure` starts the session to answer, so the first reading
+is there as soon as it starts; the renderer skips it while a restore lands on each page in turn. Every
+other measure reads null from a page with no session, so a model picked after a crash does not start a
+CLI, and a session that fails to start is not started again on each visit. A prompt or a worker report through the app (`tell`) starts
+it too, as before.
+
+A worker's SendMessage needs a running session to arrive at (workers-decision-1). A worker main
+dispatched in this run had main running already, since main dispatched it. One that came back after a
+restart has not, so a page whose main dispatched a worker that came back starts its session at open
+(`chat-start.ts`). That is the dispatcher's page, which is another page than the worker's when the
+pane was claimed with `--project`: the worker SendMessages the main that dispatched it.
+`session.json` keeps the dispatcher's path with the worker's mark, since nothing else that survives a
+restart knows it.
+
+A started session is not stopped when idle. It may have background tasks or a worker still to report,
+and nothing here knows when both are over. Launch is what cost the memory; a session you opened stays
+until the project closes.
 
 The app keeps the conversation's id per project in `chat-sessions.json` in the app's data folder,
 never in `.dashboard/`, since a conversation is personal and the board is tracked. The id is the one
@@ -151,3 +169,72 @@ The stash is a list Up walks rather than a slot a second press restores: Up from
 the newest stashed draft first, then the older ones, then the prompts sent. The last 10 are kept,
 for as long as the app runs, across new conversations; a draft leaves the stash when it is sent.
 Images attached to the box are not stashed, and stay attached.
+
+## chat-decision-10: The context popup reads the measure the meter already has, and sits above the meter
+
+The breakdown comes from the same `getContextUsage({ detail: 'summary' })` answer the status line's
+meter reads after each turn, so opening the popup asks main for nothing: it shows the last measure and
+says when it was taken. `/context` is the screen's own command and never reaches the session, which
+would answer it as text in the conversation.
+
+A row is classified on the SDK's `kind` and coloured by its `id`, never by its English name. A
+`deferred` row, and an MCP tool with `isLoaded: false`, is a tool schema that is not in the window, so
+it is left out rather than shown apart: the popup answers what fills the window. The SDK's `color` is
+a key of Claude Code's terminal theme, not a colour a page can paint, so each id takes one of the
+app's theme colours instead.
+
+The popup is drawn above what opened it, lined up with whichever of its edges faces the middle of the
+window (`popup-placement.ts`). The context meter sits on the right of the foot, so its popup grows
+leftwards; the workers count on the left would grow rightwards from the same code, so the two never
+cover each other's anchor. The workers popup is still the centred search sheet; `anchored-popup.ts`
+takes rows with a choice, so moving it over is a change of caller, not of the popup.
+
+## chat-decision-11: A streaming reply is cut at a paragraph break, and drawn whole when it cannot be
+
+The streaming block draws the text before its last cut once, as it settles, and redraws only what
+follows each frame (`chat-live-view.ts`). A cut (`chat-live-cut.ts`) is the start of a line after a
+blank line, outside a code fence, that cannot carry on the block above it: not indented, not a list
+item, not a quote. Markdown drawn in two pieces there is the same HTML as drawn whole, which the
+test checks for every prefix of a reply holding a table, fences, a loose list and a link across a
+line break.
+
+A reply holding a link definition (`[name]: url`, also in a list item or a quote), an HTML comment,
+or a `<pre>`, `<script>`, `<style>` or `<textarea>` line is drawn whole every frame, as before: a
+definition applies to links anywhere in the text, and those HTML blocks run on past a blank line.
+Other HTML lines end at one, so they still cut. A fence opened in a list item or a quote, or a fenced
+line less indented than its opener, is drawn whole too: the scanner follows top-level fences only, and
+the container can end a fence where it would run on. Telling the refused cases apart from a safe cut
+costs more code than they are worth; Claude rarely writes any of these. The finished reply is an entry and is always drawn whole.
+
+What is still redrawn every frame: an open code fence, highlighted whole each frame until it closes,
+and a list still growing, since a blank line between items cannot be cut.
+
+## chat-decision-12: Warm or cold is worked out from each reply's usage, with no call of its own
+
+Checked against Anthropic's prompt caching page
+(https://platform.claude.com/docs/en/build-with-claude/prompt-caching) on 2026-11-02:
+
+- "By default, the cache has a 5-minute lifetime. The cache is refreshed for no additional cost each
+  time the cached content is used."
+- "If you find that 5 minutes is too short, Anthropic also offers a 1-hour cache duration", asked for
+  with `"ttl": "1h"` in `cache_control`.
+- "The lifetime is measured from the start of the request that writes or reads the cache entry, not
+  from the end of its response."
+- The usage block's `cache_creation` object carries `ephemeral_5m_input_tokens` and
+  `ephemeral_1h_input_tokens`, and "`cache_read_input_tokens`: Number of tokens retrieved from the
+  cache for this request".
+
+So `cache-warmth.ts` takes, from each of a conversation's own replies, the last one that wrote or read
+the cache. Its tier is the one the session last wrote: 1h if any of a write went to the hour-long
+cache, else 5m; a read keeps the tier, and with no write seen it guesses 5m, the shorter. The cache is
+warm until that reply's time plus the tier. The Claude screen reads the SDK's assistant messages
+(`chat-transcript.ts`); a worker pane's comes from its transcript lines, which the usage sweep already
+reads (`usage-store.ts`). A subagent's replies are left out of both: it runs its own cache.
+
+What it gets wrong, on purpose: the time is when the reply was written, not when its request started,
+so a long reply reads up to its own length too warm. A request that mixed tiers counts as 1h, though
+its 5m part goes cold first. An SDK message with no `timestamp` (an older Claude Code) is not counted,
+rather than stamped with when it arrived. The pill redraws once a minute, once a second in the last
+minute. A tick that finds the screen off view redraws nothing and sets no further timer; showing the
+screen again wakes the clock and redraws it. The workers
+popup reads the time when its rows are drawn and does not count down while open.

@@ -14,6 +14,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
+import { sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
@@ -27,7 +28,9 @@ import { isRecord } from '../../shared/app/is-record';
 import { unpacked } from '../app/unpacked';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
-// session. It is started when the project opens and again after a new conversation or a /resume, and
+// session. It is started the first time the page's Claude screen is shown (its measure asks), on the
+// first prompt or worker report, at open for a page whose main dispatched a worker that came back (chat-start.ts),
+// and again after a new conversation or a /resume. Once started it is
 // kept open in streaming input mode, so every prompt goes into the same process and a worker's
 // SendMessage has somewhere to arrive. The renderer draws; everything here is the session and the
 // questions it is waiting on.
@@ -214,7 +217,7 @@ export function mainSessionStart(
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
-): { open(slot: number, adopt?: string): void; stop(slot: number): void; stopAll(): void } {
+): { open(slot: number, adopt?: string): void; start(slot: number): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): void } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -372,8 +375,9 @@ export function registerChatSessions(
     return session;
   }
 
-  // A prompt for this page's session, stamped with the uuid the session's queue reports it by.
-  table.on('chat:send', (_screen, slot: number, content: ChatContent) => {
+  // A prompt for this page's session, stamped with the uuid the session's queue reports it by. One sent
+  // mid-turn waits in that queue (chat-decision-7), so it never cuts into what the session is doing.
+  function send(slot: number, content: ChatContent): void {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return;
     const id = randomUUID();
@@ -382,7 +386,8 @@ export function registerChatSessions(
       (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
-  });
+  }
+  table.on('chat:send', (_screen, slot: number, content: ChatContent) => send(slot, content));
 
   // The slash commands the session would run, for the menu. The list is the CLI's, and only a running
   // session has it; one that has ended is started again by the asking, as a prompt would.
@@ -530,16 +535,20 @@ export function registerChatSessions(
 
   // What the status line shows: how full the context window is, read from the last response rather
   // than counted again, the model by its shown name, and the plan's limits. The limits come from an
-  // experimental call; a release that drops it leaves the line without them and nothing else.
-  table.handle('chat:measure', async (_screen, slot: number): Promise<ChatMeasure | null> => {
-    const session = await sessions.get(slot);
+  // experimental call; a release that drops it leaves the line without them and nothing else. A screen
+  // shown for the first time asks with `start`, which is what starts a page's session; any other
+  // measure, a model picked after the session ended say, reads null rather than starting a CLI.
+  table.handle('chat:measure', async (_screen, slot: number, start: boolean): Promise<ChatMeasure | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    const session = await sessionToMeasure(start, () => running(slot, projectPath), sessions.get(slot));
     if (!session) return null;
     const [context, models, usage] = await Promise.all([
       session.query.getContextUsage({ detail: 'summary' }),
       session.query.supportedModels(),
       session.query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }).catch(() => null),
     ]);
-    return measureOf(context, models, usage);
+    return measureOf(context, models, usage, Date.now());
   });
 
   // The conversation this page would resume, read back from its transcript, as far as a /rewind left it.
@@ -668,8 +677,8 @@ export function registerChatSessions(
   });
 
   return {
-    // A project opening starts its main session at once, as the terminal one was, so a worker's
-    // SendMessage has somewhere to arrive. `adopt` is the conversation the terminal main left;
+    // A project opening sets up what its main session will start on, without starting it: that waits
+    // for the screen, a prompt or start(). `adopt` is the conversation the terminal main left;
     // mainSessionStart says what wins.
     open(slot, adopt) {
       const projectPath = host.projectPath(slot);
@@ -677,11 +686,17 @@ export function registerChatSessions(
       const opening = mainSessionStart(remembered[projectPath], adopt, preferences.get(slot));
       if (opening.resume !== remembered[projectPath]) remember(projectPath, opening.resume);
       preferences.set(slot, opening.preferences);
-      running(slot, projectPath).catch(() => undefined);
+    },
+    // The page's session started now, for a worker's SendMessage to arrive at (chat-start.ts).
+    start(slot) {
+      const projectPath = host.projectPath(slot);
+      if (projectPath !== undefined) running(slot, projectPath).catch(() => undefined);
     },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
     stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
+    // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
+    tell: (slot, text) => send(slot, [{ type: 'text', text }]),
   };
 }

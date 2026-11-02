@@ -6,26 +6,29 @@ const models = [
   { value: 'opus', resolvedModel: 'claude-opus-5-5', displayName: 'Opus 5.5', description: '' },
   { value: 'claude-opus-4-8', resolvedModel: 'claude-opus-4-8', displayName: 'Opus 4.8', description: '' },
 ];
-const context = { totalTokens: 70_400, maxTokens: 1_000_000, percentage: 7.4, model: 'claude-opus-4-8' };
+const context = { totalTokens: 70_400, maxTokens: 1_000_000, percentage: 7.4, model: 'claude-opus-4-8', categories: [], memoryFiles: [], mcpTools: [] };
+const empty = { categories: [], memoryFiles: [], mcpTools: [] };
 const window = (utilization: number | null) => ({ utilization, resets_at: '2026-10-30T03:50:00Z' });
 
 describe('measureOf', () => {
   it('names the model by the list and keeps only the limits that carry a number', () => {
-    const measure = measureOf(context, models, { rate_limits: { five_hour: window(25), seven_day: window(null) } });
+    const measure = measureOf(context, models, { rate_limits: { five_hour: window(25), seven_day: window(null) } }, 5);
     expect(measure).toEqual({
       context: { percentage: 7.4, used: 70_400, size: 1_000_000 },
       model: 'Opus 4.8',
       fiveHour: { percentage: 25, resetsAt: '2026-10-30T03:50:00Z' },
       sevenDay: null,
+      breakdown: empty,
+      at: 5,
     });
   });
 
   it('names the default model by its own row, not the default row that resolves to it', () => {
-    expect(measureOf({ ...context, model: 'claude-opus-5-5' }, models, null).model).toBe('Opus 5.5');
+    expect(measureOf({ ...context, model: 'claude-opus-5-5' }, models, null, 0).model).toBe('Opus 5.5');
   });
 
   it('shows a model the list lacks by its id, and no limits when the plan has none', () => {
-    const measure = measureOf({ ...context, model: 'claude-x' }, models, null);
+    const measure = measureOf({ ...context, model: 'claude-x' }, models, null, 0);
     expect([measure.model, measure.fiveHour, measure.sevenDay]).toEqual(['claude-x', null, null]);
   });
 });
@@ -34,6 +37,7 @@ describe('statusMeters', () => {
   const measure: ChatMeasure = {
     context: { percentage: 7.4, used: 70_400, size: 1_000_000 }, model: 'Opus 5.5',
     fiveHour: { percentage: 25.9, resetsAt: new Date(2026, 9, 30, 7, 19).toISOString() }, sevenDay: { percentage: 89, resetsAt: null },
+    breakdown: empty, at: 0,
   };
 
   it('carries the context and both plan limits, each with its colour and what else it says', () => {

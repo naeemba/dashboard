@@ -3,7 +3,7 @@ import '@fontsource/vazirmatn/arabic-500.css';
 import './markets.css';
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { icon, iconOnlyButton, type IconName } from '../app/icons';
-import type { THEME } from '../../shared/app/theme';
+import type { ThemeColour } from '../../shared/app/theme';
 import {
   formatChange, settle, type Forecast, type Quote, type Reading, type WeatherWord,
 } from '../../shared/markets/markets';
@@ -83,7 +83,7 @@ export function createMarketsView(bridge: DashboardBridge): MarketsView {
   // aside: drawn at the far end of the head, the date card's Persian half. what: the end of the refresh
   // button's name, "Refresh Bitcoin".
   function card<T>(
-    glyph: IconName, accent: keyof typeof THEME, title: string, subtitle: string, what: string, aside?: HTMLElement,
+    glyph: IconName, accent: ThemeColour, title: string, subtitle: string, what: string, aside?: HTMLElement,
   ): Card<T> {
     const badge = part('markets-badge', icon(glyph));
     // Its click is wired once the card's read exists, below.

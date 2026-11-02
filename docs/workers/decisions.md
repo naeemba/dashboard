@@ -31,11 +31,16 @@ the eighth, Alt+J/K walk the list.
 **Main is called `main-<project>`, not `main`.** Every open project has a main session, and a worker's
 SendMessage to `main` with two of them open names two sessions. dispatch.ts spells it.
 
-**The Stop hook marks the pane instead of messaging main.** A hook is a shell command, and Claude Code
-has no command that sends a message to a named session; the mailbox under `~/.claude/sessions` is its
-own undocumented business. So the hook runs `session notify <id> done`: the pane gets a green edge and
-`session list` says `done`, which is what main reads for a worker that forgot to write or died before
-it could. The worker's own prompt still ends by telling it to SendMessage main.
+**The Stop hook goes through the app, not to main directly.** A hook is a shell command, and Claude
+Code has no command that sends a message to a named session; the mailbox under `~/.claude/sessions` is
+its own undocumented business. So the hook runs `session notify <id> done`: the pane gets a green edge,
+`session list` says `done`, and for a pane main's worker is in, the app queues a short prompt into the
+session of the main that dispatched it (the claimer's, for a pane claimed with `--project`): the
+worker's name, its pane, and that its own report says what it did. It goes through the session's own
+queue (chat-decision-7), so a main mid-turn reads it after the turn. That is the report main can count
+on when a worker forgot to write or died before it could. The worker's own prompt still ends by telling
+it to SendMessage main, since the hook knows nothing of what the worker did. A card's agent a ship
+started and a Claude opened by hand never tell main: neither is main's worker.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and
@@ -63,3 +68,31 @@ the recent list the same way. The pane belongs to the page it is on: its worker 
 project, works in it and takes that project's cards and worktrees. Only its report goes elsewhere, to the
 main that claimed it. The claimer and the pane's own project may both run and release it; nobody else.
 Which slot claimed a pane is kept in memory only, so after a restart the pane is its own project's.
+
+## workers-decision-3: Who dispatched a worker, and the screen's links and popup
+
+`session-requests.ts` keeps one record per worker a `pane run` started: the slot whose main ran it and
+the first words of its prompt, until it is released, its number is claimed again, or its pane closes
+or something else starts in it (main.ts calls `forget` where it drops its own mark). An agent that
+only exits keeps its record and is listed idle. It sits beside the
+hook states `pane list` already reads, so the done report, the foot's count and the workers popup all
+read the one record rather than a store of their own. It is not `dispatchers`, which says who may run a
+pane, not who did: a project's own main may run a pane the manager claimed on its page, and then its
+own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker is
+listed by nobody and reports to its own page's main.
+
+**A pane reference is an address, not a bare id.** `pane run` and the done report print
+`dashboard://pane/<slot>:<index>`; the screen links only that, so `2:1` in a reply about a time or a
+ratio is never a link. It names the number, not the worker: numbers are reused, so an old link lands
+on whatever holds the number now, and a link to a number nothing holds says the pane is not open.
+`pane claim` still prints the bare id: main pipes it into `run`, and a second token there would be
+one more thing to strip. A link is drawn from text nodes only, so an address in an attribute stays
+text.
+
+**The popup is the search dialog, not a box anchored to the count.** It is the same dialog every
+picker uses, with the arrows, Enter and Escape already right, and it now takes a `watch` so it reads
+main again while it is open. Anchoring it to the button would be a second list dialog to keep in step.
+The keyboard way to a worker is the popup (Alt+W); a link is the mouse's.
+
+Watch for: the count refreshes on a hook mark and on the open-pane list changing. A worker whose agent
+exits without either shows as working until the next one.

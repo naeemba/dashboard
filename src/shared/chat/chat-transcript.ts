@@ -8,6 +8,7 @@ import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
 import type { PermissionAsk } from './chat-elicitation';
+import { cacheUseOf, type CacheUse } from '../usage/cache-warmth';
 
 // A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
 // it with. The session reports each one's lifecycle by that id: queued, then started (the next turn
@@ -42,7 +43,7 @@ export const isImageType = (type: string): boolean => (IMAGE_TYPES as readonly s
 // error. The cap is on all of a prompt's images together, which also keeps a prompt sent from the
 // second screen under the host's frame limit (MAX_FRAME_BYTES).
 const IMAGE_LIMIT = 5 * 1024 * 1024;
-// The limit as the refusal notice and the help dialog say it.
+// The limit as the refusal notice says it.
 export const IMAGE_LIMIT_SHOWN = `${IMAGE_LIMIT / 1024 / 1024} MB`;
 export function imagesFit(base64Lengths: number[]): boolean {
   return base64Lengths.reduce((sum, length) => sum + length, 0) <= IMAGE_LIMIT;
@@ -116,10 +117,14 @@ export type Transcript = {
   // What Claude guesses you will ask next, sent after a turn's result; null once anything starts the
   // next turn. Drawn in the empty box, and Tab puts it there.
   suggestion: string | null;
+  // The last request of this conversation's own that wrote or read the prompt cache, for the status
+  // line's warm or cold (cache-warmth.ts); null until a reply says. A subagent's replies are its own
+  // cache, so they are not counted.
+  cache: CacheUse | null;
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], hook: null, suggestion: null, queued: [],
+  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -326,7 +331,10 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
   }
   switch (message.type) {
     case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
-    case 'assistant': return assistant(transcript, inner.content, stampOf(message, inner));
+    case 'assistant': {
+      const stamp = stampOf(message, inner);
+      return { ...assistant(transcript, inner.content, stamp), cache: cacheUseOf(inner.usage, stamp.at, transcript.cache) };
+    }
     case 'user': return userMessage(transcript, message);
     case 'stream_event': return streamed(transcript, message.event);
     case 'command_lifecycle': return taken(transcript, message);

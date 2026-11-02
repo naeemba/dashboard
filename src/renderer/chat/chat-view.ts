@@ -9,11 +9,16 @@ import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './ch
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from '../../shared/chat/chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
-import { renderMarkdown } from './chat-markdown';
+import { createLiveBlock } from './chat-live-view';
 import { permissionTitle } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
-import { footSides, piece } from './chat-foot-view';
+import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
+import { createMeasures } from './chat-context-view';
+import { followWorkers, showWorkers } from './chat-workers-view';
+import { createCacheClock } from './chat-cache-clock';
+import { PANE_LINK } from './chat-pane-links';
+import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
@@ -46,11 +51,15 @@ export type ChatViewOptions = {
   onWaiting(): void;
   // Puts the page's nvim in front, starting it if it is not running: the editor key's last step.
   showEditor(): void;
+  // A pane link or a workers popup row: lands on that pane's page and focuses it, or says it is closed.
+  goToPane(id: string): void;
 };
 
 export type ChatView = {
   element: HTMLElement;
   open(): void;
+  // The screen came into view; the first time, it measures, which starts the page's session.
+  shown(): void;
   focus(): void;
   receive(event: ChatEvent): void;
   runCommand(command: ChatCommand): void;
@@ -87,8 +96,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   log.className = 'chat-log';
   const live = document.createElement('div');
   live.className = 'chat-entry chat-text chat-live';
-  live.hidden = true;
   log.append(live);
+  const drawLive = createLiveBlock(live);
   const ask = createAskPanel((id, result) => {
     bridge.chatAnswer(slot, id, result);
     dropAsk(id);
@@ -123,7 +132,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let fast = false;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
-  let measured: ChatMeasure | null = null;
+  const measures = createMeasures(bridge, slot, drawFoot, options.onNotice);
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
@@ -154,19 +163,38 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
 
   // One row under the box: on the left the model, the mode and what Claude is doing; on the right
-  // the meters Claude Code's status line carries, then the version.
+  // the meters Claude Code's status line carries, whether the prompt cache is warm, then the
+  // version.
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
+  const cacheClock = createCacheClock(() => foot.checkVisibility(), () => drawFoot());
   let drawnFoot = '';
+  let drawnMeasure: ChatMeasure | null = null;
   function drawFoot(): void {
+    const measured = measures.latest();
+    const cache = cacheClock.read(transcript.cache);
     const shown = `${measured?.model ?? model ?? transcript.model ?? 'default model'}${fast ? ' · fast' : ''}`;
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
     const effortShown = footEffort(effort, state, transcript.entries);
-    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state]);
-    if (key === drawnFoot) return;
+    // The measure by reference: each one landed is a new object, and stringifying its breakdown every paint is waste.
+    const key = JSON.stringify([shown, transcript.version, mode, effortShown, state, workers, cache?.text, cache?.tone]);
+    if (key === drawnFoot && measured === drawnMeasure) return;
     drawnFoot = key;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version));
+    drawnMeasure = measured;
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, cache, transcript.version, workers));
   }
+  let workers = '';
+  followWorkers(bridge, slot, (list) => {
+    workers = workerCount(list);
+    drawFoot();
+  });
+  const openWorkers = (): void => void showWorkers(bridge, slot, options.goToPane).then((landed) => { if (!landed) focus(); });
+  const showContext = (): void => void measures.show(foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`)).then(focus);
+  foot.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest(`.${FOOT_WORKERS}`)) openWorkers();
+    if (target?.closest(`.${FOOT_CONTEXT}`)) showContext();
+  });
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
   // It ticks once a second on its own, since a long tool call streams nothing to paint by. A question
@@ -190,7 +218,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let painting = 0;
   let paintedLive = '';
   // Everything a change puts on screen, at most once every PAINT_MS: a token arrives far more often
-  // than that, and each paint reads the layout and runs markdown over the whole streaming block.
+  // than that, and each paint reads the layout and redraws the streaming block's unsettled tail.
   function render(): void {
     if (!painting) painting = window.setTimeout(paint, PAINT_MS);
   }
@@ -213,16 +241,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // so a burst flows in rather than landing at once.
   // Whether the log sits at its end is kept from its scroll events rather than read each frame, which
   // would force a layout right after the last frame's write.
-  // ponytail: markdown runs over the whole streaming block each frame; render only the tail past the
-  // last finished paragraph if a long answer ever stutters.
   let revealing = 0;
   let pinned = true;
   log.addEventListener('scroll', () => { pinned = atBottom(); }, { passive: true });
   function reveal(): void {
     revealing = 0;
     paintedLive = revealed(paintedLive, transcript.live);
-    live.hidden = paintedLive === '';
-    live.innerHTML = paintedLive ? renderMarkdown(paintedLive) : '';
+    drawLive(paintedLive);
     if (pinned) log.scrollTop = log.scrollHeight;
     if (paintedLive !== transcript.live) revealing = requestAnimationFrame(reveal);
   }
@@ -250,18 +275,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       drawn[index] = fresh;
     });
-  }
-
-  // Open, a turn ending and a model picked each measure, and the answers can come back out of order:
-  // only the latest one asked is kept.
-  let measures = 0;
-  function measure(): void {
-    const asked = ++measures;
-    bridge.chatMeasure(slot).then((reading) => {
-      if (asked !== measures) return;
-      if (reading !== null) measured = reading;
-      drawFoot();
-    }, () => undefined);
   }
 
   function showAsk(): void {
@@ -461,6 +474,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       openPdf(tile);
       return;
     }
+    const pane = target?.closest<HTMLElement>(`.${PANE_LINK}`);
+    if (pane) {
+      event.preventDefault();
+      options.goToPane(pane.dataset.pane ?? '');
+      return;
+    }
     const link = target?.closest('a');
     if (!link) return;
     event.preventDefault();
@@ -503,7 +522,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawFoot();
     // A model picked is measured again, so the status line names it.
     bridge.chatConfigure(slot, change).then(() => {
-      if ('model' in change) measure();
+      if ('model' in change) measures.take();
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
@@ -525,7 +544,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     // A model picked here or on another screen shows over the measured name until the next measure.
     if ('model' in change && (change.model ?? null) !== model) {
       model = change.model ?? null;
-      if (measured) measured = { ...measured, model: null };
+      measures.unname();
     }
     if (change.permissionMode) mode = change.permissionMode;
     if ('effort' in change) effort = change.effort ?? null;
@@ -588,8 +607,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawnEntries = [];
     selected = null;
     asks = [];
-    measured = null;
-    measures++;
+    measures.forget();
     recalled = null;
     draft = '';
     showAsk();
@@ -620,7 +638,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   const commandScreen: CommandScreen = {
-    bridge, slot, options, prompt, configure, focus,
+    bridge, slot, options, prompt, configure, focus, showContext,
     transcript: () => transcript,
     askCount: () => asks.length,
     model: () => model,
@@ -632,10 +650,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
   return {
     element,
     question: () => (asks.length > 0 ? permissionTitle(asks[0]) : null),
-    // Reads the conversation in and measures it; the page calls it once, when it is built.
+    // Reads the conversation in; the page calls it once, when it is built.
     open() {
       readEarlier();
-      measure();
+    },
+    // The screen on view. Main starts the page's session for its first measure, so a page you never
+    // look at runs no CLI.
+    shown() {
+      measures.shown();
+      cacheClock.wake();
+      drawFoot();
     },
     focus,
     receive(event) {
@@ -654,10 +678,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const change = preferencesOf(event);
       if (change) choose(change);
       transcript = applyEvent(transcript, event);
-      if (event.kind === 'message' && event.message.type === 'result') measure();
+      if (event.kind === 'message' && event.message.type === 'result') measures.take();
       render();
     },
     runCommand(command) {
+      if (command === 'workers') openWorkers();
+      if (command === 'context') showContext();
       if (command === 'select-up') select(selected === null ? drawn.length - 1 : selected - 1);
       if (command === 'select-down') select(selected === null ? null : selected + 1);
       if (command === 'unfold') {

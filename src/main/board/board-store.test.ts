@@ -104,6 +104,15 @@ describe('isManagerHomeDirectory', () => {
 });
 
 describe('parseBoard', () => {
+  // Two parses of one file are the screen's board and the read a save replays onto: they have to agree.
+  it('gives a card with no id, or a copied one, the same id on every parse of the same file', () => {
+    const text = '{"columns":[{"name":"Todo","cards":[{"title":"hand"},{"id":"x","title":"x"},{"id":"x","title":"copy"}]}]}';
+    const ids = () => parseBoard(text).columns.flatMap((column) => column.cards.map((card) => card.id));
+    const first = ids();
+    expect(ids()).toEqual(first);
+    expect(new Set(first).size).toBe(3);
+  });
+
   it('reads a well-formed board', () => {
     const board = parseBoard('{"columns":[{"name":"Later","cards":[{"id":"1","title":"a","notes":"n"}]}]}');
     expect(board.columns).toEqual([

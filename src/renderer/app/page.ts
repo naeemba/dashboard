@@ -15,6 +15,8 @@ import { PANE_SCROLLBACK, paneScreen } from '../panes/pane';
 import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
+import { writeFlow } from '../panes/write-flow';
+import { pauseSelectionRedraws } from '../panes/paused-selection';
 import type { SectionStrip } from '../manager/section-strip';
 import type { MarketsView } from '../markets/markets-view';
 import type { Settings } from '../../shared/settings/settings';
@@ -58,6 +60,8 @@ export type PageOptions = {
   showEditor(page: Page): void;
   // A worker's close button, which does what the close key does.
   closePane(page: Page, index: number): void;
+  // Lands on a pane by its id, on whichever page it is: a pane link on the Claude screen.
+  goToPane(id: string): void;
 };
 
 // Every pane in the window by its terminal id, filled as pages are built. The bytes from a pty, an
@@ -372,9 +376,11 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       ]),
     });
     terminal.open(container);
+    pauseSelectionRedraws(terminal);
 
     const pane: Pane = {
       index, element: container, terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths,
+      flow: writeFlow((paused) => (paused ? options.bridge.pauseOutput(id) : options.bridge.resumeOutput(id))),
     };
     terminal.onData((data) => {
       if (!pane.exited) {
@@ -591,6 +597,10 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
       onWaiting: options.onChanged,
       showEditor: () => options.showEditor(page),
+      goToPane(id) {
+        if (panesById.has(id)) options.goToPane(id);
+        else options.onNotice(`chat:${slot}`, `Pane ${id} is not open.`);
+      },
     });
     page.chat = chat;
     const main = document.createElement('div');

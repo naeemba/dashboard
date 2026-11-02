@@ -18,6 +18,13 @@ export function windowHears(cause: string, reachesWindow: boolean): boolean {
   return cause !== LOCAL_SCREEN && reachesWindow;
 }
 
+// Whether main keeps its own copy of each pane's screen: while a remote screen may join (the host is
+// running) or the window shows another host, so either can be redrawn from it on arrival or coming home.
+// Otherwise the window draws every pane itself and the copy is a flood's CPU spent for nothing.
+export function keepsScreenCopies(hostRunning: boolean, reachesWindow: boolean): boolean {
+  return hostRunning || !reachesWindow;
+}
+
 export type Screens = {
   resize(screen: string, paneId: string, size: PaneSize): void;
   forget(screen: string): void;

@@ -581,20 +581,24 @@ export function shipHome(board: Board, selection: Selection, inFlight: ShipHome[
   return { ...selection, id: cards[selection.card]?.id ?? '', order };
 }
 
-// The row a card goes back to in a column holding `ids`: after the nearest card above it in its home
-// order that is still there, else in front of the nearest one below it. Undefined when none of its
-// old neighbours is left.
-function homeRow(ids: string[], home: ShipHome): number | undefined {
-  const at = home.order.indexOf(home.id);
+// The row card `id` goes to in a column holding `ids`, given the column `order` it stood in: after the
+// nearest card above it in that order that is still there, else in front of the nearest one below it.
+// Undefined when none of its old neighbours is left. board-merge.ts places a saved card with it too.
+export function neighbourRow(ids: string[], order: readonly string[], id: string): number | undefined {
+  const at = order.indexOf(id);
   for (let index = at - 1; index >= 0; index--) {
-    const row = ids.indexOf(home.order[index]);
+    const row = ids.indexOf(order[index]);
     if (row !== -1) return row + 1;
   }
-  for (let index = at + 1; index < home.order.length; index++) {
-    const row = ids.indexOf(home.order[index]);
+  for (let index = at + 1; index < order.length; index++) {
+    const row = ids.indexOf(order[index]);
     if (row !== -1) return row;
   }
   return undefined;
+}
+
+function homeRow(ids: string[], home: ShipHome): number | undefined {
+  return neighbourRow(ids, home.order, home.id);
 }
 
 // A ship that worked, undone on main's board: the card goes back to where it was shipped from. The

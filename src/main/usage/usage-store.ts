@@ -1,6 +1,7 @@
 import { open, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { retainFrom, tokensOf, type FileUsage } from '../../shared/usage/usage';
+import { cacheUseOf } from '../../shared/usage/cache-warmth';
 
 // Reading Claude Code's session logs. Every rule about what a number means is usage.ts's; what is here
 // is the walk, the incremental read, and the one decision that belongs with the file rather than the
@@ -21,6 +22,7 @@ const USAGE_MARKER = '"usage"';
 type LogLine = {
   cwd?: string;
   timestamp?: string;
+  isSidechain?: boolean;
   message?: { usage?: Record<string, number> };
 };
 
@@ -118,6 +120,8 @@ function countInto(usage: FileUsage, text: string): void {
     const tokens = tokensOf(block);
     usage.allTime += tokens;
     usage.samples.push({ at, tokens });
+    // A subagent's replies are its own cache, not the pane's conversation's.
+    if (parsed.isSidechain !== true) usage.cache = cacheUseOf(block, at, usage.cache ?? null);
   }
 }
 
@@ -153,6 +157,7 @@ export async function sweepUsage(
         if (appended.size < usage.size) {
           usage.allTime = 0;
           usage.samples = [];
+          usage.cache = null;
         }
         countInto(usage, appended.text);
         usage.size = appended.size;

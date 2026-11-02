@@ -370,7 +370,12 @@ function focusMode(page: Page, entering: boolean): void {
     if (entering) void page.log.open();
     else page.log.focus();
   }
-  if (page.mode === 'terminals') return focusTerminal(page.focused);
+  if (page.mode === 'terminals') {
+    // Main's session starts the first time its Claude screen is shown, as nvim does below. Not while
+    // a restore lands on each page in turn: only the page it ends on is shown.
+    if (entering && !restoring) page.chat?.shown();
+    return focusTerminal(page.focused);
+  }
   if (page.mode === 'nvim' && page.editor) {
     // Started the first time you ask for it, through the same path a dead pane restarts by. Quit
     // nvim and the pane says so and waits for Enter, exactly like a shell that has exited.
@@ -444,6 +449,7 @@ const builder = createPageBuilder({
   openFile: (page, index, link) => openFileLink(page, index, link),
   showEditor: (page) => showEditor(page),
   closePane: (page, index) => closePane(page, index, panePorts),
+  goToPane: (id) => goToPaneId(id),
 });
 
 // The new-pane key and its button in the title row. Main opens it and answers with the list that has it
@@ -725,17 +731,18 @@ window.addEventListener('drop', (event) => event.preventDefault());
 
 window.addEventListener('resize', fitAllPages);
 
-// Clicking the banner lands you on the pane that raised it. The page has to be put on the right view
-// and told which pane is focused before it is shown, because showPage lands on whatever the page was
-// already showing. A slot with no page any more — the project was closed while the banner sat there —
-// is nowhere to go.
-bridge.onNotificationClick((paneId) => {
+// Clicking the banner, or a pane link on the Claude screen, lands you on the pane. The page has to be
+// put on the right view and told which pane is focused before it is shown, because showPage lands on
+// whatever the page was already showing. A slot with no page any more — the project was closed while
+// the banner sat there — is nowhere to go.
+function goToPaneId(paneId: string): void {
   // A dialog owns the keyboard while it is up. Move the page out from under one and the sheet stays
   // drawn with the keystrokes going to a shell behind it.
   if (document.querySelector(OVERLAY_SELECTOR)) return;
   const { slot, index } = paneFromId(paneId);
   goToPane(slot, index);
-});
+}
+bridge.onNotificationClick(goToPaneId);
 
 // Something other than the app wrote a board.json — the `board` command an agent runs, or a hand
 // edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and
@@ -767,7 +774,8 @@ bridge.onData((id, data) => {
   const pane = panesById.get(id);
   if (!pane) return;
   pane.lastPrintedAt = Date.now();
-  pane.terminal.write(data);
+  pane.flow.queued(data.length);
+  pane.terminal.write(data, () => pane.flow.parsed(data.length));
 });
 
 // The manager's pane rows are the only thing on any screen that goes stale where it stands: every

@@ -52,3 +52,26 @@ export function paneScreenCopy(size: () => { cols: number; rows: number }): Pane
     exitCode: () => exitCode,
   };
 }
+
+// A pane's copy kept only while `wanted` says something will read it: a remote screen could join (the
+// host's port is set) or this window is showing another host's panes and will want its own back. A
+// pane printing flat out otherwise spends most of main's core on a headless terminal nobody reads
+// (docs/performance/history.md, finding 7). Asked on every push, so a change of answer takes effect at
+// the next byte: turning on starts a fresh terminal, rather than one with a gap in the middle, and
+// turning off drops the terminal and what it held.
+// ponytail: the window coming home shows only what each pane printed while it was away, and a quiet pane
+// comes back blank until it next prints. Seed the copy from the pane host's own when it starts if that matters.
+export function screenCopyWhile(wanted: () => boolean, size: () => { cols: number; rows: number }): PaneScreenCopy {
+  let copy: PaneScreenCopy | undefined;
+  let exitCode: number | undefined;
+  return {
+    push(data) {
+      const want = wanted();
+      if (want !== (copy !== undefined)) copy = want ? paneScreenCopy(size) : undefined;
+      copy?.push(data);
+    },
+    replay: () => copy?.replay() ?? '',
+    exit(code) { exitCode = code; },
+    exitCode: () => exitCode,
+  };
+}

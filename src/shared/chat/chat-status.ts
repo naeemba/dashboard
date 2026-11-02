@@ -1,5 +1,6 @@
 import type { ModelInfo, SDKControlGetContextUsageResponse, SDKControlGetUsageResponse } from '@anthropic-ai/claude-agent-sdk';
 import { formatTokens } from '../usage/usage';
+import { contextBreakdown, type ContextBreakdown, type ContextUsageParts } from './chat-context';
 
 // The Claude screen's status line: what Claude Code's own status line shows under the prompt in a
 // terminal — how full the context is, the plan's five-hour and seven-day limits, the model and the
@@ -14,6 +15,9 @@ export type ChatMeasure = {
   model: string | null;
   fiveHour: UsageWindow | null;
   sevenDay: UsageWindow | null;
+  // What fills the context window, for the context popup, and when it was measured, in milliseconds.
+  breakdown: ContextBreakdown;
+  at: number;
 };
 
 export type StatusTone = 'green' | 'yellow' | 'red' | 'blue' | 'plain';
@@ -21,7 +25,7 @@ export type StatusTone = 'green' | 'yellow' | 'red' | 'blue' | 'plain';
 // What the foot of the Claude screen says Claude is doing.
 export type FootState = 'ready' | 'working' | 'waiting';
 
-type ContextUsage = Pick<SDKControlGetContextUsageResponse, 'totalTokens' | 'maxTokens' | 'percentage' | 'model'>;
+type ContextUsage = Pick<SDKControlGetContextUsageResponse, 'totalTokens' | 'percentage' | 'model'> & ContextUsageParts;
 type PlanUsage = Pick<SDKControlGetUsageResponse, 'rate_limits'> | null;
 type PlanWindow = NonNullable<SDKControlGetUsageResponse['rate_limits']>['five_hour'];
 
@@ -37,13 +41,15 @@ export function isModel(row: ModelInfo, id: string): boolean {
 }
 
 // What the session's three answers say, put together. A model the list does not hold is shown by its id.
-export function measureOf(context: ContextUsage, models: ModelInfo[], usage: PlanUsage): ChatMeasure {
+export function measureOf(context: ContextUsage, models: ModelInfo[], usage: PlanUsage, at: number): ChatMeasure {
   const named = models.find((model) => isModel(model, context.model));
   return {
     context: { percentage: context.percentage, used: context.totalTokens, size: context.maxTokens },
     model: named?.displayName ?? context.model,
     fiveHour: usageWindow(usage?.rate_limits?.five_hour),
     sevenDay: usageWindow(usage?.rate_limits?.seven_day),
+    breakdown: contextBreakdown(context),
+    at,
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { folderDialogRefusal, screens, windowHears, LOCAL_SCREEN } from './screens';
+import { folderDialogRefusal, keepsScreenCopies, screens, windowHears, LOCAL_SCREEN } from './screens';
 import { sizeOfPane, DEFAULT_PANE_SIZE } from '../panes/terminals';
 
 describe('screens', () => {
@@ -44,6 +44,17 @@ describe('windowHears', () => {
 
   it('tells the window nothing while it shows another host', () => {
     expect(windowHears('screen-1', false)).toBe(false);
+  });
+});
+
+describe('keepsScreenCopies', () => {
+  it('keeps a copy while the host runs or the window shows another host', () => {
+    expect(keepsScreenCopies(true, true)).toBe(true);
+    expect(keepsScreenCopies(false, false)).toBe(true);
+  });
+
+  it('keeps none while the window draws every pane itself and no screen can join', () => {
+    expect(keepsScreenCopies(false, true)).toBe(false);
   });
 });
 

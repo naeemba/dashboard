@@ -64,3 +64,45 @@ describe('connect rows', () => {
     expect(rows.map((row) => row.choice)).toEqual([{ kind: 'open', path: null }, { kind: 'connect' }]);
   });
 });
+
+describe('typed path row', () => {
+  it('leads with a row opening a typed path that matches no recent', () => {
+    const rows = pickerRows([project('api', '/code/api')], ' /code/new ', none);
+    expect(rows[0]).toMatchObject({ name: '/code/new', choice: { kind: 'open', path: '/code/new' } });
+  });
+
+  it('puts the recents a path matches first, so Enter opens the recent', () => {
+    const rows = pickerRows([project('api', '/code/api')], '/api', none);
+    expect(rows.slice(0, 2).map((row) => row.choice)).toEqual([
+      { kind: 'open', path: '/code/api' }, { kind: 'open', path: '/api' },
+    ]);
+  });
+
+  it('leads with a typed path a recent matches only loosely, so Enter opens what was typed', () => {
+    const rows = pickerRows([project('notes-app', '/home/me/Workspace/personal/notes-app')], '/home/me/notes', none);
+    expect(rows[0].choice).toEqual({ kind: 'open', path: '/home/me/notes' });
+  });
+
+  it('offers no second row for a recent typed with a trailing slash', () => {
+    const rows = pickerRows([project('api', '/code/api')], '/code/api/', none);
+    expect(rows.filter((row) => row.choice.kind === 'open' && row.choice.path !== null)).toHaveLength(1);
+  });
+
+  it('offers no second row for a recent typed in full', () => {
+    const rows = pickerRows([project('api', '/code/api')], '/code/api', none);
+    expect(rows.filter((row) => row.choice.kind === 'open' && row.choice.path === '/code/api')).toHaveLength(1);
+  });
+
+  it('takes a drive letter path', () => {
+    expect(pickerRows([], 'C:\\code\\api', none)[0].choice).toEqual({ kind: 'open', path: 'C:\\code\\api' });
+  });
+
+  it('takes a path from the home folder', () => {
+    expect(pickerRows([], '~/code/new', none)[0].choice).toEqual({ kind: 'open', path: '~/code/new' });
+    expect(pickerRows([], '~', none)[0].choice).toEqual({ kind: 'open', path: '~' });
+  });
+
+  it('offers no path row for a name', () => {
+    expect(pickerRows([], '~api', none).map((row) => row.choice)).toEqual([{ kind: 'open', path: null }, { kind: 'connect' }]);
+  });
+});

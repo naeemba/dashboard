@@ -66,7 +66,8 @@ app.
 - **The help dialog is part of the change.** A key, mode or screen change
   updates `src/renderer/keys/help.ts` in the same change: a new key is a row
   in `src/shared/keys/actions.ts` (handler, help, settings and which-key strip
-  all read it); a screen that does something new gets its blurb updated.
+  all read it); a screen that does something new gets its blurb updated, kept to
+  `BLURB_WORD_LIMIT` words, with the detail in its feature's README.
   (keys-rule-2)
 - **A decision gets its own module and a test.** `renderer.ts` is wiring. A
   rule with branches goes in a small module beside a `.test.ts`. Main-process

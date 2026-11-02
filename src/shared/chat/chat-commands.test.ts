@@ -7,6 +7,7 @@ const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ na
 describe('screenCommand', () => {
   it('takes /resume and /plan for the screen', () => {
     expect(screenCommand('/resume')).toEqual({ kind: 'resume' });
+    expect(screenCommand('/context')).toEqual({ kind: 'context' });
     expect(screenCommand('/diff')).toEqual({ kind: 'diff' });
     expect(screenCommand('/rewind')).toEqual({ kind: 'rewind' });
     expect(screenCommand('/mcp')).toEqual({ kind: 'mcp' });
@@ -55,7 +56,7 @@ describe('commandMenu', () => {
 
   it('puts names that start with what was typed before aliases, then names that hold it', () => {
     expect(commandMenu('/lo', session).map((each) => each.name)).toEqual(['loop', 'pr-loop']);
-    expect(commandMenu('/co', session).map((each) => each.name)).toEqual(['compact', 'copy', 'usage']);
+    expect(commandMenu('/co', session).map((each) => each.name)).toEqual(['compact', 'context', 'copy', 'usage']);
   });
 
   it('shows a name listed twice once, as the session\'s own', () => {

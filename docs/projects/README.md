@@ -43,6 +43,68 @@ second folder with the same name `-2`. Run outside a pane, where there is no
 `DASHBOARD_USER_DATA`, it refuses and writes nothing, so a later run from a pane
 is not blocked by an empty file.
 
+## On screen
+
+What each screen does, in full. The help dialog keeps only a short
+blurb for it; this is where the rest lives.
+
+The first tab along the top is the manager; every tab after it is one project,
+in the order you put them in. A click on a tab goes to it, the same as its jump
+key. A project cannot be moved in front of the manager, so the first two move
+keys both land it in tab 2. The next and previous keys walk the whole strip, so
+they pass through the manager on the way round. The window opens on the projects
+the last run was left on. Every worker pane's shell runs in a pane host outside
+the app, so a quit, a crash or an update leaves it running, and the next launch
+puts it back in its pane mid-job, screen and all. A pane whose shell did not
+survive (the machine restarted) and was running Claude Code comes back in that
+conversation, resumed in the folder it ran in. Closing the window asks first,
+because it stops every Claude screen; the worker shells are left running, unless
+they run in the app this time (no pane host, another Dashboard holds it, or it
+died), and then it says they are killed. The editor always stops, and starts
+fresh.
+
+The close key takes one project away instead, the one whose page you are on: its
+page, its shells and its editor go, whatever was in them, its tab goes with it
+and the next tab along takes its place, and the next launch opens without it. It
+refuses while one of that project's workers has anything running in it — an
+agent, a dev server, a tail, vim — and names each pane in the way with what was
+found running in it, the way a refused ship does. That is the same reading the
+command screen picks a free pane by, so a pane it would not type into is a pane
+this will not kill without asking. Main and the editor are not counted: each
+runs for as long as the project is open, and a close that counted them could
+never happen. Main's conversation comes back when the project is opened again.
+Nor is a job you put in the background, which leaves the shell at its prompt. So
+a close it allows is still not a promise that nothing was running — which is why
+it asks first, and Enter is what takes the project away.
+
+The drawer, the button at the left of the tabs or its key, opens on the left of
+a project's page and pushes the panes aside. It lists two things: the markdown
+under the project's docs/ folder as a tree, and the Claude conversations the app
+started for it — main, every worker, every card's agent — newest first, fifty at
+a time with a Load more row at the bottom. Type to filter both, which finds a
+doc inside a closed folder too; the arrows walk the rows, Right opens a folder
+and Left closes it, and Enter on a folder does either. Enter on a doc shows it
+rendered, full screen: the arrows scroll it, Enter on its Edit row opens it in
+the project's nvim, Escape goes back to the drawer. Enter on a session resumes
+it in a new worker pane, in the folder it ran in, and is refused while it still
+runs somewhere. F2 renames a session. Escape or the key again closes the drawer,
+and closed it takes no room at all; open, it stays open on every tab and lists
+the page in front. On the manager's page the button is there too and the drawer
+lists the markdown under ~/.dashboard and ~/.claude, a folder read when you open
+it, so the filter finds only what is in the folders opened; a doc there has no
+Edit row, since the manager has no nvim. The sessions are the manager's own.
+
+The project list has one more row at the bottom, Connect to a host: another
+Dashboard, on another machine, that has a port and a token in its settings.
+Connected, this window is a second screen of that session — its projects, its
+shells, its boards — and the row becomes Disconnect. Until you search, the host
+you last connected to leads the list as Reconnect, so the list and Enter take
+you back to it. Opening a new project while connected asks for a folder path on
+the host, since a folder dialog here would show this machine's disk. Type a path
+that starts with /, \, ~ or a drive letter and a row opens that folder, here or
+on the host, without the folder dialog; it follows a recent whose path contains
+it, and leads otherwise. One that is not a folder is refused.
+
 ## Files
 
 Folders: `src/main/projects/`.
