@@ -105,6 +105,10 @@ describe('pickedFolder', () => {
     expect(pickedFolder('~', '/home/you', exists)).toEqual({ path: '/home/you' });
   });
 
+  it('refuses a relative path, which names no place on the host', () => {
+    expect(pickedFolder('code/api', '/home/you', exists)).toEqual({ refused: 'No folder at code/api' });
+  });
+
   it('refuses a path that is not a folder', () => {
     expect(pickedFolder('/code/typo', '/home/you', () => false)).toEqual({ refused: 'No folder at /code/typo' });
   });

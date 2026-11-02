@@ -1,7 +1,8 @@
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import type { Project } from '../../shared/app/bridge';
+import { wholePath } from '../nvim/file-open';
 
 function isDirectory(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
@@ -15,14 +16,16 @@ export function projectFromPath(path: string, directoryExists: (path: string) =>
 }
 
 // A path the picker sends: a recent, a folder from the dialog, or one typed. `~` is the home of this
-// machine, which is the host even for a remote screen. One that is not a folder is refused rather than
-// opened as a dead page, since a typo would otherwise leave a tab nothing can run in.
+// machine, which is the host even for a remote screen. A relative path names no place on the host, and
+// it and one that is not a folder are refused rather than opened as a dead page, since a typo would
+// otherwise leave a tab nothing can run in.
 export function pickedFolder(
   path: string, home: string = homedir(), directoryExists: (path: string) => boolean = isDirectory,
 ): { path: string } | { refused: string } {
-  const expanded = path === '~' || path.startsWith('~/') ? join(home, path.slice(1)) : path;
-  const directory = resolve(expanded);
-  return directoryExists(directory) ? { path: directory } : { refused: `No folder at ${directory}` };
+  const whole = wholePath(path, home);
+  if (whole === undefined) return { refused: `No folder at ${path}` };
+  const project = projectFromPath(whole, directoryExists);
+  return project.missing ? { refused: `No folder at ${project.path}` } : { path: project.path };
 }
 
 // The projects among these paths whose folder is still there, so neither the picker nor `project init`
