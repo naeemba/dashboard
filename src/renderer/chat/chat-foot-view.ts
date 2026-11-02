@@ -23,6 +23,9 @@ function toned(element: HTMLElement, tone: StatusTone): HTMLElement {
 // (chat-view.ts). Not drawn while the session has no worker open.
 export const FOOT_WORKERS = 'chat-foot-workers';
 
+// The context meter, which a click opens the context popup from (chat-context-view.ts).
+export const FOOT_CONTEXT = 'chat-foot-context';
+
 export function footSides(model: string, mode: string, effort: string, ultrathink: boolean, state: FootState, measured: ChatMeasure | null, version: string | null, workers: string): HTMLElement[] {
   const chosen = document.createElement('div');
   chosen.className = 'chat-foot-side';
@@ -36,6 +39,7 @@ export function footSides(model: string, mode: string, effort: string, ultrathin
   meters.className = 'chat-foot-side';
   for (const each of measured ? statusMeters(measured) : []) {
     const meter = toned(piece('chat-meter', ''), each.tone);
+    if (each.label === 'context') meter.classList.add(FOOT_CONTEXT);
     meter.style.setProperty('--used', `${Math.min(100, each.percentage)}%`);
     meter.append(
       piece('chat-meter-label', each.label), piece('chat-meter-bar', ''),
