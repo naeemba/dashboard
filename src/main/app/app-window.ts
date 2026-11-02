@@ -77,8 +77,8 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q
   // stacks a question per keypress and you answer the same one five times.
   let askingToQuit = false;
-  // Closing the window kills every shell on every page, and there is no getting a long-running task
-  // back. Cancel is the default button, so Enter and Escape both mean "I hit that by accident".
+  // Closing the window stops every Claude screen. The panes' shells are the pane host's and go on
+  // running for the next launch (panes-decision-1), unless there was no host this run. Cancel is the default button, so Enter and Escape both mean "I hit that by accident".
   // Asked without blocking: showMessageBoxSync stops the whole main process, so anything already
   // waiting there — a folder panel, a board write — can never finish while the question is up. The
   // close is stopped every time; destroy() is what actually goes, and it raises no close to answer.
@@ -92,7 +92,7 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       defaultId: 0,
       cancelId: 0,
       message: 'Quit Dashboard?',
-      detail: 'Every shell in every open project is killed, including anything still running in one.',
+      detail: 'Every Claude screen stops. The panes\' shells keep running and come back when Dashboard opens again.',
     }).then(async ({ response }) => {
       if (response !== 1) return;
       await options.beforeQuit();
