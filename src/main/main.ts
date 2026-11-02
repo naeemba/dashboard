@@ -815,7 +815,10 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
 // the session command's and decides them.
 const folderExists = (folder: string) => !projectFromPath(folder).missing;
-const sessions = listenForSessions(sessionSocket, projectRequests({
+// Every answer waits for the pane host, for the reason projects:open does: `project open` and
+// `pane claim --project` open projects too.
+const sessions = listenForSessions(sessionSocket, (request) => shellHost.ready.then(() => answerSession(request)), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+const answerSession = projectRequests({
   slotOf: slotOfProject,
   missingIn: (slot) => projects[slot]?.missing === true,
   folderExists,
@@ -872,7 +875,7 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
     const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
-})), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+}));
 
 function createWindow(): void {
   mainWindow = openAppWindow({
