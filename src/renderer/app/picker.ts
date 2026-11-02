@@ -1,6 +1,6 @@
 import { ranked, type SearchRow } from '../../shared/app/fuzzy';
 import { searchOverlay } from './overlay';
-import { isWholePath } from '../../shared/app/whole-path';
+import { isWholePath } from './whole-path';
 import type { Project } from '../../shared/app/bridge';
 
 // What the picker settles on. Opening carries a path, or null for "a new project"; the host choices
@@ -71,8 +71,8 @@ export function pickerRows(projects: Project[], query: string, state: PickerStat
 
 // A query that is a path gets a row that opens it, so a folder that is not a recent yet opens from the
 // keyboard, and from a remote screen, which has no folder dialog. None when a recent already is that
-// path, a trailing separator aside, so one folder is never two rows. Whether it is a folder only main can say, on the machine the
-// project opens on: it refuses one that is not.
+// path, a trailing separator aside, so one folder is never two rows. Whether it is a folder only main
+// can say, on the machine the project opens on: it refuses one that is not.
 function typedPathRows(query: string, matched: Row[]): Row[] {
   const typed = query.trim();
   if (!isWholePath(typed)) return [];
