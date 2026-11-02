@@ -6,6 +6,7 @@ import {
   readFailed,
   readLanded,
   strandedMessage,
+  TEXT_STRANDED,
   UNREAD_NOTES,
   writeLanded,
   type NotesState,
@@ -70,8 +71,8 @@ describe('what the notes box may do', () => {
     // A box nothing was ever read into reads again as soon as it is empty; a box holding the page a
     // failed re-read left behind reads again once it matches that page. Telling someone to empty the
     // second one throws away three months of notes.
-    expect(strandedMessage(readFailed(UNREAD_NOTES))).toContain('empty the box');
-    expect(strandedMessage(readFailed(readLanded('friday\n')))).toContain('undo back');
+    expect(strandedMessage(readFailed(UNREAD_NOTES), TEXT_STRANDED)).toContain('empty the box');
+    expect(strandedMessage(readFailed(readLanded('friday\n')), TEXT_STRANDED)).toContain('undo back');
   });
 
   it('does not take an empty file for a file nobody has read', () => {

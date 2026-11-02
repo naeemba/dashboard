@@ -72,6 +72,6 @@ export const TEXT_STRANDED: StrandedWords = {
   afterFailedRead: 'Notes were typed after a failed read: nothing here is saved. Copy it out, then undo back to the page that was here.',
 };
 
-export function strandedMessage(state: NotesState, words: StrandedWords = TEXT_STRANDED): string {
+export function strandedMessage(state: NotesState, words: StrandedWords): string {
   return state.savedText === undefined ? words.neverRead : words.afterFailedRead;
 }
