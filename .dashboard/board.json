@@ -2571,12 +2571,18 @@
         {
           "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
           "title": "Start a page's Claude CLI only when it is needed",
-          "notes": "Shipped in #186: a page's Agent SDK CLI starts the first time its Claude screen is shown (or on a prompt/worker report); a main whose restored worker reports to it starts at launch. Demo memory: 6 CLIs / 621 MB -> 1 CLI / 188-194 MB. Not done: idle stop (see PR).",
+          "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-02T01:45:34.582Z",
+          "updatedAt": "2026-11-02T01:45:56.762Z",
           "branch": "work-board-card-0e8c5536-589a-4dea-b8ce-685",
-          "pullRequest": 186
+          "pullRequest": 186,
+          "comments": [
+            {
+              "at": "2026-11-02T01:45:56.762Z",
+              "body": "Shipped in #186: a page's Agent SDK CLI starts the first time its Claude screen is shown, or on a prompt or worker report; a main that a restored worker reports to starts at launch. Demo memory: 6 CLIs / 621 MB before, 1 CLI / 188-194 MB after. Not done: idle stop (see PR)."
+            }
+          ]
         }
       ]
     }
