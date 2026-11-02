@@ -109,7 +109,8 @@ function racingWriter(bare: string, checkout: string, races: number): void {
   ].join('\n'));
 }
 
-describe('runCreateTask', () => {
+// Each test runs a dozen git processes; on the Windows runner that alone can pass the 5s default.
+describe('runCreateTask', { timeout: 60_000 }, () => {
   it('files the card with its title, notes and priority on main, and leaves the branch alone', () => {
     const bare = remote();
     const checkout = clone(bare, true);
