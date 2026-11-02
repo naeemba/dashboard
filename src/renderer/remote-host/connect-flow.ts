@@ -30,7 +30,7 @@ function typedText(answer: string | null): string | null {
 
 // Asks for the address and token of a host to join. Null when either is dismissed or the address is empty.
 async function askForHost(ports: ConnectFlowPorts, address: string): Promise<{ address: string; token: string } | null> {
-  const typedAddress = typedText(await ports.prompt('Host address', address, '192.168.1.20:7777', KEEPS_YOU_HERE));
+  const typedAddress = typedText(await ports.prompt('Host address', address, '127.0.0.1:7777', KEEPS_YOU_HERE));
   if (typedAddress === null) return null;
   const token = await ports.prompt('Host token', '', "from the host's settings screen", KEEPS_YOU_HERE);
   return token === null ? null : { address: typedAddress, token };

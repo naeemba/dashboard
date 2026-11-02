@@ -1,6 +1,6 @@
 import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry } from '../keys/actions';
 import { formatBinding, parseBinding } from '../keys/binding';
-import { isRecord } from '../app/is-record';
+import { isRecord, stringOrEmpty } from '../app/is-record';
 import { THEME } from '../app/theme';
 
 // Everything the settings file holds. `keys` always has an entry for every action after parsing, so
@@ -16,8 +16,9 @@ export type Settings = {
   // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
   // geocoder whenever it changes, so it is never blank.
   weatherPlace: string;
-  // The port a second Dashboard joins this one on (null: do not listen) and the token it must show.
-  host: { port: number | null; token: string };
+  // The port a second Dashboard joins this one on (null: do not listen), the token it must show, and the
+  // interface the port opens on, written in the file by hand only (remote-host-decision-3).
+  host: { port: number | null; token: string; bind: string };
   // The host this Dashboard last joined, remembered by the connect dialog. Not a settings screen row.
   remote: { address: string; token: string };
 };
@@ -29,6 +30,8 @@ type Binding = { binding: string | null; written: boolean };
 const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 
 export const DEFAULT_WEATHER_PLACE = 'Tehran';
+
+const DEFAULT_HOST_BIND = '127.0.0.1';
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -61,7 +64,7 @@ export function defaultSettings(isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [name, String(THEME[name as keyof typeof THEME])])),
     keys: Object.fromEntries(ACTIONS.map((entry) => [entry.name, defaultBinding(entry, isMac)])),
     weatherPlace: DEFAULT_WEATHER_PLACE,
-    host: { port: null, token: '' },
+    host: { port: null, token: '', bind: DEFAULT_HOST_BIND },
     remote: { address: '', token: '' },
   };
 }
@@ -145,6 +148,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     host: {
       port: typeof storedHost.port === 'number' && isPort(storedHost.port) ? storedHost.port : null,
       token: typeof storedHost.token === 'string' ? storedHost.token : '',
+      bind: stringOrEmpty(storedHost.bind).trim() || defaults.host.bind,
     },
     remote: {
       address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',
