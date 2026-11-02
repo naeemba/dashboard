@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
-          "title": "Write the board as operations against a fresh read in main",
-          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
           "title": "Cap each help dialog blurb",
           "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
@@ -324,6 +317,14 @@
               "body": "Confirmed with seq 1 inf (PR #166): the pane stops, but 3.2 s after Ctrl+C."
             }
           ]
+        },
+        {
+          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
+          "title": "Write the board as operations against a fresh read in main",
+          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:49:53.539Z"
         }
       ]
     },
