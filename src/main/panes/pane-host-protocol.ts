@@ -9,8 +9,10 @@ import path from 'node:path';
 const PROTOCOL_VERSION = 1;
 
 // In a folder of its own, made private before the socket is: anyone who can reach the socket can type
-// into every shell. The user-data folder, not the temporary one, so a second Dashboard on its own user
-// data (a demo instance, a development build) has a host of its own and never adopts the other's shells.
+// into every shell. The user-data folder, not the temporary one, so a second Dashboard started with its
+// own --user-data-dir has a host of its own. One on the same user data (a development build beside the
+// installed app) reaches the same socket, and the host turns it away with `busy` while the first is
+// connected.
 export function paneHostSocket(userData: string): string {
   return path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`);
 }
@@ -58,6 +60,8 @@ export type Survivor = {
 
 export type FromHost =
   | { type: 'panes'; panes: Survivor[] }
+  // Another app is connected; this one runs its shells itself.
+  | { type: 'busy' }
   | { type: 'spawned'; key: string; pid: number }
   | { type: 'data'; key: string; data: string }
   | { type: 'exit'; key: string; code: number }
@@ -75,7 +79,16 @@ export function lineReader<T>(message: (value: T) => void): (chunk: string) => v
       const line = unfinished.join('') + chunk.slice(start, end);
       unfinished = [];
       start = end + 1;
-      if (line !== '') message(JSON.parse(line) as T);
+      if (line === '') continue;
+      // A line that is not JSON is skipped: thrown out of a socket's data handler it would end the host,
+      // and every shell of every project with it.
+      let parsed: T;
+      try {
+        parsed = JSON.parse(line) as T;
+      } catch {
+        continue;
+      }
+      message(parsed);
     }
     if (start < chunk.length) unfinished.push(chunk.slice(start));
   };

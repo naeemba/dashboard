@@ -53,6 +53,13 @@ describe('lineReader', () => {
     read('2}\n');
     expect(heard).toEqual([{ a: 1 }, { b: 2 }]);
   });
+
+  it('skips a line that is not JSON and reads the next', () => {
+    const heard: unknown[] = [];
+    const read = lineReader((message) => heard.push(message));
+    read('not json\n{"a":1}\n');
+    expect(heard).toEqual([{ a: 1 }]);
+  });
 });
 
 describe('paneHostServer', () => {
@@ -98,6 +105,21 @@ describe('paneHostServer', () => {
     host.receive({ type: 'spawn', ...request('k') });
     expect(sent.at(-1)).toEqual({ type: 'exit', key: 'k', code: 127 });
   });
+
+  it('sends a pane\'s foreground only when it changes, and nothing with no app connected', () => {
+    const { host, spawned } = server();
+    const sent: FromHost[] = [];
+    host.connect((message) => sent.push(message));
+    host.receive({ type: 'spawn', ...request('k') });
+    host.pollForeground();
+    host.pollForeground();
+    expect(sent.filter((message) => message.type === 'foreground')).toEqual([{ type: 'foreground', key: 'k', name: 'zsh' }]);
+    host.disconnect();
+    (spawned[0].shell as { process: string }).process = 'vim';
+    sent.length = 0;
+    host.pollForeground();
+    expect(sent).toEqual([]);
+  });
 });
 
 describe('hostCommand', () => {
@@ -108,11 +130,17 @@ describe('hostCommand', () => {
 
 describe('paneHost over a socket', () => {
   let folder = '';
-  afterEach(() => rmSync(folder, { recursive: true, force: true }));
+  // Every connection the test host took, ended before its folder goes.
+  const accepted: net.Socket[] = [];
+  afterEach(() => {
+    for (const socket of accepted.splice(0)) socket.destroy();
+    rmSync(folder, { recursive: true, force: true });
+  });
 
   // The host's socket, with the server above behind it, as pane-host-entry.ts puts it.
   function listen(host: ReturnType<typeof paneHostServer>, socketPath: string): Promise<net.Server> {
     const listener = net.createServer((socket) => {
+      accepted.push(socket);
       socket.setEncoding('utf8');
       socket.on('data', lineReader<ToHost>((message) => host.receive(message)));
       socket.on('close', () => host.disconnect());
@@ -120,6 +148,17 @@ describe('paneHost over a socket', () => {
     });
     return new Promise((resolve) => listener.listen(socketPath, () => resolve(listener)));
   }
+
+  it('seeds a new host shell\'s foreground with the shell itself, not an empty name', async () => {
+    folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
+    const socketPath = path.join(folder, 'host.sock');
+    const { host } = server();
+    const listener = await listen(host, socketPath);
+    const client = paneHost({ socket: socketPath, launch: () => undefined, lost: () => undefined });
+    await client.ready;
+    expect(client.spawn(request(paneKey('/project', 1))).process).toBe('/bin/zsh');
+    listener.close();
+  });
 
   it('takes back a shell the host kept, with its screen first and its typing reaching it', async () => {
     folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
@@ -143,6 +182,43 @@ describe('paneHost over a socket', () => {
     expect(client.adopt('/project')).toEqual([]);
     listener.close();
     expect(lost).toEqual([]);
+  });
+
+  it('ends every shell it held when the host goes, and runs the next one in this process', async () => {
+    folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
+    const socketPath = path.join(folder, 'host.sock');
+    const { host } = server();
+    host.receive({ type: 'spawn', ...request(paneKey('/project', 2)) });
+    const listener = await listen(host, socketPath);
+    const lost: string[] = [];
+    const client = paneHost({ socket: socketPath, launch: () => undefined, lost: (message) => lost.push(message) });
+    await client.ready;
+    const [{ shell }] = client.adopt('/project');
+    const exited = new Promise<number>((resolve) => shell.onExit(({ exitCode }) => resolve(exitCode)));
+    accepted[0].destroy();
+    expect(await exited).toBe(1);
+    expect(lost).toHaveLength(1);
+    const next = client.spawn({ ...request(paneKey('/project', 1)), file: '/bin/sh', args: ['-c', 'exit 0'], cwd: folder, env: { PATH: process.env.PATH ?? '' } });
+    expect(next.kept).toBeUndefined();
+    await new Promise((resolve) => next.onExit(resolve));
+    listener.close();
+  });
+
+  it('runs its shells itself when the host is busy with another app', async () => {
+    folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
+    const socketPath = path.join(folder, 'host.sock');
+    const listener = net.createServer((socket) => {
+      accepted.push(socket);
+      socket.end(line({ type: 'busy' }));
+    });
+    await new Promise<void>((resolve) => listener.listen(socketPath, resolve));
+    const lost: string[] = [];
+    const client = paneHost({ socket: socketPath, launch: () => undefined, lost: (message) => lost.push(message) });
+    await client.ready;
+    expect(lost).toHaveLength(1);
+    expect(lost[0]).toContain('Another Dashboard');
+    expect(client.spawn({ ...request(paneKey('/project', 1)), file: '/bin/sh', args: ['-c', 'exit 0'], cwd: folder, env: { PATH: process.env.PATH ?? '' } }).kept).toBeUndefined();
+    listener.close();
   });
 
   it('runs shells in this process when no host answers', async () => {

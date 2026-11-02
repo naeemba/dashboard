@@ -54,8 +54,15 @@ export function paneHost(options: {
       return;
     }
     await new Promise<void>((resolve) => {
+      let turnedAway = false;
       open.setEncoding('utf8');
       open.on('data', lineReader<FromHost>((message) => {
+        if (message.type === 'busy') {
+          turnedAway = true;
+          options.lost(`Another Dashboard on the same user data holds the pane host at ${options.socket}; shells die with the app this run`);
+          open.destroy();
+          return resolve();
+        }
         if (message.type === 'panes') {
           kept = message.panes;
           connection = open;
@@ -65,6 +72,7 @@ export function paneHost(options: {
         if (message.type === 'exit') shells.delete(message.key);
       }));
       open.on('close', () => {
+        if (turnedAway) return;
         options.lost('The pane host stopped; every pane it ran has ended');
         connection = null;
         kept = [];
@@ -85,7 +93,9 @@ export function paneHost(options: {
     spawn(request) {
       if (connection === null) return spawnShell(request);
       send({ type: 'spawn', ...request });
-      return track(request.key, hostShell(request.key, { pid: 0, cols: request.cols, rows: request.rows, foreground: '' }, '', send));
+      // The shell itself is in the foreground until the host's first reading says otherwise. An empty
+      // name would read as a program to the busy check, and a pane at its prompt would refuse a ship.
+      return track(request.key, hostShell(request.key, { pid: 0, cols: request.cols, rows: request.rows, foreground: request.file }, '', send));
     },
     adopt(projectPath) {
       const taken = kept.filter((survivor) => paneOfKey(survivor.key).projectPath === projectPath);

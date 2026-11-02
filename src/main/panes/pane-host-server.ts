@@ -71,7 +71,7 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
       if (message.type === 'kill') shell?.kill();
     },
     // What is in the foreground of each pane, sent when it changes. The app reads it synchronously
-    // (main.ts's foregroundOf), so it has to be there already when asked.
+    // (pane-shells.ts's foregroundOf), so it has to be there already when asked.
     // ponytail: polled, so a reading can be one tick stale; push from the data event if a ship ever races it.
     pollForeground(): void {
       if (send === null) return;

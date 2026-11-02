@@ -10,7 +10,7 @@ import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup'
 import { processTree } from './panes/process-tree';
 import { launchPaneHost, paneHost } from './panes/pane-host-client';
 import { paneHostSocket, paneOfKey } from './panes/pane-host-protocol';
-import { paneShells } from './panes/pane-shells';
+import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { adoptedPane } from './panes/adopted-pane';
 import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
@@ -885,6 +885,7 @@ function createWindow(): void {
       if (placement !== null) claudeSessions.placed(placement);
     },
     loaded: () => failures.drain(),
+    shellsDieAtQuit: panes.workDiesAtQuit,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.
@@ -921,7 +922,7 @@ app.on('will-quit', () => {
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   // The pane host's shells stay up for the next launch to take back; only one this process runs itself
   // dies with it.
-  for (const shellProcess of shells.values()) if (!shellProcess.kept) shellProcess.kill();
+  for (const shellProcess of shells.values()) if (diesAtQuit(shellProcess)) shellProcess.kill();
   chats.stopAll();
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.

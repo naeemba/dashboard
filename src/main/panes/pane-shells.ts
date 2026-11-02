@@ -1,10 +1,10 @@
 import { editorArguments } from '../../shared/panes/shell';
-import { paneFromId, sizeOfPane } from '../../shared/panes/terminals';
+import { EDITOR_INDEX, paneFromId, sizeOfPane } from '../../shared/panes/terminals';
 import { editorSocket, removeSocket } from '../nvim/nvim-remote';
 import { paneKey } from './pane-host-protocol';
 import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
-import { foregroundName, type PaneShell } from './pane-shell';
+import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
 import type { Screens } from '../../shared/remote-host/screens';
 
@@ -46,11 +46,14 @@ export function paneShells(main: {
       removeSocket(socket);
       paneArguments = editorArguments(shellCommand, socket);
     }
+    // The editor runs in this process, never the host: no launch could reach its nvim again
+    // (adopted-pane.ts), so kept it would only hold its buffers and swap file until the next launch.
+    const spawnPane = entry.args === 'editor' ? spawnShell : main.host.spawn;
     let shell: PaneShell;
     try {
       const { cols, rows } = sizeOfPane(main.screens, id);
       const { slot, index } = paneFromId(id);
-      shell = main.host.spawn({
+      shell = spawnPane({
         key: paneKey(main.projectPath(slot) ?? '', index),
         file: shellCommand, args: paneArguments, cwd: entry.directory, env: main.environment, cols, rows,
       });
@@ -110,5 +113,17 @@ export function paneShells(main: {
     startedWith.delete(id);
   }
 
-  return { shells, screenCopies, startedWith, spawn, listenTo, foregroundOf, drop };
+  // Whether quitting now kills a shell you could lose work in: a worker pane running in this process
+  // because there was no host. The editor is always one, and starts fresh either way.
+  function workDiesAtQuit(): boolean {
+    return [...shells].some(([id, shell]) => diesAtQuit(shell) && paneFromId(id).index !== EDITOR_INDEX);
+  }
+
+  return { shells, screenCopies, startedWith, spawn, listenTo, foregroundOf, drop, workDiesAtQuit };
+}
+
+// A shell this process runs itself, which will-quit kills. One the pane host runs is left for the next
+// launch.
+export function diesAtQuit(shell: PaneShell): boolean {
+  return shell.kept !== true;
 }

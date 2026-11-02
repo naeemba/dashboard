@@ -21,8 +21,14 @@ function listen(): void {
   chmodSync(folder, 0o700);
   rmSync(socketPath, { force: true });
   net.createServer((socket) => {
-    // One app at a time. A second one arriving is the first having gone without the socket noticing.
-    current?.destroy();
+    socket.on('error', () => undefined);
+    // One app at a time. An app that went has had its end closed by the kernel, so a second one arriving
+    // while one is connected is a second Dashboard on the same user data: it is turned away and runs
+    // its shells itself, rather than taking the first one's panes out from under it.
+    if (current !== null) {
+      socket.end(line({ type: 'busy' }));
+      return;
+    }
     current = socket;
     socket.setEncoding('utf8');
     socket.on('data', lineReader<ToHost>((message) => server.receive(message)));
@@ -31,7 +37,6 @@ function listen(): void {
       current = null;
       server.disconnect();
     });
-    socket.on('error', () => undefined);
     server.connect((message) => socket.write(line(message)));
   })
     // A path too long for a socket (a unix socket's is about a hundred bytes), or a folder it cannot

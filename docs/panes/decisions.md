@@ -25,7 +25,7 @@ turned down:
   round trip per pane.
 - Control mode is a protocol of its own to parse (`%output` with octal escapes,
   `send-keys -H`, `refresh-client -C` per pane, `capture-pane` to redraw). The
-  host's protocol is five message types, and the screen it replays comes from
+  host's protocol is ten message types, and the screen it replays comes from
   `pane-screen-copy.ts`, which the remote host already uses.
 
 Two things made the host possible without changing the build. node-pty's binary
@@ -40,7 +40,11 @@ shells die with it this run. If the host dies mid-run every pane it held reads a
 exited and new panes run in the app.
 
 Not kept: the editor, because nvim's socket is named after the project's page
-(`nvim-remote.ts`) and a project can come back on another one. The Claude
+(`nvim-remote.ts`) and a project can come back on another one. It is spawned in
+the app, not the host, so it dies on quit instead of holding its buffers until
+the next launch. A second Dashboard on the same user data (a development build
+beside the installed app) is turned away by the host with `busy` while the
+first is connected, and runs its shells itself. The Claude
 screens run in the app and still stop on quit. workflow-rule-1 stays: a restart
 still stops every Claude screen and every kept shell's `DASHBOARD_SOCKET` goes
 stale (README, Open questions).
