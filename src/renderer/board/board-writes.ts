@@ -16,8 +16,8 @@ export function reportBoardWrites(bridge: DashboardBridge): BoardWrites {
   // over a frozen prototype's property throws in strict mode. Every other call reaches the original.
   const reporting: DashboardBridge = Object.create(bridge, {
     writeBoard: {
-      value: (projectPath: string, board: Board) => {
-        const written = bridge.writeBoard(projectPath, board);
+      value: (projectPath: string, base: Board, board: Board) => {
+        const written = bridge.writeBoard(projectPath, base, board);
         // Beside the write, not inside it: a listener that throws is its own failure, and the board
         // still says it saved. Only a write that landed is reported; a failed one left the file as it
         // was, and the caller hears of it through `written`.

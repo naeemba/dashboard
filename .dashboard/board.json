@@ -280,14 +280,6 @@
           ]
         },
         {
-          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
-          "title": "Write the board as operations against a fresh read in main",
-          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:49:53.539Z"
-        },
-        {
           "id": "0e8c5536-589a-4dea-b8ce-6856613b92b3",
           "title": "Start a page's Claude CLI only when it is needed",
           "notes": "Measured: 6 Agent SDK claude CLIs (5 projects + manager), 97-112 MB private each, 600 MB total vs 320 MB for all Electron processes; 1.0-1.24 CPU-s each at boot; SDK code holds main 420 ms of the first 3 s. Where: src/main/main.ts:456 and :640 chats.open, chat-sessions.ts start(). Fix (medium): start on first Claude screen show or worker report; stop after idle. Workers reporting to main is the constraint. Rerun: measure.mjs memory and boot. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -2565,6 +2557,22 @@
             {
               "at": "2026-11-02T01:33:38.468Z",
               "body": "Shipped in PR #185: main keeps a pane's screen copy only while host.port is set or the window shows another host; the renderer pauses a pane's pty past 100k queued characters (1 s lease, renewed every 0.5 s); the pane host resumes every shell when the app disconnects. Flood: main 102-115% -> 35-51%, Ctrl+C 2.6-4.4 s -> 0.11 s, with and without the pane host."
+            }
+          ]
+        },
+        {
+          "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
+          "title": "Write the board as operations against a fresh read in main",
+          "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:39:11.565Z",
+          "branch": "work-board-card-9cd31d20-59e2-46fd-a196-9d0",
+          "pullRequest": 183,
+          "comments": [
+            {
+              "at": "2026-11-02T01:39:11.565Z",
+              "body": "Shipped in PR #183: board:write takes the screen's last-read board beside the new one, and main replays the card-by-card change onto a fresh read (rebaseBoardChange in board-merge.ts), so a card the board command moved is no longer erased by the app's next save. board.json format unchanged."
             }
           ]
         }

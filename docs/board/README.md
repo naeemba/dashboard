@@ -12,6 +12,8 @@ blurb for it; this is where the rest lives.
 
 A kanban board kept in .dashboard/board.json inside the project. Every change is
 written straight to disk, so there is no save key and undo is the only way back.
+A write carries only what you changed, laid over the file as it is at that
+moment, so a card an agent moved a second ago stays where the agent put it.
 The file is re-read each time you enter the board, and again while you are
 looking at it if something else writes it — an agent running the board command,
 or a hand edit — with your selection left on the card it was on and a box you
@@ -144,11 +146,13 @@ its own, and .dashboard/CLAUDE.md in each project spells it out.
 Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 
 - Model and file: `board.ts`, `board-store.ts`, `board-watch.ts`,
-  `board-writes.ts`, `board-changes.ts`, `card-moves.ts`
+  `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
+  onto the file as it is now)
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
   `board-usage.ts` (also `dashboard board`, see [command](../command/README.md))
 - Screen: `board-view.ts`, `board-detail.ts`, `board-toolbar.ts`,
-  `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`
+  `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`, `card-editor.ts`,
+  `board-saves.ts` (the screen's saves, one at a time, each beside the board it replays from)
 - Narrowing: `board-filter.ts`, `filter-dialog.ts`, `card-search.ts`
 - Styles: `board.css`
 - Tests: `test-board.ts` (helpers), `board.test.ts`, `board.columns.test.ts`,
@@ -157,6 +161,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 ## Scenarios
 
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
+- Given an agent ran `board move` after the board last read the file, when you rename another card before the reload arrives, then the file keeps both: the agent's move and your rename.
+- Given an agent ran `board move`, when you rename a card twice and the board's re-read lands between the two writes, then the board reads again and shows the second rename.
 - Given a card with subtasks, when you blank its title, then it is refused and the status bar says to delete it with `d`.
 - Given you deleted a card, when you undo, then it comes back where it was.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.
