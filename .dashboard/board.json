@@ -2451,10 +2451,10 @@
         {
           "id": "4187f056-2471-4ea9-be8d-36104044bca0",
           "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "Shipped in #173: the remote host listens on 127.0.0.1 unless host.bind in settings.json names another interface (hand-written only, documented in docs/remote-host/README.md and remote-host-decision-3); tokens compared with timingSafeEqual after a byte-length check. Not done: wss:// for a network bind (needs a certificate design).",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)\n\nShipped in #173: the remote host listens on 127.0.0.1 unless host.bind in settings.json names another interface (hand-written only, documented in docs/remote-host/README.md and remote-host-decision-3); tokens compared with timingSafeEqual after a byte-length check. Not done: wss:// for a network bind (needs a certificate design).",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-02T00:07:22.229Z",
+          "updatedAt": "2026-11-02T00:07:36.975Z",
           "branch": "work-board-card-4187f056-2471-4ea9-be8d-361",
           "pullRequest": 173
         }
