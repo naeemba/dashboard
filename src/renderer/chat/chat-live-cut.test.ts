@@ -13,6 +13,12 @@ const REPLY = [
 ].join('\n');
 
 describe('liveCut', () => {
+  it('reads a long run of container markers in linear time', () => {
+    const start = performance.now();
+    for (const line of ['*' + '  *'.repeat(20000) + 'x', '>' + ' >'.repeat(20000) + 'x']) liveCut(`a\n\n${line}`);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
   it('draws every prefix of a reply, cut where it says, as the finished reply draws whole', () => {
     const whole = renderMarkdown(REPLY);
     let from = 0;

@@ -14,8 +14,9 @@
 
 // A backtick fence's info string cannot hold a backtick.
 const FENCE = /^ {0,3}(`{3,}(?=[^`]*$)|~{3,})/;
-const WHOLE = /^ {0,3}((\s*([-*+]|\d+[.)])\s+|\s*>\s?)*\[[^\]]+\]:|<(!|\?|(script|pre|style|textarea)(\s|>|$)))/i;
-const CONTAINED_FENCE = /^(\s*([-*+]|\d+[.)])\s+|\s*>\s?)+(`{3,}|~{3,})/;
+// Each container marker starts with a character a space is not, so a run of spaces has one way to match.
+const WHOLE = /^(\s*(([-*+]|\d+[.)])\s+|>\s*)*\[[^\]]+\]:| {0,3}<(!|\?|(script|pre|style|textarea)(\s|>|$)))/i;
+const CONTAINED_FENCE = /^\s*(([-*+]|\d+[.)])\s+|>\s*)+(`{3,}|~{3,})/;
 // A digit carries on even alone: half arrived, it may yet be `2.`.
 const CARRIES_ON = /^(\s|>|\d|[-*+](\s|$))/;
 
