@@ -49,9 +49,11 @@ export function posixQuoted(word: string): string {
   return `'${word.replaceAll("'", "'\\''")}'`;
 }
 
+// PowerShell reads the typographic single quotes (U+2018 to U+201B) as quote characters too, so a
+// pasted "don’t" would end the string just as "don't" would; each is doubled like the ASCII one.
 export function quoteForShell(value: string, shellCommand: string): string {
   if (SHELL_SAFE.test(value)) return value;
-  if (isPowerShell(shellCommand)) return `'${value.replaceAll("'", "''")}'`;
+  if (isPowerShell(shellCommand)) return `'${value.replace(/['\u2018-\u201B]/g, '$&$&')}'`;
   return posixQuoted(value);
 }
 

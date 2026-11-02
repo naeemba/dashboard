@@ -62,6 +62,11 @@ describe('quoteForShell', () => {
     expect(quoteForShell("/tmp/it's here", '/opt/homebrew/bin/pwsh')).toBe("'/tmp/it''s here'");
   });
 
+  it('doubles a typographic single quote for PowerShell, which ends a string on one too', () => {
+    expect(quoteForShell('don\u2019t touch', 'powershell.exe')).toBe("'don\u2019\u2019t touch'");
+    expect(quoteForShell('\u2018a\u201Ab\u201B', 'powershell.exe')).toBe("'\u2018\u2018a\u201A\u201Ab\u201B\u201B'");
+  });
+
   it('follows the overridden shell, not the platform it runs on', () => {
     expect(quoteForShell("C:\\Users\\me\\John's notes.pdf", 'C:\\Program Files\\Git\\bin\\bash.exe'))
       .toBe("'C:\\Users\\me\\John'\\''s notes.pdf'");
