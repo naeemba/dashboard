@@ -1,4 +1,4 @@
-import type * as pty from 'node-pty';
+import type { PaneShell } from '../panes/pane-shell';
 import { resizeShellsToScreens } from '../panes/pane-channels';
 import type { HeldForRemote } from './remote-ipc';
 import { replaySession } from './session-replay';
@@ -7,7 +7,7 @@ import type { Screens } from '../../shared/remote-host/screens';
 
 // What the host needs from the main process, which holds all of it. Out of main.ts because main had
 // reached its 600-line ceiling; this is only the plumbing between the two.
-export type HeldByMain = HeldForRemote & { shells: Map<string, pty.IPty>; screens: Screens; hold(message: string): void };
+export type HeldByMain = HeldForRemote & { shells: Map<string, PaneShell>; screens: Screens; hold(message: string): void };
 
 // After the join replay a screen gets the same pushes as everyone. A screen that leaves stops voting
 // on pane sizes, so the shells are resized to whoever is left. No port in the settings means the host

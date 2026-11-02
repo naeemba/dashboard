@@ -4,10 +4,10 @@ import { PROJECT_MODES, type Mode } from '../../shared/keys/modes';
 import type { SessionPage } from '../../shared/app/bridge';
 
 // What a restart puts back: the projects that were open, in the order you cycled them, the view each one
-// was left on, and which pane had the keyboard. Not the shells themselves — those die with the app, and
-// every pane comes back empty at its project's directory, and what each pane was called, except a pane
-// that was running Claude Code, which resumes that conversation. `Session` and `SessionPage`, the
-// part the renderer sends, are declared in bridge.ts.
+// was left on, and which pane had the keyboard. Not the shells themselves — the pane host keeps those
+// (panes-decision-1) — but what each pane was called, and which Claude Code conversation each was
+// running, for a pane whose shell the host did not keep: that one resumes the conversation.
+// `Session` and `SessionPage`, the part the renderer sends, are declared in bridge.ts.
 
 // What is on disk: the layout the renderer sends, plus which Claude Code conversation each terminal was
 // running, one entry per pane number like `names`. Main fills these in; the renderer never sees them change.

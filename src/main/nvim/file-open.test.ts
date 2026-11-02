@@ -29,6 +29,10 @@ describe('wholePath', () => {
     expect(wholePath('src/a.ts', '/home/me')).toBeUndefined();
     expect(wholePath('../b.ts', '/home/me')).toBeUndefined();
   });
+
+  it('asks this platform: a drive letter is not whole on posix', () => {
+    expect(wholePath('C:/code', '/home/me')).toBeUndefined();
+  });
 });
 
 describe('firstFile', () => {

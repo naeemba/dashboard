@@ -8,8 +8,10 @@ The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
 machine unless I ask for it in that same conversation.** No `npm run package`
 into /Applications, no `osascript ... quit`, no `pkill`, no `open -a Dashboard`.
 
-Restarting kills every shell inside it, including long-running tasks, with no
-way to get the work back. The quit also fires node-pty's exit callback during
+Restarting stops every Claude screen mid-turn. The worker panes' shells now
+outlive it in the pane host (panes-decision-1), but only when a host is
+running: without one, a restart kills every shell, long-running tasks
+included, with no way to get the work back. The quit also fires node-pty's exit callback during
 teardown, so it surfaces as a SIGABRT crash report and looks like the app broke.
 
 After changing code: run the tests, say the installed app needs a rebuild and
