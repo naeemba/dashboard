@@ -2542,12 +2542,18 @@
         {
           "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
           "title": "Cap each help dialog blurb",
-          "notes": "Shipped in #184: every help blurb rewritten to at most 60 words (BLURB_WORD_LIMIT), help.test.ts fails a blurb over the cap or naming one of its group's keys by spelling; the full prose moved to each feature's README under On screen; keys-rule-2 and CLAUDE.md updated.",
+          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
           "priority": "medium",
           "parent": null,
-          "updatedAt": "2026-11-02T01:30:02.298Z",
+          "updatedAt": "2026-11-02T01:30:18.814Z",
           "branch": "work-board-card-79b80d8d-7fe8-4b96-8ad1-ef0",
-          "pullRequest": 184
+          "pullRequest": 184,
+          "comments": [
+            {
+              "at": "2026-11-02T01:30:18.814Z",
+              "body": "Shipped in #184: every help blurb rewritten to at most 60 words (BLURB_WORD_LIMIT); help.test.ts fails a blurb over the cap or one naming its own group's keys by spelling; the full prose moved to each feature's README under On screen; keys-rule-2 and CLAUDE.md updated."
+            }
+          ]
         }
       ]
     }
