@@ -444,10 +444,7 @@ const builder = createPageBuilder({
   openFile: (page, index, link) => openFileLink(page, index, link),
   showEditor: (page) => showEditor(page),
   closePane: (page, index) => closePane(page, index, panePorts),
-  goToPane(id) {
-    const { slot, index } = paneFromId(id);
-    goToPane(slot, index);
-  },
+  goToPane: (id) => goToPaneId(id),
 });
 
 // The new-pane key and its button in the title row. Main opens it and answers with the list that has it
@@ -729,17 +726,18 @@ window.addEventListener('drop', (event) => event.preventDefault());
 
 window.addEventListener('resize', fitAllPages);
 
-// Clicking the banner lands you on the pane that raised it. The page has to be put on the right view
-// and told which pane is focused before it is shown, because showPage lands on whatever the page was
-// already showing. A slot with no page any more — the project was closed while the banner sat there —
-// is nowhere to go.
-bridge.onNotificationClick((paneId) => {
+// Clicking the banner, or a pane link on the Claude screen, lands you on the pane. The page has to be
+// put on the right view and told which pane is focused before it is shown, because showPage lands on
+// whatever the page was already showing. A slot with no page any more — the project was closed while
+// the banner sat there — is nowhere to go.
+function goToPaneId(paneId: string): void {
   // A dialog owns the keyboard while it is up. Move the page out from under one and the sheet stays
   // drawn with the keystrokes going to a shell behind it.
   if (document.querySelector(OVERLAY_SELECTOR)) return;
   const { slot, index } = paneFromId(paneId);
   goToPane(slot, index);
-});
+}
+bridge.onNotificationClick(goToPaneId);
 
 // Something other than the app wrote a board.json — the `board` command an agent runs, or a hand
 // edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and

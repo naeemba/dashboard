@@ -78,8 +78,9 @@ export const answered = (output: string): SessionReply => ({ ok: true, output })
 export const refused = (output: string): SessionReply => ({ ok: false, output });
 
 export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
-  // The workers the slot's main ran that are still open, in the order it ran them, for its status line and popup.
-  workers(dispatcher: number): DispatchedWorker[];
+  // Every worker a session run started that is still open, in the order they ran, each naming the slot
+  // whose main ran it: one read serves every page's status line and popup.
+  workers(): DispatchedWorker[];
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -207,14 +208,16 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
-  function workers(dispatcher: number): DispatchedWorker[] {
-    const names = new Map(ports.openSlots().map((each) => [each.slot, each.name]));
-    return [...dispatched].flatMap(([id, record]) => {
+  function workers(): DispatchedWorker[] {
+    if (dispatched.size === 0) return [];
+    const slots = new Map(ports.openSlots().map((each) => [each.slot, { name: each.name, open: ports.openPanes(each.slot) }]));
+    return [...dispatched].flatMap(([id, { dispatcher, about }]) => {
       const { slot, index } = paneFromId(id);
-      if (record.dispatcher !== dispatcher || !ports.openPanes(slot).includes(index)) return [];
+      const page = slots.get(slot);
+      if (page === undefined || !page.open.includes(index)) return [];
       return [{
-        id, dispatcher, project: names.get(slot) ?? '', name: workerSessionName(ports.projectPath(slot) ?? '', index),
-        about: record.about, status: workerStatus(mainsWorker(id), states.get(id)),
+        id, dispatcher, project: page.name, name: workerSessionName(ports.projectPath(slot) ?? '', index),
+        about, status: workerStatus(mainsWorker(id), states.get(id)),
       }];
     });
   }

@@ -15,6 +15,7 @@ import { revealed } from './chat-reveal';
 import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
 import { FOOT_WORKERS, footSides, piece } from './chat-foot-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
+import { PANE_LINK } from './chat-pane-links';
 import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
@@ -172,7 +173,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version, workers));
   }
   let workers = '';
-  followWorkers(bridge, slot, element, (list) => {
+  followWorkers(bridge, slot, (list) => {
     workers = workerCount(list);
     drawFoot();
   });
@@ -474,11 +475,16 @@ export function createChatView(options: ChatViewOptions): ChatView {
       openPdf(tile);
       return;
     }
+    const pane = target?.closest<HTMLElement>(`.${PANE_LINK}`);
+    if (pane) {
+      event.preventDefault();
+      options.goToPane(pane.dataset.pane ?? '');
+      return;
+    }
     const link = target?.closest('a');
     if (!link) return;
     event.preventDefault();
-    if (link.dataset.pane !== undefined) options.goToPane(link.dataset.pane);
-    else bridge.openExternal(link.href);
+    bridge.openExternal(link.href);
   });
 
   // A click on an entry moves the selection there; a tool call's own summary unfolds it, which is what

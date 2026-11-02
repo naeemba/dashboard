@@ -145,19 +145,19 @@ describe('sessionRequests', () => {
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['claim'] });
-    expect(answer.workers(2)).toEqual([]);
+    expect(answer.workers()).toEqual([]);
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
-    expect(answer.workers(2)).toEqual([
+    expect(answer.workers()).toEqual([
       { id: '2:1', dispatcher: 2, project: 'api', name: 'api-terminal-2', about: 'research the cache', status: 'working' },
     ]);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
-    expect(answer.workers(2)[0].status).toBe('done');
+    expect(answer.workers()[0].status).toBe('done');
     // The agent exited: the pane is a shell again.
     agents.delete('2:1');
     workers.delete('2:1');
-    expect(answer.workers(2)[0].status).toBe('idle');
+    expect(answer.workers()[0].status).toBe('idle');
     await answer({ directory: '/work/api', args: ['release', '2:1'] });
-    expect(answer.workers(2)).toEqual([]);
+    expect(answer.workers()).toEqual([]);
   });
 
   it('tells main when a worker it started is done, and not when anything else in a pane is', async () => {
@@ -356,12 +356,11 @@ describe('sessionRequests across projects', () => {
     expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
-  it('lists a worker claimed on another page under the main that ran it, not the page\'s own', async () => {
+  it('lists a worker claimed on another page under the main that ran it', async () => {
     const { ask, answer } = pages();
     await ask(['claim', '--project', 'api']);
     await ask(['run', '2:1', 'fix the tests']);
-    expect(answer.workers(-2)).toMatchObject([{ id: '2:1', dispatcher: -2, project: 'api', name: 'api-terminal-2' }]);
-    expect(answer.workers(2)).toEqual([]);
+    expect(answer.workers()).toMatchObject([{ id: '2:1', dispatcher: -2, project: 'api', name: 'api-terminal-2' }]);
   });
 
   it('opens a closed project before claiming a pane on its page', async () => {

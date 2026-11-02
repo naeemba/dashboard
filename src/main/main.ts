@@ -869,7 +869,7 @@ const workerAnswers = sessionRequests({
   }),
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
-table.handle('workers:read', (_screen, slot: number) => workerAnswers.workers(slot));
+table.handle('workers:read', () => workerAnswers.workers());
 const sessions = listenForSessions(sessionSocket, projectRequests({
   slotOf: slotOfProject,
   missingIn: (slot) => projects[slot]?.missing === true,

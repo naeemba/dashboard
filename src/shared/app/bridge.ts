@@ -294,8 +294,8 @@ export type DashboardBridge = {
   chatChangeMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
   // /btw's answer, kept out of the conversation; null when there is none.
   chatSideQuestion(slot: number, question: string): Promise<string | null>;
-  // The workers the page's main ran that are still open, for its status line and workers popup.
-  workers(slot: number): Promise<DispatchedWorker[]>;
+  // Every open worker a main ran, each naming the slot that ran it, for the status lines and the popup.
+  workers(): Promise<DispatchedWorker[]>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { workerAbout, workerCount, workerRows, workerStatus, type DispatchedWorker, type WorkerStatus } from './worker-roster';
-import { paneLink, paneLinks } from './pane-link';
+import { paneLink, splitAtPaneLinks } from './pane-link';
 
 const worker = (id: string, status: WorkerStatus): DispatchedWorker => ({ id, dispatcher: 2, project: 'api', name: `api-${id}`, about: 'go', status });
 
@@ -32,12 +32,9 @@ describe('worker roster', () => {
 });
 
 describe('pane links', () => {
-  it('finds every pane address, the manager\'s negative slot included, and nothing bare', () => {
+  it('cuts the text at every pane address, the manager\'s negative slot included, and at nothing bare', () => {
     const text = `started api-terminal-2 in 2:1 ${paneLink('2:1')}, then ${paneLink('-2:3')}.`;
-    expect(paneLinks(text).map((link) => [text.slice(link.start, link.end), link.id])).toEqual([
-      ['dashboard://pane/2:1', '2:1'],
-      ['dashboard://pane/-2:3', '-2:3'],
-    ]);
-    expect(paneLinks('meet at 2:1')).toEqual([]);
+    expect(splitAtPaneLinks(text)).toEqual(['started api-terminal-2 in 2:1 ', '2:1', ', then ', '-2:3', '.']);
+    expect(splitAtPaneLinks('meet at 2:1')).toEqual(['meet at 2:1']);
   });
 });
