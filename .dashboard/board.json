@@ -417,22 +417,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
-          "title": "Add a Content-Security-Policy to the window",
-          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:56:37.005Z",
-          "branch": "work-board-card-a912d6fe-5157-4785-8ba2-df5",
-          "pullRequest": 181,
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.579Z",
-              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
-            }
-          ]
         }
       ]
     },
@@ -2536,6 +2520,26 @@
             {
               "at": "2026-11-02T00:59:28.857Z",
               "body": "Shipped in #179: hidden pages and views translate off screen so xterm pauses them, and paused-selection.ts holds xterm's selection redraw (which bypassed the pause) until the terminal is back. Hidden renderer CPU 15.5-19.0% to 7.2-10.9%, layouts per 10 s 192-356 to 1. Not done: the same redraw still rebuilds shown terminals on every scroll."
+            }
+          ]
+        },
+        {
+          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
+          "title": "Add a Content-Security-Policy to the window",
+          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:02:17.432Z",
+          "branch": "work-board-card-a912d6fe-5157-4785-8ba2-df5",
+          "pullRequest": 181,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.579Z",
+              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
+            },
+            {
+              "at": "2026-11-02T01:02:17.432Z",
+              "body": "Shipped in #181: meta CSP in index.html (default-src 'self', script-src 'self', inline styles, data: images and fonts, connect-src data: and frame-src blob: for the PDF viewer, object-src/base-uri/form-action 'none'), docs/app/README.md section, index.html.test.ts guard. Checked in a demo instance: terminals, chat image, PDF tile, doc viewer image, market cards, zero violations. Not checked: npm start dev server."
             }
           ]
         }
