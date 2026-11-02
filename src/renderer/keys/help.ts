@@ -427,7 +427,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'you search, the host you last connected to leads the list as Reconnect, so the list and Enter '
     + 'take you back to it. Opening '
     + 'a new project while connected asks for a folder path on the host, since a folder dialog here '
-    + 'would show this machine\'s disk.',
+    + 'would show this machine\'s disk. Type a path that starts with /, \\, ~ or a drive letter and a row opens '
+    + 'that folder, here or on the host, without the folder dialog; it follows a recent whose path '
+    + 'contains it, and leads otherwise. One that is not a folder is refused.',
   log: 'What the app did and what went wrong, newest first: errors, panes and agents exiting, cards '
     + 'moving, ships, worktrees, projects opening and closing. Type in the box to filter — every word '
     + 'must appear, so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s '
