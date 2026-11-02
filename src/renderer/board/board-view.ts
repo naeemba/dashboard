@@ -33,17 +33,16 @@ import {
   filterAfterPicking,
   changedCardIdAfter,
   hiddenSelectedCard,
-  keepsSelection,
+  drawnRows,
   emptyFilter,
   isFilterActive,
   realRow,
   reorderRow,
   sideRow,
   rowAbove,
-  rowsToDraw,
+  movesHighlightOnly,
   settleSelection,
   stepSelection,
-  visibleRows,
   type BoardFilter,
 } from './board-filter';
 import { createDropMarker } from './drop-marker';
@@ -404,6 +403,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const item = document.createElement('li');
     // The priority rides on the card as a class so board.css owns which colour each one is.
     item.className = `board-card priority-${card.priority}${selected ? ' selected' : ''}`;
+    item.dataset.cardId = card.id;
     // Which piece of work this card belongs to. Invisible from the column otherwise: a subtask is an
     // ordinary card sitting in an ordinary column, and nothing else on it says so.
     const parent = card.parent === null ? undefined : cardById(state.board, card.parent);
@@ -623,8 +623,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     inFlight = new Map(options.worktrees()
       .filter((entry) => entry.projectPath === options.projectPath)
       .map((entry) => [entry.cardId, entry]));
-    const keep = keepsSelection(state.board, state.selection, editing !== null, changedCardId);
-    const drawn = rowsToDraw(visibleRows(state.board, filter, Date.now()), state.selection, keep);
+    const drawn = drawnRows(state.board, filter, Date.now(), state.selection, editing !== null, changedCardId);
     visible = drawn.visible;
     if (drawn.selection !== state.selection) state = { ...state, selection: drawn.selection };
     const filtered = isFilterActive(filter);
@@ -687,6 +686,19 @@ export function createBoardView(options: BoardOptions): BoardView {
     const bar = filterBar(filter, visible, state.board, resetFilter);
     element.replaceChildren(...(bar ? [bar, columns] : [columns]));
     element.querySelector(SELECTED_CARD)?.scrollIntoView({ block: 'nearest' });
+    options.onChanged();
+  }
+
+  // An arrow key that leaves the drawn rows as they are moves the class across instead of rebuilding
+  // every card; movesHighlightOnly says when it can. A card it cannot find, such as an empty column's,
+  // is the full redraw too.
+  function moveHighlight(): void {
+    const item = element.querySelector(`[data-card-id="${CSS.escape(cardAt(state.board, state.selection)?.id ?? '')}"]`);
+    const drawn = drawnRows(state.board, filter, Date.now(), state.selection, editing !== null, changedCardId);
+    if (!item || !movesHighlightOnly(visible, drawn, state.selection)) return render();
+    element.querySelector(SELECTED_CARD)?.classList.remove('selected');
+    item.classList.add('selected');
+    item.scrollIntoView({ block: 'nearest' });
     options.onChanged();
   }
 
@@ -887,7 +899,7 @@ export function createBoardView(options: BoardOptions): BoardView {
             ? stepSelection(visible, state.selection, action.direction)
             : moveSelection(state.board, state.selection, action.direction);
           state = { ...state, selection };
-          return render();
+          return moveHighlight();
         }
         case 'board-move':
           // Up and down trade places with the next card you can see, not one the filter hides.

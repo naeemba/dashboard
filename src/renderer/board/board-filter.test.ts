@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Board, Card } from '../../shared/board/board';
+import type { Board, Card, Selection } from '../../shared/board/board';
 import {
-  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, keepingRow, keepsSelection, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, sideRow, settleSelection, stepSelection, visibleRows,
+  actsOnHiddenCard, cardMatches, changedCardIdAfter, filterAfterPicking, hiddenSelectedCard, drawnRows, keepingRow, keepsSelection, movesHighlightOnly, rowAbove, rowsToDraw, emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, sideRow, settleSelection, stepSelection, visibleRows,
   type BoardFilter,
 } from './board-filter';
 
@@ -239,6 +239,38 @@ describe('rowsToDraw', () => {
   it('keeps the new card a filter would hide, on a column the filter empties', () => {
     const selection = { column: 2, card: 3 };
     expect(rowsToDraw(visible, selection, true).visible[2]).toEqual([3]);
+  });
+});
+
+describe('movesHighlightOnly', () => {
+  const rows = (drawn: number[][], selection: Selection) => ({ visible: drawn, selection });
+
+  it('moves only the highlight when the drawn rows stay the same', () => {
+    const selection = { column: 1, card: 2 };
+    expect(movesHighlightOnly(visible, rows(visible.map((column) => [...column]), selection), selection)).toBe(true);
+  });
+
+  it('redraws when the rows drawn change, as when stepping off a kept card', () => {
+    const selection = { column: 0, card: 3 };
+    expect(movesHighlightOnly([[1, 2, 3], [0, 2, 4], []], rows(visible, selection), selection)).toBe(false);
+  });
+
+  it('redraws when the arrow lands on a card that is not drawn, as in an empty column', () => {
+    const selection = { column: 2, card: 0 };
+    expect(movesHighlightOnly(visible, rows(visible, selection), selection)).toBe(false);
+  });
+});
+
+describe('drawnRows', () => {
+  const board = boardOf([card({ id: 'a', title: 'apple' }), card({ id: 'b', title: 'berry' })]);
+  const narrowed = filter({ text: 'apple' });
+
+  it('keeps the card just changed on screen while the selection is on it', () => {
+    expect(drawnRows(board, narrowed, now, { column: 0, card: 1 }, false, 'b').visible).toEqual([[0, 1]]);
+  });
+
+  it('drops it once the selection is elsewhere', () => {
+    expect(drawnRows(board, narrowed, now, { column: 0, card: 0 }, false, 'b').visible).toEqual([[0]]);
   });
 });
 

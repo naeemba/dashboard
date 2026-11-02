@@ -27,3 +27,4 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - Given you deleted a card, when you undo, then it comes back where it was.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.
 - Given a card's pull request is open, when its agent finishes, then the card goes in Review, not Done.
+- Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
