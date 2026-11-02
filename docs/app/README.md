@@ -31,7 +31,8 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 `shared/`; and a package that needs Node or the DOM is a value import only on
 its own side. `eslint.config.test.ts` pins each of those.
 
-- Process and window: `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
+- Process and window: `index.html` (at the repository root, with the window's
+  Content-Security-Policy), `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`
 - Build: `vite.build-version.ts` and its test at the repository root, declared
   in `forge.env.d.ts`
@@ -69,12 +70,42 @@ with its reason and the condition that lifts it.
   Version 11 removed `makeRe`, `AST` and `Minimatch#matchOne`; before any bump
   of those consumers, check that none of them calls one.
 
+## Content-Security-Policy
+
+`index.html` carries the window's policy as a `<meta>` tag. Replies, and docs
+from a cloned repository, are drawn as `innerHTML`; the markdown renderer
+escapes raw HTML, and the policy is the line behind it. Without one, a
+renderer bug that let markup through (a highlight.js grammar emitting raw
+HTML, say) would run the reply's script with the preload bridge in reach,
+which can type into any pane.
+
+Only the app's own scripts run (`script-src 'self'`, no `'unsafe-inline'`,
+no `'unsafe-eval'`). Everything else allowed is there because a feature
+needs it:
+
+| Directive | Needed by | Without it |
+|---|---|---|
+| `style-src 'unsafe-inline'` | xterm and every view set `style` and add `<style>` | Views and panes draw unstyled |
+| `img-src data: blob:` | Images in a reply or a doc, carried inline (`safeImage`) | Images show broken |
+| `font-src data:` | The build inlines the smaller font files as `data:` URLs | Those font files are refused |
+| `connect-src data:` | A PDF tile turns its base64 into a Blob with `fetch` | The PDF tile opens nothing |
+| `frame-src blob:` | The PDF viewer is an iframe on that Blob's URL | The PDF viewer opens blank |
+
+`object-src 'none'`, `base-uri 'none'` and `form-action 'none'` close what
+`default-src` does not cover. The PDF viewer still draws under
+`object-src 'none'`: Chromium's viewer is not an `<object>` of the page.
+
+A feature that loads something new (a remote image, a worker, a WebSocket)
+adds its directive here and to the table in the same change. A violation is
+silent in the app: open DevTools and look for `Refused to` in the console.
+
 ## Scenarios
 
 - Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
 - Given a shell is running a task, when you close the window, then the app asks before it closes.
 - Given the picker is open, when you type part of a folder's name, then the list narrows to the folders whose letters appear in that order.
 - Given a pane in a project is running a program, when you close the project, then it refuses and the status bar names the pane.
+- Given a reply carries markup that gets past the markdown renderer, when it is drawn, then no script in it runs.
 
 ## Open questions
 
