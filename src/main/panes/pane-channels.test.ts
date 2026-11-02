@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type * as pty from 'node-pty';
+import type { PaneShell } from './pane-shell';
 import { resizeShellsToScreens } from './pane-channels';
 import { screens } from '../../shared/remote-host/screens';
 
 function shell(cols: number, rows: number) {
   const resizes: number[][] = [];
   const fake = { cols, rows, resize(nextCols: number, nextRows: number) { resizes.push([nextCols, nextRows]); } };
-  return { fake: fake as unknown as pty.IPty, resizes };
+  return { fake: fake as unknown as PaneShell, resizes };
 }
 
 describe('resizeShellsToScreens', () => {

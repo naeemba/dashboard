@@ -8,8 +8,10 @@ import { directoriesOf } from '../panes/shell-directory-lookup';
 // was started in, then the project; the first that holds a file wins.
 
 // `~`, `~/` and an absolute path name one place whatever folder the pane is in; a relative path names none
-// yet. Both fileCandidates and findPaneFile ask this, so the pane's folder is looked up exactly when it
-// is used. projects.yaml's paths are read by it too, in project-named.ts.
+// yet. Absolute is this machine's own rule (path.isAbsolute): a drive letter is not whole on a mac,
+// where it would be read against main's own folder. Both fileCandidates and findPaneFile ask this, so the
+// pane's folder is looked up exactly when it is used. projects.yaml's paths are read by it too, in
+// project-named.ts, and a folder typed into the picker, in projects.ts.
 export function wholePath(filePath: string, home: string): string | undefined {
   if (filePath === '~') return home;
   if (filePath.startsWith('~/')) return path.join(home, filePath.slice(2));

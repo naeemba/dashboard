@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
+import { pickedFolder, projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
 
 const exists = () => true;
 
@@ -92,5 +92,24 @@ describe('the recents file', () => {
     rememberRecentPath(path, '/code/web');
     rememberRecentPath(path, '/code/api');
     expect(readRecentPaths(path)).toEqual(['/code/api', '/code/web']);
+  });
+});
+
+describe('pickedFolder', () => {
+  it('opens a folder that is there, resolved', () => {
+    expect(pickedFolder('/code/api/', '/home/you', exists)).toEqual({ path: '/code/api' });
+  });
+
+  it('reads ~ as the home folder', () => {
+    expect(pickedFolder('~/code/api', '/home/you', exists)).toEqual({ path: '/home/you/code/api' });
+    expect(pickedFolder('~', '/home/you', exists)).toEqual({ path: '/home/you' });
+  });
+
+  it('refuses a relative path, which names no place on the host', () => {
+    expect(pickedFolder('code/api', '/home/you', exists)).toEqual({ refused: 'No folder at code/api' });
+  });
+
+  it('refuses a path that is not a folder', () => {
+    expect(pickedFolder('/code/typo', '/home/you', () => false)).toEqual({ refused: 'No folder at /code/typo' });
   });
 });
