@@ -31,8 +31,7 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 `shared/`; and a package that needs Node or the DOM is a value import only on
 its own side. `eslint.config.test.ts` pins each of those.
 
-- Process and window: `index.html` (at the repository root, with the window's
-  Content-Security-Policy), `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
+- Process and window: `index.html` and its test, `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
   `channels.ts`, `app-window.ts`
 - Build: `vite.build-version.ts` and its test at the repository root, declared
   in `forge.env.d.ts`
@@ -96,8 +95,10 @@ needs it:
 `object-src 'none'`: Chromium's viewer is not an `<object>` of the page.
 
 A feature that loads something new (a remote image, a worker, a WebSocket)
-adds its directive here and to the table in the same change. A violation is
+adds its directive to `index.html` and a row to this table in the same change. A violation is
 silent in the app: open DevTools and look for `Refused to` in the console.
+`index.html.test.ts` fails if `script-src` or `object-src` widens, or the
+PDF viewer's two directives go.
 
 ## Scenarios
 

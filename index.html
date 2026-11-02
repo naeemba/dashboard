@@ -2,17 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <!--
-      Model output and docs from cloned repositories are drawn as innerHTML. The markdown renderer
-      escapes raw HTML, and this policy is the second line behind it: no script runs unless it is one
-      of the app's own files, so a renderer bug cannot hand a reply the preload bridge.
-      - style-src 'unsafe-inline': xterm and the views set style attributes and inject <style>.
-      - img-src data: blob: an image in a reply or a doc is carried inline (safeImage, chat-markdown.ts).
-      - font-src data: the build inlines small font files as data: URLs.
-      - connect-src data: a PDF tile turns its base64 into a Blob with fetch (chat-view.ts).
-      - frame-src blob: the PDF viewer shows that Blob in an iframe (pdfOverlay, overlay.ts).
-      docs/app/README.md lists each directive and the feature that needs it.
-    -->
+    <!-- The window's Content-Security-Policy: docs/app/README.md says what each directive is for. -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data:; frame-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'"
