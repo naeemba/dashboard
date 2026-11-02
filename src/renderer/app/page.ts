@@ -58,6 +58,8 @@ export type PageOptions = {
   showEditor(page: Page): void;
   // A worker's close button, which does what the close key does.
   closePane(page: Page, index: number): void;
+  // Lands on a pane by its id, on whichever page it is: a pane link on the Claude screen.
+  goToPane(id: string): void;
 };
 
 // Every pane in the window by its terminal id, filled as pages are built. The bytes from a pty, an
@@ -591,6 +593,10 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
       onWaiting: options.onChanged,
       showEditor: () => options.showEditor(page),
+      goToPane(id) {
+        if (panesById.has(id)) options.goToPane(id);
+        else options.onNotice(`chat:${slot}`, `Pane ${id} is closed: its worker was released.`);
+      },
     });
     page.chat = chat;
     const main = document.createElement('div');

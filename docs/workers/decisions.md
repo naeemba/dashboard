@@ -68,3 +68,27 @@ the recent list the same way. The pane belongs to the page it is on: its worker 
 project, works in it and takes that project's cards and worktrees. Only its report goes elsewhere, to the
 main that claimed it. The claimer and the pane's own project may both run and release it; nobody else.
 Which slot claimed a pane is kept in memory only, so after a restart the pane is its own project's.
+
+## workers-decision-3: Who dispatched a worker, and the screen's links and popup
+
+`session-requests.ts` keeps one record per worker a `pane run` started: the slot whose main ran it and
+the first words of its prompt, until it is released or its number is claimed again. It sits beside the
+hook states `pane list` already reads, so the done report, the foot's count and the workers popup all
+read the one record rather than a store of their own. It is not `dispatchers`, which says who may run a
+pane, not who did: a project's own main may run a pane the manager claimed on its page, and then its
+own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker is
+listed by nobody and reports to its own page's main.
+
+**A pane reference is an address, not a bare id.** `pane run` and the done report print
+`dashboard://pane/<slot>:<index>`; the screen links only that, so `2:1` in a reply about a time or a
+ratio is never a link. `pane claim` still prints the bare id: main pipes it into `run`, and a second
+token there would be one more thing to strip. A link is drawn from text nodes only, so an address in
+an attribute stays text.
+
+**The popup is the search dialog, not a box anchored to the count.** It is the same dialog every
+picker uses, with the arrows, Enter and Escape already right, and it now takes a `watch` so it reads
+main again while it is open. Anchoring it to the button would be a second list dialog to keep in step.
+The keyboard way to a worker is the popup (Alt+W); a link is the mouse's.
+
+Watch for: the count refreshes on a hook mark and on the open-pane list changing. A worker whose agent
+exits without either shows as working until the next one.

@@ -20,7 +20,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-screen-dispatch.ts`, `chat-attachments.ts`,
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
-  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`
+  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`
 - Styles: `chat.css`
 
 ## Scenarios
@@ -38,6 +38,9 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
 - Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
+- Given main ran `pane run`, when its output or a reply names `dashboard://pane/<slot>:<index>`, then it is drawn as a `pane <id>` link; a click lands on that pane on its own project's page, and on a pane since released says it is closed and goes nowhere.
+- Given main has workers open, when the foot is drawn, then between what Claude is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a click on it or Alt+W opens a list of them (the manager's across every project) that updates while open, the arrows walk it, Enter lands on the pane and Escape closes it.
+- Given a worker main dispatched finishes its turn, when the hook reports it, then the conversation gets a prompt naming the worker and its pane link, queued behind the turn if one is running (workers-decision-1).
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.
 - Given a MultiEdit makes two edits, when its diff is drawn, then a dimmed "…" row sits between them, the same row that stands for skipped lines inside one edit.

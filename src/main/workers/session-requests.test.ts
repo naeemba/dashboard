@@ -75,7 +75,7 @@ describe('sessionRequests', () => {
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] }))
-      .toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api' });
+      .toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
     expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api', cardId: null });
     expect(started[0].agentArguments[1]).toContain('research the cache');
   });
@@ -134,10 +134,30 @@ describe('sessionRequests', () => {
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
     expect(await answer({ directory: '/anywhere', args: ['notify', '2:1', 'blocked'] })).toEqual({ ok: true, output: '' });
-    expect(marked).toEqual(['2:1 blocked']);
+    expect(marked).toEqual(['2:1 running', '2:1 blocked']);
     expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n').map((line) => line.split('\t')[2]))
       .toEqual(['main', 'blocked', 'idle']);
     expect(await answer({ directory: '/work/api', args: ['notify', '2:7', 'done'] })).toMatchObject({ ok: false });
+  });
+
+  it('lists the workers main ran, with what each was asked and how it stands, until released', async () => {
+    const { ports, agents, workers } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    expect(answer.workers(2)).toEqual([]);
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
+    expect(answer.workers(2)).toEqual([
+      { id: '2:1', dispatcher: 2, project: 'api', name: 'api-terminal-2', about: 'research the cache', status: 'working' },
+    ]);
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    expect(answer.workers(2)[0].status).toBe('done');
+    // The agent exited: the pane is a shell again.
+    agents.delete('2:1');
+    workers.delete('2:1');
+    expect(answer.workers(2)[0].status).toBe('idle');
+    await answer({ directory: '/work/api', args: ['release', '2:1'] });
+    expect(answer.workers(2)).toEqual([]);
   });
 
   it('tells main when a worker it started is done, and not when anything else in a pane is', async () => {
@@ -262,7 +282,7 @@ describe('sessionRequests', () => {
     expect(await ask(['run', '-2:1', 'review it'])).toMatchObject({ ok: true });
     expect(started[0]).toMatchObject({ id: '-2:1', directory: '/home/me/.dashboard' });
     expect(await ask(['notify', '-2:1', 'done'])).toEqual({ ok: true, output: '' });
-    expect(marked).toEqual(['-2:1 done']);
+    expect(marked).toEqual(['-2:1 running', '-2:1 done']);
     expect(await ask(['release', '-2:1'])).toEqual({ ok: true, output: 'released -2:1' });
     expect(closed).toEqual(['-2:1']);
   });
@@ -313,7 +333,7 @@ function pages() {
   });
   const answer = sessionRequests(ports);
   const ask = (words: string[], directory = '/work/desk') => answer({ directory, args: words });
-  return { ask, ports, started, opened, told };
+  return { ask, answer, ports, started, opened, told };
 }
 
 describe('sessionRequests across projects', () => {
@@ -321,7 +341,7 @@ describe('sessionRequests across projects', () => {
     const { ask, started, opened } = pages();
     expect(await ask(['claim', '--project', 'api'])).toEqual({ ok: true, output: '2:1' });
     expect(opened).toEqual([]);
-    expect(await ask(['run', '2:1', 'fix the tests'])).toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api' });
+    expect(await ask(['run', '2:1', 'fix the tests'])).toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
     expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api' });
     expect(started[0].agentArguments[1]).toContain('SendMessage to main-desk when done');
     expect(await ask(['release', '2:1'])).toEqual({ ok: true, output: 'released 2:1' });
@@ -334,6 +354,14 @@ describe('sessionRequests across projects', () => {
     await ask(['run', '2:1', 'fix the tests']);
     await ask(['notify', '2:1', 'done'], '/anywhere');
     expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+  });
+
+  it('lists a worker claimed on another page under the main that ran it, not the page\'s own', async () => {
+    const { ask, answer } = pages();
+    await ask(['claim', '--project', 'api']);
+    await ask(['run', '2:1', 'fix the tests']);
+    expect(answer.workers(-2)).toMatchObject([{ id: '2:1', dispatcher: -2, project: 'api', name: 'api-terminal-2' }]);
+    expect(answer.workers(2)).toEqual([]);
   });
 
   it('opens a closed project before claiming a pane on its page', async () => {

@@ -410,6 +410,13 @@
 .chat-foot-state[data-state='working'] { color: var(--blue); }
 .chat-foot-state[data-state='waiting'] { color: var(--yellow); }
 
+/* The workers count opens the workers popup on a click, so it reads as something to press. */
+.chat-foot-workers {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.chat-foot-workers:hover { color: var(--white); }
+
 /* A meter: its name, a short bar filled to how much is used, the percentage in the same colour, then
    anything else worth saying, quieter. */
 .chat-meter {

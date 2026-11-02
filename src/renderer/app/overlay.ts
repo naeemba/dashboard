@@ -196,12 +196,17 @@ export function searchOverlay<Choice>(options: {
   empty?: string;
   // The icon each row leads with, by what the row is.
   glyph: (row: SearchRow<Choice>) => IconName;
+  // For a list that changes while it is open: called once with the way to ask for the rows again,
+  // and answers with the way to stop, which closing the dialog calls.
+  watch?: (changed: () => void) => () => void;
 }): Promise<Choice | undefined> {
   let rows: SearchRow<Choice>[] = [];
   let highlighted = 0;
+  let unwatch: (() => void) | undefined;
 
   return new Promise<Choice | undefined>((resolve) => {
     function finish(choice: Choice | undefined): void {
+      unwatch?.();
       remove();
       resolve(choice);
     }
@@ -281,6 +286,7 @@ export function searchOverlay<Choice>(options: {
       }
     });
     search();
+    unwatch = options.watch?.(search);
   });
 }
 

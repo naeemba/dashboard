@@ -444,6 +444,10 @@ const builder = createPageBuilder({
   openFile: (page, index, link) => openFileLink(page, index, link),
   showEditor: (page) => showEditor(page),
   closePane: (page, index) => closePane(page, index, panePorts),
+  goToPane(id) {
+    const { slot, index } = paneFromId(id);
+    goToPane(slot, index);
+  },
 });
 
 // The new-pane key and its button in the title row. Main opens it and answers with the list that has it

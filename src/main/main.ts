@@ -817,15 +817,7 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 // `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
 // the session command's and decides them.
 const folderExists = (folder: string) => !projectFromPath(folder).missing;
-const sessions = listenForSessions(sessionSocket, projectRequests({
-  slotOf: slotOfProject,
-  missingIn: (slot) => projects[slot]?.missing === true,
-  folderExists,
-  open: openProject,
-  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
-  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
-  close: closeProjectSlot,
-}, sessionRequests({
+const workerAnswers = sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
   openSlots: () => [MANAGER_SLOT, ...projects.keys()].flatMap((slot) => {
@@ -875,7 +867,18 @@ const sessions = listenForSessions(sessionSocket, projectRequests({
     const removal = await worktrees.remove(worktreePath, false, projectPath);
     if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
   }),
-})), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
+});
+// The workers each main ran, for its status line and workers popup (worker-roster.ts).
+table.handle('workers:read', (_screen, slot: number) => workerAnswers.workers(slot));
+const sessions = listenForSessions(sessionSocket, projectRequests({
+  slotOf: slotOfProject,
+  missingIn: (slot) => projects[slot]?.missing === true,
+  folderExists,
+  open: openProject,
+  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
+  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
+  close: closeProjectSlot,
+}, workerAnswers), (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`));
 
 function createWindow(): void {
   mainWindow = openAppWindow({

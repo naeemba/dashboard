@@ -7,13 +7,14 @@ after a restart.
 
 ## Files
 
-Folders: `src/main/workers/`.
+Folders: `src/main/workers/`, `src/shared/workers/`.
 
 - Dispatch: `dispatch.ts`, `../projects/project-named.ts` (the project `--project` names), `worker-channels.ts`, `finished-work.ts`
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
+- What each main dispatched, as its status line and workers popup read it: `worker-roster.ts`, `pane-link.ts`
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
 
 ## Scenarios
@@ -25,6 +26,7 @@ Folders: `src/main/workers/`.
 - Given a project folder called `My API`, when its sessions start, then main is `main-my-api` and its workers `my-api-terminal-<n>` (lower-case, every other run one hyphen, none at either end, never cut short); a folder name with no Latin letters gives `main-project`, and the manager's folder `~/.dashboard` gives `main-manager` (manager-decision-2).
 - Given the manager's main, when it runs `pane claim --project crm` and `crm` is an exact name or aka in `~/.dashboard/projects.yaml`, then a worker opens on that project's page (the project opened first if it was closed, its `~` expanded) and its id is printed; a word that is not an exact name or aka is refused with the projects it could be (workers-decision-2).
 - Given a pane claimed with `--project`, when the asker runs it, then it works in that project as `<project>-terminal-<n>` and reports to the asker's main; any other project but the pane's own is refused it.
+- Given main runs a worker, when `pane run` answers, then the line ends with `dashboard://pane/<id>`, which the Claude screen draws as a link to the pane; `pane claim` still prints the bare id, since main passes it straight to `run`.
 - Given several open projects, when `pane list --all` runs, then every open page's panes are listed, the manager's first, each line led by its project's name.
 - Given main dispatches a worker or a card is shipped, when its Claude starts, then it starts with `--session-id` the app chose and the app's session index has its row first (drawer-decision-1).
 - Given a throwaway worktree with uncommitted work, when the worker is released, then the worktree is kept and the reply says why.

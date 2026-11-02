@@ -7,6 +7,8 @@ import type { ProjectNamed } from '../projects/project-named';
 import { parseSessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
+import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
+import { paneLink } from '../../shared/workers/pane-link';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
@@ -68,14 +70,19 @@ export function projectOfFolder(
 // What main is told when a worker it dispatched ends its turn: which worker, and that the worker's own
 // report, if it wrote one, says what it did. The hook knows nothing of what the worker did.
 export function doneReport(name: string, id: string): string {
-  return `${name} in pane ${id} has finished its turn. If it sent you a report, that says what it did;`
+  return `${name} in pane ${id} (${paneLink(id)}) has finished its turn. If it sent you a report, that says what it did;`
     + ' `pane list` shows where every worker stands.';
 }
 
 export const answered = (output: string): SessionReply => ({ ok: true, output });
 export const refused = (output: string): SessionReply => ({ ok: false, output });
 
-export function sessionRequests(ports: SessionPorts): (request: SessionRequest) => Promise<SessionReply> {
+export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
+  // The workers the slot's main ran that are still open, in the order it ran them, for its status line and popup.
+  workers(dispatcher: number): DispatchedWorker[];
+};
+
+export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
   // because a worker run a second time has not finished the second task.
   const states = new Map<string, WorkerState>();
@@ -89,6 +96,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
   // and release it as its own, and its main hears the worker's report. Slots are never reused, so an
   // entry left by a project closed since names nobody.
   const dispatchers = new Map<string, number>();
+  // Each worker a session run started, until it is released or its number claimed again: the slot whose
+  // main ran it, which hears its report, and what it was asked. Kept apart from `dispatchers`, which is
+  // who may run the pane, not who did.
+  const dispatched = new Map<string, { dispatcher: number; about: string }>();
 
   // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
   // or one it claimed elsewhere. Main and the editor are never a worker: one is where the asking
@@ -124,6 +135,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       target = ports.openProject(found.path);
     }
     const id = terminalId(target, ports.openWorker(target));
+    dispatched.delete(id);
     if (target === slot) dispatchers.delete(id);
     else dispatchers.set(id, slot);
     return answered(id);
@@ -158,7 +170,10 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     states.delete(id);
     const session = ports.newSession(projectPath, directory, card);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card);
-    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}`);
+    dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
+    // As its hooks would say it, so a status line counting the asker's workers counts this one now.
+    ports.mark(id, 'running');
+    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory} ${paneLink(id)}`);
   }
 
   async function release(id: string, slot: number): Promise<SessionReply> {
@@ -169,6 +184,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     ports.closeWorker(id);
     states.delete(id);
     dispatchers.delete(id);
+    dispatched.delete(id);
     const throwaway = throwaways.get(id);
     throwaways.delete(id);
     if (throwaway === undefined) return answered(`released ${id}`);
@@ -191,7 +207,19 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
-  return async (request) => {
+  function workers(dispatcher: number): DispatchedWorker[] {
+    const names = new Map(ports.openSlots().map((each) => [each.slot, each.name]));
+    return [...dispatched].flatMap(([id, record]) => {
+      const { slot, index } = paneFromId(id);
+      if (record.dispatcher !== dispatcher || !ports.openPanes(slot).includes(index)) return [];
+      return [{
+        id, dispatcher, project: names.get(slot) ?? '', name: workerSessionName(ports.projectPath(slot) ?? '', index),
+        about: record.about, status: workerStatus(mainsWorker(id), states.get(id)),
+      }];
+    });
+  }
+
+  return Object.assign(async (request: SessionRequest): Promise<SessionReply> => {
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
@@ -206,7 +234,7 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
       // Claude opened by hand reports to nobody. The main that claimed it hears, which is another
       // project's when it was claimed with --project.
       if (command.state === 'done' && mainsWorker(command.id)) {
-        ports.tell(dispatchers.get(command.id) ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), command.id));
+        ports.tell(dispatched.get(command.id)?.dispatcher ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), command.id));
       }
       return answered('');
     }
@@ -223,5 +251,5 @@ export function sessionRequests(ports: SessionPorts): (request: SessionRequest) 
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
     }
-  };
+  }, { workers });
 }

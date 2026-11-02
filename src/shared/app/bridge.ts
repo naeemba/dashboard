@@ -16,6 +16,7 @@ import type { Settings } from '../settings/settings';
 import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
 import type { FileLink } from '../panes/links';
+import type { DispatchedWorker } from '../workers/worker-roster';
 import type { DocEntry, DocReply, DrawerReply, ResumeReply, SessionList } from '../drawer/drawer';
 
 export type Project = { name: string; path: string; missing: boolean };
@@ -293,6 +294,8 @@ export type DashboardBridge = {
   chatChangeMcpServer(slot: number, name: string, action: McpAction): Promise<void>;
   // /btw's answer, kept out of the conversation; null when there is none.
   chatSideQuestion(slot: number, question: string): Promise<string | null>;
+  // The workers the page's main ran that are still open, for its status line and workers popup.
+  workers(slot: number): Promise<DispatchedWorker[]>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

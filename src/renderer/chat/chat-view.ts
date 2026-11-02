@@ -13,7 +13,9 @@ import { renderMarkdown } from './chat-markdown';
 import { permissionTitle } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
-import { footSides, piece } from './chat-foot-view';
+import { FOOT_WORKERS, footSides, piece } from './chat-foot-view';
+import { followWorkers, showWorkers } from './chat-workers-view';
+import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
@@ -46,6 +48,8 @@ export type ChatViewOptions = {
   onWaiting(): void;
   // Puts the page's nvim in front, starting it if it is not running: the editor key's last step.
   showEditor(): void;
+  // A pane link or a workers popup row: lands on that pane's page and focuses it, or says it is closed.
+  goToPane(id: string): void;
 };
 
 export type ChatView = {
@@ -162,11 +166,20 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
     const effortShown = footEffort(effort, state, transcript.entries);
-    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state]);
+    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state, workers]);
     if (key === drawnFoot) return;
     drawnFoot = key;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version, workers));
   }
+  let workers = '';
+  followWorkers(bridge, slot, element, (list) => {
+    workers = workerCount(list);
+    drawFoot();
+  });
+  const openWorkers = (): void => void showWorkers(bridge, slot, options.goToPane).then((landed) => { if (!landed) focus(); });
+  foot.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest(`.${FOOT_WORKERS}`)) openWorkers();
+  });
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
   // It ticks once a second on its own, since a long tool call streams nothing to paint by. A question
@@ -464,7 +477,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const link = target?.closest('a');
     if (!link) return;
     event.preventDefault();
-    bridge.openExternal(link.href);
+    if (link.dataset.pane !== undefined) options.goToPane(link.dataset.pane);
+    else bridge.openExternal(link.href);
   });
 
   // A click on an entry moves the selection there; a tool call's own summary unfolds it, which is what
@@ -658,6 +672,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       render();
     },
     runCommand(command) {
+      if (command === 'workers') openWorkers();
       if (command === 'select-up') select(selected === null ? drawn.length - 1 : selected - 1);
       if (command === 'select-down') select(selected === null ? null : selected + 1);
       if (command === 'unfold') {
