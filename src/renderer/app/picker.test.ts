@@ -78,6 +78,16 @@ describe('typed path row', () => {
     ]);
   });
 
+  it('leads with a typed path a recent matches only loosely, so Enter opens what was typed', () => {
+    const rows = pickerRows([project('notes-app', '/home/me/Workspace/personal/notes-app')], '/home/me/notes', none);
+    expect(rows[0].choice).toEqual({ kind: 'open', path: '/home/me/notes' });
+  });
+
+  it('offers no second row for a recent typed with a trailing slash', () => {
+    const rows = pickerRows([project('api', '/code/api')], '/code/api/', none);
+    expect(rows.filter((row) => row.choice.kind === 'open' && row.choice.path !== null)).toHaveLength(1);
+  });
+
   it('offers no second row for a recent typed in full', () => {
     const rows = pickerRows([project('api', '/code/api')], '/code/api', none);
     expect(rows.filter((row) => row.choice.kind === 'open' && row.choice.path === '/code/api')).toHaveLength(1);

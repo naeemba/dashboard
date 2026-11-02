@@ -74,7 +74,7 @@ with its reason and the condition that lifts it.
 - Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
 - Given a shell is running a task, when you close the window, then the app asks before it closes.
 - Given the picker is open, when you type part of a folder's name, then the list narrows to the folders whose letters appear in that order.
-- Given the picker is open, when you type a path starting with `/`, `~` or a drive letter, then a row opens that folder, on a remote screen too, where `~` is the host's home; it is the first row when no recent matches, and comes after the recents that do, so Enter on a path opens the recent it names.
+- Given the picker is open, when you type a path starting with `/`, `~` or a drive letter, then a row opens that folder, on a remote screen too, where `~` is the host's home; it comes after the recents when one of their paths contains it, so Enter on `/api` opens `/code/api`, and is the first row otherwise, so Enter on a new folder that only loosely matches a recent opens what was typed.
 - Given a typed path that is not a folder, when you press Enter on its row, then the project is not opened and the status bar says `No folder at` the path.
 - Given a pane in a project is running a program, when you close the project, then it refuses and the status bar names the pane.
 
