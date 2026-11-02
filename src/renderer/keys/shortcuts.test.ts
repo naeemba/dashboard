@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chatShadowPartner, hears, isBareCharacter, mapShortcut } from './shortcuts';
+import { chatShadowPartner, hears, isBareCharacter, mapShortcut, pressesWalkedToButton } from './shortcuts';
 import { ACTIONS, defaultBinding } from '../../shared/keys/actions';
 import { parseBinding } from '../../shared/keys/binding';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
@@ -255,5 +255,18 @@ describe('the Claude screen in the terminals view', () => {
     const rebound = bindKey(defaultSettings(false), 'terminal-add', 'Alt+M').keys;
     expect(chatShadowPartner('terminal-add', rebound)?.name).toBe('claude-model');
     expect(mapShortcut(alt('KeyM'), rebound, 'terminals', false, true)).toEqual({ kind: 'chat', command: 'model' });
+  });
+});
+
+describe('pressesWalkedToButton', () => {
+  it('leaves a bare Enter or Space to a button Tab walked to', () => {
+    expect(pressesWalkedToButton(key({ key: 'Enter' }), true)).toBe(true);
+    expect(pressesWalkedToButton(key({ key: ' ' }), true)).toBe(true);
+  });
+
+  it('keeps every other key, a modified Enter, and any key away from a button that was not walked to', () => {
+    expect(pressesWalkedToButton(key({ key: 'a' }), true)).toBe(false);
+    expect(pressesWalkedToButton(key({ key: 'Enter', altKey: true }), true)).toBe(false);
+    expect(pressesWalkedToButton(key({ key: 'Enter' }), false)).toBe(false);
   });
 });

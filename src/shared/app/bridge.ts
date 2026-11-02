@@ -8,7 +8,7 @@ import type { ChatMeasure } from '../chat/chat-status';
 import type { ChatEvent, ImageType } from '../chat/chat-transcript';
 import type { ScannedWorktree } from '../ship/git-worktrees';
 import type { Board } from '../board/board';
-import type { MarketsSnapshot } from '../markets/markets';
+import type { MarketName, MarketsSnapshot } from '../markets/markets';
 import type { PaneUse } from '../panes/pane-reading';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
 import type { Mode } from '../keys/modes';
@@ -234,9 +234,9 @@ export type DashboardBridge = {
   // Code's own session logs. Read once on the way up and then pushed every half minute, the way the
   // worktree records are: the numbers move on their own while nothing on screen does.
   readUsage(): Promise<UsageSnapshot>;
-  // The manager's four cards, fetched by main. Never rejects: a source that failed is a failed reading
-  // inside the snapshot, so the other cards still draw.
-  readMarkets(): Promise<MarketsSnapshot>;
+  // One of the manager's four cards, fetched by main. A source that failed is a failed reading, not a
+  // rejection, so the card can print why.
+  readMarket<K extends MarketName>(market: K): Promise<MarketsSnapshot[K]>;
   onUsageChange(listener: (usage: UsageSnapshot) => void): void;
   // One line about something that broke on main's side of the wire. What reaches here and why the app
   // is still up to hear it are failure.ts's.

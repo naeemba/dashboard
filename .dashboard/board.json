@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
-          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
           "title": "Write the board as operations against a fresh read in main",
           "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
@@ -250,6 +243,13 @@
           "parent": null,
           "createdAt": "2026-11-01T23:48:56.818Z",
           "updatedAt": "2026-11-01T23:48:56.818Z"
+        },
+        {
+          "id": "7c3bd72f-85ac-4faa-8d52-9c0b44f110a2",
+          "title": "Split board-view.ts along its drag-and-drop seam",
+          "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -331,21 +331,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
-          "title": "Refresh button on each market card of the manager page",
-          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T20:23:46.345Z",
-          "updatedAt": "2026-11-01T23:24:01.442Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:25:59.478Z",
-              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
-            }
-          ]
-        },
-        {
           "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
           "title": "Stop the first usage sweep freezing main for a minute after launch",
           "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -370,6 +355,14 @@
           "priority": "high",
           "parent": null,
           "updatedAt": "2026-11-01T23:43:36.000Z"
+        },
+        {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-01T23:52:57.025Z"
         }
       ]
     },
@@ -466,7 +459,7 @@
           "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-01T23:51:07.041Z",
+          "updatedAt": "2026-11-02T00:00:14.748Z",
           "branch": "work-board-card-7236dc86-df9e-44c4-a855-55e",
           "pullRequest": 171
         }
@@ -2444,6 +2437,23 @@
           "updatedAt": "2026-11-01T23:41:30.922Z",
           "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
           "pullRequest": 168
+        },
+        {
+          "id": "e857e0b7-d6be-4921-8825-0fc117423ba1",
+          "title": "Refresh button on each market card of the manager page",
+          "notes": "The four cards across the top of the manager page (date and weather, Bitcoin, Tether in toman, gold; docs/markets/) only refresh on their own schedule. When one shows 'fetch failed' (seen on Bitcoin), there is no way to retry.\n\n- A small refresh icon in each card's corner. A click refetches that card only. It is an iconButton with a tooltip and an accessible name (Refresh Bitcoin).\n- While the fetch runs the icon spins and a second click does nothing; the card keeps its last good answer on screen until the new one lands, as it does today on a failed read.\n- A failure shows the error line as today; the icon stays, so the user can try again.\n- Keyboard first (conventions-rule-1): a manager-scoped key refreshes all four cards (a row in src/shared/keys/actions.ts, so help, settings and which-key read it). Each card's button is also reachable with Tab.\n- A manual refresh resets that card's timer, so the scheduled fetch does not fire right after.\n- The decision (ignore while in flight, reset the timer) goes in a small module with a test (workflow-rule-2). docs/markets updated, help updated, minor version bump.\n\nShipped in #169: a refresh button in each of the four cards' corner (date card reads the weather), spins while reading, ignores presses in flight, resets that card's half-hour timer; Alt+R refreshes all four from any manager section; Tab reaches each button and Enter/Space presses it. markets:read now reads one card.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T20:23:46.345Z",
+          "updatedAt": "2026-11-01T23:47:53.375Z",
+          "branch": "work-board-card-e857e0b7-d6be-4921-8825-0fc",
+          "pullRequest": 169,
+          "comments": [
+            {
+              "at": "2026-11-01T20:25:59.478Z",
+              "body": "The date and weather card gets the refresh icon too: it refetches the weather (the date needs no fetch). All four cards, no exceptions."
+            }
+          ]
         }
       ]
     }
