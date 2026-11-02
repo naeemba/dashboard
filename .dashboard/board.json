@@ -104,13 +104,6 @@
           "parent": null
         },
         {
-          "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
-          "title": "Decide whether Windows is a target and drop the installer dependencies if not",
-          "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
-          "priority": "low",
-          "parent": null
-        },
-        {
           "id": "0fc819e5-7dd5-46b0-a5cf-246ac3f168cc",
           "title": "Turn off the terminal cursor blink that costs idle CPU",
           "notes": "Measured: focused terminal, nothing happening: renderer 3.7-5% CPU, ~70 style recalcs/s, +1% main, +1% GPU; 0.1% with xterm's animation off. Where: cursorBlink: true at src/renderer/app/page.ts:318; xterm DOM renderer blinks via CSS keyframes on background-color. Fix (small): cursorBlink off, or a setting defaulting off. Rerun: measure.mjs keys (last step). From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -196,7 +189,17 @@
           "id": "73b08c71-d792-4eab-b927-172365c242a4",
           "title": "Use Promise.withResolvers in tests instead of hand-written deferred helpers",
           "notes": "newest-read.test.ts:5, manager-reads.test.ts:8 and ship.test.ts:125 each hand-write a deferred promise helper that Promise.withResolvers() already provides (it typechecks and runs here: target ESNext, Node 24). Replace each copy with it. Cost if left: every new test that needs to control when a promise settles writes another copy under another name. Issue: https://github.com/naeemba/dashboard/issues/192 Review: https://github.com/naeemba/dashboard/pull/190#discussion_r4441187097",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
+        },
+        {
+          "id": "efbe3e2d-88b1-41c0-98e2-7d806e390e03",
+          "title": "Run CI on Windows",
+          "notes": "Windows is a target since PR #191. CI runs on Ubuntu only, so a change can break Windows start or packaging unseen. Add a windows-latest job to the CI workflow: npm ci (node-pty builds there), npm test, npx tsc --noEmit, and a make of the Windows installer (Forge squirrel maker) without publishing. Mark tests that need a POSIX shell or unix sockets so they skip on win32 with a reason, rather than failing; list them in the PR.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-02T10:26:20.200Z",
+          "updatedAt": "2026-11-02T10:26:20.200Z"
         }
       ]
     },
@@ -2612,6 +2615,20 @@
             {
               "at": "2026-11-01T20:46:57.620Z",
               "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
+            }
+          ]
+        },
+        {
+          "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
+          "title": "Decide whether Windows is a target and drop the installer dependencies if not",
+          "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
+          "priority": "low",
+          "parent": null,
+          "updatedAt": "2026-11-02T10:26:20.142Z",
+          "comments": [
+            {
+              "at": "2026-11-02T10:26:20.083Z",
+              "body": "Answered by PR #191 (Sana, merged): Windows is a target. The installer dependencies stay. A Windows CI job is its own card."
             }
           ]
         }
