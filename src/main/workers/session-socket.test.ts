@@ -56,7 +56,7 @@ describe('listenForSessions and askApp', () => {
   });
 
   // An answer that throws, or a request of the wrong shape, still gets the command a reply.
-  halfOpenOnly('answers a request it cannot handle rather than leaving the command waiting', async () => {
+  it('answers a request it cannot handle rather than leaving the command waiting', async () => {
     const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
     const server = listenForSessions(socket, async () => { throw new Error('no such pane'); }, () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
