@@ -24,6 +24,7 @@ import { homedir } from 'node:os';
 import { failureText } from '../../shared/errors/failure';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
+import { unpacked } from '../app/unpacked';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started when the project opens and again after a new conversation or a /resume, and
@@ -101,7 +102,7 @@ function claudeExecutable(): string {
     if (process.platform !== 'linux') throw error;
     found = require.resolve(`${name}-musl/${binary}`);
   }
-  return found.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  return unpacked(found);
 }
 
 // The PATH a pane's shell builds from its startup files, which the app itself never read when it was

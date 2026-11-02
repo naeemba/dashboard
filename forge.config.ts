@@ -33,7 +33,8 @@ const config: ForgeConfig = {
     // node-pty runs spawn-helper from app.asar.unpacked, so the whole package must be unpacked.
     // Every *-cli-entry.js (board, session, dashboard) is unpacked for a different reason: they are run by
     // `node`, not by Electron, and node cannot read a file inside an asar. main.ts points agents at the
-    // unpacked copies.
+    // unpacked copies. Every *-worker.js is unpacked because a worker thread is started from a path on
+    // disk; usage-thread.ts points at the unpacked copy.
     asar: { unpack: '{**/node_modules/node-pty/**,**/node_modules/@anthropic-ai/claude-agent-sdk-*/**,**/.vite/build/*-cli-entry.js,**/.vite/build/*-worker.js}' },
     // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,
     // which still calls itself com.github.Electron while Info.plist says com.electron.dashboard.

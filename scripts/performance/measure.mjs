@@ -266,11 +266,11 @@ function holdTimer() {
   return () => { clearInterval(timer); return longest; };
 }
 
-// Wall time and this process's CPU (every thread's) for one run.
-async function timed(run) {
+// Wall time and this process's CPU (every thread's) for one piece of work.
+async function timed(work) {
   const started = performance.now();
   const cpuBefore = process.cpuUsage();
-  const result = await run();
+  const result = await work();
   const cpu = process.cpuUsage(cpuBefore);
   return { result, seconds: +((performance.now() - started) / 1000).toFixed(1), cpuSeconds: +((cpu.user + cpu.system) / 1e6).toFixed(1) };
 }
