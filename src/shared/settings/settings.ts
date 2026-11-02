@@ -206,6 +206,12 @@ export function bindKey(settings: Settings, name: string, binding: string | null
   return { ...settings, keys };
 }
 
+// What a line of help text calls the key an action is on. One spelling for an unbound one, so the
+// hints on the manager page and on a project page never name it two ways.
+export function bindingName(settings: Settings, name: string): string {
+  return settings.keys[name] ?? 'Nothing';
+}
+
 export function resetKeys(settings: Settings, isMac: boolean): Settings {
   return { ...settings, keys: defaultSettings(isMac).keys };
 }

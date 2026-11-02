@@ -195,6 +195,11 @@ export type DashboardBridge = {
   onNotesChange(listener: (projectPath: string) => void): void;
   readNotes(projectPath: string): Promise<string>;
   writeNotes(projectPath: string, text: string): Promise<void>;
+  // The handwriting page of the same notes, kept whole as an SVG string the renderer makes and reads;
+  // main never looks inside it. Its change event is another screen's write, like the notes'.
+  onInkChange(listener: (projectPath: string) => void): void;
+  readInk(projectPath: string): Promise<string>;
+  writeInk(projectPath: string, text: string): Promise<void>;
   // The settings, and the shell that was resolved from them. One call, because the renderer needs
   // both before it builds a pane and they are decided together.
   getSettings(): Promise<{ settings: Settings; shellCommand: string }>;

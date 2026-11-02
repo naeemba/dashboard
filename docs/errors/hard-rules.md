@@ -36,12 +36,12 @@ stale. Say what the wiring does; let the module say what the rule is.
 An error put in front of a person goes through `failureText`, never
 `String(error)`. `src/main/command/failure-line.ts` is the exception — `failureLine` is
 the command line's own formatter and prints a stack on purpose. `board-view.ts`
-and `notes-view.ts` are owed the fix still, exempted below only so the check
+is owed the fix still, exempted below only so the check
 stays actionable — a file added to the exemption list here without also being
 fixed is the rule being broken, not followed. The check is that this prints
 nothing:
 
-    grep -rn "String(error)" src/ | grep -v 'failure.ts\|failure-line.ts\|board-view.ts\|notes-view.ts'
+    grep -rn "String(error)" src/ | grep -v 'failure.ts\|failure-line.ts\|board-view.ts'
 
 ## errors-rule-2: An IPC handler answers a refusal, it does not throw it
 

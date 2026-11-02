@@ -144,7 +144,9 @@ describe('hears, over the action table', () => {
       for (const mode of MODES) {
         const taken = new Map<string, string>();
         for (const entry of ACTIONS) {
-          if (!hears(entry.scope, mode, true)) continue;
+          // The handwriting page showing, which hears the most keys a screen can: the notes' own, the ink
+          // keys and the manager's, all at once.
+          if (!hears(entry.scope, mode, true, false, true)) continue;
           const binding = defaultBinding(entry, isMac);
           if (binding === null) continue;
           expect(taken.get(binding), `${entry.name} and ${taken.get(binding)} both ship on ${binding} in ${mode}`)
@@ -198,11 +200,41 @@ describe('every shipped default reaches its own action', () => {
         // manager-page is not a mode: it is every section of the manager. Driven from its first section,
         // with the flag the renderer passes when the page you are on is the manager.
         // claude is the main session's screen inside the terminals view, heard while it has the keyboard.
-        const mode = entry.scope === 'manager-page' ? 'manager' : entry.scope === 'claude' ? 'terminals' : entry.scope;
+        // ink is the notes' handwriting page, heard in notes mode while that page is showing.
+        const mode = entry.scope === 'manager-page' ? 'manager'
+          : entry.scope === 'claude' ? 'terminals' : entry.scope === 'ink' ? 'notes' : entry.scope;
         const onManagerPage = entry.scope === 'manager-page';
-        expect(mapShortcut(pressed, keys, mode, onManagerPage, entry.scope === 'claude'), entry.name).toEqual(entry.action);
+        expect(mapShortcut(pressed, keys, mode, onManagerPage, entry.scope === 'claude', entry.scope === 'ink'), entry.name)
+          .toEqual(entry.action);
       }
     }
+  });
+});
+
+describe('the handwriting page', () => {
+  const p = key({ key: 'P', code: 'KeyP' });
+  const toggle = key({ key: 'H', code: 'KeyH', ctrlKey: true, shiftKey: true });
+
+  it('hears its keys in notes mode, only while the handwriting page is the one showing', () => {
+    expect(mapShortcut(p, other, 'notes', false, false, true)).toEqual({ kind: 'ink', command: 'pen' });
+    expect(mapShortcut(p, other, 'notes', false, false, false)).toBeNull();
+  });
+
+  it('hears them inside the manager notes section too', () => {
+    expect(mapShortcut(p, other, 'notes', true, false, true)).toEqual({ kind: 'ink', command: 'pen' });
+  });
+
+  it('never hears them on another screen, whatever the page says', () => {
+    for (const mode of MODES.filter((each) => each !== 'notes')) {
+      expect(hears('ink', mode, false, false, true), mode).toBe(false);
+      expect(hears('ink', mode, true, false, true), mode).toBe(false);
+    }
+  });
+
+  it('hears the toggle on both pages of the notes, and nowhere else', () => {
+    expect(mapShortcut(toggle, other, 'notes', false, false, false)).toEqual({ kind: 'notes-ink-toggle' });
+    expect(mapShortcut(toggle, other, 'notes', false, false, true)).toEqual({ kind: 'notes-ink-toggle' });
+    expect(mapShortcut(toggle, other, 'board', false)).toBeNull();
   });
 });
 
