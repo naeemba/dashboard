@@ -41,7 +41,8 @@ export type SessionPorts = {
   openWorker(slot: number): number;
   // The id the worker's conversation starts with, recorded in the app's session index first.
   newSession(projectPath: string, directory: string, cardId: string | null): string;
-  startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null): void;
+  // `dispatcherPath` is the page whose main the worker reports to, saved so a restart starts that main.
+  startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null, dispatcherPath: string): void;
   closeWorker(id: string): void;
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
@@ -175,7 +176,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const { index } = paneFromId(id);
     states.delete(id);
     const session = ports.newSession(projectPath, directory, card);
-    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card);
+    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card, dispatcherPath);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');

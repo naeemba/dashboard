@@ -14,6 +14,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
+import { sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
@@ -27,7 +28,9 @@ import { isRecord } from '../../shared/app/is-record';
 import { unpacked } from '../app/unpacked';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
-// session. It is started when the project opens and again after a new conversation or a /resume, and
+// session. It is started the first time the page's Claude screen is shown (its measure asks), on the
+// first prompt or worker report, at open for a page whose main dispatched a worker that came back (chat-start.ts),
+// and again after a new conversation or a /resume. Once started it is
 // kept open in streaming input mode, so every prompt goes into the same process and a worker's
 // SendMessage has somewhere to arrive. The renderer draws; everything here is the session and the
 // questions it is waiting on.
@@ -214,7 +217,7 @@ export function mainSessionStart(
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
-): { open(slot: number, adopt?: string): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): void } {
+): { open(slot: number, adopt?: string): void; start(slot: number): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): void } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -532,9 +535,13 @@ export function registerChatSessions(
 
   // What the status line shows: how full the context window is, read from the last response rather
   // than counted again, the model by its shown name, and the plan's limits. The limits come from an
-  // experimental call; a release that drops it leaves the line without them and nothing else.
-  table.handle('chat:measure', async (_screen, slot: number): Promise<ChatMeasure | null> => {
-    const session = await sessions.get(slot);
+  // experimental call; a release that drops it leaves the line without them and nothing else. A screen
+  // shown for the first time asks with `start`, which is what starts a page's session; any other
+  // measure, a model picked after the session ended say, reads null rather than starting a CLI.
+  table.handle('chat:measure', async (_screen, slot: number, start: boolean): Promise<ChatMeasure | null> => {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return null;
+    const session = await sessionToMeasure(start, () => running(slot, projectPath), sessions.get(slot));
     if (!session) return null;
     const [context, models, usage] = await Promise.all([
       session.query.getContextUsage({ detail: 'summary' }),
@@ -670,8 +677,8 @@ export function registerChatSessions(
   });
 
   return {
-    // A project opening starts its main session at once, as the terminal one was, so a worker's
-    // SendMessage has somewhere to arrive. `adopt` is the conversation the terminal main left;
+    // A project opening sets up what its main session will start on, without starting it: that waits
+    // for the screen, a prompt or start(). `adopt` is the conversation the terminal main left;
     // mainSessionStart says what wins.
     open(slot, adopt) {
       const projectPath = host.projectPath(slot);
@@ -679,7 +686,11 @@ export function registerChatSessions(
       const opening = mainSessionStart(remembered[projectPath], adopt, preferences.get(slot));
       if (opening.resume !== remembered[projectPath]) remember(projectPath, opening.resume);
       preferences.set(slot, opening.preferences);
-      running(slot, projectPath).catch(() => undefined);
+    },
+    // The page's session started now, for a worker's SendMessage to arrive at (chat-start.ts).
+    start(slot) {
+      const projectPath = host.projectPath(slot);
+      if (projectPath !== undefined) running(slot, projectPath).catch(() => undefined);
     },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.

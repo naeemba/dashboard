@@ -57,6 +57,8 @@ export type ChatViewOptions = {
 export type ChatView = {
   element: HTMLElement;
   open(): void;
+  // The screen came into view; the first time, it measures, which starts the page's session.
+  shown(): void;
   focus(): void;
   receive(event: ChatEvent): void;
   runCommand(command: ChatCommand): void;
@@ -644,11 +646,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
   return {
     element,
     question: () => (asks.length > 0 ? permissionTitle(asks[0]) : null),
-    // Reads the conversation in and measures it; the page calls it once, when it is built.
+    // Reads the conversation in; the page calls it once, when it is built.
     open() {
       readEarlier();
-      measures.take();
     },
+    // The screen on view. Main starts the page's session for its first measure, so a page you never
+    // look at runs no CLI.
+    shown: measures.shown,
     focus,
     receive(event) {
       if (event.kind === 'ask') return addAsk(event.ask);

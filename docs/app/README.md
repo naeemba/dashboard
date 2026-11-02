@@ -4,6 +4,19 @@ The window, its pages and what a restart puts back. Main owns the projects that
 are open and the files under `.dashboard/`; the renderer draws one page per
 project and wires every other feature into it.
 
+## On screen
+
+What each screen does, in full. The help dialog keeps only a short
+blurb for it; this is where the rest lives.
+
+### Log
+
+What the app did and what went wrong, newest first: errors, panes and agents
+exiting, cards moving, ships, worktrees, projects opening and closing. Type in
+the box to filter — every word must appear, so `error ship` is the ships that
+failed. Kept in dashboard.log in the app's data folder, 5 files of 5 MB; the
+path is at the top. Never what you type in a pane.
+
 ## Files
 
 Folders: `src/main/`, `src/main/app/`, `src/preload/`, `src/shared/app/`, `src/renderer/`, `src/renderer/app/`.

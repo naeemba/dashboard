@@ -27,7 +27,7 @@ import { MANAGER_SLOT } from '../shared/manager/manager';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
-import { folderDialogRefusal, screens, windowHears } from '../shared/remote-host/screens';
+import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
 import { peekBoard, writeBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
@@ -36,6 +36,7 @@ import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
 import { registerPaneChannels } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
+import { startsAtOpen } from './chat/chat-start';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
@@ -48,7 +49,7 @@ import { SESSION_FILE } from './app/session';
 import { sessionIndexStore } from './workers/session-index-store';
 import { registerDrawer } from './drawer/drawer-ipc';
 import { sessionStore } from './app/session-store';
-import { agentToResume, mainResume, resumedAs, resumeLine, type PaneConversation } from './workers/claude-resume';
+import { agentToResume, mainResume, resumedAs, resumeLine, workerDispatcher, type PaneConversation } from './workers/claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
@@ -244,7 +245,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
   temporary: app.getPath('temp'), shellCommand: () => shellCommand, projectPath: (slot) => projectIn(slot)?.path,
-  send: sendToRenderer,
+  send: sendToRenderer, keepsScreens: () => keepsScreenCopies(remoteHost !== null, remote.reachesWindow()),
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
@@ -382,7 +383,7 @@ registerPaneOpeners(table, {
   },
 });
 
-// A project starts with its main session, plus a worker for each pane that was running Claude Code when
+// A project opens with its main session, plus a worker for each pane that was running Claude Code when
 // the app last quit — session-store.ts says when it was. Whether the conversation saved for pane 0 is
 // main's to carry on is mainResume's; one that was not main's comes back in a worker after the rest.
 // The editor is registered but not started: opening nine projects should not launch nine editors, each
@@ -393,6 +394,7 @@ function spawnProject(project: Project, projectIndex: number): void {
   const mainId = terminalId(projectIndex, MAIN_INDEX);
   const first = mainResume(claudeSessions.takeResume(project.path, MAIN_INDEX, mainId), project.path, realPath);
   // Main is the Claude screen in the terminals view's left column, run through the Agent SDK, not a pane.
+  // It starts when first shown, unless a worker it dispatched comes back, here or on another page (chat-start.ts).
   chats.open(projectIndex, first.session);
   for (const index of claudeSessions.owedResumes(project.path)) {
     const id = terminalId(projectIndex, index);
@@ -407,6 +409,17 @@ function spawnProject(project: Project, projectIndex: number): void {
     resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+  startMainsWaitedOn();
+}
+
+// Every open page whose main a worker that came back after a restart reports to, started for its
+// SendMessage to arrive at. Run once a page's own main is open, so the worker opening on X starts the
+// main on A that dispatched it, and A opening after X starts it too. A main already running is left as is.
+function startMainsWaitedOn(): void {
+  for (const slot of [MANAGER_SLOT, ...projects.keys()]) {
+    const project = projectIn(slot);
+    if (project !== undefined && !project.missing && startsAtOpen(project.path, mainsWorkers.values())) chats.start(slot);
+  }
 }
 
 // The shells the pane host kept for this project through a restart, back in their panes as they were.
@@ -424,7 +437,7 @@ function adoptSurvivors(slot: number, projectPath: string): void {
     setPaneCommand(id, pane.command);
     panes.listenTo(id, shell, survivor.file);
     if (pane.card !== undefined) recordWorktree({ ...pane.card, pane: index });
-    if (pane.worker) mainsWorkers.add(id);
+    if (pane.worker && saved !== null) mainsWorkers.set(id, workerDispatcher(saved, projectPath));
   }
 }
 
@@ -444,13 +457,14 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
   }
   const agentArguments = comesBackAs === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
   startAgent(id, card?.worktreePath ?? resume.directory, agentArguments);
-  if (comesBackAs === 'worker') mainsWorkers.add(id);
+  if (comesBackAs === 'worker') mainsWorkers.set(id, workerDispatcher(resume, projectPath));
 }
 
 // The panes main's worker is in now, which the `session` command may release and session.json marks so
 // a restart knows them again. A pane leaves the set when its agent exits, anything else starts in it, or
-// it closes, so release never kills what somebody else put there afterwards.
-const mainsWorkers = new Set<string>();
+// it closes, so release never kills what somebody else put there afterwards. Each names the path of the
+// page whose main dispatched it, the one it reports to.
+const mainsWorkers = new Map<string, string>();
 
 // Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
 // 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
@@ -564,7 +578,7 @@ table.handle('usage:read', () => tokenUsage.latest());
 
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
 // so a crash loses at most the change you were making, or half a minute of sessions.
-const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SESSION_FILE), slotOfProject, (id) => mainsWorkers.has(id));
+const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SESSION_FILE), slotOfProject, (id) => mainsWorkers.get(id));
 // Every Claude the app starts, by project, for the drawer to list and resume.
 const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'));
 registerDrawer(table, {
@@ -598,13 +612,17 @@ const chats = registerChatSessions(table, {
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
 });
-// The manager's main, started at launch the way a project's starts when it opens: its workers report to
-// it. Its folder is made first, since a session cannot start in a folder that is not there.
+// The manager's main, opened at launch the way a project's is when it opens, and started the same way:
+// shown, told something, or a worker it dispatched kept through a restart. Its folder is made first, since
+// a session cannot start in a folder that is not there.
 try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
-  void shellHost.ready.then(() => adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER));
+  void shellHost.ready.then(() => {
+    adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER);
+    startMainsWaitedOn();
+  });
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }
@@ -804,14 +822,14 @@ const workerAnswers = sessionRequests({
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.
-  startWorker(id, directory, agentArguments, cardId) {
+  startWorker(id, directory, agentArguments, cardId, dispatcherPath) {
     const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
     const { slot, index } = paneFromId(id);
     takePane(projectIn(slot)?.path ?? '', index, cardId ?? '');
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
     startAgent(id, directory, agentArguments);
-    mainsWorkers.add(id);
+    mainsWorkers.set(id, dispatcherPath);
   },
   closeWorker,
   mark: (id, state) => sendToRenderer('pane:mark', id, state),

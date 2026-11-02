@@ -146,6 +146,10 @@ export type DashboardBridge = {
   sendInput(id: string, data: string): void;
   resize(id: string, cols: number, rows: number): void;
   restart(id: string): void;
+  // Stop and start reading a pane's pty while its terminal has too much queued to draw:
+  // renderer/panes/write-flow.ts.
+  pauseOutput(id: string): void;
+  resumeOutput(id: string): void;
   // Every pane with an agent still working in it, sent on a timer and read by the review sweep. The
   // same direction as openScrollback and for the same reason: main has the pty, which is the bytes
   // going past, not the screen they built — and "still working" is a thing you can only see on the
@@ -179,7 +183,9 @@ export type DashboardBridge = {
   // A read that changes nothing on disk, for the manager's counts: null when there is nothing to
   // count. board-store.ts says why the manager may not use readBoard.
   peekBoard(projectPath: string): Promise<Board | null>;
-  writeBoard(projectPath: string, board: Board): Promise<void>;
+  // `base` is the board this screen last read or wrote; main replays the change from it to `board`
+  // onto the file as it is now. Answers with what it wrote when that is not `board`, else null.
+  writeBoard(projectPath: string, base: Board, board: Board): Promise<Board | null>;
   // The project whose board.json has become something the app did not write — the `board` command
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.
@@ -260,7 +266,8 @@ export type DashboardBridge = {
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
   // What the status line shows; null before the session has started.
-  chatMeasure(slot: number): Promise<ChatMeasure | null>;
+  // `start` starts the page's session when it is not running; without it a page with none reads null.
+  chatMeasure(slot: number, start?: boolean): Promise<ChatMeasure | null>;
   // What a screen opening the page catches up on: the conversation it would resume, the questions
   // waiting, and the model and mode chosen.
   chatRead(slot: number): Promise<ChatState>;
