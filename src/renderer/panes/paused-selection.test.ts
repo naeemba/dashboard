@@ -40,4 +40,14 @@ describe('pauseSelectionRedraws', () => {
     pauseSelectionRedraws({ _core: { _renderService: service } });
     expect(service.handleSelectionChanged).toBe(original);
   });
+
+  it.each([
+    '_isPaused', '_needsFullRefresh', '_needsSelectionRefresh', '_selectionState', 'handleSelectionChanged',
+  ] as const)('changes nothing when the render service lacks %s', (field) => {
+    const { terminal, service } = fakeTerminal();
+    delete (service as Partial<RenderServiceInternals>)[field];
+    const original = service.handleSelectionChanged;
+    pauseSelectionRedraws(terminal);
+    expect(service.handleSelectionChanged).toBe(original);
+  });
 });

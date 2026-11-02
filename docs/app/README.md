@@ -60,6 +60,8 @@ with its reason and the condition that lifts it.
   reaches its private render service. A bump checks those fields still exist
   and reruns `measure.mjs streams` (docs/performance/), since a rename turns the
   patch off silently and hidden projects go back to drawing every line.
+  The hold and `paused-selection.ts` both go once
+  `RenderService.handleSelectionChanged` checks `_isPaused` upstream.
 - `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
   keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
   when typescript-eslint supports TypeScript 7.
