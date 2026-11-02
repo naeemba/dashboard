@@ -10,7 +10,7 @@
     "start": "electron-forge start",
     "prepackage": "node scripts/no-running-app.mjs && node scripts/node-pty-built.mjs",
     "package": "electron-forge package",
-    "premake": "node scripts/node-pty-built.mjs",
+    "premake": "node scripts/no-running-app.mjs && node scripts/node-pty-built.mjs",
     "make": "electron-forge make",
     "release": "electron-forge release",
     "lint": "eslint .",

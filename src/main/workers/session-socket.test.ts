@@ -18,7 +18,8 @@ afterEach(() => {
 describe('sessionSocketPath', () => {
   // The folder is the lock: only you can enter it, so only you can reach the socket inside.
   // Skipped on Windows, which has no POSIX file modes to read back.
-  it.skipIf(process.platform === 'win32')('puts the socket in a fresh folder only this user can enter', () => {
+  const posixModesOnly = it.skipIf(process.platform === 'win32');
+  posixModesOnly('puts the socket in a fresh folder only this user can enter', () => {
     const temporary = folder('socket-test-');
     const socket = sessionSocketPath('linux', temporary, 42);
     expect(path.basename(socket)).toBe('session.sock');

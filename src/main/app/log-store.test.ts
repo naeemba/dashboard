@@ -6,7 +6,7 @@ import type { LogDraft, LogEntry } from '../../shared/app/log-entry';
 import { logStore } from './log-store';
 
 // Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
-const posixOnly = it.skipIf(process.platform === 'win32');
+const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 // Lets one test make a rename or an append fail the way a busy or locked file does; every other test
 // writes for real.
@@ -99,7 +99,7 @@ describe('logStore', () => {
     expect(store.tail(1)[0].message).toBe('entry 59');
   });
 
-  posixOnly('keeps the files and drops the entry when a rotation cannot move them', () => {
+  posixModesOnly('keeps the files and drops the entry when a rotation cannot move them', () => {
     const store = logStore(directory, () => undefined, 200);
     for (let index = 0; index < 20; index++) store.log(info(`entry ${index}`));
     const before = store.tail(1000).map((entry) => entry.message);

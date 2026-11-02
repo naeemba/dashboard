@@ -4,7 +4,7 @@ import {
 } from './ship';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixOnly = it.skipIf(process.platform === 'win32');
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
 
@@ -53,12 +53,12 @@ describe('branchNameFor', () => {
 describe('worktreePathFor', () => {
   // Beside the project, never inside it: nothing to gitignore, and a search in the real checkout
   // never walks into it.
-  posixOnly('puts the worktree in a sibling folder named after the project', () => {
+  posixPathsOnly('puts the worktree in a sibling folder named after the project', () => {
     expect(worktreePathFor('/Users/sharp/workspace/personal/dashboard', 'panes-name-themselves'))
       .toBe('/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves');
   });
 
-  posixOnly('is not confused by a trailing slash on the project path', () => {
+  posixPathsOnly('is not confused by a trailing slash on the project path', () => {
     expect(worktreePathFor('/Users/sharp/work/api/', 'bump-deps'))
       .toBe('/Users/sharp/work/api.worktrees/bump-deps');
   });

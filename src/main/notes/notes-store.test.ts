@@ -6,7 +6,7 @@ import { BOARD_DIRECTORY } from '../board/board-store';
 import { NOTES_FILE, notesPath, readNotes, writeNotes } from './notes-store';
 
 // Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
-const posixOnly = it.skipIf(process.platform === 'win32');
+const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 function project(): string {
   return mkdtempSync(join(tmpdir(), 'dashboard-notes-'));
@@ -46,7 +46,7 @@ describe('the notes file', () => {
     expect(() => readNotes(projectPath)).toThrow();
   });
 
-  posixOnly('leaves the old page whole when the new one cannot be written', () => {
+  posixModesOnly('leaves the old page whole when the new one cannot be written', () => {
     const projectPath = project();
     writeNotes(projectPath, 'the page that was there\n');
     // A folder that takes no new file: the temporary file cannot be made, so nothing replaces

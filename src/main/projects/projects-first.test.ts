@@ -3,10 +3,10 @@ import { firstProjectsFile } from './projects-first';
 import { readProjects } from './projects-file';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixOnly = it.skipIf(process.platform === 'win32');
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 describe('firstProjectsFile', () => {
-  posixOnly('writes a file readProjects reads back, open and recent folders once each, ~ for home', () => {
+  posixPathsOnly('writes a file readProjects reads back, open and recent folders once each, ~ for home', () => {
     const file = firstProjectsFile(['/home/me/Workspace/crm', '/srv/api', '/home/me/Workspace/crm', '/home/me'], '/home/me');
     expect(readProjects(file.file)).toEqual({
       ok: true,

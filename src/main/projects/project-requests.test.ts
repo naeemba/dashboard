@@ -4,7 +4,7 @@ import { PROJECT_REQUEST } from './project-cli';
 import { projectRequests, type ProjectRequestPorts } from './project-requests';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixOnly = it.skipIf(process.platform === 'win32');
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 const idle = (index: number): ClosingPane => ({
   name: `terminal ${index + 1}`, index, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
@@ -31,7 +31,7 @@ describe('projectRequests', () => {
     expect(otherwise).toHaveBeenCalledOnce();
   });
 
-  posixOnly('opens a folder that is not open, and leaves one that is', async () => {
+  posixPathsOnly('opens a folder that is not open, and leaves one that is', async () => {
     const { ports, answer } = setup({ '/web': 0 });
     await expect(answer('open', '/api/', 'api')).resolves.toEqual({ ok: true, output: 'opened api' });
     expect(ports.open).toHaveBeenCalledWith('/api');
@@ -41,32 +41,32 @@ describe('projectRequests', () => {
 
   // Restored while its drive was unmounted, it sits in its slot reading Directory not found; answering
   // "already open" would leave it dead with the command reporting success.
-  posixOnly('opens over a dead page whose folder is back, as the picker does', async () => {
+  posixPathsOnly('opens over a dead page whose folder is back, as the picker does', async () => {
     const { ports, answer } = setup({ '/api': 2 }, [idle(1)], [2]);
     await expect(answer('open', '/api', 'api')).resolves.toEqual({ ok: true, output: 'opened api' });
     expect(ports.open).toHaveBeenCalledWith('/api');
   });
 
-  posixOnly('refuses a dead page whose folder is still gone', async () => {
+  posixPathsOnly('refuses a dead page whose folder is still gone', async () => {
     const { ports, answer } = setup({ '/gone': 2 }, [idle(1)], [2]);
     await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: "gone's folder, /gone, does not exist" });
     expect(ports.open).not.toHaveBeenCalled();
   });
 
   // Opened anyway, it would be a dead page reading Directory not found.
-  posixOnly('refuses to open a folder that is not there', async () => {
+  posixPathsOnly('refuses to open a folder that is not there', async () => {
     const { ports, answer } = setup({});
     await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: "gone's folder, /gone, does not exist" });
     expect(ports.open).not.toHaveBeenCalled();
   });
 
-  posixOnly('closes a quiet project with no question', async () => {
+  posixPathsOnly('closes a quiet project with no question', async () => {
     const { ports, answer } = setup({ '/web': 3 });
     await expect(answer('close', '/web', 'web')).resolves.toEqual({ ok: true, output: 'closed web' });
     expect(ports.close).toHaveBeenCalledWith(3);
   });
 
-  posixOnly('refuses to close while a pane is running something, naming it as the close key does', async () => {
+  posixPathsOnly('refuses to close while a pane is running something, naming it as the close key does', async () => {
     const { ports, answer } = setup({ '/web': 3 }, [idle(1), { ...idle(2), foreground: 'npm' }]);
     await expect(answer('close', '/web', 'web'))
       .resolves.toEqual({ ok: false, output: 'web is still running in terminal 3 npm — stop it and close again' });

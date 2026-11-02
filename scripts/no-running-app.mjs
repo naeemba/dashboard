@@ -1,7 +1,8 @@
 // Refuse to package while an app is running out of this checkout. Packaging wipes out/ and
 // .vite/, and pulling those files out from under a process that is executing them is a
 // SIGBUS crash on a mac or Linux; on Windows the files are locked instead and packaging dies
-// half way with EBUSY. Runs as npm's prepackage hook, so it covers every route to a build.
+// half way with EBUSY. Runs as npm's prepackage and premake hooks, since electron-forge make
+// packages first and wipes the same folders.
 //
 // Node rather than sh so the same npm hook runs on Windows, where npm runs scripts with cmd.exe
 // and there is no ps: the process list comes from PowerShell there instead.

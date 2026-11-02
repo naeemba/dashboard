@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { doneReport, projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixOnly = it.skipIf(process.platform === 'win32');
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
 
@@ -437,7 +437,7 @@ describe('projectOfFolder', () => {
   const projects = [undefined, '/work/api', '/work/web'];
   const asGiven = (path: string): string => path;
 
-  posixOnly('finds the project from its checkout, anywhere inside it, or one of its worktrees', () => {
+  posixPathsOnly('finds the project from its checkout, anywhere inside it, or one of its worktrees', () => {
     expect(projectOfFolder(projects, '/work/api', asGiven)).toBe(1);
     expect(projectOfFolder(projects, '/work/api/src', asGiven)).toBe(1);
     expect(projectOfFolder(projects, '/work/api.worktrees/fix-it', asGiven)).toBe(1);
@@ -450,7 +450,7 @@ describe('projectOfFolder', () => {
   });
 
   // ~/work is a symlink to /mnt/data, and the command reports the folder it really is in.
-  posixOnly('finds a project opened through a symlink', () => {
+  posixPathsOnly('finds a project opened through a symlink', () => {
     const real = (path: string): string => path.replace('/work/', '/mnt/data/');
     expect(projectOfFolder(projects, '/mnt/data/api', real)).toBe(1);
     expect(projectOfFolder(projects, '/mnt/data/api.worktrees/fix-it', real)).toBe(1);
