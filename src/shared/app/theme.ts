@@ -3,7 +3,7 @@ import type { ITheme } from '@xterm/xterm';
 // The theme the app ships with: Ghostty's stock look (`ghostty +show-config --default`) — #282c34
 // background, white foreground, and its default 16-color palette. settings.json overrides any colour
 // in here; this is only what a fresh install, or a settings file with no `theme` key, paints with.
-export const THEME: ITheme = {
+export const THEME = {
   background: '#282c34',
   foreground: '#ffffff',
   cursor: '#ffffff',
@@ -26,13 +26,11 @@ export const THEME: ITheme = {
   brightMagenta: '#c397d8',
   brightCyan: '#70c0b1',
   brightWhite: '#eaeaea',
-};
+} satisfies ITheme;
 
-// The names of the sixteen terminal colours the shipped theme always carries, each published as a CSS
-// custom property of the same name, for something that paints with one by name.
-export type ThemeColour =
-  | 'black' | 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white'
-  | 'brightBlack' | 'brightRed' | 'brightGreen' | 'brightYellow' | 'brightBlue' | 'brightMagenta' | 'brightCyan' | 'brightWhite';
+// The names of the colours the shipped theme carries, each published as a CSS custom property of the
+// same name, for something that paints with one by name.
+export type ThemeColour = keyof typeof THEME;
 
 // Height of the title row. Main needs it to place the traffic lights inside the row; the renderer
 // publishes it as a custom property so chrome.css sizes the row from the same number.
