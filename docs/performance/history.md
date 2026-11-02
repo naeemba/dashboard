@@ -5,6 +5,39 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-02: a streaming reply redraws only its tail (finding 5)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs chat
+<demo> <characters>` at 600 chars/s (12 characters every 20 ms). "Before" is
+`origin/main`'s `chat-view.ts` built the same day, "after" this branch; two
+runs each, alternated.
+
+| | before | after |
+|---|---|---|
+| Renderer CPU, 2k reply | 42.0–43.5% | 43.0–47.3% |
+| Renderer CPU, 8k reply | 54.5–63.3% | 44.9–49.4% |
+| Renderer CPU, 16k reply | 65.7–66.2% | 50.6–50.7% |
+| Script time, 16k | 7.9–8.1% | 2.2% |
+| Layout time, 16k | 28.3–28.4% | 20.0–20.1% |
+| Style time, 16k | 3.1% | 0.8% |
+| DOM nodes at the end, 16k | 28,179–31,434 | 8,575–8,598 |
+
+- The text before the last paragraph break outside a code fence is drawn once
+  as it settles (`chat-live-view.ts`, `chat-live-cut.ts`); each frame redraws
+  only what follows. The finished reply is still drawn whole as an entry.
+- The 2k reply did not move: most of it is one tail until the first breaks
+  arrive, and what is left is the cost of the frame itself.
+- The same day's before runs put 16k at 66%, not the first profile's 100%: the
+  demo's `answer.md` differs from the one first used. The after column is
+  measured against the same day's before.
+- What is left is layout, about 60 a second, and it is near the same at 2k as
+  at 16k, so it is the long conversation above the block being laid out each
+  frame, not the reply. Not done here: finding out what each frame dirties
+  there.
+- Still redrawn every frame: an open code fence, highlighted whole until it
+  closes, and a list whose items are blank-separated. A reply with a link
+  definition or an HTML comment or `<pre>` block is drawn whole, as before.
+
 ## 2026-11-02: hidden projects stop drawing their terminals (finding 4)
 
 Same machine, compositor and tooling as the first profile, `measure.mjs
