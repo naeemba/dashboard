@@ -69,13 +69,6 @@
           "parent": null
         },
         {
-          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
-          "title": "Cap each help dialog blurb",
-          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
           "title": "Decide whether the review agent may merge without a person",
           "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
@@ -188,7 +181,17 @@
           "id": "108cae37-1920-49da-98d3-53e21813ee21",
           "title": "Hold focus inside confirmOverlay and promptOverlay so Shift+Tab cannot leave them",
           "notes": "confirmOverlay and promptOverlay in src/renderer/app/overlay.ts hold no focus: Shift+Tab is a modified key, so answerKeys lets it through, and focus moves to the last focusable element before the overlay (a prompt box or a pane) while the sheet stays up. An Escape meant to cancel the dialog then reaches the page behind it. Fix with a shared focus hold in overlay.ts, as viewerOverlay does with its focusin listener; no key handling changes, so keys-rule-1 is untouched.\n\nIssue: https://github.com/naeemba/dashboard/issues/182\nReview: https://github.com/naeemba/dashboard/pull/180#discussion_r4438105899",
-          "priority": "medium"
+          "priority": "medium",
+          "parent": null
+        },
+        {
+          "id": "6bc82ed1-40f3-491a-b1fd-e415d264f3c5",
+          "title": "Skip xterm's selection redraw on scroll when nothing is selected",
+          "notes": "Left over from PR #179. On a shown terminal, every scroll asks the selection to redraw and the DOM renderer rebuilds every row, even with no selection. Skipping it when nothing is selected should cut shown renderer CPU while panes stream. Build on src/renderer/panes/paused-selection.ts; measure with docs/performance/ tooling before and after.",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-02T01:02:00.310Z",
+          "updatedAt": "2026-11-02T01:02:00.310Z"
         }
       ]
     },
@@ -331,6 +334,14 @@
           "priority": "high",
           "parent": null,
           "updatedAt": "2026-11-02T00:49:53.539Z"
+        },
+        {
+          "id": "79b80d8d-7fe8-4b96-8ad1-ef01297c2ba9",
+          "title": "Cap each help dialog blurb",
+          "notes": "Terminals help is 4,563 words, its blurb 1,129 before the first key. Cap blurbs at about 60 words with a test in help.test.ts; detail moves to docs. Cost small. (docs/review/2026-11-01.md U2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T01:02:00.351Z"
         }
       ]
     },
