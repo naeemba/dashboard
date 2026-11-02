@@ -22,6 +22,15 @@ describe('applyMessage', () => {
     expect(done.entries).toEqual([{ kind: 'text', text: 'Hello' }]);
   });
 
+  it("keeps the conversation's last use of the prompt cache, not a subagent's", () => {
+    const usage = { cache_read_input_tokens: 9, cache_creation: { ephemeral_1h_input_tokens: 3 } };
+    const transcript = fold([
+      { type: 'assistant', parent_tool_use_id: null, timestamp: '2026-11-01T09:00:05.000Z', message: { content: [], usage } },
+      { type: 'assistant', parent_tool_use_id: 'tool-1', timestamp: '2026-11-01T09:00:09.000Z', message: { content: [], usage } },
+    ]);
+    expect(transcript.cache).toEqual({ at: Date.parse('2026-11-01T09:00:05.000Z'), tier: '1h' });
+  });
+
   it('stamps a message with when it was written and the model that wrote it', () => {
     const transcript = fold([
       { type: 'user', parent_tool_use_id: null, timestamp: '2026-11-01T09:00:00.000Z', message: { content: 'hi' } },

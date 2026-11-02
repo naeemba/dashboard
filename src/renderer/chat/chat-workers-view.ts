@@ -1,6 +1,7 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { workerRows, type DispatchedWorker } from '../../shared/workers/worker-roster';
 import { searchOverlay } from '../app/overlay';
+import type { UsageSnapshot } from '../../shared/usage/usage';
 
 // Every main's workers, kept current for the Claude screens' status lines and the workers popup. What
 // is counted and how the rows read is worker-roster.ts's; this only asks main and draws.
@@ -11,14 +12,20 @@ import { searchOverlay } from '../app/overlay';
 // ponytail: an exit alone does not refresh; add a main-side event if idle needs to show at once.
 const watchers = new Set<() => void>();
 let roster: DispatchedWorker[] = [];
+// Each pane's last use of the prompt cache, from the usage sweep, for the popup's warm or cold.
+let caches: UsageSnapshot['caches'] = {};
 let listening = false;
 
 const ofSlot = (slot: number): DispatchedWorker[] => roster.filter((worker) => worker.dispatcher === slot);
 
+function tellWatchers(): void {
+  for (const each of watchers) each();
+}
+
 function read(bridge: DashboardBridge): void {
   bridge.workers().then((list) => {
     roster = list;
-    for (const each of watchers) each();
+    tellWatchers();
   }, () => undefined);
 }
 
@@ -27,6 +34,12 @@ function watch(bridge: DashboardBridge, changed: () => void): () => void {
     listening = true;
     bridge.onPaneMark(() => read(bridge));
     bridge.onProjectsChange(() => read(bridge));
+    const takeCaches = (usage: UsageSnapshot) => {
+      caches = usage.caches;
+      tellWatchers();
+    };
+    bridge.onUsageChange(takeCaches);
+    bridge.readUsage().then(takeCaches, () => undefined);
   }
   watchers.add(changed);
   return () => watchers.delete(changed);
@@ -46,7 +59,7 @@ export function followWorkers(bridge: DashboardBridge, slot: number, drawn: (wor
 export async function showWorkers(bridge: DashboardBridge, slot: number, goToPane: (id: string) => void): Promise<boolean> {
   const id = await searchOverlay({
     name: 'chat-workers', placeholder: 'Search this session\'s workers', empty: 'No worker of this session is open.',
-    rows: (query) => workerRows(ofSlot(slot), query), glyph: () => 'claude',
+    rows: (query) => workerRows(ofSlot(slot), query, caches, Date.now()), glyph: () => 'claude',
     watch: (changed) => watch(bridge, changed),
   });
   if (id !== undefined) goToPane(id);

@@ -49,6 +49,16 @@ describe('sweepUsage', () => {
     expect(file.session).toBe('session-a');
   });
 
+  it("keeps the session's last use of the prompt cache, not a subagent's", async () => {
+    const line = (at: number, sidechain: boolean) => `${JSON.stringify({
+      cwd: PROJECT, timestamp: new Date(at).toISOString(), isSidechain: sidechain,
+      message: { usage: { cache_read_input_tokens: 9, cache_creation: { ephemeral_1h_input_tokens: 3 } } },
+    })}\n`;
+    await writeFile(logPath('session-a.jsonl'), line(NOW - 2_000, false) + line(NOW - 1_000, true));
+    const [file] = [...(await sweep()).values()];
+    expect(file.cache).toEqual({ at: NOW - 2_000, tier: '1h' });
+  });
+
   it('reads only what has been appended since the last sweep', async () => {
     const file = logPath('session-a.jsonl');
     await writeFile(file, reply(10));
@@ -78,6 +88,19 @@ describe('sweepUsage', () => {
     await writeFile(file, reply(4));
     await sweep(known);
     expect(totalsOf(known.values(), NOW).allTime).toBe(4);
+  });
+
+  it('forgets the cache use of a file read from the start again', async () => {
+    const file = logPath('session-a.jsonl');
+    await writeFile(file, `${JSON.stringify({
+      type: 'assistant', cwd: PROJECT, timestamp: new Date(NOW).toISOString(),
+      message: { usage: { cache_creation: { ephemeral_5m_input_tokens: 3 } } },
+    })}\n`);
+    const known = await sweep();
+    expect([...known.values()][0].cache).not.toBeNull();
+    await writeFile(file, reply(4));
+    await sweep(known);
+    expect([...known.values()][0].cache).toBeNull();
   });
 
   it('forgets a log that has been deleted', async () => {

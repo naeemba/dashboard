@@ -1,6 +1,7 @@
 import type { WorkerState } from '../app/bridge';
 import { ranked, type SearchRow } from '../app/fuzzy';
 import { paneFromId, paneLabel } from '../panes/terminals';
+import { cacheWarmth, type CacheUse } from '../usage/cache-warmth';
 
 // The workers a main session dispatched, as the Claude screen's status line counts them and its
 // workers popup lists them. Main builds the list from what `pane list` already reads
@@ -49,12 +50,16 @@ export function workerCount(workers: readonly DispatchedWorker[]): string {
 }
 
 // The popup's rows: the workers matching what is typed, best first, and with nothing typed the states
-// in ORDER, each in the order main gave them. Choosing one answers with its pane id.
-export function workerRows(workers: DispatchedWorker[], query: string): SearchRow<string>[] {
+// in ORDER, each in the order main gave them. Choosing one answers with its pane id. A worker whose
+// session has used the prompt cache says whether it is still warm, from `caches` (the usage sweep's).
+export function workerRows(workers: DispatchedWorker[], query: string, caches: Readonly<Record<string, CacheUse>>, now: number): SearchRow<string>[] {
   const byState = (one: DispatchedWorker, other: DispatchedWorker) => ORDER.indexOf(one.status) - ORDER.indexOf(other.status);
-  return ranked(workers, (worker) => `${worker.project} ${worker.name} ${worker.about}`, query, byState).map((worker) => ({
-    name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
-    detail: `${worker.status} · ${worker.about}`,
-    choice: worker.id,
-  }));
+  return ranked(workers, (worker) => `${worker.project} ${worker.name} ${worker.about}`, query, byState).map((worker) => {
+    const cache = caches[worker.id];
+    return {
+      name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
+      detail: [worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
+      choice: worker.id,
+    };
+  });
 }

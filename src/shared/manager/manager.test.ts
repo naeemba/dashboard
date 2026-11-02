@@ -145,6 +145,7 @@ describe('managerRows', () => {
       projects: { '/work/api': { fiveHours: 10, week: 20, allTime: 30 } },
       days: {},
       panes: { '3:1': 4_000 },
+      caches: {},
     });
     expect(rows[0].tokens).toEqual({ fiveHours: 10, week: 20, allTime: 30 });
     expect(rows[0].panes.map((entry) => entry.tokens)).toEqual([0, 4_000]);
@@ -215,7 +216,7 @@ describe('managerRows', () => {
 
   it("carries the project's week of spend for its trend", () => {
     const days = [1, 2, 3, 0, 0, 0, 0];
-    const rows = managerRows([page('api', 0, [])], { projects: {}, days: { '/work/api': days }, panes: {} });
+    const rows = managerRows([page('api', 0, [])], { projects: {}, days: { '/work/api': days }, panes: {}, caches: {} });
     expect(rows[0].days).toEqual(days);
   });
 });

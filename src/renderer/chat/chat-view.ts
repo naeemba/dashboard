@@ -16,6 +16,7 @@ import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
 import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
 import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
+import { createCacheClock } from './chat-cache-clock';
 import { PANE_LINK } from './chat-pane-links';
 import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
@@ -162,22 +163,25 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
 
   // One row under the box: on the left the model, the mode and what Claude is doing; on the right
-  // the meters Claude Code's status line carries, then the version.
+  // the meters Claude Code's status line carries, whether the prompt cache is warm, then the
+  // version.
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
+  const cacheClock = createCacheClock(() => foot.checkVisibility(), () => drawFoot());
   let drawnFoot = '';
   let drawnMeasure: ChatMeasure | null = null;
   function drawFoot(): void {
     const measured = measures.latest();
+    const cache = cacheClock.read(transcript.cache);
     const shown = `${measured?.model ?? model ?? transcript.model ?? 'default model'}${fast ? ' · fast' : ''}`;
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
     const effortShown = footEffort(effort, state, transcript.entries);
     // The measure by reference: each one landed is a new object, and stringifying its breakdown every paint is waste.
-    const key = JSON.stringify([shown, transcript.version, mode, effortShown, state, workers]);
+    const key = JSON.stringify([shown, transcript.version, mode, effortShown, state, workers, cache?.text, cache?.tone]);
     if (key === drawnFoot && measured === drawnMeasure) return;
     drawnFoot = key;
     drawnMeasure = measured;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version, workers));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, cache, transcript.version, workers));
   }
   let workers = '';
   followWorkers(bridge, slot, (list) => {
@@ -652,7 +656,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
     },
     // The screen on view. Main starts the page's session for its first measure, so a page you never
     // look at runs no CLI.
-    shown: measures.shown,
+    shown() {
+      measures.shown();
+      cacheClock.wake();
+      drawFoot();
+    },
     focus,
     receive(event) {
       if (event.kind === 'ask') return addAsk(event.ask);
