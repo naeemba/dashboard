@@ -31,8 +31,8 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 `shared/`; and a package that needs Node or the DOM is a value import only on
 its own side. `eslint.config.test.ts` pins each of those.
 
-- Process and window: `index.html` and its test, `main.ts`, `renderer.ts`, `preload.ts`, `bridge.ts`,
-  `channels.ts`, `app-window.ts`
+- Process and window: `index.html` and its test, `main.ts`, `renderer.ts`,
+  `preload.ts`, `bridge.ts`, `channels.ts`, `app-window.ts`
 - Build: `vite.build-version.ts` and its test at the repository root, declared
   in `forge.env.d.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
@@ -78,14 +78,17 @@ renderer bug that let markup through (a highlight.js grammar emitting raw
 HTML, say) would run the reply's script with the preload bridge in reach,
 which can type into any pane.
 
-Only the app's own scripts run (`script-src 'self'`, no `'unsafe-inline'`,
-no `'unsafe-eval'`). Everything else allowed is there because a feature
-needs it:
+No inline script, no inline handlers, no `eval` and nothing from the
+network runs (`script-src 'self'`, no `'unsafe-inline'`, no `'unsafe-eval'`).
+That is not "only the bundle": the packaged app loads the page with
+`loadFile`, and on a `file:` page Chromium matches `'self'` by scheme, so any
+`file:` URL on the disk counts as self, for scripts and images alike.
+Everything else allowed is there because a feature needs it:
 
 | Directive | Needed by | Without it |
 |---|---|---|
 | `style-src 'unsafe-inline'` | xterm and every view set `style` and add `<style>` | Views and panes draw unstyled |
-| `img-src data: blob:` | Images in a reply or a doc, carried inline (`safeImage`) | Images show broken |
+| `img-src data:` | Images in a reply or a doc, carried inline (`safeImage`) | Images show broken |
 | `font-src data:` | The build inlines the smaller font files as `data:` URLs | Those font files are refused |
 | `connect-src data:` | A PDF tile turns its base64 into a Blob with `fetch` | The PDF tile opens nothing |
 | `frame-src blob:` | The PDF viewer is an iframe on that Blob's URL | The PDF viewer opens blank |
@@ -95,10 +98,12 @@ needs it:
 `object-src 'none'`: Chromium's viewer is not an `<object>` of the page.
 
 A feature that loads something new (a remote image, a worker, a WebSocket)
-adds its directive to `index.html` and a row to this table in the same change. A violation is
-silent in the app: open DevTools and look for `Refused to` in the console.
-`index.html.test.ts` fails if `script-src` or `object-src` widens, or the
-PDF viewer's two directives go.
+adds its directive to `index.html` and a row to this table in the same
+change. A violation is silent in the app: open DevTools and look for
+`Refused to` in the console. `index.html.test.ts` fails if `script-src` or
+`object-src` widens, `img-src` lets in the network (the path `safeImage`
+guards against a reply sending a secret out), or the PDF viewer's two
+directives go.
 
 ## Scenarios
 
