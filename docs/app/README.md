@@ -81,7 +81,9 @@ is running only focuses the installed app's window, and says so on stderr.
 one, so a crash or a power cut mid-write leaves the old file or the new one,
 never half of one. The temporary file has a new name on every write, so two
 writers never share one. The flush runs on main's thread: on a busy disk a save
-can hold main for a moment, chosen over losing the file.
+can hold main for a moment, chosen over losing the file. A `mode`, when given,
+is set with `fchmod` on the temporary file before the rename, so the file never
+appears under its name without it and the umask cannot narrow it.
 
 ## Dependency holds
 
