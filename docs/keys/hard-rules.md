@@ -61,8 +61,16 @@ dialog, because it is believed.
 - The keys. Every row prints from the one table in `src/shared/keys/actions.ts`, so adding a
   shortcut means adding a row there and nothing else — the handler, the help
   dialog, the settings screen and the which-key strip all read it.
-- The blurb. Each section opens with a sentence saying what that screen is. If a
-  task changes what a screen does, the blurb is stale too.
+- The blurb. Each section opens with a few sentences saying what that screen is,
+  at most `BLURB_WORD_LIMIT` words, which `help.test.ts` checks. If a task
+  changes what a screen does, the blurb is stale too; the full account goes under
+  "On screen" in that feature's `docs/<feature>/README.md`. Uncapped, the
+  terminals blurb reached 1,129 words and Ctrl+H showed four screens of prose
+  before the first key. A blurb names a bound key as "the X key", never by its
+  spelling: the key can be rebound, and the blurb is a fixed string.
+  `help.test.ts` fails a blurb that names one of its own group's keys by its
+  default spelling. The command blurb said "Enter gives each its own process";
+  rebind it to Ctrl+O and Ctrl+H still said Enter runs the command.
 
 A change is not done until Ctrl+H would tell the truth about it.
 

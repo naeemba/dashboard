@@ -2,7 +2,7 @@
 // saying how many more there are. Claude was sent all of it; this only decides what the thread shows.
 
 const FOLD_OVER = 12;
-export const FOLD_SHOWN_LINES = 6;
+const FOLD_SHOWN_LINES = 6;
 
 type FoldedMessage = { head: string; rest: string; hidden: number };
 
