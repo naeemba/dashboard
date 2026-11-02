@@ -173,11 +173,13 @@ build's copy differs. A dev run (`npm start`) installs nothing; run a branch's p
 `node .vite/build/create-task-cli-entry.js`.
 
 - `~/.claude/skills/create-task/SKILL.md`, the `/create-task` skill
-- `~/.claude/skills/create-task/create-task.js`, the program it runs
+- `~/.claude/skills/create-task/create-task.js`, the program it runs, with a
+  `#!/usr/bin/env node` line and mode 0755 so it runs as a command (the mode is set again on a
+  copy whose bytes match but whose mode does not; on Windows it means nothing)
 - `~/.claude/skills/create-task/package.json`, `{"type":"commonjs"}`, so a `"type": "module"`
   package.json in `~/.claude` or `~` cannot make node read the program as ESM
 
-The program's path is fixed: `claude-pr-loop` calls it through `PR_LOOP_CARD_SCRIPT` with
+The program's path is fixed: `claude-pr-loop` runs it as an executable through `PR_LOOP_CARD_SCRIPT` with
 `--title`, `--notes` and `--priority`, and `--remote <name>` on a repo whose board lives on a
 remote other than `origin`. `--column <name>` picks the column (Backlog otherwise), `--seed`
 creates a board missing from the default branch, from this checkout's copy when it has one, and
@@ -207,5 +209,6 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs, then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
 - Given the default branch has no `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
 - Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then none is rewritten.
+- Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and runs as a command, its bytes not rewritten.
 - Given the remote's hook declines the push, when `create-task.js` runs, then it prints git's sentence and pushes once, not twice.
 - Given `--dry-run`, when `create-task.js` runs, then the remote's main is unchanged.
