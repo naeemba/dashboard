@@ -45,7 +45,7 @@ import { createProjectCloser } from './app/close-project';
 import { paneSends } from './panes/pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './panes/pane';
 import {
-  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, showNotesPage, typedNames, type Page,
 } from './app/page';
 import { neighborPane, paneAtPosition, stepPane } from '../shared/panes/pane-layout';
 import { closePane, runPaneAction, type PanePorts } from './panes/pane-actions';
@@ -382,18 +382,31 @@ function focusMode(page: Page, entering: boolean): void {
     if (entering) startEditor(page);
     page.editor.terminal.focus();
   }
-  if (page.mode === 'notes' && page.notes) {
-    // Re-read on arrival, like the board: the file may have been edited in a pane, or by the agent
-    // working in a project's worktree, since you were last here. open() takes the keyboard itself.
-    if (entering) void page.notes.open();
-    else page.notes.element.focus();
-  }
+  if (page.mode === 'notes') focusNotes(page, entering);
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
     // report() wrapper is needed here.
     if (entering) void page.board.open();
     else page.board.element.focus();
   }
+  renderStatus();
+}
+
+// The page of the notes that is showing, whichever of the two that is. Re-read on arrival, like the board:
+// the file may have been edited in a pane, or by the agent working in a project's worktree, since you were
+// last here. open() takes the keyboard itself.
+function focusNotes(page: Page, entering: boolean): void {
+  const showing = page.inkShowing ? page.ink : page.notes;
+  if (!showing) return;
+  if (entering) void showing.open();
+  else showing.element.focus();
+}
+
+// The notes' toggle key: the other page, read as if you had just arrived at it, since that is what it is.
+function toggleNotesPage(page: Page): void {
+  if (page.mode !== 'notes' || !page.ink) return;
+  showNotesPage(page, !page.inkShowing);
+  focusNotes(page, true);
   renderStatus();
 }
 
@@ -687,6 +700,8 @@ function apply(action: Action): void {
     case 'log-open':
     case 'log-filter-reset': return page.log?.runAction(action);
     case 'chat': return page.chat?.runCommand(action.command);
+    case 'notes-ink-toggle': return toggleNotesPage(page);
+    case 'ink': return page.ink?.command(action.command);
     case 'chat-edit': return editFocusedBox(page.chat?.element, action.edit);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
@@ -699,7 +714,7 @@ function apply(action: Action): void {
 // keeps what it is showing.
 const whichKey = createWhichKeyTracking(() => {
   const page = pages[activeIndex];
-  return { keys: settings.keys, mode: page.mode, onManagerPage: !isProjectPage(page), chatFocused: chatFocused(page) };
+  return { keys: settings.keys, mode: page.mode, onManagerPage: !isProjectPage(page), chatFocused: chatFocused(page), inkShowing: page.inkShowing };
 }, isMac);
 
 // A modifier let go of behind the app's back — Cmd+Tab away with Ctrl down — never reaches the keyup
@@ -716,7 +731,7 @@ window.addEventListener('keydown', (event) => {
   const walkedToButton = event.target instanceof HTMLButtonElement && event.target.matches(':focus-visible');
   if (pressesWalkedToButton(event, walkedToButton)) return;
   const page = pages[activeIndex];
-  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page), chatFocused(page));
+  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page), chatFocused(page), page.inkShowing);
   if (!action) return;
   event.preventDefault();
   event.stopPropagation();
@@ -760,6 +775,13 @@ bridge.onBoardChange((projectPath) => {
 bridge.onNotesChange((projectPath) => {
   const page = pages[activeIndex];
   if (page.mode === 'notes') void page.notes?.reload(projectPath);
+});
+
+// The same for the handwriting page, which has its own file and its own message. Only the page showing is
+// told: a hidden one reads when you switch to it.
+bridge.onInkChange((projectPath) => {
+  const page = pages[activeIndex];
+  if (page.mode === 'notes' && page.inkShowing) void page.ink?.reload(projectPath);
 });
 
 // jumps.ts says where each of these lands.

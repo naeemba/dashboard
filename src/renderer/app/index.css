@@ -199,6 +199,66 @@ body *:not(.pane, .pane *) {
   color: var(--muted);
 }
 
+/* The notes' second page, the handwriting. It covers the whole view, padding included: a page you draw on
+   has no column to keep inside. A strip of one line on top and a surface that scrolls under it. */
+.ink-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  outline: none;
+}
+
+/* The attribute is what swaps the two pages, and the display above would otherwise win over it. */
+.ink-view[hidden] {
+  display: none;
+}
+
+.ink-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font: 12px var(--ui-font);
+}
+
+.ink-hints {
+  margin-left: auto;
+}
+
+/* The pen's colour as it will draw. currentColor is the theme's text colour, as it is on the page. */
+.ink-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--white);
+}
+
+.ink-surface {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* What currentColor means on the page: the theme's text colour. */
+  color: var(--white);
+}
+
+/* touch-action: none is what lets a finger or a pen draw instead of scrolling the surface; the
+   keyboard's way to the lower page is a stroke's own room below, and the mouse wheel. */
+.ink-canvas {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.ink-view[data-tool='eraser'] .ink-canvas {
+  cursor: cell;
+}
+
 /* The manager: prose and lists, no panes. It takes the keyboard when you arrive, and a focus ring
    around the whole page says nothing useful, so the tab strip is what marks it instead. */
 .view-manager,

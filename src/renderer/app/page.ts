@@ -9,6 +9,7 @@ import type { LogView } from '../manager/log-view';
 import { fileLinksIn, webLinksIn } from '../nvim/file-links';
 import type { ManagerView } from '../manager/manager-view';
 import type { Mode, ProjectMode } from '../../shared/keys/modes';
+import { createInkView, type InkView } from '../notes/ink-view';
 import { createNotesView, type NotesView } from '../notes/notes-view';
 import type { Pane } from '../panes/pane';
 import { PANE_SCROLLBACK, paneScreen } from '../panes/pane';
@@ -119,6 +120,12 @@ export type Page = {
   // The page's notes. Null only on a dead project, for the same reason its board is: there is no
   // folder to keep a notes.md in. The manager has one — its file sits in the home directory instead.
   notes: NotesView | null;
+  // The notes' second page, written by hand, in the same view as the text box and shown instead of it. Null
+  // wherever `notes` is.
+  ink: InkView | null;
+  // Which of the two pages the notes view is showing, remembered for the session on each page: the choice
+  // is a page's, not the app's, and it starts on the text.
+  inkShowing: boolean;
   // Only the manager page has one, the way only a project page has a board.
   manager: ManagerView | null;
   // Only the manager page has these two either — the strip above the sections and the screen one of
@@ -206,6 +213,14 @@ export function showMode(page: Page, mode: Mode): void {
   page.mode = mode;
   for (const [name, view] of Object.entries(page.views)) if (view) view.hidden = name !== mode;
   page.strip?.render(mode);
+}
+
+// The notes view holds two pages and shows one. The text box is the other one's `hidden`, set here so the
+// two cannot both be on screen or both be gone.
+export function showNotesPage(page: Page, ink: boolean): void {
+  page.inkShowing = ink;
+  if (page.notes) page.notes.element.hidden = ink;
+  if (page.ink) page.ink.element.hidden = !ink;
 }
 
 function fontFamily(settings: Settings): string {
@@ -539,7 +554,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     };
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: MAIN_INDEX, workers: null, slot, editor: null,
-      editorStarted: false, board: null, notes: null, manager: null, command: null, strip: null, markets: null, log: null, chat: null,
+      editorStarted: false, board: null, notes: null, ink: null, inkShowing: false, manager: null, command: null, strip: null, markets: null, log: null, chat: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -575,7 +590,15 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       // A slot each, like the board's, so one project's notes never clear another one's failure.
       onError: (message) => options.onError(`notes:${slot}`, message),
     });
-    views.notes.append(page.notes.element);
+    page.ink = createInkView({
+      bridge: options.bridge,
+      projectPath: project.path,
+      // Its own slot beside the text's, so a failure of one page is not cleared by the other's success.
+      onError: (message) => options.onError(`ink:${slot}`, message),
+    });
+    // Hidden until the toggle key asks for it: see showNotesPage.
+    page.ink.element.hidden = true;
+    views.notes.append(page.notes.element, page.ink.element);
     return page;
   }
 

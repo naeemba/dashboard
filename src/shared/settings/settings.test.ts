@@ -205,6 +205,16 @@ describe('holderOfBinding, across overlapping scopes', () => {
     // heard there at once.
     expect(scopesOverlap('manager-page', 'board')).toBe(true);
     expect(scopesOverlap('board', 'manager-page')).toBe(true);
+    // The handwriting page is part of the notes screen, which the manager shows as a section: it is heard
+    // beside the notes keys and the manager's, and beside nothing else's.
+    expect(scopesOverlap('ink', 'notes')).toBe(true);
+    expect(scopesOverlap('notes', 'ink')).toBe(true);
+    expect(scopesOverlap('ink', 'manager-page')).toBe(true);
+    expect(scopesOverlap('ink', 'global')).toBe(true);
+    expect(scopesOverlap('ink', 'board')).toBe(false);
+    expect(scopesOverlap('ink', 'terminals')).toBe(false);
+    expect(scopesOverlap('ink', 'manager')).toBe(false);
+    expect(scopesOverlap('notes', 'manager-page')).toBe(true);
   });
 
   it('sees two screens that are never on at once as free of each other', () => {

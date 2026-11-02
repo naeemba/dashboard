@@ -69,10 +69,16 @@ export function isBareCharacter(input: KeyInput): boolean {
 //
 // `claude` is not a mode either: it is the main session's Claude screen, in the terminals view's left
 // column, and its keys are heard while it holds the keyboard there, alongside the terminals keys.
-export function hears(scope: ActionScope, mode: Mode, onManagerPage: boolean, chatFocused = false): boolean {
+//
+// `ink` is the notes screen's handwriting page: heard in notes mode while that page, and not the text box,
+// is the one showing. Which one that is belongs to the page, so the renderer says, as it does for chat.
+export function hears(
+  scope: ActionScope, mode: Mode, onManagerPage: boolean, chatFocused = false, inkShowing = false,
+): boolean {
   if (scope === 'global') return true;
   if (scope === 'manager-page') return onManagerPage && isSection(mode);
   if (scope === 'claude') return chatFocused && mode === 'terminals';
+  if (scope === 'ink') return inkShowing && mode === 'notes';
   return scope === mode;
 }
 
@@ -113,9 +119,10 @@ export function mapShortcut(
   mode: Mode = 'terminals',
   onManagerPage = false,
   chatFocused = false,
+  inkShowing = false,
 ): Action | null {
   for (const entry of ACTIONS) {
-    if (!hears(entry.scope, mode, onManagerPage, chatFocused)) continue;
+    if (!hears(entry.scope, mode, onManagerPage, chatFocused, inkShowing)) continue;
     if (chatFocused && chatShadow(entry, keys) !== undefined) continue;
     if (!matchesBinding(input, keys[entry.name] ?? null)) continue;
     if (passesThrough(entry, mode)) return null;

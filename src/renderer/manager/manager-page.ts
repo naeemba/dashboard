@@ -10,6 +10,7 @@ import { createManagerView } from './manager-view';
 import { createMarketsView } from '../markets/markets-view';
 import type { Mode } from '../../shared/keys/modes';
 import type { Need } from '../../shared/manager/needs-you';
+import { createInkView } from '../notes/ink-view';
 import { createNotesView } from '../notes/notes-view';
 import { showMode, type Page } from '../app/page';
 import { createSectionStrip } from './section-strip';
@@ -137,12 +138,20 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     // or have one cleared by it. MANAGER_SLOT is a number no project is ever given.
     onError: (message) => options.onError(`notes:${MANAGER_SLOT}`, message),
   });
-  // The notes view is the box and nothing else, so the wrapper a project's page builds in page.ts is
+  // The handwriting page of the same notes, in the same home-directory folder for the same reason, with
+  // a slot of its own beside the text's.
+  const ink = createInkView({
+    bridge: options.bridge,
+    projectPath: MANAGER_PROJECT.path,
+    onError: (message) => options.onError(`ink:${MANAGER_SLOT}`, message),
+  });
+  ink.element.hidden = true;
+  // The notes view is the box and the page beside it, so the wrapper a project's page builds in page.ts is
   // built here too: `.view` is what the stylesheet positions and hides, and `.page-manager .view` is
   // what pushes it down below the strip.
   const notesView = document.createElement('div');
   notesView.className = 'view view-notes';
-  notesView.append(notes.element);
+  notesView.append(notes.element, ink.element);
   const log = createLogView({
     bridge: options.bridge,
     onError: (message) => options.onError('log', message),
@@ -162,7 +171,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
       log: log.element,
     },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes, manager, command, strip, markets, log, chat: null, workers: null,
+    board: cards, notes, ink, inkShowing: false, manager, command, strip, markets, log, chat: null, workers: null,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.

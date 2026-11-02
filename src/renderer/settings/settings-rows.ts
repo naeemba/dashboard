@@ -22,6 +22,7 @@ const GROUP_TITLES: Record<ActionGroup, string> = {
   projects: 'Projects',
   terminals: 'Terminals',
   board: 'Board',
+  notes: 'Notes',
   manager: 'Manager',
   sections: 'Sections',
   command: 'Command',
@@ -30,7 +31,7 @@ const GROUP_TITLES: Record<ActionGroup, string> = {
 };
 
 const GROUP_ORDER: ActionGroup[] = [
-  'app', 'modes', 'projects', 'manager', 'sections', 'command', 'log', 'terminals', 'board', 'claude',
+  'app', 'modes', 'projects', 'manager', 'sections', 'command', 'log', 'terminals', 'board', 'notes', 'claude',
 ];
 
 export function settingsRows(settings: Settings): SettingsRow[] {

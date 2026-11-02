@@ -62,10 +62,11 @@ function remainingKeys(entry: ActionEntry, held: Held, keys: Settings['keys']): 
 // about when a numbered run may print as a range, or about what a passed-through key says.
 export function whichKeyRows(
   held: Held, keys: Settings['keys'], mode: Mode, onManagerPage: boolean, isMac: boolean, chatFocused = false,
+  inkShowing = false,
 ): Shortcut[] {
   return shortcutRows({
     // A terminals key the Claude screen has taken is left out, so no key is offered twice.
-    wants: (entry) => hears(entry.scope, mode, onManagerPage, chatFocused) && !(chatFocused && chatShadow(entry, keys) !== undefined),
+    wants: (entry) => hears(entry.scope, mode, onManagerPage, chatFocused, inkShowing) && !(chatFocused && chatShadow(entry, keys) !== undefined),
     label: (entry) => remainingKeys(entry, held, keys),
     mode,
     keys,

@@ -22,7 +22,7 @@ commits cite the id.
 | [command](command/README.md) | The `dashboard` command: `board`, `pane` and `project` behind one entry |
 | [projects](projects/README.md) | `~/.dashboard/projects.yaml` and `dashboard project find`, `list`, `init`, `open` and `close` |
 | [ship](ship/README.md) | A card into a worktree with an agent, the review, the worktree list |
-| [notes](notes/README.md) | One page of notes per project and one for the manager |
+| [notes](notes/README.md) | Text and handwriting notes per project and for the manager |
 | [drawer](drawer/README.md) | The drawer of a page's docs and the Claude sessions the app started |
 | [manager](manager/README.md) | The first tab: what wants you, every board, the command runner |
 | [usage](usage/README.md) | Token usage per project and per pane |

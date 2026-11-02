@@ -10,6 +10,7 @@ export type WhichKeyScreen = {
   mode: Mode;
   onManagerPage: boolean;
   chatFocused: boolean;
+  inkShowing: boolean;
 };
 
 export type WhichKeyTracking = {
@@ -37,8 +38,8 @@ export function createWhichKeyTracking(screen: () => WhichKeyScreen, isMac: bool
   // modifier is still down. So this is called wherever the screen changes, beside renderStatus.
   function refresh(): void {
     if (!held) return;
-    const { keys, mode, onManagerPage, chatFocused } = screen();
-    whichKey.show(whichKeyRows(held, keys, mode, onManagerPage, isMac, chatFocused));
+    const { keys, mode, onManagerPage, chatFocused, inkShowing } = screen();
+    whichKey.show(whichKeyRows(held, keys, mode, onManagerPage, isMac, chatFocused, inkShowing));
   }
 
   // Every press and release, whether the strip is up or not: adding Shift to a held Ctrl is a different

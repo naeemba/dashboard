@@ -35,10 +35,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
   board: 'A kanban board in .dashboard/board.json, written on every change: no save key, undo is '
     + 'the way back. Another writer\'s change shows while you look. A card moved into Ship goes to an '
     + 'agent in its own worktree; the app puts it in Review once a pull request is open.',
-  notes: 'One page of free text in .dashboard/notes.md: the project\'s, or for the manager a folder '
-    + 'in your home directory. For what is not a card. No save key: it is written a moment after you '
-    + 'stop typing, and read only when you arrive, so an edit made elsewhere shows next time. Plain '
-    + 'text; Tab does nothing here.',
+  notes: 'Two pages for what is not a card: free text in .dashboard/notes.md and handwriting in '
+    + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
+    + 'key turns between them. No save key: written a moment after you stop, read only when you '
+    + 'arrive. Draw with mouse, pen or touch; the keys pick tool, colour and width.',
   manager: 'The first tab, and no project: no shells, so the terminal and nvim keys do nothing here. '
     + 'Needs you lists what waits on you across the open projects, oldest first; under it, every '
     + 'project with its panes, token figures and worktrees. A letter, digit or symbol answers the '
