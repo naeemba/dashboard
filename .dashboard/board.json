@@ -319,20 +319,6 @@
           "updatedAt": "2026-11-02T00:02:42.653Z"
         },
         {
-          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
-          "title": "Take the single-instance lock and write session.json atomically",
-          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:09:21.437Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.620Z",
-              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
-            }
-          ]
-        },
-        {
           "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
           "title": "Stop hidden projects laying out and painting their terminals",
           "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -426,6 +412,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:20:11.259Z",
+          "branch": "work-board-card-d08a84fb-ae8a-49e5-81f7-1ac",
+          "pullRequest": 175,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.620Z",
+              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
             }
           ]
         }
