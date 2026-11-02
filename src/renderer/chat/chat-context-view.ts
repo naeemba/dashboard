@@ -1,0 +1,87 @@
+import type { DashboardBridge } from '../../shared/app/bridge';
+import type { BreakdownRow } from '../../shared/chat/chat-context';
+import { clockTime, type ChatMeasure } from '../../shared/chat/chat-status';
+import { formatTokens } from '../../shared/usage/usage';
+import { anchoredPopup, type PopupRow, type PopupSection } from '../app/anchored-popup';
+import { piece } from './chat-foot-view';
+
+// The Claude screen's measure of its session, and the context popup that breaks it down. The view
+// asks for a measure when the screen opens, a turn ends or a model is picked; the latest one asked
+// for is the one kept, the foot draws it, and an open popup reads it again when it lands. How the
+// rows are shaped is chat-context.ts's; this only asks main and draws.
+
+export type Measures = {
+  latest(): ChatMeasure | null;
+  take(): void;
+  // A new conversation: nothing is measured until the next answer, and one still on its way is dropped.
+  forget(): void;
+  // A model was picked, which shows over the measured name until the next measure names it.
+  unname(): void;
+  // The popup, over `anchor`, the context meter; resolves once it is closed.
+  show(anchor: HTMLElement | null): Promise<void>;
+};
+
+function row(each: BreakdownRow): PopupRow<never> {
+  const bar = piece('chat-context-bar', '');
+  bar.style.setProperty('--tone', each.tone ? `var(--${each.tone})` : 'var(--line)');
+  bar.style.setProperty('--used', `${Math.min(100, each.percentage)}%`);
+  const name = piece('chat-context-name', each.name);
+  if (each.detail) name.append(piece('chat-context-detail', ` ${each.detail}`));
+  return {
+    key: each.key,
+    cells: [name, bar, piece('chat-context-tokens', formatTokens(each.tokens)), piece('chat-context-share', `${each.percentage.toFixed(1)}%`)],
+  };
+}
+
+function sections(measure: ChatMeasure): PopupSection<never>[] {
+  const { categories, memoryFiles, mcpTools } = measure.breakdown;
+  const all: [string | null, BreakdownRow[]][] = [[null, categories], ['Memory files', memoryFiles], ['MCP tools', mcpTools]];
+  return all.filter(([, rows]) => rows.length > 0).map(([title, rows]) => ({ title, rows: rows.map(row) }));
+}
+
+function heading(measure: ChatMeasure): string {
+  const { used, size, percentage } = measure.context;
+  const at = clockTime(measure.at);
+  return `Context ${Math.floor(percentage)}% · ${formatTokens(used)} / ${formatTokens(size)}${at ? ` · measured ${at}` : ''}`;
+}
+
+export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () => void, say: (message: string) => void): Measures {
+  let measured: ChatMeasure | null = null;
+  let asked = 0;
+  const watchers = new Set<() => void>();
+
+  return {
+    latest: () => measured,
+    // Open, a turn ending and a model picked each measure, and the answers can come back out of
+    // order: only the latest one asked is kept.
+    take() {
+      const ask = ++asked;
+      bridge.chatMeasure(slot).then((reading) => {
+        if (ask !== asked) return;
+        if (reading !== null) measured = reading;
+        drawn();
+        for (const each of watchers) each();
+      }, () => undefined);
+    },
+    forget() {
+      measured = null;
+      asked++;
+    },
+    unname() {
+      if (measured) measured = { ...measured, model: null };
+    },
+    async show(anchor) {
+      // An open popup keeps what it showed through a new conversation, until the next measure lands.
+      if (!measured || !anchor) return say('Nothing measured yet: the context is measured once Claude has answered.');
+      let shown: ChatMeasure = measured;
+      const current = (): ChatMeasure => (shown = measured ?? shown);
+      await anchoredPopup<never>({
+        name: 'chat-context', anchor, heading: () => heading(current()), sections: () => sections(current()),
+        watch: (changed) => {
+          watchers.add(changed);
+          return () => watchers.delete(changed);
+        },
+      });
+    },
+  };
+}

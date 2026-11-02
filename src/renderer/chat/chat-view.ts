@@ -13,11 +13,12 @@ import { renderMarkdown } from './chat-markdown';
 import { permissionTitle } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
-import { FOOT_WORKERS, footSides, piece } from './chat-foot-view';
+import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
+import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
 import { PANE_LINK } from './chat-pane-links';
 import { workerCount } from '../../shared/workers/worker-roster';
-import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
+import { workingLine, type FootState } from '../../shared/chat/chat-status';
 import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from '../../shared/chat/chat-transcript';
@@ -128,7 +129,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let fast = false;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
-  let measured: ChatMeasure | null = null;
+  const measures = createMeasures(bridge, slot, drawFoot, options.onNotice);
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
@@ -163,6 +164,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
   let drawnFoot = '';
   function drawFoot(): void {
+    const measured = measures.latest();
     const shown = `${measured?.model ?? model ?? transcript.model ?? 'default model'}${fast ? ' · fast' : ''}`;
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
@@ -178,8 +180,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawFoot();
   });
   const openWorkers = (): void => void showWorkers(bridge, slot, options.goToPane).then((landed) => { if (!landed) focus(); });
+  const showContext = (): void => void measures.show(foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`)).then(focus);
   foot.addEventListener('click', (event) => {
     if (event.target instanceof Element && event.target.closest(`.${FOOT_WORKERS}`)) openWorkers();
+    if (event.target instanceof Element && event.target.closest(`.${FOOT_CONTEXT}`)) showContext();
   });
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
@@ -264,18 +268,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       drawn[index] = fresh;
     });
-  }
-
-  // Open, a turn ending and a model picked each measure, and the answers can come back out of order:
-  // only the latest one asked is kept.
-  let measures = 0;
-  function measure(): void {
-    const asked = ++measures;
-    bridge.chatMeasure(slot).then((reading) => {
-      if (asked !== measures) return;
-      if (reading !== null) measured = reading;
-      drawFoot();
-    }, () => undefined);
   }
 
   function showAsk(): void {
@@ -523,7 +515,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawFoot();
     // A model picked is measured again, so the status line names it.
     bridge.chatConfigure(slot, change).then(() => {
-      if ('model' in change) measure();
+      if ('model' in change) measures.take();
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
@@ -545,7 +537,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     // A model picked here or on another screen shows over the measured name until the next measure.
     if ('model' in change && (change.model ?? null) !== model) {
       model = change.model ?? null;
-      if (measured) measured = { ...measured, model: null };
+      measures.unname();
     }
     if (change.permissionMode) mode = change.permissionMode;
     if ('effort' in change) effort = change.effort ?? null;
@@ -608,8 +600,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawnEntries = [];
     selected = null;
     asks = [];
-    measured = null;
-    measures++;
+    measures.forget();
     recalled = null;
     draft = '';
     showAsk();
@@ -640,7 +631,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   const commandScreen: CommandScreen = {
-    bridge, slot, options, prompt, configure, focus,
+    bridge, slot, options, prompt, configure, focus, showContext,
     transcript: () => transcript,
     askCount: () => asks.length,
     model: () => model,
@@ -655,7 +646,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     // Reads the conversation in and measures it; the page calls it once, when it is built.
     open() {
       readEarlier();
-      measure();
+      measures.take();
     },
     focus,
     receive(event) {
@@ -674,11 +665,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
       const change = preferencesOf(event);
       if (change) choose(change);
       transcript = applyEvent(transcript, event);
-      if (event.kind === 'message' && event.message.type === 'result') measure();
+      if (event.kind === 'message' && event.message.type === 'result') measures.take();
       render();
     },
     runCommand(command) {
       if (command === 'workers') openWorkers();
+      if (command === 'context') showContext();
       if (command === 'select-up') select(selected === null ? drawn.length - 1 : selected - 1);
       if (command === 'select-down') select(selected === null ? null : selected + 1);
       if (command === 'unfold') {
