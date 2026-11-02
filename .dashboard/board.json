@@ -248,7 +248,8 @@
           "id": "7c3bd72f-85ac-4faa-8d52-9c0b44f110a2",
           "title": "Split board-view.ts along its drag-and-drop seam",
           "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
-          "priority": "low"
+          "priority": "low",
+          "parent": null
         }
       ]
     },
@@ -362,14 +363,6 @@
           "priority": "high",
           "parent": null,
           "updatedAt": "2026-11-01T23:43:36.000Z"
-        },
-        {
-          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
-          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
-          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:52:57.025Z"
         }
       ]
     },
@@ -459,6 +452,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "4187f056-2471-4ea9-be8d-36104044bca0",
+          "title": "Bind the remote host to localhost by default and compare tokens in constant time",
+          "notes": "remote-host.ts:30 binds every interface over plain ws. A joined screen reaches pty:input and task:run. Bind 127.0.0.1 by default, make network a setting with wss, use timingSafeEqual. Cost small to medium. (docs/review/2026-11-01.md S1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:00:28.614Z",
+          "branch": "work-board-card-4187f056-2471-4ea9-be8d-361",
+          "pullRequest": 173
         }
       ]
     },
