@@ -30,6 +30,16 @@ async function startStreams(page, count, rate) {
   for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, `${stream} ${rate}`); }
 }
 
+// The highest line number each worker on screen has drawn: build-log-stream.sh numbers its lines, so a
+// pane that came back showing what it printed while hidden reads higher than when it left. A worker
+// scrolled out of the list is off screen too, so xterm draws it only once it is scrolled back into view.
+const DRAWN_LINES = `[...document.querySelectorAll('.page:not([hidden]) .view:not([hidden]) .workers .xterm-rows')]
+  .filter((rows) => {
+    const box = rows.getBoundingClientRect(), list = rows.closest('.workers').getBoundingClientRect();
+    return box.bottom > list.top && box.top < list.bottom;
+  })
+  .map((rows) => Math.max(0, ...(rows.textContent.match(/\\d{6}/g) ?? []).map(Number)))`;
+
 // GC first, then what the renderer and main hold: heap, DOM, listeners, private memory per process.
 async function heldMemory(page, main) {
   await page.send('HeapProfiler.collectGarbage'); await main.send('HeapProfiler.collectGarbage');
@@ -85,10 +95,17 @@ const measurements = {
     print('four-streams-shown', await cpuWindow(10));
     await keys(page, 'Ctrl+Shift+T'); await wait(1500); await keys(page, 'Alt+6'); await wait(500);
     print('typing-beside-four-streams', await echoLatency(page));
+    const drawnWhenLeft = await page.evaluate(DRAWN_LINES);
+    const leftAt = Date.now();
     await keys(page, 'Ctrl+4'); await wait(1000);
     await openWorkers(page); await wait(500);
     print('four-streams-hidden', await cpuWindow(10));
     print('typing-other-project', await echoLatency(page));
+    await keys(page, 'Ctrl+2'); await wait(300);
+    const drawnOnReturn = await page.evaluate(DRAWN_LINES);
+    // Every pane should have moved on by about <rate> lines per second it was away.
+    print('back-on-alpha', { hiddenSeconds: Math.round((Date.now() - leftAt) / 1000), drawnWhenLeft, drawnOnReturn });
+    await keys(page, 'Ctrl+4'); await wait(500);
     const main = await connectMain();
     await main.send('Profiler.enable'); await main.send('Profiler.start');
     await wait(10000);
