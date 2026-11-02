@@ -295,20 +295,6 @@
           "updatedAt": "2026-11-02T00:40:52.580Z"
         },
         {
-          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
-          "title": "Add a Content-Security-Policy to the window",
-          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-02T00:41:46.404Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.579Z",
-              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
-            }
-          ]
-        },
-        {
           "id": "69800344-8134-4450-bafc-e045518a0cd5",
           "title": "Make Ctrl+C stop a flooding pane at once and spare main's core",
           "notes": "Measured: seq flat out: main 109-112% CPU, renderer 110-119%, renderer heap 124-208 MB; 59% of main's busy time is the headless xterm copy (pane-screen-copy.ts) with no remote screen joined. Ctrl+C keeps printing 2.5-2.6 s (~9M lines). Typing beside it fine (24-27 ms). Where: src/main/main.ts:429 copy.push, no flow control from xterm's write queue to the pty. Fix (medium): feed the copy only while a host port is set or the window is away; pause the pty past a write-queue high-water mark. Rerun: measure.mjs flood shown|hidden. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -420,6 +406,22 @@
             {
               "at": "2026-10-22T10:10:49.896Z",
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
+            }
+          ]
+        },
+        {
+          "id": "a912d6fe-5157-4785-8ba2-df55013e10a7",
+          "title": "Add a Content-Security-Policy to the window",
+          "notes": "No CSP; model output is rendered as innerHTML with escaping as the only defence. Add a meta CSP (default-src self, img-src self data blob). Cost small. (docs/review/2026-11-01.md S2)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:56:37.005Z",
+          "branch": "work-board-card-a912d6fe-5157-4785-8ba2-df5",
+          "pullRequest": 181,
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.579Z",
+              "body": "Correction from the review's PR loop: the CSP also needs connect-src 'self' data: and frame-src blob:, which the PDF viewer uses. Without them a PDF tile opens blank."
             }
           ]
         }
