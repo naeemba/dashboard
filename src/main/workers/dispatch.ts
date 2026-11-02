@@ -70,14 +70,17 @@ export function mainPrompt(projectPath: string): string {
 // None of them reads the pane's screen.
 export function workerSettings(id: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
-  return JSON.stringify({
+  // The space after the brace is outside every string, which is what makes Windows PowerShell wrap the
+  // word in quotes on its way to claude; every other space here is inside one, and without it the JSON
+  // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
+  return '{ ' + JSON.stringify({
     hooks: {
       Stop: [{ hooks: [notify('done')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
       UserPromptSubmit: [{ hooks: [notify('running')] }],
       PostToolUse: [{ hooks: [notify('running')] }],
     },
-  });
+  }).slice(1);
 }
 
 // The prompt is the argument, never typed into a session already running: what a live prompt box
