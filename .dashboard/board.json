@@ -243,6 +243,12 @@
           "parent": null,
           "createdAt": "2026-11-01T23:48:56.818Z",
           "updatedAt": "2026-11-01T23:48:56.818Z"
+        },
+        {
+          "id": "7c3bd72f-85ac-4faa-8d52-9c0b44f110a2",
+          "title": "Split board-view.ts along its drag-and-drop seam",
+          "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
+          "priority": "low"
         }
       ]
     },
