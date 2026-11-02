@@ -10,7 +10,8 @@ same file, so an agent can work its own card.
 Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 
 - Model and file: `board.ts`, `board-store.ts`, `board-watch.ts`,
-  `board-writes.ts`, `board-changes.ts`, `card-moves.ts`
+  `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
+  onto the file as it is now)
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
   `board-usage.ts` (also `dashboard board`, see [command](../command/README.md))
 - Screen: `board-view.ts`, `board-detail.ts`, `board-toolbar.ts`,
@@ -23,6 +24,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 ## Scenarios
 
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
+- Given an agent ran `board move` after the board last read the file, when you rename another card before the reload arrives, then the file keeps both: the agent's move and your rename.
 - Given a card with subtasks, when you blank its title, then it is refused and the status bar says to delete it with `d`.
 - Given you deleted a card, when you undo, then it comes back where it was.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.

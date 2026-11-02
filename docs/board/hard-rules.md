@@ -26,6 +26,16 @@ into the bin. It compares bytes against what the app last wrote, or every
 keystroke would redraw the board under your cursor thirty times a minute.
 `isBoardChange` in `board-watch.ts` is that rule, with the test.
 
+Two writers through one file still overwrite each other unless each writes only
+what it changed. The command re-runs itself on a fresh read just before it
+writes (`runBoardCommandOnLatest`). The app sends `board:write` the board it
+last read or wrote beside its new one, and main replays the difference onto
+the file as it is then (`rebaseBoardChange` in `board-merge.ts`), and answers
+with what it wrote. What writing the whole board cost: an agent ran
+`board move <id> Review` while you renamed another card, your save landed
+before the watcher's reload, and the card was back in Doing with nothing on
+screen saying so. `project-files-ipc.test.ts` reproduces it.
+
 ## board-rule-2: A card with a pull request open goes in `Review`, not `Done`
 
 **A card with a pull request open goes in `Review`, not `Done`.** A column on

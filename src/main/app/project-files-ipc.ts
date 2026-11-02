@@ -1,6 +1,7 @@
 import type { Channels } from './channels';
 import type { Board } from '../../shared/board/board';
 import { openBoard, peekBoard, writeBoard } from '../board/board-store';
+import { rebaseBoardChange } from '../../shared/board/board-merge';
 import type { BoardChanges } from '../board/board-changes';
 import type { BoardWatchers } from '../board/board-watch';
 import { readNotes, writeNotes } from '../notes/notes-store';
@@ -31,13 +32,20 @@ export function registerProjectFiles(
     }
   });
   // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
-  // The bytes are kept so the watcher can tell this write from somebody else's. Nothing is returned to
-  // the renderer: it already has the board it just sent. Every other screen is told here instead,
-  // since to the watcher this write is the app's own: a board left open on the laptop would otherwise
-  // never see the cards moved from the mac, and its next save would put them back.
-  table.handle('board:write', (screen, projectPath: string, board: Board) => {
-    changes.wrote(projectPath, board, () => boards.wrote(projectPath, writeBoard(projectPath, board)));
+  // The screen sends the board it last read or wrote beside its new one, and the change between them
+  // is replayed onto the file as it is now, so a card the `board` command moved in the meantime stays
+  // moved: rebaseBoardChange says what that costs otherwise. What was written goes back, since it can
+  // hold a move the screen has not seen yet. The bytes are kept so the watcher can tell this write from
+  // somebody else's. Every other screen is told here instead, since to the watcher this write is the
+  // app's own: a board left open on the laptop would otherwise never see the cards moved from the mac.
+  table.handle('board:write', (screen, projectPath: string, base: Board, board: Board) => {
+    // A file that is gone or will not parse has nothing to keep, and the screen's board is written as
+    // it is; replaying onto an empty one would drop every card the screen did not touch.
+    const onDisk = peekBoard(projectPath);
+    const written = onDisk === null ? board : rebaseBoardChange(base, board, onDisk);
+    changes.wrote(projectPath, written, () => boards.wrote(projectPath, writeBoard(projectPath, written)));
     tellOthers(screen, 'board:change', projectPath);
+    return written;
   });
 
   // The project's page of notes. No watcher and no seeding: a project that has never had any has no

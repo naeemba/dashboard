@@ -26,6 +26,8 @@ import {
   type Selection,
   type ShipHome,
 } from '../../shared/board/board';
+import { sameBoard } from '../../shared/board/board-merge';
+import type { Board } from '../../shared/board/board';
 import type { Action } from '../../shared/keys/actions';
 import { openCardDetail, type CardDetail } from './board-detail';
 import {
@@ -189,6 +191,9 @@ export function createBoardView(options: BoardOptions): BoardView {
   let visible: number[][] = [];
   // The card the last change landed on, kept drawn while the selection is on it.
   let changedCardId: string | null = null;
+  // The board this screen last read from the file or sent to it: the save sends it beside the new one
+  // so main can replay only what this screen changed. board-merge.ts says why.
+  let onDisk: Board = state.board;
 
   // The one read. `fresh` is an arrival — the selection starts at the top of the column and the undo
   // step is gone, which is what entering a board means. Without it the file simply changed under you
@@ -243,6 +248,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const wasEditing = editingCardId();
     const carried = editing === null ? null : takeEdit(editorInput());
     state = next;
+    if (readWorked) onDisk = next.board;
     // The box only goes back on the card it was opened on. A write that drops that card leaves the
     // selection on the row it held, which is now the next card down — and a box drawn there would be
     // that card's box with your text in it, so pressing Enter renames a card you never opened.
@@ -264,13 +270,21 @@ export function createBoardView(options: BoardOptions): BoardView {
   // True when the write landed, so a caller with something to say after it knows the status bar is
   // not holding a failure it would be talking over.
   function save(): Promise<boolean> {
-    return options.bridge.writeBoard(options.projectPath, state.board).then(
+    const base = onDisk;
+    const sent = state.board;
+    onDisk = sent;
+    return options.bridge.writeBoard(options.projectPath, base, sent).then(
       // A write that lands clears the failure it replaces; nothing else knows the message is stale.
-      () => {
+      (written) => {
         options.onError('');
+        // Main kept a change the screen had not seen — a card the `board` command moved a moment ago.
+        // Read it in, unless a newer save is already on its way: that one's answer will.
+        if (!sameBoard(written, sent) && state.board === sent) void readAgain(false);
         return true;
       },
       (error: unknown) => {
+        // The file still holds `base`, so the next save has to replay this change too.
+        if (onDisk === sent) onDisk = base;
         options.onError(`Board not saved: ${String(error)}`);
         return false;
       },

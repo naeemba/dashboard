@@ -179,7 +179,9 @@ export type DashboardBridge = {
   // A read that changes nothing on disk, for the manager's counts: null when there is nothing to
   // count. board-store.ts says why the manager may not use readBoard.
   peekBoard(projectPath: string): Promise<Board | null>;
-  writeBoard(projectPath: string, board: Board): Promise<void>;
+  // `base` is the board this screen last read or wrote; main replays the change from it to `board`
+  // onto the file as it is now and answers with what it wrote. board-merge.ts says why.
+  writeBoard(projectPath: string, base: Board, board: Board): Promise<Board>;
   // The project whose board.json has become something the app did not write — the `board` command
   // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.

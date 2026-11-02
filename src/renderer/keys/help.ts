@@ -103,7 +103,9 @@ const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'nothing in the pane it came from, and pressing the key again on that pane throws your edits away '
     + 'for a fresh copy. Each pane gets a tab of its own, so two of them can be read side by side.',
   board: 'A kanban board kept in .dashboard/board.json inside the project. Every change is written '
-    + 'straight to disk, so there is no save key and undo is the only way back. The file is re-read '
+    + 'straight to disk, so there is no save key and undo is the only way back. A write carries only '
+    + 'what you changed, laid over the file as it is at that moment, so a card an agent moved a second '
+    + 'ago stays where the agent put it. The file is re-read '
     + 'each time you enter the board, and again while you are looking at it if something else writes '
     + 'it — an agent running the board command, or a hand edit — with your selection left on the card '
     + 'it was on and a box you have open left open on that card, still holding what you have typed. If '
