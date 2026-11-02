@@ -114,14 +114,28 @@ export function registerRemote(held: HeldForRemote, window: {
 // back the local opens until the connect settles, which would have to tell a restore's open from one
 // you asked for. Once per launch: a reloaded page restores again but does not connect again.
 // A refusal is held for the status bar rather than thrown, because the launch itself went fine.
-export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void): void {
+//
+// What it hands back reads a later launch's command line, which launch-gate.ts passes on from the copy
+// that lost the single-instance lock: `--remote` there joins at once if the window has restored, or
+// when it does if not. Every flag the app reads off a launch is read here, for both.
+export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void): (argv: string[]) => void {
   let waiting = argv.includes('--remote');
-  table.on('session:restored', () => {
-    if (!waiting) return;
-    waiting = false;
+  let restored = false;
+  const connect = (): void => {
     const { address, token } = settings().remote;
     if (address === '') return hold('No host remembered for --remote: connect to one from the project list once');
     void table.invoke(LOCAL_SCREEN, 'host:connect', [address, token])
       .then((refusal) => { if (refusal) hold(String(refusal)); });
+  };
+  table.on('session:restored', () => {
+    restored = true;
+    if (!waiting) return;
+    waiting = false;
+    connect();
   });
+  return (laterArgv) => {
+    if (!laterArgv.includes('--remote')) return;
+    if (restored) connect();
+    else waiting = true;
+  };
 }

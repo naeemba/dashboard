@@ -152,8 +152,8 @@ describe('connectAtLaunch', () => {
       invoke: async (_screen: string, channel: string, channelArguments: unknown[]) => { connects.push([channel, ...channelArguments]); return 'refused'; },
     } as unknown as Channels;
     const settings = () => ({ remote: { address: '10.0.0.2:7777', token: 't' } }) as Settings;
-    connectAtLaunch(argv, settings, table, (message) => held.push(message));
-    return { restored: () => listeners.get('session:restored')!(), connects, held };
+    const launchedAgain = connectAtLaunch(argv, settings, table, (message) => held.push(message));
+    return { restored: () => listeners.get('session:restored')!(), launchedAgain, connects, held };
   }
 
   it('joins once the window has restored, and only the first time', async () => {
@@ -187,6 +187,32 @@ describe('connectAtLaunch', () => {
   it('joins nothing without --remote', async () => {
     const launch = launched([]);
     launch.restored();
+    await settle();
+    expect(launch.connects).toEqual([]);
+  });
+
+  it('joins on a second launch with --remote once the window has restored', async () => {
+    const launch = launched([]);
+    launch.restored();
+    launch.launchedAgain(['/opt/dashboard/Dashboard', '--remote']);
+    await settle();
+    expect(launch.connects).toEqual([['host:connect', '10.0.0.2:7777', 't']]);
+  });
+
+  it('holds a second launch with --remote until the window has restored', async () => {
+    const launch = launched([]);
+    launch.launchedAgain(['--remote']);
+    await settle();
+    expect(launch.connects).toEqual([]);
+    launch.restored();
+    await settle();
+    expect(launch.connects).toEqual([['host:connect', '10.0.0.2:7777', 't']]);
+  });
+
+  it('joins nothing on a second launch without --remote', async () => {
+    const launch = launched([]);
+    launch.restored();
+    launch.launchedAgain(['/opt/dashboard/Dashboard']);
     await settle();
     expect(launch.connects).toEqual([]);
   });
