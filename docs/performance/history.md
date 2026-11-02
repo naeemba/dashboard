@@ -37,6 +37,27 @@ one past 0.5 s.
 Not done: the counts are still kept only in memory, so every launch reads
 every log again, now on the thread. Saving them in userData would cut the
 CPU too.
+## 2026-11-02: board arrows move the highlight only (finding 2)
+
+Same machine, compositor and tooling as the first profile, `measure.mjs keys`.
+The demo board is this repository's board when staged: 179 cards, not 153.
+"Before" is this branch without the fix, rebuilt and measured the same day.
+
+| Step | Before (2 runs) | After (5 runs) |
+|---|---|---|
+| ↓ input to paint, median | 96 ms, 96 ms | 32, 24, 32, 32, 96 ms |
+| ↓ input to paint, worst | 112 ms | 48 ms (152 ms in the slow run) |
+| ↓ key handler | 51–78 ms | 1–13 ms |
+| ← → input to paint, median | 88 ms, 96 ms | 24–56 ms (88 ms in the slow run) |
+
+- What changed: `board-select` moves the `selected` class between two cards
+  and scrolls, when `movesHighlightOnly` (`board-filter.ts`) says the drawn
+  rows stay the same. Anything else still rebuilds the board.
+- The slow run was the first launch after the rebuild. Its handler times
+  (52–106 ms) match a full rebuild on every press; the four later launches did
+  not repeat it, and why it happened is not known.
+- One sideways press in every run still paints at 104–120 ms with a handler of
+  6 ms. That is the browser's layout or scroll, not the key handler.
 
 ## 2026-11-02: first profile (v2.41.1)
 
