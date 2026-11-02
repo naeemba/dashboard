@@ -67,6 +67,7 @@ export function listenForSessions(
     }
     connection.setEncoding('utf8');
     connection.on('data', (chunk: string) => {
+      if (read) return;
       text += chunk;
       const end = text.indexOf(REQUEST_END);
       if (end !== -1) handle(text.slice(0, end));

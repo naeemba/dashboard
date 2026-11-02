@@ -42,6 +42,9 @@ describe('sessionSocketPath', () => {
 });
 
 describe('listenForSessions and askApp', () => {
+  // A Windows named pipe does not stay half open: a command that ended its side to say the request was
+  // whole closed the whole pipe, the answer went nowhere, and every `pane` command printed "the app
+  // answered with something that was not a reply". On win32 this round trip runs over that real pipe.
   it('carries a request to the app and its answer back', async () => {
     const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
     const server = listenForSessions(socket, async (request) => ({ ok: true, output: `${request.directory} ${request.args.join(' ')}` }), () => undefined);
@@ -58,20 +61,6 @@ describe('listenForSessions and askApp', () => {
     expect(await askApp(socket, { directory: '/work/api', args: ['claim'] })).toEqual({ ok: false, output: 'no such pane' });
     expect(await askApp(socket, { directory: 7, args: 'claim' } as never)).toMatchObject({ ok: false });
     server.close();
-  });
-
-  // A Windows named pipe does not stay half open: a command that ended its side to say the request was
-  // whole closed the whole pipe, the answer went nowhere, and every `pane` command printed "the app
-  // answered with something that was not a reply". The real pipe, since a socket file cannot show it.
-  it.runIf(process.platform === 'win32')('carries a request and its answer over a Windows named pipe', async () => {
-    const socket = sessionSocketPath('win32', tmpdir(), process.pid);
-    const server = listenForSessions(socket, async (request) => ({ ok: true, output: request.args.join(' ') }), () => undefined);
-    await new Promise((resolve) => server.once('listening', resolve));
-    try {
-      expect(await askApp(socket, { directory: 'C:\\work\\api', args: ['pane', 'list'] })).toEqual({ ok: true, output: 'pane list' });
-    } finally {
-      server.close();
-    }
   });
 
   // A command killed halfway through writing its request closes before the newline. It is refused like
