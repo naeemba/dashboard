@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { describeProject, initialPaths, OUTSIDE_PANE_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
 
+// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
+const posixOnly = it.skipIf(process.platform === 'win32');
+
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
 const NO_FOLDERS = () => { throw new Error('asked for the folders'); };
 const run = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml', NO_FOLDERS, '/home/me');
@@ -30,7 +33,7 @@ describe('runProjectCommand', () => {
 });
 
 describe('project open and close', () => {
-  it('asks the app with the folder, ~ expanded, and the name, for a name or an aka in any case', () => {
+  posixOnly('asks the app with the folder, ~ expanded, and the name, for a name or an aka in any case', () => {
     expect(run(['open', 'Mandala'])).toEqual({ ok: true, ask: [PROJECT_REQUEST, 'open', '/screensaver', 'screensaver'] });
     expect(run(['close', 'new-crm'], '- name: new-crm\n  path: ~/Workspace/new-crm\n'))
       .toEqual({ ok: true, ask: [PROJECT_REQUEST, 'close', '/home/me/Workspace/new-crm', 'new-crm'] });
@@ -43,7 +46,7 @@ describe('project open and close', () => {
 });
 
 describe('project init', () => {
-  it('writes from the known folders, and never over a file that is there', () => {
+  posixOnly('writes from the known folders, and never over a file that is there', () => {
     expect(init(null, () => ({ open: ['/home/me/crm'], recent: ['/home/me/crm'] }))).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy by hand' });
     expect(init('', NO_FOLDERS)).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
     expect(init(null, NO_FOLDERS, ['now'])).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });

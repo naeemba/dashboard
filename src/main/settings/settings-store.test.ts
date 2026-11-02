@@ -5,6 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
 
+// Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
+const posixOnly = it.skipIf(process.platform === 'win32');
+
 function file(): string {
   return join(mkdtempSync(join(tmpdir(), 'dashboard-settings-')), 'settings.json');
 }
@@ -48,7 +51,7 @@ describe('writeSettings', () => {
     expect(readFileSync(path, 'utf8')).toContain('\n  "shellCommand"');
   });
 
-  it('leaves the file readable by this account only, since it holds the tokens', () => {
+  posixOnly('leaves the file readable by this account only, since it holds the tokens', () => {
     const path = file();
     writeFileSync(path, '{}', { mode: 0o644 });
     writeSettings(path, defaultSettings(true), true);

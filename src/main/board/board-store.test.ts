@@ -28,6 +28,9 @@ import {
 } from './board-store';
 import { MANAGER_PROJECT } from '../../shared/manager/manager';
 
+// Skipped on Windows: git checks the docs out with CRLF line endings on Windows, and the seeded text has LF.
+const lfCheckoutOnly = it.skipIf(process.platform === 'win32');
+
 // Runs a test with a fake home directory standing in for the real one, so nothing it writes lands in
 // the .dashboard of whoever runs the tests.
 function inFakeHome(test: (home: string) => void): void {
@@ -510,7 +513,7 @@ describe('the manager\'s own board', () => {
 // other project gets the new docs on first open while this one keeps the old text forever, which is the
 // text an agent working on this codebase reads. This fails the moment the two drift apart.
 describe('the .dashboard docs checked into this repository', () => {
-  it('still say what a freshly seeded project would be told', () => {
+  lfCheckoutOnly('still say what a freshly seeded project would be told', () => {
     expect(readFileSync(join(BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
     expect(readFileSync(join(BOARD_DIRECTORY, 'README.md'), 'utf8')).toBe(EXPLANATION_FOR_PEOPLE);
   });

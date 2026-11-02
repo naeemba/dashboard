@@ -4,6 +4,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { pickedFolder, projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
 
+// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
+const posixOnly = it.skipIf(process.platform === 'win32');
+
 const exists = () => true;
 
 describe('projectFromPath', () => {
@@ -96,11 +99,11 @@ describe('the recents file', () => {
 });
 
 describe('pickedFolder', () => {
-  it('opens a folder that is there, resolved', () => {
+  posixOnly('opens a folder that is there, resolved', () => {
     expect(pickedFolder('/code/api/', '/home/you', exists)).toEqual({ path: '/code/api' });
   });
 
-  it('reads ~ as the home folder', () => {
+  posixOnly('reads ~ as the home folder', () => {
     expect(pickedFolder('~/code/api', '/home/you', exists)).toEqual({ path: '/home/you/code/api' });
     expect(pickedFolder('~', '/home/you', exists)).toEqual({ path: '/home/you' });
   });
@@ -109,7 +112,7 @@ describe('pickedFolder', () => {
     expect(pickedFolder('code/api', '/home/you', exists)).toEqual({ refused: 'No folder at code/api' });
   });
 
-  it('refuses a path that is not a folder', () => {
+  posixOnly('refuses a path that is not a folder', () => {
     expect(pickedFolder('/code/typo', '/home/you', () => false)).toEqual({ refused: 'No folder at /code/typo' });
   });
 });
