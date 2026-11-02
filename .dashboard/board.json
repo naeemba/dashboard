@@ -90,20 +90,6 @@
           "parent": null
         },
         {
-          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
-          "title": "Take the single-instance lock and write session.json atomically",
-          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
-          "priority": "medium",
-          "parent": null,
-          "updatedAt": "2026-11-01T20:46:57.620Z",
-          "comments": [
-            {
-              "at": "2026-11-01T20:46:57.620Z",
-              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
-            }
-          ]
-        },
-        {
           "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
           "title": "Decide whether the review agent may merge without a person",
           "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
@@ -356,6 +342,20 @@
           "parent": null,
           "createdAt": "2026-11-01T23:48:56.818Z",
           "updatedAt": "2026-11-02T00:02:42.653Z"
+        },
+        {
+          "id": "d08a84fb-ae8a-49e5-81f7-1ac8223895d9",
+          "title": "Take the single-instance lock and write session.json atomically",
+          "notes": "No requestSingleInstanceLock; session.json and recents use plain writeFileSync, and a damaged session.json reads as empty. Use the lock (let --user-data-dir through), replaceFile, and flush notes on beforeunload. Cost small. (docs/review/2026-11-01.md R3)",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:09:21.437Z",
+          "comments": [
+            {
+              "at": "2026-11-01T20:46:57.620Z",
+              "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
+            }
+          ]
         }
       ]
     },
