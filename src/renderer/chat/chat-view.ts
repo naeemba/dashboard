@@ -9,7 +9,7 @@ import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './ch
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from '../../shared/chat/chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
-import { renderMarkdown } from './chat-markdown';
+import { createLiveBlock } from './chat-live-view';
 import { permissionTitle } from './chat-permission';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
@@ -95,8 +95,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   log.className = 'chat-log';
   const live = document.createElement('div');
   live.className = 'chat-entry chat-text chat-live';
-  live.hidden = true;
   log.append(live);
+  const drawLive = createLiveBlock(live);
   const ask = createAskPanel((id, result) => {
     bridge.chatAnswer(slot, id, result);
     dropAsk(id);
@@ -214,7 +214,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let painting = 0;
   let paintedLive = '';
   // Everything a change puts on screen, at most once every PAINT_MS: a token arrives far more often
-  // than that, and each paint reads the layout and runs markdown over the whole streaming block.
+  // than that, and each paint reads the layout and redraws the streaming block's unsettled tail.
   function render(): void {
     if (!painting) painting = window.setTimeout(paint, PAINT_MS);
   }
@@ -237,16 +237,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // so a burst flows in rather than landing at once.
   // Whether the log sits at its end is kept from its scroll events rather than read each frame, which
   // would force a layout right after the last frame's write.
-  // ponytail: markdown runs over the whole streaming block each frame; render only the tail past the
-  // last finished paragraph if a long answer ever stutters.
   let revealing = 0;
   let pinned = true;
   log.addEventListener('scroll', () => { pinned = atBottom(); }, { passive: true });
   function reveal(): void {
     revealing = 0;
     paintedLive = revealed(paintedLive, transcript.live);
-    live.hidden = paintedLive === '';
-    live.innerHTML = paintedLive ? renderMarkdown(paintedLive) : '';
+    drawLive(paintedLive);
     if (pinned) log.scrollTop = log.scrollHeight;
     if (paintedLive !== transcript.live) revealing = requestAnimationFrame(reveal);
   }
