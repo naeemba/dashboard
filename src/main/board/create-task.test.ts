@@ -51,6 +51,7 @@ describe('lostRace', () => {
     expect(lostRace(' ! [rejected]        HEAD -> main (fetch first)')).toBe(true);
     expect(lostRace(' ! [rejected]        HEAD -> main (non-fast-forward)')).toBe(true);
     expect(lostRace(' ! [remote rejected] HEAD -> main (incorrect old value provided)')).toBe(true);
+    expect(lostRace("remote: error: cannot lock ref 'refs/heads/main': is at 1a2b3c but expected 4d5e6f")).toBe(true);
     expect(lostRace(' ! [remote rejected] HEAD -> main (pre-receive hook declined)')).toBe(false);
     expect(lostRace('remote: error: GH006: Protected branch update failed for refs/heads/main.')).toBe(false);
   });

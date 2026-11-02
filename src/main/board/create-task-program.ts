@@ -38,7 +38,7 @@ function git(directory: string, commandArguments: readonly string[]): string {
 
 // The project's hooks are for its code, not for one card in a temp folder: a pre-push `npm test` there
 // has no node_modules and fails, a post-checkout `npm install` costs a full install per card. Passed
-// to the three calls that write; a local push does not carry it to the remote's own hooks.
+// to every call that writes; a local push does not carry it to the remote's own hooks.
 const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];
 
 function gitOrNull(directory: string, commandArguments: readonly string[]): string | null {
@@ -85,7 +85,7 @@ function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOpt
     const text = writeBoard(worktree, result.board);
     if (options.dryRun) return { line: `${text}\n(dry run) would add ${result.output} on ${branch}${seedNote}` };
 
-    git(worktree, ['add', BOARD_FILE_PATH]);
+    git(worktree, [...NO_HOOKS, 'add', BOARD_FILE_PATH]);
     git(worktree, [...NO_HOOKS, 'commit', '--quiet', '-m', commitMessage(options.title)]);
     try {
       git(worktree, [...NO_HOOKS, 'push', '--quiet', options.remote, `HEAD:refs/heads/${branch}`]);

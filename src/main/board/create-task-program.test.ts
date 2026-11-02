@@ -88,7 +88,8 @@ function pushesTo(bare: string): number {
 }
 
 // Another writer that moves main while each of the first `races` pushes is under way, the way a
-// second push landing first does: the remote answers "incorrect old value provided".
+// second push landing first does: the remote answers "incorrect old value provided" (git 2.51 and
+// later) or "is at <sha> but expected <sha>" (older git).
 function racingWriter(bare: string, checkout: string, races: number): void {
   const commits: string[] = [];
   git(checkout, 'checkout', '--quiet', 'main');
