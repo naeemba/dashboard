@@ -31,7 +31,9 @@ what it changed. The command re-runs itself on a fresh read just before it
 writes (`runBoardCommandOnLatest`). The app sends `board:write` the board it
 last read or wrote beside its new one, and main replays the difference onto
 the file as it is then (`rebaseBoardChange` in `board-merge.ts`), and answers
-with what it wrote. What writing the whole board cost: an agent ran
+with what it wrote. The screen sends its saves one at a time
+(`board-saves.ts`), so a save that failed is still inside the next one's
+difference. What writing the whole board cost: an agent ran
 `board move <id> Review` while you renamed another card, your save landed
 before the watcher's reload, and the card was back in Doing with nothing on
 screen saying so. `project-files-ipc.test.ts` reproduces it.

@@ -15,7 +15,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
   `board-usage.ts` (also `dashboard board`, see [command](../command/README.md))
 - Screen: `board-view.ts`, `board-detail.ts`, `board-toolbar.ts`,
-  `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`
+  `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`, `card-editor.ts`,
+  `board-saves.ts` (the screen's saves, one at a time, each beside the board it replays from)
 - Narrowing: `board-filter.ts`, `filter-dialog.ts`, `card-search.ts`
 - Styles: `board.css`
 - Tests: `test-board.ts` (helpers), `board.test.ts`, `board.columns.test.ts`,
