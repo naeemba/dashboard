@@ -33,7 +33,8 @@ last read or sent beside its new one, and main replays the difference onto
 the file as it is then (`rebaseBoardChange` in `board-merge.ts`), and answers
 with what it wrote. The screen sends its saves one at a time
 (`board-saves.ts`), so a save that failed is still inside the next one's
-difference. What writing the whole board cost: an agent ran
+difference, and a read that lands while a save is out stays the base, since
+the screen was rebuilt from it. What writing the whole board cost: an agent ran
 `board move <id> Review` while you renamed another card, your save landed
 before the watcher's reload, and the card was back in Doing with nothing on
 screen saying so. `project-files-ipc.test.ts` reproduces it.

@@ -62,6 +62,37 @@ describe('createBoardSaves', () => {
     expect(titles(disk)).toEqual([['renamed again'], [], ['b']]);
   });
 
+  // The re-read after the first rename lands while the second rename is out.
+  it('keeps a read that landed while a save was out as the next base', async () => {
+    const start = board(['a', 'b'], [], []);
+    let disk = moveCardToColumn(start, selectionOf(start, 'b')!, 2).board;
+    const answers: (() => void)[] = [];
+    const saves = createBoardSaves((base, next) => {
+      const written = rebaseBoardChange(base, next, disk);
+      disk = written;
+      return new Promise((resolve) => answers.push(() => resolve(sameBoard(written, next) ? null : written)));
+    }, start);
+    const once = renameCard(start, selectionOf(start, 'a')!, 'r0').board;
+    const twice = renameCard(once, selectionOf(once, 'a')!, 'r1').board;
+    void saves.save(once);
+    void saves.save(twice);
+    await tick();
+    const reread = disk;
+    answers[0]();
+    await tick();
+    expect(titles(reread)).toEqual([['r0'], [], ['b']]);
+    expect(answers).toHaveLength(2);
+    saves.read(reread);
+    answers[1]();
+    await tick();
+    const renamed = renameCard(reread, selectionOf(reread, 'b')!, 'bb').board;
+    const last = saves.save(renamed);
+    await tick();
+    answers[2]();
+    await last;
+    expect(titles(disk)).toEqual([['r1'], [], ['bb']]);
+  });
+
   it('keeps the base of a failed save, so the next one carries its change', async () => {
     const { calls, write } = recording();
     const saves = createBoardSaves(write, first);

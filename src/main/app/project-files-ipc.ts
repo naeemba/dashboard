@@ -32,7 +32,7 @@ export function registerProjectFiles(
     }
   });
   // invoke, not send, so a write that fails rejects in the renderer and reaches the status bar.
-  // The screen sends the board it last read or wrote beside its new one, and the change between them
+  // The screen sends the board it last read or sent beside its new one, and the change between them
   // is replayed onto the file as it is now, so a card the `board` command moved in the meantime stays
   // moved (board-merge.ts says why). What was written goes back when it holds a change the screen has not
   // seen. The bytes are kept so the watcher can tell this write from somebody else's. Every other screen
