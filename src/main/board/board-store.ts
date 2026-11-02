@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -303,9 +304,20 @@ function repairCards(columns: Column[], makeId: () => string): Column[] {
   }));
 }
 
+// The ids a parse gives cards the file holds without one, or with one another card already has: the
+// same for the same bytes. The screen's board and the read a save replays onto are two parses of one
+// file, and with a random id each they would name the hand-written card differently, so a rename of
+// it on the board is dropped as an edit to a card that is not there. The counter keeps two such cards
+// apart, and repairCards splits a generated id that lands on one the file already uses.
+function idsFor(text: string): () => string {
+  const digest = createHash('sha256').update(text).digest('hex').slice(0, 16);
+  let count = 0;
+  return () => `${digest}-${++count}`;
+}
+
 // Throws rather than falling back, so readBoard can tell "nothing here made sense" apart from "no
 // file at all" and only salvage the former.
-export function parseBoard(text: string, makeId: () => string = () => crypto.randomUUID()): Board {
+export function parseBoard(text: string, makeId: () => string = idsFor(text)): Board {
   const stored: unknown = JSON.parse(text);
   if (!isRecord(stored) || !Array.isArray(stored.columns)) throw new Error('Not a board');
   const columns = stored.columns

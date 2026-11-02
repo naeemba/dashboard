@@ -21,13 +21,13 @@ async function unhandledDuring(run: () => Promise<unknown>): Promise<unknown[]> 
 
 describe('reportBoardWrites', () => {
   it('names the project once its write has landed', async () => {
-    const writeBoard = vi.fn(() => Promise.resolve());
+    const writeBoard = vi.fn(() => Promise.resolve(empty));
     // Frozen, because the bridge contextBridge hands the page is.
     const writes = reportBoardWrites(Object.freeze({ writeBoard, platform: 'darwin' }) as unknown as DashboardBridge);
     const listener = vi.fn();
     writes.onWrite(listener);
-    await writes.bridge.writeBoard('/work/api', empty);
-    expect(writeBoard).toHaveBeenCalledWith('/work/api', empty);
+    await writes.bridge.writeBoard('/work/api', empty, empty);
+    expect(writeBoard).toHaveBeenCalledWith('/work/api', empty, empty);
     expect(listener).toHaveBeenCalledWith('/work/api');
     expect(writes.bridge.platform).toBe('darwin');
   });
@@ -37,7 +37,7 @@ describe('reportBoardWrites', () => {
     const writes = reportBoardWrites(Object.freeze({ writeBoard: () => Promise.reject(new Error('disk full')) }) as unknown as DashboardBridge);
     const listener = vi.fn();
     writes.onWrite(listener);
-    const thrown = await unhandledDuring(() => expect(writes.bridge.writeBoard('/work/api', empty)).rejects.toThrow('disk full'));
+    const thrown = await unhandledDuring(() => expect(writes.bridge.writeBoard('/work/api', empty, empty)).rejects.toThrow('disk full'));
     expect(listener).not.toHaveBeenCalled();
     // Only the caller hears of it, not the window's handler as well.
     expect(thrown).toHaveLength(0);
@@ -45,9 +45,9 @@ describe('reportBoardWrites', () => {
 
   // The file was written, so the board must not say it was not.
   it('still resolves the write when a listener throws', async () => {
-    const writes = reportBoardWrites(Object.freeze({ writeBoard: () => Promise.resolve() }) as unknown as DashboardBridge);
+    const writes = reportBoardWrites(Object.freeze({ writeBoard: () => Promise.resolve(empty) }) as unknown as DashboardBridge);
     writes.onWrite(() => { throw new Error('listener broke'); });
-    const thrown = await unhandledDuring(() => expect(writes.bridge.writeBoard('/work/api', empty)).resolves.toBeUndefined());
+    const thrown = await unhandledDuring(() => expect(writes.bridge.writeBoard('/work/api', empty, empty)).resolves.toBe(empty));
     expect(thrown).toHaveLength(1);
   });
 });

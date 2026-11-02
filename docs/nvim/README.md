@@ -4,6 +4,24 @@ Each project's editor view, an nvim the app talks to over its socket. A pane's
 scrollback, the Claude screen's prompt box and any file path a pane printed open
 in it.
 
+## On screen
+
+What each screen does, in full. The help dialog keeps only a short
+blurb for it; this is where the rest lives.
+
+One nvim filling the window. It starts the first time you press the nvim key for
+this project, not at launch. Quit it and the pane says it exited; Enter starts
+it again, and so does coming back to this screen — the scrollback key needs a
+running nvim to hand a file to. The status bar names the file nvim has open, and
+just says nvim while nothing is open.
+
+The scrollback key on the terminals screen sends the pane you are looking at
+here as a file in a new tab, so an agent transcript can be searched and yanked
+with real editor tools. It arrives whatever you were editing, unsaved changes
+and all, and it is a copy: editing it changes nothing in the pane it came from,
+and pressing the key again on that pane throws your edits away for a fresh copy.
+Each pane gets a tab of its own, so two of them can be read side by side.
+
 ## Files
 
 Folders: `src/main/nvim/`, `src/renderer/nvim/`.

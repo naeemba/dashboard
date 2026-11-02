@@ -42,7 +42,7 @@ export const isImageType = (type: string): boolean => (IMAGE_TYPES as readonly s
 // error. The cap is on all of a prompt's images together, which also keeps a prompt sent from the
 // second screen under the host's frame limit (MAX_FRAME_BYTES).
 const IMAGE_LIMIT = 5 * 1024 * 1024;
-// The limit as the refusal notice and the help dialog say it.
+// The limit as the refusal notice says it.
 export const IMAGE_LIMIT_SHOWN = `${IMAGE_LIMIT / 1024 / 1024} MB`;
 export function imagesFit(base64Lengths: number[]): boolean {
   return base64Lengths.reduce((sum, length) => sum + length, 0) <= IMAGE_LIMIT;

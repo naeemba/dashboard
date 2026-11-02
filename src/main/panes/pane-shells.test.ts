@@ -9,7 +9,7 @@ import { paneShells } from './pane-shells';
 function fakeShell(kept?: boolean): PaneShell {
   return {
     pid: 1, process: 'zsh', cols: 80, rows: 24, kept,
-    write: () => undefined, resize: () => undefined, kill: () => undefined,
+    write: () => undefined, resize: () => undefined, kill: () => undefined, pause: () => undefined, resume: () => undefined,
     onData: () => undefined, onExit: () => undefined,
   };
 }
@@ -30,7 +30,7 @@ function shells() {
     host,
     commands: new Map([[EDITOR, { args: 'editor', directory: '/work' }], [WORKER, { args: [], directory: '/work' }]]),
     screens: screens(), environment: {}, temporary: '/nonexistent', shellCommand: () => '/bin/zsh',
-    projectPath: () => '/project', send: () => undefined, ended: () => undefined,
+    projectPath: () => '/project', send: () => undefined, keepsScreens: () => false, ended: () => undefined,
   });
   return { ...made, hostSpawned: () => hostSpawned };
 }
