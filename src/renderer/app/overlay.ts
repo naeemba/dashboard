@@ -88,6 +88,15 @@ export function pdfOverlay(pdf: Blob): void {
   viewerOverlay('pdf-viewer', frame, { closed: () => URL.revokeObjectURL(frame.src) });
 }
 
+// Focus that leaves the dialog comes back to it. Returns the way to stop, which closing calls.
+export function holdFocus(dialog: HTMLElement): () => void {
+  function hold(event: FocusEvent): void {
+    if (!(event.target instanceof Node && dialog.contains(event.target))) dialog.focus();
+  }
+  document.addEventListener('focusin', hold);
+  return () => document.removeEventListener('focusin', hold);
+}
+
 // The viewer on screen, if any, for the Escape main hands over from the PDF's frame.
 let closeViewer: (() => void) | null = null;
 
@@ -101,21 +110,18 @@ export function viewerOverlay(
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
     closeViewer = null;
-    document.removeEventListener('focusin', hold);
+    release();
     remove();
     closed?.();
     previous?.focus();
   }
-  // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks
-  // back out past the sheet to whatever is behind it. Focus that leaves the sheet comes back to it,
-  // so the next keys never reach the page under the overlay.
-  function hold(event: FocusEvent): void {
-    if (!(event.target instanceof Node && dialog.contains(event.target))) dialog.focus();
-  }
   const { dialog, remove } = openOverlay(name, close);
+  // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks
+  // back out past the sheet to whatever is behind it; holding focus keeps the next keys off the page
+  // under the overlay.
+  const release = holdFocus(dialog);
   dialog.append(shown);
   answerKeys(dialog, (key) => (key === 'Enter' && enter !== undefined ? enter() : close()));
-  document.addEventListener('focusin', hold);
   closeViewer = close;
   dialog.focus();
   return close;

@@ -26,6 +26,7 @@ export type CommandScreen = {
   imageCount(): number;
   configure(change: ChatPreferences): void;
   focus(): void;
+  showContext(): void;
 };
 
 // The text `send` goes on to send to the session: what follows /plan, when there is something to send.
@@ -34,6 +35,7 @@ export function runScreenCommand(command: ScreenCommand, screen: CommandScreen):
   const { bridge, slot, options, focus } = screen;
   switch (command.kind) {
     case 'resume': showResume(screen); break;
+    case 'context': screen.showContext(); break;
     case 'diff': showEdits(screen.transcript().entries, options); break;
     case 'rewind': showRewind(screen); break;
     case 'mcp': void manageMcp(bridge, slot, options).then(focus); break;
