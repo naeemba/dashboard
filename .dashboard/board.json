@@ -330,15 +330,6 @@
           "priority": "medium",
           "parent": null,
           "updatedAt": "2026-11-02T00:20:52.873Z"
-        },
-        {
-          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
-          "title": "Show what fills the context window from the Claude screen's context meter",
-          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
-          "priority": "medium",
-          "parent": null,
-          "createdAt": "2026-11-01T23:46:08.026Z",
-          "updatedAt": "2026-11-02T00:40:52.580Z"
         }
       ]
     },
@@ -428,6 +419,17 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "5b208bbb-e210-4ceb-bfce-216ebc58089a",
+          "title": "Show what fills the context window from the Claude screen's context meter",
+          "notes": "The Claude screen's status line shows 'context 14%' and used/size only. The Agent SDK's getContextUsage() answer (SDKControlGetContextUsageResponse) already carries the breakdown, and measureOf in src/shared/chat/chat-status.ts drops it: categories (tokens per row, with a stable id: system_prompt, system_tools, mcp_tools, custom_agents, memory_files, skills, messages, autocompact_buffer, free_space and the rest, plus kind used/free/buffer/deferred), memoryFiles (path, tokens), mcpTools (name, server, tokens). No extra call needed.\n\n- A click on the context meter opens a small popup anchored to it: one row per category with tokens and percentage of the window, a thin coloured bar per row in the category's colour, then the memory files and the MCP tools, biggest first, each list capped with a 'N more' row. Deferred rows (not in the window) are shown apart or left out, decided on kind, never on the English name.\n- Keyboard first (conventions-rule-1): a key opens the same popup (a row in src/shared/keys/actions.ts), and /context on the Claude screen does too, answered by the screen rather than sent to the session. Arrow keys walk the rows; Esc closes it and focus goes back to the prompt.\n- The numbers are from the last measure (after each turn); the popup says when they were taken, and refreshes when a new measure lands while it is open.\n- The breakdown shaping (sorting, capping, percentages, kind filter) is a small module with a test (workflow-rule-2). Help and docs/chat updated.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-01T23:46:08.026Z",
+          "updatedAt": "2026-11-02T00:53:15.948Z",
+          "branch": "work-board-card-5b208bbb-e210-4ceb-bfce-216",
+          "pullRequest": 180
         }
       ]
     },
