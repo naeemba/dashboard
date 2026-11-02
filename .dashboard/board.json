@@ -191,6 +191,24 @@
           "notes": "newest-read.test.ts:5, manager-reads.test.ts:8 and ship.test.ts:125 each hand-write a deferred promise helper that Promise.withResolvers() already provides (it typechecks and runs here: target ESNext, Node 24). Replace each copy with it. Cost if left: every new test that needs to control when a promise settles writes another copy under another name. Issue: https://github.com/naeemba/dashboard/issues/192 Review: https://github.com/naeemba/dashboard/pull/190#discussion_r4441187097",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "25055404-20ba-465a-8a82-7965f85967f7",
+          "title": "The pane host never runs on Windows, so panes do not survive a restart",
+          "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
+          "priority": "high"
+        },
+        {
+          "id": "12dcfdf3-6cfa-4445-a592-6400ea498d37",
+          "title": "The session command gets no answer over the Windows named pipe",
+          "notes": "The comment says it: the `session` command is broken on Windows, not just its test. Both tests here drive the real `askApp` against the real `listenForSessions`, so the empty reply or timeout they get on `windows-latest` is what a worker pane gets when it runs `session ...` on Windows. The main session asks a worker to report back, and the call either says \"the app answered with something that was not a reply\" or hangs until it times out.\n\nTagged medium, not high, because the cause (the pipe not staying half open after the client's `end()`) is inferred and not yet reproduced outside CI. A likely fix, outside this PR, is to stop relying on half-close: the client writes the request followed by a newline and keeps its side open, and the server answers once it has read one line. That works the same over a unix socket and a named pipe. Then drop `halfOpenOnly`.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551443",
+          "priority": "medium"
+        },
+        {
+          "id": "43ceddd8-1f20-4512-9578-37eaaaa6952a",
+          "title": "Make the POSIX path-literal tests portable instead of skipping them on Windows",
+          "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
+          "priority": "low"
         }
       ]
     },
