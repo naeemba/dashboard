@@ -183,10 +183,10 @@ line break.
 A reply holding a link definition (`[name]: url`, also in a list item or a quote), an HTML comment,
 or a `<pre>`, `<script>`, `<style>` or `<textarea>` line is drawn whole every frame, as before: a
 definition applies to links anywhere in the text, and those HTML blocks run on past a blank line.
-Other HTML lines end at one, so they still cut. So is a reply with a fence opened in a list item or a
-quote, or a fenced line less indented than its opener: the scanner follows top-level fences only, and
-the container can end a fence where it would run on. Telling the refused cases apart from a safe cut costs more code than they are worth;
-Claude rarely writes either. The finished reply is an entry and is always drawn whole.
+Other HTML lines end at one, so they still cut. A fence opened in a list item or a quote, or a fenced
+line less indented than its opener, is drawn whole too: the scanner follows top-level fences only, and
+the container can end a fence where it would run on. Telling the refused cases apart from a safe cut
+costs more code than they are worth; Claude rarely writes any of these. The finished reply is an entry and is always drawn whole.
 
 What is still redrawn every frame: an open code fence, highlighted whole each frame until it closes,
 and a list still growing, since a blank line between items cannot be cut.
