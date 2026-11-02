@@ -10,3 +10,4 @@ One line per merged change: date, pull request, why.
 - 2026-10-30 #97 — A new-pane button in the title row
 - 2026-11-01 #135 — Session names use the shared slug instead of a second copy
 - 2026-11-02 #176 — Main is told when its worker finishes; the who-ran-it record (workers-decision-1, workers-decision-3)
+- 2026-11-02 — A session request ends at its newline, not at a half close a Windows named pipe cannot do
