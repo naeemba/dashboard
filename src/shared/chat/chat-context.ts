@@ -24,6 +24,10 @@ const CATEGORY_TONES: Partial<Record<CategoryId, string>> = {
   autocompact_buffer: 'brightBlack', compact_buffer: 'brightBlack',
 };
 
+function toneOf(id: string | undefined): string | null {
+  return (id ? CATEGORY_TONES[id as CategoryId] : undefined) ?? null;
+}
+
 function share(tokens: number, size: number): number {
   return size > 0 ? (tokens / size) * 100 : 0;
 }
@@ -47,10 +51,10 @@ export function contextBreakdown(usage: ContextUsageParts): ContextBreakdown {
   return {
     categories: usage.categories
       .filter((category) => category.kind !== 'deferred' && category.tokens > 0)
-      .map((category) => row(category.id ?? category.name, category.name, null, category.tokens, (category.id && CATEGORY_TONES[category.id]) ?? null)),
-    memoryFiles: capped(usage.memoryFiles.map((file) => row(file.path, file.path, null, file.tokens, CATEGORY_TONES.memory_files ?? null)), size),
+      .map((category) => row(category.id ?? category.name, category.name, null, category.tokens, toneOf(category.id))),
+    memoryFiles: capped(usage.memoryFiles.map((file) => row(file.path, file.path, null, file.tokens, toneOf('memory_files'))), size),
     // A tool the session has not loaded is deferred in the same way, and is not counted in the window.
     mcpTools: capped(usage.mcpTools.filter((tool) => tool.isLoaded !== false)
-      .map((tool) => row(tool.name, tool.name, tool.serverName, tool.tokens, CATEGORY_TONES.mcp_tools ?? null)), size),
+      .map((tool) => row(tool.name, tool.name, tool.serverName, tool.tokens, toneOf('mcp_tools'))), size),
   };
 }

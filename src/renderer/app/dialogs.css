@@ -262,7 +262,8 @@
 }
 
 .search-list li,
-.worktrees-list li {
+.worktrees-list li,
+.anchored-list li {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -272,12 +273,14 @@
 }
 
 .search-list li:hover,
-.worktrees-list li:hover {
+.worktrees-list li:hover,
+.anchored-list li:hover {
   background: var(--hover);
 }
 
 .search-list li.highlighted,
-.worktrees-list li.highlighted {
+.worktrees-list li.highlighted,
+.anchored-list li.highlighted {
   background: var(--tint);
 }
 
@@ -582,19 +585,7 @@
   list-style: none;
 }
 
+/* The search list's rows, a little tighter. */
 .anchored-list li {
-  display: flex;
-  gap: 10px;
-  align-items: center;
   padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.anchored-list li:hover {
-  background: var(--hover);
-}
-
-.anchored-list li.highlighted {
-  background: var(--tint);
 }

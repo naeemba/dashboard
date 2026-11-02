@@ -1,6 +1,6 @@
 import { heldIndex } from '../../shared/app/clamp-index';
 import { isModified } from '../keys/shortcuts';
-import { openOverlay } from './overlay';
+import { answerKeys, openOverlay } from './overlay';
 import { placeAbove } from './popup-placement';
 
 // A small list opened from something on screen and drawn just above it rather than in the middle of a
@@ -105,11 +105,10 @@ export function anchoredPopup<Choice>(options: {
       draw();
     }
 
+    answerKeys(dialog, (key) => (key === 'Enter' ? take() : finish(undefined)));
     dialog.addEventListener('keydown', (event) => {
       if (isModified(event)) return;
       switch (event.key) {
-        case 'Escape': event.preventDefault(); return finish(undefined);
-        case 'Enter': event.preventDefault(); return take();
         case 'ArrowDown': event.preventDefault(); return move(1);
         case 'ArrowUp': event.preventDefault(); return move(-1);
         // Nothing in it takes focus but the box itself, so Tab would leave for the pane behind.

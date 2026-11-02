@@ -1,6 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import type { BreakdownRow } from '../../shared/chat/chat-context';
-import { clockTime, type ChatMeasure } from '../../shared/chat/chat-status';
+import { clockTime, statusMeters, type ChatMeasure } from '../../shared/chat/chat-status';
 import { formatTokens } from '../../shared/usage/usage';
 import { anchoredPopup, type PopupRow, type PopupSection } from '../app/anchored-popup';
 import { piece } from './chat-foot-view';
@@ -22,7 +22,7 @@ export type Measures = {
 };
 
 function row(each: BreakdownRow): PopupRow<never> {
-  const bar = piece('chat-context-bar', '');
+  const bar = piece('chat-meter-bar', '');
   bar.style.setProperty('--tone', each.tone ? `var(--${each.tone})` : 'var(--line)');
   bar.style.setProperty('--used', `${Math.min(100, each.percentage)}%`);
   const name = piece('chat-context-name', each.name);
@@ -40,15 +40,17 @@ function sections(measure: ChatMeasure): PopupSection<never>[] {
 }
 
 function heading(measure: ChatMeasure): string {
-  const { used, size, percentage } = measure.context;
+  // The meter's own words, so the heading and the foot cannot say it differently.
+  const [meter] = statusMeters(measure);
   const at = clockTime(measure.at);
-  return `Context ${Math.floor(percentage)}% · ${formatTokens(used)} / ${formatTokens(size)}${at ? ` · measured ${at}` : ''}`;
+  return `Context ${Math.floor(meter.percentage)}% · ${meter.detail}${at ? ` · measured ${at}` : ''}`;
 }
 
 export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () => void, say: (message: string) => void): Measures {
   let measured: ChatMeasure | null = null;
   let asked = 0;
-  const watchers = new Set<() => void>();
+  // The open popup's way to read the measure again; one popup is up at a time.
+  let redraw: (() => void) | undefined;
 
   return {
     latest: () => measured,
@@ -60,7 +62,7 @@ export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () 
         if (ask !== asked) return;
         if (reading !== null) measured = reading;
         drawn();
-        for (const each of watchers) each();
+        redraw?.();
       }, () => undefined);
     },
     forget() {
@@ -78,8 +80,8 @@ export function createMeasures(bridge: DashboardBridge, slot: number, drawn: () 
       await anchoredPopup<never>({
         name: 'chat-context', anchor, heading: () => heading(current()), sections: () => sections(current()),
         watch: (changed) => {
-          watchers.add(changed);
-          return () => watchers.delete(changed);
+          redraw = changed;
+          return () => { redraw = undefined; };
         },
       });
     },

@@ -434,10 +434,9 @@
   white-space: nowrap;
 }
 .chat-context-detail { color: var(--muted); }
-.chat-context-bar {
+.chat-context-dialog .chat-meter-bar {
+  width: auto;
   height: 3px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--tone) var(--used), var(--line) var(--used));
 }
 .chat-context-tokens, .chat-context-share {
   color: var(--muted);

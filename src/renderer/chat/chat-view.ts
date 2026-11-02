@@ -18,7 +18,7 @@ import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
 import { PANE_LINK } from './chat-pane-links';
 import { workerCount } from '../../shared/workers/worker-roster';
-import { workingLine, type FootState } from '../../shared/chat/chat-status';
+import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from '../../shared/chat/chat-transcript';
@@ -163,15 +163,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
   // the meters Claude Code's status line carries, then the version.
   const turnState = (): FootState => (asks.length > 0 ? 'waiting' : transcript.busy ? 'working' : 'ready');
   let drawnFoot = '';
+  let drawnMeasure: ChatMeasure | null = null;
   function drawFoot(): void {
     const measured = measures.latest();
     const shown = `${measured?.model ?? model ?? transcript.model ?? 'default model'}${fast ? ' · fast' : ''}`;
     const state = turnState();
     // Every paint asks, a streamed token included; the foot is only rebuilt when something on it changed.
     const effortShown = footEffort(effort, state, transcript.entries);
-    const key = JSON.stringify([measured, shown, transcript.version, mode, effortShown, state, workers]);
-    if (key === drawnFoot) return;
+    // The measure by reference: each one landed is a new object, and stringifying its breakdown every paint is waste.
+    const key = JSON.stringify([shown, transcript.version, mode, effortShown, state, workers]);
+    if (key === drawnFoot && measured === drawnMeasure) return;
     drawnFoot = key;
+    drawnMeasure = measured;
     foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, transcript.version, workers));
   }
   let workers = '';
@@ -182,8 +185,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
   const openWorkers = (): void => void showWorkers(bridge, slot, options.goToPane).then((landed) => { if (!landed) focus(); });
   const showContext = (): void => void measures.show(foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`)).then(focus);
   foot.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest(`.${FOOT_WORKERS}`)) openWorkers();
-    if (event.target instanceof Element && event.target.closest(`.${FOOT_CONTEXT}`)) showContext();
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest(`.${FOOT_WORKERS}`)) openWorkers();
+    if (target?.closest(`.${FOOT_CONTEXT}`)) showContext();
   });
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
