@@ -2,18 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TEXT_STRANDED } from './notes-state';
 import { createSavedPage, SAVE_DELAY_MS, type SavedPageOptions } from './saved-page';
 
-type Held<T> = { promise: Promise<T>; resolve(value: T): void; reject(error: unknown): void };
-
-function held<T>(): Held<T> {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((onResolve, onReject) => {
-    resolve = onResolve;
-    reject = onReject;
-  });
-  return { promise, resolve, reject };
-}
-
 // A page held in a string, with a file behind it that answers or fails as a test says. With `held`,
 // every read and write waits until the test answers it, so a test can choose the order they land in.
 function fakePage(file: { text: string; readFails?: boolean; held?: boolean }) {
@@ -21,15 +9,15 @@ function fakePage(file: { text: string; readFails?: boolean; held?: boolean }) {
   let busy = false;
   const errors: string[] = [];
   const writes: string[] = [];
-  const loads: Held<string>[] = [];
-  const saves: Held<void>[] = [];
+  const loads: PromiseWithResolvers<string>[] = [];
+  const saves: PromiseWithResolvers<void>[] = [];
   const options: SavedPageOptions = {
     name: 'Notes',
     text: () => shown,
     show: (text) => (text.startsWith('!') ? undefined : (shown = text)),
     load: () => {
       if (file.held) {
-        loads.push(held<string>());
+        loads.push(Promise.withResolvers<string>());
         return loads.at(-1)!.promise;
       }
       return file.readFails ? Promise.reject(new Error('gone')) : Promise.resolve(file.text);
@@ -37,7 +25,7 @@ function fakePage(file: { text: string; readFails?: boolean; held?: boolean }) {
     save: (text) => {
       writes.push(text);
       if (file.held) {
-        saves.push(held<void>());
+        saves.push(Promise.withResolvers<void>());
         return saves.at(-1)!.promise;
       }
       file.text = text;
