@@ -10,3 +10,4 @@ One line per merged change: date, pull request, why.
 - 2026-10-30 #97 — A new-pane button in the title row
 - 2026-11-01 #135 — Session names use the shared slug instead of a second copy
 - 2026-11-02 #176 — Main is told when its worker finishes; the who-ran-it record (workers-decision-1, workers-decision-3)
+- 2026-11-02 #195 — Workers start under Windows PowerShell: claude's words escaped for the program, --settings wrapped whole
