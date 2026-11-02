@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
+  bindingName, bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
 } from './settings';
 import { ACTIONS, scopesOverlap } from '../keys/actions';
 import { THEME } from '../app/theme';
@@ -278,5 +278,11 @@ describe('resetAll', () => {
     expect(reset.host).toEqual({ port: null, token: 'abc', bind: '127.0.0.1' });
     expect(reset.remote).toEqual(settings.remote);
     expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
+  });
+
+  it('names the key an action is on, and an unbound one as Nothing', () => {
+    const settings = defaultSettings(true);
+    expect(bindingName(settings, 'project-picker')).toBe(settings.keys['project-picker']);
+    expect(bindingName(bindKey(settings, 'project-picker', null), 'project-picker')).toBe('Nothing');
   });
 });

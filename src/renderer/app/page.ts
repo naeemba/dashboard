@@ -20,7 +20,7 @@ import { writeFlow } from '../panes/write-flow';
 import { pauseSelectionRedraws } from '../panes/paused-selection';
 import type { SectionStrip } from '../manager/section-strip';
 import type { MarketsView } from '../markets/markets-view';
-import type { Settings } from '../../shared/settings/settings';
+import { bindingName, type Settings } from '../../shared/settings/settings';
 import { droppedPathsText } from '../../shared/panes/shell';
 import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from '../../shared/panes/terminals';
 import { icon, type IconName } from './icons';
@@ -595,7 +595,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       projectPath: project.path,
       // Its own slot beside the text's, so a failure of one page is not cleared by the other's success.
       onError: (message) => options.onError(`ink:${slot}`, message),
-      binding: (actionName) => options.settings().keys[actionName] ?? 'Nothing',
+      binding: (actionName) => bindingName(options.settings(), actionName),
     });
     // Hidden until the toggle key asks for it: see showNotesPage.
     page.ink.element.hidden = true;

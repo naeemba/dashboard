@@ -33,7 +33,7 @@ import { WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import type { WorktreeList, Project, Session, WorktreeEntry } from '../shared/app/bridge';
 import { createPageSync } from './app/page-sync';
 import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
-import { defaultSettings, type Settings } from '../shared/settings/settings';
+import { bindingName, defaultSettings, type Settings } from '../shared/settings/settings';
 import { openSettings } from './settings/settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './app/overlay';
 import { anyWaiting, questionBell, waitingNames } from '../shared/panes/waiting';
@@ -177,7 +177,7 @@ function statusPage(page: Page): StatusPage {
     hasProjects: projectPages().length > 0,
     managerStatusLabel: page.manager?.statusLabel() ?? '',
     commandStatusLabel: page.command?.statusLabel() ?? '',
-    pickerBinding: settings.keys['project-picker'] ?? 'Nothing',
+    pickerBinding: bindingName(settings, 'project-picker'),
     pickerDescription: actionByName('project-picker')?.description ?? '',
     worktrees,
     focusedDirectory: paneDirectories[terminalId(page.slot, page.focused)] ?? '',
@@ -911,7 +911,7 @@ async function start(): Promise<void> {
     bridge,
     projects: projectPages,
     worktrees: () => worktrees,
-    binding: (actionName) => settings.keys[actionName] ?? 'Nothing',
+    binding: (actionName) => bindingName(settings, actionName),
     onChanged: renderStatus,
     onError: showError,
     onNotice: showNotice,
