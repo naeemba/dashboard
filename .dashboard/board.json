@@ -153,13 +153,6 @@
           "parent": null
         },
         {
-          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
-          "title": "Stop hidden projects laying out and painting their terminals",
-          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "medium",
-          "parent": null
-        },
-        {
           "id": "adf42c92-bd82-482c-88c7-5daabbe6a9de",
           "title": "Render only the tail of a streaming Claude reply",
           "notes": "Measured: 2k/8k/16k-char answers at 600 chars/s put the renderer at 39%/69%/100% CPU; layout 9.5% to 31.5%, about 60 layouts/s. Typing unaffected (23 ms median). Where: src/renderer/chat/chat-view.ts:216-225, whole live block through marked each frame. Fix (medium): render finished part once, re-render only the tail after the last paragraph break outside a code fence. Rerun: measure.mjs chat. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
@@ -310,24 +303,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
-          "title": "Stop the first usage sweep freezing main for a minute after launch",
-          "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-01T23:36:51.612Z",
-          "comments": [
-            {
-              "at": "2026-11-01T22:18:53.958Z",
-              "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
-            },
-            {
-              "at": "2026-11-01T22:23:48.077Z",
-              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
-            }
-          ]
-        },
-        {
           "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
           "title": "Tell main when a worker finishes",
           "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
@@ -357,6 +332,14 @@
               "body": "Correction from the review's PR loop: flushing notes on beforeunload is not needed; drop that part."
             }
           ]
+        },
+        {
+          "id": "3dcdeb41-9283-457f-b2b4-52658d46c466",
+          "title": "Stop hidden projects laying out and painting their terminals",
+          "notes": "Measured: 4 workers at 200 lines/s: renderer 23.8-26.9% CPU shown, still 12.6-14.5% and 195-200 layouts/10 s when the project is hidden (idle 0%). Where: .page[hidden] is visibility:hidden (src/renderer/app/index.css:72), so xterm's IntersectionObserver never pauses. Fix (medium): take hidden pages out of the viewport keeping their size; check panes show latest output on return. Rerun: measure.mjs streams. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "medium",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:13:45.382Z"
         }
       ]
     },
@@ -2468,6 +2451,30 @@
           "updatedAt": "2026-11-02T00:07:36.975Z",
           "branch": "work-board-card-4187f056-2471-4ea9-be8d-361",
           "pullRequest": 173
+        },
+        {
+          "id": "504767c6-333d-464f-84fe-51bc39b9db7d",
+          "title": "Stop the first usage sweep freezing main for a minute after launch",
+          "notes": "Measured: first sweep reads every ~/.claude/projects log on main's thread: 4,585 files, 4.53 GB, 56 s, 46 CPU-s, longest hold 477 ms (one 128.8 MB log). In the app with 0.5 GB of logs: 22 main stalls over 50 ms in 3.6 s, worst 411 ms; a keystroke echo took 356 ms. Where: src/main/usage/usage-sweep.ts FIRST_SWEEP_MS, usage-store.ts sweepUsage/countInto. Fix (medium): persist per-file size and counts in userData so a launch reads only appended bytes; parse off main's thread. Rerun: measure.mjs usage-sweep and lag. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-02T00:11:07.543Z",
+          "branch": "work-board-card-504767c6-333d-464f-84fe-51b",
+          "pullRequest": 172,
+          "comments": [
+            {
+              "at": "2026-11-01T22:18:53.958Z",
+              "body": "The 477 ms longest hold (and the 56 s / 46 CPU-s) came from a copy of the sweep that skipped Date.parse, tokensOf and the sample push per line, so it is a floor. usage-sweep now runs the app's own sweepUsage; rerun it before comparing a fix against these. See docs/performance/history.md."
+            },
+            {
+              "at": "2026-11-01T22:23:48.077Z",
+              "body": "Rerun with the app's own sweepUsage (PR #166): 4,608 files, 4.55 GB, 17.9 s, 22.6 CPU-s, longest event-loop hold 182 ms. The 56 s / 477 ms in the notes came from a hand-written copy that overstated it. The in-app lag numbers (22 stalls over 50 ms, worst 411 ms, a 356 ms keystroke with 0.5 GB of logs) stand."
+            },
+            {
+              "at": "2026-11-02T00:11:07.543Z",
+              "body": "Shipped in #172: the usage sweep runs on its own worker thread. Main's longest hold during the first sweep of 4.57 GB went from 148-165 ms to 1-2 ms; in the app, 6-8 stalls over 50 ms after launch went to 0. Not done: counts are not saved between launches, so each launch still reads every log, off main's thread."
+            }
+          ]
         }
       ]
     }
