@@ -1,8 +1,23 @@
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { replaceFile } from './replace-file';
+
+// Lets one test make the write itself fail the way a full disk does; every other test writes for real.
+const writes = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    writeFileSync: (...parameters: Parameters<typeof actual.writeFileSync>) => {
+      if (writes.failure && typeof parameters[0] === 'number') throw writes.failure;
+      return actual.writeFileSync(...parameters);
+    },
+  };
+});
+
+afterEach(() => { writes.failure = undefined; });
 
 describe('replaceFile', () => {
   it('replaces the file and leaves no temporary file behind once the rename lands', () => {
@@ -20,5 +35,15 @@ describe('replaceFile', () => {
     mkdirSync(join(folder, 'board.json', 'inside'), { recursive: true });
     expect(() => replaceFile(join(folder, 'board.json'), 'new')).toThrow();
     expect(readdirSync(folder)).toEqual(['board.json']);
+  });
+
+  it('removes its temporary file when the write itself fails', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'replace-file-'));
+    const filePath = join(folder, 'board.json');
+    writeFileSync(filePath, 'old');
+    writes.failure = Object.assign(new Error('no space left on device'), { code: 'ENOSPC' });
+    expect(() => replaceFile(filePath, 'new')).toThrow('no space left on device');
+    expect(readdirSync(folder)).toEqual(['board.json']);
+    expect(readFileSync(filePath, 'utf8')).toBe('old');
   });
 });

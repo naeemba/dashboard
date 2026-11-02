@@ -25,19 +25,21 @@ export function replaceFile(filePath: string, text: string): void {
   mkdirSync(dirname(filePath), { recursive: true });
   const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   const descriptor = openSync(temporaryPath, 'w');
+  // One try from the first byte to the rename: a write that fails part way (a full disk) leaves a file
+  // under a name no later write reuses, so whatever fails after the open removes it before rethrowing.
   try {
-    writeFileSync(descriptor, text);
-    fsyncSync(descriptor);
-  } finally {
-    closeSync(descriptor);
-  }
-  try {
+    try {
+      writeFileSync(descriptor, text);
+      fsyncSync(descriptor);
+    } finally {
+      closeSync(descriptor);
+    }
     renameSync(temporaryPath, filePath);
   } catch (error: unknown) {
     try {
       unlinkSync(temporaryPath);
     } catch {
-      // Best effort: the rename error below is the one that matters.
+      // Best effort: the error below is the one that matters.
     }
     throw error;
   }

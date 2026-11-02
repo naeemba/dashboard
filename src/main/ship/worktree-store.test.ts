@@ -96,7 +96,7 @@ describe('writeWorktrees', () => {
   // The shape on disk, not the round trip above: parse and write would agree with each other just as
   // well after both had moved off `entries`, and every file an older build wrote would stop being
   // read. That the write leaves no .tmp behind is replaceFile's own promise, pinned in
-  // board-store.test.ts.
+  // replace-file.test.ts.
   it('writes the entries under the key the file has always used', () => {
     const file = worktreesFile();
     writeWorktrees(file, [entry]);

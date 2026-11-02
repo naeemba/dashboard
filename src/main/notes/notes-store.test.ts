@@ -43,7 +43,7 @@ describe('the notes file', () => {
     expect(() => readNotes(projectPath)).toThrow();
   });
 
-  it('leaves the old page whole when the rename cannot land', () => {
+  it('leaves the old page whole when the new one cannot be written', () => {
     const projectPath = project();
     writeNotes(projectPath, 'the page that was there\n');
     // A folder that takes no new file: the temporary file cannot be made, so nothing replaces
