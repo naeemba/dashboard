@@ -8,7 +8,7 @@ describe('isBoardFile', () => {
 
   // Written on every save, right before the rename that replaces board.json.
   it('is not the temporary file the save goes through', () => {
-    expect(isBoardFile('board.json.tmp')).toBe(false);
+    expect(isBoardFile('board.json.4242.0b8e5c1a-3f2d-4c7e-9a6b-1d2e3f4a5b6c.tmp')).toBe(false);
   });
 
   it('is not the explanation files seeded beside the board', () => {

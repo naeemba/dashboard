@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { replaceFile } from './replace-file';
 import { isPaneConversation, type PaneConversation } from '../workers/claude-resume';
 import { PROJECT_MODES, type Mode } from '../../shared/keys/modes';
 import type { SessionPage } from '../../shared/app/bridge';
@@ -78,7 +79,7 @@ export function readSession(file: string): SavedSession {
 
 export function writeSession(file: string, session: SavedSession): void {
   try {
-    writeFileSync(file, JSON.stringify(session));
+    replaceFile(file, JSON.stringify(session));
   } catch {
     // Nothing to restore next time.
   }

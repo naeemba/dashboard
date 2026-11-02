@@ -23,6 +23,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 ## Scenarios
 
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
+- Given the power goes out just after a board, notes or session write, when the app next launches, then it reads the old file or the new one, never an empty one (`replaceFile` flushes before it renames).
 - Given a card with subtasks, when you blank its title, then it is refused and the status bar says to delete it with `d`.
 - Given you deleted a card, when you undo, then it comes back where it was.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.

@@ -18,6 +18,10 @@ The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run
     npm install
     npm start
 
+While the installed app is running, `npm start` on its own only brings that app's window to the front and
+exits: one app runs per userData folder. "One app at a time" in `docs/app/README.md` says how to run a
+development copy beside it.
+
 ## Install
 
     scripts/rebuild.sh
@@ -74,7 +78,8 @@ launch. Copy the token from the `Token` row under it. On the other machine, open
 and choose Connect to a host, then type `address:port` and paste the token. From then on that window is a
 second screen of the first: the same shells, boards and notes, with its own selected pane and mode. Each
 shell is sized to the smaller of the two windows. Choose Disconnect in the same list to come back to the
-machine's own projects. Launch with `--remote` to connect to the last host straight away.
+machine's own projects. Launch with `--remote` to connect to the last host straight away; launched that way while the app is
+already running, the running app connects instead of a second one opening.
 
 The wire is plain text, guarded by the token. It is meant for a home network; a token in the wrong hands
 is a shell as you. The host must not sleep on lid close; that is the operating system's setting.

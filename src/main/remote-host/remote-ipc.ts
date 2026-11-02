@@ -20,7 +20,7 @@ export type HeldForRemote = SessionState & {
 export function registerRemote(held: HeldForRemote, window: {
   send(channel: string, ...payload: unknown[]): void;
   saveSettings(next: Settings): void;
-}): { current(): RemoteTarget | null; reachesWindow(): boolean } {
+}): { current(): RemoteTarget | null; reachesWindow(): boolean; joinedTo(): string | null } {
   let client: RemoteClient | null = null;
   // Each connect takes a number. One that finishes after a newer connect or a disconnect has started
   // is stale, and is closed rather than kept: two live clients would both push into the renderer.
@@ -103,8 +103,8 @@ export function registerRemote(held: HeldForRemote, window: {
   // way back home go to the window directly, not through this gate.
   const reachesWindow = (): boolean => client === null && !handedOver;
 
-  // What registerWithIpc relays through.
-  return { current: () => client, reachesWindow };
+  // What registerWithIpc relays through, and the host a later launch's --remote checks against.
+  return { current: () => client, reachesWindow, joinedTo: () => client?.address ?? null };
 }
 
 // `--remote` on the command line: join the remembered host once the window has put its own session
@@ -114,14 +114,30 @@ export function registerRemote(held: HeldForRemote, window: {
 // back the local opens until the connect settles, which would have to tell a restore's open from one
 // you asked for. Once per launch: a reloaded page restores again but does not connect again.
 // A refusal is held for the status bar rather than thrown, because the launch itself went fine.
-export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void): void {
+//
+// What it hands back reads a later launch's command line, which launch-gate.ts passes on from the copy
+// that lost the single-instance lock: `--remote` there joins at once if the window has restored, or
+// when it does if not. A window already joined to the remembered host stays joined: host:connect drops
+// the client first whatever the address, so a launcher entry used to bring the window forward would
+// otherwise replay the host's whole session, and a key typed in the gap would reach a local shell.
+// Every flag the app reads off a launch is read here, for both.
+export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void, joinedTo: () => string | null): (argv: string[]) => void {
   let waiting = argv.includes('--remote');
-  table.on('session:restored', () => {
-    if (!waiting) return;
-    waiting = false;
+  let restored = false;
+  const connect = (): void => {
     const { address, token } = settings().remote;
     if (address === '') return hold('No host remembered for --remote: connect to one from the project list once');
     void table.invoke(LOCAL_SCREEN, 'host:connect', [address, token])
       .then((refusal) => { if (refusal) hold(String(refusal)); });
+  };
+  table.on('session:restored', () => {
+    restored = true;
+    if (waiting) { waiting = false; connect(); }
   });
+  return (laterArgv) => {
+    if (!laterArgv.includes('--remote')) return;
+    if (restored && joinedTo() === settings().remote.address) return;
+    if (restored) connect();
+    else waiting = true;
+  };
 }

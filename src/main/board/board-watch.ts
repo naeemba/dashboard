@@ -8,8 +8,8 @@ import { BOARD_FILE, boardPath } from './board-store';
 //
 // The folder is watched rather than the file, because writeBoard replaces board.json by renaming a
 // temporary file over it and a watch on the file itself follows the old inode into the bin. So the
-// events arriving here are for everything in there: board.json.tmp on every single save, CLAUDE.md
-// and README.md the first time a project is opened, board.json.broken after a salvage.
+// events arriving here are for everything in there: board.json.<pid>.<uuid>.tmp on every single save,
+// CLAUDE.md and README.md the first time a project is opened, board.json.broken after a salvage.
 
 // fs.watch does not always say which file it was. Then everything is read and the bytes below are the
 // only guard, which is the one that matters anyway.
@@ -56,7 +56,7 @@ export function boardWatchers(announce: (projectPath: string) => void): BoardWat
       let watcher: FSWatcher;
       try {
         watcher = watch(directory, (_event, fileName) => {
-          // Before the read, not after: one save fires an event for board.json.tmp and another for the
+          // Before the read, not after: one save fires an event for its board.json.<pid>.<uuid>.tmp and another for the
           // rename, and reading the whole board for the first of them is work on the thread every
           // pane's bytes flow through.
           if (!isBoardFile(fileName)) return;
