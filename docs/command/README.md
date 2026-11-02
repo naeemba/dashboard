@@ -12,6 +12,50 @@ own and parses its own verbs; this feature only picks the program.
 
 `session` is another name for `pane`.
 
+## On screen
+
+What each screen does, in full. The help dialog keeps only a short
+blurb for it; this is where the rest lives.
+
+One command, run in the projects you mark. Type it once — `npm audit`, `npm
+outdated`, the test suite — and choose how it runs. Enter gives every marked
+project a process of its own and puts the answers side by side: each row shows
+how its project exited and the last line it printed, Enter on a finished row
+shows the last few lines under it, and Escape stops the run. Nothing there
+touches the shells, so whatever was in them is still there.
+
+The other key types the command into a shell instead — one free pane in each
+marked project, or a new worker where none is free, where it has history, prints
+as it goes and can be taken over mid-run. A free pane is one that has not died
+and has nothing running in it: it is the same question a ship asks before it
+takes a pane, and gets the same answer, so a pane a ship would step around is
+one this will not type into either. An agent, a dev server, a tail, psql, vim —
+all of them hold a pane back. It picks in the ship's order too, which is the
+lowest-numbered free pane, except that a pane still standing in a finished
+card's worktree goes last — otherwise the line runs in that card's checkout
+while an empty prompt of the project sits below it.
+
+The one thing it cannot see is a job you put in the background: run npm run dev
+& and the shell is at its prompt again, so that pane takes the line like any
+other. That last part is unix only, the same way the ship's is: on Windows
+nothing about a pane's foreground can be read, so only a pane a card's agent was
+started in is held back, and a dev server there takes the line like anything
+else.
+
+A project a new worker cannot be opened in is named in the status bar rather
+than quietly missed, and so is one whose folder has gone. Nothing comes back to
+this screen from a run like that — the output is in the pane, on that project's
+page.
+
+The last line is a guess and this screen does not pretend otherwise: a command
+whose final act is to redraw a progress bar shows that bar. Reading `npm audit`
+properly — three high, none moderate — would need a parser per tool, and every
+tool words it differently.
+
+The command you typed lasts while the app is running and is gone on restart, and
+so are the results: a run answers a question you are asking now, and is not a
+record of anything.
+
 ## Files
 
 Folders: `src/main/command/`.

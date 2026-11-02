@@ -5,6 +5,157 @@ open per project and drawn as HTML over a prompt box. It asks for tool
 permissions itself, runs slash commands, rewinds to an earlier prompt, and shows images, PDFs and the agents
 Claude has running.
 
+## On screen
+
+What each screen does, in full. The help dialog keeps only a short
+blurb for it; this is where the rest lives.
+
+A Claude Code conversation drawn as a page rather than a terminal: tables as
+tables, code highlighted with a copy button in each block's corner (the copy key
+copies the selected entry's first block, then the next on each press; a tool
+call's or message's blocks once it is unfolded), a command run with ! as the
+line typed and a block of what it printed, a message Claude Code put in the
+conversation itself — an agent finishing, a subagent's report — as one folded
+line that a click or the unfold key opens, a long message you sent — a pasted
+log — as its first 6 lines and a row counting the rest, opened the same way
+(Claude still gets all of it), an image Claude carried inline drawn inline (one
+from the web is a link, so nothing is fetched until you click it), an edit as a
+diff. It runs in the project's folder with the project's own CLAUDE.md,
+settings, skills, hooks and MCP servers, the same as claude typed in a pane, as
+the project's main session. It starts when the project opens.
+
+The boxes take the terminal's readline keys: deleting the word before the caret,
+back to the start of the line or on to its end keeps what went, and the yank key
+puts it back; kills one straight after another join into one, the yank-pop key
+straight after a yank swaps it for the kill before, and undo takes any of them
+back.
+
+Enter sends what is in the box and Shift+Enter starts a new line; you can send
+while Claude is working: the message waits grey under the conversation until the
+turn gets to it, and Up in the empty box takes the last one waiting back to
+edit. Paste an image or drop one on the screen to attach it; any other file or
+folder dropped goes in the box as an @ mention, so Claude reads it — a thumbnail
+of each sits over the box, up to 5 MB of images a prompt, and Backspace in an
+empty box takes the last one off. A click on an image, or the image key, shows
+it full size: the selected entry's first one, or with nothing selected the first
+one attached. Write @ and a path to point Claude at a file; @ opens a list of
+the project's files that narrows as you type, and Tab or Enter puts the one
+picked in the box. A PDF mentioned that way shows as a [PDF File] tile with its
+name, and so does one Claude reads, once its Read call is unfolded; a click or
+the image key opens it in the built-in PDF viewer, Escape puts it away, and one
+missing or over 5 MB says so on the tile. Up and Down on the box's first or last
+line bring back the prompts sent before, the stash key empties the box and Up
+brings the draft back first (the last 10 stashed), and the history key searches
+every prompt sent in the project's 20 most recent conversations, the terminal's
+too, and puts the one picked in the box. After a turn Claude may suggest what
+you will ask next: it shows grey in the empty box, Tab puts it there to edit or
+send, and typing anything else replaces it. The editor key opens what is in the
+box in the project's nvim; save it there and come back, and the box holds what
+you saved.
+
+A slash opens the list of commands, the same ones claude has in a pane: its own,
+your skills and the project's. The arrows walk it, Tab fills the box with the
+one picked, and Enter runs it, or fills the box when it takes arguments.
+Thirteen are this screen's own: /diff shows every change Claude made to a file
+in this conversation, file by file, on a sheet the arrows scroll and Escape puts
+away; /btw asks a side question, answered at once even mid-turn, from the
+conversation so far and without tools, in a sheet that Escape or Enter puts away
+and that never joins the conversation; /copy puts Claude's last reply on the
+clipboard as the markdown it wrote, or the one N back with /copy N; /model lists
+the session's models with the one it is on marked and switches to the one
+picked, or straight to the one named after it; /effort lists auto and low to max
+the same way, for how hard Claude thinks from the next turn on; /fast and the
+fast key turn fast mode on or off, /fast on and /fast off set it, faster output
+from the same model at a higher price, and the foot adds fast to the model while
+it is on; /resume lists the project's earlier conversations to carry on from,
+newest first with the one you are on marked and a box to search them; /rewind
+lists the prompts sent, newest first, and puts the code, the conversation or
+both back to just before the one picked, with that prompt back in the box when
+the conversation went back; /rename names the conversation you are on, the name
+/resume then lists it by; /mcp lists the session's MCP servers with how each
+stands and reconnects, disables or enables the one picked; /branch carries on in
+a copy of this conversation, called whatever follows it, if anything, and leaves
+the original in /resume; /export copies the conversation as text to the
+clipboard or saves it to a .txt file in the project's folder, or to the file
+named after it, never over one already there; and /plan switches to plan mode,
+sending anything after it as the prompt. /clear starts over like the new
+conversation key. The word ultrathink anywhere in a prompt asks for deeper
+thinking on that turn alone.
+
+Every tool call is folded to one line: a mark saying whether it is still
+running, worked or failed, the tool and what it touched. The selection keys walk
+the conversation one entry at a time, scrolling as they go, and the unfold key
+opens the call under the selection to show its command or its diff and what came
+back; a click does the same.
+
+When Claude wants to use a tool that needs your say, a box over the prompt names
+it and shows what it would do, and the arrows and Enter answer it. A tool asked
+about often offers a row that stops it asking again this session, and every one
+has a row to say no with a reason typed into it, which Claude reads. In plan
+mode Claude works the plan out without changing anything and puts it up in the
+same box: go ahead accepting edits, go ahead asking before each one, or keep
+planning, with what to change typed in. A question Claude asks you comes the
+same way, one question at a time, with a row to type an answer of your own. A
+form an MCP server sends comes the same way too, a field at a time, and a
+sign-in link it sends has a row to open it; every step of either has a row to
+decline, and a required pick of several or a link that is not a web page has
+only that. If the window is behind something else when either arrives, a
+notification says so and clicking it lands here. Escape stops Claude where it is
+and gives up on anything it was asking; with the command list open it only
+closes the list.
+
+While Claude works, a line over the box says whether it is thinking, for how
+long and roughly how many tokens have come down, and its answer flows in a few
+characters at a time. What it thought is folded to a Thinking line in the
+conversation, unfolding to a summary of it.
+
+A pane named in the conversation — what pane run printed, a worker's report — is
+a link: a click lands on that pane, on its own project's page, or says the pane
+is not open; numbers are reused, so a link to a pane closed and opened again
+lands on whatever holds the number now.
+
+When a worker this session dispatched finishes its turn, the app tells Claude so
+in the conversation, queued behind whatever it is doing.
+
+While the session has workers open the foot counts them by how they stand,
+working, blocked, done or idle; a click on the count or the workers key opens a
+list of them, the manager's across every project, that keeps up while it is
+open: the arrows walk it, Enter lands on the pane and Escape closes it. Above
+the working line, a strip lists the agents, workflows and background commands
+Claude has running, each under the one that started it, with its tool calls,
+tokens, time and last tool so far; a task leaves the strip when it ends. It
+lists only what started while the screen was open, since a saved session keeps
+none of it. The task key picks a row in the strip, the next each press and none
+after the last; a click picks the row too. The stop key stops the picked task,
+and the background key sends it to the background so the turn goes on without
+waiting for it; with no row picked, the background key sends every foreground
+task there, as Ctrl+B does in the terminal.
+
+The row under the box holds what Claude Code's status line does: on the left the
+model, whether edits are asked about or accepted, the effort level (default
+effort until one is picked: the level in your settings), or ultrathink while
+such a turn runs, and whether Claude is working; on the right meters for the
+context, the plan's five-hour limit and when it resets, and the seven-day limit,
+each green, then yellow from 70 and red from 90, and the version. A click on the
+context meter, the context key or /context opens a popup over the meter listing
+what fills the window: each part (the system prompt, tools, memory files,
+skills, messages, free space and the rest) with its tokens, its share of the
+window and a bar in its colour, then the memory files and the MCP tools, biggest
+first; tool schemas held back out of the window are left out. The numbers are
+from the last measure, after each turn; the popup says when they were taken and
+follows a new one while it is open. The arrows walk its rows and Escape closes
+it. The model key walks the models and the edits key walks asking, accepting,
+planning and auto, both for the next thing Claude does; the foot follows a mode
+Claude moves to by itself, such as accepting edits once a plan is approved. A
+second screen on the same page shows the same conversation, questions and
+choices, and either can answer.
+
+The conversation outlives the app: the next launch shows it again and carries on
+from it as the project opens. The new conversation key starts over; the old one
+stays in Claude Code's own history on disk. A very long conversation scrolls
+fine, but only the part near the screen is drawn properly at any moment, so fast
+scrolling shows plain text for a moment first.
+
 ## Files
 
 Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
