@@ -25,12 +25,13 @@ Every card runs in a worktree of its own, and under npm each worktree held its o
 its store (`~/.pnpm-global/v3`, on the same filesystem as the checkouts) and hard-links it into every
 `node_modules`. Measured on 2026-11-03: a second install of the same lockfile took 1 s, its files share
 inodes with the first worktree's (`@xterm/xterm/lib/xterm.js` has 3 links: the store and both
-`node_modules`), and the two `node_modules` together are 702 MB on disk where two npm copies were
-1.4 GB.
+`node_modules`), and the two `node_modules` together, Electron's binary aside, are 702 MB on disk where
+two npm copies of the same packages were 1.4 GB.
 
 - `node-linker=hoisted` in `.npmrc`: a flat `node_modules` as npm made it. Electron Forge packages from
-  `node_modules`, and its docs say a pnpm project needs this layout. The cost is pnpm's strict layout: a
-  package can still import a dependency it never declared, as under npm.
+  `node_modules`, and its CLI refuses anything else: `@electron-forge/cli`'s `check-system.js` throws
+  "When using pnpm, `node-linker` must be set to \"hoisted\"" before it packages. The cost is pnpm's
+  strict layout: a package can still import a dependency it never declared, as under npm.
 - `packageManager` pins `pnpm@10.33.3`. pnpm 10, not 9, because 10 runs no dependency's install script
   unless it is named in `pnpm.onlyBuiltDependencies`: CI runs the install straight out of a pull
   request's `package.json`. 10.33.3, not the newest 10.x, because it is the release already in this
@@ -38,7 +39,7 @@ inodes with the first worktree's (`@xterm/xterm/lib/xterm.js` has 3 links: the s
   keys rotated, and fails with `Cannot find matching keyid`, so a newer pin breaks every `pnpm`
   command here until corepack is upgraded. Not 11: with the same `.npmrc`, `pnpm config get
   node-linker` answers `hoisted` under 10.33.3 and `undefined` under 11.24.0, so 11 would install the
-  isolated layout Forge cannot package.
+  isolated layout, and Forge would refuse to package.
 - `onlyBuiltDependencies` names the packages whose npm lock entry had an install script: `node-pty`
   (builds `pty.node` on Linux), `electron-winstaller` (picks the 7-Zip build the Squirrel maker uses on
   Windows) and `fsevents` (a mac only). Electron 45 has no install script: it downloads its binary on
