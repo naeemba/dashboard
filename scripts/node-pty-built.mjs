@@ -13,9 +13,15 @@
 // conpty.node, conpty_console_list.node and conpty/ on Windows. The prebuilt spawn-helper arrives
 // without its exec bit, and posix_spawnp fails without it.
 //
+// Only what build/Release lacks is copied, and nothing there is overwritten. On Windows node-pty's
+// install script has already put conpty/ there, and pnpm restores it from its store as hard links:
+// copying the prebuilt conpty/ over it failed in CI with "EPIPE, The process cannot access the file
+// because it is being used by another process", and a write into a hard-linked file would change the
+// store's copy, which every other worktree shares.
+//
 // Node rather than sh so the same hook runs on Windows, where pnpm runs scripts with cmd.exe.
 /* global process, console */
-import { chmodSync, cpSync, existsSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +36,8 @@ if (!existsSync(join(prebuilt, 'pty.node'))) {
   process.exit(1);
 }
 console.log(`node-pty has no built binary in this checkout; taking the prebuilt one from ${prebuilt}.`);
-cpSync(prebuilt, release, { recursive: true });
+for (const entry of readdirSync(prebuilt)) {
+  if (!existsSync(join(release, entry))) cpSync(join(prebuilt, entry), join(release, entry), { recursive: true });
+}
 const spawnHelper = join(release, 'spawn-helper');
 if (existsSync(spawnHelper)) chmodSync(spawnHelper, 0o755);
