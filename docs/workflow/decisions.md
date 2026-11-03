@@ -45,6 +45,13 @@ two npm copies of the same packages were 1.4 GB.
   Windows) and `fsevents` (a mac only). Electron 45 has no install script: it downloads its binary on
   first use, into each worktree's `node_modules/electron/dist`, so those 274 MB are still one per
   worktree.
+- `glob@^7` is a devDependency no source file imports. The Squirrel maker reaches it through
+  `electron-winstaller` → `temp` → `rimraf@2.6.3`, which requires it from the top of `node_modules`.
+  `glob@7.2.3`'s other dependents include `electron-installer-common`, which Windows skips, and on
+  Windows the hoister left the root `glob` slot empty: `pnpm run make` died loading `forge.config.ts`
+  with `Cannot find module 'glob'`. Naming it puts 7.2.3 at the root on every OS; `pnpm install
+  --frozen-lockfile --ignore-scripts --os win32 --cpu x64` shows it on Linux. Drop it once nothing in
+  the Squirrel maker's tree uses `rimraf` 2.
 - `pnpm-lock.yaml` came from `pnpm import` of the old `package-lock.json`, so no version moved, except
   that the import resolved `@typescript/old` (`@typescript/typescript6`'s alias of `typescript@^6`) to
   6.0.2 where npm had locked 6.0.3; the lock was set back to 6.0.3 by hand. npm's `overrides` moved to
