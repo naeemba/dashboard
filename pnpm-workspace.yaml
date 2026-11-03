@@ -11,3 +11,7 @@ onlyBuiltDependencies:
   - electron-winstaller
   - fsevents
   - node-pty
+
+# Resolve Linux's packages on every OS, so the hoister lays out the same tree everywhere.
+supportedArchitectures:
+  os: [current, linux]

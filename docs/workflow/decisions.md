@@ -38,7 +38,7 @@ two npm copies of the same packages were 1.4 GB.
   machine's corepack cache: corepack 0.28.2 cannot verify the signature on a pnpm downloaded since its
   keys rotated, and fails with `Cannot find matching keyid`, so a newer pin breaks every `pnpm`
   command here until corepack is upgraded.
-- Every pnpm setting (`nodeLinker`, `overrides`, `onlyBuiltDependencies`) lives in
+- Every pnpm setting (`nodeLinker`, `overrides`, `onlyBuiltDependencies`, `supportedArchitectures`) lives in
   `pnpm-workspace.yaml`, not `.npmrc` or a `pnpm` block in `package.json`. pnpm 10 reads all three
   places; pnpm 11 reads only `pnpm-workspace.yaml`. With `node-linker=hoisted` in `.npmrc`, `pnpm config
   get node-linker` answered `hoisted` under 10.33.3 and `undefined` under 11.24.0, and 11's
@@ -50,13 +50,17 @@ two npm copies of the same packages were 1.4 GB.
   Windows) and `fsevents` (a mac only). Electron 45 has no install script: it downloads its binary on
   first use, into each worktree's `node_modules/electron/dist`, so those 274 MB are still one per
   worktree.
-- `glob@^7` is a devDependency no source file imports. The Squirrel maker reaches it through
-  `electron-winstaller` → `temp` → `rimraf@2.6.3`, which requires it from the top of `node_modules`.
-  `glob@7.2.3`'s other dependents include `electron-installer-common`, which Windows skips, and on
-  Windows the hoister left the root `glob` slot empty: `pnpm run make` died loading `forge.config.ts`
-  with `Cannot find module 'glob'`. Naming it puts 7.2.3 at the root on every OS; `pnpm install
-  --frozen-lockfile --ignore-scripts --os win32 --cpu x64` shows it on Linux. Drop it once nothing in
-  the Squirrel maker's tree uses `rimraf` 2.
+- `supportedArchitectures` adds `linux` to the current OS, so every install resolves the Linux-only
+  packages too. Without it the hoisted layout on Windows, which skips them, left holes at the top of
+  `node_modules`: the hoister gave the root slot of a package shared with a skipped subtree to that
+  subtree, and nothing landed there. The Squirrel maker then died loading `forge.config.ts` with
+  `Cannot find module 'glob'` (`rimraf@2.6.3`, under `electron-winstaller` → `temp`), and once `glob`
+  was named directly, `lodash`; `@electron/windows-sign`'s `fs-extra` also lacked `jsonfile` and
+  `universalify`. pnpm 10.34.9 lays it out the same. Naming each missing package fixes only the ones
+  found so far, so the tree is made the same on every OS instead. The cost: Windows and a mac also
+  install the Linux makers' packages and Linux platform binaries. To check a layout from Linux, run
+  `pnpm install --frozen-lockfile --ignore-scripts --os win32 --os linux --cpu x64`; the Windows CI job
+  runs the Squirrel make on the real one.
 - `pnpm-lock.yaml` came from `pnpm import` of the old `package-lock.json`, so no version moved, except
   that the import resolved `@typescript/old` (`@typescript/typescript6`'s alias of `typescript@^6`) to
   6.0.2 where npm had locked 6.0.3; the lock was set back to 6.0.3 by hand. npm's `overrides` moved to
