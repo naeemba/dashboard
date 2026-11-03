@@ -67,7 +67,6 @@
       "minimatch@10": "^11.0.3"
     },
     "onlyBuiltDependencies": [
-      "electron",
       "electron-winstaller",
       "fsevents",
       "node-pty"
