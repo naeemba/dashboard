@@ -15,10 +15,11 @@ The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run
 ## Setup
 
     cp .env.example .env   # optional: SHELL_COMMAND
-    npm install
-    npm start
+    corepack enable        # pnpm, at the version packageManager pins
+    pnpm install
+    pnpm start
 
-While the installed app is running, `npm start` on its own only brings that app's window to the front and
+While the installed app is running, `pnpm start` on its own only brings that app's window to the front and
 exits: one app runs per userData folder. "One app at a time" in `docs/app/README.md` says how to run a
 development copy beside it.
 
@@ -136,4 +137,4 @@ On Linux and Windows, the Ctrl modifier used for shortcuts also intercepts Ctrl+
 
 ## Tests
 
-    npm test
+    pnpm test

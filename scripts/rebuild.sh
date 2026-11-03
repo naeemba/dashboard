@@ -32,7 +32,7 @@ installed="$parent/$name"
 staged="$parent/.$name.rebuild"
 previous="$parent/.$name.previous"
 
-npm run package
+pnpm run package
 
 # Unquoted on purpose, so the shell expands the pattern.
 built=$(ls -d "$repo"/$pattern 2>/dev/null | head -1)

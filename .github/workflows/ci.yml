@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
 
-# Nothing here touches the API, and npm ci runs install scripts straight out of the PR's package.json.
+# Nothing here touches the API, and pnpm install runs onlyBuiltDependencies' scripts straight out of the PR.
 permissions:
   contents: read
 
@@ -14,15 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Version from packageManager; before setup-node, whose pnpm cache needs it.
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      # The checks only read TypeScript, but npm ci still builds node-pty and downloads Electron.
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm run lint
-      - run: npm test
+          cache: pnpm
+      # The checks only read TypeScript, but the install still builds node-pty.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm run lint
+      - run: pnpm test
 
   # Windows is a target since #191. Lint is left to the Ubuntu job: it reads the same files on any platform.
   windows:
@@ -30,12 +32,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm test
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm test
       # Squirrel only: the other makers are for a mac or Linux. Nothing is published.
-      - run: npm run make -- --targets @electron-forge/maker-squirrel
+      - run: pnpm run make --targets @electron-forge/maker-squirrel

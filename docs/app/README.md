@@ -38,7 +38,7 @@ declared in `bridge.ts`, beside the contract that carries it. A shared test
 imports only shared modules: a case that needs a renderer module lives in that
 module's test.
 
-`npx eslint .` holds the line (app-rule-2, rules in `eslint.config.mjs`): a file
+`pnpm exec eslint .` holds the line (app-rule-2, rules in `eslint.config.mjs`): a file
 in `renderer/` imports nothing from `main/` or `preload/`, one in `main/` nothing
 from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 `shared/`; and a package that needs Node or the DOM is a value import only on
@@ -73,7 +73,7 @@ The lock is keyed on the userData folder, so a copy started with its own
 `--user-data-dir` runs beside the installed app. `settings.json` and `.env` are
 not in userData, so such a copy also needs a `HOME` and `XDG_CONFIG_HOME` of
 its own to stay off the app you are using; `scripts/performance/launch-demo.sh`
-sets all three. Without `--user-data-dir`, `npm start` while the installed app
+sets all three. Without `--user-data-dir`, `pnpm start` while the installed app
 is running only focuses the installed app's window, and says so on stderr.
 
 `session.json` and `recents.json` are written through `replaceFile`

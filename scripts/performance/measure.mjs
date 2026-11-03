@@ -305,7 +305,7 @@ async function timed(work) {
 // No demo instance: the app's own sweepUsage (src/main/usage/usage-store.ts), loaded through vite, on a
 // real log folder, read-only. Twice: the first sweep reads everything, the second what a later one costs.
 // Then the first sweep again the way the app runs it, on the built usage-worker.js thread
-// (npm run package first), where main's hold is only waiting. A project of '' takes in every log that
+// (pnpm run package first), where main's hold is only waiting. A project of '' takes in every log that
 // named a folder, since ranInProject asks for `${path}/` as a prefix, and its tokens are checked against
 // the in-process sweep's so a thread that read nothing cannot pass for a fast one. They differ by
 // whatever running sessions appended in between.
@@ -346,7 +346,7 @@ async function usageSweep(root) {
 // maps to (glue the bundler wrote) are counted as (unmapped).
 function bundle() {
   const out = path.join(demo, 'renderer-build');
-  execFileSync('npx', ['vite', 'build', '--config', 'vite.renderer.config.ts', '--sourcemap', '--outDir', out, '--emptyOutDir'], { cwd: path.join(here, '..', '..'), stdio: 'ignore' });
+  execFileSync('pnpm', ['exec', 'vite', 'build', '--config', 'vite.renderer.config.ts', '--sourcemap', '--outDir', out, '--emptyOutDir'], { cwd: path.join(here, '..', '..'), stdio: 'ignore' });
   const mapFile = path.join(out, 'assets', readdirSync(path.join(out, 'assets')).find((name) => name.endsWith('.js.map')));
   const map = JSON.parse(readFileSync(mapFile, 'utf8'));
   const owners = map.sources.map(ownerOf);

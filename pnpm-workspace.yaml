@@ -1,0 +1,17 @@
+# pnpm's settings live here, not in .npmrc or package.json's "pnpm" block: pnpm 11 reads neither.
+# docs/workflow/decisions.md (workflow-decision-3) says why each one is set.
+nodeLinker: hoisted
+
+overrides:
+  undici@6: ^6.29.1
+  undici@7: ^7.30.1
+  minimatch@10: ^11.0.3
+
+onlyBuiltDependencies:
+  - electron-winstaller
+  - fsevents
+  - node-pty
+
+# Resolve Linux's packages on every OS, so the hoister lays out the same tree everywhere.
+supportedArchitectures:
+  os: [current, linux]

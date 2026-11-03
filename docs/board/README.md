@@ -169,7 +169,7 @@ and working tree it is run from alone. It needs no Dashboard pane and no `DASHBO
 plain terminal, another project or a headless review agent runs it the same.
 
 At every launch the installed app writes three files, and rewrites them only when this
-build's copy differs. A dev run (`npm start`) installs nothing; run a branch's program by hand with
+build's copy differs. A dev run (`pnpm start`) installs nothing; run a branch's program by hand with
 `node .vite/build/create-task-cli-entry.js`.
 
 - `~/.claude/skills/create-task/SKILL.md`, the `/create-task` skill

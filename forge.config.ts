@@ -14,7 +14,7 @@ const agentSdk = '/node_modules/@anthropic-ai/claude-agent-sdk';
 const agentBinary = `${agentSdk}-${process.platform}-${process.arch}`;
 // build/Release, not prebuilds/: it is the one directory node-pty looks in first, and the copy
 // there has spawn-helper's exec bit, without which posix_spawnp fails. scripts/node-pty-built.mjs
-// is what puts it there in a checkout npm left with prebuilds/ alone.
+// is what puts it there in a checkout the install left with prebuilds/ alone.
 const keep = [
   '/.vite',
   '/package.json',
@@ -32,7 +32,7 @@ const keep = [
   `${nodePty}/build/Release/winpty-agent.exe`,
   agentSdk,
   agentBinary,
-  // npm installs this one instead on a musl Linux; a path in `keep` that is not there costs nothing.
+  // pnpm installs this one instead on a musl Linux; a path in `keep` that is not there costs nothing.
   `${agentBinary}-musl`,
 ];
 
