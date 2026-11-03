@@ -15,6 +15,7 @@ The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run
 ## Setup
 
     cp .env.example .env   # optional: SHELL_COMMAND
+    corepack enable        # pnpm, at the version packageManager pins
     pnpm install
     pnpm start
 
