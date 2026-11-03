@@ -2,7 +2,7 @@ import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 // Pins the process boundaries in eslint.config.mjs (app-rule-2). A rule that stops matching and a
-// clean tree look the same to `npx eslint .`, so each case here is one crossing that must fail.
+// clean tree look the same to `pnpm exec eslint .`, so each case here is one crossing that must fail.
 const eslint = new ESLint();
 
 const boundaryErrors = async (filePath: string, source: string): Promise<string[]> => {

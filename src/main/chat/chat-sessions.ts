@@ -91,9 +91,9 @@ export function inputQueue<T>(): InputQueue<T> {
   };
 }
 
-// The CLI the SDK drives, from the platform package npm installed beside it. Named here rather than
+// The CLI the SDK drives, from the platform package pnpm installed beside it. Named here rather than
 // left to the SDK because a packaged app keeps it in app.asar.unpacked: nothing can be executed from
-// inside an asar, and the SDK would find the copy inside it. On a musl Linux npm installs the `-musl`
+// inside an asar, and the SDK would find the copy inside it. On a musl Linux pnpm installs the `-musl`
 // package instead, so that name is tried when the plain one is not there.
 function claudeExecutable(): string {
   const binary = process.platform === 'win32' ? 'claude.exe' : 'claude';

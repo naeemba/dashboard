@@ -5,7 +5,7 @@ The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
 ## workflow-rule-1: Never rebuild or restart the running app
 
 **Do not quit, kill, restart, or replace the Dashboard app running on this
-machine unless I ask for it in that same conversation.** No `npm run package`
+machine unless I ask for it in that same conversation.** No `pnpm run package`
 into /Applications, no `osascript ... quit`, no `pkill`, no `open -a Dashboard`.
 
 Restarting stops every Claude screen mid-turn. The worker panes' shells now

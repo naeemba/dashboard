@@ -30,7 +30,7 @@ Folder: `scripts/performance/`.
 - `measure.mjs`: one command per measurement, each printing a JSON line per step.
 - `calculations.mjs`: the parts that decide something (which process is the
   demo's, what a chord sends, quantiles, the source-map split), pinned by
-  `calculations.test.mjs` in `npm test`.
+  `calculations.test.mjs` in `pnpm test`.
 - `build-log-stream.sh`: a pane's fake build log at a given number of lines a
   second.
 
@@ -51,10 +51,10 @@ start and resume but never call a model.
 ## Reproduce
 
 Build once into `.vite/`. The `out/` package is not needed, and its fuses turn
-off `--inspect`. `npm run package` rather than `electron-forge package`, so
+off `--inspect`. `pnpm run package` rather than `electron-forge package`, so
 `prepackage` refuses while a demo instance still runs out of `.vite/`:
 
-    npm ci && npm run package
+    pnpm install --frozen-lockfile && pnpm run package
 
 Start a headless compositor of its own. Nothing appears on your screen:
 

@@ -11,9 +11,9 @@ arguing with a rule.
 
 ## Checks
 
-    npm test        # vitest, node environment only
-    npx tsc --noEmit
-    npx eslint .
+    pnpm test                # vitest, node environment only
+    pnpm exec tsc --noEmit
+    pnpm exec eslint .
 
 There is no DOM test environment: jsdom is not installed and nothing in `src/`
 declares one. A `*.test.ts` can test a decision module, never a view. DOM
@@ -23,7 +23,7 @@ app.
 ## Hard rules
 
 - **Never quit, kill, restart or replace the running Dashboard app** unless
-  asked in the same conversation. No `npm run package` into /Applications, no
+  asked in the same conversation. No `pnpm run package` into /Applications, no
   `osascript ... quit`, no `pkill`, no `open -a Dashboard`. Building into
   `out/` or `.vite/` is fine. After a change: run the checks, say the installed
   app needs a rebuild and restart, stop. (workflow-rule-1)
@@ -87,7 +87,7 @@ app.
   `src/main/` or `src/preload/`, `src/main/` never imports `src/renderer/` or
   `src/preload/`, `src/preload/` and `src/shared/` import only `src/shared/`,
   even for a type or an `import()`. A Node or DOM package is a value import
-  only on its own side. `npx eslint .` enforces it, `eslint.config.test.ts`
+  only on its own side. `pnpm exec eslint .` enforces it, `eslint.config.test.ts`
   pins it; a type both sides name moves to `src/shared/`, never an
   eslint-disable. (app-rule-2)
 - **A card does not bump `package.json` `version`.** The build stamps its

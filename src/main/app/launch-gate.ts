@@ -14,7 +14,7 @@ if (started) app.quit();
 // settings.json is not in userData (settings-store.ts) and such a copy still shares it, which is why the
 // demo also runs with a HOME of its own.
 // app.exit, not app.quit: quit waits for the event loop, and main.ts would run in the meantime. The line
-// on stderr is for `npm start` while the installed app runs, which otherwise only brings that window up.
+// on stderr is for `pnpm start` while the installed app runs, which otherwise only brings that window up.
 if (!app.requestSingleInstanceLock()) {
   console.error(`Dashboard is already running on ${app.getPath('userData')}; brought it to the front. Start another copy with --user-data-dir.`);
   app.exit(0);
