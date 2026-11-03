@@ -28,18 +28,23 @@ inodes with the first worktree's (`@xterm/xterm/lib/xterm.js` has 3 links: the s
 `node_modules`), and the two `node_modules` together, Electron's binary aside, are 702 MB on disk where
 two npm copies of the same packages were 1.4 GB.
 
-- `node-linker=hoisted` in `.npmrc`: a flat `node_modules` as npm made it. Electron Forge packages from
+- `nodeLinker: hoisted`: a flat `node_modules` as npm made it. Electron Forge packages from
   `node_modules`, and its CLI refuses anything else: `@electron-forge/cli`'s `check-system.js` throws
   "When using pnpm, `node-linker` must be set to \"hoisted\"" before it packages. The cost is pnpm's
   strict layout: a package can still import a dependency it never declared, as under npm.
 - `packageManager` pins `pnpm@10.33.3`. pnpm 10, not 9, because 10 runs no dependency's install script
-  unless it is named in `pnpm.onlyBuiltDependencies`: CI runs the install straight out of a pull
+  unless it is named in `onlyBuiltDependencies`: CI runs the install straight out of a pull
   request's `package.json`. 10.33.3, not the newest 10.x, because it is the release already in this
   machine's corepack cache: corepack 0.28.2 cannot verify the signature on a pnpm downloaded since its
   keys rotated, and fails with `Cannot find matching keyid`, so a newer pin breaks every `pnpm`
-  command here until corepack is upgraded. Not 11: with the same `.npmrc`, `pnpm config get
-  node-linker` answers `hoisted` under 10.33.3 and `undefined` under 11.24.0, so 11 would install the
-  isolated layout, and Forge would refuse to package.
+  command here until corepack is upgraded.
+- Every pnpm setting (`nodeLinker`, `overrides`, `onlyBuiltDependencies`) lives in
+  `pnpm-workspace.yaml`, not `.npmrc` or a `pnpm` block in `package.json`. pnpm 10 reads all three
+  places; pnpm 11 reads only `pnpm-workspace.yaml`. With `node-linker=hoisted` in `.npmrc`, `pnpm config
+  get node-linker` answered `hoisted` under 10.33.3 and `undefined` under 11.24.0, and 11's
+  `install --frozen-lockfile` stopped with `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` because it no longer saw
+  `package.json`'s overrides. Kept there, a later bump to 11 installs the same layout with the same
+  overrides and build allowlist.
 - `onlyBuiltDependencies` names the packages whose npm lock entry had an install script: `node-pty`
   (builds `pty.node` on Linux), `electron-winstaller` (picks the 7-Zip build the Squirrel maker uses on
   Windows) and `fsevents` (a mac only). Electron 45 has no install script: it downloads its binary on
@@ -55,4 +60,4 @@ two npm copies of the same packages were 1.4 GB.
 - `pnpm-lock.yaml` came from `pnpm import` of the old `package-lock.json`, so no version moved, except
   that the import resolved `@typescript/old` (`@typescript/typescript6`'s alias of `typescript@^6`) to
   6.0.2 where npm had locked 6.0.3; the lock was set back to 6.0.3 by hand. npm's `overrides` moved to
-  `pnpm.overrides`, which pnpm reads with the same selectors.
+  `overrides` in `pnpm-workspace.yaml`, which pnpm reads with the same selectors.
