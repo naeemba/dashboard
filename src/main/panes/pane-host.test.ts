@@ -222,7 +222,8 @@ describe('paneHost over a socket', () => {
   const accepted: net.Socket[] = [];
   afterEach(() => {
     for (const socket of accepted.splice(0)) socket.destroy();
-    rmSync(folder, { recursive: true, force: true });
+    // Windows lets go of a destroyed pipe's files a moment later, and an rmdir before then is EBUSY.
+    rmSync(folder, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   });
 
   // The socket the app would use with this folder as its user data, made ready as the host makes it.
