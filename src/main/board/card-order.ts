@@ -15,9 +15,21 @@
 // indexing) are the upgrade if it ever shows up as merge conflicts.
 export type OrderedCard = { id: string; previous: number | undefined };
 
+// The number a card's file holds, or undefined when it holds none worth reading.
+export function storedOrder(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+// Where two cards go in a column read back: by number, then by id. The one rule both the read and the
+// numbering above follow, so a column written in order reads back in it.
+export function byPlace(first: { id: string; order: number }, second: { id: string; order: number }): number {
+  if (first.order !== second.order) return first.order < second.order ? -1 : 1;
+  return first.id < second.id ? -1 : first.id > second.id ? 1 : 0;
+}
+
 function before(first: OrderedCard, second: OrderedCard): boolean {
   if (first.previous === undefined || second.previous === undefined) return false;
-  return first.previous < second.previous || (first.previous === second.previous && first.id < second.id);
+  return byPlace({ id: first.id, order: first.previous }, { id: second.id, order: second.previous }) < 0;
 }
 
 // The cards that keep their number: the longest run already in order. O(n²), and a column is short.

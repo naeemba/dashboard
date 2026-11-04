@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { BOARD_FOLDER_PATH, BOARD_PATHSPECS, hasBoard, peekBoard, readBoard, writeBoard } from './board-store';
 import { runBoardCommand } from './board-cli';
+import { BROKEN_SUFFIX } from './board-files';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
 import { boardAddArguments, commitMessage, lostRace, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
@@ -76,7 +77,7 @@ function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOpt
     const read = readBoard(worktree);
     // readBoard has moved a damaged file aside and answered with an empty board. Writing that back
     // would wipe every card on the default branch.
-    if (read.brokenFile !== null) return { refusal: `${options.remote}/${branch} has a board file that does not parse (${relative(worktree, read.brokenFile).replace(/\.broken$/, '')}); fix it there first` };
+    if (read.brokenFile !== null) return { refusal: `${options.remote}/${branch} has a board file that does not parse (${relative(worktree, read.brokenFile).slice(0, -BROKEN_SUFFIX.length)}); fix it there first` };
     const result = runBoardCommand(read.board, boardAddArguments(options));
     if (!result.ok) return { refusal: result.message };
     // `add` always answers with a changed board; the type only says it might not.

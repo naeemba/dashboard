@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { replaceFile } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import type { Column } from '../../shared/board/board';
-import { cardOrders } from './card-order';
+import { cardOrders, storedOrder } from './card-order';
 
 // The board as files on disk: `.dashboard/board/columns.json` for the columns and their order, and one
 // `.dashboard/board/cards/<id>.json` per card, holding the card, its column and its place in it. What a
@@ -18,6 +18,8 @@ export const BOARD_FOLDER = 'board';
 const CARDS_FOLDER = 'cards';
 const COLUMNS_FILE = 'columns.json';
 const CARD_SUFFIX = '.json';
+// What a file that will not parse is renamed to, beside where it was.
+export const BROKEN_SUFFIX = '.broken';
 
 // What the folder holds, before board-store.ts decides what any of it means. `text` is every byte that
 // was read, for the ids a card written without one is given — the same for the same files.
@@ -35,7 +37,7 @@ function cardFileName(id: string): string {
 }
 
 // A missing file is null; every other failure is thrown, for the reason board-store.ts's readBoard gives.
-function readText(file: string): string | null {
+export function readText(file: string): string | null {
   try {
     return readFileSync(file, 'utf8');
   } catch (error: unknown) {
@@ -75,8 +77,8 @@ export function readBoardFolder(folder: string, salvage: boolean): StoredBoard |
   let brokenFile: string | null = null;
   function setAside(file: string): void {
     if (!salvage) return;
-    renameSync(file, `${file}.broken`);
-    brokenFile ??= `${file}.broken`;
+    renameSync(file, `${file}${BROKEN_SUFFIX}`);
+    brokenFile ??= `${file}${BROKEN_SUFFIX}`;
   }
 
   let columns: unknown = null;
@@ -104,18 +106,23 @@ export function readBoardFolder(folder: string, salvage: boolean): StoredBoard |
 }
 
 // What the folder holds, as one string, for the watcher to compare against what the app last wrote.
-// Not a format anybody parses: only ever compared with another snapshot.
+// Not a format anybody parses: only ever compared with another snapshot, which is why writeBoardFolder
+// builds its own from the bytes it wrote with this same function rather than reading them back.
+function snapshotOf(columnsText: string | null, cards: readonly (readonly [string, string])[]): string | null {
+  if (columnsText === null && cards.length === 0) return null;
+  return [columnsText ?? '', ...cards.map(([name, text]) => `${name}\0${text}`)].join('\0');
+}
+
 export function boardFolderSnapshot(folder: string): string | null {
   const cardsFolder = join(folder, CARDS_FOLDER);
-  const columnsText = readText(join(folder, COLUMNS_FILE));
-  const names = cardFileNames(cardsFolder);
-  if (columnsText === null && names.length === 0) return null;
-  return [columnsText ?? '', ...names.map((name) => `${name}\0${readText(join(cardsFolder, name)) ?? ''}`)].join('\0');
+  const cards = cardFileNames(cardsFolder).map((name) => [name, readText(join(cardsFolder, name)) ?? ''] as const);
+  return snapshotOf(readText(join(folder, COLUMNS_FILE)), cards);
 }
 
 // Writes only the files whose bytes change, then removes the cards that are gone. In that order, so a
 // write that stops part way leaves every card on disk at least once — twice at worst, never not at all.
-export function writeBoardFolder(folder: string, columns: readonly Column[]): void {
+// Answers with the snapshot of what the folder now holds.
+export function writeBoardFolder(folder: string, columns: readonly Column[]): string {
   const cardsFolder = join(folder, CARDS_FOLDER);
   const onDisk = new Map<string, string>();
   const previous = new Map<string, { column: unknown; order: unknown }>();
@@ -135,8 +142,7 @@ export function writeBoardFolder(folder: string, columns: readonly Column[]): vo
   for (const column of columns) {
     const orders = cardOrders(column.cards.map((card) => {
       const was = previous.get(card.id);
-      const kept = was?.column === column.name && typeof was.order === 'number' && Number.isFinite(was.order);
-      return { id: card.id, previous: kept ? was.order as number : undefined };
+      return { id: card.id, previous: was?.column === column.name ? storedOrder(was.order) : undefined };
     }));
     column.cards.forEach((card, index) => {
       wanted.set(cardFileName(card.id), `${JSON.stringify({ ...card, column: column.name, order: orders[index] }, null, 2)}\n`);
@@ -152,4 +158,5 @@ export function writeBoardFolder(folder: string, columns: readonly Column[]): vo
   for (const name of onDisk.keys()) {
     if (!wanted.has(name)) rmSync(join(cardsFolder, name), { force: true });
   }
+  return snapshotOf(columnsText, [...wanted].sort(([first], [second]) => (first < second ? -1 : first > second ? 1 : 0))) ?? '';
 }

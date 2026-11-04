@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { addCard, allCards, emptyBoard, moveCardById, type Board } from '../../shared/board/board';
-import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, BOARD_PATHSPECS, boardSnapshot, peekBoard, readBoard, writeBoard } from './board-store';
 import { git, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
 
 // The board kept one file per card: the move off board.json, and the merges it exists for.
@@ -106,6 +106,18 @@ describe('the folder', () => {
     const changed = readdirSync(cardsFolder(path)).filter((name) => readFileSync(join(cardsFolder(path), name), 'utf8') !== files[name]);
     expect(changed).toEqual([`${cardId(board, 'one')}.json`]);
     expect(titles(readBoard(path).board, 'Doing')).toEqual(['four', 'five', 'one']);
+  });
+
+  // The watcher tells the app's own write from somebody else's by this string; built from the bytes
+  // written rather than read back, it has to come out the same as a read of the folder would.
+  it('answers a write with the snapshot a read of the folder gives', () => {
+    const path = project();
+    writeLegacyBoard(path, startingBoard());
+    const board = readBoard(path).board;
+    expect(writeBoard(path, board)).toBe(boardSnapshot(path));
+    const moved = moveCardById(board, cardId(board, 'two'), columnIndex(board, 'Done'));
+    if (!moved) throw new Error('no move');
+    expect(writeBoard(path, moved)).toBe(boardSnapshot(path));
   });
 
   it('keeps an empty column and the order of the columns', () => {

@@ -24,9 +24,13 @@ import { dirname } from 'node:path';
 //
 // `mode`, when given, is set on the temporary file before the rename, so the file is never seen under
 // its name without it. Set with fchmod rather than through open, which the umask would narrow.
+// The name a write goes through, beside the file, until the rename. Exported so what watches or commits
+// the folder can leave a write still in flight, or one a crash left behind, alone.
+export const TEMPORARY_SUFFIX = '.tmp';
+
 export function replaceFile(filePath: string, text: string, mode?: number): void {
   mkdirSync(dirname(filePath), { recursive: true });
-  const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+  const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}${TEMPORARY_SUFFIX}`;
   const descriptor = openSync(temporaryPath, 'w');
   // One try from the first byte to the rename: a write that fails part way (a full disk) leaves a file
   // under a name no later write reuses, so whatever fails after the open removes it before rethrowing.

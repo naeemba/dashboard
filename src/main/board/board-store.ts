@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
-import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
+import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, readText, writeBoardFolder, type StoredBoard } from './board-files';
+import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
-import { replaceFile } from '../app/replace-file';
+import { replaceFile, TEMPORARY_SUFFIX } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import {
   BACKLOG_COLUMN,
@@ -48,12 +49,12 @@ export const BOARD_FOLDER_PATH = `${BOARD_DIRECTORY}/${BOARD_FOLDER}`;
 // A git pathspec's `*` crosses `/`, so the one pattern covers both.
 export const BOARD_PATHSPECS = [
   `${BOARD_DIRECTORY}/board*`,
-  `:(exclude)${BOARD_DIRECTORY}/board*.broken`,
-  `:(exclude)${BOARD_DIRECTORY}/board*.tmp`,
+  `:(exclude)${BOARD_DIRECTORY}/board*${BROKEN_SUFFIX}`,
+  `:(exclude)${BOARD_DIRECTORY}/board*${TEMPORARY_SUFFIX}`,
 ] as const;
 // Where a board.json that could not be parsed is moved aside, so a crash mid-write or a bad hand-edit
 // loses nothing: the next read starts fresh, and the damaged file sits right next to it under this name.
-export const BROKEN_BOARD_FILE = 'board.json.broken';
+export const BROKEN_BOARD_FILE = `${BOARD_FILE}${BROKEN_SUFFIX}`;
 
 // Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
 // writes a file that is not there, so those copies would otherwise drift the moment this text changes.
@@ -364,10 +365,6 @@ function repairedBoard(columns: Column[], makeId: () => string): Board {
   return withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) })));
 }
 
-function storedOrder(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
-}
-
 // The board from its folder, and from board.json too when both are there. That happens when a write
 // stopped between the cards and the old file's removal, and when a branch that still edits board.json
 // merges into one that has moved on: either way the folder is the newer copy, and a card only the old
@@ -388,9 +385,9 @@ function folderBoard(stored: StoredBoard, legacy: Board | null): Board {
     if (card === null) return [];
     const column = typeof record.column === 'string' ? record.column : BACKLOG_COLUMN;
     if (!names.includes(column)) names.push(column);
-    return [{ card, column, order: storedOrder(record.order) }];
+    return [{ card, id: card.id, column, order: storedOrder(record.order) ?? Number.POSITIVE_INFINITY }];
   });
-  placed.sort((first, second) => first.order - second.order || (first.card.id < second.card.id ? -1 : first.card.id > second.card.id ? 1 : 0));
+  placed.sort(byPlace);
   const columns: Column[] = names.map((name) => ({
     name,
     cards: placed.filter((entry) => entry.column === name).map((entry) => entry.card),
@@ -446,13 +443,8 @@ function readStoredBoard(projectPath: string, salvage: boolean): { board: Board 
 
 function readBoardFile(projectPath: string, salvage: boolean): { board: Board | null; brokenFile: string | null } {
   const filePath = boardPath(projectPath);
-  let text: string;
-  try {
-    text = readFileSync(filePath, 'utf8');
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return { board: null, brokenFile: null };
-  }
+  const text = readText(filePath);
+  if (text === null) return { board: null, brokenFile: null };
   try {
     return { board: parseBoard(text), brokenFile: null };
   } catch (error: unknown) {
@@ -469,12 +461,7 @@ function readBoardFile(projectPath: string, salvage: boolean): { board: Board | 
 // is no board at all. Only ever compared with another snapshot — it is how the watcher tells the app's
 // own write from somebody else's.
 export function boardSnapshot(projectPath: string): string | null {
-  let legacy: string | null;
-  try {
-    legacy = readFileSync(boardPath(projectPath), 'utf8');
-  } catch {
-    legacy = null;
-  }
+  const legacy = readText(boardPath(projectPath));
   const folder = boardFolderSnapshot(boardFolderPath(projectPath));
   return legacy === null && folder === null ? null : `${legacy ?? ''}\0\0${folder ?? ''}`;
 }
@@ -494,10 +481,13 @@ export { replaceFile };
 // bytes change are written — a move rewrites the card that moved. A project still on board.json moves
 // to the folder here, in one step: every card is written to its own file first and only then is the
 // old file removed, so a write that stops part way leaves both, which readStoredBoard reads as one.
+//
+// The snapshot comes from the bytes written, not a read back: the same string boardSnapshot reads,
+// with board.json gone.
 export function writeBoard(projectPath: string, board: Board): string {
-  writeBoardFolder(boardFolderPath(projectPath), board.columns);
+  const folder = writeBoardFolder(boardFolderPath(projectPath), board.columns);
   rmSync(boardPath(projectPath), { force: true });
-  return boardSnapshot(projectPath) ?? '';
+  return `\0\0${folder}`;
 }
 
 // Seed, then read. Both callers that open a board — the app's board:read and the command line — want

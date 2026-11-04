@@ -2,6 +2,7 @@ import { watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { BOARD_FILE, boardPath, boardSnapshot } from './board-store';
 import { BOARD_FOLDER } from './board-files';
+import { TEMPORARY_SUFFIX } from '../app/replace-file';
 
 // Whether something that happened inside a project's .dashboard folder is a board change the screen
 // has to be told about. Two questions, in the order that costs least: the name first, so an event
@@ -19,7 +20,7 @@ import { BOARD_FOLDER } from './board-files';
 export function isBoardFile(fileName: string | null): boolean {
   if (fileName === null) return true;
   const name = fileName.split(path.sep).join('/');
-  if (name.endsWith('.tmp')) return false;
+  if (name.endsWith(TEMPORARY_SUFFIX)) return false;
   return name === BOARD_FILE || name === BOARD_FOLDER || name.startsWith(`${BOARD_FOLDER}/`);
 }
 

@@ -37,4 +37,8 @@ old file's removal included, is one commit.
 first write of the same `board.json`, in parallel, both add every card file;
 the merge is clean for every card neither changed and an add/add conflict on a
 card both changed. Moving main first — the app's own write of the board on
-screen — is what avoids it.
+screen — is what avoids it. A branch cut before main moved that still edits
+`board.json` meets main's removal of it as a modify/delete conflict, once.
+Either answer loses nothing: keep the branch's `board.json` and the read adds
+any card only it has, or drop it (`git rm .dashboard/board.json`) and redo that
+branch's card move with the `board` command.
