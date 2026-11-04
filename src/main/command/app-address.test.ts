@@ -9,11 +9,12 @@ describe('userDataFolder', () => {
     expect(userDataFolder('linux', { DASHBOARD_USER_DATA: '/demo/data' }, '/home/ann')).toBe('/demo/data');
   });
 
-  // Electron's appData joined with the product name, per platform.
+  // Electron's appData joined with the product name, per platform. Joined with this machine's separator,
+  // as the code joins it, so the test reads the same on Windows.
   it('is Electron\'s userData folder for Dashboard otherwise', () => {
-    expect(userDataFolder('linux', {}, '/home/ann')).toBe('/home/ann/.config/Dashboard');
-    expect(userDataFolder('linux', { XDG_CONFIG_HOME: '/home/ann/conf' }, '/home/ann')).toBe('/home/ann/conf/Dashboard');
-    expect(userDataFolder('darwin', {}, '/Users/ann')).toBe('/Users/ann/Library/Application Support/Dashboard');
+    expect(userDataFolder('linux', {}, '/home/ann')).toBe(path.join('/home/ann', '.config', 'Dashboard'));
+    expect(userDataFolder('linux', { XDG_CONFIG_HOME: '/home/ann/conf' }, '/home/ann')).toBe(path.join('/home/ann/conf', 'Dashboard'));
+    expect(userDataFolder('darwin', {}, '/Users/ann')).toBe(path.join('/Users/ann', 'Library', 'Application Support', 'Dashboard'));
     expect(userDataFolder('win32', { APPDATA: 'C:\\Users\\ann\\AppData\\Roaming' }, 'C:\\Users\\ann'))
       .toBe(path.join('C:\\Users\\ann\\AppData\\Roaming', 'Dashboard'));
   });
