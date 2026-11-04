@@ -51,11 +51,7 @@ export function listenForSessions(
     let text = '';
     // One request per connection: anything after its newline, or a close after it, is not another.
     let read = false;
-    // The reply ends the connection outright once it is written, rather than only ending this side: a
-    // Windows named pipe gives the command no end for a half close that follows an earlier write, so
-    // an answer sent after ACCEPTED was read but never finished, and the command waited for good.
-    const reply = (body: SessionReply) => connection.end(JSON.stringify(body), () => connection.destroy());
-    const refuse = (output: string) => reply({ ok: false, output });
+    const refuse = (output: string) => connection.end(JSON.stringify({ ok: false, output }));
     function handle(line: string): void {
       if (read) return;
       read = true;
@@ -77,7 +73,7 @@ export function listenForSessions(
       connection.write(ACCEPTED);
       void answer(request)
         .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }))
-        .then(reply);
+        .then((reply) => connection.end(JSON.stringify(reply)));
     }
     connection.setEncoding('utf8');
     connection.on('data', (chunk: string) => {
