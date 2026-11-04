@@ -1,8 +1,12 @@
-import { mkdtempSync } from 'node:fs';
+import { chmodSync, mkdtempSync } from 'node:fs';
+import { homedir } from 'node:os';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
 import type { SessionReply, SessionRequest } from './session-cli';
+import { readSocketPointer, userDataFolder } from '../command/app-address';
+import { mayStartApp, reachApp } from '../command/reach-app';
+import { appStarter } from '../command/start-app';
 import { ACCEPTANCE_TIMEOUT, ACCEPTED, awaitAcceptance, unacceptedLine, versionRefusal } from './app-handshake';
 
 // The `session` command's way into the running app. A pane's command is a separate node process and
@@ -43,6 +47,7 @@ export function listenForSessions(
   appVersion: string,
   answer: (request: SessionRequest) => Promise<SessionReply>,
   failed: (error: Error) => void,
+  listening: () => void = () => undefined,
 ): net.Server {
   // Half open only for the refusal below: a command that closed its side before the newline would
   // otherwise have the socket's own write shut before the refusal is written. A whole request needs
@@ -90,26 +95,51 @@ export function listenForSessions(
     connection.on('error', () => undefined);
   });
   server.on('error', failed);
-  server.listen(socketPath);
+  // 0600 on top of the 0700 folder: the folder is what keeps others out, and the socket's own mode,
+  // which the umask decides, should not be the one thing left saying otherwise. listening is when a
+  // command outside a pane may be told where it is (app-address.ts).
+  server.listen(socketPath, () => {
+    if (process.platform !== 'win32') chmodSync(socketPath, 0o600);
+    listening();
+  });
   return server;
 }
 
-// A command's whole conversation with the app that opened its pane, whichever noun it was: the words
-// out, the answer printed, the exit code back. Run outside such a pane, it says so instead.
-export async function askAppFromPane(commandArguments: readonly string[]): Promise<number> {
-  const socket = process.env.DASHBOARD_SOCKET;
-  if (!socket) {
-    process.stderr.write('DASHBOARD_SOCKET is not set — run this from a pane the Dashboard app opened\n');
+// A command's whole conversation with the app, whichever noun it was: the words out, the answer
+// printed, the exit code back. Which app, and starting it when none answers, is reach-app.ts's.
+export async function askRunningApp(commandArguments: readonly string[]): Promise<number> {
+  const userData = userDataFolder(process.platform, process.env, homedir());
+  const reached = await reachApp({
+    paneSocket: process.env.DASHBOARD_SOCKET,
+    pointed: () => readSocketPointer(userData),
+    connects,
+    start: appStarter(process.env),
+    sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+    now: Date.now,
+  }, mayStartApp(commandArguments));
+  if (!reached.ok) {
+    process.stderr.write(`${reached.message}\n`);
     return 1;
   }
-  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments, version: __BUILD_VERSION__ });
+  const reply = await askApp(reached.socket, { directory: process.cwd(), args: commandArguments, version: __BUILD_VERSION__ });
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }
 
+// Whether anything listens on the socket, without saying anything to it.
+function connects(socketPath: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const probe = net.connect(socketPath, () => {
+      probe.destroy();
+      resolve(true);
+    });
+    probe.on('error', () => resolve(false));
+  });
+}
+
 // The command's half: the request out as one line, with the connection left open for the answer, and
-// the answer read until the app closes it. A socket nobody is listening on is the app that opened this
-// pane having quit, which is worth saying in those words. An app that has not taken the request in
+// the answer read until the app closes it. reachApp has already found the socket listening, so an
+// error here is the app going away mid-request. An app that has not taken the request in
 // acceptanceTimeout is one that never will.
 export function askApp(socketPath: string, request: SessionRequest, acceptanceTimeout = ACCEPTANCE_TIMEOUT): Promise<SessionReply> {
   return new Promise((resolve) => {
@@ -126,7 +156,7 @@ export function askApp(socketPath: string, request: SessionRequest, acceptanceTi
       }
     });
     connection.on('error', (error) => {
-      resolve({ ok: false, output: `the Dashboard that opened this pane is not answering: ${failureText(error)}` });
+      resolve({ ok: false, output: `the running Dashboard stopped answering: ${failureText(error)}` });
     });
   });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeProject, initialPaths, OUTSIDE_PANE_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
+import { describeProject, initialPaths, NO_APP_DATA_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
@@ -7,7 +7,8 @@ const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
 const NO_FOLDERS = () => { throw new Error('asked for the folders'); };
-const run = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml', NO_FOLDERS, '/home/me');
+const run = (words: string[], text: string | null = FILE, folders: () => KnownFolders = NO_FOLDERS) => runProjectCommand(words, text, 'projects.yaml', folders, '/home/me');
+const NONE_OPEN = () => null;
 const init = (text: string | null, folders: () => KnownFolders, words: string[] = []) => runProjectCommand(['init', ...words], text, 'projects.yaml', folders, '/home/me');
 
 describe('runProjectCommand', () => {
@@ -20,23 +21,34 @@ describe('runProjectCommand', () => {
   });
 
   it('lists every project and finds by word', () => {
-    expect(run(['list'])).toEqual({ ok: true, output: 'new-crm (aka crm)\n  path: /crm\n\nscreensaver (aka mandala)\n  path: /screensaver' });
+    expect(run(['list'], FILE, NONE_OPEN)).toEqual({ ok: true, output: 'new-crm (aka crm)\n  path: /crm\n\nscreensaver (aka mandala)\n  path: /screensaver' });
     expect(run(['find', 'mandala'])).toEqual({ ok: true, output: 'screensaver (aka mandala)\n  path: /screensaver' });
     expect(run(['find', 'zzz'])).toEqual({ ok: false, message: 'no project matches zzz' });
   });
 
+  // What the app had open at its last save, read from its own files: list never starts the app.
+  posixPathsOnly('marks the projects the app has open, and lists open ones the file does not', () => {
+    const open = () => ({ open: ['/crm', '/home/me/notes'], recent: [] });
+    expect(run(['list'], FILE, open)).toEqual({
+      ok: true,
+      output: 'new-crm (aka crm)\n  path: /crm\n  open\n\nscreensaver (aka mandala)\n  path: /screensaver\n\nnotes\n  path: /home/me/notes\n  open, not in projects.yaml',
+    });
+    expect(run(['list'], null, open)).toMatchObject({ ok: true, output: expect.stringContaining('notes\n  path: /home/me/notes') });
+  });
+
   it('says when the file is missing, empty or broken', () => {
-    expect(run(['list'], null)).toEqual({ ok: false, message: 'projects.yaml does not exist yet; "dashboard project init" writes a first one from the open and recent projects' });
-    expect(run(['list'], '')).toEqual({ ok: false, message: 'projects.yaml lists no projects' });
-    expect(run(['list'], '- name: a\n')).toEqual({ ok: false, message: 'projects.yaml:1: project a has no path' });
+    expect(run(['list'], null, NONE_OPEN)).toEqual({ ok: false, message: 'projects.yaml does not exist yet; "dashboard project init" writes a first one from the open and recent projects' });
+    expect(run(['list'], '', NONE_OPEN)).toEqual({ ok: false, message: 'projects.yaml lists no projects' });
+    expect(run(['list'], '- name: a\n', NONE_OPEN)).toEqual({ ok: false, message: 'projects.yaml:1: project a has no path' });
   });
 });
 
-describe('project open and close', () => {
+describe('project open, close and focus', () => {
   posixPathsOnly('asks the app with the folder, ~ expanded, and the name, for a name or an aka in any case', () => {
     expect(run(['open', 'Mandala'])).toEqual({ ok: true, ask: [PROJECT_REQUEST, 'open', '/screensaver', 'screensaver'] });
     expect(run(['close', 'new-crm'], '- name: new-crm\n  path: ~/Workspace/new-crm\n'))
       .toEqual({ ok: true, ask: [PROJECT_REQUEST, 'close', '/home/me/Workspace/new-crm', 'new-crm'] });
+    expect(run(['focus', 'crm'])).toEqual({ ok: true, ask: [PROJECT_REQUEST, 'focus', '/crm', 'new-crm'] });
   });
 
   // A fuzzy match would close a project you did not name. The refusal is projectNamed's.
@@ -52,8 +64,8 @@ describe('project init', () => {
     expect(init(null, NO_FOLDERS, ['now'])).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
   });
 
-  it('refuses outside a pane rather than write a file with no projects', () => {
-    expect(init(null, () => null)).toEqual({ ok: false, message: OUTSIDE_PANE_MESSAGE });
+  it('refuses before the app has ever run rather than write a file with no projects', () => {
+    expect(init(null, () => null)).toEqual({ ok: false, message: NO_APP_DATA_MESSAGE });
   });
 
   it('lists the open folders before the recent ones', () => {

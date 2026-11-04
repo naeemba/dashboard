@@ -18,6 +18,7 @@ function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], m
     open: vi.fn(),
     panesOf: () => panes,
     close: vi.fn(),
+    focus: vi.fn(),
   };
   const otherwise = vi.fn(async () => ({ ok: true, output: 'session' }));
   const answer = (...words: string[]) => projectRequests(ports, otherwise)({ directory: '/anywhere', args: [PROJECT_REQUEST, ...words] });
@@ -25,6 +26,14 @@ function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], m
 }
 
 describe('projectRequests', () => {
+  posixPathsOnly('switches to an open project\'s page, and refuses one that is not open', async () => {
+    const { ports, answer } = setup({ '/web': 3 });
+    await expect(answer('focus', '/web', 'web')).resolves.toEqual({ ok: true, output: 'switched to web' });
+    expect(ports.focus).toHaveBeenCalledWith(3);
+    await expect(answer('focus', '/api', 'api')).resolves.toEqual({ ok: false, output: 'api is not open' });
+    expect(ports.focus).toHaveBeenCalledOnce();
+  });
+
   it('hands anything that is not a project request to the session command', async () => {
     const { otherwise, ports } = setup({});
     await expect(projectRequests(ports, otherwise)({ directory: '/a', args: ['claim'] })).resolves.toEqual({ ok: true, output: 'session' });
