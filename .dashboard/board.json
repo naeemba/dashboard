@@ -281,16 +281,7 @@
     },
     {
       "name": "Doing",
-      "cards": [
-        {
-          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
-          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
-          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-04T11:54:11.851Z"
-        }
-      ]
+      "cards": []
     },
     {
       "name": "Review",
@@ -378,6 +369,16 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
+        },
+        {
+          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
+          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
+          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T12:13:08.179Z",
+          "branch": "work-board-card-883f68e9-510a-4c4c-bbef-bd9",
+          "pullRequest": 206
         }
       ]
     },
