@@ -1,6 +1,6 @@
 import type net from 'node:net';
 import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
-import { line, lineReader, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
+import { hostProof, line, lineReader, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
 import { foregroundName, type PaneShell } from './pane-shell';
 
 // The pane host's half: the shells themselves, kept running whether or not an app is connected. One
@@ -50,13 +50,13 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
 
   return {
     // An app arriving is told every shell still running, then hears everything after.
-    connect(sender: (message: FromHost) => void): void {
+    connect(sender: (message: FromHost) => void, proof?: string): void {
       send = sender;
       const panes: Survivor[] = [...entries].map(([key, { shell, request, copy }]) => ({
         key, pid: shell.pid, file: request.file, args: request.args, cwd: request.cwd,
         cols: shell.cols, rows: shell.rows, foreground: foregroundName(shell) ?? '', screen: copy.replay(),
       }));
-      sender({ type: 'panes', panes });
+      sender({ type: 'panes', panes, proof });
     },
     // The app went: quit, a crash, a restart. The shells stay. A host with nothing left to keep has no
     // reason to stay up, and the next app starts its own.
@@ -68,6 +68,7 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
       if (entries.size === 0) idle();
     },
     receive(message: ToHost): void {
+      if (message.type === 'hello') return;
       if (message.type === 'spawn') return start(message);
       const shell = entries.get(message.key)?.shell;
       if (message.type === 'write') shell?.write(message.data);
@@ -92,26 +93,34 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
 }
 
 // What the host's socket does with each app that connects, here rather than in pane-host-entry.ts so
-// the test drives the same wiring the host runs.
-export function acceptApps(server: ReturnType<typeof paneHostServer>): (socket: net.Socket) => void {
+// the test drives the same wiring the host runs. `token` is the pipe's on Windows (paneHostAddress).
+export function acceptApps(server: ReturnType<typeof paneHostServer>, token?: string): (socket: net.Socket) => void {
   let current: net.Socket | null = null;
   return (socket) => {
     socket.on('error', () => undefined);
-    // One app at a time. An app that went has had its end closed by the kernel, so a second one arriving
-    // while one is connected is a second Dashboard on the same user data: it is turned away and runs
-    // its shells itself, rather than taking the first one's panes out from under it.
-    if (current !== null) {
-      socket.end(line({ type: 'busy' }));
-      return;
-    }
-    current = socket;
     socket.setEncoding('utf8');
-    socket.on('data', lineReader<ToHost>((message) => server.receive(message)));
+    socket.on('data', lineReader<ToHost>((message) => {
+      if (socket === current) return server.receive(message);
+      // Nothing is told before the app says hello: a Windows named pipe lets every user of the machine
+      // open it for reading, and one that cannot write must hear no screen nor hold the host from the app.
+      // Anything else first is not an app, and is let go rather than held open.
+      if (message.type !== 'hello') return void socket.destroy();
+      // One app at a time. An app that went has had its end closed by the kernel, so a second one
+      // arriving while one is connected is a second Dashboard on the same user data: it is turned away
+      // and runs its shells itself, rather than taking the first one's panes out from under it.
+      // The proof goes with a busy too: on Windows an unproven busy is an impostor's.
+      const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
+      if (current !== null) {
+        socket.end(line({ type: 'busy', proof }));
+        return;
+      }
+      current = socket;
+      server.connect((answer) => socket.write(line(answer)), proof);
+    }));
     socket.on('close', () => {
       if (current !== socket) return;
       current = null;
       server.disconnect();
     });
-    server.connect((message) => socket.write(line(message)));
   };
 }
