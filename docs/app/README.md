@@ -53,6 +53,7 @@ its own side. `eslint.config.test.ts` pins each of those.
   `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
 - Atomic write: `replace-file.ts`
+- Whether a socket is listening (the nvim server, the `dashboard` command finding the app): `can-connect.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`, `default-branch.ts` (which branch on a remote is its default, for the ship and `/create-task` alike)
 - Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,

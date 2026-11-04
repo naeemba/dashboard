@@ -8,6 +8,7 @@ export type SessionCommand =
   | { kind: 'claim'; project: string | null }
   | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean }
   | { kind: 'list'; all: boolean }
+  | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
   | { kind: 'notify'; id: string; state: WorkerState };
 
@@ -17,11 +18,12 @@ export type SessionCommand =
 export type SessionRequest = { directory: string; args: readonly string[]; version?: string };
 export type SessionReply = { ok: boolean; output: string };
 
-const SESSION_USAGE = `session — the Dashboard panes of the project you are in
+export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim [--project <name|aka>]
   session run <id> [--card <card id> | --worktree] "<prompt>"
   session list [--all]
+  session send <id> "<text>"
   session release <id>
   session notify <id> running|blocked|done
 
@@ -29,8 +31,8 @@ claim opens a worker pane and prints its id: --project opens it on the page of t
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
-and neither in the project itself. notify is what a worker's hooks call. list --all lists the panes
-of every open project and the manager.`;
+and neither in the project itself. send types the text into the pane and presses Enter. notify is
+what a worker's hooks call. list --all lists the panes of every open project and the manager.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 
@@ -81,6 +83,13 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       return refuse('session list takes nothing, or --all');
     }
     case 'run': return parseRun(rest);
+    case 'send': {
+      const id = paneId(rest[0], 'send');
+      if (typeof id !== 'string') return id;
+      const text = rest.slice(1).join(' ');
+      if (text.trim() === '') return refuse('session send needs the text to type');
+      return { ok: true, command: { kind: 'send', id, text } };
+    }
     case 'release': {
       const id = paneId(rest[0], 'release');
       return typeof id === 'string' ? { ok: true, command: { kind: 'release', id } } : id;
@@ -96,4 +105,21 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     }
     default: return refuse(verb === undefined ? SESSION_USAGE : `no such command: ${verb}\n\n${SESSION_USAGE}`);
   }
+}
+
+// Whether the words say which project they act on without a folder to go by: a pane id names its own
+// project, claim --project and list --all name theirs. The app reads it for a command from a folder in
+// no open project (session-requests.ts), and outsidePaneRefusal for one from outside every pane.
+export function namesItsTarget(command: SessionCommand): boolean {
+  return 'id' in command || (command.kind === 'claim' && command.project !== null) || (command.kind === 'list' && command.all);
+}
+
+// Why a command run outside any pane is refused before it reaches the app, or null. A pane knows its
+// project and a plain terminal does not, so a claim there has to name one: claiming in whatever
+// project the terminal happens to stand in would be a guess.
+export function outsidePaneRefusal(command: SessionCommand): string | null {
+  if (command.kind === 'claim' && !namesItsTarget(command)) {
+    return 'outside a Dashboard pane, claim needs --project <name|aka> to say which project the worker is for';
+  }
+  return null;
 }

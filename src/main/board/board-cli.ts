@@ -263,7 +263,7 @@ export function runBoardCommandOnLatest(
   return runBoardCommand(readAgain(), commandArguments);
 }
 
-// What board-cli-entry prints when isManagerHomeDirectory says the command was run from $HOME
+// What the board command prints when isManagerHomeDirectory says the command was run from $HOME
 // itself. Home is the manager's own folder, not a project — see projectRoot's comment in
 // board-store.ts — so the message says why the command wrote nothing instead of seeding a board
 // there.

@@ -149,7 +149,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
   onto the file as it is now)
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
-  `board-usage.ts` (also `dashboard board`, see [command](../command/README.md))
+  `board-usage.ts`, `board-target.ts` (which project, `--project`) (also `dashboard board`, see [command](../command/README.md))
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
   (what the app writes under `~/.claude` at launch), each beside its `.test.ts`
@@ -195,6 +195,8 @@ board there does not parse, and when it cannot tell which branch on the remote i
 
 ## Scenarios
 
+- Given a plain terminal in a folder with no `.dashboard` and no git repository above it, when `dashboard board list` runs, then it is refused naming `--project` and no board is seeded there.
+- Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm` runs from any folder, then the card moves on crm's board.
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
 - Given the power goes out just after a board, notes or session write, when the app next launches, then it reads the old file or the new one, never an empty one (`replaceFile` flushes before it renames).
 - Given an agent ran `board move` after the board last read the file, when you rename another card before the reload arrives, then the file keeps both: the agent's move and your rename.

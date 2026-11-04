@@ -25,6 +25,8 @@ import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { projectNamedInFile } from './projects/project-named';
 import { MANAGER_SLOT } from '../shared/manager/manager';
+import { announceSocket, clearSocketPointer } from './command/app-address';
+import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
@@ -36,7 +38,7 @@ import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
-import { registerPaneChannels } from './panes/pane-channels';
+import { landOnPane, registerPaneChannels, typeIntoPane } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
 import { startsAtOpen } from './chat/chat-start';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
@@ -193,34 +195,15 @@ let shellCommand = pickShell(settings, process.env, process.platform);
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
 const paneScreens = screens();
-// The `board` command, handed to every pane as DASHBOARD_BOARD so an agent in any project can move
-// its own card without hand-editing JSON. .dashboard/CLAUDE.md is where it is documented, and that
-// file is seeded into every project the app touches.
-//
-// Unpacked, because node is what runs it and node cannot read a file inside an asar. In a packaged
-// app getAppPath() ends in app.asar and forge puts this one file in app.asar.unpacked beside it.
-const boardCommand = unpacked(path.join(app.getAppPath(), '.vite', 'build', 'board-cli-entry.js'));
-// The `session` command, built and unpacked the same way, and the socket it reaches this app on.
-// session-socket.ts says why the socket is this run's own.
-const sessionCommand = path.join(path.dirname(boardCommand), 'session-cli-entry.js');
-// The `dashboard` command, both of the above behind one entry. DASHBOARD_BOARD and DASHBOARD_SESSION
-// stay, since skills and worker hooks call them by name.
-const dashboardCommand = path.join(path.dirname(boardCommand), 'dashboard-cli-entry.js');
+// The command files and the socket every pane is handed: pane-environment.ts. session-socket.ts says
+// why the socket is this run's own.
+const buildFolder = unpacked(path.join(app.getAppPath(), '.vite', 'build'));
+const commands = paneCommands(buildFolder);
 const sessionSocket = sessionSocketPath(process.platform, app.getPath('temp'), process.pid);
-// Built once. Every pane gets the same one, and cloning the whole environment per pane is a clone per
-// pane opened for a value that never changes.
-const paneEnvironment = {
-  ...process.env,
-  DASHBOARD_COMMAND: dashboardCommand,
-  DASHBOARD_BOARD: boardCommand,
-  DASHBOARD_SESSION: sessionCommand,
-  DASHBOARD_SOCKET: sessionSocket,
-  // Where session.json and recents.json are, for `dashboard project init`.
-  DASHBOARD_USER_DATA: app.getPath('userData'),
-} as Record<string, string>;
+const paneEnvironment = environmentForPanes(process.env, commands, sessionSocket, app.getPath('userData'), app.isPackaged ? process.execPath : null);
 // Where every pane's shell runs, so it outlives this process: pane-host-client.ts and panes-decision-1.
 // Built and unpacked beside the commands above, since `node` is what runs it.
-const paneHostEntry = path.join(path.dirname(boardCommand), 'pane-host-entry.js');
+const paneHostEntry = path.join(buildFolder, 'pane-host-entry.js');
 const paneAddress = paneHostAddress(process.platform, app.getPath('userData'));
 const shellHost = paneHost({
   socket: paneAddress?.socket ?? null,
@@ -836,6 +819,7 @@ const workerAnswers = sessionRequests({
     mainsWorkers.set(id, dispatcherPath);
   },
   closeWorker,
+  type: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
   tell: chats.tell,
   cardWorktree(projectPath, cardId) {
@@ -862,6 +846,8 @@ const answerSession = projectRequests({
   // Named the way the close key names them, less any name you gave a pane: those are the screen's.
   panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
   close: closeProjectSlot,
+  // A notification click's landing, on the project's main pane.
+  focus: (slot) => landOnPane(liveWindow(), terminalId(slot, MAIN_INDEX)),
 }, workerAnswers);
 // Every answer waits for the pane host, for the reason projects:open does: `project open` and
 // `pane claim --project` open projects too.
@@ -870,6 +856,8 @@ const sessions = listenForSessions(
   __BUILD_VERSION__,
   (request) => shellHost.ready.then(() => answerSession(request)),
   (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`),
+  // Where a terminal outside the panes finds it: app-address.ts.
+  () => announceSocket(app.getPath('userData'), sessionSocket, failures.hold),
 );
 
 function createWindow(): void {
@@ -914,13 +902,14 @@ app.on('ready', () => {
   // refreshed from this build (create-task-install.ts). The installed app only: every Claude session
   // on the machine runs that copy, and a dev run from a half-done branch would hand them its program.
   if (app.isPackaged) {
-    const notInstalled = installCreateTask(app.getPath('home'), path.join(path.dirname(boardCommand), 'create-task-cli-entry.js'));
+    const notInstalled = installCreateTask(app.getPath('home'), path.join(buildFolder, 'create-task-cli-entry.js'));
     if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
   }
 });
 app.on('will-quit', () => {
   remoteHost?.close();
   sessions.close();
+  clearSocketPointer(app.getPath('userData'), sessionSocket);
   // The socket's own folder, which session-socket.ts made for this run.
   const socketFolder = sessionSocketFolder(process.platform, sessionSocket);
   if (socketFolder !== null) rmSync(socketFolder, { recursive: true, force: true });

@@ -21,16 +21,7 @@ export function registerPaneChannels(table: Channels, main: {
   table.on('notification:show', (_screen, title: string, body: string, paneId: string) => {
     const notification = new Notification({ title, body });
     notification.on('click', () => {
-      // Landing on the pane is no use behind a window that is not on screen. macOS activates the app
-      // for a click but leaves a minimized window in the Dock, and on Windows and Linux nothing
-      // activates it at all, so ask for the window every time. show() is the hidden-to-shown
-      // transition; coming back from the Dock is restore()'s, so both are needed.
-      const window = main.window();
-      if (!window) return;
-      if (window.isMinimized()) window.restore();
-      window.show();
-      window.focus();
-      window.webContents.send('notification:click', paneId);
+      landOnPane(main.window(), paneId);
     });
     notification.show();
   });
@@ -67,4 +58,27 @@ function fitShell(shells: Map<string, PaneShell>, screens: Screens, id: string):
   const size = screens.sizeOf(id);
   if (!shell || !size || (shell.cols === size.cols && shell.rows === size.rows)) return;
   shell.resize(size.cols, size.rows);
+}
+
+// The window to the front, then the renderer to the pane: a notification click, and `dashboard project
+// focus`. Landing on the pane is no use behind a window that is not on screen. macOS activates the app
+// for a click but leaves a minimized window in the Dock, and on Windows and Linux nothing activates it
+// at all, so ask for the window every time. show() is the hidden-to-shown transition; coming back from
+// the Dock is restore()'s, so both are needed.
+export function landOnPane(window: BrowserWindow | undefined, paneId: string): void {
+  if (!window) return;
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+  window.webContents.send('notification:click', paneId);
+}
+
+// ponytail: a fixed pause; a pty that echoes slower than this still gets the Enter inside the paste.
+const TYPED_ENTER_DELAY = 150;
+
+// `pane send`: Enter a moment after the text, not in the same write. An agent's prompt reads one burst
+// as a paste and keeps a carriage return inside it as a newline instead of sending.
+export function typeIntoPane(write: (data: string) => void, text: string): void {
+  write(text);
+  setTimeout(() => write('\r'), TYPED_ENTER_DELAY);
 }

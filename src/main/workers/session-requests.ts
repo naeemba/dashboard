@@ -4,7 +4,7 @@ import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
 import type { ProjectNamed } from '../projects/project-named';
-import { parseSessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { namesItsTarget, parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
 import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
@@ -44,6 +44,8 @@ export type SessionPorts = {
   // `dispatcherPath` is the page whose main the worker reports to, saved so a restart starts that main.
   startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null, dispatcherPath: string): void;
   closeWorker(id: string): void;
+  // Types the text into the pane's shell, then presses Enter.
+  type(id: string, text: string): void;
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   tell(slot: number, text: string): void;
@@ -73,6 +75,14 @@ export function projectOfFolder(
 export function doneReport(name: string, id: string): string {
   return `${name} in pane ${id} (${paneLink(id)}) has finished its turn. If it sent you a report, that says what it did;`
     + ' `pane list` shows where every worker stands.';
+}
+
+// Who is asking: the open project the command's folder is in, or, from a folder outside every one —
+// a plain terminal — the project of the pane the words name, since the id says which. A command
+// naming no pane stays -1, and is refused unless its words name the target some other way.
+function askingSlot(command: SessionCommand, folderSlot: number): number {
+  if (folderSlot !== -1) return folderSlot;
+  return 'id' in command ? paneFromId(command.id).slot : -1;
 }
 
 export const answered = (output: string): SessionReply => ({ ok: true, output });
@@ -143,7 +153,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const id = terminalId(target, ports.openWorker(target));
     dispatched.delete(id);
-    if (target === slot) dispatchers.delete(id);
+    if (target === slot || slot === -1) dispatchers.delete(id);
     else dispatchers.set(id, slot);
     return answered(id);
   }
@@ -201,6 +211,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(`released ${id} and removed ${baseName(throwaway.worktreePath)}`);
   }
 
+  // Typed into whatever is in the pane, which is the asker's to know: an agent, a prompt, a REPL.
+  function send(id: string, slot: number, text: string): SessionReply {
+    const refusal = worker(id, slot);
+    if (refusal !== null) return refused(refusal);
+    ports.type(id, text);
+    return answered(`typed into ${id}`);
+  }
+
   function paneLines(slot: number, prefix: string): string[] {
     return ports.openPanes(slot).map((index) => {
       const id = terminalId(slot, index);
@@ -247,14 +265,22 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       }
       return answered('');
     }
-    const slot = ports.slotOf(request.directory);
+    const folderSlot = ports.slotOf(request.directory);
+    const slot = askingSlot(command, folderSlot);
+    // From outside every project only words that name their target are answered: a claim --project
+    // opens its worker in the named project, which is then its asker, and list --all lists every one.
+    // There a pane id whose page is not open is the id's fault, not the folder's.
     const projectPath = ports.projectPath(slot);
-    if (slot === -1 || projectPath === undefined) return refused(`${request.directory} is not in a project open in Dashboard`);
+    if (slot === -1 ? !namesItsTarget(command) : projectPath === undefined) {
+      const blamed = folderSlot === -1 && 'id' in command ? command.id : request.directory;
+      return refused(`${blamed} is not in a project open in Dashboard`);
+    }
     try {
       switch (command.kind) {
         case 'claim': return claim(slot, command.project);
         case 'list': return list(slot, command.all);
-        case 'run': return await run(command.id, slot, projectPath, command.prompt, command.card, command.worktree);
+        case 'send': return send(command.id, slot, command.text);
+        case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree);
         case 'release': return await release(command.id, slot);
       }
     } catch (error: unknown) {

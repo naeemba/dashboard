@@ -17,6 +17,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const marked: string[] = [];
   const removed: string[] = [];
   const told: string[] = [];
+  const typed: string[] = [];
   const ports: SessionPorts = {
     slotOf: (directory) => (directory.startsWith('/work/api') ? 2 : -1),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
@@ -48,6 +49,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
       open.splice(open.indexOf(Number(id.split(':')[1])), 1);
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
+    type: (id, text) => { typed.push(`${id} ${text}`); },
     tell: (slot, text) => { told.push(`${slot} ${text}`); },
     cardWorktree: (_projectPath, cardId) => ({
       'card-1': { worktreePath: '/work/api.worktrees/card-one', working: false },
@@ -59,7 +61,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
-  return { ports, ask, open, agents, workers, started, closed, marked, removed, told };
+  return { ports, ask, open, agents, workers, started, closed, marked, removed, told, typed };
 }
 
 describe('sessionRequests', () => {
@@ -71,6 +73,31 @@ describe('sessionRequests', () => {
 
   it('refuses a folder that is in no open project', async () => {
     expect(await project().ask(['claim'], '/elsewhere')).toMatchObject({ ok: false });
+    expect(await project().ask(['list'], '/elsewhere')).toMatchObject({ ok: false });
+  });
+
+  it('types into a worker of the project, and never into main or a closed pane', async () => {
+    const { ask, typed } = project();
+    await ask(['claim']);
+    expect(await ask(['send', '2:1', 'npm test'])).toEqual({ ok: true, output: 'typed into 2:1' });
+    expect(await ask(['send', '2:0', 'hi'])).toMatchObject({ ok: false });
+    expect(await ask(['send', '2:5', 'hi'])).toMatchObject({ ok: false });
+    expect(typed).toEqual(['2:1 npm test']);
+  });
+
+  // A plain terminal stands in no project: the pane id, or --project, names the target instead.
+  it('from outside every project, acts on the project the pane id or --project names', async () => {
+    const { ports, started, typed } = project({ findProject: () => ({ ok: true, name: 'api', path: '/work/api' }) });
+    const answer = sessionRequests(ports);
+    const outside = (args: string[]) => answer({ directory: '/home/ann', args });
+    expect(await outside(['claim', '--project', 'api'])).toEqual({ ok: true, output: '2:1' });
+    expect(await outside(['run', '2:1', 'look around'])).toMatchObject({ ok: true });
+    expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api' });
+    expect(await outside(['send', '2:1', 'y'])).toMatchObject({ ok: true });
+    expect(typed).toEqual(['2:1 y']);
+    expect((await outside(['list', '--all'])).output).toContain('api\t2:1');
+    expect(await outside(['release', '2:1'])).toMatchObject({ ok: true });
+    expect(await outside(['send', '9:1', 'hi'])).toEqual({ ok: false, output: '9:1 is not in a project open in Dashboard' });
   });
 
   it('runs a worker in the project with its prompt as the argument', async () => {

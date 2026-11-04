@@ -13,7 +13,9 @@ export const USAGE = `board — the Dashboard board of the project you are in
   board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
   board comment <id> "<text>"
 
-Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field.
+Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field. Any of them
+takes --project <name|aka> to work on that project's board, from ~/.dashboard/projects.yaml, instead
+of the board of the folder you are in.
 
 --notes replaces the card's description. To record what you found, use \`comment\`: it appends to the
 card's trail and takes nothing away. \`show\` prints one card with its description and its trail.`;

@@ -146,6 +146,17 @@ describe('listenForSessions and askApp', () => {
 
   it('says the app is gone when nothing is listening', async () => {
     const reply = await askApp(path.join(folder('socket-test-'), 'none.sock'), { directory: '/', args: [] });
-    expect(reply).toMatchObject({ ok: false, output: expect.stringContaining('is not answering') });
+    expect(reply).toMatchObject({ ok: false, output: expect.stringContaining('stopped answering') });
+  });
+
+  it.skipIf(process.platform === 'win32')('leaves the socket readable by this user alone, then says it is listening', async () => {
+    const socket = path.join(folder('socket-test-'), 'session.sock');
+    let listening = false;
+    const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: '' }), () => undefined, () => { listening = true; });
+    await new Promise((resolve) => server.once('listening', resolve));
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(listening).toBe(true);
+    expect(statSync(socket).mode & 0o777).toBe(0o600);
+    server.close();
   });
 });

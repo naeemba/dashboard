@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSessionCommand } from './session-cli';
+import { outsidePaneRefusal, parseSessionCommand } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -50,5 +50,21 @@ describe('parseSessionCommand', () => {
   it('answers nothing, or a word it does not know, with what it takes', () => {
     expect(parseSessionCommand([])).toMatchObject({ ok: false, message: expect.stringContaining('session claim') });
     expect(parseSessionCommand(['spawn'])).toMatchObject({ ok: false, message: expect.stringMatching(/^no such command: spawn/) });
+  });
+
+  it('reads send as the pane and everything after it as the text, and refuses no text', () => {
+    expect(parseSessionCommand(['send', '2:3', 'run', 'the', 'tests'])).toEqual({ ok: true, command: { kind: 'send', id: '2:3', text: 'run the tests' } });
+    expect(parseSessionCommand(['send', '2:3'])).toEqual({ ok: false, message: 'session send needs the text to type' });
+    expect(parseSessionCommand(['send', 'crm', 'hi']).ok).toBe(false);
+  });
+});
+
+describe('outsidePaneRefusal', () => {
+  // A plain terminal has no project of its own: claiming in the folder it stands in would be a guess.
+  it('refuses a claim that names no project, and lets everything that names its target through', () => {
+    expect(outsidePaneRefusal({ kind: 'claim', project: null })).toContain('--project');
+    expect(outsidePaneRefusal({ kind: 'claim', project: 'crm' })).toBeNull();
+    expect(outsidePaneRefusal({ kind: 'send', id: '2:3', text: 'hi' })).toBeNull();
+    expect(outsidePaneRefusal({ kind: 'list', all: true })).toBeNull();
   });
 });
