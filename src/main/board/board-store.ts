@@ -414,8 +414,14 @@ function folderBoard(stored: StoredBoard, legacy: Board | null): Board {
 // Every other reason the read can fail is a failure and is thrown. Answer an EMFILE or an EIO with an
 // empty board and the board draws with no cards and nothing in the status bar; the next card you add
 // is saved over the forty that are still sitting on disk.
-export function readBoard(projectPath: string): BoardRead {
-  const read = readStoredBoard(projectPath, true);
+//
+// Without `salvage`, nothing is moved: a damaged file is skipped, left under its own name, and named in
+// brokenFiles on every read until it is fixed. That is the read for a write that gets committed — the
+// `board` command and the ship move — which refuses whenever brokenFiles is not empty. A rename there
+// would take the tracked file away, so the second read would come back clean and the next `git add -A`
+// would commit that card as deleted.
+export function readBoard(projectPath: string, salvage = true): BoardRead {
+  const read = readStoredBoard(projectPath, salvage);
   return { ...read, board: withManagerColumns(projectPath, read.board ?? emptyBoard()) };
 }
 
@@ -425,18 +431,21 @@ export function readBoard(projectPath: string): BoardRead {
 // it first and nobody is told, and the board screen then opens empty with no message.
 // Null when there is nothing to count: no file, a file that will not parse, or one that cannot be read.
 //
-// A card file that will not parse is skipped by a look, not counted, and left where it is.
+// A card file that will not parse is skipped by a look, not counted, and left where it is. A board.json
+// that will not parse is null even beside a folder: a save from the screen is based on this look, and
+// one based on the folder alone would remove that file, the only copy of the cards it holds.
 export function peekBoard(projectPath: string): Board | null {
   try {
-    const { board } = readStoredBoard(projectPath, false);
-    return board === null ? null : withManagerColumns(projectPath, board);
+    const { board, brokenFiles } = readStoredBoard(projectPath, false);
+    if (board === null || brokenFiles.includes(boardPath(projectPath))) return null;
+    return withManagerColumns(projectPath, board);
   } catch {
     return null;
   }
 }
 
 // Null for the board when there is none at all. Without `salvage`, a board.json that will not parse
-// throws instead of being moved aside.
+// is left where it is and named in brokenFiles instead of being moved aside.
 function readStoredBoard(projectPath: string, salvage: boolean): { board: Board | null; brokenFiles: string[] } {
   const legacy = readBoardFile(projectPath, salvage);
   const stored = readBoardFolder(boardFolderPath(projectPath), salvage);
@@ -450,8 +459,8 @@ function readBoardFile(projectPath: string, salvage: boolean): { board: Board | 
   if (text === null) return { board: null, brokenFiles: [] };
   try {
     return { board: parseBoard(text), brokenFiles: [] };
-  } catch (error: unknown) {
-    if (!salvage) throw error;
+  } catch {
+    if (!salvage) return { board: null, brokenFiles: [filePath] };
     const brokenFile = brokenBoardPath(projectPath);
     // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
     // the header is about and goes out the same door.
@@ -502,14 +511,14 @@ export function writeBoard(projectPath: string, board: Board): string {
 // `board` command that moves its cards, and that command refuses to run in the home directory — an
 // agent reading them there would be told how to do something it cannot. The folder is still made, so
 // the watch main starts after this read has something to watch.
-export function openBoard(projectPath: string): BoardRead {
+export function openBoard(projectPath: string, salvage = true): BoardRead {
   try {
     if (isManagerPath(projectPath)) mkdirSync(dirname(boardPath(projectPath)), { recursive: true });
     else seedBoardDirectory(projectPath);
   } catch {
     // No explanation files this time.
   }
-  return readBoard(projectPath);
+  return readBoard(projectPath, salvage);
 }
 
 // Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md

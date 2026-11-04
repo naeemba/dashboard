@@ -172,6 +172,28 @@ describe('the folder', () => {
     expect(readFileSync(join(cardsFolder(path), 'not-an-object.json'), 'utf8')).toBe('[]');
   });
 
+  // The read a committed write makes. A rename would leave the second read clean and the tracked file
+  // gone, so `git add -A` after the next write would commit the card as deleted.
+  it('leaves a board file that does not parse in place on a read without salvage, and names it on every one', () => {
+    const path = project();
+    writeBoard(path, startingBoard());
+    writeFileSync(join(cardsFolder(path), 'broken.json'), '{ "id": "broken", }');
+    for (let read = 0; read < 2; read += 1) {
+      expect(readBoard(path, false).brokenFiles).toEqual([join(cardsFolder(path), 'broken.json')]);
+    }
+    expect(readdirSync(cardsFolder(path)).filter((name) => name.startsWith('broken'))).toEqual(['broken.json']);
+  });
+
+  it('names a board.json that does not parse on a read without salvage, and a look still finds no board', () => {
+    const path = project();
+    writeBoard(path, startingBoard());
+    writeFileSync(join(path, BOARD_FILE_PATH), '{ not json');
+    for (let read = 0; read < 2; read += 1) {
+      expect(readBoard(path, false).brokenFiles).toEqual([join(path, BOARD_FILE_PATH)]);
+    }
+    expect(peekBoard(path)).toBeNull();
+  });
+
   it('keeps every damaged copy of a card that breaks twice, and names every file it sets aside', () => {
     const path = project();
     writeBoard(path, startingBoard());

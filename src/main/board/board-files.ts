@@ -24,7 +24,7 @@ export const BROKEN_SUFFIX = '.broken';
 
 // What the folder holds, before board-store.ts decides what any of it means. `text` is every byte that
 // was read, for the ids a card written without one is given — the same for the same files. brokenFiles
-// is every file this read set aside, where it now is.
+// is every file that did not parse: where this read set it aside, or, without salvage, where it still is.
 export type StoredBoard = {
   columns: unknown;
   cards: Record<string, unknown>[];
@@ -72,7 +72,10 @@ export function isCardSetAside(folder: string, id: string): boolean {
 //
 // A file that will not parse is the same as a board.json that will not parse, one card's worth: with
 // `salvage` it is moved aside under `.broken` so the next write cannot replace it, and brokenFiles says
-// where. Without, it is skipped and left where it is, for a look that must not change anything.
+// where. Without, it is skipped and left where it is, for a look that must not change anything and for
+// a write that gets committed, and brokenFiles names it there. Every read without salvage names it
+// again, which is what a writer refusing on it needs: a rename would leave the next read clean and the
+// tracked file gone, and `git add -A` would commit the card as deleted.
 export function readBoardFolder(folder: string, salvage: boolean): StoredBoard | null {
   const cardsFolder = join(folder, CARDS_FOLDER);
   const names = cardFileNames(cardsFolder);
@@ -80,7 +83,10 @@ export function readBoardFolder(folder: string, salvage: boolean): StoredBoard |
   if (columnsText === null && names.length === 0) return null;
   const brokenFiles: string[] = [];
   function setAside(file: string): void {
-    if (!salvage) return;
+    if (!salvage) {
+      brokenFiles.push(file);
+      return;
+    }
     const target = setAsidePath(file);
     renameSync(file, target);
     brokenFiles.push(target);
