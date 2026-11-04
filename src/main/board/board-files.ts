@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { orMissing, readText } from '../app/missing-file';
 import { replaceFile } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import type { Column } from '../../shared/board/board';
@@ -22,12 +23,13 @@ const CARD_SUFFIX = '.json';
 export const BROKEN_SUFFIX = '.broken';
 
 // What the folder holds, before board-store.ts decides what any of it means. `text` is every byte that
-// was read, for the ids a card written without one is given — the same for the same files.
+// was read, for the ids a card written without one is given — the same for the same files. brokenFiles
+// is every file this read set aside, where it now is.
 export type StoredBoard = {
   columns: unknown;
   cards: Record<string, unknown>[];
   text: string;
-  brokenFile: string | null;
+  brokenFiles: string[];
 };
 
 // The id goes through encodeURIComponent, so a hand-written id with a `/` in it names a file in this
@@ -36,49 +38,52 @@ function cardFileName(id: string): string {
   return `${encodeURIComponent(id)}${CARD_SUFFIX}`;
 }
 
-// A missing file is null; every other failure is thrown, for the reason board-store.ts's readBoard gives.
-export function readText(file: string): string | null {
-  try {
-    return readFileSync(file, 'utf8');
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  }
-}
-
 // The card files, in name order so a snapshot of the same files is the same string. Only `.json`: the
 // temporary file replaceFile writes beside each one, and a `.broken` one set aside, are not cards.
 function cardFileNames(cardsFolder: string): string[] {
-  try {
-    return readdirSync(cardsFolder).filter((name) => name.endsWith(CARD_SUFFIX)).sort();
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
-    throw error;
-  }
+  return (orMissing(() => readdirSync(cardsFolder)) ?? []).filter((name) => name.endsWith(CARD_SUFFIX)).sort();
 }
 
 // A card file read back: the record, with the id the file name carries when the file has none of its own.
-function storedCard(name: string, text: string): Record<string, unknown> | null {
+// Throws for a file that is not one — not JSON, or JSON that is not an object — so a reader sets it aside
+// and a writer leaves it where it is, both for the same files.
+function storedCard(name: string, text: string): Record<string, unknown> {
   const value: unknown = JSON.parse(text);
-  if (!isRecord(value)) return null;
+  if (!isRecord(value)) throw new Error(`${name} is not a card`);
   return typeof value.id === 'string' ? value : { ...value, id: decodeURIComponent(name.slice(0, -CARD_SUFFIX.length)) };
+}
+
+// Where a file is set aside: `<file>.broken`, or `<file>.2.broken` and on when that is taken, so a card
+// that breaks twice keeps both damaged copies. The first copy always has the plain name, which is what
+// isCardSetAside looks for.
+function setAsidePath(file: string): string {
+  let candidate = `${file}${BROKEN_SUFFIX}`;
+  for (let count = 2; existsSync(candidate); count += 1) candidate = `${file}.${count}${BROKEN_SUFFIX}`;
+  return candidate;
+}
+
+// Whether this card's file has been set aside: the card is off the board because its file broke, not
+// because anybody deleted it, and putting the file back brings it back.
+export function isCardSetAside(folder: string, id: string): boolean {
+  return existsSync(join(folder, CARDS_FOLDER, `${cardFileName(id)}${BROKEN_SUFFIX}`));
 }
 
 // Null when the folder holds no board: a project still on board.json, or with no board at all.
 //
 // A file that will not parse is the same as a board.json that will not parse, one card's worth: with
-// `salvage` it is moved aside under `.broken` so the next write cannot replace it, and brokenFile says
+// `salvage` it is moved aside under `.broken` so the next write cannot replace it, and brokenFiles says
 // where. Without, it is skipped and left where it is, for a look that must not change anything.
 export function readBoardFolder(folder: string, salvage: boolean): StoredBoard | null {
   const cardsFolder = join(folder, CARDS_FOLDER);
   const names = cardFileNames(cardsFolder);
   const columnsText = readText(join(folder, COLUMNS_FILE));
   if (columnsText === null && names.length === 0) return null;
-  let brokenFile: string | null = null;
+  const brokenFiles: string[] = [];
   function setAside(file: string): void {
     if (!salvage) return;
-    renameSync(file, `${file}${BROKEN_SUFFIX}`);
-    brokenFile ??= `${file}${BROKEN_SUFFIX}`;
+    const target = setAsidePath(file);
+    renameSync(file, target);
+    brokenFiles.push(target);
   }
 
   let columns: unknown = null;
@@ -96,13 +101,12 @@ export function readBoardFolder(folder: string, salvage: boolean): StoredBoard |
     if (cardText === null) continue;
     text += `\0${name}\0${cardText}`;
     try {
-      const card = storedCard(name, cardText);
-      if (card) cards.push(card);
+      cards.push(storedCard(name, cardText));
     } catch {
       setAside(join(cardsFolder, name));
     }
   }
-  return { columns, cards, text, brokenFile };
+  return { columns, cards, text, brokenFiles };
 }
 
 // What the folder holds, as one string, for the watcher to compare against what the app last wrote.
@@ -122,17 +126,23 @@ export function boardFolderSnapshot(folder: string): string | null {
 // Writes only the files whose bytes change, then removes the cards that are gone. In that order, so a
 // write that stops part way leaves every card on disk at least once — twice at worst, never not at all.
 // Answers with the snapshot of what the folder now holds.
+//
+// Only a file that read back as a card is removed. One that does not parse is not on the board this
+// write was handed, because peekBoard skipped it, and that absence is not a deletion: removing it would
+// take the card and its bytes both, with nothing set aside and nothing said.
 export function writeBoardFolder(folder: string, columns: readonly Column[]): string {
   const cardsFolder = join(folder, CARDS_FOLDER);
   const onDisk = new Map<string, string>();
   const previous = new Map<string, { column: unknown; order: unknown }>();
+  const removable = new Set<string>();
   for (const name of cardFileNames(cardsFolder)) {
     const text = readText(join(cardsFolder, name));
     if (text === null) continue;
     onDisk.set(name, text);
     try {
       const card = storedCard(name, text);
-      if (card) previous.set(card.id as string, { column: card.column, order: card.order });
+      previous.set(card.id as string, { column: card.column, order: card.order });
+      removable.add(name);
     } catch {
       // A file that does not parse has no place to keep; the card it was is rewritten below if it is on the board.
     }
@@ -155,7 +165,7 @@ export function writeBoardFolder(folder: string, columns: readonly Column[]): st
   const columnsText = `${JSON.stringify({ columns: columns.map((column) => column.name) }, null, 2)}\n`;
   const columnsFile = join(folder, COLUMNS_FILE);
   if (readText(columnsFile) !== columnsText) replaceFile(columnsFile, columnsText);
-  for (const name of onDisk.keys()) {
+  for (const name of removable) {
     if (!wanted.has(name)) rmSync(join(cardsFolder, name), { force: true });
   }
   return snapshotOf(columnsText, [...wanted].sort(([first], [second]) => (first < second ? -1 : first > second ? 1 : 0))) ?? '';

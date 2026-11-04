@@ -63,9 +63,10 @@ export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionA
 // The conversations /resume offers, newest first, and the one this page is on.
 export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
 
-// What readBoard hands back. brokenFile is the path a damaged board file — board.json, or one card's
-// file — was moved to, or null when nothing needed salvaging, including the ordinary case of no board yet.
-export type BoardRead = { board: Board; brokenFile: string | null };
+// What readBoard hands back. brokenFiles is every path a damaged board file — board.json, or one card's
+// file — was moved to by this read, and empty when nothing needed salvaging, including the ordinary case
+// of no board yet.
+export type BoardRead = { board: Board; brokenFiles: string[] };
 
 // What a hand-over answers: whether the file is in front of you, and what the status bar says.
 export type Handover = { ok: boolean; message: string };

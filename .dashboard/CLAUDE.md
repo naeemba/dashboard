@@ -31,7 +31,8 @@ A card's file:
 A project the app has not written to since this layout arrived still has the older `board.json`
 here instead — the whole board in one file, `{ "columns": [{ "name": "Todo", "cards": [...] }] }`.
 It is read the same, and the next write moves every card into `board/` and removes it. Commit the
-two together: `git add -A -- '.dashboard/board*'` takes in both.
+two together: `git add -A -- '.dashboard/board*' ':(exclude).dashboard/board*.broken' ':(exclude).dashboard/board*.tmp'` takes in both,
+and leaves out a `.broken` file set aside and a write's temporary file.
 
 - `columns` in `columns.json` is ordered. The first column is the leftmost on screen. A card naming
   a column the list does not have gets that column, after the listed ones.

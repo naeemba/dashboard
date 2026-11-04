@@ -32,8 +32,12 @@ export type ShipPorts = {
 // card already in Ship stages nothing, and `git commit` with nothing to commit exits 1, which would
 // fail the ship in git's own words with the branch and the folder already made. Nothing staged also
 // covers the card never having been on the base branch's board at all.
+//
+// A read that set a file aside writes nothing. That card is off the board it read, so the write and the
+// `git add -A` after it would commit the card as deleted under a ship message.
 async function commitShipMove(entry: WorktreeEntry): Promise<void> {
-  const board = readBoard(entry.worktreePath).board;
+  const { board, brokenFiles } = readBoard(entry.worktreePath);
+  if (brokenFiles.length > 0) return;
   const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
   if (!moved) return;
   writeBoard(entry.worktreePath, moved);

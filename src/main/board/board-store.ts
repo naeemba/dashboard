@@ -5,10 +5,12 @@ import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
-import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, readText, writeBoardFolder, type StoredBoard } from './board-files';
+import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
+import { readText } from '../app/missing-file';
 import { replaceFile, TEMPORARY_SUFFIX } from '../app/replace-file';
+import { posixQuoted } from '../../shared/panes/shell';
 import { isRecord } from '../../shared/app/is-record';
 import {
   BACKLOG_COLUMN,
@@ -91,7 +93,8 @@ A card's file:
 A project the app has not written to since this layout arrived still has the older \`board.json\`
 here instead — the whole board in one file, \`{ "columns": [{ "name": "Todo", "cards": [...] }] }\`.
 It is read the same, and the next write moves every card into \`board/\` and removes it. Commit the
-two together: \`git add -A -- '.dashboard/board*'\` takes in both.
+two together: \`git add -A -- ${BOARD_PATHSPECS.map(posixQuoted).join(' ')}\` takes in both,
+and leaves out a \`.broken\` file set aside and a write's temporary file.
 
 - \`columns\` in \`columns.json\` is ordered. The first column is the leftmost on screen. A card naming
   a column the list does not have gets that column, after the listed ones.
@@ -434,26 +437,26 @@ export function peekBoard(projectPath: string): Board | null {
 
 // Null for the board when there is none at all. Without `salvage`, a board.json that will not parse
 // throws instead of being moved aside.
-function readStoredBoard(projectPath: string, salvage: boolean): { board: Board | null; brokenFile: string | null } {
+function readStoredBoard(projectPath: string, salvage: boolean): { board: Board | null; brokenFiles: string[] } {
   const legacy = readBoardFile(projectPath, salvage);
   const stored = readBoardFolder(boardFolderPath(projectPath), salvage);
   if (stored === null) return legacy;
-  return { board: folderBoard(stored, legacy.board), brokenFile: legacy.brokenFile ?? stored.brokenFile };
+  return { board: folderBoard(stored, legacy.board), brokenFiles: [...legacy.brokenFiles, ...stored.brokenFiles] };
 }
 
-function readBoardFile(projectPath: string, salvage: boolean): { board: Board | null; brokenFile: string | null } {
+function readBoardFile(projectPath: string, salvage: boolean): { board: Board | null; brokenFiles: string[] } {
   const filePath = boardPath(projectPath);
   const text = readText(filePath);
-  if (text === null) return { board: null, brokenFile: null };
+  if (text === null) return { board: null, brokenFiles: [] };
   try {
-    return { board: parseBoard(text), brokenFile: null };
+    return { board: parseBoard(text), brokenFiles: [] };
   } catch (error: unknown) {
     if (!salvage) throw error;
     const brokenFile = brokenBoardPath(projectPath);
     // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
     // the header is about and goes out the same door.
     renameSync(filePath, brokenFile);
-    return { board: emptyBoard(), brokenFile };
+    return { board: emptyBoard(), brokenFiles: [brokenFile] };
   }
 }
 

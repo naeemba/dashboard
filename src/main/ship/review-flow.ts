@@ -1,4 +1,5 @@
-import { peekBoard, readBoard } from '../board/board-store';
+import { boardFolderPath, peekBoard, readBoard } from '../board/board-store';
+import { isCardSetAside } from '../board/board-files';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
@@ -226,21 +227,23 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       return;
     }
     // Neither answer: no board to read, or a board with no row for this card — the card was deleted after
-    // its review, or a board.json that would not parse was moved aside and the empty one that replaced it
-    // has lost every card at once. Nothing is touched either way, because the one thing the sweep can say
-    // about a card it cannot find is written on that card.
+    // its review, or its file would not parse and was set aside as `<id>.json.broken`, or a board.json
+    // that would not parse was moved aside and the empty one that replaced it has lost every card at
+    // once. Nothing is touched either way, because the one thing the sweep can say about a card it
+    // cannot find is written on that card.
     //
     // Whether it is marked is the difference between those two. A deleted card is never coming back with
     // that id and its worktree stays on disk — only a card seen past Review has it removed — so leaving it
     // unmarked costs two board reads every five seconds for the rest of the run, which is the cost the
-    // branch above marks to avoid. A board that was moved aside is the opposite: restore it from git and
-    // every card is back, and a sweep that marked them all in between would start no review again until
-    // you restarted, with nothing on screen saying why. An empty board is that case, so a board with
-    // cards on it that does not have this one is the deletion, and only that one is marked.
+    // branch above marks to avoid. A file that was set aside is the opposite: restore it from git and the
+    // card is back, and a sweep that marked it in between would start no review again until you
+    // restarted, with nothing on screen saying why. An empty board is a whole board.json moved aside, and
+    // a card whose own file sits beside the cards under `.broken` is one card set aside, so only a board
+    // with cards on it that lacks this one, with no set-aside file of its own, is the deletion and marked.
     //
     // What that costs, and it is a real card: the same id can come back. `d` deletes and `u` puts the
-    // board back with the card exactly as it was, and `git checkout .dashboard/board.json` undoes a
-    // `board` command that dropped one card off a board that still has others. Either is the deletion
+    // board back with the card exactly as it was, and `git checkout .dashboard/board` undoes a `board`
+    // command that dropped one card off a board that still has others. Either is the deletion
     // as far as this line is concerned, and one tick — five seconds — is all it takes to land in
     // between. The card is then back in Ship reading `shipped · fix-login · terminal 3`, with its
     // worktree still on disk and its pull request number still on the branch's board, and no review
@@ -249,7 +252,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // no cheap version of this that covers it. If it becomes worth more than this paragraph, `forget`
     // is already exported and `board:change` already fires in main for every open project's folder.
     if (awaits === null) {
-      if (board !== null && allCards(board).length > 0) reviewed.add(entry.cardId);
+      const deleted = board !== null && allCards(board).length > 0 && !isCardSetAside(boardFolderPath(entry.projectPath), entry.cardId);
+      if (deleted) reviewed.add(entry.cardId);
       return;
     }
     // A review already running for it. Asked here rather than first, so the card reaching Done is

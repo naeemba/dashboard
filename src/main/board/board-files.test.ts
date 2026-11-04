@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { addCard, allCards, emptyBoard, moveCardById, type Board } from '../../shared/board/board';
-import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, BOARD_PATHSPECS, boardSnapshot, peekBoard, readBoard, writeBoard } from './board-store';
+import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, BOARD_PATHSPECS, boardFolderPath, boardSnapshot, peekBoard, readBoard, writeBoard } from './board-store';
+import { isCardSetAside } from './board-files';
 import { git, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
 
 // The board kept one file per card: the move off board.json, and the merges it exists for.
@@ -154,8 +155,35 @@ describe('the folder', () => {
     expect(existsSync(join(cardsFolder(path), 'broken.json'))).toBe(true);
 
     const read = readBoard(path);
-    expect(read.brokenFile).toBe(join(cardsFolder(path), 'broken.json.broken'));
+    expect(read.brokenFiles).toEqual([join(cardsFolder(path), 'broken.json.broken')]);
     expect(allCards(read.board)).toHaveLength(5);
+  });
+
+  // A save from the screen is based on a look, which skipped the bad file: its absence there is not a deletion.
+  it('keeps a card file that does not parse, or is not an object, through a save after a look', () => {
+    const path = project();
+    writeBoard(path, startingBoard());
+    writeFileSync(join(cardsFolder(path), 'trailing-comma.json'), '{ "id": "trailing-comma", "title": "B", }');
+    writeFileSync(join(cardsFolder(path), 'not-an-object.json'), '[]');
+
+    const looked = peekBoard(path) ?? emptyBoard();
+    writeBoard(path, withCard(looked, 1, 'new'));
+    expect(readFileSync(join(cardsFolder(path), 'trailing-comma.json'), 'utf8')).toBe('{ "id": "trailing-comma", "title": "B", }');
+    expect(readFileSync(join(cardsFolder(path), 'not-an-object.json'), 'utf8')).toBe('[]');
+  });
+
+  it('keeps every damaged copy of a card that breaks twice, and names every file it sets aside', () => {
+    const path = project();
+    writeBoard(path, startingBoard());
+    writeFileSync(join(cardsFolder(path), 'twice.json'), '{ first');
+    writeFileSync(join(cardsFolder(path), 'other.json'), 'null');
+    expect(readBoard(path).brokenFiles).toEqual([join(cardsFolder(path), 'other.json.broken'), join(cardsFolder(path), 'twice.json.broken')]);
+    expect(isCardSetAside(boardFolderPath(path), 'twice')).toBe(true);
+
+    writeFileSync(join(cardsFolder(path), 'twice.json'), '{ second');
+    expect(readBoard(path).brokenFiles).toEqual([join(cardsFolder(path), 'twice.json.2.broken')]);
+    expect(readFileSync(join(cardsFolder(path), 'twice.json.broken'), 'utf8')).toBe('{ first');
+    expect(readFileSync(join(cardsFolder(path), 'twice.json.2.broken'), 'utf8')).toBe('{ second');
   });
 
   it('puts a hand-written card that names no column in Backlog', () => {

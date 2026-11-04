@@ -215,6 +215,8 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs, then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
 - Given the default branch has no board, neither `.dashboard/board/` nor `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
 - Given a project still on `.dashboard/board.json`, when the board is first written, then every card is in its own file under `.dashboard/board/cards/`, `board.json` is gone, and the board reads back the same (`board-files.test.ts`, on a copy of this repository's own board).
+- Given a card file that does not parse, or parses to something that is not an object, when the board saves a change it read with a look, then that file is still there with its bytes; when the board next reads, it is set aside as `<id>.json.broken` (`<id>.json.2.broken` if that name is taken) and every file set aside is named (`board-files.test.ts`).
+- Given a read that set a card file aside, when the `board` command or a ship's Ship move would write, then nothing is written or committed, and the review sweep does not mark that card as deleted.
 - Given two branches that each add a card, or each move a different card, when both merge, then git merges them with no conflict (`board-files.test.ts`, with real merges).
 - Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then none is rewritten.
 - Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and runs as a command, its bytes not rewritten.

@@ -35,8 +35,9 @@ export function intoReview(board: Board, cardId: string): Board | null {
 // Null is the third answer, for a card this board does not mention, and it means "I cannot say" rather
 // than "review it". Such a card cannot be one made on the branch: every worktree the sweep walks was cut
 // from a card sitting on the project's board. It is a card that has left the board since — you deleted
-// it once the review was done, or readBoard found a board.json it could not parse, moved it aside and
-// handed back an empty board, which loses every card at once. Answer "review it" there and the first
+// it once the review was done, or readBoard found its card file would not parse and set it aside, or
+// found a board.json it could not parse, moved it aside and handed back an empty board, which loses
+// every card at once. Answer "review it" there and the first
 // tick re-cuts the worktree and runs /pr-loop at a pull request that merged last week, with no card left
 // anywhere to say so on. The sweep leaves a board it cannot open alone, and this is the same silence.
 //

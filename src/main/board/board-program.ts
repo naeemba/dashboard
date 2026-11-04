@@ -20,9 +20,12 @@ function run(words: readonly string[]): number {
   }
   const { project, commandArguments } = target;
   const read = openBoard(project);
-  if (read.brokenFile !== null) {
-    // The same salvage the app does, said out loud. Silence here would look like an empty board.
-    process.stderr.write(`board.json was damaged and has been kept as ${read.brokenFile}\n`);
+  if (read.brokenFiles.length > 0) {
+    // The same salvage the app does, said out loud, and nothing written after it. A write now would
+    // leave the card a set-aside file held out of the board, and the next `git add -A` would commit
+    // that card as deleted.
+    process.stderr.write(`board files that did not parse were set aside, nothing was written: ${read.brokenFiles.join(', ')}\n`);
+    return 1;
   }
 
   // Run against the board as it stands a moment before the write, not the one opened above:

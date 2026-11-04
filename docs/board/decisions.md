@@ -39,6 +39,10 @@ the merge is clean for every card neither changed and an add/add conflict on a
 card both changed. Moving main first — the app's own write of the board on
 screen — is what avoids it. A branch cut before main moved that still edits
 `board.json` meets main's removal of it as a modify/delete conflict, once.
-Either answer loses nothing: keep the branch's `board.json` and the read adds
-any card only it has, or drop it (`git rm .dashboard/board.json`) and redo that
-branch's card move with the `board` command.
+Neither answer keeps the branch's edits to a card main already has: the read
+takes the folder's copy of any card both hold, and the next write removes
+`board.json` with those edits in it. Keeping the branch's `board.json` keeps
+only the cards new on the branch; dropping it (`git rm .dashboard/board.json`)
+keeps none of them. Either way, redo the branch's moves with the `board`
+command — a card the branch moved to Review in `board.json` reads back in
+whatever column main's folder has it.
