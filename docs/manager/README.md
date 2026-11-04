@@ -86,7 +86,9 @@ and the Projects screen, docs/projects/README.md, says both.
 ### The manager's sections
 
 The manager is five screens with one strip of names above them. The previous and
-next section keys walk it, from any of the five. The arrows are deliberately not
+next section keys walk it, from any of the five, and a click on a name goes
+there. The names take no keyboard focus: Tab skips them, and a click leaves the
+keyboard on the section it lands on. The arrows are deliberately not
 those keys: on the board they move between cards, and in the notes they move the
 caret. Above the strip, four cards show the date and weather, Bitcoin, Tether in
 toman and gold, each read again every half hour. The refresh key reads all four
