@@ -42,7 +42,7 @@ const config: ForgeConfig = {
     // Every *-cli-entry.js (board, session, dashboard) and pane-host-entry.js is unpacked for a different reason: they are run by
     // `node`, not by Electron, and node cannot read a file inside an asar. main.ts points agents at the
     // unpacked copies. create-task-cli-entry.js is never run from the bundle: main copies it to
-    // ~/.claude, and it is unpacked only because main finds it beside boardCommand. Every *-worker.js is unpacked because a worker thread is started from a path on
+    // ~/.claude, and it is unpacked only because main finds it in the unpacked build folder. Every *-worker.js is unpacked because a worker thread is started from a path on
     // disk; usage-thread.ts points at the unpacked copy.
     asar: { unpack: '{**/node_modules/node-pty/**,**/node_modules/@anthropic-ai/claude-agent-sdk-*/**,**/.vite/build/*-cli-entry.js,**/.vite/build/pane-host-entry.js,**/.vite/build/*-worker.js}' },
     // Re-sign the bundle. A packaged app otherwise keeps the prebuilt Electron binary's signature,

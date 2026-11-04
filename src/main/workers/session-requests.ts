@@ -265,11 +265,16 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       }
       return answered('');
     }
-    const slot = askingSlot(command, ports.slotOf(request.directory));
+    const folderSlot = ports.slotOf(request.directory);
+    const slot = askingSlot(command, folderSlot);
     // From outside every project only words that name their target are answered: a claim --project
     // opens its worker in the named project, which is then its asker, and list --all lists every one.
+    // There a pane id whose page is not open is the id's fault, not the folder's.
     const projectPath = ports.projectPath(slot);
-    if (slot === -1 ? !namesItsTarget(command) : projectPath === undefined) return refused(`${request.directory} is not in a project open in Dashboard`);
+    if (slot === -1 ? !namesItsTarget(command) : projectPath === undefined) {
+      const blamed = folderSlot === -1 && 'id' in command ? command.id : request.directory;
+      return refused(`${blamed} is not in a project open in Dashboard`);
+    }
     try {
       switch (command.kind) {
         case 'claim': return claim(slot, command.project);

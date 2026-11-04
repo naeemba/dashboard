@@ -1,8 +1,9 @@
+import { existsSync } from 'node:fs';
 import { runBoardProgram } from '../board/board-program';
 import { runProjectProgram } from '../projects/project-program';
 import { runSessionProgram } from '../workers/session-program';
 import { routeDashboardCommand } from './dashboard-cli';
-import { appStarter } from './start-app';
+import { appStarter, appStartRefusal } from './start-app';
 
 // The file DASHBOARD_COMMAND names and the `dashboard` launcher runs: `dashboard <noun> <verb> ...`.
 // Which noun is dashboard-cli.ts's decision; this only runs the program it names.
@@ -18,7 +19,7 @@ async function run(): Promise<number> {
     case 'app': {
       const start = appStarter(process.env);
       if (start === null) {
-        process.stderr.write('DASHBOARD_APP is not set, so this command does not know where the app is — run the `dashboard` launcher rebuild.sh installs\n');
+        process.stderr.write(`${appStartRefusal(process.env.DASHBOARD_APP, existsSync)}\n`);
         return 1;
       }
       start(route.appArguments);

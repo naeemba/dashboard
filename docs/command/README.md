@@ -27,6 +27,12 @@ they start the app detached and wait up to 30 seconds for it to write that file
 and answer, then ask; past that they say so and exit 1. `pane notify`, which a
 worker's hook sends, never starts it (command-decision-2).
 
+The app starts in the home folder, with the caller's environment minus its
+Claude session (`CLAUDECODE`, `CLAUDE_PID`, every `CLAUDE_CODE_*`) and the pane
+variables (`DASHBOARD_*`): every pane inherits the app's environment, and a
+session started with another session's id is not saved. Bare `dashboard` with a
+`DASHBOARD_APP` that is gone says so and exits 1.
+
 `board`, `project list`, `find` and `init` work on files and never start it:
 the app already watches each project's `.dashboard` folder. Quitting,
 restarting or replacing the app is never the command's.
@@ -103,7 +109,7 @@ Folders: `src/main/command/`.
 
 - Which noun, and the usage: `dashboard-cli.ts`, `dashboard-cli.test.ts`
 - The program: `dashboard-cli-entry.ts`, built by `vite.dashboard-cli.config.ts`
-- Which socket, and starting the app when none answers: `reach-app.ts`, `reach-app.test.ts`, `start-app.ts`
+- Which socket, and starting the app when none answers: `reach-app.ts`, `reach-app.test.ts`, `start-app.ts`, `start-app.test.ts`
 - Where the app says its socket is: `app-address.ts`, `app-address.test.ts`
 - What every pane is handed to reach the app: `pane-environment.ts`, `pane-environment.test.ts`
 - The launcher: `scripts/rebuild.sh`
@@ -120,6 +126,8 @@ Folders: `src/main/command/`.
 - Given a plain terminal in `~/Downloads`, when `dashboard board list` runs, then it is refused naming `--project`, and `dashboard board list --project crm` prints crm's board.
 - Given a plain terminal, when `dashboard pane claim` runs, then it is refused naming `--project`.
 - Given a worker's hook whose app has quit, when it runs `pane notify <id> done`, then it says no Dashboard is running and nothing starts.
+- Given a projects.yaml with a broken entry and a project open, when `dashboard project list` runs, then the file's error prints and it exits 1.
+- Given a plain terminal, when `dashboard pane send 9:1 hi` runs and page 9 is not open, then it is refused naming `9:1`, not the folder.
 - Given `dashboard --help` or `dashboard pane --help`, when it runs, then the usage prints and it exits 0.
 
 ## Adding to it

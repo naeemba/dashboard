@@ -57,7 +57,9 @@ export function runProjectCommand(commandArguments: readonly string[], text: str
   }
 
   const listed = projectsListed(text, filePath);
-  if (verb === 'list') return projectList(listed, knownFolders()?.open ?? [], home, filePath);
+  // An absent file still leaves the open projects to list; a broken one is refused, or every project
+  // in it would vanish and the open ones would read as not in the file.
+  if (verb === 'list') return text !== null && !listed.ok ? listed : projectList(listed, knownFolders()?.open ?? [], home, filePath);
   if (!listed.ok) return listed;
 
   const projects = findProjects(listed.projects, word);
@@ -84,8 +86,8 @@ function projectInit(words: readonly string[], text: string | null, knownFolders
 }
 
 // `project list`: the file's projects, each marked open when the app had it open at its last save, then
-// the open ones the file does not list, under their folder's name. Only the file is refused for: with
-// a project open, an absent or broken file still leaves something to list.
+// the open ones the file does not list, under their folder's name. With a project open, an absent file
+// still leaves something to list.
 function projectList(listed: ReturnType<typeof projectsListed>, open: readonly string[], home: string, filePath: string): ProjectAnswer {
   const fileProjects = (listed.ok ? listed.projects : []).map((project) => ({ project, folder: wholePath(project.path, home) }));
   const listedPaths = new Set(fileProjects.map(({ folder }) => folder));

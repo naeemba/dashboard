@@ -97,6 +97,7 @@ describe('sessionRequests', () => {
     expect(typed).toEqual(['2:1 y']);
     expect((await outside(['list', '--all'])).output).toContain('api\t2:1');
     expect(await outside(['release', '2:1'])).toMatchObject({ ok: true });
+    expect(await outside(['send', '9:1', 'hi'])).toEqual({ ok: false, output: '9:1 is not in a project open in Dashboard' });
   });
 
   it('runs a worker in the project with its prompt as the argument', async () => {

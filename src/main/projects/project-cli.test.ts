@@ -34,6 +34,7 @@ describe('runProjectCommand', () => {
       output: 'new-crm (aka crm)\n  path: /crm\n  open\n\nscreensaver (aka mandala)\n  path: /screensaver\n\nnotes\n  path: /home/me/notes\n  open, not in projects.yaml',
     });
     expect(run(['list'], null, open)).toMatchObject({ ok: true, output: expect.stringContaining('notes\n  path: /home/me/notes') });
+    expect(run(['list'], '- name: a\n', open)).toEqual({ ok: false, message: 'projects.yaml:1: project a has no path' });
   });
 
   it('says when the file is missing, empty or broken', () => {
