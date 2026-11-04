@@ -138,6 +138,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given a worker pane running a job, when the app quits, crashes or is updated and opens again, then the pane comes back with the same shell, its screen and the job still running.
 - Given Windows, when the app quits and opens again, then every pane comes back the same as on a mac or Linux.
 - Given another user on the same Windows machine, when they open the pane host's pipe, then they hear no screen and the app keeps its panes.
+- Given another user on the same Windows machine, when they try to sit on the pane host's pipe before it starts, then they cannot name it, since the name holds a token only the user data has.
 - Given a pane the pane host kept, when its project is closed or the pane is closed, then its shell is killed.
 - Given no `node` on the login shell's PATH (on Windows, the PATH), when the app starts, then the status bar says shells die with the app this run, and the panes work as before.
 - Given no pane host this run, when you close the window, then the quit question says every shell is killed.

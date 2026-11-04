@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
-import { chmodSync, mkdirSync, rmSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 // What the app and the pane host say to each other: one JSON message per line over a unix socket,
@@ -10,21 +10,41 @@ import path from 'node:path';
 // that would misread them. It starts a host of its own instead, and the old host's shells run on
 // unseen until they exit. Bump it with any change to the types below that an older host would misread.
 // A message type it has never heard of it drops (pane-host-server.ts's receive), so adding one, as
-// pause and resume were, keeps the running host and its shells: an older host just never pauses.
-const PROTOCOL_VERSION = 2;
+// pause, resume and hello were, keeps the running host and its shells: an older host just never pauses.
+// The bump is weighed against an older app too: one meeting a newer host that waits on a message it
+// never sends (hello) hangs at start until it is quit. That costs only a downgrade; a bump costs every
+// update the panes it was running.
+const PROTOCOL_VERSION = 1;
 
 // In a folder of its own, made private before the socket is: anyone who can reach the socket can type
 // into every shell. The user-data folder, not the temporary one, so a second Dashboard started with its
 // own --user-data-dir has a host of its own. One on the same user data (a development build beside the
 // installed app) reaches the same socket, and the host turns it away with `busy` while the first is
-// connected. Windows has no socket files: a named pipe stands in, as it does for sessionSocketPath,
-// named after a hash of the user-data folder, not the pid, so the next launch finds the same host.
-export function paneHostSocket(platform: string, userData: string): string {
-  if (platform === 'win32') {
-    const userDataHash = createHash('sha256').update(userData).digest('hex').slice(0, 16);
-    return `\\\\.\\pipe\\dashboard-panes-${PROTOCOL_VERSION}-${userDataHash}`;
-  }
+// connected. Windows has no socket files: a named pipe stands in, as it does for sessionSocketPath.
+// There the app is the one connecting, and any user of the machine can create a pipe of a name not
+// taken, so a name they could work out lets them answer as the host and hear every keystroke. The
+// name carries a token kept in the user data (pipeToken), which no other user can read, and the same
+// one every launch so the next launch finds the same host.
+export function paneHostSocket(platform: string, userData: string, token?: string): string {
+  if (platform === 'win32') return `\\\\.\\pipe\\dashboard-panes-${PROTOCOL_VERSION}-${token ?? pipeToken(userData)}`;
   return path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`);
+}
+
+const PIPE_TOKEN = /^[0-9a-f]{32}$/;
+
+// The secret in the pipe's name, made on the first launch. A file that is not a token is made again.
+function pipeToken(userData: string): string {
+  const file = path.join(userData, 'pane-host', 'pipe-token');
+  try {
+    const kept = readFileSync(file, 'utf8');
+    if (PIPE_TOKEN.test(kept)) return kept;
+  } catch {
+    // Not made yet.
+  }
+  const token = randomBytes(16).toString('hex');
+  mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  writeFileSync(file, token, { mode: 0o600 });
+  return token;
 }
 
 // What the host does before it listens: the socket's folder made private, and a file a host that
@@ -60,8 +80,8 @@ export type SpawnRequest = {
 };
 
 export type ToHost =
-  // The app's first line, before which the host says nothing (pane-host-server.ts's acceptApps). New in
-  // version 2: an app of version 1 says no hello and would wait on a version 2 host for good.
+  // The app's first line, before which the host says nothing (pane-host-server.ts's acceptApps). An
+  // older host drops it and answers anyway; an older app says none and waits on a newer host for good.
   | { type: 'hello' }
   | ({ type: 'spawn' } & SpawnRequest)
   | { type: 'write'; key: string; data: string }

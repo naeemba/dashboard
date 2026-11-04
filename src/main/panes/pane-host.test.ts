@@ -161,15 +161,28 @@ describe('hostLaunch', () => {
 });
 
 describe('paneHostSocket', () => {
-  it('is a named pipe on Windows, one per user-data folder', () => {
-    const socket = paneHostSocket('win32', 'C:\\Users\\a\\Dashboard');
-    expect(socket).toMatch(/^\\\\\.\\pipe\\dashboard-panes-2-[0-9a-f]{16}$/);
-    expect(paneHostSocket('win32', 'C:\\Users\\a\\Dashboard')).toBe(socket);
-    expect(paneHostSocket('win32', 'C:\\Users\\a\\Dashboard Dev')).not.toBe(socket);
+  it('is a named pipe on Windows, named after the token', () => {
+    expect(paneHostSocket('win32', 'C:\\Users\\a\\Dashboard', 'ab12')).toBe('\\\\.\\pipe\\dashboard-panes-1-ab12');
+  });
+
+  it('keeps one secret token per user-data folder, so no other user can work the pipe\'s name out', () => {
+    const first = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
+    const second = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
+    try {
+      const socket = paneHostSocket('win32', first);
+      expect(socket).toMatch(/^\\\\\.\\pipe\\dashboard-panes-1-[0-9a-f]{32}$/);
+      expect(paneHostSocket('win32', first)).toBe(socket);
+      expect(paneHostSocket('win32', second)).not.toBe(socket);
+      writeFileSync(path.join(first, 'pane-host', 'pipe-token'), '');
+      expect(paneHostSocket('win32', first)).toMatch(/[0-9a-f]{32}$/);
+    } finally {
+      rmSync(first, { recursive: true, force: true });
+      rmSync(second, { recursive: true, force: true });
+    }
   });
 
   it('is a socket file in a pane-host folder of the user data elsewhere', () => {
-    expect(paneHostSocket('linux', '/data')).toBe(path.join('/data', 'pane-host', 'panes-2.sock'));
+    expect(paneHostSocket('linux', '/data')).toBe(path.join('/data', 'pane-host', 'panes-1.sock'));
   });
 });
 
@@ -295,6 +308,23 @@ describe('paneHost over a socket', () => {
     expect(lost).toEqual([]);
     expect(overheard).toBe('');
     silent.destroy();
+    listener.close();
+  });
+
+  it('lets go of a connection whose first line is not hello, and passes nothing it said on', async () => {
+    const socketPath = hostSocket();
+    const { host, spawned } = server();
+    host.receive({ type: 'spawn', ...request(paneKey('/project', 2)) });
+    const listener = await listen(host, socketPath);
+    const stranger = net.connect(socketPath);
+    const closed = new Promise((resolve) => stranger.on('close', resolve));
+    stranger.on('error', () => undefined);
+    stranger.write(line({ type: 'write', key: paneKey('/project', 2), data: 'x' }));
+    await closed;
+    expect(spawned[0].written).toEqual([]);
+    const client = paneHost({ socket: socketPath, launch: () => undefined, lost: () => undefined });
+    await client.ready;
+    expect(client.adopt('/project')).toHaveLength(1);
     listener.close();
   });
 
