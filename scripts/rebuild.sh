@@ -15,12 +15,16 @@ case "$os" in
     name=Dashboard.app
     pattern='out/*/Dashboard.app'
     copy=ditto
+    executable=Contents/MacOS/Dashboard
+    resources=Contents/Resources
     ;;
   Linux)
     parent="$HOME/.local/opt"
     name=dashboard
     pattern='out/Dashboard-linux-*'
     copy='cp -a'
+    executable=Dashboard
+    resources=resources
     ;;
   *)
     echo "Stopped: no install location for $os."
@@ -48,4 +52,19 @@ if [ -d "$installed" ]; then mv "$installed" "$previous"; fi
 mv "$staged" "$installed"
 rm -rf "$previous"
 
-echo "Installed $installed. The running app is untouched — restart it when you are ready."
+# The `dashboard` command for any terminal: no words open the app, `dashboard <noun> ...` runs the
+# command entry under node (docs/command). Written beside and renamed over, never through: the old
+# launcher was a symlink to the app's executable, and writing through it would overwrite the app.
+# node, not the app's own binary as node: the RunAsNode fuse is off (forge.config.ts, command-decision-3).
+launcher="$HOME/.local/bin/dashboard"
+mkdir -p "$(dirname "$launcher")"
+cat > "$launcher.new" <<LAUNCHER
+#!/bin/sh
+# Written by the Dashboard's scripts/rebuild.sh; rebuilding writes it again.
+command -v node >/dev/null 2>&1 || { echo "dashboard: node is not on PATH, and the command runs under it" >&2; exit 1; }
+DASHBOARD_APP='$installed/$executable' exec node '$installed/$resources/app.asar.unpacked/.vite/build/dashboard-cli-entry.js' "\$@"
+LAUNCHER
+chmod 755 "$launcher.new"
+mv -f "$launcher.new" "$launcher"
+
+echo "Installed $installed and $launcher. The running app is untouched — restart it when you are ready."
