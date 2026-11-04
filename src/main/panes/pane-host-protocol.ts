@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -22,28 +22,69 @@ const PROTOCOL_VERSION = 1;
 // installed app) reaches the same socket, and the host turns it away with `busy` while the first is
 // connected. Windows has no socket files: a named pipe stands in, as it does for sessionSocketPath.
 // There the app is the one connecting, and any user of the machine can create a pipe of a name not
-// taken, so a name they could work out lets them answer as the host and hear every keystroke. The
-// name carries a token kept in the user data (pipeToken), which no other user can read, and the same
-// one every launch so the next launch finds the same host.
-export function paneHostSocket(platform: string, userData: string, token?: string): string {
-  if (platform === 'win32') return `\\\\.\\pipe\\dashboard-panes-${PROTOCOL_VERSION}-${token ?? pipeToken(userData)}`;
-  return path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`);
+// taken and answer as the host, hearing every keystroke. Any user can also list the pipes, so the name
+// is no secret: it is a hash of a token kept in the user data (pipeToken), which no other user can read,
+// and the host proves it holds that token (hostProof) before the app sends it anything but hello.
+// `token` is set only on Windows. Null when the token could not be read or made: no host this run.
+export type PaneHostAddress = { socket: string; token?: string };
+
+export function paneHostAddress(platform: string, userData: string): PaneHostAddress | null {
+  if (platform !== 'win32') return { socket: path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`) };
+  try {
+    const token = pipeToken(userData);
+    return { socket: pipeName(token), token };
+  } catch {
+    return null;
+  }
+}
+
+export function pipeName(token: string): string {
+  return `\\\\.\\pipe\\dashboard-panes-${PROTOCOL_VERSION}-${createHash('sha256').update(token).digest('hex').slice(0, 32)}`;
+}
+
+// What the host answers a hello's nonce with, which only a holder of the token can work out.
+export function hostProof(token: string, nonce: string): string {
+  return createHmac('sha256', token).update(nonce).digest('hex');
 }
 
 const PIPE_TOKEN = /^[0-9a-f]{32}$/;
 
-// The secret in the pipe's name, made on the first launch. A file that is not a token is made again.
+export function pipeTokenFile(userData: string): string {
+  return path.join(userData, 'pane-host', 'pipe-token');
+}
+
+// The token, made on the first launch and kept: a new one names a new pipe, and a host running on the
+// old name would be left running unseen while the app launched a second. So it is written only when
+// there is no file, or the file holds no token (no host can be on a name it never gave). A read that
+// fails any other way (a scan holding the file) is thrown, not taken for a missing file. Two launches
+// making it at once: the second finds the first's file and keeps it.
 function pipeToken(userData: string): string {
-  const file = path.join(userData, 'pane-host', 'pipe-token');
+  const file = pipeTokenFile(userData);
   try {
     const kept = readFileSync(file, 'utf8');
-    if (PIPE_TOKEN.test(kept)) return kept;
-  } catch {
-    // Not made yet.
+    return PIPE_TOKEN.test(kept) ? kept : writeToken(file, 'w');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
+  try {
+    return writeToken(file, 'wx');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    const raced = readFileSync(file, 'utf8');
+    if (!PIPE_TOKEN.test(raced)) throw new Error('The pipe token is still being written', { cause: error });
+    return raced;
+  }
+}
+
+// After something at the pipe's name failed the proof: the next launch uses a name it never saw.
+export function renewPipeToken(userData: string): void {
+  writeToken(pipeTokenFile(userData), 'w');
+}
+
+function writeToken(file: string, flag: 'w' | 'wx'): string {
   const token = randomBytes(16).toString('hex');
   mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, token, { mode: 0o600 });
+  writeFileSync(file, token, { mode: 0o600, flag });
   return token;
 }
 
@@ -82,7 +123,8 @@ export type SpawnRequest = {
 export type ToHost =
   // The app's first line, before which the host says nothing (pane-host-server.ts's acceptApps). An
   // older host drops it and answers anyway; an older app says none and waits on a newer host for good.
-  | { type: 'hello' }
+  // `nonce` only on Windows, for the host's proof (paneHostAddress).
+  | { type: 'hello'; nonce?: string }
   | ({ type: 'spawn' } & SpawnRequest)
   | { type: 'write'; key: string; data: string }
   | { type: 'resize'; key: string; cols: number; rows: number }
@@ -105,7 +147,8 @@ export type Survivor = {
 };
 
 export type FromHost =
-  | { type: 'panes'; panes: Survivor[] }
+  // `proof` answers the hello's nonce, when there was one.
+  | { type: 'panes'; panes: Survivor[]; proof?: string }
   // Another app is connected; this one runs its shells itself.
   | { type: 'busy' }
   | { type: 'spawned'; key: string; pid: number }

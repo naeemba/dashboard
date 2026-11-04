@@ -11,7 +11,7 @@ import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
 import { launchPaneHost, paneHost } from './panes/pane-host-client';
-import { paneHostSocket, paneOfKey } from './panes/pane-host-protocol';
+import { paneHostAddress, paneOfKey, pipeTokenFile, renewPipeToken } from './panes/pane-host-protocol';
 import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { adoptedPane } from './panes/adopted-pane';
 import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
@@ -221,10 +221,16 @@ const paneEnvironment = {
 // Where every pane's shell runs, so it outlives this process: pane-host-client.ts and panes-decision-1.
 // Built and unpacked beside the commands above, since `node` is what runs it.
 const paneHostEntry = path.join(path.dirname(boardCommand), 'pane-host-entry.js');
-const paneSocket = paneHostSocket(process.platform, app.getPath('userData'));
+const paneAddress = paneHostAddress(process.platform, app.getPath('userData'));
 const shellHost = paneHost({
-  socket: paneSocket,
-  launch: () => launchPaneHost(process.env.SHELL, paneHostEntry, paneSocket, app.getPath('home')),
+  socket: paneAddress?.socket ?? null,
+  token: paneAddress?.token,
+  launch: () => {
+    if (paneAddress === null) return;
+    const tokenFile = paneAddress.token === undefined ? undefined : pipeTokenFile(app.getPath('userData'));
+    launchPaneHost(process.env.SHELL, paneHostEntry, paneAddress.socket, app.getPath('home'), tokenFile);
+  },
+  impostor: () => renewPipeToken(app.getPath('userData')),
   lost: failures.hold,
 });
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;

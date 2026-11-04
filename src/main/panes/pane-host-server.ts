@@ -1,6 +1,6 @@
 import type net from 'node:net';
 import { paneScreenCopy, type PaneScreenCopy } from './pane-screen-copy';
-import { line, lineReader, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
+import { hostProof, line, lineReader, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
 import { foregroundName, type PaneShell } from './pane-shell';
 
 // The pane host's half: the shells themselves, kept running whether or not an app is connected. One
@@ -50,13 +50,13 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
 
   return {
     // An app arriving is told every shell still running, then hears everything after.
-    connect(sender: (message: FromHost) => void): void {
+    connect(sender: (message: FromHost) => void, proof?: string): void {
       send = sender;
       const panes: Survivor[] = [...entries].map(([key, { shell, request, copy }]) => ({
         key, pid: shell.pid, file: request.file, args: request.args, cwd: request.cwd,
         cols: shell.cols, rows: shell.rows, foreground: foregroundName(shell) ?? '', screen: copy.replay(),
       }));
-      sender({ type: 'panes', panes });
+      sender({ type: 'panes', panes, proof });
     },
     // The app went: quit, a crash, a restart. The shells stay. A host with nothing left to keep has no
     // reason to stay up, and the next app starts its own.
@@ -93,8 +93,8 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
 }
 
 // What the host's socket does with each app that connects, here rather than in pane-host-entry.ts so
-// the test drives the same wiring the host runs.
-export function acceptApps(server: ReturnType<typeof paneHostServer>): (socket: net.Socket) => void {
+// the test drives the same wiring the host runs. `token` is the pipe's on Windows (paneHostAddress).
+export function acceptApps(server: ReturnType<typeof paneHostServer>, token?: string): (socket: net.Socket) => void {
   let current: net.Socket | null = null;
   return (socket) => {
     socket.on('error', () => undefined);
@@ -113,7 +113,8 @@ export function acceptApps(server: ReturnType<typeof paneHostServer>): (socket: 
         return;
       }
       current = socket;
-      server.connect((answer) => socket.write(line(answer)));
+      const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
+      server.connect((answer) => socket.write(line(answer)), proof);
     }));
     socket.on('close', () => {
       if (current !== socket) return;

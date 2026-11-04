@@ -1,10 +1,10 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { hostCommand, hostLaunch, launchPaneHost, paneHost } from './pane-host-client';
-import { line, lineReader, paneHostSocket, paneKey, prepareHostSocket, type FromHost, type SpawnRequest } from './pane-host-protocol';
+import { hostProof, line, lineReader, paneHostAddress, paneKey, pipeName, pipeTokenFile, prepareHostSocket, renewPipeToken, type FromHost, type SpawnRequest, type ToHost } from './pane-host-protocol';
 import { acceptApps, paneHostServer } from './pane-host-server';
 import type { PaneShell } from './pane-shell';
 
@@ -152,6 +152,7 @@ describe('hostLaunch', () => {
   it('starts node straight on Windows, whatever SHELL says, since no POSIX shell is there to read it', () => {
     expect(hostLaunch('win32', undefined, 'C:\\app\\host.js', '\\\\.\\pipe\\p')).toEqual({ file: 'node', args: ['C:\\app\\host.js', '\\\\.\\pipe\\p'] });
     expect(hostLaunch('win32', '/usr/bin/bash', 'host.js', 'p')).toEqual({ file: 'node', args: ['host.js', 'p'] });
+    expect(hostLaunch('win32', undefined, 'host.js', 'p', 'C:\\data\\pipe-token')).toEqual({ file: 'node', args: ['host.js', 'p', 'C:\\data\\pipe-token'] });
   });
 
   it('goes through the login shell elsewhere, and launches nothing without one', () => {
@@ -160,29 +161,46 @@ describe('hostLaunch', () => {
   });
 });
 
-describe('paneHostSocket', () => {
-  it('is a named pipe on Windows, named after the token', () => {
-    expect(paneHostSocket('win32', 'C:\\Users\\a\\Dashboard', 'ab12')).toBe('\\\\.\\pipe\\dashboard-panes-1-ab12');
+describe('paneHostAddress', () => {
+  it('names the pipe after a hash of the token, so a listing of the pipes does not give the token away', () => {
+    const token = 'ab'.repeat(16);
+    expect(pipeName(token)).toMatch(/^\\\\\.\\pipe\\dashboard-panes-1-[0-9a-f]{32}$/);
+    expect(pipeName(token)).not.toContain(token);
+    expect(pipeName(token)).not.toBe(pipeName('cd'.repeat(16)));
   });
 
-  it('keeps one secret token per user-data folder, so no other user can work the pipe\'s name out', () => {
+  it('keeps one secret token per user-data folder, and remakes only a file that holds no token', () => {
     const first = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
     const second = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
     try {
-      const socket = paneHostSocket('win32', first);
-      expect(socket).toMatch(/^\\\\\.\\pipe\\dashboard-panes-1-[0-9a-f]{32}$/);
-      expect(paneHostSocket('win32', first)).toBe(socket);
-      expect(paneHostSocket('win32', second)).not.toBe(socket);
-      writeFileSync(path.join(first, 'pane-host', 'pipe-token'), '');
-      expect(paneHostSocket('win32', first)).toMatch(/[0-9a-f]{32}$/);
+      const address = paneHostAddress('win32', first);
+      expect(address?.token).toMatch(/^[0-9a-f]{32}$/);
+      expect(address?.socket).toBe(pipeName(address?.token ?? ''));
+      expect(paneHostAddress('win32', first)).toEqual(address);
+      expect(paneHostAddress('win32', second)?.token).not.toBe(address?.token);
+      writeFileSync(pipeTokenFile(first), '');
+      expect(paneHostAddress('win32', first)?.token).toMatch(/^[0-9a-f]{32}$/);
+      const remade = paneHostAddress('win32', first)?.token;
+      renewPipeToken(first);
+      expect(paneHostAddress('win32', first)?.token).not.toBe(remade);
     } finally {
       rmSync(first, { recursive: true, force: true });
       rmSync(second, { recursive: true, force: true });
     }
   });
 
-  it('is a socket file in a pane-host folder of the user data elsewhere', () => {
-    expect(paneHostSocket('linux', '/data')).toBe(path.join('/data', 'pane-host', 'panes-1.sock'));
+  it('gives no address, and writes no token, when the token file cannot be read for a reason other than missing', () => {
+    const folder = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
+    try {
+      mkdirSync(pipeTokenFile(folder), { recursive: true });
+      expect(paneHostAddress('win32', folder)).toBeNull();
+    } finally {
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+
+  it('is a socket file in a pane-host folder of the user data elsewhere, with no token', () => {
+    expect(paneHostAddress('linux', '/data')).toEqual({ socket: path.join('/data', 'pane-host', 'panes-1.sock') });
   });
 });
 
@@ -207,14 +225,14 @@ describe('paneHost over a socket', () => {
   // The socket the app would use with this folder as its user data, made ready as the host makes it.
   function hostSocket(): string {
     folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
-    const socketPath = paneHostSocket(process.platform, folder);
+    const socketPath = paneHostAddress(process.platform, folder)?.socket ?? '';
     prepareHostSocket(process.platform, socketPath);
     return socketPath;
   }
 
   // The host's socket, with the server above behind it, wired the way pane-host-entry.ts wires it.
-  function listen(host: ReturnType<typeof paneHostServer>, socketPath: string): Promise<net.Server> {
-    const accept = acceptApps(host);
+  function listen(host: ReturnType<typeof paneHostServer>, socketPath: string, token?: string): Promise<net.Server> {
+    const accept = acceptApps(host, token);
     const listener = net.createServer((socket) => {
       accepted.push(socket);
       accept(socket);
@@ -326,6 +344,59 @@ describe('paneHost over a socket', () => {
     await client.ready;
     expect(client.adopt('/project')).toHaveLength(1);
     listener.close();
+  });
+
+  it('adopts from a host that proves it holds the token', async () => {
+    const socketPath = hostSocket();
+    const { host } = server();
+    host.receive({ type: 'spawn', ...request(paneKey('/project', 2)) });
+    const token = 'ab'.repeat(16);
+    const listener = await listen(host, socketPath, token);
+    const lost: string[] = [];
+    const client = paneHost({ socket: socketPath, token, launch: () => undefined, lost: (message) => lost.push(message) });
+    await client.ready;
+    expect(client.adopt('/project')).toHaveLength(1);
+    expect(lost).toEqual([]);
+    listener.close();
+  });
+
+  it('sends nothing past hello to whatever answers without the proof, and runs its shells itself', async () => {
+    const socketPath = hostSocket();
+    const heard: ToHost[] = [];
+    const listener = net.createServer((socket) => {
+      accepted.push(socket);
+      socket.setEncoding('utf8');
+      socket.on('data', lineReader<ToHost>((message) => {
+        heard.push(message);
+        // A guess at the proof, keyed by something other than the token.
+        if (message.type === 'hello') socket.write(line({ type: 'panes', panes: [], proof: hostProof('guess', message.nonce ?? '') }));
+      }));
+    });
+    await new Promise<void>((resolve) => listener.listen(socketPath, resolve));
+    const lost: string[] = [];
+    let impostors = 0;
+    const client = paneHost({
+      socket: socketPath, token: 'ab'.repeat(16), launch: () => undefined,
+      impostor: () => { impostors += 1; }, lost: (message) => lost.push(message),
+    });
+    await client.ready;
+    expect(impostors).toBe(1);
+    expect(lost).toHaveLength(1);
+    expect(lost[0]).toContain('Something other than the pane host');
+    const shell = client.spawn({ ...request(paneKey('/project', 1)), ...exitingShell(0), cwd: folder });
+    expect(shell.kept).toBeUndefined();
+    await new Promise((resolve) => shell.onExit(resolve));
+    expect(heard.map((message) => message.type)).toEqual(['hello']);
+    listener.close();
+  });
+
+  it('runs its shells itself when there is no address this run', async () => {
+    const lost: string[] = [];
+    let launched = 0;
+    const client = paneHost({ socket: null, launch: () => { launched += 1; }, lost: (message) => lost.push(message) });
+    await client.ready;
+    expect(launched).toBe(0);
+    expect(lost[0]).toContain('pipe token');
   });
 
   it('runs its shells itself when the host is busy with another app', async () => {

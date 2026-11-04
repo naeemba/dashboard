@@ -1,6 +1,7 @@
 import { spawn as spawnProcess } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import net from 'node:net';
-import { line, lineReader, paneOfKey, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
+import { hostProof, line, lineReader, paneOfKey, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
 import { spawnShell, type PaneShell } from './pane-shell';
 import { posixQuoted, taskArguments } from '../../shared/panes/shell';
 
@@ -24,8 +25,13 @@ const CONNECT_PAUSE_MS = 100;
 const LOST_EXIT = 1;
 
 export function paneHost(options: {
-  socket: string;
+  // Null when there is no address this run (paneHostAddress).
+  socket: string | null;
+  // On Windows, what the host proves it holds before it is sent anything but hello.
+  token?: string;
   launch(): void;
+  // What answered at the socket failed the proof: it is not this app's host.
+  impostor?(): void;
   // The host was never reached, or went: shells from then on are this process's and die with it.
   lost(message: string): void;
 }): PaneHost {
@@ -35,35 +41,54 @@ export function paneHost(options: {
   const send = (message: ToHost): void => { connection?.write(line(message)); };
 
   // The host's socket, starting the host when nothing answers on it.
-  async function reachHost(): Promise<net.Socket | null> {
-    let socket = await attempt(options.socket);
+  async function reachHost(socketPath: string): Promise<net.Socket | null> {
+    let socket = await attempt(socketPath);
     if (socket !== null) return socket;
     options.launch();
     for (let tries = 0; socket === null && tries < CONNECT_TRIES; tries += 1) {
       await new Promise((resolve) => setTimeout(resolve, CONNECT_PAUSE_MS));
-      socket = await attempt(options.socket);
+      socket = await attempt(socketPath);
     }
     return socket;
   }
 
   async function connect(): Promise<void> {
-    const open = await reachHost();
-    if (open === null) {
-      options.lost(`No pane host answered at ${options.socket}; shells die with the app this run`);
+    const socketPath = options.socket;
+    if (socketPath === null) {
+      options.lost('The pane host\'s pipe token could not be read or made; shells die with the app this run');
       return;
     }
+    const open = await reachHost(socketPath);
+    if (open === null) {
+      options.lost(`No pane host answered at ${socketPath}; shells die with the app this run`);
+      return;
+    }
+    const { token } = options;
+    const nonce = token === undefined ? undefined : randomBytes(16).toString('hex');
     await new Promise<void>((resolve) => {
       let turnedAway = false;
       open.setEncoding('utf8');
-      open.write(line({ type: 'hello' }));
+      open.write(line({ type: 'hello', nonce }));
       open.on('data', lineReader<FromHost>((message) => {
         if (message.type === 'busy') {
           turnedAway = true;
-          options.lost(`Another Dashboard on the same user data holds the pane host at ${options.socket}; shells die with the app this run`);
+          options.lost(`Another Dashboard on the same user data holds the pane host at ${socketPath}; shells die with the app this run`);
           open.destroy();
           return resolve();
         }
         if (message.type === 'panes') {
+          // Anything can listen at a pipe's name; only the host can answer the nonce.
+          if (token !== undefined && nonce !== undefined && message.proof !== hostProof(token, nonce)) {
+            turnedAway = true;
+            try {
+              options.impostor?.();
+            } catch {
+              // The next launch tries the same name, and is turned down the same way.
+            }
+            options.lost(`Something other than the pane host answered at ${socketPath}; shells die with the app this run`);
+            open.destroy();
+            return resolve();
+          }
           kept = message.panes;
           connection = open;
           return resolve();
@@ -177,8 +202,8 @@ export function hostShell(
 }
 
 // Starts the host detached, as hostLaunch says. No way to start one means no host.
-export function launchPaneHost(shell: string | undefined, entry: string, socket: string, home: string): void {
-  const launch = hostLaunch(process.platform, shell, entry, socket);
+export function launchPaneHost(shell: string | undefined, entry: string, socket: string, home: string, tokenFile?: string): void {
+  const launch = hostLaunch(process.platform, shell, entry, socket, tokenFile);
   if (launch === null) return;
   // windowsHide: detached on Windows gives the host a console window of its own, which would sit open.
   const child = spawnProcess(launch.file, launch.args, { detached: true, stdio: 'ignore', cwd: home, windowsHide: true });
@@ -189,9 +214,9 @@ export function launchPaneHost(shell: string | undefined, entry: string, socket:
 // Through the user's login shell on a mac or Linux: the host runs on the `node` a pane's shell finds,
 // which an app started from a launcher does not have on its PATH. node-pty's binary is N-API, so the
 // copy the app ships loads there too. Windows hands every app the PATH the user set, and has no POSIX
-// shell to read hostCommand, so `node` is started straight.
-export function hostLaunch(platform: string, shell: string | undefined, entry: string, socket: string): { file: string; args: string[] } | null {
-  if (platform === 'win32') return { file: 'node', args: [entry, socket] };
+// shell to read hostCommand, so `node` is started straight, with the file holding the pipe's token.
+export function hostLaunch(platform: string, shell: string | undefined, entry: string, socket: string, tokenFile?: string): { file: string; args: string[] } | null {
+  if (platform === 'win32') return { file: 'node', args: tokenFile === undefined ? [entry, socket] : [entry, socket, tokenFile] };
   if (!shell) return null;
   return { file: shell, args: taskArguments(shell, hostCommand(entry, socket)) };
 }

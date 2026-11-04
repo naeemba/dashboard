@@ -37,24 +37,38 @@ the host: the `RunAsNode` fuse is off in `forge.config.ts`, and turning it on to
 run the app's binary as node was not worth it.
 
 Windows has neither a POSIX login shell nor socket files. There the app starts
-`node pane-host-entry.js <pipe>` straight, since a Windows app is handed the
-PATH the user set, and the socket is a named pipe,
-`\\.\pipe\dashboard-panes-1-<token>`, the way the `session` command's is
+`node pane-host-entry.js <pipe> <token file>` straight, since a Windows app is
+handed the PATH the user set, and the socket is a named pipe,
+`\\.\pipe\dashboard-panes-1-<hash of the token>`, the way the `session` command's is
 (`session-socket.ts`). Its access is the pipe default, not a 0700 folder, and
 that default lets every user on the machine open it for reading. Such a
 connection cannot write the `hello`, so it hears no screen and does not turn
 the app away as `busy`.
 
 The other direction is what the token is for. On Windows the app is the one
-connecting, and any user can create a pipe of a name nobody holds, so a name
-they could work out (a hash of the user data folder, say) lets them sit on it
-while the host is down and answer as the host: the app would send every pane's
-environment and every keystroke to them. The token is random, made on the first
-launch and kept in `pane-host/pipe-token` in the user data, which a Windows
-profile does not let other users read. What it does not cover: while the host
-runs, its pipe's name shows in a listing of `\\.\pipe\`, so a user who looked
-then could still sit on it after the host exits. Closing that needs the host to
-prove it holds the token, not only to be at its name.
+connecting, and any user can create a pipe of a name nobody holds and answer as
+the host: the app would send every pane's environment and every keystroke to
+them. A name is no secret, since any user can list `\\.\pipe\`, so the name
+only has to differ per user data; the secret is the token itself, 16 random
+bytes made on the first launch and kept in `pane-host/pipe-token`, which a
+Windows profile does not let other users read. The host is handed the file's
+path, not the token, so it is on no command line. The app's `hello` carries a
+random nonce, the host answers with an HMAC of it keyed by the token, and the
+app sends nothing more and adopts nothing until that checks out. Something that
+fails it hears only the `hello`; the app runs its shells itself this run and
+writes a new token, so the next launch uses a name that was never listed. It
+does not launch a host on the new name the same run: that costs one run's panes
+their survival, against retargeting a client already reaching for a name.
+
+The token is written only when the file is missing or holds no token, with
+`wx` so a second launch racing the first keeps the first's. A new token while a
+host runs on the old name would leave that host's shells running unseen and
+resume their Claude conversations a second time. A read failing any other way
+(a scan holding the file) is no host this run, not a new token.
+
+On a mac or Linux there is no nonce: the 0700 folder is what keeps others out,
+and a version 1 host already running there, which answers no proof, keeps its
+panes through the update.
 
 The protocol stayed at version 1 when `hello` came in. An older host drops it
 and answers anyway, so an update keeps the running host and its panes; a bump
