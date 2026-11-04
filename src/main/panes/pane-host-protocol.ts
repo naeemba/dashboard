@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { chmodSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 // What the app and the pane host say to each other: one JSON message per line over a unix socket,
@@ -17,7 +18,7 @@ const PROTOCOL_VERSION = 2;
 // own --user-data-dir has a host of its own. One on the same user data (a development build beside the
 // installed app) reaches the same socket, and the host turns it away with `busy` while the first is
 // connected. Windows has no socket files: a named pipe stands in, as it does for sessionSocketPath,
-// named after a hash of the user-data folder so a second user data still has a host of its own.
+// named after a hash of the user-data folder, not the pid, so the next launch finds the same host.
 export function paneHostSocket(platform: string, userData: string): string {
   if (platform === 'win32') {
     const userDataHash = createHash('sha256').update(userData).digest('hex').slice(0, 16);
@@ -26,10 +27,15 @@ export function paneHostSocket(platform: string, userData: string): string {
   return path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`);
 }
 
-// The folder the host makes private and clears a dead host's socket from before it listens, or null
-// for a named pipe, which has neither a folder nor a file left behind.
-export function paneHostSocketFolder(platform: string, socketPath: string): string | null {
-  return platform === 'win32' ? null : path.dirname(socketPath);
+// What the host does before it listens: the socket's folder made private, and a file a host that
+// died left behind removed (the app starts a host only when nothing answered). A named pipe has no
+// folder and leaves no file.
+export function prepareHostSocket(platform: string, socketPath: string): void {
+  if (platform === 'win32') return;
+  const folder = path.dirname(socketPath);
+  mkdirSync(folder, { recursive: true, mode: 0o700 });
+  chmodSync(folder, 0o700);
+  rmSync(socketPath, { force: true });
 }
 
 // What a pane is called on both sides of the socket. The project and the pane's number, not the

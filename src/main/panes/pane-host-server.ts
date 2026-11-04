@@ -103,7 +103,8 @@ export function acceptApps(server: ReturnType<typeof paneHostServer>): (socket: 
       if (socket === current) return server.receive(message);
       // Nothing is told before the app says hello: a Windows named pipe lets every user of the machine
       // open it for reading, and one that cannot write must hear no screen nor hold the host from the app.
-      if (message.type !== 'hello') return;
+      // Anything else first is not an app, and is let go rather than held open.
+      if (message.type !== 'hello') return void socket.destroy();
       // One app at a time. An app that went has had its end closed by the kernel, so a second one
       // arriving while one is connected is a second Dashboard on the same user data: it is turned away
       // and runs its shells itself, rather than taking the first one's panes out from under it.

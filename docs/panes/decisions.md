@@ -45,8 +45,8 @@ not a 0700 folder, and that default lets every user on the machine open it for
 reading. Such a connection cannot write the `hello`, so it hears no screen and
 does not turn the app away as `busy`.
 
-When no host answers (no `node` on the login shell's PATH, or on Windows' PATH,
-a socket path too long), the app runs ptys itself as before, and the status bar says the
+When no host answers (no `node` where the host would start, a socket path too
+long), the app runs ptys itself as before, and the status bar says the
 shells die with it this run. If the host dies mid-run every pane it held reads as
 exited and new panes run in the app.
 

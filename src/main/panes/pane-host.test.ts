@@ -1,10 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { hostCommand, hostLaunch, launchPaneHost, paneHost } from './pane-host-client';
-import { line, lineReader, paneHostSocket, paneHostSocketFolder, paneKey, type FromHost, type SpawnRequest } from './pane-host-protocol';
+import { line, lineReader, paneHostSocket, paneKey, prepareHostSocket, type FromHost, type SpawnRequest } from './pane-host-protocol';
 import { acceptApps, paneHostServer } from './pane-host-server';
 import type { PaneShell } from './pane-shell';
 
@@ -166,12 +166,10 @@ describe('paneHostSocket', () => {
     expect(socket).toMatch(/^\\\\\.\\pipe\\dashboard-panes-2-[0-9a-f]{16}$/);
     expect(paneHostSocket('win32', 'C:\\Users\\a\\Dashboard')).toBe(socket);
     expect(paneHostSocket('win32', 'C:\\Users\\a\\Dashboard Dev')).not.toBe(socket);
-    expect(paneHostSocketFolder('win32', socket)).toBeNull();
   });
 
   it('is a socket file in a pane-host folder of the user data elsewhere', () => {
     expect(paneHostSocket('linux', '/data')).toBe(path.join('/data', 'pane-host', 'panes-2.sock'));
-    expect(paneHostSocketFolder('linux', paneHostSocket('linux', '/data'))).toBe(path.join('/data', 'pane-host'));
   });
 });
 
@@ -193,12 +191,11 @@ describe('paneHost over a socket', () => {
     rmSync(folder, { recursive: true, force: true });
   });
 
-  // The socket the app would use with this folder as its user data, its folder made as the host makes it.
+  // The socket the app would use with this folder as its user data, made ready as the host makes it.
   function hostSocket(): string {
     folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
     const socketPath = paneHostSocket(process.platform, folder);
-    const socketFolder = paneHostSocketFolder(process.platform, socketPath);
-    if (socketFolder !== null) mkdirSync(socketFolder, { recursive: true });
+    prepareHostSocket(process.platform, socketPath);
     return socketPath;
   }
 
@@ -337,16 +334,16 @@ describe('paneHost over a socket', () => {
   it('launches a host that binds its socket and answers the app', async () => {
     const socketPath = hostSocket();
     const entry = path.join(folder, 'host.js');
-    writeFileSync(entry, [
-      "const net = require('node:net');",
-      'net.createServer((socket) => {',
-      "  socket.on('data', (data) => {",
-      `    if (String(data).includes('hello')) socket.write(${JSON.stringify(line({ type: 'panes', panes: [] }))});`,
-      "    if (String(data).includes('kill')) process.exit(0);",
-      '  });',
-      '}).listen(process.argv[2]);',
-      'setTimeout(() => process.exit(1), 20000);',
-    ].join('\n'));
+    writeFileSync(entry, `
+      const net = require('node:net');
+      net.createServer((socket) => {
+        socket.on('data', (data) => {
+          if (String(data).includes('hello')) socket.write(${JSON.stringify(line({ type: 'panes', panes: [] }))});
+          if (String(data).includes('kill')) process.exit(0);
+        });
+      }).listen(process.argv[2]);
+      setTimeout(() => process.exit(1), 20000);
+    `);
     const lost: string[] = [];
     const stopped = new Promise<void>((resolve) => {
       const client = paneHost({
