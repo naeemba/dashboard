@@ -2,8 +2,8 @@ import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
-import { BOARD_FILE_PATH, writeBoard } from './board-store';
-import { clone, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
+import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, writeBoard } from './board-store';
+import { boardOn as boardOnBranch, clone, git, remote, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
 import { runCreateTask } from './create-task-program';
 
 // Real git, against a bare repository standing in for the remote: what the program promises is
@@ -13,7 +13,9 @@ import { runCreateTask } from './create-task-program';
 useGitTestEnvironment();
 
 function boardOn(bare: string): Board {
-  return JSON.parse(git(bare, 'show', `main:${BOARD_FILE_PATH}`)) as Board;
+  const board = boardOnBranch(bare);
+  if (board === null) throw new Error('no board on main');
+  return board;
 }
 
 function run(directory: string, ...commandArguments: string[]): { code: number; stdout: string; stderr: string } {
@@ -77,6 +79,12 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     const [card] = boardOn(bare).columns.flatMap((column) => column.cards);
     expect(card).toMatchObject({ title: 'Fix the thing', notes: 'It breaks', priority: 'high' });
     expect(git(bare, 'log', '-1', '--format=%s', 'main')).toBe('board: add "Fix the thing"');
+    // main was still on board.json: the one commit moves it into the folder, old file and all.
+    expect(git(bare, 'show', '--name-status', '--format=', 'main').split('\n').sort()).toEqual([
+      `A\t${BOARD_FOLDER_PATH}/cards/${card.id}.json`,
+      `A\t${BOARD_FOLDER_PATH}/columns.json`,
+      `D\t${BOARD_FILE_PATH}`,
+    ]);
     expect(git(checkout, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('feature');
     expect(git(checkout, 'rev-parse', 'HEAD')).toBe(head);
     expect(git(checkout, 'status', '--porcelain')).toBe('');
@@ -91,7 +99,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     git(checkout, 'remote', 'add', 'gitlab', second);
     git(checkout, 'checkout', '--quiet', 'main');
     writeBoard(checkout, emptyBoard());
-    git(checkout, 'add', BOARD_FILE_PATH);
+    git(checkout, 'add', BOARD_FOLDER_PATH);
     git(checkout, 'commit', '--quiet', '-m', 'board');
     git(checkout, 'push', '--quiet', 'gitlab', 'main');
     git(checkout, 'fetch', '--quiet', 'gitlab');
@@ -100,7 +108,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(run(checkout, '--title', 'On GitLab', '--remote', 'gitlab').code).toBe(0);
 
     expect(boardOn(second).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['On GitLab']);
-    expect(() => git(bare, 'show', `main:${BOARD_FILE_PATH}`)).toThrow();
+    expect(boardOnBranch(bare)).toBeNull();
   });
 
   it('refuses, naming --seed, when the default branch has no board', () => {
@@ -112,7 +120,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
 
     expect(result.code).toBe(1);
     expect(result.stderr).toBe(
-      "create-task: origin/main has no .dashboard/board.json. Re-run with --seed to create it there, from this worktree's copy if it has one. Check first that it was not lost in a merge.\n",
+      "create-task: origin/main has no board (.dashboard/board or .dashboard/board.json). Re-run with --seed to create it there, from this worktree's copy if it has one. Check first that it was not lost in a merge.\n",
     );
     expect(git(bare, 'rev-parse', 'main')).toBe(before);
   });
@@ -122,7 +130,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     const checkout = clone(bare, false);
     const local = emptyBoard();
     local.columns[0].name = 'Ideas';
-    writeBoard(checkout, local);
+    writeLegacyBoard(checkout, local);
 
     expect(run(checkout, '--title', 'Seeded', '--seed').code).toBe(0);
 
@@ -149,7 +157,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     const before = git(bare, 'rev-parse', 'main');
 
     expect(run(checkout, '--title', 'x')).toEqual({
-      code: 1, stdout: '', stderr: 'create-task: origin/main has a .dashboard/board.json that does not parse; fix it there first\n',
+      code: 1, stdout: '', stderr: 'create-task: origin/main has a board file that does not parse (.dashboard/board.json); fix it there first\n',
     });
     expect(git(bare, 'rev-parse', 'main')).toBe(before);
   });

@@ -1,6 +1,6 @@
 import type { ShipRequest, ShipResult, WorktreeEntry } from '../../shared/app/bridge';
 import { moveCardById, shipColumnIndex } from '../../shared/board/board';
-import { BOARD_FILE_PATH, readBoard, writeBoard } from '../board/board-store';
+import { BOARD_PATHSPECS, readBoard, writeBoard } from '../board/board-store';
 import { failureText } from '../../shared/errors/failure';
 import { baseBranch, git } from '../app/git';
 import { isManagerPath } from '../../shared/manager/manager';
@@ -32,19 +32,28 @@ export type ShipPorts = {
 // card already in Ship stages nothing, and `git commit` with nothing to commit exits 1, which would
 // fail the ship in git's own words with the branch and the folder already made. Nothing staged also
 // covers the card never having been on the base branch's board at all.
-async function commitShipMove(entry: WorktreeEntry): Promise<void> {
-  const board = readBoard(entry.worktreePath).board;
-  const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
-  if (!moved) return;
-  writeBoard(entry.worktreePath, moved);
-  // Both halves name the board file. A resumed ship runs in a worktree that has been lived in, so
-  // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
-  // half-finished work under a board message.
-  await git(['add', BOARD_FILE_PATH], entry.worktreePath);
-  const staged = await git(['diff', '--cached', '--name-only', '--', BOARD_FILE_PATH], entry.worktreePath);
-  if (staged !== '') {
-    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', BOARD_FILE_PATH], entry.worktreePath);
+//
+// A board file that does not parse writes nothing and answers why, for the ship to say. The read does
+// not salvage, so the file stays under its own name and a resumed ship refuses again until it is fixed;
+// readBoard says why a rename here would commit that card as deleted under a ship message.
+async function commitShipMove(entry: WorktreeEntry): Promise<string | null> {
+  const { board, brokenFiles } = readBoard(entry.worktreePath, false);
+  if (brokenFiles.length > 0) {
+    return `"${entry.title}" is on ${entry.branch}, but board files there do not parse: ${brokenFiles.join(', ')}; fix them and ship again`;
   }
+  const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
+  if (!moved) return null;
+  writeBoard(entry.worktreePath, moved);
+  // Both halves name the board's files. A resumed ship runs in a worktree that has been lived in, so
+  // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
+  // half-finished work under a board message. -A takes in board.json's removal when this write is the
+  // one that moved the board into its folder.
+  await git(['add', '-A', '--', ...BOARD_PATHSPECS], entry.worktreePath);
+  const staged = await git(['diff', '--cached', '--name-only', '--', ...BOARD_PATHSPECS], entry.worktreePath);
+  if (staged !== '') {
+    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', ...BOARD_PATHSPECS], entry.worktreePath);
+  }
+  return null;
 }
 
 export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<ShipResult> {
@@ -86,7 +95,8 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
       reviewing: false,
     });
 
-    await commitShipMove(entry);
+    const refusal = await commitShipMove(entry);
+    if (refusal !== null) return { ok: false, message: refusal };
     return ports.attachPane(entry, slot, workPrompt(cardId));
   }
 
@@ -123,7 +133,8 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
         // rather than assuming only the pane is missing — an agent started in a worktree whose Ship move
         // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
         // it runs git in the same repository.
-        await commitShipMove(existing);
+        const refusal = await commitShipMove(existing);
+        if (refusal !== null) return { ok: false, message: refusal };
         // `reviewing: false` is the other half of the forget above. A record that was the review keeps
         // the flag through this spread otherwise, and the sweep skips the card for good: the pull
         // request this ship opens is never reviewed, with nothing on screen saying why.

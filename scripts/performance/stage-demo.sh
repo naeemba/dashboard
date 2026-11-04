@@ -1,6 +1,6 @@
 #!/bin/sh
 # Make the demo folder measure.mjs runs against: a HOME of its own with six git projects (alpha to
-# zeta, each with this repository's board.json, so a real-sized board), projects.yaml naming zeta for
+# zeta, each with this repository's board, so a real-sized board), projects.yaml naming zeta for
 # the open/close cycles, a session.json that restores alpha to epsilon, and two long conversations
 # copied in for alpha's and beta's Claude screens. Nothing is read from or written to your own HOME
 # except the two transcripts it copies.
@@ -16,7 +16,8 @@ for project in alpha beta gamma delta epsilon zeta; do
   folder="$home/projects/$project"
   [ -d "$folder/.git" ] && continue
   mkdir -p "$folder/.dashboard"
-  cp "$repo/.dashboard/board.json" "$folder/.dashboard/"
+  # The board in whichever shape this checkout keeps it: the folder, or board.json before its first write.
+  cp -R "$repo/.dashboard/board" "$folder/.dashboard/" 2>/dev/null || cp "$repo/.dashboard/board.json" "$folder/.dashboard/"
   cp "$repo/README.md" "$folder/"
   (cd "$folder" && git init -q && git add -A && git -c user.name=demo -c user.email=demo@example.com commit -qm init)
 done

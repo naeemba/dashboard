@@ -27,7 +27,7 @@ const NOUNS = new Map<string, Noun>([
 export const DASHBOARD_USAGE = `dashboard — drive the Dashboard app from any terminal
 
 Dashboard is a desktop app with one page per project: a main Claude session, the worker panes it
-dispatches into, an editor and a kanban board kept in the project's .dashboard/board.json.
+dispatches into, an editor and a kanban board kept in the project's .dashboard/board folder.
 
   dashboard                     open the app, or bring it to the front
   dashboard board <command>     read and change a project's board; never starts the app
@@ -40,10 +40,10 @@ and project list, find and init work on files alone. Outside a pane the command 
 project you mean: board uses the folder you are in, or --project <name>; pane claim needs --project.`;
 
 const NOUN_HELP: Record<Noun, string> = {
-  board: `dashboard board — the kanban board of a project, kept in its .dashboard/board.json
+  board: `dashboard board — the kanban board of a project, kept in its .dashboard/board folder
 
 The board of the folder you are in, or of the git repository it is in; --project <name|aka> names one
-from ~/.dashboard/projects.yaml instead. The app redraws it as soon as the file changes. The words
+from ~/.dashboard/projects.yaml instead. The app redraws it as soon as its files change. The words
 after \`board\` are these:
 
 ${BOARD_USAGE}`,

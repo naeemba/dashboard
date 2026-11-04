@@ -4,10 +4,15 @@ The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
 
 ## board-rule-1: The board has two writers
 
-The app is not the only thing writing `.dashboard/board.json`. The `board`
+The app is not the only thing writing the board in `.dashboard/board/` (and,
+in a project not yet moved, reading `.dashboard/board.json`). The `board`
 command does too, and an agent working a card uses it to move its own card.
 **Anything that writes a board goes through `board.ts` and `board-store.ts` —
-never its own JSON.**
+never its own JSON.** `board-store.ts` hands the folder's bytes to
+`board-files.ts`, which is the only file that knows where they go; nothing
+else names a card file. Committing a board names `BOARD_PATHSPECS`, never a
+path of its own, so the move off `board.json` takes the old file's removal into
+the same commit.
 
 What a second copy costs: someone teaches the command line to write a card
 without `createdAt`. The app reads it back, `relativeAge` has nothing to show,
@@ -18,13 +23,17 @@ board quietly stops agreeing with itself.
 `board.ts`. `board-cli-entry.ts` is the file and the terminal, with no decision
 in it.
 
-The app has to notice. Main watches each open project's `.dashboard` folder and
-sends `board:change`, and the board re-reads itself without moving your
-selection. It watches the *folder*, not the file — `writeBoard` renames a
-temporary file over `board.json`, and a watch on the file follows the old one
-into the bin. It compares bytes against what the app last wrote, or every
-keystroke would redraw the board under your cursor thirty times a minute.
-`isBoardChange` in `board-watch.ts` is that rule, with the test.
+The app has to notice. Main watches each open project's `.dashboard` folder,
+everything under it, and sends `board:change`, and the board re-reads itself
+without moving your selection. It watches the *folder*, not a file — every
+file is replaced by renaming a temporary file over it, and a watch on the file
+follows the old one into the bin. It compares a snapshot of every board file
+(`boardSnapshot`) against the one the app last wrote, or every keystroke would
+redraw the board under your cursor thirty times a minute. `isBoardChange` in
+`board-watch.ts` is that rule, with the test. A burst of events is read once,
+30ms after the first: the first write of a board still in `board.json` writes a
+file per card, and reading the whole folder for each of them would redraw the
+screen a hundred and seventy times.
 
 Two writers through one file still overwrite each other unless each writes only
 what it changed. The command re-runs itself on a fresh read just before it

@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
-import { emptyBoard } from '../../shared/board/board';
-import { BOARD_FILE_PATH, writeBoard } from './board-store';
+import { emptyBoard, type Board } from '../../shared/board/board';
+import { BOARD_FILE_PATH, peekBoard } from './board-store';
 
 // Real git for the create-task tests, against a bare repository standing in for the remote. Not a
 // .test.ts, so vitest runs it only through the files that import it.
@@ -41,12 +41,26 @@ export function remote(): string {
   return bare;
 }
 
+// The board on a branch of `bare`, read the way the app reads one, or null when it has none.
+export function boardOn(bare: string, branch = 'main'): Board | null {
+  const checkout = mkdtempSync(join(tmpdir(), 'create-task-read-'));
+  git(checkout, 'clone', '--quiet', '--branch', branch, bare, '.');
+  return peekBoard(checkout);
+}
+
+// A board.json as every project kept it before cards had files of their own — what the default
+// branch of a repository the app has not written to since holds.
+export function writeLegacyBoard(checkout: string, board: Board = emptyBoard()): void {
+  mkdirSync(dirname(join(checkout, BOARD_FILE_PATH)), { recursive: true });
+  writeFileSync(join(checkout, BOARD_FILE_PATH), `${JSON.stringify(board, null, 2)}\n`);
+}
+
 // A clone of `bare` standing on a feature branch with a change it has not committed.
 export function clone(bare: string, withBoard: boolean): string {
   const checkout = mkdtempSync(join(tmpdir(), 'create-task-checkout-'));
   git(checkout, 'clone', '--quiet', bare, '.');
   git(checkout, 'checkout', '--quiet', '-b', 'main');
-  if (withBoard) writeBoard(checkout, emptyBoard());
+  if (withBoard) writeLegacyBoard(checkout);
   git(checkout, 'commit', '--quiet', '--allow-empty', '-m', 'start');
   if (withBoard) {
     git(checkout, 'add', BOARD_FILE_PATH);

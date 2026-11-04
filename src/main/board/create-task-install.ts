@@ -56,7 +56,7 @@ Run exactly one command:
 - Add \`--remote <name>\` only on a repo whose board lives on a remote other than
   \`origin\` (a GitLab remote beside a GitHub \`origin\`).
 
-If it says the branch has no \`.dashboard/board.json\`, stop and tell me. Do not
+If it says the branch has no board, stop and tell me. Do not
 re-run it with \`--seed\` unless I say so — a board missing from main is usually a
 bad merge, and seeding would publish whatever stale copy is in this worktree.
 

@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { PRIORITIES, isPriority, type Priority } from '../../shared/board/board';
-import { BOARD_FILE_PATH } from './board-store';
+import { BOARD_FILE_PATH, BOARD_FOLDER_PATH } from './board-store';
 
 // Every decision the create-task program makes. It files one card on a project's board on the
 // default branch of a remote and pushes it, without touching the branch it is run from: the card is
@@ -78,7 +78,7 @@ export function boardAddArguments(options: CreateTaskOptions): string[] {
 // A board missing from the default branch is far more likely a bad merge than an invitation to
 // publish whatever stale copy sits in this worktree, so seeding one is a flag of its own.
 export function noBoardMessage(remote: string, branch: string): string {
-  return `${remote}/${branch} has no ${BOARD_FILE_PATH}. Re-run with --seed to create it there, ` +
+  return `${remote}/${branch} has no board (${BOARD_FOLDER_PATH} or ${BOARD_FILE_PATH}). Re-run with --seed to create it there, ` +
     "from this worktree's copy if it has one. Check first that it was not lost in a merge.";
 }
 

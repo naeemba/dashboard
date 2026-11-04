@@ -150,10 +150,11 @@ describe('reviewPrompt', () => {
   // commit` having nothing to commit, before the push and before the merge — and reports that git
   // refused, about a pull request that was ready to land.
   it('commits the branch board in the same command that writes it, and survives a second run', () => {
+    const board = "-- '.dashboard/board*' ':(exclude).dashboard/board*.broken' ':(exclude).dashboard/board*.tmp'";
     expect(prompt).toContain(
-      `node "$DASHBOARD_BOARD" move ${CARD} Done && git add -- .dashboard/board.json`
-      + ' && { git diff --cached --quiet -- .dashboard/board.json'
-      + " || git commit -m 'board: \"Ship it\" is done' -- .dashboard/board.json; } && git push",
+      `node "$DASHBOARD_BOARD" move ${CARD} Done && git add -A ${board}`
+      + ` && { git diff --cached --quiet ${board}`
+      + ` || git commit -m 'board: "Ship it" is done' ${board}; } && git push`,
     );
   });
 

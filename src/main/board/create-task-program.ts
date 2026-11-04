@@ -1,9 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
+import { join, relative, sep } from 'node:path';
+import { BOARD_FOLDER_PATH, BOARD_PATHSPECS, hasBoard, peekBoard, readBoard, writeBoard } from './board-store';
 import { runBoardCommand } from './board-cli';
+import { BROKEN_SUFFIX } from './board-files';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
 import { boardAddArguments, commitMessage, lostRace, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
@@ -49,14 +50,14 @@ function gitOrNull(directory: string, commandArguments: readonly string[]): stri
   }
 }
 
-// --seed with no board on the default branch: this checkout's copy when it has one, otherwise the
-// empty board readBoard answers with. Returns the note the printed line ends with.
-function seedBoard(repositoryRoot: string, boardFile: string, branch: string): string {
-  const local = join(repositoryRoot, BOARD_FILE_PATH);
-  if (!existsSync(local)) return ` — ${BOARD_FILE_PATH} created on ${branch}`;
-  mkdirSync(dirname(boardFile), { recursive: true });
-  copyFileSync(local, boardFile);
-  return ` — ${BOARD_FILE_PATH} created on ${branch} from the local copy`;
+// --seed with no board on the default branch: this checkout's copy when it has one, read and written
+// back the way any board is, otherwise the empty board readBoard answers with. Returns the note the
+// printed line ends with.
+function seedBoard(repositoryRoot: string, worktree: string, branch: string): string {
+  const local = peekBoard(repositoryRoot);
+  if (local === null) return ` — ${BOARD_FOLDER_PATH} created on ${branch}`;
+  writeBoard(worktree, local);
+  return ` — ${BOARD_FOLDER_PATH} created on ${branch} from the local copy`;
 }
 
 // One try: a worktree of `<remote>/<branch>` as fetched a moment ago, the card added there, one
@@ -68,24 +69,30 @@ function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOpt
   const worktree = mkdtempSync(join(tmpdir(), 'create-task-'));
   try {
     git(repositoryRoot, [...NO_HOOKS, 'worktree', 'add', '--quiet', '--detach', worktree, `${options.remote}/${branch}`]);
-    const boardFile = join(worktree, BOARD_FILE_PATH);
     let seedNote = '';
-    if (!existsSync(boardFile)) {
+    if (!hasBoard(worktree)) {
       if (!options.seed) return { refusal: noBoardMessage(options.remote, branch) };
-      seedNote = seedBoard(repositoryRoot, boardFile, branch);
+      seedNote = seedBoard(repositoryRoot, worktree, branch);
     }
     const read = readBoard(worktree);
     // readBoard has moved a damaged file aside and answered with an empty board. Writing that back
     // would wipe every card on the default branch.
-    if (read.brokenFile !== null) return { refusal: `${options.remote}/${branch} has a ${BOARD_FILE_PATH} that does not parse; fix it there first` };
+    if (read.brokenFiles.length > 0) return { refusal: `${options.remote}/${branch} has a board file that does not parse (${read.brokenFiles.map((file) => relative(worktree, file).slice(0, -BROKEN_SUFFIX.length).split(sep).join('/')).join(', ')}); fix it there first` };
     const result = runBoardCommand(read.board, boardAddArguments(options));
     if (!result.ok) return { refusal: result.message };
     // `add` always answers with a changed board; the type only says it might not.
     if (result.board === null) return { refusal: 'add changed nothing' };
-    const text = writeBoard(worktree, result.board);
-    if (options.dryRun) return { line: `${text}\n(dry run) would add ${result.output} on ${branch}${seedNote}` };
+    writeBoard(worktree, result.board);
+    // What the commit would hold: the card's own file, and on a board still kept in board.json, the
+    // move of every card into the folder.
+    if (options.dryRun) {
+      const staged = git(worktree, [...NO_HOOKS, 'add', '--dry-run', '-A', '--', ...BOARD_PATHSPECS]);
+      return { line: `${staged}\n(dry run) would add ${result.output} on ${branch}${seedNote}` };
+    }
 
-    git(worktree, [...NO_HOOKS, 'add', BOARD_FILE_PATH]);
+    // -A, so a board moving out of board.json takes the old file's removal into the same commit as the
+    // folder that replaces it: the default branch never holds both, and never neither.
+    git(worktree, [...NO_HOOKS, 'add', '-A', '--', ...BOARD_PATHSPECS]);
     git(worktree, [...NO_HOOKS, 'commit', '--quiet', '-m', commitMessage(options.title)]);
     try {
       git(worktree, [...NO_HOOKS, 'push', '--quiet', options.remote, `HEAD:refs/heads/${branch}`]);

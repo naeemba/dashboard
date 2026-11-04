@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY, readBoard, writeBoard } from '../board/board-store';
+import { BOARD_DIRECTORY, BOARD_FOLDER_PATH, readBoard, writeBoard } from '../board/board-store';
 import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts } from './review-flow';
 import type { WorktreeEntry } from '../../shared/app/bridge';
@@ -270,6 +270,21 @@ describe('reviewSweep', () => {
   it('asks again about a card an empty board has lost once the board is back', async () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, emptyBoard());
+    const { ports: made, log } = ports(entry);
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    writeBoard(projectPath, boardWithCard(null));
+    await sweep.run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
+  // One card's file set aside. The board still has cards on it, so only the set-aside file tells this
+  // apart from the deletion above, and marking here would stop reviews once the file is restored.
+  it('asks again about a card whose file was set aside once the file is back', async () => {
+    const { entry, projectPath } = flight(12);
+    const [first, ...rest] = boardWithCard(null).columns;
+    writeBoard(projectPath, { columns: [{ ...first, cards: [...first.cards, { ...first.cards[0], id: 'b0a1' }] }, ...rest] });
+    writeFileSync(join(projectPath, BOARD_FOLDER_PATH, 'cards', `${CARD}.json`), '{ "id": ');
     const { ports: made, log } = ports(entry);
     const sweep = reviewSweep(made);
     await sweep.run();

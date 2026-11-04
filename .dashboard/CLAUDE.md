@@ -2,33 +2,43 @@
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B.
 
-## board.json
+## board/
+
+One file per card, so two branches working different cards never edit the same file:
+
+    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done"] }
+    board/cards/<id>.json         one card, with the column it is in and its place there
+
+A card's file:
 
     {
-      "columns": [
-        {
-          "name": "Todo",
-          "cards": [
-            {
-              "id": "0f6a2c5e-...",
-              "title": "Fix the resize race",
-              "notes": "",
-              "priority": "high",
-              "parent": null,
-              "createdAt": "2026-09-08T09:12:44.017Z",
-              "updatedAt": "2026-09-08T09:12:44.017Z",
-              "branch": "fix-resize-race",
-              "pullRequest": 14,
-              "comments": [
-                { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
-              ]
-            }
-          ]
-        }
-      ]
+      "id": "0f6a2c5e-...",
+      "title": "Fix the resize race",
+      "notes": "",
+      "priority": "high",
+      "parent": null,
+      "createdAt": "2026-09-08T09:12:44.017Z",
+      "updatedAt": "2026-09-08T09:12:44.017Z",
+      "branch": "fix-resize-race",
+      "pullRequest": 14,
+      "comments": [
+        { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
+      ],
+      "column": "Todo",
+      "order": 3
     }
 
-- `columns` is ordered. The first column is the leftmost on screen.
+A project the app has not written to since this layout arrived still has the older `board.json`
+here instead — the whole board in one file, `{ "columns": [{ "name": "Todo", "cards": [...] }] }`.
+It is read the same, and the next write moves every card into `board/` and removes it. Commit the
+two together: `git add -A -- '.dashboard/board*' ':(exclude).dashboard/board*.broken' ':(exclude).dashboard/board*.tmp'` takes in both,
+and leaves out a `.broken` file set aside and a write's temporary file.
+
+- `columns` in `columns.json` is ordered. The first column is the leftmost on screen. A card naming
+  a column the list does not have gets that column, after the listed ones.
+- `column` is the name of the card's column; a card without one is in Backlog. `order` is a number,
+  and the cards of a column go top to bottom by it, then by `id`. A move gives the moved card a
+  number between its new neighbours and leaves every other file alone.
 - Every board has a `Backlog` column, first unless someone moved it. A card
   nobody has chosen to work on waits there; `Todo` holds what has been picked.
   `board add` with no `--column` puts a card in Backlog.
@@ -45,10 +55,11 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   is the one exception — a card there has a pull request open and nothing has
   checked it. While work is in flight the card's column lives on that work's own
   branch, and arrives here when the pull request does.
-- `cards` is ordered. The first card is at the top of its column.
-- `id` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
-  written without one, or with an id another card already used, is given a fresh one the next time
-  the app reads the file.
+- `id` is a UUID, and no two cards may share one; it is also the file's name. Keep it stable when you
+  edit a card. A card written without one takes its file's name, and one with an id another card
+  already used is given a fresh one the next time the app reads the board.
+- A card file that is not JSON is moved aside as `<id>.json.broken` the next time the app reads the
+  board, so nothing overwrites it.
 - `title` is one line. A card with no `title`, or a blank one, is dropped when the app reads
   the file.
 - `notes` is the card's description, free text over as many lines as you like. `e` opens it.
@@ -102,7 +113,7 @@ for.
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.
 
-Edit this file directly if you like — the app notices. It watches board.json while a board is on
+Edit the files directly if you like — the app notices. It watches this folder while a board is on
 screen, so a card moved from the command line or by hand shows up where you are looking, with the
-selection left on the card it was on. The app rewrites the whole file on every edit and drops any
-field not listed above.
+selection left on the card it was on. The app rewrites a card's whole file when it changes that card
+and drops any field not listed above.

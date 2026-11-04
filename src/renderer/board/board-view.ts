@@ -221,7 +221,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       const read = await boardRead;
       next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
       // The old file is still on disk under this name, so the cards are not gone — just not shown.
-      if (read.brokenFile) message = `Board file was damaged; kept as ${read.brokenFile}`;
+      if (read.brokenFiles.length > 0) message = `Damaged board files kept as ${read.brokenFiles.join(', ')}`;
       readWorked = true;
     } catch (error: unknown) {
       message = `Board not opened: ${String(error)}`;

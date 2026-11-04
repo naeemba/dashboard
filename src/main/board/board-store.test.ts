@@ -13,6 +13,7 @@ vi.mock('node:os', async (importOriginal) => {
 import {
   BOARD_DIRECTORY,
   BOARD_FILE_PATH,
+  BOARD_FOLDER_PATH,
   BROKEN_BOARD_FILE,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
@@ -220,7 +221,7 @@ describe('parseBoard', () => {
   it('writes nothing for the fields a card does not have', () => {
     const projectPath = project();
     writeBoard(projectPath, parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}'));
-    const written = readFileSync(join(projectPath, BOARD_DIRECTORY, 'board.json'), 'utf8');
+    const written = readFileSync(join(projectPath, BOARD_FOLDER_PATH, 'cards', '1.json'), 'utf8');
     expect(written).not.toContain('createdAt');
     expect(written).not.toContain('pullRequest');
   });
@@ -366,7 +367,7 @@ describe('readBoard', () => {
   // A missing file is not damage: there is nothing to salvage, so no .broken file appears.
   it('does not treat a missing file as broken', () => {
     const path = project();
-    expect(readBoard(path).brokenFile).toBeNull();
+    expect(readBoard(path).brokenFiles).toEqual([]);
     expect(existsSync(join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE))).toBe(false);
   });
 
@@ -383,7 +384,7 @@ describe('readBoard', () => {
     writeRaw(path, '{"columns": [');
     const brokenPath = join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE);
     const result = readBoard(path);
-    expect(result.brokenFile).toBe(brokenPath);
+    expect(result.brokenFiles).toEqual([brokenPath]);
     expect(readFileSync(brokenPath, 'utf8')).toBe('{"columns": [');
   });
 
@@ -401,7 +402,7 @@ describe('readBoard', () => {
     readBoard(path);
     expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json'))).toBe(false);
     const second = readBoard(path);
-    expect(second.brokenFile).toBeNull();
+    expect(second.brokenFiles).toEqual([]);
     expect(columnNames(second.board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
   });
 
@@ -418,7 +419,7 @@ describe('writeBoard', () => {
   it('creates the folder and writes readable json', () => {
     const path = project();
     writeBoard(path, { columns: [{ name: 'Todo', cards: [] }] });
-    const text = readFileSync(join(path, BOARD_DIRECTORY, 'board.json'), 'utf8');
+    const text = readFileSync(join(path, BOARD_FOLDER_PATH, 'columns.json'), 'utf8');
     expect(text).toContain('\n  "columns"');
     expect(text.endsWith('\n')).toBe(true);
   });

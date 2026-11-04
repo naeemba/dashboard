@@ -19,15 +19,17 @@ function run(words: readonly string[]): number {
     return 1;
   }
   const { project, commandArguments } = target;
-  const read = openBoard(project);
-  if (read.brokenFile !== null) {
-    // The same salvage the app does, said out loud. Silence here would look like an empty board.
-    process.stderr.write(`board.json was damaged and has been kept as ${read.brokenFile}\n`);
+  // Without salvage: a file that does not parse stays where it is under its own name, so every run
+  // refuses until it is fixed. readBoard says why a rename here would commit the card as deleted.
+  const read = openBoard(project, false);
+  if (read.brokenFiles.length > 0) {
+    process.stderr.write(`board files do not parse, nothing was written; fix them first: ${read.brokenFiles.join(', ')}\n`);
+    return 1;
   }
 
   // Run against the board as it stands a moment before the write, not the one opened above:
   // runBoardCommandOnLatest says why.
-  const result = runBoardCommandOnLatest(read.board, commandArguments, () => readBoard(project).board);
+  const result = runBoardCommandOnLatest(read.board, commandArguments, () => readBoard(project, false).board);
   if (!result.ok) {
     process.stderr.write(`${result.message}\n`);
     return 1;

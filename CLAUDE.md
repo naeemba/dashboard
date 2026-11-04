@@ -74,7 +74,8 @@ app.
   event wiring and spawning are exempt wherever they live; a branch owes a test
   wherever it lives. (workflow-rule-2)
 - **The board has two writers.** The app and the `board` command both write
-  `.dashboard/board.json`, only through `board.ts` and `board-store.ts`.
+  `.dashboard/board/` (one file per card; an old `board.json` is read, never
+  written), only through `board.ts` and `board-store.ts`.
   `board-cli.ts` holds the command's decisions, `board-cli-entry.ts` the file
   and terminal. Main watches the `.dashboard` folder, not the file.
   (board-rule-1)
