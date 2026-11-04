@@ -12,3 +12,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-02 #176 — Main is told when its worker finishes; the who-ran-it record (workers-decision-1, workers-decision-3)
 - 2026-11-02 #196 — A session request ends at its newline, not at a half close a Windows named pipe cannot do
 - 2026-11-02 #195 — Workers start under Windows PowerShell: claude's words escaped for the program, --settings wrapped whole
+- 2026-11-04 #203 — A pane command gives up on an app that never takes its request, and the app refuses another build (workers-decision-4)
