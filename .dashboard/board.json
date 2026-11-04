@@ -182,6 +182,33 @@
           "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
           "priority": "low",
           "parent": null
+        },
+        {
+          "id": "219ebb8b-1b84-4b7e-a0fb-1643dc3aac61",
+          "title": "Show YAML and JSON files in the doc drawer, formatted and foldable",
+          "notes": "The drawer's docs tree lists only .md files, and its viewer renders only markdown. The user wants .yaml/.yml and .json files there too (the project's docs/ and, on the manager tab, ~/.dashboard and ~/.claude, e.g. projects.yaml, settings.json).\n\n- List .yaml, .yml and .json beside .md in the tree, under the same roots and the same docs:read refusal rules (only those extensions, only under the allowed roots).\n- The viewer shows them formatted: syntax colours for keys, strings, numbers, booleans, null, comments (YAML); JSON pretty-printed with two-space indent; a file that does not parse is shown as plain text with one line saying where it failed.\n- Collapse: every object and array (YAML mapping and sequence) can be folded and unfolded. Keyboard first (conventions-rule-1): arrow keys walk the foldable lines, Right/Left or Enter unfold and fold, a key folds or unfolds all; a click on the fold marker does the same. Long files open with only the top level unfolded.\n- The Edit row opens the file in nvim as for markdown.\n- Use the yaml package already in the project (yaml@2.9.1) for parsing; no new dependency for a highlighter unless the one the chat uses (highlight.js) already covers it.\n- The fold logic (which lines fold, what is open) is a small module with a test (workflow-rule-2). docs/drawer and help updated within BLURB_WORD_LIMIT.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-04T10:30:49.280Z",
+          "updatedAt": "2026-11-04T10:30:49.280Z"
+        },
+        {
+          "id": "c6e70a0f-948e-49be-a673-2a9f627af66c",
+          "title": "Stop waking main for a worker that only paused",
+          "notes": "Since PR #176, every time a worker's turn ends the app queues a prompt into its main: '<worker> in pane <id> has finished its turn. If it sent you a report...'. A worker's turn also ends while it waits on its own background work (pr-loop, /simplify reviewers, CI), so main gets dozens of these per card, each one a full main turn spent checking pane list and saying 'still waiting' (seen 2026-11-04 on dashboard and new-crm, four in a few minutes). It costs tokens, buries real reports, and fills the user's chat.\n\nFix: tell main only when it means something.\n- A worker that sent main a report (SendMessage) is already heard; no extra notice for that turn end.\n- Otherwise notify only when the pane stays out of 'running' for a grace period (a few minutes, re-checked), so mid-task pauses never reach main; one notice per stop, not one per turn end.\n- Keep a done notice for a worker that truly stopped without reporting, which is the case #176 was built for.\n- Show it on the Claude screen as a compact status line rather than a user-coloured prompt bubble, so it does not read as something the user typed.\nRelated: card 5f5b62b8 carries the same comment; close that part there. The rule (grace period, report seen, one notice per stop) is a small module with a test (workflow-rule-2). docs/workers decision updated.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-04T10:30:49.341Z",
+          "updatedAt": "2026-11-04T10:30:49.341Z"
+        },
+        {
+          "id": "71351fc8-7698-4e79-a341-b3adfa8136ce",
+          "title": "Make dashboard://pane links readable on the Claude screen",
+          "notes": "Pane links in the Claude screen's transcript (the 'pane 0:5' link in worker notices and in tool output, from PR #176) render in the browser's default link blue on the dark bubble, which is hard to read (screenshot from the user, 2026-11-04). Give them the screen's own link colour from the theme, with a visited/hover state and enough contrast on both the dark prompt bubble and the transcript background (check WCAG AA, 4.5:1, for the text size used). Also make them reachable from the keyboard like other transcript links (card 5f5b62b8 lists that). CSS in the chat stylesheet; no test needed beyond the existing link parsing ones; check by hand in the app.",
+          "priority": "medium",
+          "parent": null,
+          "createdAt": "2026-11-04T10:30:49.401Z",
+          "updatedAt": "2026-11-04T10:30:49.401Z"
         }
       ]
     },
