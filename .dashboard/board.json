@@ -279,14 +279,6 @@
           "parent": null,
           "createdAt": "2026-11-02T12:59:21.133Z",
           "updatedAt": "2026-11-04T09:23:50.535Z"
-        },
-        {
-          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
-          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
-          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-04T09:23:50.760Z"
         }
       ]
     },
@@ -383,7 +375,7 @@
           "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
           "priority": "high",
           "parent": null,
-          "updatedAt": "2026-11-04T09:33:19.350Z",
+          "updatedAt": "2026-11-04T10:13:09.450Z",
           "branch": "work-board-card-25055404-20ba-465a-8a82-796",
           "pullRequest": 204
         }
@@ -2724,6 +2716,22 @@
             {
               "at": "2026-11-04T09:23:50.365Z",
               "body": "All six subtasks are Done (PRs #154-#159); the parent closes with them."
+            }
+          ]
+        },
+        {
+          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
+          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
+          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T09:39:09.608Z",
+          "branch": "work-board-card-566a2de5-7b26-4cb2-bc5b-cde",
+          "pullRequest": 202,
+          "comments": [
+            {
+              "at": "2026-11-04T09:39:09.608Z",
+              "body": "Shipped in #202: section strip names take no keyboard focus (tabIndex -1, one mousedown preventDefault on the strip). pressesWalkedToButton from #169 already let Enter press a Tab-focused strip button; this removes the strip from that question."
             }
           ]
         }

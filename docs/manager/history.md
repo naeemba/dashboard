@@ -18,3 +18,4 @@ One line per merged change: date, pull request, why.
 - 2026-10-01 #66 — A queue of what needs you, and a key to the next one
 - 2026-10-25 #81 — A log section
 - 2026-11-01 #155 — Terminals in the manager: main-manager and workers in ~/.dashboard (manager-decision-2)
+- 2026-11-04 #202 — The section strip takes no keyboard focus
