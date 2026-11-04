@@ -18,15 +18,21 @@ export const ACCEPTANCE_TIMEOUT = 5000;
 // follows still parses as JSON with it in front.
 export const ACCEPTED = '\n';
 
+// The request line is already written when the command gives up, so the app may still read it and act
+// on it: an older app answers without ACCEPTED, and a busy one gets to it late.
 export function unacceptedLine(milliseconds: number): string {
-  return `the running Dashboard did not take the request within ${milliseconds / 1000} seconds — `
-    + 'it is most likely older than this command and needs a restart';
+  return `the running Dashboard did not answer within ${milliseconds / 1000} seconds — `
+    + 'it is most likely older than this command and needs a restart, and it may still act on the request: '
+    + 'check `pane list` after restarting before asking again';
 }
 
 // Why the app will not answer a command of another build, or undefined when it will. A command older
-// than the version stamp sends none.
-export function versionRefusal(appVersion: string, commandVersion: unknown): string | undefined {
-  if (commandVersion === appVersion) return undefined;
+// than the version stamp sends none. notify is let through whatever its stamp: it is what a worker's
+// hooks send, a refusal there goes to a hook log nobody reads, and the worker would stay running for
+// good with its main never told. Its words have not changed, and a state the app does not know is
+// refused by parseSessionCommand all the same.
+export function versionRefusal(appVersion: string, commandVersion: unknown, commandArguments: readonly string[]): string | undefined {
+  if (commandVersion === appVersion || commandArguments[0] === 'notify') return undefined;
   const command = typeof commandVersion === 'string' ? `v${commandVersion}` : 'an older build';
   return `this command is ${command} and the running Dashboard is v${appVersion} — restart the app`;
 }

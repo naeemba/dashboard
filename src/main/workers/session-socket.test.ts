@@ -93,9 +93,26 @@ describe('listenForSessions and askApp', () => {
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
     expect(await askApp(socket, { directory: '/work/api', args: ['list'], version: '1.5.0+aaaaaaaaaaaa' }))
-      .toEqual({ ok: false, output: versionRefusal(VERSION, '1.5.0+aaaaaaaaaaaa') });
+      .toEqual({ ok: false, output: versionRefusal(VERSION, '1.5.0+aaaaaaaaaaaa', ['list']) });
     expect(await askApp(socket, { directory: '/work/api', args: ['list'] }))
-      .toEqual({ ok: false, output: versionRefusal(VERSION, undefined) });
+      .toEqual({ ok: false, output: versionRefusal(VERSION, undefined, ['list']) });
+    server.close();
+  });
+
+  // A command from before #196 ended its whole request by closing its side, with no newline. It is
+  // told to restart like any other build, not that its request could not be read.
+  it.skipIf(process.platform === 'win32')('refuses a half-closed whole request as another build', async () => {
+    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
+    await new Promise((resolve) => server.once('listening', resolve));
+    const reply = await new Promise<string>((resolve) => {
+      let text = '';
+      const connection = net.connect({ path: socket, allowHalfOpen: true }, () => connection.end(JSON.stringify({ directory: '/work/api', args: ['list'] })));
+      connection.setEncoding('utf8');
+      connection.on('data', (chunk: string) => { text += chunk; });
+      connection.on('end', () => resolve(text));
+    });
+    expect(JSON.parse(reply)).toEqual({ ok: false, output: versionRefusal(VERSION, undefined, ['list']) });
     server.close();
   });
 

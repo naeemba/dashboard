@@ -52,12 +52,12 @@ export function listenForSessions(
     // One request per connection: anything after its newline, or a close after it, is not another.
     let read = false;
     const refuse = (output: string) => connection.end(JSON.stringify({ ok: false, output }));
-    function handle(line: string | undefined): void {
+    function handle(line: string): void {
       if (read) return;
       read = true;
       let request: SessionRequest | undefined;
       try {
-        request = line === undefined ? undefined : JSON.parse(line) as SessionRequest;
+        request = JSON.parse(line) as SessionRequest;
       } catch {
         request = undefined;
       }
@@ -65,7 +65,7 @@ export function listenForSessions(
         refuse('the request was not one the app could read');
         return;
       }
-      const refusal = versionRefusal(appVersion, request.version);
+      const refusal = versionRefusal(appVersion, request.version, request.args);
       if (refusal !== undefined) {
         refuse(refusal);
         return;
@@ -82,8 +82,10 @@ export function listenForSessions(
       const end = text.indexOf(REQUEST_END);
       if (end !== -1) handle(text.slice(0, end));
     });
-    // Closed before the newline: a request that never finished arriving.
-    connection.on('end', () => handle(undefined));
+    // Closed before the newline: a request cut off on its way, or one from a command before #196, which
+    // ended its request by closing its side. The first does not parse and is refused as unreadable; the
+    // second does, and is refused as another build.
+    connection.on('end', () => handle(text));
     // A command killed mid-answer is nobody's to tell.
     connection.on('error', () => undefined);
   });

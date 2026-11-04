@@ -22,8 +22,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 
 - Given a project is open, when main dispatches a task, then a worker pane opens in the list on the right and runs it.
 - Given Dashboard on Windows, when a pane runs `node "$DASHBOARD_COMMAND" pane list`, then the app's answer comes back over the named pipe rather than an empty reply.
-- Given a rebuild swapped the command under an app still running the old build, when a pane runs `pane list`, `claim` or `run`, then within 5 seconds it prints that the running app is likely older than the command and needs a restart, and exits 1, rather than hanging.
-- Given the command and the running app are different builds that both carry the stamp, when the command asks anything, then the app refuses it naming both builds and saying to restart; a command older than the stamp is refused the same way.
+- Given a rebuild swapped the command under an app still running the old build, when a pane runs `pane list`, `claim` or `run`, then within 5 seconds it prints that the running app is likely older than the command and needs a restart and may still act on the request, and exits 1, rather than hanging.
+- Given the command and the running app are different builds that both carry the stamp, when the command asks anything, then the app refuses it naming both builds and saying to restart; a command older than the stamp, including one from before #196 that ends its request by closing its side, is refused the same way.
+- Given the command and the running app are different builds, when a worker's hook runs `session notify <id> done`, then the app still takes it and the pane goes green (workers-decision-4).
 - Given a request the app has taken, when its answer takes longer than 5 seconds (a `pane run --card` making its worktree), then the command keeps waiting and prints the answer.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose prompt holds double quotes, then the worker starts with its --settings JSON and its prompt exactly as they were written.
 - Given a worker's agent stops, when its Stop hook runs `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
