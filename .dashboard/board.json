@@ -368,16 +368,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "25055404-20ba-465a-8a82-7965f85967f7",
-          "title": "The pane host never runs on Windows, so panes do not survive a restart",
-          "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-04T10:13:09.450Z",
-          "branch": "work-board-card-25055404-20ba-465a-8a82-796",
-          "pullRequest": 204
         }
       ]
     },
@@ -2732,6 +2722,22 @@
             {
               "at": "2026-11-04T09:39:09.608Z",
               "body": "Shipped in #202: section strip names take no keyboard focus (tabIndex -1, one mousedown preventDefault on the strip). pressesWalkedToButton from #169 already let Enter press a Tab-focused strip button; this removes the strip from that question."
+            }
+          ]
+        },
+        {
+          "id": "25055404-20ba-465a-8a82-7965f85967f7",
+          "title": "The pane host never runs on Windows, so panes do not survive a restart",
+          "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T10:13:24.838Z",
+          "branch": "work-board-card-25055404-20ba-465a-8a82-796",
+          "pullRequest": 204,
+          "comments": [
+            {
+              "at": "2026-11-04T10:13:24.838Z",
+              "body": "Shipped in PR #204. The pane host now runs on Windows: node is started directly, on a named pipe named after a secret token in the user data. The host proves it holds the token, and the app says hello first. The socket tests no longer skip Windows, so the Windows CI job runs them over a real pipe. Not checked: the real built pane-host-entry.js under node-pty on a Windows machine (the launch test uses a stand-in entry)."
             }
           ]
         }
