@@ -202,6 +202,24 @@
           "parent": null,
           "createdAt": "2026-11-04T10:30:49.401Z",
           "updatedAt": "2026-11-04T10:30:49.401Z"
+        },
+        {
+          "id": "6965717c-5e25-4252-ac22-f3d2ea7c2818",
+          "title": "Salvaging a second broken board.json overwrites the first board.json.broken",
+          "notes": "readBoardFile in src/main/board/board-store.ts:452-455 renames a board.json that will not parse to the fixed name board.json.broken. If board.json breaks a second time, the second rename replaces the first damaged copy, and that first copy may be the one that still holds the cards. Fix: pick a name that is not taken yet. Issue: https://github.com/naeemba/dashboard/issues/207 Review: https://github.com/naeemba/dashboard/pull/206#discussion_r4467374866",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-04T12:22:56.000Z",
+          "updatedAt": "2026-11-04T12:22:56.000Z"
+        },
+        {
+          "id": "d7a6fca8-196e-4bde-a123-5ff94f51d926",
+          "title": "Use one read-or-null helper instead of six hand-rolled ENOENT checks",
+          "notes": "notes-store.ts:29, ink-store.ts:23, worktree-store.ts:60, projects-file.ts:179, log-store.ts:48 and pane-host-protocol.ts:69 each hand-roll the same try / ENOENT / rethrow. Once readText moves to src/main/app/ (asked for in #206), they can call it, and a change to how a missing file is treated then happens in one place instead of six. Issue: https://github.com/naeemba/dashboard/issues/207 Review: https://github.com/naeemba/dashboard/pull/206#discussion_r4467375251",
+          "priority": "low",
+          "parent": null,
+          "createdAt": "2026-11-04T12:23:02.192Z",
+          "updatedAt": "2026-11-04T12:23:02.193Z"
         }
       ]
     },
