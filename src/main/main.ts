@@ -867,6 +867,7 @@ const answerSession = projectRequests({
 // `pane claim --project` open projects too.
 const sessions = listenForSessions(
   sessionSocket,
+  __BUILD_VERSION__,
   (request) => shellHost.ready.then(() => answerSession(request)),
   (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`),
 );
