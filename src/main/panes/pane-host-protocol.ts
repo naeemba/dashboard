@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
-import { chmodSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 // What the app and the pane host say to each other: one JSON message per line over a unix socket,
@@ -25,14 +25,15 @@ const PROTOCOL_VERSION = 1;
 // taken and answer as the host, hearing every keystroke. Any user can also list the pipes, so the name
 // is no secret: it is a hash of a token kept in the user data (pipeToken), which no other user can read,
 // and the host proves it holds that token (hostProof) before the app sends it anything but hello.
-// `token` is set only on Windows. Null when the token could not be read or made: no host this run.
-export type PaneHostAddress = { socket: string; token?: string };
+// `token`, and the file the host reads it from, are set only on Windows. Null when the token could
+// not be read or made: no host this run.
+export type PaneHostAddress = { socket: string; token?: string; tokenFile?: string };
 
 export function paneHostAddress(platform: string, userData: string): PaneHostAddress | null {
   if (platform !== 'win32') return { socket: path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`) };
   try {
     const token = pipeToken(userData);
-    return { socket: pipeName(token), token };
+    return { socket: pipeName(token), token, tokenFile: pipeTokenFile(userData) };
   } catch {
     return null;
   }
@@ -56,35 +57,46 @@ export function pipeTokenFile(userData: string): string {
 // The token, made on the first launch and kept: a new one names a new pipe, and a host running on the
 // old name would be left running unseen while the app launched a second. So it is written only when
 // there is no file, or the file holds no token (no host can be on a name it never gave). A read that
-// fails any other way (a scan holding the file) is thrown, not taken for a missing file. Two launches
-// making it at once: the second finds the first's file and keeps it.
+// fails any other way (a scan holding the file) is thrown, not taken for a missing file. The file is
+// never seen half written (writeToken), so two launches making it at once agree: the second finds the
+// first's whole file and keeps it.
 function pipeToken(userData: string): string {
   const file = pipeTokenFile(userData);
   try {
     const kept = readFileSync(file, 'utf8');
-    return PIPE_TOKEN.test(kept) ? kept : writeToken(file, 'w');
+    return PIPE_TOKEN.test(kept) ? kept : writeToken(file, 'replace');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
   try {
-    return writeToken(file, 'wx');
+    return writeToken(file, 'create');
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     const raced = readFileSync(file, 'utf8');
-    if (!PIPE_TOKEN.test(raced)) throw new Error('The pipe token is still being written', { cause: error });
+    if (!PIPE_TOKEN.test(raced)) throw new Error('The pipe token file holds no token', { cause: error });
     return raced;
   }
 }
 
 // After something at the pipe's name failed the proof: the next launch uses a name it never saw.
 export function renewPipeToken(userData: string): void {
-  writeToken(pipeTokenFile(userData), 'w');
+  writeToken(pipeTokenFile(userData), 'replace');
 }
 
-function writeToken(file: string, flag: 'w' | 'wx'): string {
+// Written whole to a file of its own and then put in place in one step, so a reader finds either no
+// token file or a whole one. `create` links it in, which fails with EEXIST if another launch got there
+// first; `replace` renames it over the old one.
+function writeToken(file: string, how: 'create' | 'replace'): string {
   const token = randomBytes(16).toString('hex');
   mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  writeFileSync(file, token, { mode: 0o600, flag });
+  const written = `${file}.${randomBytes(8).toString('hex')}`;
+  writeFileSync(written, token, { mode: 0o600, flag: 'wx' });
+  try {
+    if (how === 'create') linkSync(written, file);
+    else renameSync(written, file);
+  } finally {
+    rmSync(written, { force: true });
+  }
   return token;
 }
 
@@ -149,8 +161,8 @@ export type Survivor = {
 export type FromHost =
   // `proof` answers the hello's nonce, when there was one.
   | { type: 'panes'; panes: Survivor[]; proof?: string }
-  // Another app is connected; this one runs its shells itself.
-  | { type: 'busy' }
+  // Another app is connected; this one runs its shells itself. `proof` as for panes.
+  | { type: 'busy'; proof?: string }
   | { type: 'spawned'; key: string; pid: number }
   | { type: 'data'; key: string; data: string }
   | { type: 'exit'; key: string; code: number }

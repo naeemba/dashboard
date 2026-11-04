@@ -54,14 +54,21 @@ bytes made on the first launch and kept in `pane-host/pipe-token`, which a
 Windows profile does not let other users read. The host is handed the file's
 path, not the token, so it is on no command line. The app's `hello` carries a
 random nonce, the host answers with an HMAC of it keyed by the token, and the
-app sends nothing more and adopts nothing until that checks out. Something that
-fails it hears only the `hello`; the app runs its shells itself this run and
-writes a new token, so the next launch uses a name that was never listed. It
+app sends nothing more and adopts nothing until that checks out. A `busy`
+carries the proof too, since another Dashboard holding the host is told so by
+the host itself. Something that fails it, or answers `busy` without it, closes
+before answering, or says nothing for ten seconds, hears only the `hello`; the
+app runs its shells itself this run and writes a new token, so the next launch
+uses a name that was never listed. Silence ends the wait on a mac or Linux too,
+with no new token, so a hung host cannot keep every project from opening. It
 does not launch a host on the new name the same run: that costs one run's panes
 their survival, against retargeting a client already reaching for a name.
 
-The token is written only when the file is missing or holds no token, with
-`wx` so a second launch racing the first keeps the first's. A new token while a
+The token is written only when the file is missing or holds no token. It is
+written whole to a file beside it and then linked into place, which fails if a
+second launch got there first, so that launch keeps the first's token and no
+launch ever reads a half-written file and takes it for a damaged one. A new
+token (a renewal) is renamed over the old file the same way. A new token while a
 host runs on the old name would leave that host's shells running unseen and
 resume their Claude conversations a second time. A read failing any other way
 (a scan holding the file) is no host this run, not a new token.

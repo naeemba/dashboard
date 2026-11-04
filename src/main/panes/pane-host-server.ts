@@ -108,12 +108,13 @@ export function acceptApps(server: ReturnType<typeof paneHostServer>, token?: st
       // One app at a time. An app that went has had its end closed by the kernel, so a second one
       // arriving while one is connected is a second Dashboard on the same user data: it is turned away
       // and runs its shells itself, rather than taking the first one's panes out from under it.
+      // The proof goes with a busy too: on Windows an unproven busy is an impostor's.
+      const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
       if (current !== null) {
-        socket.end(line({ type: 'busy' }));
+        socket.end(line({ type: 'busy', proof }));
         return;
       }
       current = socket;
-      const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
       server.connect((answer) => socket.write(line(answer)), proof);
     }));
     socket.on('close', () => {

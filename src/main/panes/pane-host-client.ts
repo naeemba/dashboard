@@ -23,6 +23,8 @@ const CONNECT_TRIES = 50;
 const CONNECT_PAUSE_MS = 100;
 // What a pane shows for a shell lost with the host, which has no exit code of its own to give.
 const LOST_EXIT = 1;
+// How long the first answer may take. A real host answers on connect, even with megabytes of screens.
+const ANSWER_WAIT_MS = 10_000;
 
 export function paneHost(options: {
   // Null when there is no address this run (paneHostAddress).
@@ -32,6 +34,8 @@ export function paneHost(options: {
   launch(): void;
   // What answered at the socket failed the proof: it is not this app's host.
   impostor?(): void;
+  // In place of ANSWER_WAIT_MS, for a test.
+  answerWaitMs?: number;
   // The host was never reached, or went: shells from then on are this process's and die with it.
   lost(message: string): void;
 }): PaneHost {
@@ -65,30 +69,44 @@ export function paneHost(options: {
     }
     const { token } = options;
     const nonce = token === undefined ? undefined : randomBytes(16).toString('hex');
+    // Anything can listen at a pipe's name; only the host can answer the nonce.
+    const proven = (proof: string | undefined): boolean => token === undefined || nonce === undefined || proof === hostProof(token, nonce);
     await new Promise<void>((resolve) => {
-      let turnedAway = false;
+      let settled = false;
+      // Ends the wait for the first answer with this app running its shells itself.
+      const turnAway = (message: string): void => {
+        settled = true;
+        clearTimeout(silence);
+        options.lost(message);
+        open.destroy();
+        resolve();
+      };
+      // What answered is not this app's host: a wrong proof, or on Windows none at all (a close, a busy
+      // without one, silence). Renewing the token gives the next launch a name nobody has seen.
+      const impostor = (): void => {
+        try {
+          options.impostor?.();
+        } catch {
+          // The next launch tries the same name, and is turned down the same way.
+        }
+        turnAway(`Something other than the pane host answered at ${socketPath}; shells die with the app this run`);
+      };
+      // A real host answers at once; one that never does would hold every project from opening.
+      const silence = setTimeout(() => {
+        if (token !== undefined) return impostor();
+        turnAway(`The pane host at ${socketPath} did not answer; shells die with the app this run`);
+      }, options.answerWaitMs ?? ANSWER_WAIT_MS);
       open.setEncoding('utf8');
       open.write(line({ type: 'hello', nonce }));
       open.on('data', lineReader<FromHost>((message) => {
-        if (message.type === 'busy') {
-          turnedAway = true;
-          options.lost(`Another Dashboard on the same user data holds the pane host at ${socketPath}; shells die with the app this run`);
-          open.destroy();
-          return resolve();
-        }
-        if (message.type === 'panes') {
-          // Anything can listen at a pipe's name; only the host can answer the nonce.
-          if (token !== undefined && nonce !== undefined && message.proof !== hostProof(token, nonce)) {
-            turnedAway = true;
-            try {
-              options.impostor?.();
-            } catch {
-              // The next launch tries the same name, and is turned down the same way.
-            }
-            options.lost(`Something other than the pane host answered at ${socketPath}; shells die with the app this run`);
-            open.destroy();
-            return resolve();
+        if (message.type === 'busy' || message.type === 'panes') {
+          if (settled) return;
+          if (!proven(message.proof)) return impostor();
+          if (message.type === 'busy') {
+            return turnAway(`Another Dashboard on the same user data holds the pane host at ${socketPath}; shells die with the app this run`);
           }
+          settled = true;
+          clearTimeout(silence);
           kept = message.panes;
           connection = open;
           return resolve();
@@ -97,7 +115,10 @@ export function paneHost(options: {
         if (message.type === 'exit') shells.delete(message.key);
       }));
       open.on('close', () => {
-        if (turnedAway) return;
+        if (!settled && token !== undefined) return impostor();
+        if (settled && connection !== open) return;
+        settled = true;
+        clearTimeout(silence);
         options.lost('The pane host stopped; every pane it ran has ended');
         connection = null;
         kept = [];

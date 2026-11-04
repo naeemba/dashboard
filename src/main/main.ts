@@ -11,7 +11,7 @@ import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
 import { launchPaneHost, paneHost } from './panes/pane-host-client';
-import { paneHostAddress, paneOfKey, pipeTokenFile, renewPipeToken } from './panes/pane-host-protocol';
+import { paneHostAddress, paneOfKey, renewPipeToken } from './panes/pane-host-protocol';
 import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { adoptedPane } from './panes/adopted-pane';
 import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
@@ -226,9 +226,7 @@ const shellHost = paneHost({
   socket: paneAddress?.socket ?? null,
   token: paneAddress?.token,
   launch: () => {
-    if (paneAddress === null) return;
-    const tokenFile = paneAddress.token === undefined ? undefined : pipeTokenFile(app.getPath('userData'));
-    launchPaneHost(process.env.SHELL, paneHostEntry, paneAddress.socket, app.getPath('home'), tokenFile);
+    if (paneAddress !== null) launchPaneHost(process.env.SHELL, paneHostEntry, paneAddress.socket, app.getPath('home'), paneAddress.tokenFile);
   },
   impostor: () => renewPipeToken(app.getPath('userData')),
   lost: failures.hold,

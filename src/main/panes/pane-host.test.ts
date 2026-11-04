@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -183,6 +183,9 @@ describe('paneHostAddress', () => {
       const remade = paneHostAddress('win32', first)?.token;
       renewPipeToken(first);
       expect(paneHostAddress('win32', first)?.token).not.toBe(remade);
+      // Each token is written beside the file and moved in whole, and nothing is left beside it.
+      expect(readdirSync(path.dirname(pipeTokenFile(first)))).toEqual(['pipe-token']);
+      expect(paneHostAddress('win32', first)?.tokenFile).toBe(pipeTokenFile(first));
     } finally {
       rmSync(first, { recursive: true, force: true });
       rmSync(second, { recursive: true, force: true });
@@ -387,6 +390,63 @@ describe('paneHost over a socket', () => {
     expect(shell.kept).toBeUndefined();
     await new Promise((resolve) => shell.onExit(resolve));
     expect(heard.map((message) => message.type)).toEqual(['hello']);
+    listener.close();
+  });
+
+  // A listener at the pipe's name that is not the host, answering hello as `answer` says.
+  async function squatter(answer: (socket: net.Socket) => void) {
+    const socketPath = hostSocket();
+    const heard: ToHost[] = [];
+    const listener = net.createServer((socket) => {
+      accepted.push(socket);
+      socket.setEncoding('utf8');
+      socket.on('data', lineReader<ToHost>((message) => {
+        heard.push(message);
+        if (message.type === 'hello') answer(socket);
+      }));
+    });
+    await new Promise<void>((resolve) => listener.listen(socketPath, resolve));
+    const lost: string[] = [];
+    let impostors = 0;
+    const client = paneHost({
+      socket: socketPath, token: 'ab'.repeat(16), launch: () => undefined, answerWaitMs: 200,
+      impostor: () => { impostors += 1; }, lost: (message) => lost.push(message),
+    });
+    await client.ready;
+    const shell = client.spawn({ ...request(paneKey('/project', 1)), ...exitingShell(0), cwd: folder });
+    await new Promise((resolve) => shell.onExit(resolve));
+    listener.close();
+    return { heard, lost, impostors: () => impostors, kept: shell.kept };
+  }
+
+  for (const [what, answer] of [
+    ['stays silent', () => undefined],
+    ['answers busy without the proof', (socket: net.Socket) => socket.end(line({ type: 'busy' }))],
+    ['closes', (socket: net.Socket) => socket.destroy()],
+  ] as const) {
+    it(`takes whatever ${what} at the pipe's name for an impostor, renews the token and runs its shells itself`, async () => {
+      const result = await squatter(answer);
+      expect(result.impostors()).toBe(1);
+      expect(result.lost).toHaveLength(1);
+      expect(result.lost[0]).toContain('Something other than the pane host');
+      expect(result.kept).toBeUndefined();
+      expect(result.heard.map((message) => message.type)).toEqual(['hello']);
+    });
+  }
+
+  it('believes a busy that carries the proof: another Dashboard holds the host', async () => {
+    const socketPath = hostSocket();
+    const { host } = server();
+    const token = 'ab'.repeat(16);
+    const listener = await listen(host, socketPath, token);
+    const first = paneHost({ socket: socketPath, token, launch: () => undefined, lost: () => undefined });
+    await first.ready;
+    const lost: string[] = [];
+    let impostors = 0;
+    const second = paneHost({ socket: socketPath, token, launch: () => undefined, impostor: () => { impostors += 1; }, lost: (message) => lost.push(message) });
+    await second.ready;
+    expect(impostors).toBe(0);
+    expect(lost[0]).toContain('Another Dashboard');
     listener.close();
   });
 
