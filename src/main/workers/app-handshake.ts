@@ -19,7 +19,7 @@ export const ACCEPTANCE_TIMEOUT = 5000;
 export const ACCEPTED = '\n';
 
 export function unacceptedLine(milliseconds: number): string {
-  return `the Dashboard that opened this pane did not take the request within ${milliseconds / 1000} seconds — `
+  return `the running Dashboard did not take the request within ${milliseconds / 1000} seconds — `
     + 'it is most likely older than this command and needs a restart';
 }
 

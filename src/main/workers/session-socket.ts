@@ -51,6 +51,7 @@ export function listenForSessions(
     let text = '';
     // One request per connection: anything after its newline, or a close after it, is not another.
     let read = false;
+    const refuse = (output: string) => connection.end(JSON.stringify({ ok: false, output }));
     function handle(line: string | undefined): void {
       if (read) return;
       read = true;
@@ -61,12 +62,12 @@ export function listenForSessions(
         request = undefined;
       }
       if (!Array.isArray(request?.args) || typeof request.directory !== 'string') {
-        connection.end(JSON.stringify({ ok: false, output: 'the request was not one the app could read' }));
+        refuse('the request was not one the app could read');
         return;
       }
       const refusal = versionRefusal(appVersion, request.version);
       if (refusal !== undefined) {
-        connection.end(JSON.stringify({ ok: false, output: refusal }));
+        refuse(refusal);
         return;
       }
       connection.write(ACCEPTED);
