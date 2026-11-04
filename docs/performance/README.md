@@ -63,7 +63,7 @@ Start a headless compositor of its own. Nothing appears on your screen:
 Stage the demo. The two transcripts are any long Claude Code conversations;
 the first run used this repository's longest, 8,084 lines (31 MB) and 1,955
 lines (8 MB). Keep `$D` short: the pane host's socket is
-`$D/userdata/pane-host/panes-1.sock`, and a unix socket's path past about a
+`$D/userdata/pane-host/panes-2.sock`, and a unix socket's path past about a
 hundred bytes cannot be listened on, so a long folder quietly runs every
 measurement without the pane host:
 

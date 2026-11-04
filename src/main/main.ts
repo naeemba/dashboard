@@ -221,7 +221,7 @@ const paneEnvironment = {
 // Where every pane's shell runs, so it outlives this process: pane-host-client.ts and panes-decision-1.
 // Built and unpacked beside the commands above, since `node` is what runs it.
 const paneHostEntry = path.join(path.dirname(boardCommand), 'pane-host-entry.js');
-const paneSocket = paneHostSocket(app.getPath('userData'));
+const paneSocket = paneHostSocket(process.platform, app.getPath('userData'));
 const shellHost = paneHost({
   socket: paneSocket,
   launch: () => launchPaneHost(process.env.SHELL, paneHostEntry, paneSocket, app.getPath('home')),

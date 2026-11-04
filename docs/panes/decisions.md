@@ -9,9 +9,11 @@ crash or the restart an update needs killed every shell (review R1, 2026-11-01).
 They now run in the pane host: `pane-host-entry.js`, started detached through
 the user's login shell as `node pane-host-entry.js <socket>`, holding the ptys
 with the same node-pty the app ships. The app talks to it over a unix socket in
-its user data (`pane-host/panes-1.sock`, folder mode 0700), one JSON message a
-line. On connecting it is told every shell still running with its screen, and
-`spawnProject` puts each back in its pane before any Claude resume runs.
+its user data (`pane-host/panes-2.sock`, folder mode 0700; a named pipe on
+Windows, below), one JSON message a line. The app speaks first, with `hello`,
+and the host says nothing to a connection until it has. Then it is told every
+shell still running with its screen, and `spawnProject` puts each back in its
+pane before any Claude resume runs.
 
 The review named two ways. tmux in control mode (`tmux -C`) was weighed and
 turned down:
@@ -25,7 +27,7 @@ turned down:
   round trip per pane.
 - Control mode is a protocol of its own to parse (`%output` with octal escapes,
   `send-keys -H`, `refresh-client -C` per pane, `capture-pane` to redraw). The
-  host's protocol is ten message types, and the screen it replays comes from
+  host's protocol is thirteen message types, and the screen it replays comes from
   `pane-screen-copy.ts`, which the remote host already uses.
 
 Two things made the host possible without changing the build. node-pty's binary
@@ -34,8 +36,17 @@ is N-API, so the copy in `app.asar.unpacked` loads under the system `node`
 the host: the `RunAsNode` fuse is off in `forge.config.ts`, and turning it on to
 run the app's binary as node was not worth it.
 
-When no host answers (no `node` on the login shell's PATH, a socket path too
-long, Windows), the app runs ptys itself as before, and the status bar says the
+Windows has neither a POSIX login shell nor socket files. There the app starts
+`node pane-host-entry.js <pipe>` straight, since a Windows app is handed the
+PATH the user set, and the socket is a named pipe,
+`\\.\pipe\dashboard-panes-2-<hash of the user data folder>`, the way the
+`session` command's is (`session-socket.ts`). Its access is the pipe default,
+not a 0700 folder, and that default lets every user on the machine open it for
+reading. Such a connection cannot write the `hello`, so it hears no screen and
+does not turn the app away as `busy`.
+
+When no host answers (no `node` on the login shell's PATH, or on Windows' PATH,
+a socket path too long), the app runs ptys itself as before, and the status bar says the
 shells die with it this run. If the host dies mid-run every pane it held reads as
 exited and new panes run in the app.
 

@@ -68,6 +68,7 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
       if (entries.size === 0) idle();
     },
     receive(message: ToHost): void {
+      if (message.type === 'hello') return;
       if (message.type === 'spawn') return start(message);
       const shell = entries.get(message.key)?.shell;
       if (message.type === 'write') shell?.write(message.data);
@@ -97,21 +98,26 @@ export function acceptApps(server: ReturnType<typeof paneHostServer>): (socket: 
   let current: net.Socket | null = null;
   return (socket) => {
     socket.on('error', () => undefined);
-    // One app at a time. An app that went has had its end closed by the kernel, so a second one arriving
-    // while one is connected is a second Dashboard on the same user data: it is turned away and runs
-    // its shells itself, rather than taking the first one's panes out from under it.
-    if (current !== null) {
-      socket.end(line({ type: 'busy' }));
-      return;
-    }
-    current = socket;
     socket.setEncoding('utf8');
-    socket.on('data', lineReader<ToHost>((message) => server.receive(message)));
+    socket.on('data', lineReader<ToHost>((message) => {
+      if (socket === current) return server.receive(message);
+      // Nothing is told before the app says hello: a Windows named pipe lets every user of the machine
+      // open it for reading, and one that cannot write must hear no screen nor hold the host from the app.
+      if (message.type !== 'hello') return;
+      // One app at a time. An app that went has had its end closed by the kernel, so a second one
+      // arriving while one is connected is a second Dashboard on the same user data: it is turned away
+      // and runs its shells itself, rather than taking the first one's panes out from under it.
+      if (current !== null) {
+        socket.end(line({ type: 'busy' }));
+        return;
+      }
+      current = socket;
+      server.connect((answer) => socket.write(line(answer)));
+    }));
     socket.on('close', () => {
       if (current !== socket) return;
       current = null;
       server.disconnect();
     });
-    server.connect((message) => socket.write(line(message)));
   };
 }

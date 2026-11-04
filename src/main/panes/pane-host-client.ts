@@ -47,7 +47,6 @@ export function paneHost(options: {
   }
 
   async function connect(): Promise<void> {
-    if (process.platform === 'win32') return;
     const open = await reachHost();
     if (open === null) {
       options.lost(`No pane host answered at ${options.socket}; shells die with the app this run`);
@@ -56,6 +55,7 @@ export function paneHost(options: {
     await new Promise<void>((resolve) => {
       let turnedAway = false;
       open.setEncoding('utf8');
+      open.write(line({ type: 'hello' }));
       open.on('data', lineReader<FromHost>((message) => {
         if (message.type === 'busy') {
           turnedAway = true;
@@ -176,14 +176,24 @@ export function hostShell(
   };
 }
 
-// Starts the host detached, through the user's login shell: the host runs on the `node` a pane's
-// shell finds, which an app started from a launcher does not have on its PATH. node-pty's binary is
-// N-API, so the copy the app ships loads there too. No shell to ask means no host.
+// Starts the host detached, as hostLaunch says. No way to start one means no host.
 export function launchPaneHost(shell: string | undefined, entry: string, socket: string, home: string): void {
-  if (!shell) return;
-  const child = spawnProcess(shell, taskArguments(shell, hostCommand(entry, socket)), { detached: true, stdio: 'ignore', cwd: home });
+  const launch = hostLaunch(process.platform, shell, entry, socket);
+  if (launch === null) return;
+  // windowsHide: detached on Windows gives the host a console window of its own, which would sit open.
+  const child = spawnProcess(launch.file, launch.args, { detached: true, stdio: 'ignore', cwd: home, windowsHide: true });
   child.on('error', () => undefined);
   child.unref();
+}
+
+// Through the user's login shell on a mac or Linux: the host runs on the `node` a pane's shell finds,
+// which an app started from a launcher does not have on its PATH. node-pty's binary is N-API, so the
+// copy the app ships loads there too. Windows hands every app the PATH the user set, and has no POSIX
+// shell to read hostCommand, so `node` is started straight.
+export function hostLaunch(platform: string, shell: string | undefined, entry: string, socket: string): { file: string; args: string[] } | null {
+  if (platform === 'win32') return { file: 'node', args: [entry, socket] };
+  if (!shell) return null;
+  return { file: shell, args: taskArguments(shell, hostCommand(entry, socket)) };
 }
 
 export function hostCommand(entry: string, socket: string): string {

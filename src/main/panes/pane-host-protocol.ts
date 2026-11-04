@@ -1,6 +1,8 @@
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
-// What the app and the pane host say to each other: one JSON message per line over a unix socket.
+// What the app and the pane host say to each other: one JSON message per line over a unix socket,
+// or a named pipe on Windows.
 // panes-decision-1 says why the shells live in a process of their own.
 
 // In the socket's name, so an app built against another shape of these messages never talks to a host
@@ -8,15 +10,26 @@ import path from 'node:path';
 // unseen until they exit. Bump it with any change to the types below that an older host would misread.
 // A message type it has never heard of it drops (pane-host-server.ts's receive), so adding one, as
 // pause and resume were, keeps the running host and its shells: an older host just never pauses.
-const PROTOCOL_VERSION = 1;
+const PROTOCOL_VERSION = 2;
 
 // In a folder of its own, made private before the socket is: anyone who can reach the socket can type
 // into every shell. The user-data folder, not the temporary one, so a second Dashboard started with its
 // own --user-data-dir has a host of its own. One on the same user data (a development build beside the
 // installed app) reaches the same socket, and the host turns it away with `busy` while the first is
-// connected.
-export function paneHostSocket(userData: string): string {
+// connected. Windows has no socket files: a named pipe stands in, as it does for sessionSocketPath,
+// named after a hash of the user-data folder so a second user data still has a host of its own.
+export function paneHostSocket(platform: string, userData: string): string {
+  if (platform === 'win32') {
+    const userDataHash = createHash('sha256').update(userData).digest('hex').slice(0, 16);
+    return `\\\\.\\pipe\\dashboard-panes-${PROTOCOL_VERSION}-${userDataHash}`;
+  }
   return path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`);
+}
+
+// The folder the host makes private and clears a dead host's socket from before it listens, or null
+// for a named pipe, which has neither a folder nor a file left behind.
+export function paneHostSocketFolder(platform: string, socketPath: string): string | null {
+  return platform === 'win32' ? null : path.dirname(socketPath);
 }
 
 // What a pane is called on both sides of the socket. The project and the pane's number, not the
@@ -41,6 +54,9 @@ export type SpawnRequest = {
 };
 
 export type ToHost =
+  // The app's first line, before which the host says nothing (pane-host-server.ts's acceptApps). New in
+  // version 2: an app of version 1 says no hello and would wait on a version 2 host for good.
+  | { type: 'hello' }
   | ({ type: 'spawn' } & SpawnRequest)
   | { type: 'write'; key: string; data: string }
   | { type: 'resize'; key: string; cols: number; rows: number }
