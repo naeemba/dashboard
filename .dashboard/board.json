@@ -39,13 +39,6 @@
           "parent": null
         },
         {
-          "id": "8e62548c-822c-463d-bc02-3b3b13f57de7",
-          "title": "Manager terminals: ask the dashboard about any project and dispatch work into it",
-          "notes": "The manager tab gets the same terminals layout as a project (main Claude session plus worker panes), and that session can find any project by name or alias, open and close projects, and dispatch panes into them, getting results back as worker reports. Projects are described in ~/.dashboard/projects.yaml. Subtasks, in order: (1) projects.yaml + reader + dashboard project find/list, (2) one dashboard command with project/pane/board subcommands, board and session kept as aliases, (3) terminals in the manager, (4) cross-project pane claim --project and list --all, (5) project open/close, (6) first projects.yaml generated from open and recent projects. Decided: YAML not markdown; close refuses when any pane is busy and otherwise closes with no dialog; results come back as worker reports (SendMessage), no fetch-result command until reports prove not enough.",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "ffac7938-8f71-4205-b6c8-3d52cd5fd6cd",
           "title": "Bring the manager's worker panes back after a restart",
           "notes": "Follow-up from #155 (manager terminals). The manager's worker panes (manager-terminal-<n>) do not come back after the app restarts: session-store keys saved pages by project path, and the manager is not in that list. Project pages already restore their panes and resume their Claude sessions; the manager's should too.",
@@ -118,13 +111,6 @@
           "parent": null
         },
         {
-          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
-          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
-          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "7c3bd72f-85ac-4faa-8d52-9c0b44f110a2",
           "title": "Split board-view.ts along its drag-and-drop seam",
           "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
@@ -193,13 +179,6 @@
           "parent": null
         },
         {
-          "id": "25055404-20ba-465a-8a82-7965f85967f7",
-          "title": "The pane host never runs on Windows, so panes do not survive a restart",
-          "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "12dcfdf3-6cfa-4445-a592-6400ea498d37",
           "title": "The session command gets no answer over the Windows named pipe",
           "notes": "The comment says it: the `session` command is broken on Windows, not just its test. Both tests here drive the real `askApp` against the real `listenForSessions`, so the empty reply or timeout they get on `windows-latest` is what a worker pane gets when it runs `session ...` on Windows. The main session asks a worker to report back, and the call either says \"the app answered with something that was not a reply\" or hangs until it times out.\n\nTagged medium, not high, because the cause (the pipe not staying half open after the client's `end()`) is inferred and not yet reproduced outside CI. A likely fix, outside this PR, is to stop relying on half-close: the client writes the request followed by a newline and keeps its side open, and the server answers once it has read one line. That works the same over a unix socket and a named pipe. Then drop `halfOpenOnly`.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551443",
@@ -212,15 +191,6 @@
           "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
           "priority": "low",
           "parent": null
-        },
-        {
-          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
-          "title": "pane commands hang forever when the CLI is newer than the running app",
-          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-11-02T12:59:21.133Z",
-          "updatedAt": "2026-11-02T12:59:21.133Z"
         }
       ]
     },
@@ -300,7 +270,33 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
+          "title": "pane commands hang forever when the CLI is newer than the running app",
+          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-02T12:59:21.133Z",
+          "updatedAt": "2026-11-04T09:23:50.535Z"
+        },
+        {
+          "id": "25055404-20ba-465a-8a82-7965f85967f7",
+          "title": "The pane host never runs on Windows, so panes do not survive a restart",
+          "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T09:23:50.651Z"
+        },
+        {
+          "id": "566a2de5-7b26-4cb2-bc5b-cde3b4b73ad4",
+          "title": "Enter on a Tab-focused section strip button does the section's Enter action instead",
+          "notes": "section-strip.ts: the window's capture-phase lookup in renderer.ts claims a bare Enter for the current section even when focus is on a strip button. Tab to Board on the strip, press Enter, and the selected worktree opens instead of the board. In the command section, the typed command runs in every marked project. Fix: make the strip buttons pointer-only (tabIndex -1 plus a mousedown preventDefault, like createAddPaneButton in chrome-bars.ts); Alt+H and Alt+L already walk the strip. Issue: https://github.com/naeemba/dashboard/issues/170 Review: https://github.com/naeemba/dashboard/pull/169#discussion_r4437837755",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T09:23:50.760Z"
+        }
+      ]
     },
     {
       "name": "Review",
@@ -2712,6 +2708,20 @@
             {
               "at": "2026-11-03T17:06:49.155Z",
               "body": "Shipped in #201: pnpm@10.33.3, nodeLinker hoisted, settings in pnpm-workspace.yaml, lock from pnpm import, CI on pnpm for both jobs. Two worktrees' packages: 1.4 GB -> 702 MB; a second install takes 1 s."
+            }
+          ]
+        },
+        {
+          "id": "8e62548c-822c-463d-bc02-3b3b13f57de7",
+          "title": "Manager terminals: ask the dashboard about any project and dispatch work into it",
+          "notes": "The manager tab gets the same terminals layout as a project (main Claude session plus worker panes), and that session can find any project by name or alias, open and close projects, and dispatch panes into them, getting results back as worker reports. Projects are described in ~/.dashboard/projects.yaml. Subtasks, in order: (1) projects.yaml + reader + dashboard project find/list, (2) one dashboard command with project/pane/board subcommands, board and session kept as aliases, (3) terminals in the manager, (4) cross-project pane claim --project and list --all, (5) project open/close, (6) first projects.yaml generated from open and recent projects. Decided: YAML not markdown; close refuses when any pane is busy and otherwise closes with no dialog; results come back as worker reports (SendMessage), no fetch-result command until reports prove not enough.",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T09:23:50.426Z",
+          "comments": [
+            {
+              "at": "2026-11-04T09:23:50.365Z",
+              "body": "All six subtasks are Done (PRs #154-#159); the parent closes with them."
             }
           ]
         }
