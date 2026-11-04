@@ -13,6 +13,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
+- What the command and the app agree on before an answer, the build stamp and the acceptance timeout: `app-handshake.ts`
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it: `worker-roster.ts`, `pane-link.ts`
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
@@ -21,6 +22,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 
 - Given a project is open, when main dispatches a task, then a worker pane opens in the list on the right and runs it.
 - Given Dashboard on Windows, when a pane runs `node "$DASHBOARD_COMMAND" pane list`, then the app's answer comes back over the named pipe rather than an empty reply.
+- Given a rebuild swapped the command under an app still running the old build, when a pane runs `pane list`, `claim` or `run`, then within 5 seconds it prints that the running app is likely older than the command and needs a restart, and exits 1, rather than hanging.
+- Given the command and the running app are different builds that both carry the stamp, when the command asks anything, then the app refuses it naming both builds and saying to restart; a command older than the stamp is refused the same way.
+- Given a request the app has taken, when its answer takes longer than 5 seconds (a `pane run --card` making its worktree), then the command keeps waiting and prints the answer.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose prompt holds double quotes, then the worker starts with its --settings JSON and its prompt exactly as they were written.
 - Given a worker's agent stops, when its Stop hook runs `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
 - Given main dispatched a worker, when the worker's Stop hook runs `session notify <id> done`, then the main that dispatched it (the claimer's main for a pane claimed with `--project`) gets a prompt naming the worker and its pane, queued behind its turn if it is busy; a card's agent or a Claude opened by hand tells nobody (workers-decision-1).

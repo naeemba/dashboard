@@ -3,6 +3,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
 import type { SessionReply, SessionRequest } from './session-cli';
+import { ACCEPTANCE_TIMEOUT, ACCEPTED, awaitAcceptance, unacceptedLine, versionRefusal } from './app-handshake';
 
 // The `session` command's way into the running app. A pane's command is a separate node process and
 // the panes and their ptys are main's, so it has to ask: one request in, one answer out, over a socket
@@ -35,9 +36,11 @@ const REQUEST_END = '\n';
 // closes the connection and that is the command's sign the answer is whole. A request that is not JSON
 // is answered as a refusal rather than dropped, so the command says what went wrong, and so is one of
 // the wrong shape, one cut off before its newline, or an answer that throws: any of them would
-// otherwise leave the command waiting for good.
+// otherwise leave the command waiting for good. A command of another build than appVersion is refused
+// too, and one the app will answer hears ACCEPTED first: app-handshake.ts says why.
 export function listenForSessions(
   socketPath: string,
+  appVersion: string,
   answer: (request: SessionRequest) => Promise<SessionReply>,
   failed: (error: Error) => void,
 ): net.Server {
@@ -61,6 +64,12 @@ export function listenForSessions(
         connection.end(JSON.stringify({ ok: false, output: 'the request was not one the app could read' }));
         return;
       }
+      const refusal = versionRefusal(appVersion, request.version);
+      if (refusal !== undefined) {
+        connection.end(JSON.stringify({ ok: false, output: refusal }));
+        return;
+      }
+      connection.write(ACCEPTED);
       void answer(request)
         .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }))
         .then((reply) => connection.end(JSON.stringify(reply)));
@@ -90,18 +99,20 @@ export async function askAppFromPane(commandArguments: readonly string[]): Promi
     process.stderr.write('DASHBOARD_SOCKET is not set — run this from a pane the Dashboard app opened\n');
     return 1;
   }
-  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments });
+  const reply = await askApp(socket, { directory: process.cwd(), args: commandArguments, version: __BUILD_VERSION__ });
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }
 
 // The command's half: the request out as one line, with the connection left open for the answer, and
 // the answer read until the app closes it. A socket nobody is listening on is the app that opened this
-// pane having quit, which is worth saying in those words.
-export function askApp(socketPath: string, request: SessionRequest): Promise<SessionReply> {
+// pane having quit, which is worth saying in those words. An app that has not taken the request in
+// acceptanceTimeout is one that never will.
+export function askApp(socketPath: string, request: SessionRequest, acceptanceTimeout = ACCEPTANCE_TIMEOUT): Promise<SessionReply> {
   return new Promise((resolve) => {
     let text = '';
     const connection = net.connect(socketPath, () => connection.write(JSON.stringify(request) + REQUEST_END));
+    awaitAcceptance(connection, acceptanceTimeout, () => resolve({ ok: false, output: unacceptedLine(acceptanceTimeout) }));
     connection.setEncoding('utf8');
     connection.on('data', (chunk: string) => { text += chunk; });
     connection.on('end', () => {

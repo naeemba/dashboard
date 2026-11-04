@@ -96,3 +96,19 @@ The keyboard way to a worker is the popup (Alt+W); a link is the mouse's.
 
 Watch for: the count refreshes on a hook mark and on the open-pane list changing. A worker whose agent
 exits without either shows as working until the next one.
+
+## workers-decision-4: The command and the app must be the same build
+
+**The app answers only a command with its own build stamp, `<version>+<commit>`.** A rebuild replaces
+the command files while the old app keeps running, so a pane's command is newer than the app it asks
+until the restart. Matching the stamp exactly, not a protocol number, means nobody has to remember to
+bump one when a request changes shape: any rebuild from another commit is refused with a line naming
+both builds and saying to restart. A command older than the stamp sends none and is refused the same.
+
+**The app accepts a request before answering it, and only the acceptance is timed.** An app from before
+the stamp cannot refuse anything; it hung waiting for a half close the command no longer sends. So the
+app writes a newline the moment it has read a request it will answer, and the command gives up after
+5 seconds of silence with a line saying the app is likely older and needs a restart. Timing the whole
+answer would cut off `pane run --card`, which waits for a worktree to be made.
+
+Watch for: an app too busy to read its socket for 5 seconds is reported as older than it is.
