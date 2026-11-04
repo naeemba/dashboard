@@ -375,17 +375,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
-          "title": "pane commands hang forever when the CLI is newer than the running app",
-          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-11-02T12:59:21.133Z",
-          "updatedAt": "2026-11-04T09:32:06.114Z",
-          "branch": "work-board-card-f15fe86a-0dda-4f58-abe5-fd7",
-          "pullRequest": 203
         }
       ]
     },
@@ -2726,6 +2715,17 @@
               "body": "All six subtasks are Done (PRs #154-#159); the parent closes with them."
             }
           ]
+        },
+        {
+          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
+          "title": "pane commands hang forever when the CLI is newer than the running app",
+          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-02T12:59:21.133Z",
+          "updatedAt": "2026-11-04T09:48:24.163Z",
+          "branch": "work-board-card-f15fe86a-0dda-4f58-abe5-fd7",
+          "pullRequest": 203
         }
       ]
     }
