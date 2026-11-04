@@ -46,7 +46,8 @@ function startingBoard(): Board {
   return board;
 }
 
-describe('the move off board.json', () => {
+// Two hundred files, each flushed before its rename: past the 5s default on the Windows runner.
+describe('the move off board.json', { timeout: 60_000 }, () => {
   // This repository's own board, whichever way it is kept today, written out as the board.json every
   // project the app has opened still holds: about a hundred and seventy cards, with comments,
   // subtasks, pull requests and hand-written fields.
