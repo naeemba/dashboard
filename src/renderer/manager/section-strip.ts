@@ -16,7 +16,13 @@ export function createSectionStrip(onPick: (mode: Mode) => void): SectionStrip {
   const names = STRIP.map((section) => {
     // A click goes to that section, which is what the key does. Every control in this app answers the
     // keyboard first and the pointer to the same place.
+    //
+    // It takes no keyboard, like the add-pane button in chrome-bars.ts: the previous and next section
+    // keys already walk the strip. A name that Tab could reach, or that a click left focused, would be
+    // one more place a bare Enter has to be told apart from the section's own Enter.
     const item = iconButton('section-name', MODE_GLYPHS[section.mode], section.name, () => onPick(section.mode));
+    item.tabIndex = -1;
+    item.addEventListener('mousedown', (event) => event.preventDefault());
     element.append(item);
     return { item, mode: section.mode };
   });
