@@ -1,16 +1,18 @@
 # Board
 
-A project's kanban board under Ctrl+B, kept in `.dashboard/board.json`: cards
-with priority, notes, subtasks, a comment trail, a branch and a pull request,
-in Backlog, Todo, Ship, Doing, Review and Done. The `board` command writes the
-same file, so an agent can work its own card.
+A project's kanban board under Ctrl+B, kept in `.dashboard/board/`, one file per
+card: cards with priority, notes, subtasks, a comment trail, a branch and a pull
+request, in Backlog, Todo, Ship, Doing, Review and Done. The `board` command
+writes the same files, so an agent can work its own card. A project the app has
+not written to since still keeps `.dashboard/board.json`; it is read as it is,
+and the next write moves it into the folder (board-decision-1).
 
 ## On screen
 
 What each screen does, in full. The help dialog keeps only a short
 blurb for it; this is where the rest lives.
 
-A kanban board kept in .dashboard/board.json inside the project. Every change is
+A kanban board kept in .dashboard/board inside the project, a file per card. Every change is
 written straight to disk, so there is no save key and undo is the only way back.
 A write carries only what you changed, laid over the file as it is at that
 moment, so a card an agent moved a second ago stays where the agent put it.
@@ -145,7 +147,8 @@ its own, and .dashboard/CLAUDE.md in each project spells it out.
 
 Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 
-- Model and file: `board.ts`, `board-store.ts`, `board-watch.ts`,
+- Model and file: `board.ts`, `board-store.ts`, `board-files.ts` (where the
+  folder's bytes go), `card-order.ts` (a card's place in its column), `board-watch.ts`,
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
   onto the file as it is now)
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
@@ -182,11 +185,13 @@ The program's path is fixed: `claude-pr-loop` runs it as an executable through `
 `--title`, `--notes` and `--priority`, and `--remote <name>` on a repo whose board lives on a
 remote other than `origin`. `--column <name>` picks the column (Backlog otherwise), `--seed`
 creates a board missing from the default branch, from this checkout's copy when it has one, and
-`--dry-run` prints the file instead of pushing it.
+`--dry-run` prints the files it would commit instead of pushing them.
 
 The card is written by the `board` command's own `add`, in a worktree of `<remote>/<default>`
 made for that one commit in the system temp folder and removed after, so it carries the same
-fields as one added on the board. The commit is `board: add "<title>"`. The worktree add, commit and
+fields as one added on the board. The commit is `board: add "<title>"`, and takes in every board
+file with `git add -A`: on a default branch still on `board.json`, that one commit is the move into
+the folder, the old file's removal included. The worktree add, commit and
 push run with `core.hooksPath=/dev/null`, since the project's hooks are for its code. A push that
 loses a race (fetch first, non-fast-forward, or the remote moving mid-push) fetches and tries once
 more; any other refused push prints git's own sentence and is not retried.
@@ -208,7 +213,9 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
 - Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
 - Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs, then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
-- Given the default branch has no `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
+- Given the default branch has no board, neither `.dashboard/board/` nor `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
+- Given a project still on `.dashboard/board.json`, when the board is first written, then every card is in its own file under `.dashboard/board/cards/`, `board.json` is gone, and the board reads back the same (`board-files.test.ts`, on a copy of this repository's own board).
+- Given two branches that each add a card, or each move a different card, when both merge, then git merges them with no conflict (`board-files.test.ts`, with real merges).
 - Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then none is rewritten.
 - Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and runs as a command, its bytes not rewritten.
 - Given the remote's hook declines the push, when `create-task.js` runs, then it prints git's sentence and pushes once, not twice.
