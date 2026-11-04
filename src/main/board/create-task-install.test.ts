@@ -71,7 +71,7 @@ describe('installCreateTask', () => {
     const result = spawnSync(command, [...prefix, '--title', 't', '--notes', '', '--priority', 'low'], { cwd: clone(remote(), false), encoding: 'utf8' });
     expect(result.error).toBeUndefined();
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain('origin/main has no .dashboard/board.json');
+    expect(result.stderr).toContain('origin/main has no board');
   });
 
   it('answers a line to log, never a throw, when the build has no program', () => {

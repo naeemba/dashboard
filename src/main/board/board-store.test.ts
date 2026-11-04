@@ -13,6 +13,7 @@ vi.mock('node:os', async (importOriginal) => {
 import {
   BOARD_DIRECTORY,
   BOARD_FILE_PATH,
+  BOARD_FOLDER_PATH,
   BROKEN_BOARD_FILE,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
@@ -220,7 +221,7 @@ describe('parseBoard', () => {
   it('writes nothing for the fields a card does not have', () => {
     const projectPath = project();
     writeBoard(projectPath, parseBoard('{"columns":[{"name":"Todo","cards":[{"id":"1","title":"a"}]}]}'));
-    const written = readFileSync(join(projectPath, BOARD_DIRECTORY, 'board.json'), 'utf8');
+    const written = readFileSync(join(projectPath, BOARD_FOLDER_PATH, 'cards', '1.json'), 'utf8');
     expect(written).not.toContain('createdAt');
     expect(written).not.toContain('pullRequest');
   });
@@ -418,7 +419,7 @@ describe('writeBoard', () => {
   it('creates the folder and writes readable json', () => {
     const path = project();
     writeBoard(path, { columns: [{ name: 'Todo', cards: [] }] });
-    const text = readFileSync(join(path, BOARD_DIRECTORY, 'board.json'), 'utf8');
+    const text = readFileSync(join(path, BOARD_FOLDER_PATH, 'columns.json'), 'utf8');
     expect(text).toContain('\n  "columns"');
     expect(text.endsWith('\n')).toBe(true);
   });

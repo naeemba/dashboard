@@ -1,14 +1,16 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 // The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
 // flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { USAGE } from './board-usage';
+import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { dashboardFolder } from '../app/dashboard-folder';
 import { replaceFile } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import {
+  BACKLOG_COLUMN,
   DEFAULT_PRIORITY,
   emptyBoard,
   isCommentBody,
@@ -30,13 +32,25 @@ import type { BoardRead } from '../../shared/app/bridge';
 // The project's own corner of its repository. Everything the dashboard keeps about a project lives
 // here, so there is one thing to commit or to ignore.
 export const BOARD_DIRECTORY = '.dashboard';
-// Exported because main watches the folder rather than the file — a board is replaced by a rename,
-// which a watch on the file itself loses — and has to know which name in it is the board.
+// The board as it was kept until each card got a file of its own: the whole board in one file. Still
+// read, forever — every project the app has ever opened has one until its board is next written, and
+// that write is what moves it into the folder below (writeBoard says how). Never written again.
 export const BOARD_FILE = 'board.json';
-// The board, relative to the project — the shape git reports and git compares, as opposed to the
-// absolute path boardPath joins. One spelling, so a second copy in another module cannot drift from
-// this one the day .dashboard is renamed.
+// Both, relative to the project — the shape git reports and git compares, as opposed to the absolute
+// paths boardPath and boardFolderPath join. One spelling, so a second copy in another module cannot
+// drift from this one the day .dashboard is renamed.
 export const BOARD_FILE_PATH = `${BOARD_DIRECTORY}/${BOARD_FILE}`;
+export const BOARD_FOLDER_PATH = `${BOARD_DIRECTORY}/${BOARD_FOLDER}`;
+// What `git add -A --`, `git diff --cached --` and `git commit --` are handed to take in a board change
+// and nothing else: the old file (its removal, the first time a board is written) and every file in the
+// folder, but not a `.broken` file set aside or a write's temporary file. Naming the two paths outright
+// does not work — git refuses a path that matches nothing, and after the first write board.json is gone.
+// A git pathspec's `*` crosses `/`, so the one pattern covers both.
+export const BOARD_PATHSPECS = [
+  `${BOARD_DIRECTORY}/board*`,
+  `:(exclude)${BOARD_DIRECTORY}/board*.broken`,
+  `:(exclude)${BOARD_DIRECTORY}/board*.tmp`,
+] as const;
 // Where a board.json that could not be parsed is moved aside, so a crash mid-write or a bad hand-edit
 // loses nothing: the next read starts fresh, and the damaged file sits right next to it under this name.
 export const BROKEN_BOARD_FILE = 'board.json.broken';
@@ -47,33 +61,42 @@ export const EXPLANATION_FOR_AGENTS = `# .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B.
 
-## board.json
+## board/
+
+One file per card, so two branches working different cards never edit the same file:
+
+    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done"] }
+    board/cards/<id>.json         one card, with the column it is in and its place there
+
+A card's file:
 
     {
-      "columns": [
-        {
-          "name": "Todo",
-          "cards": [
-            {
-              "id": "0f6a2c5e-...",
-              "title": "Fix the resize race",
-              "notes": "",
-              "priority": "high",
-              "parent": null,
-              "createdAt": "2026-09-08T09:12:44.017Z",
-              "updatedAt": "2026-09-08T09:12:44.017Z",
-              "branch": "fix-resize-race",
-              "pullRequest": 14,
-              "comments": [
-                { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
-              ]
-            }
-          ]
-        }
-      ]
+      "id": "0f6a2c5e-...",
+      "title": "Fix the resize race",
+      "notes": "",
+      "priority": "high",
+      "parent": null,
+      "createdAt": "2026-09-08T09:12:44.017Z",
+      "updatedAt": "2026-09-08T09:12:44.017Z",
+      "branch": "fix-resize-race",
+      "pullRequest": 14,
+      "comments": [
+        { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
+      ],
+      "column": "Todo",
+      "order": 3
     }
 
-- \`columns\` is ordered. The first column is the leftmost on screen.
+A project the app has not written to since this layout arrived still has the older \`board.json\`
+here instead — the whole board in one file, \`{ "columns": [{ "name": "Todo", "cards": [...] }] }\`.
+It is read the same, and the next write moves every card into \`board/\` and removes it. Commit the
+two together: \`git add -A -- '.dashboard/board*'\` takes in both.
+
+- \`columns\` in \`columns.json\` is ordered. The first column is the leftmost on screen. A card naming
+  a column the list does not have gets that column, after the listed ones.
+- \`column\` is the name of the card's column; a card without one is in Backlog. \`order\` is a number,
+  and the cards of a column go top to bottom by it, then by \`id\`. A move gives the moved card a
+  number between its new neighbours and leaves every other file alone.
 - Every board has a \`Backlog\` column, first unless someone moved it. A card
   nobody has chosen to work on waits there; \`Todo\` holds what has been picked.
   \`board add\` with no \`--column\` puts a card in Backlog.
@@ -90,10 +113,11 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
   is the one exception — a card there has a pull request open and nothing has
   checked it. While work is in flight the card's column lives on that work's own
   branch, and arrives here when the pull request does.
-- \`cards\` is ordered. The first card is at the top of its column.
-- \`id\` is a UUID, and no two cards may share one. Keep it stable when you edit a card. A card
-  written without one, or with an id another card already used, is given a fresh one the next time
-  the app reads the file.
+- \`id\` is a UUID, and no two cards may share one; it is also the file's name. Keep it stable when you
+  edit a card. A card written without one takes its file's name, and one with an id another card
+  already used is given a fresh one the next time the app reads the board.
+- A card file that is not JSON is moved aside as \`<id>.json.broken\` the next time the app reads the
+  board, so nothing overwrites it.
 - \`title\` is one line. A card with no \`title\`, or a blank one, is dropped when the app reads
   the file.
 - \`notes\` is the card's description, free text over as many lines as you like. \`e\` opens it.
@@ -133,15 +157,16 @@ for.
 Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
 where a hand edit that gets a field wrong is repaired silently on the next read.
 
-Edit this file directly if you like — the app notices. It watches board.json while a board is on
+Edit the files directly if you like — the app notices. It watches this folder while a board is on
 screen, so a card moved from the command line or by hand shows up where you are looking, with the
-selection left on the card it was on. The app rewrites the whole file on every edit and drops any
-field not listed above.
+selection left on the card it was on. The app rewrites a card's whole file when it changes that card
+and drops any field not listed above.
 `;
 
 export const EXPLANATION_FOR_PEOPLE = `# .dashboard
 
-Project state for the Dashboard app. \`board.json\` holds this project's kanban board, and
+Project state for the Dashboard app. \`board/\` holds this project's kanban board, one file per card
+(\`board.json\` in a project the app has not written to since), and
 \`notes.md\` — if it is here — is the project's page of free text, for what is not a card.
 
 Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\` if it is yours alone.
@@ -184,6 +209,15 @@ export function isManagerHomeDirectory(directory: string): boolean {
 // project to sit in and goes in the home directory.
 export function boardPath(projectPath: string): string {
   return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BOARD_FILE);
+}
+
+export function boardFolderPath(projectPath: string): string {
+  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BOARD_FOLDER);
+}
+
+// Whether a project has a board of either kind on disk, read or not.
+export function hasBoard(projectPath: string): boolean {
+  return existsSync(boardPath(projectPath)) || existsSync(boardFolderPath(projectPath));
 }
 
 function brokenBoardPath(projectPath: string): string {
@@ -323,7 +357,53 @@ export function parseBoard(text: string, makeId: () => string = idsFor(text)): B
     .map((column) => parseColumn(column, makeId))
     .filter((column): column is Column => column !== null);
   if (columns.length === 0) throw new Error('No columns');
+  return repairedBoard(columns, makeId);
+}
+
+function repairedBoard(columns: Column[], makeId: () => string): Board {
   return withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) })));
+}
+
+function storedOrder(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+}
+
+// The board from its folder, and from board.json too when both are there. That happens when a write
+// stopped between the cards and the old file's removal, and when a branch that still edits board.json
+// merges into one that has moved on: either way the folder is the newer copy, and a card only the old
+// file has is kept, at the bottom of its column, so no card is lost to the move.
+//
+// columns.json names the columns in order. A card naming a column it does not list gets that column,
+// after the listed ones — two branches each adding one, or a hand-written card — and a card naming no
+// column waits in Backlog. Inside a column the cards go by their `order`, then by id, so two cards two
+// branches both put on top come out the same way on every machine.
+function folderBoard(stored: StoredBoard, legacy: Board | null): Board {
+  const makeId = idsFor(stored.text);
+  const listed = isRecord(stored.columns) && Array.isArray(stored.columns.columns)
+    ? stored.columns.columns.filter((name): name is string => typeof name === 'string')
+    : legacy?.columns.map((column) => column.name) ?? [];
+  const names = [...new Set(listed)];
+  const placed = stored.cards.flatMap((record) => {
+    const card = parseCard(record, makeId);
+    if (card === null) return [];
+    const column = typeof record.column === 'string' ? record.column : BACKLOG_COLUMN;
+    if (!names.includes(column)) names.push(column);
+    return [{ card, column, order: storedOrder(record.order) }];
+  });
+  placed.sort((first, second) => first.order - second.order || (first.card.id < second.card.id ? -1 : first.card.id > second.card.id ? 1 : 0));
+  const columns: Column[] = names.map((name) => ({
+    name,
+    cards: placed.filter((entry) => entry.column === name).map((entry) => entry.card),
+  }));
+  const present = new Set(placed.map((entry) => entry.card.id));
+  for (const column of legacy?.columns ?? []) {
+    const missing = column.cards.filter((card) => !present.has(card.id));
+    if (missing.length === 0) continue;
+    const target = columns.find((candidate) => candidate.name === column.name);
+    if (target) target.cards.push(...missing);
+    else columns.push({ name: column.name, cards: missing });
+  }
+  return columns.length === 0 ? emptyBoard() : repairedBoard(columns, makeId);
 }
 
 // A missing file is the ordinary "no board yet" case: nothing is salvaged. A file that exists but
@@ -335,8 +415,8 @@ export function parseBoard(text: string, makeId: () => string = idsFor(text)): B
 // empty board and the board draws with no cards and nothing in the status bar; the next card you add
 // is saved over the forty that are still sitting on disk.
 export function readBoard(projectPath: string): BoardRead {
-  const read = readStoredBoard(projectPath);
-  return { ...read, board: withManagerColumns(projectPath, read.board) };
+  const read = readStoredBoard(projectPath, true);
+  return { ...read, board: withManagerColumns(projectPath, read.board ?? emptyBoard()) };
 }
 
 // A look at a board without taking charge of it, for the manager's counts and activity. Nothing is
@@ -344,26 +424,39 @@ export function readBoard(projectPath: string): BoardRead {
 // it is. readBoard moves a damaged file aside and the board screen says so — let a background look do
 // it first and nobody is told, and the board screen then opens empty with no message.
 // Null when there is nothing to count: no file, a file that will not parse, or one that cannot be read.
+//
+// A card file that will not parse is skipped by a look, not counted, and left where it is.
 export function peekBoard(projectPath: string): Board | null {
   try {
-    return withManagerColumns(projectPath, parseBoard(readFileSync(boardPath(projectPath), 'utf8')));
+    const { board } = readStoredBoard(projectPath, false);
+    return board === null ? null : withManagerColumns(projectPath, board);
   } catch {
     return null;
   }
 }
 
-function readStoredBoard(projectPath: string): BoardRead {
+// Null for the board when there is none at all. Without `salvage`, a board.json that will not parse
+// throws instead of being moved aside.
+function readStoredBoard(projectPath: string, salvage: boolean): { board: Board | null; brokenFile: string | null } {
+  const legacy = readBoardFile(projectPath, salvage);
+  const stored = readBoardFolder(boardFolderPath(projectPath), salvage);
+  if (stored === null) return legacy;
+  return { board: folderBoard(stored, legacy.board), brokenFile: legacy.brokenFile ?? stored.brokenFile };
+}
+
+function readBoardFile(projectPath: string, salvage: boolean): { board: Board | null; brokenFile: string | null } {
   const filePath = boardPath(projectPath);
   let text: string;
   try {
     text = readFileSync(filePath, 'utf8');
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return { board: emptyBoard(), brokenFile: null };
+    return { board: null, brokenFile: null };
   }
   try {
     return { board: parseBoard(text), brokenFile: null };
-  } catch {
+  } catch (error: unknown) {
+    if (!salvage) throw error;
     const brokenFile = brokenBoardPath(projectPath);
     // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
     // the header is about and goes out the same door.
@@ -372,10 +465,24 @@ function readStoredBoard(projectPath: string): BoardRead {
   }
 }
 
+// Every byte of the board as it is on disk, old file and folder both, as one string; null when there
+// is no board at all. Only ever compared with another snapshot — it is how the watcher tells the app's
+// own write from somebody else's.
+export function boardSnapshot(projectPath: string): string | null {
+  let legacy: string | null;
+  try {
+    legacy = readFileSync(boardPath(projectPath), 'utf8');
+  } catch {
+    legacy = null;
+  }
+  const folder = boardFolderSnapshot(boardFolderPath(projectPath));
+  return legacy === null && folder === null ? null : `${legacy ?? ''}\0\0${folder ?? ''}`;
+}
+
 // The app's one atomic write lives in app/replace-file.ts; the stores outside app/ import it from here.
 export { replaceFile };
 
-// Answers with the bytes it wrote. Main keeps the last of them per project and compares them against
+// Answers with the snapshot of what it wrote. Main keeps the last of them per project and compares them against
 // what the folder watcher finds, which is how the app's own saves are told apart from the command
 // line's — without it every keystroke on the board would come back as somebody else's change and
 // redraw the board out from under the selection.
@@ -383,11 +490,14 @@ export { replaceFile };
 // Unlike reading, a failed write is reported. Swallowing it would show cards on screen that are not
 // on disk, and the next launch would silently lose them.
 //
-// It writes through replaceFile, so the file is replaced whole or not at all.
+// Every file goes through replaceFile, so each is replaced whole or not at all, and only the files whose
+// bytes change are written — a move rewrites the card that moved. A project still on board.json moves
+// to the folder here, in one step: every card is written to its own file first and only then is the
+// old file removed, so a write that stops part way leaves both, which readStoredBoard reads as one.
 export function writeBoard(projectPath: string, board: Board): string {
-  const text = `${JSON.stringify(board, null, 2)}\n`;
-  replaceFile(boardPath(projectPath), text);
-  return text;
+  writeBoardFolder(boardFolderPath(projectPath), board.columns);
+  rmSync(boardPath(projectPath), { force: true });
+  return boardSnapshot(projectPath) ?? '';
 }
 
 // Seed, then read. Both callers that open a board — the app's board:read and the command line — want

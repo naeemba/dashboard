@@ -759,7 +759,7 @@ function goToPaneId(paneId: string): void {
 }
 bridge.onNotificationClick(goToPaneId);
 
-// Something other than the app wrote a board.json — the `board` command an agent runs, or a hand
+// Something other than the app wrote the board's files — the `board` command an agent runs, or a hand
 // edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and
 // a board that is not on screen has nothing to redraw. The manager's stack of boards is one of these
 // too, and finds the project the path belongs to itself.

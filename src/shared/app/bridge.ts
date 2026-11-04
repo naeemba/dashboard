@@ -63,8 +63,8 @@ export type ChatState = { messages: Record<string, unknown>[]; asks: PermissionA
 // The conversations /resume offers, newest first, and the one this page is on.
 export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionInfo, 'sessionId' | 'summary' | 'lastModified' | 'gitBranch'>[] };
 
-// What readBoard hands back. brokenFile is the path a damaged board.json was moved to, or null when
-// nothing needed salvaging — including the ordinary case of no board.json existing yet.
+// What readBoard hands back. brokenFile is the path a damaged board file — board.json, or one card's
+// file — was moved to, or null when nothing needed salvaging, including the ordinary case of no board yet.
 export type BoardRead = { board: Board; brokenFile: string | null };
 
 // What a hand-over answers: whether the file is in front of you, and what the status bar says.
@@ -186,8 +186,8 @@ export type DashboardBridge = {
   // `base` is the board this screen last read or wrote; main replays the change from it to `board`
   // onto the file as it is now. Answers with what it wrote when that is not `board`, else null.
   writeBoard(projectPath: string, base: Board, board: Board): Promise<Board | null>;
-  // The project whose board.json has become something the app did not write — the `board` command
-  // moving a card, or a hand edit. Main watches the file; this is how a board on screen finds out,
+  // The project whose board has become something the app did not write — the `board` command
+  // moving a card, or a hand edit. Main watches the files; this is how a board on screen finds out,
   // so a card an agent moves shows up without leaving the board and coming back.
   onBoardChange(listener: (projectPath: string) => void): void;
   // The project's page of notes, read and written whole. The change event is another screen's write:

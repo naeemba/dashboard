@@ -1,6 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { BOARD_FILE_PATH, parseBoard, readBoard } from '../board/board-store';
+import { peekBoard, readBoard } from '../board/board-store';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
@@ -54,7 +52,7 @@ export type ReviewPorts = {
 // writes the field — so a card that failed is left alone rather than reviewed. The worktree's own
 // board is where to look, because it is the copy the agent has been editing all along.
 //
-// parseBoard rather than readBoard: readBoard moves a board.json it cannot parse aside, and in a
+// peekBoard rather than readBoard: readBoard moves a board file it cannot parse aside, and in a
 // worktree that file is tracked and committed. A sweep running on a timer must not delete a branch's
 // board because the agent in it wrote a broken one.
 //
@@ -66,12 +64,8 @@ export type ReviewPorts = {
 // per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
 // that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
 function finishedIn(entry: WorktreeEntry): number | null {
-  try {
-    const text = readFileSync(join(entry.worktreePath, BOARD_FILE_PATH), 'utf8');
-    return cardById(parseBoard(text), entry.cardId)?.pullRequest ?? null;
-  } catch {
-    return null;
-  }
+  const board = peekBoard(entry.worktreePath);
+  return board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
 }
 
 // The project's board, or null when it cannot be read at all. Null is not "no card here": a board the

@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isBoardChange, isBoardFile } from './board-watch';
 
@@ -9,6 +10,21 @@ describe('isBoardFile', () => {
   // Written on every save, right before the rename that replaces board.json.
   it('is not the temporary file the save goes through', () => {
     expect(isBoardFile('board.json.4242.0b8e5c1a-3f2d-4c7e-9a6b-1d2e3f4a5b6c.tmp')).toBe(false);
+  });
+
+  it('is a card file, the columns file and the folder they live in', () => {
+    expect(isBoardFile(join('board', 'cards', '0f6a2c5e.json'))).toBe(true);
+    expect(isBoardFile(join('board', 'columns.json'))).toBe(true);
+    expect(isBoardFile('board')).toBe(true);
+  });
+
+  it('is not the temporary file a card file is written through', () => {
+    expect(isBoardFile(join('board', 'cards', '0f6a2c5e.json.4242.0b8e5c1a.tmp'))).toBe(false);
+  });
+
+  // Typing in the notes page writes notes.md on every keystroke, in the same watched folder.
+  it('is not the notes', () => {
+    expect(isBoardFile('notes.md')).toBe(false);
   });
 
   it('is not the explanation files seeded beside the board', () => {

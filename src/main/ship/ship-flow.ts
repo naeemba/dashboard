@@ -1,6 +1,6 @@
 import type { ShipRequest, ShipResult, WorktreeEntry } from '../../shared/app/bridge';
 import { moveCardById, shipColumnIndex } from '../../shared/board/board';
-import { BOARD_FILE_PATH, readBoard, writeBoard } from '../board/board-store';
+import { BOARD_PATHSPECS, readBoard, writeBoard } from '../board/board-store';
 import { failureText } from '../../shared/errors/failure';
 import { baseBranch, git } from '../app/git';
 import { isManagerPath } from '../../shared/manager/manager';
@@ -37,13 +37,14 @@ async function commitShipMove(entry: WorktreeEntry): Promise<void> {
   const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
   if (!moved) return;
   writeBoard(entry.worktreePath, moved);
-  // Both halves name the board file. A resumed ship runs in a worktree that has been lived in, so
+  // Both halves name the board's files. A resumed ship runs in a worktree that has been lived in, so
   // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
-  // half-finished work under a board message.
-  await git(['add', BOARD_FILE_PATH], entry.worktreePath);
-  const staged = await git(['diff', '--cached', '--name-only', '--', BOARD_FILE_PATH], entry.worktreePath);
+  // half-finished work under a board message. -A takes in board.json's removal when this write is the
+  // one that moved the board into its folder.
+  await git(['add', '-A', '--', ...BOARD_PATHSPECS], entry.worktreePath);
+  const staged = await git(['diff', '--cached', '--name-only', '--', ...BOARD_PATHSPECS], entry.worktreePath);
   if (staged !== '') {
-    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', BOARD_FILE_PATH], entry.worktreePath);
+    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', ...BOARD_PATHSPECS], entry.worktreePath);
   }
 }
 
