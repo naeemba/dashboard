@@ -30,7 +30,10 @@ worker's hook sends, never starts it (command-decision-2).
 The app starts in the home folder, with the caller's environment minus its
 Claude session (`CLAUDECODE`, `CLAUDE_PID`, every `CLAUDE_CODE_*`) and the pane
 variables (`DASHBOARD_*`): every pane inherits the app's environment, and a
-session started with another session's id is not saved. Bare `dashboard` with a
+session started with another session's id is not saved. A pane that names a
+userData folder (`DASHBOARD_USER_DATA`, set in a copy run with
+`--user-data-dir`) starts the app with `--user-data-dir` on that folder, so it
+writes `session-socket` where the command waits for it. Bare `dashboard` with a
 `DASHBOARD_APP` that is gone says so and exits 1.
 
 `board`, `project list`, `find` and `init` work on files and never start it:

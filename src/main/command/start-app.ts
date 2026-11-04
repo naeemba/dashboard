@@ -13,11 +13,20 @@ export function appStarter(environment: NodeJS.ProcessEnv, exists: (file: string
   const executable = environment.DASHBOARD_APP;
   if (executable === undefined || appStartRefusal(executable, exists) !== null) return null;
   return (appArguments = []) => {
-    const child = spawn(executable, [...appArguments], { detached: true, stdio: 'ignore', env: appEnvironment(environment), cwd: homedir() });
+    const child = spawn(executable, appLaunchArguments(environment, appArguments), { detached: true, stdio: 'ignore', env: appEnvironment(environment), cwd: homedir() });
     // Gone between the check and the spawn ends in the command's own line (no app answered), not a throw.
     child.on('error', () => undefined);
     child.unref();
   };
+}
+
+// A pane of a copy started with --user-data-dir names that copy's folder in DASHBOARD_USER_DATA, and the
+// command waits for the socket pointer there (app-address.ts). The app it starts has to open on the same
+// folder, or it writes its pointer somewhere the command never looks. An installed app's own panes name
+// its default folder, so for them this changes nothing.
+export function appLaunchArguments(environment: NodeJS.ProcessEnv, appArguments: readonly string[]): string[] {
+  const userData = environment.DASHBOARD_USER_DATA;
+  return userData ? [`--user-data-dir=${userData}`, ...appArguments] : [...appArguments];
 }
 
 // Why the app cannot be started, or null.
