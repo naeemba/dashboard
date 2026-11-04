@@ -120,12 +120,17 @@ describe('listenForSessions and askApp', () => {
   // and `pane list` hung for good. An app that never answers is that app.
   it('stops waiting on an app that never takes the request', async () => {
     const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
-    const server = net.createServer(() => undefined);
+    const held: net.Socket[] = [];
+    const server = net.createServer((connection) => { held.push(connection); });
     server.listen(socket);
     await new Promise((resolve) => server.once('listening', resolve));
     expect(await askApp(socket, { directory: '/work/api', args: ['list'], version: VERSION }, 50))
       .toEqual({ ok: false, output: unacceptedLine(50) });
-    server.close();
+    // A Windows pipe is named after the process, so every test here listens on the same name, and a
+    // server whose connection is still held keeps that name from the next test until it lets go.
+    const closed = new Promise((resolve) => server.close(resolve));
+    for (const connection of held) connection.destroy();
+    await closed;
   });
 
   // Only the acceptance is timed: an answer that takes longer than that, such as a worktree being made,
