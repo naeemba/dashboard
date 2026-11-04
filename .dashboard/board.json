@@ -46,13 +46,6 @@
           "parent": null
         },
         {
-          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
-          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
-          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
-          "priority": "high",
-          "parent": null
-        },
-        {
           "id": "7bd82aca-db72-4087-876b-b0cd16be42b5",
           "title": "Decide whether the review agent may merge without a person",
           "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
@@ -288,7 +281,16 @@
     },
     {
       "name": "Doing",
-      "cards": []
+      "cards": [
+        {
+          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
+          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
+          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T11:54:11.851Z"
+        }
+      ]
     },
     {
       "name": "Review",
