@@ -387,16 +387,6 @@
               "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
             }
           ]
-        },
-        {
-          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
-          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
-          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
-          "priority": "high",
-          "parent": null,
-          "updatedAt": "2026-11-04T12:13:08.179Z",
-          "branch": "work-board-card-883f68e9-510a-4c4c-bbef-bd9",
-          "pullRequest": 206
         }
       ]
     },
@@ -2794,6 +2784,22 @@
             {
               "at": "2026-11-04T11:46:43.315Z",
               "body": "Shipped in #205: dashboard launcher from rebuild.sh, --help for newcomers, app started on demand by pane/project commands (never by board or notify), socket pointer in userData (0600, atomic), board --project and refusal outside a project, pane send, project focus, project list open marks, docs/command decisions 2-4. Not done: ELECTRON_RUN_AS_NODE (fuse off; launcher uses node, command-decision-3); no version bump (workflow-rule-3); real-app hand check pending a rebuild."
+            }
+          ]
+        },
+        {
+          "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
+          "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
+          "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
+          "priority": "high",
+          "parent": null,
+          "updatedAt": "2026-11-04T12:44:21.074Z",
+          "branch": "work-board-card-883f68e9-510a-4c4c-bbef-bd9",
+          "pullRequest": 206,
+          "comments": [
+            {
+              "at": "2026-11-04T12:44:21.074Z",
+              "body": "Shipped in #206: board kept as .dashboard/board/columns.json + cards/<id>.json with an order field; board.json read forever, moved on first write; create-task, ship and review commit through BOARD_PATHSPECS; watcher recursive with snapshot compare. Migration tested on this repo's 202-card board; add/add and move/move merges proven conflict-free. Running app needs rebuild and restart after merge."
             }
           ]
         }
