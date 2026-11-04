@@ -19,8 +19,8 @@ export function createSectionStrip(onPick: (mode: Mode) => void): SectionStrip {
     // A click goes to that section, which is what the key does. Every control in this app answers the
     // keyboard first and the pointer to the same place.
     //
-    // It takes no keyboard: the previous and next section keys already walk the strip. Tab skips it, and
-    // a click does not focus it. A name that held focus would be one more place a bare Enter has to be
+    // It takes no keyboard: the previous and next section keys already walk the strip. Tab skips it. A
+    // name that held focus would be one more place a bare Enter has to be
     // told apart from the section's own Enter.
     const item = iconButton('section-name', MODE_GLYPHS[section.mode], section.name, () => onPick(section.mode));
     item.tabIndex = -1;
