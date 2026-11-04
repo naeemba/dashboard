@@ -87,7 +87,9 @@ code the app does, so a card it writes is a card the app wrote.
       board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
       board comment <id> "<text>"
 
-    Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field.
+    Levels: urgent, high, medium, low. An empty --branch or --pull-request clears the field. Any of them
+    takes --project <name|aka> to work on that project's board, from ~/.dashboard/projects.yaml, instead
+    of the board of the folder you are in.
 
     --notes replaces the card's description. To record what you found, use `comment`: it appends to the
     card's trail and takes nothing away. `show` prints one card with its description and its trail.

@@ -155,23 +155,21 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 // printed back, a card on no board anyone looks at, and an untracked folder in `git status`.
 //
 // The nearest board above you wins, and a project that has no board yet falls back to the repository,
-// which is the same root the app itself opens a project at. Neither found, the directory you are in is
-// the answer, so a folder that is not a repository still gets a board where you asked for one.
+// which is the same root the app itself opens a project at. Neither found, the answer is null and the
+// command refuses: run from a plain terminal in ~/Downloads, a guessed board there would be a card on
+// a board nobody looks at. Every project the app opens is seeded a board, so its panes always find one.
 // The climb stops at the home directory and never looks inside it, so a `board` command run
 // somewhere under $HOME that is neither a repository nor has a board of its own cannot climb past
 // $HOME into the manager's own .dashboard (dashboard-folder.ts puts its notes and its board there) and
 // write a stray card into it.
-// That protection is the climb, not this function: called directly on the home directory, this
-// still answers with it — `start` is `home`, the loop body never runs. isManagerHomeDirectory below
-// is the check that catches that case, and board-cli-entry asks it before opening anything. Call
-// this on a directory that might be $HOME without that check first and the stray card is back.
-export function projectRoot(directory: string): string {
-  const start = resolve(directory);
+// Called directly on the home directory the loop body never runs and the answer is null;
+// isManagerHomeDirectory below is still asked first, so that case is refused with its own line.
+export function projectRoot(directory: string): string | null {
   const home = homedir();
-  for (let at = start; at !== dirname(at) && at !== home; at = dirname(at)) {
+  for (let at = resolve(directory); at !== dirname(at) && at !== home; at = dirname(at)) {
     if (existsSync(join(at, BOARD_DIRECTORY)) || existsSync(join(at, '.git'))) return at;
   }
-  return start;
+  return null;
 }
 
 // Whether a directory is the home directory itself. projectRoot's climb never looks inside $HOME,

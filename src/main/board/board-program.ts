@@ -1,22 +1,24 @@
 import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
-import { homeDirectoryRefusal, runBoardCommandOnLatest } from './board-cli';
+import { projectNamedInFile } from '../projects/project-named';
+import { runBoardCommandOnLatest } from './board-cli';
+import { boardTarget } from './board-target';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
 // instead, where a test can reach it. Two doors run it: board-cli-entry.ts, the file DASHBOARD_BOARD
 // names, and `dashboard board`.
 //
-// The current directory and nothing else to point it — no path to guess and no flag to get wrong;
-// `cd` is how you point this at a different project. projectRoot is what makes any depth inside the
-// project work, so an agent that has stepped into src/ still edits the project's one board.
-function run(commandArguments: readonly string[]): number {
-  if (isManagerHomeDirectory(process.cwd())) {
-    process.stderr.write(`${homeDirectoryRefusal()}\n`);
+// The current directory points it, or --project and a name from ~/.dashboard/projects.yaml; which one
+// is board-target.ts's to say. projectRoot is what makes any depth inside the project work, so an
+// agent that has stepped into src/ still edits the project's one board.
+function run(words: readonly string[]): number {
+  const target = boardTarget(words, process.cwd(), { isHome: isManagerHomeDirectory, projectRoot, named: projectNamedInFile });
+  if (!target.ok) {
+    process.stderr.write(`${target.message}\n`);
     return 1;
   }
-
-  const project = projectRoot(process.cwd());
+  const { project, commandArguments } = target;
   const read = openBoard(project);
   if (read.brokenFile !== null) {
     // The same salvage the app does, said out loud. Silence here would look like an empty board.

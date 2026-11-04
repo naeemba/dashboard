@@ -76,9 +76,8 @@ describe('projectRoot', () => {
     expect(projectRoot(deep)).toBe(root);
   });
 
-  it('answers the directory itself when there is neither above it', () => {
-    const root = project();
-    expect(projectRoot(root)).toBe(root);
+  it('answers null when there is neither above it', () => {
+    expect(projectRoot(project())).toBeNull();
   });
 
   // The manager's own .dashboard (dashboard-folder.ts) sits directly in the home directory. Without
@@ -89,7 +88,7 @@ describe('projectRoot', () => {
       mkdirSync(join(home, BOARD_DIRECTORY));
       const deep = join(home, 'Downloads', 'stray');
       mkdirSync(deep, { recursive: true });
-      expect(projectRoot(deep)).toBe(deep);
+      expect(projectRoot(deep)).toBeNull();
     });
   });
 });
