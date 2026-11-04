@@ -11,6 +11,9 @@ export function appStarter(environment: NodeJS.ProcessEnv): ((appArguments?: rea
   const executable = environment.DASHBOARD_APP;
   if (!executable) return null;
   return (appArguments = []) => {
-    spawn(executable, [...appArguments], { detached: true, stdio: 'ignore' }).unref();
+    const child = spawn(executable, [...appArguments], { detached: true, stdio: 'ignore' });
+    // A DASHBOARD_APP that is gone ends in the command's own line (no app answered), not a throw.
+    child.on('error', () => undefined);
+    child.unref();
   };
 }

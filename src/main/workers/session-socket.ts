@@ -1,10 +1,10 @@
 import { chmodSync, mkdtempSync } from 'node:fs';
-import { homedir } from 'node:os';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
 import type { SessionReply, SessionRequest } from './session-cli';
-import { readSocketPointer, userDataFolder } from '../command/app-address';
+import { canConnect } from '../app/can-connect';
+import { appUserDataFolder, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
 import { appStarter } from '../command/start-app';
 import { ACCEPTANCE_TIMEOUT, ACCEPTED, awaitAcceptance, unacceptedLine, versionRefusal } from './app-handshake';
@@ -108,11 +108,11 @@ export function listenForSessions(
 // A command's whole conversation with the app, whichever noun it was: the words out, the answer
 // printed, the exit code back. Which app, and starting it when none answers, is reach-app.ts's.
 export async function askRunningApp(commandArguments: readonly string[]): Promise<number> {
-  const userData = userDataFolder(process.platform, process.env, homedir());
+  const userData = appUserDataFolder();
   const reached = await reachApp({
     paneSocket: process.env.DASHBOARD_SOCKET,
     pointed: () => readSocketPointer(userData),
-    connects,
+    connects: canConnect,
     start: appStarter(process.env),
     sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
     now: Date.now,
@@ -124,17 +124,6 @@ export async function askRunningApp(commandArguments: readonly string[]): Promis
   const reply = await askApp(reached.socket, { directory: process.cwd(), args: commandArguments, version: __BUILD_VERSION__ });
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
-}
-
-// Whether anything listens on the socket, without saying anything to it.
-function connects(socketPath: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const probe = net.connect(socketPath, () => {
-      probe.destroy();
-      resolve(true);
-    });
-    probe.on('error', () => resolve(false));
-  });
 }
 
 // The command's half: the request out as one line, with the connection left open for the answer, and

@@ -23,6 +23,9 @@ open, close and focus take a name or an aka exactly, in any case.`;
 // The word main's socket tells a project request from a session one by. project-requests.ts reads it.
 export const PROJECT_REQUEST = 'project';
 
+// The verbs the app answers, over the socket; project-requests.ts reads the same list.
+export const APP_VERBS: readonly string[] = ['open', 'close', 'focus'];
+
 // `file`, from init alone, is what to write to the file before printing the output. `ask`, from open
 // close and focus, is what to ask the app: [PROJECT_REQUEST, verb, folder, name].
 export type ProjectAnswer =
@@ -41,14 +44,14 @@ export const NO_APP_DATA_MESSAGE = 'init reads the open and recent projects from
 export function runProjectCommand(commandArguments: readonly string[], text: string | null, filePath: string, knownFolders: () => KnownFolders, home: string): ProjectAnswer {
   const [verb, ...rest] = commandArguments;
   if (verb === 'init') return projectInit(rest, text, knownFolders, home, filePath);
-  if (verb !== 'list' && verb !== 'find' && verb !== 'open' && verb !== 'close' && verb !== 'focus') {
+  if (verb === undefined || (verb !== 'list' && verb !== 'find' && !APP_VERBS.includes(verb))) {
     return { ok: false, message: verb === undefined ? PROJECT_USAGE : `no such command: ${verb}\n\n${PROJECT_USAGE}` };
   }
   const word = rest.join(' ').trim();
   if (verb !== 'list' && word === '') return { ok: false, message: `${verb} takes a word\n\n${PROJECT_USAGE}` };
   if (verb === 'list' && rest.length > 0) return { ok: false, message: `list takes no words\n\n${PROJECT_USAGE}` };
 
-  if (verb === 'open' || verb === 'close' || verb === 'focus') {
+  if (APP_VERBS.includes(verb)) {
     const named = projectNamed(text, filePath, word, home);
     return named.ok ? { ok: true, ask: [PROJECT_REQUEST, verb, named.path, named.name] } : named;
   }
@@ -84,11 +87,11 @@ function projectInit(words: readonly string[], text: string | null, knownFolders
 // the open ones the file does not list, under their folder's name. Only the file is refused for: with
 // a project open, an absent or broken file still leaves something to list.
 function projectList(listed: ReturnType<typeof projectsListed>, open: readonly string[], home: string, filePath: string): ProjectAnswer {
-  const fileProjects = listed.ok ? listed.projects : [];
-  const listedPaths = new Set(fileProjects.map((project) => wholePath(project.path, home)));
-  const entries = fileProjects.map((project) => {
+  const fileProjects = (listed.ok ? listed.projects : []).map((project) => ({ project, folder: wholePath(project.path, home) }));
+  const listedPaths = new Set(fileProjects.map(({ folder }) => folder));
+  const entries = fileProjects.map(({ project, folder }) => {
     const described = describeProject(project);
-    return open.includes(wholePath(project.path, home) ?? '') ? `${described}\n  open` : described;
+    return folder !== undefined && open.includes(folder) ? `${described}\n  open` : described;
   });
   for (const folder of open) {
     if (!listedPaths.has(folder)) entries.push(`${baseName(folder)}\n  path: ${folder}\n  open, not in ${filePath}`);

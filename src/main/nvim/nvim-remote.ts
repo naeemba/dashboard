@@ -1,12 +1,12 @@
 import { execFile } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { connect } from 'node:net';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { locateCommand, taskArguments } from '../../shared/panes/shell';
 import type { Handover } from '../../shared/app/bridge';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { canConnect } from '../app/can-connect';
 
 const runCommand = promisify(execFile);
 
@@ -87,17 +87,6 @@ export function scrollbackFile(temporaryDirectory: string, slot: number, index: 
 // slower machine ever times out, the fix is a longer wait, not a faster poll.
 const SOCKET_POLL_MS = 50;
 const SOCKET_WAIT_MS = 15000;
-
-function canConnect(socket: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const connection = connect(socket)
-      .on('connect', () => {
-        connection.end();
-        resolve(true);
-      })
-      .on('error', () => resolve(false));
-  });
-}
 
 async function waitForSocket(socket: string): Promise<boolean> {
   for (let waited = 0; waited < SOCKET_WAIT_MS; waited += SOCKET_POLL_MS) {

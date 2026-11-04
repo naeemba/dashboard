@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { existingProjects, readRecentPaths, RECENTS_FILE } from '../app/projects';
 import { readSession, SESSION_FILE } from '../app/session';
-import { userDataFolder } from '../command/app-address';
+import { appUserDataFolder } from '../command/app-address';
 import { failureLine } from '../command/failure-line';
 import { askRunningApp } from '../workers/session-socket';
 import { type KnownFolders, runProjectCommand } from './project-cli';
@@ -13,7 +13,7 @@ import { readProjectsFile } from './projects-file';
 // last save and the recent ones, each a folder that is still there. Both files are the app's own, in
 // its userData folder (app-address.ts says which), which is not there until the app has run.
 function knownFolders(): KnownFolders {
-  const userData = userDataFolder(process.platform, process.env, homedir());
+  const userData = appUserDataFolder();
   if (!existsSync(userData)) return null;
   const stillThere = (paths: readonly string[]) => existingProjects(paths).map((project) => project.path);
   return {

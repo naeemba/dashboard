@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { closeRefusal, type ClosingPane } from '../../shared/panes/close-refusal';
 import type { SessionReply, SessionRequest } from '../workers/session-cli';
 import { answered, refused } from '../workers/session-requests';
-import { PROJECT_REQUEST } from './project-cli';
+import { APP_VERBS, PROJECT_REQUEST } from './project-cli';
 
 // What main does with `dashboard project open`, `close` and `focus`: every decision, against what main.ts hands
 // over. They arrive on the session socket as [PROJECT_REQUEST, verb, folder, name], the folder already
@@ -31,7 +31,7 @@ export function projectRequests(
   return async (request) => {
     const [word, verb, folder, name] = request.args;
     if (word !== PROJECT_REQUEST) return otherwise(request);
-    if ((verb !== 'open' && verb !== 'close' && verb !== 'focus') || folder === undefined || name === undefined) {
+    if (verb === undefined || !APP_VERBS.includes(verb) || folder === undefined || name === undefined) {
       return refused('the project request was not one the app could read');
     }
     const projectPath = resolve(folder);

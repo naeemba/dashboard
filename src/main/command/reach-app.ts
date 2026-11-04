@@ -8,7 +8,7 @@
 
 // Long enough for a cold start with every project's shells to spawn, short enough to be told why
 // before reaching for Ctrl-C.
-export const LAUNCH_TIMEOUT = 30000;
+const LAUNCH_TIMEOUT = 30000;
 const POLL_INTERVAL = 250;
 
 export type ReachPorts = {
@@ -41,16 +41,16 @@ export function launchTimedOut(milliseconds: number): string {
 export async function reachApp(ports: ReachPorts, mayStart: boolean, timeout = LAUNCH_TIMEOUT): Promise<Reached> {
   // The pane's own app first, then whichever one wrote the file: a pane whose app was restarted
   // reaches the new one.
-  for (const candidate of [ports.paneSocket, ports.pointed()]) {
-    if (candidate && await ports.connects(candidate)) return { ok: true, socket: candidate };
-  }
+  if (ports.paneSocket && await ports.connects(ports.paneSocket)) return { ok: true, socket: ports.paneSocket };
+  const pointed = ports.pointed();
+  if (pointed && await ports.connects(pointed)) return { ok: true, socket: pointed };
   if (!mayStart || ports.start === null) return { ok: false, message: NOT_RUNNING };
   ports.start();
   const deadline = ports.now() + timeout;
   while (ports.now() < deadline) {
     await ports.sleep(POLL_INTERVAL);
-    const pointed = ports.pointed();
-    if (pointed && await ports.connects(pointed)) return { ok: true, socket: pointed };
+    const latest = ports.pointed();
+    if (latest && await ports.connects(latest)) return { ok: true, socket: latest };
   }
   return { ok: false, message: launchTimedOut(timeout) };
 }

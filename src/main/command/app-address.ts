@@ -1,6 +1,8 @@
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
+import { replaceFile } from '../app/replace-file';
 
 // How a command run outside the app's panes finds the app. A pane is handed DASHBOARD_SOCKET; a plain
 // terminal is handed nothing, and the socket is made fresh in a random folder each launch
@@ -22,8 +24,15 @@ export function userDataFolder(platform: string, environment: NodeJS.ProcessEnv,
   return path.join(environment.XDG_CONFIG_HOME || path.join(home, '.config'), 'Dashboard');
 }
 
+// This process's own userData folder, for the command.
+export function appUserDataFolder(): string {
+  return userDataFolder(process.platform, process.env, homedir());
+}
+
+// Replaced whole, never truncated in place: a command reading it mid-write would read no app and start
+// a second one.
 export function writeSocketPointer(userData: string, socketPath: string): void {
-  writeFileSync(path.join(userData, SOCKET_POINTER_FILE), socketPath, { mode: 0o600 });
+  replaceFile(path.join(userData, SOCKET_POINTER_FILE), socketPath, 0o600);
 }
 
 // writeSocketPointer for main, once the socket listens: a failure leaves panes working and only a plain

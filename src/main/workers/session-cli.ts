@@ -107,11 +107,18 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
   }
 }
 
+// Whether the words say which project they act on without a folder to go by: a pane id names its own
+// project, claim --project and list --all name theirs. The app reads it for a command from a folder in
+// no open project (session-requests.ts), and outsidePaneRefusal for one from outside every pane.
+export function namesItsTarget(command: SessionCommand): boolean {
+  return 'id' in command || (command.kind === 'claim' && command.project !== null) || (command.kind === 'list' && command.all);
+}
+
 // Why a command run outside any pane is refused before it reaches the app, or null. A pane knows its
 // project and a plain terminal does not, so a claim there has to name one: claiming in whatever
 // project the terminal happens to stand in would be a guess.
 export function outsidePaneRefusal(command: SessionCommand): string | null {
-  if (command.kind === 'claim' && command.project === null) {
+  if (command.kind === 'claim' && !namesItsTarget(command)) {
     return 'outside a Dashboard pane, claim needs --project <name|aka> to say which project the worker is for';
   }
   return null;

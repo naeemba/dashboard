@@ -197,12 +197,13 @@ let shellCommand = pickShell(settings, process.env, process.platform);
 const paneScreens = screens();
 // The command files and the socket every pane is handed: pane-environment.ts. session-socket.ts says
 // why the socket is this run's own.
-const commands = paneCommands(unpacked(path.join(app.getAppPath(), '.vite', 'build')));
+const buildFolder = unpacked(path.join(app.getAppPath(), '.vite', 'build'));
+const commands = paneCommands(buildFolder);
 const sessionSocket = sessionSocketPath(process.platform, app.getPath('temp'), process.pid);
 const paneEnvironment = environmentForPanes(process.env, commands, sessionSocket, app.getPath('userData'), app.isPackaged ? process.execPath : null);
 // Where every pane's shell runs, so it outlives this process: pane-host-client.ts and panes-decision-1.
 // Built and unpacked beside the commands above, since `node` is what runs it.
-const paneHostEntry = path.join(path.dirname(commands.board), 'pane-host-entry.js');
+const paneHostEntry = path.join(buildFolder, 'pane-host-entry.js');
 const paneAddress = paneHostAddress(process.platform, app.getPath('userData'));
 const shellHost = paneHost({
   socket: paneAddress?.socket ?? null,
@@ -901,7 +902,7 @@ app.on('ready', () => {
   // refreshed from this build (create-task-install.ts). The installed app only: every Claude session
   // on the machine runs that copy, and a dev run from a half-done branch would hand them its program.
   if (app.isPackaged) {
-    const notInstalled = installCreateTask(app.getPath('home'), path.join(path.dirname(commands.board), 'create-task-cli-entry.js'));
+    const notInstalled = installCreateTask(app.getPath('home'), path.join(buildFolder, 'create-task-cli-entry.js'));
     if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
   }
 });

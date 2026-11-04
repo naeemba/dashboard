@@ -4,7 +4,7 @@ import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
 import type { ProjectNamed } from '../projects/project-named';
-import { parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { namesItsTarget, parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
 import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
@@ -80,7 +80,7 @@ export function doneReport(name: string, id: string): string {
 // Who is asking: the open project the command's folder is in, or, from a folder outside every one —
 // a plain terminal — the project of the pane the words name, since the id says which. A command
 // naming no pane stays -1, and is refused unless its words name the target some other way.
-export function askingSlot(command: SessionCommand, folderSlot: number): number {
+function askingSlot(command: SessionCommand, folderSlot: number): number {
   if (folderSlot !== -1) return folderSlot;
   return 'id' in command ? paneFromId(command.id).slot : -1;
 }
@@ -266,17 +266,16 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       return answered('');
     }
     const slot = askingSlot(command, ports.slotOf(request.directory));
-    // From outside every project, a claim --project opens its worker in the named project, which is
-    // then its asker, and list --all names every project; anything else there names no target.
-    const namesItsProject = (command.kind === 'claim' && command.project !== null) || (command.kind === 'list' && command.all);
-    const projectPath = ports.projectPath(slot) ?? '';
-    if (slot === -1 ? !namesItsProject : projectPath === '') return refused(`${request.directory} is not in a project open in Dashboard`);
+    // From outside every project only words that name their target are answered: a claim --project
+    // opens its worker in the named project, which is then its asker, and list --all lists every one.
+    const projectPath = ports.projectPath(slot);
+    if (slot === -1 ? !namesItsTarget(command) : projectPath === undefined) return refused(`${request.directory} is not in a project open in Dashboard`);
     try {
       switch (command.kind) {
         case 'claim': return claim(slot, command.project);
         case 'list': return list(slot, command.all);
         case 'send': return send(command.id, slot, command.text);
-        case 'run': return await run(command.id, slot, projectPath, command.prompt, command.card, command.worktree);
+        case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree);
         case 'release': return await release(command.id, slot);
       }
     } catch (error: unknown) {
