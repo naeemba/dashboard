@@ -272,15 +272,6 @@
       "name": "Doing",
       "cards": [
         {
-          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
-          "title": "pane commands hang forever when the CLI is newer than the running app",
-          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
-          "priority": "high",
-          "parent": null,
-          "createdAt": "2026-11-02T12:59:21.133Z",
-          "updatedAt": "2026-11-04T09:23:50.535Z"
-        },
-        {
           "id": "25055404-20ba-465a-8a82-7965f85967f7",
           "title": "The pane host never runs on Windows, so panes do not survive a restart",
           "notes": "This skip hides that the pane host never runs on Windows, and not for one reason but three, all predating this PR:\n\n- `launchPaneHost` (src/main/panes/pane-host-client.ts:181) returns early when `process.env.SHELL` is unset, which it normally is on Windows, so no host is ever launched.\n- Even with `SHELL` set, `hostCommand` builds `exec node '<entry>' '<socket>'`, POSIX syntax that cmd.exe or PowerShell does not run.\n- `paneHostSocket` (src/main/panes/pane-host-protocol.ts:18) always returns `<userData>/pane-host/panes-1.sock`. It has no named-pipe branch the way `sessionSocketPath` does (src/main/workers/session-socket.ts:17), and a file path is not something `net.listen` can bind on Windows. That is the EACCES this test hits.\n\nWhat a Windows user sees: they quit and reopen the app, and every pane comes back as a fresh shell. Whatever was running in it is gone, while on a mac or Linux the same panes survive the restart (panes-decision-1). The fix, outside this PR: a `win32` branch in `paneHostSocket` returning a pipe name unique per user-data folder, a launch that does not go through a POSIX login shell, then drop this skip.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551111",
@@ -2730,6 +2721,23 @@
             {
               "at": "2026-11-04T09:39:09.608Z",
               "body": "Shipped in #202: section strip names take no keyboard focus (tabIndex -1, one mousedown preventDefault on the strip). pressesWalkedToButton from #169 already let Enter press a Tab-focused strip button; this removes the strip from that question."
+            }
+          ]
+        },
+        {
+          "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
+          "title": "pane commands hang forever when the CLI is newer than the running app",
+          "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
+          "priority": "high",
+          "parent": null,
+          "createdAt": "2026-11-02T12:59:21.133Z",
+          "updatedAt": "2026-11-04T10:06:39.967Z",
+          "branch": "work-board-card-f15fe86a-0dda-4f58-abe5-fd7",
+          "pullRequest": 203,
+          "comments": [
+            {
+              "at": "2026-11-04T10:06:39.967Z",
+              "body": "PR #203. A pane command now gives up after 5 seconds when the app has not taken its request, saying the app is likely older and needs a restart; the request carries the build stamp and the app refuses another build as a value (notify excepted, so worker hooks keep working after a rebuild). The timeout, acceptance and version check are in src/main/workers/app-handshake.ts for the dashboard command card. Needs a rebuild and restart of the installed app."
             }
           ]
         }
