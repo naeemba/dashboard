@@ -2723,9 +2723,15 @@
           "priority": "high",
           "parent": null,
           "createdAt": "2026-11-02T12:59:21.133Z",
-          "updatedAt": "2026-11-04T09:48:24.163Z",
+          "updatedAt": "2026-11-04T10:02:49.935Z",
           "branch": "work-board-card-f15fe86a-0dda-4f58-abe5-fd7",
-          "pullRequest": 203
+          "pullRequest": 203,
+          "comments": [
+            {
+              "at": "2026-11-04T10:02:49.935Z",
+              "body": "PR #203. A pane command now gives up after 5 seconds when the app has not taken its request, saying the app is likely older and needs a restart; the request carries the build stamp and the app refuses another build as a value (notify excepted, so worker hooks keep working after a rebuild). The timeout, acceptance and version check are in src/main/workers/app-handshake.ts for the dashboard command card. Needs a rebuild and restart of the installed app."
+            }
+          ]
         }
       ]
     }
