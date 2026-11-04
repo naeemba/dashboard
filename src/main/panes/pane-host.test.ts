@@ -394,7 +394,7 @@ describe('paneHost over a socket', () => {
   });
 
   // A listener at the pipe's name that is not the host, answering hello as `answer` says.
-  async function squatter(answer: (socket: net.Socket) => void) {
+  async function squatter(answer: (socket: net.Socket) => void, token: string | undefined) {
     const socketPath = hostSocket();
     const heard: ToHost[] = [];
     const listener = net.createServer((socket) => {
@@ -409,7 +409,7 @@ describe('paneHost over a socket', () => {
     const lost: string[] = [];
     let impostors = 0;
     const client = paneHost({
-      socket: socketPath, token: 'ab'.repeat(16), launch: () => undefined, answerWaitMs: 200,
+      socket: socketPath, token, launch: () => undefined, answerWaitMs: 200,
       impostor: () => { impostors += 1; }, lost: (message) => lost.push(message),
     });
     await client.ready;
@@ -425,7 +425,7 @@ describe('paneHost over a socket', () => {
     ['closes', (socket: net.Socket) => socket.destroy()],
   ] as const) {
     it(`takes whatever ${what} at the pipe's name for an impostor, renews the token and runs its shells itself`, async () => {
-      const result = await squatter(answer);
+      const result = await squatter(answer, 'ab'.repeat(16));
       expect(result.impostors()).toBe(1);
       expect(result.lost).toHaveLength(1);
       expect(result.lost[0]).toContain('Something other than the pane host');
@@ -433,6 +433,14 @@ describe('paneHost over a socket', () => {
       expect(result.heard.map((message) => message.type)).toEqual(['hello']);
     });
   }
+
+  it('stops waiting for a silent host where no token is kept (mac, Linux) without calling it an impostor', async () => {
+    const result = await squatter(() => undefined, undefined);
+    expect(result.impostors()).toBe(0);
+    expect(result.lost).toHaveLength(1);
+    expect(result.lost[0]).toContain('did not answer');
+    expect(result.kept).toBeUndefined();
+  });
 
   it('believes a busy that carries the proof: another Dashboard holds the host', async () => {
     const socketPath = hostSocket();
