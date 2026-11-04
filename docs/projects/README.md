@@ -19,29 +19,32 @@ deploy needs all of `name`, `role` and `address`.
 
 | Verb | What it prints |
 |---|---|
-| `project list` | every project |
+| `project list` | every project, `open` under each the app had open at its last save, then open projects the file does not list |
 | `project find <word>` | the projects whose name or aka match the word, best first, then those whose about contains it |
 | `project init` | writes a first `projects.yaml` from the open and recent projects, name and path each; never over a file that is there |
 | `project open <name>` | `opened <name>`: the app opens its folder the way the project picker does |
 | `project close <name>` | `closed <name>`, or the close key's own refusal naming the panes still running something |
+| `project focus <name>` | `switched to <name>`: the window comes to the front on that project's page, at its main pane |
 
-`open` and `close` take a name or an aka exactly, in any case; a word that
+`open`, `close` and `focus` take a name or an aka exactly, in any case; a word that
 only comes close is refused with what it came close to. The path's leading `~`
 is the home folder, and a path neither absolute nor under `~` is refused, here and
 for `pane claim --project`. Close asks no question: the command has nobody at the
 keyboard to answer one, so an unsaved buffer in the project's editor, which
-the refusal never reads, goes with the rest. Both reach the app over the
-`pane` noun's socket, so they work only from a pane the app opened. A page
+the refusal never reads, goes with the rest. All three reach the app over the
+`pane` noun's socket, from a pane or any terminal, and start the app when none
+answers ([command](../command/README.md)). A page
 restored while its folder was gone is not open: `open` revives it once the
 folder is back, as the picker does. A project is found by its real path, so a
 folder opened through a symlink is the same project as its projects.yaml entry.
 
 `init` reads the app's own `session.json` (the projects open at its last save)
-and `recents.json` from the folder pane shells carry as `DASHBOARD_USER_DATA`,
-keeps the folders still there, writes a path under home from `~`, and names a
-second folder with the same name `-2`. Run outside a pane, where there is no
-`DASHBOARD_USER_DATA`, it refuses and writes nothing, so a later run from a pane
-is not blocked by an empty file.
+and `recents.json` from its userData folder (the one pane shells carry as
+`DASHBOARD_USER_DATA`, else Electron's default for Dashboard), keeps the folders
+still there, writes a path under home from `~`, and names a second folder with
+the same name `-2`. Before the app has ever run there is no such folder, and it
+refuses and writes nothing, so a later run is not blocked by an empty file.
+`list` reads the same `session.json` for what is open and never starts the app.
 
 ## On screen
 
@@ -122,17 +125,19 @@ Folders: `src/main/projects/`.
 - Given a file with a misspelt key on line 3 and a project with no name on line 4, when any verb runs, then both problems are printed, `projects.yaml:3:` and `projects.yaml:4:`, and it exits 1.
 - Given two projects that share a name or aka, when any verb runs, then the second one's line is named as the problem.
 - Given no `~/.dashboard/projects.yaml`, when `list` or `find` runs, then it says the file does not exist yet, names `dashboard project init`, and exits 1.
-- Given no `~/.dashboard/projects.yaml` and two projects open, when `dashboard project init` runs in a pane, then the file lists those two and every recent project still on disk, and `project list` reads it.
+- Given no `~/.dashboard/projects.yaml` and two projects open, when `dashboard project init` runs, then the file lists those two and every recent project still on disk, and `project list` reads it.
 - Given a `~/.dashboard/projects.yaml`, when `dashboard project init` runs, then the file is left as it was, and it says so and exits 1.
 - Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard project open crm` runs in a pane, then a new-crm page appears and it prints `opened new-crm`.
 - Given api restored reading `Directory not found` and its drive mounted since, when `dashboard project open api` runs, then the page comes back with its shells and it prints `opened api`.
 - Given new-crm opened from the picker as `~/ws/new-crm`, `ws` a symlink to `Workspace`, when `dashboard project close new-crm` runs, then that page closes.
 - Given new-crm open with `npm run dev` in terminal 2, when `dashboard project close new-crm` runs, then it prints `new-crm is still running in terminal 2 npm — stop it and close again`, exits 1 and the page stays.
 - Given new-crm open with every pane at a prompt, when `dashboard project close new-crm` runs, then the page goes with no dialog.
+- Given new-crm open on another tab, when `dashboard project focus crm` runs, then the window comes forward on new-crm's page and it prints `switched to new-crm`; a project not open is refused.
+- Given new-crm open and listed, and notes open but not listed, when `dashboard project list` runs, then new-crm reads `open` and notes is listed after the file's projects as `open, not in` the file.
 - Given `dashboard project close cr`, when no project is named or aka'd `cr`, then it is refused naming the near matches and nothing closes.
 
 ## Open questions
 
 - `path` is printed as written by `list` and `find`; `~` is expanded only once something opens a
-  project from it (`project-named.ts`, used by `project open`, `project close` and `pane claim --project`).
+  project from it (`project-named.ts`, used by `project open`, `close`, `focus`, `board --project` and `pane claim --project`).
 - A pane's own name, given on the screen, is not in the command's refusal: main never sees it, so the pane is named `terminal 2`.

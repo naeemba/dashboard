@@ -1,16 +1,57 @@
 # Command
 
-The `dashboard` command: one entry, `node "$DASHBOARD_COMMAND" <noun> <verb> ...`,
-that an agent in any pane runs to reach the app. Each noun is a program of its
-own and parses its own verbs; this feature only picks the program.
+The `dashboard` command: one entry that drives the app from any terminal, for
+you and for Claude sessions outside the app's panes. In a pane it is
+`node "$DASHBOARD_COMMAND" <noun> <verb> ...`; anywhere else it is
+`dashboard <noun> <verb> ...`, the launcher `scripts/rebuild.sh` installs in
+`~/.local/bin` on Linux and macOS. Each noun is a program of its own and parses
+its own verbs; this feature only picks the program.
 
 | Noun | Program | Verbs |
 |---|---|---|
-| `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment |
-| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], release, notify |
-| `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, open, close |
+| `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment; any of them with `--project <name>` |
+| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, notify |
+| `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, open, close, focus |
 
-`session` is another name for `pane`.
+`session` is another name for `pane`. `dashboard` with no words opens the app,
+or brings it to the front; a first word that is a flag (`--remote`) goes to the
+app too. `dashboard --help` and `dashboard <noun> --help` print usage written
+for someone who has never seen the app: that is how a Claude session learns it.
+
+## When it starts the app
+
+`pane ...` and `project open`, `close` and `focus` need the running app. They
+ask the app the pane belongs to (`DASHBOARD_SOCKET`), else the one whose socket
+path is in `session-socket` in the app's userData folder. When neither answers
+they start the app detached and wait up to 30 seconds for it to write that file
+and answer, then ask; past that they say so and exit 1. `pane notify`, which a
+worker's hook sends, never starts it (command-decision-2).
+
+`board`, `project list`, `find` and `init` work on files and never start it:
+the app already watches each project's `.dashboard` folder. Quitting,
+restarting or replacing the app is never the command's.
+
+## Outside a pane
+
+A pane knows its project; a plain terminal does not, and the command never
+guesses one. `board` uses the project of the folder you are in (the nearest
+`.dashboard` or git repository above it), else `--project`, else refuses.
+`pane claim` needs `--project`. `run`, `send` and `release` act on the project
+the pane id names; `list` needs `--all` unless the folder is in an open project.
+
+## Security
+
+The socket lets anything that reaches it start Claude in any project with any
+prompt. It lives in a fresh `mkdtemp` folder (0700) and is chmod 0600 once
+listening; the pointer file holds only its path and is written 0600. No TCP
+and no world-readable path. On Windows it is the named pipe, as before.
+
+## Teaching Claude
+
+The app does not edit your files. Copy this into your global `CLAUDE.md`:
+
+    `dashboard --help` drives the Dashboard app from any terminal: open and
+    switch projects, dispatch worker panes, move board cards.
 
 ## On screen
 
@@ -60,8 +101,12 @@ record of anything.
 
 Folders: `src/main/command/`.
 
-- Which noun: `dashboard-cli.ts`, `dashboard-cli.test.ts`
+- Which noun, and the usage: `dashboard-cli.ts`, `dashboard-cli.test.ts`
 - The program: `dashboard-cli-entry.ts`, built by `vite.dashboard-cli.config.ts`
+- Which socket, and starting the app when none answers: `reach-app.ts`, `reach-app.test.ts`, `start-app.ts`
+- Where the app says its socket is: `app-address.ts`, `app-address.test.ts`
+- What every pane is handed to reach the app: `pane-environment.ts`, `pane-environment.test.ts`
+- The launcher: `scripts/rebuild.sh`
 - What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
 
 ## Scenarios
@@ -69,7 +114,13 @@ Folders: `src/main/command/`.
 - Given a pane, when `node "$DASHBOARD_COMMAND" board move <id> Done` runs, then the card moves exactly as `node "$DASHBOARD_BOARD" move <id> Done` moves it.
 - Given a pane, when `node "$DASHBOARD_COMMAND" pane claim` or `session claim` runs, then a worker pane opens and its id is printed, as `node "$DASHBOARD_SESSION" claim` does.
 - Given a skill or a worker hook calling `node "$DASHBOARD_BOARD"` or `node "$DASHBOARD_SESSION"` with the old words, when it runs, then it works unchanged.
-- Given no noun or one it does not know, when the command runs, then it prints the nouns it takes and exits 1.
+- Given a noun it does not know, when the command runs, then it prints the nouns it takes and exits 1.
+- Given a plain terminal and no app running, when `dashboard pane list --all` runs, then the app starts, and once it answers the panes are printed.
+- Given a plain terminal and no app running, when `dashboard board list` runs in a project, then the cards print and no window appears.
+- Given a plain terminal in `~/Downloads`, when `dashboard board list` runs, then it is refused naming `--project`, and `dashboard board list --project crm` prints crm's board.
+- Given a plain terminal, when `dashboard pane claim` runs, then it is refused naming `--project`.
+- Given a worker's hook whose app has quit, when it runs `pane notify <id> done`, then it says no Dashboard is running and nothing starts.
+- Given `dashboard --help` or `dashboard pane --help`, when it runs, then the usage prints and it exits 0.
 
 ## Adding to it
 
@@ -81,4 +132,6 @@ Folders: `src/main/command/`.
 ## Open questions
 
 - The `board` and `session` usage text still names its own command (`board list`, `session claim`);
-  under `dashboard` the words after the noun are the same.
+  `dashboard <noun> --help` says above it that the words after the noun are the same.
+- The launcher needs `node` on PATH (command-decision-3). The card asked for Electron's own node;
+  the fuse that allows it is off.
