@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { BOARD_DIRECTORY, replaceFile } from '../board/board-store';
+import { replaceFile } from '../app/replace-file';
+import { BOARD_DIRECTORY } from '../board/board-store';
 import { dashboardFolder } from '../app/dashboard-folder';
 
 // A page of free text per project, beside the board in the project's own .dashboard folder, so it

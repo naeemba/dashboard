@@ -1,6 +1,6 @@
 import { readFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { replaceFile } from '../board/board-store';
+import { replaceFile } from '../app/replace-file';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
