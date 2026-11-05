@@ -699,7 +699,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   },
   // Alt+U, for usage: what fills the context window, as /context shows it.
   {
-    name: 'claude-context', description: 'Show what fills the context window, from the context meter',
+    name: 'claude-context', description: 'Show what fills the context window; Enter opens what is behind a row',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'context' }, mac: 'Alt+U', other: 'Alt+U',
   },
   // Ctrl+G, as in Claude Code, which opens the prompt in $EDITOR. Here the editor is the page's nvim.
