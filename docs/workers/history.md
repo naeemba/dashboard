@@ -14,3 +14,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-02 #195 — Workers start under Windows PowerShell: claude's words escaped for the program, --settings wrapped whole
 - 2026-11-04 #203 — A pane command gives up on an app that never takes its request, and the app refuses another build (workers-decision-4)
 - 2026-11-05 #209 — Main hears a worker stopped only after three minutes with no report, once per stop, as a status line (workers-decision-1)
+- 2026-11-05 — Main hears a worker stopped at once when its Stop hook says nothing is in flight or scheduled, and a worker waiting on its own work is listed paused (workers-decision-1)

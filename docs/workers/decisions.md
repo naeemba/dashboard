@@ -45,15 +45,35 @@ a Claude opened by hand never tell main: neither is main's worker.
 **A turn end is not a stop.** A worker's turn also ends while it waits on its own background work — a
 review subagent, `/pr-loop`, CI — and the next notification wakes it. Telling main at every Stop hook
 (#176) gave it dozens of prompts per card, each a turn spent checking `pane list` and saying "still
-waiting". So stop-notices.ts tells main only when the worker stays out of `running` for three minutes
-(`STOP_GRACE_MS`), the period starting again at each turn end, and only once until the worker runs
-again. A stop the worker's own SendMessage covers gets no notice at all: chat-sessions.ts sees the
-message arrive in main by its sender's name, before the stop or during the grace period. The Claude
-screen draws the notice as a status line, not a prompt bubble, since nobody typed it; the older
-wording, still in conversations saved before this, is drawn the same way.
+waiting". #209 told main only once the worker had stayed out of `running` for three minutes, which
+made every real stop three minutes late.
 
-Watch for: a main busy for longer than the grace period reads a worker's report only after it, so that
-stop is noticed as well as reported.
+Claude Code's Stop hook input says which it is. `background_tasks` lists what is still in flight
+(shells, subagents, monitors, workflows; empty when nothing is) and `session_crons` what is scheduled
+to wake the session (CronCreate, ScheduleWakeup, `/loop`). The worker's hook runs `session notify <id>
+done --stop-input`; the command reads the input and sends the app only the two counts. Checked against
+Claude Code 2.1.318 with a throwaway `claude -p` whose Stop hook logged its input: the stop it ended
+with a `sleep 25` still running in the background had `background_tasks: [{type: "shell", status:
+"running", ...}]`, and the stop after the task woke it had `[]`; `session_crons` was `[]` in both.
+
+So stop-notices.ts decides each stop on its own. Anything in either list is a pause: nobody is told,
+`pane list` and the workers popup say what it waits on, and the next stop decides again. Both empty is
+the worker done: main is told after `REPORT_SETTLE_MS`, ten seconds, which is there because a report is
+counted only once main reads it, and an idle main reads one sent just before the stop within that. Only
+once until the worker runs again. A stop the worker's own SendMessage covers gets no notice at all:
+chat-sessions.ts sees the message arrive in main by its sender's name. A report read before a pause
+still covers the stop after it. The Claude screen draws the notice as a status line, not a prompt
+bubble, since nobody typed it; the older wording, still in conversations saved before this, is drawn
+the same way.
+
+The three-minute grace (`STOP_GRACE_MS`) stays only for a stop that sends neither count: a Claude Code
+older than the fields, whose input lacks them, or a worker started before this whose hook still runs
+plain `notify <id> done`. Dropping it would bring back a notice per turn end for those.
+
+Watch for: a main busy for longer than the settle reads a worker's report only after it, so that stop is
+noticed as well as reported. Under the grace period this needed a main busy for three minutes; now ten
+seconds is enough, so it happens more often. If it does, withdrawing the queued notice when the report
+is read (chat-decision-7's `cancelAsyncMessage`) is the fix, not a longer settle.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and
