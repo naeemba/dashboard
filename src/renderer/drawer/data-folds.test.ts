@@ -27,7 +27,9 @@ describe('dataView', () => {
 
   it('pretty-prints JSON with two spaces and keeps each closing bracket in sight', () => {
     const view = dataView('{"a":{"b":[1,2]},"c":{}}', 'json');
-    expect(view.lines.map((line) => line.replace(/<[^>]+>/g, ''))).toEqual([
+    // The text of each line with highlight.js's spans taken off: what follows each tag's `>`.
+    const text = (line: string): string => line.split('<').map((part) => part.slice(part.indexOf('>') + 1)).join('');
+    expect(view.lines.map(text)).toEqual([
       '{', '  &quot;a&quot;: {', '    &quot;b&quot;: [', '      1,', '      2', '    ]', '  },', '  &quot;c&quot;: {}', '}',
     ]);
     expect([...view.folds.values()]).toEqual([{ header: 1, to: 5 }, { header: 2, to: 4 }]);
