@@ -1,0 +1,11 @@
+{
+  "id": "7412df95-106b-4c8f-8f18-c0ae14144cd4",
+  "title": "Refresh button for the Claude screen's usage meters",
+  "notes": "The Claude screen's status line (context meter, 5h/7d usage, cache warm) is measured after each turn, so it can look stale between turns. Add a small refresh icon beside the usage meters that re-asks for context usage and plan usage now (the same calls measureOf uses), spinning while it runs and ignoring presses during a read. Keyboard first: a key (a row in src/shared/keys/actions.ts) does the same. A failure shows the usual notice line and keeps the last numbers. Help within BLURB_WORD_LIMIT, docs/chat updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-05T14:52:35.000Z",
+  "updatedAt": "2026-11-05T14:52:35.000Z",
+  "column": "Doing",
+  "order": 1
+}

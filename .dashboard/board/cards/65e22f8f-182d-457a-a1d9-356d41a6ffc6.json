@@ -1,0 +1,11 @@
+{
+  "id": "65e22f8f-182d-457a-a1d9-356d41a6ffc6",
+  "title": "Open what is behind each row of the context popup",
+  "notes": "The context popup (PR #180, src/renderer/app/anchored-popup.ts, src/shared/chat/chat-context.ts) lists categories, memory files and MCP tools, but its rows do nothing. Enter or a click on a row should show what is behind it:\n- a memory file (CLAUDE.md, a memory file) opens in the drawer's doc viewer (PR #162 viewer; it reads only allowed roots, so widen docs:read to the memory file paths the measure named, nothing else);\n- the MCP tools row or a server opens a list of that server's tools with their tokens, biggest first;\n- skills and custom agents rows list them by size;\n- the messages row lists the conversation's largest turns (by the usage the transcript already has), Enter jumps to that entry.\nKeyboard first: arrows walk, Enter opens, Escape goes back a level. The shaping is a tested module (workflow-rule-2). Help and docs/chat updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-05T14:52:35.071Z",
+  "updatedAt": "2026-11-05T14:52:35.071Z",
+  "column": "Backlog",
+  "order": 25
+}

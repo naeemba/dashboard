@@ -1,0 +1,11 @@
+{
+  "id": "0673f125-fa74-4dc7-9f55-2976cc812496",
+  "title": "Open a running agent's conversation and list finished agents from the task strip",
+  "notes": "The Claude screen shows running agents, workflows and background commands in its task strip (src/shared/chat/chat-tasks.ts), and each subagent's steps fold into the Agent call that started it. Missing: (1) opening a strip row to read that agent's full conversation so far (its steps, tool calls and results, rendered like the main transcript, live while it runs); (2) a list of agents and workflows that already finished this conversation, with their result summary, tokens and time, reachable from the strip or a key. Keyboard first: a key focuses the strip, arrows walk it, Enter opens the agent's view, Escape returns. Help and docs/chat updated; the shaping of finished tasks is a tested module.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-05T14:52:35.149Z",
+  "updatedAt": "2026-11-05T14:52:35.149Z",
+  "column": "Backlog",
+  "order": 26
+}
