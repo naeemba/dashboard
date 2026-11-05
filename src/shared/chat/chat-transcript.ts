@@ -124,8 +124,8 @@ export type Transcript = {
   finished: FinishedTask[];
   // Each subagent's whole conversation so far, by the id of the tool call that started it, for the
   // agents key's view of it; the call's own steps keep only its lines. Only what arrived while the
-  // screen was open, and only the newest started KEPT_CONVERSATIONS and any still running: a saved session keeps a subagent's
-  // conversation in a file of its own.
+  // screen was open, and only the newest started KEPT_CONVERSATIONS and any still running: a saved
+  // session keeps a subagent's conversation in a file of its own.
   agents: Record<string, ChatEntry[]>;
   // The hook running now, for the working line (chat-hooks.ts); null with none.
   hook: string | null;
