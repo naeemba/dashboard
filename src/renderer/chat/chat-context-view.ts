@@ -1,6 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import type { DocReply } from '../../shared/drawer/drawer';
-import { contextLevel, levelTitle, nextStep, type ContextLevel, type ContextList, type Conversation, type LevelRow, type Picked } from '../../shared/chat/chat-context-levels';
+import { contextLevel, levelTitle, nextStep, type ContextLevel, type ContextList, type Conversation, type LevelRow, type Opened, type Picked } from '../../shared/chat/chat-context-levels';
 import { clockTime, statusMeters, type ChatMeasure } from '../../shared/chat/chat-status';
 import { formatTokens } from '../../shared/usage/usage';
 import { failureText } from '../../shared/errors/failure';
@@ -35,10 +35,13 @@ export type Measures = {
   show(anchor: () => HTMLElement | null, conversation: () => Conversation, jump: (index: number) => void): Promise<void>;
 };
 
-// What Escape answers on a level below the top: go back one.
-const BACK: Picked = { kind: 'back' };
+// A picked row's choice and its key, which the level picked from opens on again.
+type Taken = { picked: Picked; key?: string };
 
-function row(each: LevelRow): PopupRow<Picked> {
+// What Escape answers on a level below the top: go back one.
+const BACK: Taken = { picked: { kind: 'back' } };
+
+function row(each: LevelRow): PopupRow<Taken> {
   const bar = piece('chat-meter-bar', '');
   bar.style.setProperty('--tone', each.tone ? `var(--${each.tone})` : 'var(--line)');
   bar.style.setProperty('--used', `${Math.min(100, each.percentage)}%`);
@@ -47,11 +50,11 @@ function row(each: LevelRow): PopupRow<Picked> {
   return {
     key: each.key,
     cells: [name, bar, piece('chat-context-tokens', formatTokens(each.tokens)), piece('chat-context-share', `${each.percentage.toFixed(1)}%`)],
-    choice: each.choice,
+    choice: each.choice && { picked: each.choice, key: each.key },
   };
 }
 
-function sections(level: ContextLevel): PopupSection<Picked>[] {
+function sections(level: ContextLevel): PopupSection<Taken>[] {
   return level.sections.map((section) => ({ title: section.title, rows: section.rows.map(row) }));
 }
 
@@ -138,25 +141,27 @@ export function createMeasures(
         return contextLevel(measure.breakdown, list, conversation(), measure.context.size);
       };
       // The levels open, deepest last. Escape pops one; a click beside the popup closes every level.
-      let trail: ContextList[] = [];
+      let trail: Opened[] = [];
+      let start: string | undefined;
       for (;;) {
         const open = anchor();
         if (!open) return;
-        const list = trail.at(-1) ?? null;
-        const picked = await anchoredPopup<Picked>({
+        const list = trail.at(-1)?.list ?? null;
+        const taken = await anchoredPopup<Taken>({
           name: 'chat-context', anchor: open, heading: () => heading(current(), levelTitle(list)), sections: () => sections(level(list)),
           watch: (changed) => {
             redraw = changed;
             return () => { redraw = undefined; };
           },
           escape: list === null ? undefined : BACK,
+          start,
         });
-        if (picked === undefined) return;
-        const step = nextStep(trail, picked);
+        if (taken === undefined) return;
+        const step = nextStep(trail, taken.picked, taken.key);
         if ('jump' in step) return jump(step.jump);
         // The viewer is over the popup's place; putting it away comes back to the same level.
         if ('read' in step) await readMemory(step.read);
-        trail = step.trail;
+        ({ trail, start } = step);
       }
     },
   };

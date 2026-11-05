@@ -96,13 +96,15 @@ describe('nextStep', () => {
   const servers = { kind: 'mcpServers' } as const;
   const alpha = { kind: 'mcpTools', server: 'alpha' } as const;
 
-  it('opens a list a level down and goes back one on Escape', () => {
-    expect(nextStep([servers], { kind: 'list', list: alpha })).toEqual({ trail: [servers, alpha] });
-    expect(nextStep([servers, alpha], { kind: 'back' })).toEqual({ trail: [servers] });
+  it('opens a list a level down and goes back one on Escape, onto the row that opened it', () => {
+    const opened = { list: servers, from: 'mcp_tools' };
+    expect(nextStep([opened], { kind: 'list', list: alpha }, 'server:alpha')).toEqual({ trail: [opened, { list: alpha, from: 'server:alpha' }] });
+    expect(nextStep([opened, { list: alpha, from: 'server:alpha' }], { kind: 'back' })).toEqual({ trail: [opened], start: 'server:alpha' });
   });
 
-  it('leaves the levels for a turn, and comes back to the same level after a file', () => {
-    expect(nextStep([{ kind: 'turns' }], { kind: 'entry', index: 4 })).toEqual({ jump: 4 });
-    expect(nextStep([{ kind: 'memoryFiles' }], { kind: 'file', path: '/m.md' })).toEqual({ read: '/m.md', trail: [{ kind: 'memoryFiles' }] });
+  it('leaves the levels for a turn, and comes back to the same level and row after a file', () => {
+    const files = { list: { kind: 'memoryFiles' }, from: 'memory_files' } as const;
+    expect(nextStep([], { kind: 'entry', index: 4 }, 'turn:4')).toEqual({ jump: 4 });
+    expect(nextStep([files], { kind: 'file', path: '/m.md' }, '/m.md')).toEqual({ read: '/m.md', trail: [files], start: '/m.md' });
   });
 });

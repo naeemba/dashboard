@@ -32,6 +32,8 @@ export function anchoredPopup<Choice>(options: {
   // with the way to stop, which closing calls.
   watch?: (changed: () => void) => () => void;
   escape?: Choice;
+  // The key of the row it opens on; the first row when it is not there.
+  start?: string;
 }): Promise<Choice | undefined> {
   let sections: PopupSection<Choice>[] = [];
   let highlighted = 0;
@@ -98,7 +100,7 @@ export function anchoredPopup<Choice>(options: {
     }
 
     function read(): void {
-      const was = rows()[highlighted]?.key;
+      const was = rows()[highlighted]?.key ?? options.start;
       sections = options.sections();
       highlighted = heldIndex(rows().map((row) => row.key), was, highlighted);
       draw();

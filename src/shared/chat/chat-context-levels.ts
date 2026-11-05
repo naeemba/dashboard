@@ -131,15 +131,18 @@ export function contextLevel(breakdown: ContextBreakdown, list: ContextList | nu
 }
 
 // Where the popup goes once a row is picked: a list a level down, back one level, or out of the levels
-// to jump to an entry or read a file, after which the reading comes back to the same level.
+// to jump to an entry or read a file, after which the reading comes back to the same level. Each level
+// opened keeps the key of the row that opened it, and `start` is the row a level opens on, so going
+// back, or putting a file away, lands on the row that was picked rather than the first.
 export type Picked = ContextChoice | { kind: 'back' };
-export type Step = { trail: ContextList[] } | { jump: number } | { read: string; trail: ContextList[] };
+export type Opened = { list: ContextList; from: string };
+export type Step = { trail: Opened[]; start?: string } | { jump: number } | { read: string; trail: Opened[]; start: string };
 
-export function nextStep(trail: readonly ContextList[], picked: Picked): Step {
+export function nextStep(trail: readonly Opened[], picked: Picked, key = ''): Step {
   switch (picked.kind) {
-    case 'back': return { trail: trail.slice(0, -1) };
-    case 'list': return { trail: [...trail, picked.list] };
+    case 'back': return { trail: trail.slice(0, -1), start: trail.at(-1)?.from };
+    case 'list': return { trail: [...trail, { list: picked.list, from: key }] };
     case 'entry': return { jump: picked.index };
-    case 'file': return { read: picked.path, trail: [...trail] };
+    case 'file': return { read: picked.path, trail: [...trail], start: key };
   }
 }
