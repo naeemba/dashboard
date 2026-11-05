@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
-import { doneReport } from '../../shared/workers/done-report';
+import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
@@ -292,10 +292,13 @@ describe('sessionRequests', () => {
     expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2])
       .toBe('paused, waiting on 2 background tasks');
     expect(answer.workers()[0]).toMatchObject({ status: 'paused', waiting: 'waiting on 2 background tasks' });
+    // A pause nothing wakes is told as one once it passes the ceiling.
+    vi.advanceTimersByTime(PAUSE_CEILING_MS);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`]);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
     expect(answer.workers()[0]).toEqual(expect.not.objectContaining({ waiting: expect.anything() }));
     vi.advanceTimersByTime(REPORT_SETTLE_MS);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`, `2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.

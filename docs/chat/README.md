@@ -127,16 +127,16 @@ While the session has workers open the foot counts them by how they stand,
 working, paused (waiting on its own background work), blocked, done or idle; a
 click on the count or the workers key opens a list of them, the manager's across
 every project, that keeps up while it is open: the arrows walk it, Enter lands
-on the pane and Escape closes it. Above
-the working line, a strip lists the agents, workflows and background commands
-Claude has running, each under the one that started it, with its tool calls,
-tokens, time and last tool so far; a task leaves the strip when it ends. It
-lists only what started while the screen was open, since a saved session keeps
-none of it. The task key picks a row in the strip, the next each press and none
-after the last; a click picks the row too. The stop key stops the picked task,
-and the background key sends it to the background so the turn goes on without
-waiting for it; with no row picked, the background key sends every foreground
-task there, as Ctrl+B does in the terminal.
+on the pane and Escape closes it. Above the working line, a strip lists the
+agents, workflows and background commands Claude has running, each under the one
+that started it, with its tool calls, tokens, time and last tool so far; a task
+leaves the strip when it ends. It lists only what started while the screen was
+open, since a saved session keeps none of it. The task key picks a row in the
+strip, the next each press and none after the last; a click picks the row too.
+The stop key stops the picked task, and the background key sends it to the
+background so the turn goes on without waiting for it; with no row picked, the
+background key sends every foreground task there, as Ctrl+B does in the
+terminal.
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default
