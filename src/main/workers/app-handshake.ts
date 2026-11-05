@@ -29,8 +29,8 @@ export function unacceptedLine(milliseconds: number): string {
 // Why the app will not answer a command of another build, or undefined when it will. A command older
 // than the version stamp sends none. notify is let through whatever its stamp: it is what a worker's
 // hooks send, a refusal there goes to a hook log nobody reads, and the worker would stay running for
-// good with its main never told. Its words have not changed, and a state the app does not know is
-// refused by parseSessionCommand all the same.
+// good with its main never told. Its words have only grown words after the state, which an older app
+// reads past, and a state the app does not know is refused by parseSessionCommand all the same.
 export function versionRefusal(appVersion: string, commandVersion: unknown, commandArguments: readonly string[]): string | undefined {
   if (commandVersion === appVersion || commandArguments[0] === 'notify') return undefined;
   const command = typeof commandVersion === 'string' ? `v${commandVersion}` : 'an older build';

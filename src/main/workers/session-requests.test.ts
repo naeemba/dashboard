@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
-import { doneReport } from '../../shared/workers/done-report';
-import { STOP_GRACE_MS } from './stop-notices';
+import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
+import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -24,6 +24,8 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const marked: string[] = [];
   const removed: string[] = [];
   const told: string[] = [];
+  // The told messages taken back, by their place in `told`.
+  const withdrawn: string[] = [];
   const typed: string[] = [];
   const ports: SessionPorts = {
     slotOf: (directory) => (directory.startsWith('/work/api') ? 2 : -1),
@@ -57,7 +59,8 @@ function project(overrides: Partial<SessionPorts> = {}) {
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
     type: (id, text) => { typed.push(`${id} ${text}`); },
-    tell: (slot, text) => { told.push(`${slot} ${text}`); },
+    tell: (slot, text) => String(told.push(`${slot} ${text}`) - 1),
+    withdraw: (slot, messageId) => { withdrawn.push(`${slot} ${messageId}`); },
     cardWorktree: (_projectPath, cardId) => ({
       'card-1': { worktreePath: '/work/api.worktrees/card-one', working: false },
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
@@ -68,7 +71,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
-  return { ports, ask, open, agents, workers, started, closed, marked, removed, told, typed };
+  return { ports, ask, open, agents, workers, started, closed, marked, removed, told, withdrawn, typed };
 }
 
 describe('sessionRequests', () => {
@@ -254,6 +257,18 @@ describe('sessionRequests', () => {
     expect(told).toEqual([]);
   });
 
+  it('takes back a notice already queued when main reads the report only after it', async () => {
+    const { ports, told, withdrawn } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toHaveLength(1);
+    answer.heard(2, 'api-terminal-2');
+    expect(withdrawn).toEqual(['2 0']);
+  });
+
   it('takes no report signed by another session, or read by another main, for the worker\'s', async () => {
     const { ports, told } = project();
     const answer = sessionRequests(ports);
@@ -264,6 +279,26 @@ describe('sessionRequests', () => {
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
     expect(told).toHaveLength(1);
+  });
+
+  it('lists a worker that waits on its own background work as paused and tells main once it waits on nothing', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '2', '--scheduled', '0'] });
+    stayStopped();
+    expect(told).toEqual([]);
+    expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2])
+      .toBe('paused, waiting on 2 background tasks');
+    expect(answer.workers()[0]).toMatchObject({ status: 'paused', waiting: 'waiting on 2 background tasks' });
+    // A pause nothing wakes is told as one once it passes the ceiling.
+    vi.advanceTimersByTime(PAUSE_CEILING_MS);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`]);
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    expect(answer.workers()[0]).toEqual(expect.not.objectContaining({ waiting: expect.anything() }));
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`, `2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.

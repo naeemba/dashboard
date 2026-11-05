@@ -220,7 +220,7 @@ export function mainSessionStart(
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
-): { open(slot: number, adopt?: string): void; start(slot: number): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): void } {
+): { open(slot: number, adopt?: string): void; start(slot: number): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): string; withdraw(slot: number, id: string): Promise<boolean> } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -382,17 +382,18 @@ export function registerChatSessions(
 
   // A prompt for this page's session, stamped with the uuid the session's queue reports it by. One sent
   // mid-turn waits in that queue (chat-decision-7), so it never cuts into what the session is doing.
-  function send(slot: number, content: ChatContent): void {
-    const projectPath = host.projectPath(slot);
-    if (projectPath === undefined) return;
+  function send(slot: number, content: ChatContent): string {
     const id = randomUUID();
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return id;
     host.send(slot, { kind: 'prompt', content, id });
     running(slot, projectPath).then(
       (session) => session.input.push({ type: 'user', message: { role: 'user', content }, parent_tool_use_id: null, uuid: id }),
       () => undefined,
     );
+    return id;
   }
-  table.on('chat:send', (_screen, slot: number, content: ChatContent) => send(slot, content));
+  table.on('chat:send', (_screen, slot: number, content: ChatContent) => { send(slot, content); });
 
   // The slash commands the session would run, for the menu. The list is the CLI's, and only a running
   // session has it; one that has ended is started again by the asking, as a prompt would.
@@ -449,11 +450,12 @@ export function registerChatSessions(
 
   // A prompt still waiting in the session's queue, taken back; false once the session has taken it.
   // cancelAsyncMessage is on Query in the pinned SDK but missing from its types.
-  table.handle('chat:withdraw', async (_screen, slot: number, id: string): Promise<boolean> => {
+  async function withdraw(slot: number, id: string): Promise<boolean> {
     const session = await sessions.get(slot)?.catch(() => undefined);
     if (!session) return false;
     return (session.query as Query & { cancelAsyncMessage(uuid: string): Promise<boolean> }).cancelAsyncMessage(id);
-  });
+  }
+  table.handle('chat:withdraw', (_screen, slot: number, id: string): Promise<boolean> => withdraw(slot, id));
 
   // /rename: the SDK writes the name into the conversation's file, where /resume's summary reads it
   // first. The refusal, or null once renamed.
@@ -703,5 +705,7 @@ export function registerChatSessions(
     stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
     // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
     tell: (slot, text) => send(slot, [{ type: 'text', text }]),
+    // One of those taken back while it still waits in the queue: a worker's report read after its notice.
+    withdraw,
   };
 }

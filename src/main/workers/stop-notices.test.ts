@@ -6,14 +6,20 @@ function clock() {
   let now = 0;
   const timers: { at: number; run: () => void; cancelled: boolean }[] = [];
   const noticed: string[] = [];
+  const paused: string[] = [];
+  const takenBack: string[] = [];
   const notices = stopNotices({
     after(ms, run) {
       const timer = { at: now + ms, run, cancelled: false };
       timers.push(timer);
       return () => { timer.cancelled = true; };
     },
-    notice: (id) => { noticed.push(id); },
-  }, 100);
+    notice: (id, pause) => {
+      noticed.push(id);
+      if (pause) paused.push(id);
+      return () => { takenBack.push(id); };
+    },
+  }, 100, 10, 1000);
   function pass(ms: number) {
     now += ms;
     for (const timer of timers.filter((each) => !each.cancelled && each.at <= now)) {
@@ -21,7 +27,7 @@ function clock() {
       timer.run();
     }
   }
-  return { notices, noticed, pass };
+  return { notices, noticed, paused, takenBack, pass };
 }
 
 describe('stopNotices', () => {
@@ -104,5 +110,73 @@ describe('stopNotices', () => {
     notices.forget('2:2');
     pass(100);
     expect(noticed).toEqual([]);
+  });
+
+  describe('with a Stop hook that says what the session waits on', () => {
+    const nothing = { background: 0, scheduled: 0 };
+
+    it('tells main as soon as the report has had time to land, and gives no grace period', () => {
+      const { notices, noticed, pass } = clock();
+      notices.state('2:1', 'done', nothing);
+      pass(9);
+      expect(noticed).toEqual([]);
+      pass(1);
+      expect(noticed).toEqual(['2:1']);
+    });
+
+    it('says nothing for a stop that still waits on background work or a wakeup, until one that waits on nothing', () => {
+      const { notices, noticed, pass } = clock();
+      notices.state('2:1', 'done', { background: 2, scheduled: 0 });
+      notices.state('2:2', 'done', { background: 0, scheduled: 1 });
+      pass(900);
+      expect(noticed).toEqual([]);
+      // The task woke it and it ended again without running a tool.
+      notices.state('2:1', 'done', nothing);
+      pass(10);
+      expect(noticed).toEqual(['2:1']);
+    });
+
+    it('says nothing for a stop whose report main read in time, even one sent before a pause', () => {
+      const { notices, noticed, pass } = clock();
+      notices.state('2:1', 'done', nothing);
+      pass(5);
+      notices.reported('2:1');
+      notices.reported('2:2');
+      notices.state('2:2', 'done', { background: 1, scheduled: 0 });
+      notices.state('2:2', 'done', nothing);
+      pass(100);
+      expect(noticed).toEqual([]);
+    });
+
+    it('tells main once a pause has lasted the ceiling, since nothing may ever wake it', () => {
+      const { notices, noticed, paused, pass } = clock();
+      notices.state('2:1', 'done', { background: 1, scheduled: 0 });
+      notices.reported('2:2');
+      notices.state('2:2', 'done', { background: 1, scheduled: 0 });
+      pass(1000);
+      expect(paused).toEqual(['2:1']);
+      // Still the same pause: told once.
+      notices.state('2:1', 'done', { background: 1, scheduled: 0 });
+      pass(1000);
+      expect(noticed).toEqual(['2:1']);
+      // Woken at last and ended with nothing in flight: main heard only that it waits, so this stop
+      // is told too, as a stop.
+      notices.state('2:1', 'done', nothing);
+      pass(10);
+      expect(noticed).toEqual(['2:1', '2:1']);
+      expect(paused).toEqual(['2:1']);
+    });
+
+    it('takes back a notice main has queued when the report is read after it', () => {
+      const { notices, noticed, takenBack, pass } = clock();
+      notices.state('2:1', 'done', nothing);
+      pass(10);
+      notices.reported('2:1');
+      expect(noticed).toEqual(['2:1']);
+      expect(takenBack).toEqual(['2:1']);
+      // Taken back once: a second read of a report has nothing left to take back.
+      notices.reported('2:1');
+      expect(takenBack).toEqual(['2:1']);
+    });
   });
 });

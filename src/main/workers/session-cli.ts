@@ -3,6 +3,8 @@
 // command and the app it talks to are built from the same tree and must not disagree on a spelling.
 
 import type { WorkerState } from '../../shared/app/bridge';
+import type { StopWaiting } from '../../shared/workers/worker-roster';
+import { isRecord } from '../../shared/app/is-record';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -10,7 +12,8 @@ export type SessionCommand =
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
-  | { kind: 'notify'; id: string; state: WorkerState };
+  // `waiting` is what a Stop hook said its session waits on, when it said so.
+  | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting };
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.
@@ -25,14 +28,15 @@ export const SESSION_USAGE = `session — the Dashboard panes of the project you
   session list [--all]
   session send <id> "<text>"
   session release <id>
-  session notify <id> running|blocked|done
+  session notify <id> running|blocked|done [--stop-input]
 
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
 and neither in the project itself. send types the text into the pane and presses Enter. notify is
-what a worker's hooks call. list --all lists the panes of every open project and the manager.`;
+what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for how many background
+tasks and wakeups the session still waits on. list --all lists the panes of every open project and the manager.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 
@@ -68,6 +72,50 @@ function parseRun(words: readonly string[]): Parsed {
   return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree } };
 }
 
+const COUNT = /^\d+$/;
+
+// What a done says it waits on. Every word after the state is optional, so a hook of any build is
+// still heard: none is a Stop hook that said nothing, which the app gives the grace period.
+function parseNotify(id: string, state: WorkerState, words: readonly string[]): Parsed {
+  if (words.length === 0) return { ok: true, command: { kind: 'notify', id, state } };
+  const [backgroundFlag, background, scheduledFlag, scheduled] = words;
+  if (state !== 'done' || words.length !== 4 || backgroundFlag !== '--background' || scheduledFlag !== '--scheduled'
+    || !COUNT.test(background) || !COUNT.test(scheduled)) {
+    return refuse('session notify takes nothing after its state, except --stop-input after done');
+  }
+  return { ok: true, command: { kind: 'notify', id, state, waiting: { background: Number(background), scheduled: Number(scheduled) } } };
+}
+
+// `notify <id> done --stop-input` is a Stop hook asking the command to read its input on stdin, which
+// session-program.ts does before parsing: the app is sent the counts, never the flag or the input.
+export function readsStopInput(commandArguments: readonly string[]): boolean {
+  return commandArguments.length === 4 && commandArguments[0] === 'notify' && commandArguments[2] === 'done'
+    && commandArguments[3] === '--stop-input';
+}
+
+// A Stop hook's input, read for what the session still waits on: the arguments the app is sent in
+// place of --stop-input. None when the input is not JSON or lacks either list — an older Claude Code
+// — so the app falls back to its grace period.
+export function stopInputArguments(input: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(input);
+  } catch {
+    return [];
+  }
+  if (!isRecord(parsed)) return [];
+  const { background_tasks: background, session_crons: scheduled } = parsed;
+  if (!Array.isArray(background) || !Array.isArray(scheduled)) return [];
+  return ['--background', String(background.length), '--scheduled', String(scheduled.length)];
+}
+
+// The arguments the app is sent for what was typed, with the Stop hook's input read from stdin when
+// it asked for that: `input` is undefined when there was none to read, a terminal, which sends no counts.
+export function stopHookArguments(given: readonly string[], input: string | undefined): string[] {
+  if (!readsStopInput(given)) return [...given];
+  return [...given.slice(0, 3), ...(input === undefined ? [] : stopInputArguments(input))];
+}
+
 export function parseSessionCommand(commandArguments: readonly string[]): Parsed {
   const [verb, ...rest] = commandArguments;
   switch (verb) {
@@ -101,7 +149,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       if (state !== 'running' && state !== 'blocked' && state !== 'done') {
         return refuse('session notify takes running, blocked or done');
       }
-      return { ok: true, command: { kind: 'notify', id, state } };
+      return parseNotify(id, state, rest.slice(2));
     }
     default: return refuse(verb === undefined ? SESSION_USAGE : `no such command: ${verb}\n\n${SESSION_USAGE}`);
   }

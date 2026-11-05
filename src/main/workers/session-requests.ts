@@ -7,7 +7,7 @@ import type { ProjectNamed } from '../projects/project-named';
 import { namesItsTarget, parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
-import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
+import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
@@ -50,7 +50,9 @@ export type SessionPorts = {
   type(id: string, text: string): void;
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
-  tell(slot: number, text: string): void;
+  // Answers with the id `withdraw` takes it back by while it still waits in the queue.
+  tell(slot: number, text: string): string;
+  withdraw(slot: number, messageId: string): void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
@@ -98,8 +100,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
-  // because a worker run a second time has not finished the second task.
-  const states = new Map<string, WorkerState>();
+  // because a worker run a second time has not finished the second task, with what a done's Stop hook
+  // said the session still waits on.
+  const states = new Map<string, { state: WorkerState; waiting?: StopWaiting }>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
@@ -117,12 +120,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
   // Only a worker main started: a card's agent a ship started reports through the board, and a Claude
   // opened by hand reports to nobody. The main that claimed it hears, which is another project's when
-  // it was claimed with --project. Asked again when the grace period ends, since the pane may have been
-  // given to something else by then.
+  // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
+  // to something else by then.
   const notices = stopNotices({
-    notice(id) {
+    notice(id, paused) {
       if (!mainsWorker(id)) return;
-      ports.tell(dispatched.get(id)?.dispatcher ?? paneFromId(id).slot, doneReport(nameOfPane(id), id));
+      const slot = dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
+      const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused));
+      return () => ports.withdraw(slot, messageId);
     },
   });
 
@@ -143,7 +148,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const program = ports.busyWith(id);
       return program === null ? 'idle' : `busy ${program}`;
     }
-    return states.get(id) ?? 'running';
+    const said = states.get(id);
+    return isPaused(said?.waiting) ? `paused, ${waitingText(said.waiting)}` : said?.state ?? 'running';
   }
 
   // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
@@ -251,9 +257,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const { slot, index } = paneFromId(id);
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];
+      const said = states.get(id);
+      const waiting = said?.waiting;
+      const status = workerStatus(mainsWorker(id), said?.state, isPaused(waiting));
       return [{
         id, dispatcher, project: page.name, name: nameOfPane(id),
-        about, status: workerStatus(mainsWorker(id), states.get(id)),
+        about, status, ...(status === 'paused' && isPaused(waiting) && { waiting: waitingText(waiting) }),
       }];
     });
   }
@@ -266,10 +275,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (command.kind === 'notify') {
       const { slot, index } = paneFromId(command.id);
       if (!ports.openPanes(slot).includes(index)) return refused(`${command.id} is not open`);
+      const { waiting } = command;
       if (command.state === 'running') states.delete(command.id);
-      else states.set(command.id, command.state);
+      else states.set(command.id, { state: command.state, waiting });
       ports.mark(command.id, command.state);
-      if (mainsWorker(command.id)) notices.state(command.id, command.state);
+      if (mainsWorker(command.id)) notices.state(command.id, command.state, waiting);
       return answered('');
     }
     const folderSlot = ports.slotOf(request.directory);

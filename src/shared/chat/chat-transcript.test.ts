@@ -153,6 +153,9 @@ describe('applyMessage', () => {
   it('draws the app\'s notice that a worker stopped as a status line, as sent and as read back', () => {
     const notice = doneReport('api-terminal-2', '2:1');
     expect(prompted(notice).entries).toEqual([{ kind: 'notice', text: notice }]);
+    const paused = doneReport('api-terminal-2', '2:1', true);
+    expect(paused).toContain('paused for 30 minutes');
+    expect(prompted(paused).entries).toEqual([{ kind: 'notice', text: paused }]);
     const saved = 'api-terminal-2 in pane 2:1 (dashboard://pane/2:1) has finished its turn. If it sent you a report, that says what it did;'
       + ' `pane list` shows where every worker stands.';
     expect(fold([{ type: 'user', parent_tool_use_id: null, message: { content: saved } }]).entries).toEqual([{ kind: 'notice', text: saved }]);

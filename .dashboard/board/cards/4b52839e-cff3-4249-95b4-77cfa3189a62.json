@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-05T11:12:54.013Z",
-  "updatedAt": "2026-11-05T11:12:54.013Z",
-  "column": "Doing",
-  "order": 3
+  "updatedAt": "2026-11-05T12:15:46.549Z",
+  "branch": "work-board-card-4b52839e-cff3-4249-95b4-77c",
+  "pullRequest": 211,
+  "comments": [
+    {
+      "at": "2026-11-05T12:15:46.549Z",
+      "body": "Shipped in #211: the worker's Stop hook passes background_tasks/session_crons counts; main is told within 10 s when nothing is in flight, a pause is listed as paused (notice after a 30-minute ceiling), the 3-minute grace stays only when the counts are absent. A notice main reads after the report is withdrawn."
+    }
+  ],
+  "column": "Done",
+  "order": 166
 }
