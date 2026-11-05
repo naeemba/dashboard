@@ -3,7 +3,8 @@ import type { ChatContent, ChatPreferences } from '../app/bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
 import { rateLimitNotice, retryNotice } from './chat-notices';
-import { applyTaskMessage, type ChatTasks } from './chat-tasks';
+import { applyTaskMessage, type AgentUsage, type ChatTasks } from './chat-tasks';
+import { finishedAfter, messageUsage, resultUsage, type FinishedTask } from './chat-agents';
 import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
@@ -69,8 +70,9 @@ export type ChatEntry =
   // screen would send it to Claude as a prompt.
   | { kind: 'user'; text: string; images: ChatImage[]; ran?: true } & Stamp
   | { kind: 'text'; text: string } & Stamp
-  // `steps` is what a subagent the call started has done so far, its own conversation folded the same way.
-  | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null; steps?: ChatEntry[] }
+  // `steps` is what a subagent the call started has done so far, its own conversation folded the same
+  // way, and `usage` its count so far, kept once it finishes (chat-agents.ts).
+  | { kind: 'tool'; id: string; name: string; input: Record<string, unknown>; result: ToolResult | null; steps?: ChatEntry[]; usage?: AgentUsage }
   | { kind: 'notice'; text: string }
   // What a command run with `!` printed. The command itself is a user entry, `! git push`.
   | { kind: 'shell'; text: string }
@@ -104,17 +106,26 @@ export type Transcript = {
   // The working line's token count (turnTokens). `output` is the real output tokens of the running
   // turn's finished messages, as each message's usage says; `reported` is the last usage the message
   // in flight sent, folded into `output` when the next message starts; `streamed` is what the message
-  // in flight has streamed so far, text, thinking and tool input alike, in characters. And whether the
-  // block streaming now is thinking.
+  // in flight has streamed so far, text, thinking and tool input alike, in characters; `subagents` is
+  // what the turn's subagents wrote, in characters, since main gets no stream of theirs and their
+  // messages' usage is only the count at the message's start. And whether the block streaming now is
+  // thinking.
   output: number;
   reported: number;
   streamed: number;
+  subagents: number;
   thinking: boolean;
   // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
   // than in the view, so a question mid-turn does not start the clock over.
   started: number | null;
-  // The agents, workflows and background commands running now (chat-tasks.ts).
+  // The agents, workflows and background commands running now (chat-tasks.ts), and those that ended
+  // this conversation, newest first (chat-agents.ts).
   tasks: ChatTasks;
+  finished: FinishedTask[];
+  // Each subagent's whole conversation so far, by the id of the tool call that started it, for the
+  // agents key's view of it; the call's own steps keep only its lines. Only what arrived while the
+  // screen was open: a saved session keeps a subagent's conversation in a file of its own.
+  agents: Record<string, ChatEntry[]>;
   // The hook running now, for the working line (chat-hooks.ts); null with none.
   hook: string | null;
   // Prompts sent while a turn ran, drawn grey under the conversation until the session takes them.
@@ -129,10 +140,10 @@ export type Transcript = {
 };
 
 // A turn's count before anything has come down.
-const UNCOUNTED = { output: 0, reported: 0, streamed: 0, thinking: false } as const;
+const UNCOUNTED = { output: 0, reported: 0, streamed: 0, subagents: 0, thinking: false } as const;
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
+  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], finished: [], agents: {}, hook: null, suggestion: null, queued: [], cache: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -141,10 +152,17 @@ const IDLE = { live: '', busy: false, ...UNCOUNTED, started: null, hook: null, s
 // A tool's input streams as JSON: a Write streams the whole file, and Claude Code counts it.
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking', input_json_delta: 'partial_json' };
 
-// The running turn's output so far: the finished messages' real count, and the one in flight taken as
-// four characters a token, the estimate Claude Code shows until a message's usage arrives.
+// The running turn's output so far: the finished messages' real count, and the one in flight and what
+// subagents wrote taken as four characters a token, the estimate Claude Code shows until a message's
+// usage arrives.
 export function turnTokens(transcript: Transcript): number {
-  return transcript.output + transcript.reported + Math.round(transcript.streamed / 4);
+  return transcript.output + transcript.reported + Math.round((transcript.streamed + transcript.subagents) / 4);
+}
+
+// The characters a whole message wrote, counted as the stream would have: text, thinking, tool input.
+function writtenLength(content: unknown): number {
+  return blocksOf(content).reduce((sum, block) => sum + text(block.text).length + text(block.thinking).length
+    + (block.type === 'tool_use' ? JSON.stringify(block.input ?? {}).length : 0), 0);
 }
 
 // A message's usage, in each of its message_deltas, is cumulative for that message, so it replaces the
@@ -182,8 +200,10 @@ function toolResult(block: Record<string, unknown>): ToolResult {
   };
 }
 
+// An Agent call's result ends with the agent's final count, which is all a conversation read back has.
 function withResult(entries: ChatEntry[], id: string, result: ToolResult): ChatEntry[] {
-  return entries.map((entry) => (entry.kind === 'tool' && entry.id === id ? { ...entry, result } : entry));
+  const usage = resultUsage(result.text);
+  return entries.map((entry) => (entry.kind === 'tool' && entry.id === id ? { ...entry, result, ...(usage && { usage }) } : entry));
 }
 
 function assistant(transcript: Transcript, content: unknown, stamp: Stamp): Transcript {
@@ -279,9 +299,15 @@ function skillOf(entries: ChatEntry[], id: unknown): string | undefined {
 
 // A system message about the running tasks, folded into them; the same transcript for any other, so
 // nothing redraws.
+// An agent's count reaches the Agent call that started it as it goes.
 function withTasks(transcript: Transcript, message: Record<string, unknown>): Transcript {
   const tasks = applyTaskMessage(transcript.tasks, message);
-  return tasks === transcript.tasks ? transcript : { ...transcript, tasks };
+  const finished = finishedAfter(transcript.finished, transcript.tasks, tasks, message);
+  const usage = messageUsage(message);
+  const call = text(message.tool_use_id);
+  const entries = usage && call ? withCall(transcript.entries, call, (entry) => ({ ...entry, usage })) : transcript.entries;
+  if (tasks === transcript.tasks && finished === transcript.finished && entries === transcript.entries) return transcript;
+  return { ...transcript, tasks, finished, entries };
 }
 
 // A system message about a hook, folded into the working line and, when it failed, the conversation;
@@ -309,18 +335,33 @@ function userMessage(transcript: Transcript, message: Record<string, unknown>): 
   return user(transcript, inner.content, stampOf(message, inner));
 }
 
-// A subagent's own message, folded into the steps of the call that started it, wherever that call
-// sits: a subagent's subagent is a call in its starter's steps. The same entries when no call has the id.
-function withSteps(entries: ChatEntry[], id: string, message: Record<string, unknown>): ChatEntry[] {
+type ToolEntry = Extract<ChatEntry, { kind: 'tool' }>;
+
+// The entries with the call `id` changed, wherever it sits: a subagent's subagent is a call in its
+// starter's steps. The same entries when no call has the id or the change left it as it was.
+function withCall(entries: ChatEntry[], id: string, change: (call: ToolEntry) => ToolEntry): ChatEntry[] {
   let changed = false;
   const next = entries.map((entry) => {
     if (entry.kind !== 'tool' || (entry.id !== id && !entry.steps)) return entry;
-    const steps = entry.id === id ? stepsAfter(entry.steps ?? [], message) : withSteps(entry.steps ?? [], id, message);
-    if (steps === entry.steps || (steps.length === 0 && !entry.steps)) return entry;
-    changed = true;
-    return { ...entry, steps };
+    const after = entry.id === id ? change(entry) : withSteps(entry, withCall(entry.steps ?? [], id, change));
+    if (after !== entry) changed = true;
+    return after;
   });
   return changed ? next : entries;
+}
+
+function withSteps(call: ToolEntry, steps: ChatEntry[]): ToolEntry {
+  return steps === call.steps || (steps.length === 0 && !call.steps) ? call : { ...call, steps };
+}
+
+// A subagent's own message, in the steps of the call that started it and in its whole conversation.
+function subagentMessage(transcript: Transcript, id: string, message: Record<string, unknown>): Transcript {
+  const entries = withCall(transcript.entries, id, (call) => withSteps(call, stepsAfter(call.steps ?? [], message)));
+  const inner = isRecord(message.message) ? message.message : {};
+  const own = { ...EMPTY_TRANSCRIPT, entries: transcript.agents[id] ?? [] };
+  const after = message.type === 'assistant' ? assistant(own, inner.content, stampOf(message, inner)) : userMessage(own, message);
+  const subagents = transcript.subagents + (message.type === 'assistant' ? writtenLength(inner.content) : 0);
+  return { ...transcript, entries, subagents, agents: { ...transcript.agents, [id]: after.entries } };
 }
 
 // A step's tool output is never drawn, only whether it failed, so it is not kept. Plain text in the
@@ -348,8 +389,7 @@ function stepsAfter(steps: ChatEntry[], message: Record<string, unknown>): ChatE
 export function applyMessage(transcript: Transcript, message: Record<string, unknown>): Transcript {
   if (typeof message.parent_tool_use_id === 'string') {
     if (message.type !== 'assistant' && message.type !== 'user') return transcript;
-    const entries = withSteps(transcript.entries, message.parent_tool_use_id, message);
-    return entries === transcript.entries ? transcript : { ...transcript, entries };
+    return subagentMessage(transcript, message.parent_tool_use_id, message);
   }
   const inner = isRecord(message.message) ? message.message : {};
   // A turn under way, whoever started it, is past what the last one suggested.

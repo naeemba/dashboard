@@ -118,12 +118,20 @@ export function taskOrder(tasks: ChatTasks): { task: ChatTask; depth: number }[]
 
 // One row's text after its description: what kind of task, then what it has done so far.
 export function taskDetail(task: ChatTask): string {
-  const parts = [task.kind];
-  if (task.tools > 0) parts.push(`${task.tools} ${task.tools === 1 ? 'tool' : 'tools'}`);
-  if (task.tokens > 0) parts.push(`${formatTokens(task.tokens)} tokens`);
-  if (task.seconds > 0) parts.push(`${task.seconds}s`);
-  if (task.lastTool) parts.push(task.lastTool);
-  return parts.join(' · ');
+  return [task.kind, ...usageParts(task), ...(task.lastTool ? [task.lastTool] : [])].join(' · ');
+}
+
+// What an agent has done, as its strip row and the Agent call that started it both say it: its tool
+// calls, its tokens and its time, each left out while it is nought. The tokens are the session's
+// total_tokens, its last request's whole context and output, which is the figure Claude Code shows.
+export type AgentUsage = { tools: number; tokens: number; seconds: number };
+
+export function usageParts(usage: AgentUsage): string[] {
+  const parts: string[] = [];
+  if (usage.tools > 0) parts.push(`${usage.tools} ${usage.tools === 1 ? 'tool' : 'tools'}`);
+  if (usage.tokens > 0) parts.push(`${formatTokens(usage.tokens)} tokens`);
+  if (usage.seconds > 0) parts.push(`${usage.seconds}s`);
+  return parts;
 }
 
 // The row the task key picks next, in the strip's order: the first with none picked, then each in
