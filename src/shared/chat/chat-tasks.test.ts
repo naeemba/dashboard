@@ -16,6 +16,12 @@ describe('applyTaskMessage', () => {
     expect(taskDetail(tasks[0])).toBe('general-purpose · 3 tools · 12K tokens · 31s · Read');
   });
 
+  it('keeps a count a progress message leaves out', () => {
+    const progress = (usage: Record<string, unknown>) => ({ type: 'system', subtype: 'task_progress', task_id: 'a', usage });
+    const tasks = fold([startedTask('a'), progress({ tool_uses: 3, total_tokens: 1_000, duration_ms: 4_000 }), progress({ total_tokens: 12_000 })]);
+    expect(tasks[0]).toMatchObject({ tools: 3, tokens: 12_000, seconds: 4 });
+  });
+
   it('drops a task when it ends, by its status or its notification', () => {
     const two = fold([startedTask('a'), startedTask('b')]);
     expect(fold([{ type: 'system', subtype: 'task_updated', task_id: 'a', patch: { status: 'completed' } }], two).map((task) => task.id)).toEqual(['b']);

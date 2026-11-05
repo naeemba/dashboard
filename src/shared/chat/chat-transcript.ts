@@ -4,7 +4,7 @@ import { localCommandOutput, shellExchange, typedCommand } from './chat-commands
 import { notTypedMessage } from './chat-events';
 import { rateLimitNotice, retryNotice } from './chat-notices';
 import { applyTaskMessage, messageUsage, type AgentUsage, type ChatTasks } from './chat-tasks';
-import { finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
+import { finishedAfter, keptConversations, resultUsage, type FinishedTask } from './chat-agents';
 import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
@@ -124,7 +124,7 @@ export type Transcript = {
   finished: FinishedTask[];
   // Each subagent's whole conversation so far, by the id of the tool call that started it, for the
   // agents key's view of it; the call's own steps keep only its lines. Only what arrived while the
-  // screen was open, and only the newest started KEPT_CONVERSATIONS: a saved session keeps a subagent's
+  // screen was open, and only the newest started KEPT_CONVERSATIONS and any still running: a saved session keeps a subagent's
   // conversation in a file of its own.
   agents: Record<string, ChatEntry[]>;
   // The hook running now, for the working line (chat-hooks.ts); null with none.
@@ -365,7 +365,7 @@ function subagentMessage(transcript: Transcript, id: string, message: Record<str
   const after = message.type === 'assistant' ? assistant(own, inner.content, stampOf(message, inner)) : userMessage(own, message);
   const subagents = transcript.subagents + (message.type === 'assistant' ? writtenLength(inner.content) : 0);
   // An agent already kept stays where it was in the order, so the oldest started is the one dropped.
-  const agents = Object.fromEntries(Object.entries({ ...transcript.agents, [id]: after.entries }).slice(-KEPT_CONVERSATIONS));
+  const agents = keptConversations({ ...transcript.agents, [id]: after.entries }, transcript.tasks);
   return { ...transcript, entries, subagents, agents };
 }
 

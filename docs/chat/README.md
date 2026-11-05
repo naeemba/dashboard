@@ -154,7 +154,7 @@ goes back to the list; the list's Escape gives the keyboard back to the box. A
 click in it does what it does in the main log: an image or PDF opens over it,
 and a pane link puts the conversation away and lands on the pane. An agent that
 has said nothing yet opens empty and fills as it goes; only the last 20 agents'
-conversations are kept, and a session that ends lists what it was running as
+conversations are kept, besides any still running, and a session that ends lists what it was running as
 ended. A workflow or background command has no conversation to open, and says
 so (chat-decision-14).
 

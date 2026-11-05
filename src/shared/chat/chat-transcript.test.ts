@@ -190,6 +190,14 @@ describe('applyMessage', () => {
     expect(Object.keys(transcript.agents)).toEqual(ids.slice(1));
   });
 
+  it('never drops a running agent\'s conversation to keep the newest', () => {
+    const said = (id: string) => ({ ...assistant([{ type: 'text', text: id }]), parent_tool_use_id: id });
+    const ids = Array.from({ length: KEPT_CONVERSATIONS + 1 }, (_, index) => `a${index}`);
+    const running = ids.map((id) => ({ type: 'system', subtype: 'task_started', task_id: `t${id}`, tool_use_id: id, subagent_type: 'general-purpose' }));
+    const transcript = fold([...running, ...ids.map(said), ...ids.map(said)]);
+    expect(transcript.agents.a0).toHaveLength(2);
+  });
+
   it('reads a prompt from a saved session as what you said', () => {
     const transcript = applyMessage(EMPTY_TRANSCRIPT, { type: 'user', parent_tool_use_id: null, message: { content: 'hi' } });
     expect(transcript.entries).toEqual([{ kind: 'user', text: 'hi', images: [] }]);

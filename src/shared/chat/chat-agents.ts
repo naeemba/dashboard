@@ -14,6 +14,17 @@ export type FinishedTask = ChatTask & { status: string };
 // output, and a session that runs agents all day would hold every one of them for nobody.
 export const KEPT_CONVERSATIONS = 20;
 
+// The conversations kept once one has changed: past the cap the oldest started are dropped, but never
+// a running agent's, which someone may still be watching and whose next message would otherwise start
+// it again from there. More than the cap running keeps them all.
+export function keptConversations<T>(agents: Record<string, T>, tasks: ChatTasks): Record<string, T> {
+  const ids = Object.keys(agents);
+  if (ids.length <= KEPT_CONVERSATIONS) return agents;
+  const running = new Set(tasks.map((task) => task.toolUseId));
+  const dropped = new Set(ids.filter((id) => !running.has(id)).slice(0, ids.length - KEPT_CONVERSATIONS));
+  return Object.fromEntries(Object.entries(agents).filter(([id]) => !dropped.has(id)));
+}
+
 export type AgentConversation = { kind: 'open'; id: string } | { kind: 'refused'; reason: string };
 
 // The conversation the agents key opens for a task. An agent still running that has said nothing yet
@@ -54,10 +65,9 @@ function summaryOf(message: Record<string, unknown>): string {
 // notification that follows an update's end fills in the final count and report.
 export function finishedAfter(finished: FinishedTask[], running: ChatTasks, after: ChatTasks, message: Record<string, unknown>): FinishedTask[] {
   const left = running.filter((task) => !after.some((still) => still.id === task.id));
-  const usage = messageUsage(message);
   const summary = summaryOf(message);
   const closing = (task: ChatTask): FinishedTask => ({
-    ...task, ...(usage ?? {}), summary: summary || task.summary, status: statusOf(message),
+    ...task, ...(messageUsage(message, task) ?? {}), summary: summary || task.summary, status: statusOf(message),
   });
   if (left.length > 0) return [...left.map(closing).reverse(), ...finished];
   if (message.subtype !== 'task_notification' || !finished.some((task) => task.id === message.task_id)) return finished;

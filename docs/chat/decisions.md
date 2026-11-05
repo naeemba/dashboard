@@ -291,5 +291,7 @@ screen rather than replacing it, so Escape lands back on the list and the main c
 place. Only an agent has a conversation to open; a workflow or a background command says so.
 Each kept conversation holds its tools' output, up to 20,000 characters a result, so only the last 20
 agents started keep one: a manager session running agents all day would otherwise hold megabytes of
-output for conversations nobody opens. A finished agent past that says so when picked.
+output for conversations nobody opens. A running agent's is never the one dropped: dropping it would
+start it again from its next message, with nothing saying its beginning was cut. A finished agent past
+that says so when picked.
 

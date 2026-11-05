@@ -29,13 +29,16 @@ export type ChatTasks = readonly ChatTask[];
 
 const ENDED = new Set(['completed', 'failed', 'killed', 'stopped']);
 
-const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+const NO_USAGE: AgentUsage = { tools: 0, tokens: 0, seconds: 0 };
 
-// The count a task_progress or task_notification carries, or null when it carries none.
-export function messageUsage(message: Record<string, unknown>): AgentUsage | null {
+// The count a task_progress or task_notification carries, or null when it carries none. A count it
+// leaves out is the one in `known`, the task's own so far.
+export function messageUsage(message: Record<string, unknown>, known: AgentUsage = NO_USAGE): AgentUsage | null {
   const usage = isRecord(message.usage) ? message.usage : null;
   if (!usage || typeof usage.total_tokens !== 'number') return null;
-  return { tools: count(usage.tool_uses), tokens: usage.total_tokens, seconds: Math.round(count(usage.duration_ms) / 1000) };
+  const seconds = typeof usage.duration_ms === 'number' ? Math.round(usage.duration_ms / 1000) : known.seconds;
+  const tools = typeof usage.tool_uses === 'number' ? usage.tool_uses : known.tools;
+  return { tools, tokens: usage.total_tokens, seconds };
 }
 
 const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
@@ -75,10 +78,9 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
 }
 
 function progressed(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
-  const usage = messageUsage(message);
   return tasks.map((task) => (task.id !== message.task_id ? task : {
     ...task,
-    ...usage,
+    ...messageUsage(message, task),
     description: text(message.description) || task.description,
     lastTool: text(message.last_tool_name) || task.lastTool,
     summary: text(message.summary) || task.summary,
