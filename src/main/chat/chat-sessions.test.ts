@@ -71,8 +71,13 @@ describe('relayed', () => {
   it('relays streamed thinking, which the working line counts', () => {
     expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: 'a' } }))).toBe(true);
   });
-  it('keeps a tool input streaming in, which for a Write is the whole file', () => {
-    expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json: '{' } }))).toBe(false);
+  it('relays a tool input streaming in and a message\'s closing usage, which the working line counts', () => {
+    expect(relayed(streamed({ type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json: '{' } }))).toBe(true);
+    expect(relayed(streamed({ type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: { output_tokens: 90 } }))).toBe(true);
+  });
+  it('keeps a message starting and stopping', () => {
+    expect(relayed(streamed({ type: 'message_start', message: {} }))).toBe(false);
+    expect(relayed(streamed({ type: 'message_stop' }))).toBe(false);
   });
   it('keeps a subagent\'s stream, and relays its finished messages', () => {
     expect(relayed({ ...streamed({ type: 'content_block_delta', delta: { type: 'text_delta', text: 'a' } }), parent_tool_use_id: 't1' })).toBe(false);

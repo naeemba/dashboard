@@ -1,0 +1,11 @@
+{
+  "id": "1dfa6aae-bc4a-4e1e-9c57-388d2e9d8f13",
+  "title": "Adopt the docs pattern in every managed project with an /adopt-docs skill and a manager rollout",
+  "notes": "Every project the dashboard manages should follow the docs pattern this repo uses: docs/<feature>/{README,hard-rules,decisions,history}.md, docs/README.md as the index, and a CLAUDE.md rule that a change to a feature's files changes its docs in the same PR, with hard rules named by id. Today only dashboard does; new-crm, raxel-lead-machine, habit-tracker and raxel-studio have older, flat docs/ folders.\n- Ship a skill with the app, /adopt-docs, installed into ~/.claude/skills the way /create-task is (PR #199). Run inside a repo, it: reads the code and the existing docs; finds the features (by folder and by what the code does); writes docs/<feature>/ README (what it is, files, scenarios), hard-rules (from CLAUDE.md, comments and history: rules whose breaking was seen), decisions (settled questions, with dates and PRs from git log), history (dated lines from merged PRs); moves existing docs into the right feature without losing text; writes docs/README.md; adds the docs rule to the repo's CLAUDE.md (creating it if missing); opens a PR in that repo. It never deletes a doc it cannot place; it lists those in the PR.\n- The manager rolls it out: one worker per project in ~/.dashboard/projects.yaml (pane claim --project), each running /adopt-docs and opening its PR there; reports back to the manager. A project already in the pattern is skipped.\n- Write the skill from this repo's own docs as the worked example. Test the skill text on one small project first (habit-tracker) before the rollout, and put that PR's link in this card.\n- docs/command (or a new docs/skills) records the skill and the rollout.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-05T15:07:51.937Z",
+  "updatedAt": "2026-11-05T15:07:51.937Z",
+  "column": "Backlog",
+  "order": 30
+}

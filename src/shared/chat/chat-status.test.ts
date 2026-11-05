@@ -54,8 +54,8 @@ describe('statusMeters', () => {
 });
 
 describe('workingLine', () => {
-  it('counts the seconds and the tokens streamed, four characters to a token', () => {
-    expect(workingLine(18, 1264, false)).toBe('Working… (18s · ↓ 316 tokens)');
+  it('counts the seconds and the tokens come down', () => {
+    expect(workingLine(18, 316, false)).toBe('Working… (18s · ↓ 316 tokens)');
   });
 
   it('says thinking while a thinking block streams, and no tokens before any came', () => {
