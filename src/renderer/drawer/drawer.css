@@ -58,7 +58,8 @@
   background: var(--hover);
 }
 
-.drawer-row.highlighted {
+.drawer-row.highlighted,
+.data-line.highlighted {
   background: var(--tint);
 }
 
@@ -137,9 +138,13 @@
 
 /* A YAML or JSON doc in the same viewer, one element per line so a fold hides whole lines. Keys take
    blue here so they read apart from the strings, which share green with them on the Claude screen. */
-.data-viewer-text {
+.data-viewer-text,
+.data-viewer-failure {
   max-width: 1100px;
   margin: 0 auto;
+}
+
+.data-viewer-text {
   font: 12.5px/1.5 var(--mono-font);
   white-space: pre;
 }
@@ -157,22 +162,17 @@
   cursor: pointer;
 }
 
-.data-line.highlighted {
-  background: var(--tint);
-}
-
 .data-fold {
   flex: none;
   width: 20px;
-  color: var(--muted);
 }
 
+.data-fold,
 .data-folded {
   color: var(--muted);
 }
 
 .data-viewer-failure {
-  max-width: 1100px;
-  margin: 0 auto 8px;
+  margin-bottom: 8px;
   color: var(--red);
 }

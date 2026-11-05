@@ -33,7 +33,7 @@ export function safeImage(href: string): string | null {
   return /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(href) ? href : null;
 }
 
-function highlightCode(code: string, language: string | undefined): string {
+export function highlightCode(code: string, language: string | undefined): string {
   const known = language && hljs.getLanguage(language) ? language : null;
   // ponytail: no guessing at an unlabelled block — highlightAuto runs every grammar over it, which
   // costs more than a long answer is worth. Add it when unlabelled blocks turn out to be common.

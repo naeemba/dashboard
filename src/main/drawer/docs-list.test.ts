@@ -42,6 +42,7 @@ describe('listDocs', () => {
     mkdirSync(path.join(home, 'dotfiles', 'rules'), { recursive: true });
     writeFileSync(path.join(home, '.claude', 'CLAUDE.md'), '');
     writeFileSync(path.join(home, '.claude', 'settings.json'), '');
+    writeFileSync(path.join(home, '.claude', '.credentials.json'), '');
     writeFileSync(path.join(home, 'dotfiles', 'rules', 'naming.md'), '');
     writeFileSync(path.join(home, 'Workspace', 'notes.md'), '');
     // A folder linked in from a dotfiles repository is a folder; a broken link is left out.
@@ -82,7 +83,7 @@ describe('docScope', () => {
     expect(docScope('', '/h/.claude/rules/naming.md', ROOTS)).toEqual({ root: '/h/.claude', images: '/h/.claude' });
     expect(docScope('', '/h/.dashboard/notes.md', ROOTS)).toEqual({ root: '/h/.dashboard', images: '/h/.dashboard' });
     expect(docScope('', '/h/.claude/settings.json', ROOTS)).toEqual({ root: '/h/.claude', images: '/h/.claude' });
-    for (const file of ['/h/.claude/.credentials', '/h/.claude/../.ssh/x.json', '/h/Workspace/a.md', '/p/docs/README.md']) {
+    for (const file of ['/h/.claude/.credentials.json', '/h/.claude/.credentials', '/h/.claude/../.ssh/x.json', '/h/Workspace/a.md', '/p/docs/README.md']) {
       expect(docScope('', file, ROOTS)).toBeNull();
     }
   });

@@ -156,7 +156,9 @@ The drawer listed only markdown, so `projects.yaml` or `settings.json` under
 drawer now lists `.yaml`, `.yml` and `.json` beside `.md`**, under the same
 roots and the same refusal: `docKind` in `src/shared/drawer/drawer.ts` names a
 doc by its extension, `docScope` refuses anything else, and the viewer picks how
-to draw a file from the same answer.
+to draw a file from the same answer. A file whose name starts with a dot is
+never a doc, so `~/.claude/.credentials.json`, Claude Code's login, is neither
+listed nor read.
 
 **JSON is pretty-printed and then read as YAML.** JSON is a subset of YAML, so
 the `yaml` package's node ranges give the folds of both from one walk, and
@@ -164,7 +166,9 @@ highlight.js, which the Claude screen already ships with `yaml` and `json`
 grammars, colours them. YAML is shown as written, its comments kept; parsing it
 into a value and printing it again would drop them. A file that does not parse
 is shown as written under one line with the parser's own first line, which says
-where.
+where. Going through `JSON.parse` costs one thing: a number past what a double
+holds shows rounded, as JavaScript reads it; nvim, through Edit, has the file
+as written.
 
 **A fold is a collection that spans lines, under the line naming it**: the key
 or the `-` it is the value of. A flow collection, `{ ... }` or `[ ... ]`, keeps
@@ -174,7 +178,8 @@ closed, which leaves the top level in sight.
 
 The rows the arrows walk are the Edit row and the fold lines, so a fold is
 reachable without the mouse (conventions-rule-1); the arrows no longer scroll
-this viewer as they do the markdown one, and the Page keys still do. The keys
+this viewer as they do the markdown one, unless nothing in the doc folds, and the
+Page keys still do. The keys
 are the viewer's own, like the drawer's F2, not rows in `actions.ts`.
 
 Watch for: highlight.js leaves a span open across a line break (a block

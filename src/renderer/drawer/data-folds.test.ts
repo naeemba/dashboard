@@ -25,11 +25,11 @@ describe('docKind', () => {
 
 describe('dataView', () => {
   it('folds every YAML mapping and sequence that spans lines, under the line naming it, never the root', () => {
-    expect(dataView(YAML, 'yaml').folds).toEqual([
-      { header: 1, from: 2, to: 4 },
+    expect([...dataView(YAML, 'yaml').folds.values()]).toEqual([
+      { header: 1, to: 4 },
       // c's flow sequence hides nothing: all but its closing line is its header.
-      { header: 5, from: 6, to: 8 },
-      { header: 6, from: 7, to: 7 },
+      { header: 5, to: 8 },
+      { header: 6, to: 7 },
     ]);
   });
 
@@ -38,13 +38,13 @@ describe('dataView', () => {
     expect(view.lines.map((line) => line.replace(/<[^>]+>/g, ''))).toEqual([
       '{', '  &quot;a&quot;: {', '    &quot;b&quot;: [', '      1,', '      2', '    ]', '  },', '  &quot;c&quot;: {}', '}',
     ]);
-    expect(view.folds).toEqual([{ header: 1, from: 2, to: 5 }, { header: 2, from: 3, to: 4 }]);
+    expect([...view.folds.values()]).toEqual([{ header: 1, to: 5 }, { header: 2, to: 4 }]);
     expect(view.failure).toBeNull();
   });
 
   it('shows a doc that does not parse as plain text with one line saying where', () => {
     const json = dataView('{\n "a": 1,\n}', 'json');
-    expect(json.folds).toEqual([]);
+    expect(json.folds.size).toBe(0);
     expect(json.lines).toEqual(['{', ' &#34;a&#34;: 1,', '}']);
     expect(json.failure).toMatch(/^Not valid JSON: .*position 11/);
     const yaml = dataView('a: [1,\nb: 2\n', 'yaml');
@@ -52,7 +52,7 @@ describe('dataView', () => {
   });
 
   it('reads every document of a multi-document YAML file', () => {
-    expect(dataView('a:\n  b: 1\n---\nc:\n  d: 2\n', 'yaml').folds).toEqual([{ header: 0, from: 1, to: 1 }, { header: 3, from: 4, to: 4 }]);
+    expect([...dataView('a:\n  b: 1\n---\nc:\n  d: 2\n', 'yaml').folds.values()]).toEqual([{ header: 0, to: 1 }, { header: 3, to: 4 }]);
   });
 });
 
@@ -88,9 +88,11 @@ describe('folding', () => {
   });
 
   it('maps the arrows and the fold-all key, and ignores them modified', () => {
-    expect(['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'a', 'x'].map((key) => dataKey(key, false)))
+    expect(['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'a', 'x'].map((key) => dataKey(key, false, true)))
       .toEqual(['next', 'previous', 'open', 'close', 'all', 'ignore']);
-    expect(dataKey('a', true)).toBe('ignore');
+    expect(dataKey('a', true, true)).toBe('ignore');
+    // With nothing to fold the arrows are left to scroll the doc.
+    expect(dataKey('ArrowDown', false, false)).toBe('ignore');
   });
 
   it('walks the Edit row and the fold lines in sight, round', () => {
@@ -106,6 +108,9 @@ describe('folding', () => {
     expect(dataStep(view, new Set(), true, 6, 'close')).toEqual({ closed: new Set([6]), current: 6 });
     expect(dataStep(view, new Set([6]), true, 6, 'close')).toEqual({ closed: new Set([6]), current: 5 });
     expect(dataStep(view, new Set(), true, 'edit', 'open')).toEqual({ closed: new Set(), current: 'edit' });
+    expect(dataStep(view, new Set([5]), true, 5, 'toggle')).toEqual({ closed: new Set(), current: 5 });
+    expect(dataStep(view, new Set(), true, 5, 'toggle')).toEqual({ closed: new Set([5]), current: 5 });
+    expect(dataStep(view, new Set(), true, 'edit', 'toggle')).toEqual({ closed: new Set(), current: 'edit' });
   });
 
   it('moves the highlight out to a fold in sight when folding all hides it', () => {

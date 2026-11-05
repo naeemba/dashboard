@@ -1,65 +1,54 @@
-import hljs from 'highlight.js/lib/common';
-import { isCollection, isMap, isSeq, parseAllDocuments, type ParsedNode } from 'yaml';
+import { isCollection, isMap, isSeq, LineCounter, parseAllDocuments, type ParsedNode } from 'yaml';
 import { failureText } from '../../shared/errors/failure';
-import { escapeHtml } from '../chat/chat-markdown';
+import { escapeHtml, highlightCode } from '../chat/chat-markdown';
 
 // A YAML or JSON doc for the viewer: its lines highlighted, which of them fold and what is open. The
 // DOM is data-viewer.ts's; every rule with a branch is here.
 //
 // JSON is pretty-printed with a two-space indent and read again as YAML, which it is a subset of, so
-// one walk finds the folds of both. YAML is shown as written, its comments kept.
+// one walk finds the folds of both. YAML is shown as written, its comments kept. Pretty-printing goes
+// through JSON.parse, so a number past what a double holds shows rounded, as JavaScript reads it.
 
 // One object or array (a YAML mapping or sequence) that spans more than one line: `header` is the line
-// that names it, the key or the `-` it is the value of, and stays in sight when it folds; `from`..`to`
-// are the lines it hides. A flow collection, `{ ... }` or `[ ... ]`, keeps its closing line in sight.
-export type Fold = { header: number; from: number; to: number };
+// that names it, the key or the `-` it is the value of, and stays in sight when it folds; the lines
+// after it through `to` are what it hides. A flow collection, `{ ... }` or `[ ... ]`, keeps its closing
+// line in sight.
+type Fold = { header: number; to: number };
 
-// The doc as drawn: one line of HTML per line, and its folds. A doc that does not parse is its text as
-// written, with no folds, and `failure` saying where reading it stopped.
-export type DataView = { lines: string[]; folds: Fold[]; failure: string | null };
+// The doc as drawn: one line of HTML per line, and its folds by header line, in the order of the doc.
+// A doc that does not parse is its text as written, with no folds, and `failure` saying where reading
+// it stopped.
+export type DataView = { lines: string[]; folds: ReadonlyMap<number, Fold>; failure: string | null };
 
 // Longer than this and the doc opens with every fold closed: the top level in sight and nothing under it.
 export const OPEN_LINE_LIMIT = 60;
 
-// The line an offset in `text` is on.
-function lineAt(text: string, offset: number): number {
-  let line = 0;
-  for (let index = 0; index < offset && index < text.length; index++) if (text[index] === '\n') line++;
-  return line;
-}
-
-// The line of the last character a node covers that is not white space, so a block collection's fold
-// ends at its last entry rather than the blank line after it.
-function lastLine(text: string, end: number): number {
-  let last = Math.min(end, text.length) - 1;
-  while (last > 0 && /\s/.test(text[last])) last--;
-  return lineAt(text, last);
-}
-
-function foldsOf(text: string, root: ParsedNode | null): Fold[] {
+function foldsOf(text: string, root: ParsedNode | null, lines: LineCounter): Fold[] {
+  const lineAt = (offset: number): number => lines.linePos(offset).line - 1;
   const folds: Fold[] = [];
   const add = (node: ParsedNode, headerOffset: number): void => {
-    const header = lineAt(text, headerOffset);
-    const end = lastLine(text, node.range[1]);
+    const header = lineAt(headerOffset);
+    // The last character that is not white space, so a block collection's fold ends at its last entry
+    // rather than the blank line after it.
+    const end = lineAt(text.slice(0, node.range[1]).trimEnd().length - 1);
     const to = 'flow' in node && node.flow ? end - 1 : end;
-    if (to > header) folds.push({ header, from: header + 1, to });
+    if (to > header) folds.push({ header, to });
     walk(node);
   };
-  const walk = (node: ParsedNode): void => {
+  // A fold is added before the folds inside it, so they come out in the doc's order.
+  const walk = (node: ParsedNode | null): void => {
     if (isMap(node)) {
       for (const pair of node.items) {
         const value = pair.value as ParsedNode | null;
-        const key = pair.key as ParsedNode | null;
-        if (value !== null && isCollection(value)) add(value, key?.range[0] ?? value.range[0]);
+        if (isCollection(value)) add(value, (pair.key as ParsedNode | null)?.range[0] ?? value.range[0]);
       }
     } else if (isSeq(node)) {
       for (const item of node.items as ParsedNode[]) if (isCollection(item)) add(item, item.range[0]);
     }
   };
   // The root itself never folds: folded, it would hide the whole doc behind its first line.
-  if (root !== null) walk(root);
-  // By header, so the walk below meets an outer fold before the folds inside it.
-  return folds.sort((one, other) => one.header - other.header);
+  walk(root);
+  return folds;
 }
 
 // hljs leaves a span open across a line break (a block scalar, a comment run), so each line closes
@@ -87,7 +76,7 @@ export function splitLines(html: string): string[] {
 const firstLine = (message: string): string => message.split('\n')[0];
 
 export function dataView(text: string, kind: 'yaml' | 'json'): DataView {
-  const plain = (failure: string): DataView => ({ lines: text.split('\n').map(escapeHtml), folds: [], failure });
+  const plain = (failure: string): DataView => ({ lines: text.split('\n').map(escapeHtml), folds: new Map(), failure });
   let shown = text;
   if (kind === 'json') {
     try {
@@ -96,31 +85,31 @@ export function dataView(text: string, kind: 'yaml' | 'json'): DataView {
       return plain(`Not valid JSON: ${firstLine(failureText(error))}`);
     }
   }
-  const documents = parseAllDocuments(shown);
-  const docs = Array.isArray(documents) ? documents : [];
+  const lineCounter = new LineCounter();
+  const docs = parseAllDocuments(shown, { lineCounter });
   const error = docs.flatMap((doc) => doc.errors)[0];
   if (error !== undefined) return plain(`Not valid YAML: ${firstLine(error.message)}`);
+  const folds = docs.flatMap((doc) => foldsOf(shown, doc.contents as ParsedNode | null, lineCounter));
   return {
-    lines: splitLines(hljs.highlight(shown, { language: kind }).value),
-    folds: docs.flatMap((doc) => foldsOf(shown, doc.contents as ParsedNode | null)),
+    lines: splitLines(highlightCode(shown, kind)),
+    folds: new Map(folds.map((fold) => [fold.header, fold])),
     failure: null,
   };
 }
 
 // The headers of the folds that start closed: all of them in a long doc, none in a short one.
 export function startClosed(view: DataView): Set<number> {
-  return new Set(view.lines.length > OPEN_LINE_LIMIT ? view.folds.map((fold) => fold.header) : []);
+  return new Set(view.lines.length > OPEN_LINE_LIMIT ? view.folds.keys() : []);
 }
 
 // The lines in sight, in order: every line not hidden by a closed fold.
 export function shownLines(view: DataView, closed: ReadonlySet<number>): number[] {
   const shown: number[] = [];
   let hiddenTo = -1;
-  const folds = new Map(view.folds.map((fold) => [fold.header, fold]));
   for (let line = 0; line < view.lines.length; line++) {
     if (line <= hiddenTo) continue;
     shown.push(line);
-    const fold = folds.get(line);
+    const fold = view.folds.get(line);
     if (fold !== undefined && closed.has(line)) hiddenTo = fold.to;
   }
   return shown;
@@ -128,21 +117,21 @@ export function shownLines(view: DataView, closed: ReadonlySet<number>): number[
 
 // The fold-all key: with any fold open it closes them all, otherwise it opens them all.
 export function allToggled(view: DataView, closed: ReadonlySet<number>): Set<number> {
-  const headers = view.folds.map((fold) => fold.header);
+  const headers = [...view.folds.keys()];
   return new Set(headers.some((header) => !closed.has(header)) ? headers : []);
 }
 
-// The fold a line sits inside, innermost first, for Left on a fold that is already closed.
+// The fold a line sits inside, innermost first: the last in the doc's order that holds it.
 export function enclosingHeader(view: DataView, line: number): number | null {
-  const around = view.folds.filter((fold) => fold.from <= line && line <= fold.to);
-  return around.length === 0 ? null : around.reduce((inner, fold) => (fold.from > inner.from ? fold : inner)).header;
+  return [...view.folds.values()].filter((fold) => fold.header < line && line <= fold.to).at(-1)?.header ?? null;
 }
 
-// What a key does in the viewer; a modified key does nothing here (keys-rule-1).
-export type DataKey = 'next' | 'previous' | 'open' | 'close' | 'all' | 'ignore';
+// What a key does in the viewer; a modified key does nothing here (keys-rule-1). With nothing that
+// folds the arrows are left to scroll the doc, as they do in the markdown viewer.
+type DataKey = 'next' | 'previous' | 'open' | 'close' | 'all' | 'ignore';
 
-export function dataKey(key: string, modified: boolean): DataKey {
-  if (modified) return 'ignore';
+export function dataKey(key: string, modified: boolean, folds: boolean): DataKey {
+  if (modified || !folds) return 'ignore';
   switch (key) {
     case 'ArrowDown': return 'next';
     case 'ArrowUp': return 'previous';
@@ -158,29 +147,29 @@ export type DataRow = 'edit' | number;
 
 // The rows the arrows walk, in order: the Edit row when there is one, then each fold line in sight.
 export function walkedRows(view: DataView, closed: ReadonlySet<number>, hasEdit: boolean): DataRow[] {
-  const headers = new Set(view.folds.map((fold) => fold.header));
-  return [...(hasEdit ? ['edit' as const] : []), ...shownLines(view, closed).filter((line) => headers.has(line))];
+  return [...(hasEdit ? ['edit' as const] : []), ...shownLines(view, closed).filter((line) => view.folds.has(line))];
 }
 
 // A fold whose line a fold-all just hid hands the highlight out to the fold now in sight around it.
-export function inSight(view: DataView, closed: ReadonlySet<number>, current: DataRow | null): DataRow | null {
+function inSight(view: DataView, closed: ReadonlySet<number>, current: DataRow | null): DataRow | null {
   const shown = new Set(shownLines(view, closed));
   let row = current;
   while (typeof row === 'number' && !shown.has(row)) row = enclosingHeader(view, row);
   return row;
 }
 
-// A fold opened if it was closed and closed if it was open.
-export function toggled(closed: ReadonlySet<number>, header: number): Set<number> {
+function toggled(closed: ReadonlySet<number>, header: number): Set<number> {
   const next = new Set(closed);
   if (!next.delete(header)) next.add(header);
   return next;
 }
 
-// What a key leaves folded and highlighted. The arrows walk the rows round; Right opens a closed fold;
-// Left closes an open one, or on one already closed steps out to the fold around it.
+// What a key, or Enter or a click on a fold line (`toggle`), leaves folded and highlighted. The arrows
+// walk the rows round; Right opens a closed fold; Left closes an open one, or on one already closed
+// steps out to the fold around it. Enter on the Edit row is the viewer's, which edits.
 export function dataStep(
-  view: DataView, closed: ReadonlySet<number>, hasEdit: boolean, current: DataRow | null, action: Exclude<DataKey, 'ignore'>,
+  view: DataView, closed: ReadonlySet<number>, hasEdit: boolean, current: DataRow | null,
+  action: Exclude<DataKey, 'ignore'> | 'toggle',
 ): { closed: ReadonlySet<number>; current: DataRow | null } {
   if (action === 'all') {
     const next = allToggled(view, closed);
@@ -195,6 +184,7 @@ export function dataStep(
     return { closed, current: rows[(from + step + rows.length) % rows.length] };
   }
   if (typeof current !== 'number') return { closed, current };
+  if (action === 'toggle') return { closed: toggled(closed, current), current };
   if (action === 'open') return { closed: closed.has(current) ? toggled(closed, current) : closed, current };
   if (!closed.has(current)) return { closed: toggled(closed, current), current };
   return { closed, current: enclosingHeader(view, current) ?? current };

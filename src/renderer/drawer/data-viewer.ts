@@ -1,7 +1,7 @@
 import { icon } from '../app/icons';
 import { viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
-import { dataKey, dataStep, dataView, shownLines, startClosed, toggled, type DataRow } from './data-folds';
+import { dataKey, dataStep, dataView, shownLines, startClosed, type DataRow } from './data-folds';
 import { editRow } from './doc-viewer';
 
 // A YAML or JSON doc, highlighted, on the sheet the markdown viewer uses, with every object and array
@@ -11,17 +11,12 @@ import { editRow } from './doc-viewer';
 // does (conventions-rule-1). What folds, what is open and what each key does is data-folds.ts's.
 export function dataOverlay(name: string, text: string, kind: 'yaml' | 'json', edit: (() => void) | null): void {
   const view = dataView(text, kind);
-  const headers = new Set(view.folds.map((fold) => fold.header));
+  const hasFolds = view.folds.size > 0;
   let closed: ReadonlySet<number> = startClosed(view);
-  let current: DataRow | null = edit === null ? (view.folds[0]?.header ?? null) : 'edit';
-  let items = new Map<number, HTMLElement>();
+  let current: DataRow | null = edit === null ? (view.folds.keys().next().value ?? null) : 'edit';
 
   const keysLine = `${edit === null ? 'Enter folds' : 'Enter edits or folds'} · ↑↓ walk · ←→ fold · A folds all · Escape closes`;
-  const top = edit === null ? document.createElement('div') : editRow(name, keysLine);
-  if (edit === null) {
-    top.className = 'doc-viewer-edit drawer-detail';
-    top.textContent = keysLine;
-  }
+  const top = edit === null ? keysRow(keysLine) : editRow(name, keysLine);
   const body = document.createElement('pre');
   body.className = 'data-viewer-text';
   const shown = document.createElement('div');
@@ -34,7 +29,11 @@ export function dataOverlay(name: string, text: string, kind: 'yaml' | 'json', e
   }
   shown.append(body);
 
+  // Each line is built once, the first time it is in sight; a fold re-sets only the fold lines' markers.
+  const items = new Map<number, { item: HTMLElement; marker: HTMLElement; folded: HTMLElement }>();
   function lineElement(line: number): HTMLElement {
+    const built = items.get(line);
+    if (built !== undefined) return built.item;
     const item = document.createElement('div');
     item.className = 'data-line';
     const marker = document.createElement('span');
@@ -42,38 +41,44 @@ export function dataOverlay(name: string, text: string, kind: 'yaml' | 'json', e
     const code = document.createElement('span');
     // Escaped by highlight.js, or by escapeHtml for a doc that did not parse.
     code.innerHTML = view.lines[line];
-    item.append(marker, code);
-    if (!headers.has(line)) return item;
-    item.classList.add('foldable');
-    marker.append(icon(closed.has(line) ? 'expand' : 'collapse'));
-    if (closed.has(line)) {
-      const folded = document.createElement('span');
-      folded.className = 'data-folded';
-      folded.textContent = ' …';
-      code.append(folded);
+    const folded = document.createElement('span');
+    folded.className = 'data-folded';
+    item.append(marker, code, folded);
+    if (view.folds.has(line)) {
+      item.classList.add('foldable');
+      item.addEventListener('click', () => {
+        current = line;
+        step('toggle');
+      });
     }
-    item.addEventListener('click', () => {
-      current = line;
-      fold(toggled(closed, line));
-    });
+    items.set(line, { item, marker, folded });
     return item;
   }
 
   function draw(): void {
-    items = new Map(shownLines(view, closed).map((line) => [line, lineElement(line)]));
-    body.replaceChildren(...items.values());
+    body.replaceChildren(...shownLines(view, closed).map(lineElement));
+    for (const header of view.folds.keys()) {
+      const built = items.get(header);
+      if (built === undefined) continue;
+      built.marker.replaceChildren(icon(closed.has(header) ? 'expand' : 'collapse'));
+      built.folded.textContent = closed.has(header) ? ' …' : '';
+    }
     highlight();
   }
 
+  let lit: HTMLElement | null = null;
   function highlight(): void {
-    top.classList.toggle('highlighted', current === 'edit');
-    for (const [line, item] of items) item.classList.toggle('highlighted', line === current);
-    (typeof current === 'number' ? items.get(current) : top)?.scrollIntoView({ block: 'nearest' });
+    lit?.classList.remove('highlighted');
+    lit = current === 'edit' ? top : typeof current === 'number' ? (items.get(current)?.item ?? null) : null;
+    lit?.classList.add('highlighted');
+    lit?.scrollIntoView({ block: 'nearest' });
   }
 
-  function fold(next: ReadonlySet<number>): void {
-    if (next === closed) return highlight();
-    closed = next;
+  function step(action: Parameters<typeof dataStep>[4]): void {
+    const next = dataStep(view, closed, edit !== null, current, action);
+    current = next.current;
+    if (next.closed === closed) return highlight();
+    closed = next.closed;
     draw();
   }
 
@@ -81,24 +86,26 @@ export function dataOverlay(name: string, text: string, kind: 'yaml' | 'json', e
     close();
     edit?.();
   };
-  const enter = (): void => {
-    if (current === 'edit') editing();
-    else if (current !== null) fold(toggled(closed, current));
-  };
   // With no Edit row and nothing that folds, Enter closes the viewer as Escape does.
-  const close = viewerOverlay('doc-viewer', shown, current === null ? {} : { enter });
+  const close = viewerOverlay('doc-viewer', shown, {
+    enter: current === null ? undefined : () => (current === 'edit' ? editing() : step('toggle')),
+    keys: (event) => {
+      const action = dataKey(event.key, isModified(event), hasFolds);
+      if (action === 'ignore') return;
+      event.preventDefault();
+      step(action);
+    },
+  });
   top.addEventListener('click', () => {
     if (edit !== null) editing();
   });
   draw();
+}
 
-  // The sheet's dialog holds the keyboard, so the keys are read there; Enter and Escape are viewerOverlay's.
-  shown.parentElement?.addEventListener('keydown', (event) => {
-    const action = dataKey(event.key, isModified(event));
-    if (action === 'ignore') return;
-    event.preventDefault();
-    const next = dataStep(view, closed, edit !== null, current, action);
-    current = next.current;
-    fold(next.closed);
-  });
+// The manager's viewer has no Edit row, so the keys line stands alone where it would be.
+function keysRow(keysLine: string): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'doc-viewer-edit drawer-detail';
+  row.textContent = keysLine;
+  return row;
 }

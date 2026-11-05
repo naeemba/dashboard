@@ -14,7 +14,8 @@ import { isInside } from '../panes/shell-directory';
 // time, as each is opened, never walked. Each root is named by its folder's name and what is in it by
 // its path from there: `.claude/rules/naming.md`.
 
-const isDoc = (name: string): boolean => docKind(name) !== null;
+// A file named with a leading dot is never a doc: ~/.claude/.credentials.json is Claude Code's login.
+const isDoc = (name: string): boolean => docKind(name) !== null && !path.basename(name).startsWith('.');
 const rowName = (root: string, file: string): string => path.relative(path.dirname(root), file).split(path.sep).join('/');
 
 // The order the rows print in: by folder, each folder's README before the rest of it, so the index of a
@@ -136,7 +137,8 @@ export function imageUrls(text: string, file: string, imageRoot: string, images:
 export async function readDoc(projectPath: string, file: string, roots: readonly string[]): Promise<DocReply> {
   const scope = docScope(projectPath, file, roots);
   if (scope === null) {
-    return { refused: isManagerPath(projectPath) ? 'Only a markdown, YAML or JSON file under ~/.dashboard or ~/.claude opens here' : 'Only a markdown, YAML or JSON file under the project\'s docs/ folder opens here' };
+    const where = isManagerPath(projectPath) ? '~/.dashboard or ~/.claude' : 'the project\'s docs/ folder';
+    return { refused: `Only a markdown, YAML or JSON file under ${where} opens here` };
   }
   const text = await readFile(file, 'utf8');
   // Only markdown shows images; a YAML or JSON file is drawn as text.
