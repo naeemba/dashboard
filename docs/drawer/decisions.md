@@ -148,3 +148,46 @@ close it; splitting the two is more change than the extra key press is worth.
 
 Watch for: opening a doc's Edit or resuming a session still closes the drawer,
 on purpose: both send the keyboard to a pane.
+
+## drawer-decision-5: YAML and JSON in the viewer, one walk for both
+
+The drawer listed only markdown, so `projects.yaml` or `settings.json` under
+`~/.dashboard` and `~/.claude` had to be opened in nvim to be read. **The
+drawer now lists `.yaml`, `.yml` and `.json` beside `.md`**, under the same
+roots and the same refusal: `docKind` in `src/shared/drawer/drawer.ts` names a
+doc by its extension, `docScope` refuses anything else, and the viewer picks how
+to draw a file from the same answer. A file whose name starts with a dot is
+never a doc, so `~/.claude/.credentials.json`, Claude Code's login, is neither
+listed nor read.
+
+**JSON is pretty-printed and then read as YAML.** JSON is a subset of YAML, so
+the `yaml` package's node ranges give the folds of both from one walk, and
+highlight.js, which the Claude screen already ships with `yaml` and `json`
+grammars, colours them. YAML is shown as written, its comments kept; parsing it
+into a value and printing it again would drop them. A file that does not parse
+is shown as written under one line with the parser's own first line, which says
+where. Going through `JSON.parse` costs one thing: a number past what a double
+holds shows rounded, as JavaScript reads it; nvim, through Edit, has the file
+as written.
+
+**A fold is a collection that spans lines, under the line naming it**: the key
+or the `-` it is the value of. A sequence item whose first key holds a
+collection puts two folds on its `-` line; the item's own, the outer one, keeps
+it. A flow collection, `{ ... }` or `[ ... ]`, keeps its closing line in sight.
+The root never folds; folded, it would hide the whole doc behind its first
+line. A doc longer than sixty lines opens with every fold closed, which leaves
+the top level in sight. A doc over 500,000 characters (`FOLD_SIZE_LIMIT`) is
+shown as written, unhighlighted and with no folds, under a line saying so:
+pretty-printing, parsing and highlighting a few megabytes holds the window for
+seconds, and `~/.claude` has JSON files that size.
+
+The rows the arrows walk are the Edit row and the fold lines, so a fold is
+reachable without the mouse (conventions-rule-1); the arrows no longer scroll
+this viewer as they do the markdown one, unless nothing in the doc folds, and the
+Page keys still do. The keys are the viewer's own, like the drawer's F2, not rows
+in `actions.ts`.
+
+Watch for: highlight.js leaves a span open across a line break (a block
+scalar), so `splitLines` closes and reopens it at each line; a fold that hides
+half a span would otherwise colour the lines after it.
+
