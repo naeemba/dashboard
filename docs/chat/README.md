@@ -158,13 +158,13 @@ follows a new one while it is open. The refresh button after the meters, or the
 refresh key, measures again now: it turns while the read runs and ignores
 presses until it ends, and a read that fails or finds no session running says so
 on the notice line and keeps the last numbers. The arrows walk its rows; Enter
-or a click opens what is behind one, a level down. A memory file opens in the drawer's doc
-viewer. The MCP tools row, or its `N more`, lists the servers by what their
-tools hold, and a server, or one of its tools, lists that server's tools. The
-skills and custom agents rows list them by size. The messages row lists the
-conversation's ten largest turns, each weighed by what it added to the window
-as the transcript's usage says, and Enter selects that turn's prompt in the
-conversation. A row with nothing behind it is only read. Escape goes back a
+or a click opens what is behind one, a level down. A memory file opens in the
+drawer's doc viewer. The MCP tools row, or its `N more`, lists the servers by
+what their tools hold, and a server, or one of its tools, lists that server's
+tools. The skills and custom agents rows list them by size. The messages row
+lists the conversation's ten largest turns, each weighed by what it added to the
+window as the transcript's usage says, and Enter selects that turn's prompt in
+the conversation. A row with nothing behind it is only read. Escape goes back a
 level, onto the row that opened it, and closes the top one; putting a memory
 file away comes back to its row too. A click beside the popup closes it. The
 model key walks the models and the edits key walks asking, accepting, planning
