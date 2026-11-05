@@ -45,7 +45,7 @@ import { createProjectCloser } from './app/close-project';
 import { paneSends } from './panes/pane-sends';
 import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './panes/pane';
 import {
-  createPageBuilder, fitPage, focusTerminals, focusedPane, mainHasKeyboard, openIndices, panesById, restylePanes, setPaneTitle, showMode, showNotesPage, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedChat, focusedPane, openIndices, panesById, restylePanes, setPaneTitle, showMode, showNotesPage, typedNames, type Page,
 } from './app/page';
 import { neighborPane, paneAtPosition, stepPane } from '../shared/panes/pane-layout';
 import { closePane, runPaneAction, type PanePorts } from './panes/pane-actions';
@@ -323,9 +323,9 @@ function focusTerminal(index: number | undefined): void {
   renderStatus();
 }
 
-// Main, the Claude screen, holds the keyboard on the terminals view: its keys are heard there.
+// A Claude screen, main's or a worker's, holds the keyboard on the terminals view: its keys are heard there.
 function chatFocused(page: Page): boolean {
-  return page.mode === 'terminals' && mainHasKeyboard(page);
+  return page.mode === 'terminals' && focusedChat(page) !== undefined;
 }
 
 function setMode(mode: Mode): void {
@@ -699,10 +699,10 @@ function apply(action: Action): void {
     case 'log-select':
     case 'log-open':
     case 'log-filter-reset': return page.log?.runAction(action);
-    case 'chat': return page.chat?.runCommand(action.command);
+    case 'chat': return focusedChat(page)?.runCommand(action.command);
     case 'notes-ink-toggle': return toggleNotesPage(page);
     case 'ink': return page.ink?.command(action.command);
-    case 'chat-edit': return editFocusedBox(page.chat?.element, action.edit);
+    case 'chat-edit': return editFocusedBox(focusedChat(page)?.element, action.edit);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.

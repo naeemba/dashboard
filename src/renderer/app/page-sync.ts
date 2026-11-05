@@ -1,6 +1,6 @@
 import type { OpenProjects, Project } from '../../shared/app/bridge';
 import { isProjectPage, openPanesOf } from '../../shared/manager/manager';
-import { discardPanes, type Page } from './page';
+import { discardPanes, setScreenPanes, type Page } from './page';
 import { hostTracker, landingAfterMoves } from './page-reconcile';
 
 // What the renderer hands over: its live list of pages, the tab it is on, and the few things that put
@@ -56,6 +56,7 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
   // The host's list of open projects, made true on this screen. Pages that already match are left
   // alone, which is what lets the push and the reply to our own open both carry the list.
   function applyProjects(open: OpenProjects): void {
+    setScreenPanes(open.screens ?? []);
     const pages = ports.pages();
     const standingSlot = pages[ports.activeIndex()]?.slot ?? null;
     const current = projectPages().map((page) => ({ slot: page.slot, project: page.project }));

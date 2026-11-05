@@ -2,6 +2,7 @@ import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { PrintWidths } from './print-widths';
 import type { WriteFlow } from './write-flow';
+import type { ChatView } from '../chat/chat-view';
 import { isPrinted, tailLines } from '../../shared/manager/manager';
 import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
 
@@ -50,6 +51,8 @@ export type Pane = {
   lastPrintedAt: number;
   printWidths: PrintWidths;
   flow: WriteFlow;
+  // The Claude screen drawn over a worker run with --screen, its shell hidden under it.
+  screen?: ChatView;
 };
 
 // What these read off, written structurally rather than as xterm's Terminal, so the walk in
