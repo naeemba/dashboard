@@ -3,7 +3,7 @@ import { modelTone, statusMeters, type ChatMeasure, type StatusTone, type FootSt
 
 // The row under the Claude screen's box as DOM: on the left the model, the mode, the effort, what
 // Claude is doing and how its workers stand; on the right the meters Claude Code's status line
-// carries, whether the prompt cache is warm, then the version. What the meters say is
+// carries and the button that reads them again, whether the prompt cache is warm, then the version. What the meters say is
 // chat-status.ts's; this only builds the elements.
 
 const STATE_LABELS: Record<FootState, string> = { ready: 'ready', working: 'working', waiting: 'waiting on you' };
@@ -28,7 +28,7 @@ export const FOOT_WORKERS = 'chat-foot-workers';
 // The context meter, which a click opens the context popup from (chat-context-view.ts).
 export const FOOT_CONTEXT = 'chat-foot-context';
 
-export function footSides(model: string, mode: string, effort: string, ultrathink: boolean, state: FootState, measured: ChatMeasure | null, cache: CacheWarmth | null, version: string | null, workers: string): HTMLElement[] {
+export function footSides(model: string, mode: string, effort: string, ultrathink: boolean, state: FootState, measured: ChatMeasure | null, cache: CacheWarmth | null, version: string | null, workers: string, refresh: HTMLElement): HTMLElement[] {
   const chosen = document.createElement('div');
   chosen.className = 'chat-foot-side';
   const stateName = piece('chat-foot-state', STATE_LABELS[state]);
@@ -50,6 +50,9 @@ export function footSides(model: string, mode: string, effort: string, ultrathin
     );
     meters.append(meter);
   }
+  // The refresh button, after the meters it reads again; the view keeps the one element, so its spin
+  // survives a redraw.
+  if (measured) meters.append(refresh);
   // Whether the prompt cache is warm, beside the meters: green, yellow in its last five minutes.
   if (cache) meters.append(toned(piece('chat-foot-cache', cache.text), cache.tone));
   if (version) meters.append(piece('chat-foot-version', `v${version}`));
