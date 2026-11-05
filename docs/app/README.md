@@ -167,6 +167,6 @@ directives go.
 ## Open questions
 
 - `main.ts` is at the 600-line ceiling, at 591 code lines, and `renderer.ts` is
-  at 591, even after the close flow moved into `close-project.ts` and the which-key
+  already past it at 612, even after the close flow moved into `close-project.ts` and the which-key
   strip's tracking into `which-key-tracking.ts`. A feature that adds code to
-  `main.ts`, or would push `renderer.ts` past 600, needs a seam split out first (workflow-decision-1).
+  `main.ts` or `renderer.ts` needs a seam split out first (workflow-decision-1).

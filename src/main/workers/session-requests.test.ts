@@ -446,6 +446,26 @@ describe('sessionRequests across projects', () => {
     expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
+  it('takes a report read by the main that claimed the pane from another page', async () => {
+    const { ask, answer, told } = pages();
+    await ask(['claim', '--project', 'api']);
+    await ask(['run', '2:1', 'fix the tests']);
+    answer.heard(-2, 'api-terminal-2');
+    await ask(['notify', '2:1', 'done'], '/anywhere');
+    stayStopped();
+    expect(told).toEqual([]);
+  });
+
+  it('takes no report read by the pane\'s own page main when another page claimed it', async () => {
+    const { ask, answer, told } = pages();
+    await ask(['claim', '--project', 'api']);
+    await ask(['run', '2:1', 'fix the tests']);
+    answer.heard(2, 'api-terminal-2');
+    await ask(['notify', '2:1', 'done'], '/anywhere');
+    stayStopped();
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+  });
+
   it('lists a worker claimed on another page under the main that ran it', async () => {
     const { ask, answer } = pages();
     await ask(['claim', '--project', 'api']);
