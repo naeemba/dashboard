@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
-import { replaceFile } from '../board/board-store';
+import { replaceFile } from '../app/replace-file';
 import path from 'node:path';
 import type { ChatContent, ExportWrite, ChatPreferences, ChatState, ChatSessions } from '../../shared/app/bridge';
 import type { Channels } from '../app/channels';

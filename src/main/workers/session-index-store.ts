@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { replaceFile } from '../board/board-store';
+import { replaceFile } from '../app/replace-file';
 import { projectSlug } from './dispatch';
 import { paneLabel, paneFromId } from '../../shared/panes/terminals';
 import {

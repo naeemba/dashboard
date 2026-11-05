@@ -1,0 +1,11 @@
+{
+  "id": "83482b0a-1d58-40b5-90b4-2c42458c70bd",
+  "title": "Move the .dashboard folder name (BOARD_DIRECTORY) out of board-store",
+  "notes": "BOARD_DIRECTORY ('.dashboard') is imported from board/board-store.ts by notes-store, ink-store, ship, manager-terminals and projects-file, though the folder holds far more than the board. Cost: ship.ts:10 records that the renderer cannot import ship.ts because BOARD_DIRECTORY drags board-store.ts and node:fs in with it, and anyone tracing where notes live lands in the board store. Move it beside dashboardFolder (src/main/app/dashboard-folder.ts, or src/shared/), rename it for the folder it names, and point every importer at it.\n\nIssue: https://github.com/naeemba/dashboard/issues/217\nReview: https://github.com/naeemba/dashboard/pull/216#discussion_r4483024207",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-05T16:24:42.616Z",
+  "updatedAt": "2026-11-05T16:24:42.616Z",
+  "column": "Backlog",
+  "order": 31
+}

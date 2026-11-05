@@ -498,11 +498,11 @@
 
 /* A thing shown on its own: an image, a PDF or /diff's changes, as large as the window lets it be, on
    the sheet's centre rather than near its top like a question. */
-.image-viewer, .pdf-viewer, .diff-viewer {
+.image-viewer, .pdf-viewer, .diff-viewer, .chat-agent {
   padding-top: 0;
 }
 
-.image-viewer-dialog, .pdf-viewer-dialog, .diff-viewer-dialog {
+.image-viewer-dialog, .pdf-viewer-dialog, .diff-viewer-dialog, .chat-agent-dialog {
   align-self: center;
   max-height: 90vh;
 }

@@ -107,7 +107,8 @@ closes the list.
 
 While Claude works, a line over the box says whether it is thinking, for how
 long and how many tokens have come down, a tool's input included: an estimate
-while a message streams, its real count once it ends (chat-decision-13). Its
+while a message streams, its real count once it ends (chat-decision-13), plus
+what the turn's subagents wrote, estimated from their messages (chat-decision-15). Its
 answer flows in a few characters at a time. What it thought is folded to a
 Thinking line in the conversation, unfolding to a summary of it.
 
@@ -133,11 +134,29 @@ agents, workflows and background commands Claude has running, each under the one
 that started it, with its tool calls, tokens, time and last tool so far; a task
 leaves the strip when it ends. It lists only what started while the screen was
 open, since a saved session keeps none of it. The task key picks a row in the
-strip, the next each press and none after the last; a click picks the row too.
-The stop key stops the picked task, and the background key sends it to the
-background so the turn goes on without waiting for it; with no row picked, the
-background key sends every foreground task there, as Ctrl+B does in the
-terminal.
+strip, the next each press and none after the last; a click picks the row and
+opens its agent's conversation. The stop key stops the picked task, and the
+background key sends it to the background so the turn goes on without waiting
+for it; with no row picked, the background key sends every foreground task
+there, as Ctrl+B does in the terminal.
+
+An Agent call's line says what its agent has done, tool calls, tokens and time,
+counting while it runs and kept once it ends; a conversation read back from disk
+takes the final count from the call's result. The tokens are the figure Claude
+Code shows on an agent's row: its last request's whole context plus output. The
+agents key (Alt+A) lists what ran this conversation since the screen opened:
+what is running, then what finished, newest first, each with how it ended, its
+count and the first line of its report. Typing narrows the list, the arrows walk
+it, and Enter opens that agent's whole conversation over the screen, its prompt,
+thinking, tool calls and their output, drawn like the main one and kept up while
+it runs. Up and Down walk its entries, Enter unfolds the one picked, and Escape
+goes back to the list; the list's Escape gives the keyboard back to the box. A
+click in it does what it does in the main log: an image or PDF opens over it,
+and a pane link puts the conversation away and lands on the pane. An agent that
+has said nothing yet opens empty and fills as it goes; only the last 20 agents'
+conversations are kept, besides any still running, and a session that ends lists
+what it was running as ended. A workflow or background command has no
+conversation to open, and says so (chat-decision-15).
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default
@@ -188,9 +207,10 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-start.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
-  `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`
+  `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`, `chat-screen-click.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
-  `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`,
+  `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`, `chat-task-commands.ts`,
+  `chat-agents.ts`, `chat-agents-view.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
   `chat-screen-dispatch.ts`, `chat-attachments.ts`,
   `chat-line-editing.ts`,
@@ -239,6 +259,9 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given main's worker stopped without a report, when the app tells main so, then it is queued behind the turn if one is running, grey in the queue strip, and once main takes it the thread shows it as a notice line linking the worker's pane, never as a prompt you typed; Up skips it in the queue and /rewind leaves it out; one saved under the older "has finished its turn" wording reads back the same way (workers-decision-1).
 - Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
+- Given Claude ran an agent, when its call is on screen, then the call's line reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting while the agent runs and kept after it ends or the conversation is read back.
+- Given an agent is running or has finished this conversation, when you press Alt+A, then a list shows it, running ones first, finished ones with `completed`, their count and the first line of their report; Enter opens its conversation, which grows as the agent works, Escape goes back to the list, and a click on its strip row opens the same view (chat-decision-15).
+- Given a turn's agent writes, when it sends each message, then the working line's `↓ N tokens` grows by what it wrote, four characters a token (chat-decision-15).
 - Given a half-written prompt in the box, when you press Alt+S, then the box empties and Up from the empty box brings the draft back before any sent prompt; the last 10 stashed are kept until they are sent.
 - Given Up showing an earlier prompt over a half-written draft, when you press Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question keeps the keyboard.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.

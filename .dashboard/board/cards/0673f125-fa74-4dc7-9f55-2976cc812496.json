@@ -5,13 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T14:52:35.149Z",
-  "updatedAt": "2026-11-05T15:23:42.206Z",
+  "updatedAt": "2026-11-05T16:15:49.901Z",
+  "branch": "work-board-card-0673f125-fa74-4dc7-9f55-297",
+  "pullRequest": 215,
   "comments": [
     {
       "at": "2026-11-05T15:20:36.637Z",
       "body": "Also, from the user (2026-11-05), as Claude Code shows them: subagent tokens. (1) Each Agent/Task tool call in the conversation shows its agent's tokens, tool count and time, live while it runs and kept after it finishes (from task_progress usage.total_tokens, already read by chat-tasks.ts, and the task's final usage). (2) The working line's '↓ N tokens' includes subagent output, the gap PR #212 left (main drops subagent stream events; relay their message_delta usage or add the task totals). Check the numbers against Claude Code on the same prompt and put both in the PR."
+    },
+    {
+      "at": "2026-11-05T16:15:49.901Z",
+      "body": "Shipped in PR #215: Alt+A lists running and finished agents and opens an agent's whole conversation, live; the Agent call line shows its agent's tools, tokens and time; the working line adds a subagent estimate. Not done: PDF tiles inside an agent's conversation do not open; conversations from a saved session are not read back."
     }
   ],
-  "column": "Doing",
-  "order": 3
+  "column": "Done",
+  "order": 170
 }

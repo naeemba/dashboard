@@ -3,6 +3,7 @@ import {
   afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, IMAGE_LIMIT_SHOWN, imagesFit, preferencesOf, turnTokens, withEarlier, working, type Transcript,
 } from './chat-transcript';
 import { doneReport } from '../workers/done-report';
+import { KEPT_CONVERSATIONS } from './chat-agents';
 
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
 
@@ -72,9 +73,62 @@ describe('applyMessage', () => {
     expect(entry.kind === 'tool' && entry.result?.images).toEqual([{ mediaType: 'image/png', data: 'AAA' }]);
   });
 
-  it('leaves out a subagent\'s message whose call is not listed', () => {
+  it('leaves a subagent\'s message whose call is not listed out of the conversation', () => {
     const transcript = applyMessage(EMPTY_TRANSCRIPT, { ...assistant([{ type: 'text', text: 'inner' }]), parent_tool_use_id: 't1' });
-    expect(transcript).toBe(EMPTY_TRANSCRIPT);
+    expect(transcript.entries).toBe(EMPTY_TRANSCRIPT.entries);
+  });
+
+  it('keeps a subagent\'s whole conversation by its call: its prompt, its thinking and its tools\' output', () => {
+    const under = (message: Record<string, unknown>) => ({ ...message, parent_tool_use_id: 'a1' });
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: { prompt: 'look' } }]),
+      under({ type: 'user', message: { content: [{ type: 'text', text: 'look' }] } }),
+      under(assistant([{ type: 'thinking', thinking: 'where' }, { type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'ls' } }])),
+      under({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'b1', content: 'a.txt' }] } }),
+    ]);
+    const conversation = transcript.agents.a1;
+    expect(conversation.map((entry) => entry.kind)).toEqual(['user', 'event', 'tool']);
+    expect(conversation[2]).toMatchObject({ kind: 'tool', name: 'Bash', result: { text: 'a.txt' } });
+    const call = transcript.entries[0];
+    expect(call.kind === 'tool' && call.steps?.[0]).toMatchObject({ kind: 'tool', result: { text: '' } });
+  });
+
+  it('counts what a subagent wrote in the working line, four characters a token', () => {
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      { ...assistant([{ type: 'text', text: 'x'.repeat(400) }]), parent_tool_use_id: 'a1' },
+      { ...assistant([{ type: 'tool_use', id: 'w', name: 'Write', input: { content: 'y'.repeat(386) } }]), parent_tool_use_id: 'a1' },
+    ], prompted('go'));
+    expect(turnTokens(transcript)).toBe(200);
+  });
+
+  it('puts an agent\'s count on the Agent call as it runs, and the result\'s final count once it ends', () => {
+    const progress = {
+      type: 'system', subtype: 'task_progress', task_id: 't', tool_use_id: 'a1', usage: { total_tokens: 28_590, tool_uses: 1, duration_ms: 3138 },
+    };
+    const running = fold([
+      { type: 'system', subtype: 'task_started', task_id: 't', tool_use_id: 'a1', description: 'look' },
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      progress,
+    ]);
+    expect(running.entries[0]).toMatchObject({ usage: { tokens: 28_590, tools: 1, seconds: 3 } });
+    const done = fold([
+      { type: 'system', subtype: 'task_notification', task_id: 't', status: 'completed' },
+      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1', content: 'ok\n<usage>subagent_tokens: 33075\ntool_uses: 3\nduration_ms: 5329</usage>' }] } },
+    ], running);
+    expect(done.entries[0]).toMatchObject({ usage: { tokens: 33_075, tools: 3, seconds: 5 } });
+    expect(done.finished.map((task) => [task.id, task.status, task.tokens])).toEqual([['t', 'completed', 28_590]]);
+  });
+
+  it('keeps the count a progress message leaves out at the one the Agent call shows', () => {
+    const progress = (usage: Record<string, number>) => ({ type: 'system', subtype: 'task_progress', task_id: 't', tool_use_id: 'a1', usage });
+    const transcript = fold([
+      { type: 'system', subtype: 'task_started', task_id: 't', tool_use_id: 'a1', description: 'look' },
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      progress({ total_tokens: 10, tool_uses: 3, duration_ms: 2000 }),
+      progress({ total_tokens: 12_000 }),
+    ]);
+    expect(transcript.entries[0]).toMatchObject({ usage: { tokens: 12_000, tools: 3, seconds: 2 } });
   });
 
   it('folds a subagent\'s own steps into the call that started it, and its subagent\'s into its call', () => {
@@ -113,12 +167,46 @@ describe('applyMessage', () => {
     expect(call.kind === 'tool' && call.steps?.[1]).toEqual({ kind: 'notice', text: 'review skill' });
   });
 
-  it('keeps the transcript when a subagent\'s message adds no step', () => {
+  it('keeps the conversation when a subagent\'s message adds no step', () => {
     const start = fold([
       assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
       { ...assistant([{ type: 'text', text: 'said' }]), parent_tool_use_id: 'a1' },
     ]);
-    expect(applyMessage(start, { ...assistant([{ type: 'thinking', thinking: 'hm' }]), parent_tool_use_id: 'a1' })).toBe(start);
+    expect(applyMessage(start, { ...assistant([{ type: 'thinking', thinking: 'hm' }]), parent_tool_use_id: 'a1' }).entries).toBe(start.entries);
+  });
+
+  it('leaves the Agent call as it was when a task message repeats its count', () => {
+    const progress = { type: 'system', subtype: 'task_progress', task_id: 't', tool_use_id: 'a1', usage: { total_tokens: 10, tool_uses: 1, duration_ms: 1000 } };
+    const once = fold([
+      { type: 'system', subtype: 'task_started', task_id: 't', tool_use_id: 'a1', description: 'look' },
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      progress,
+    ]);
+    expect(applyMessage(once, progress).entries).toBe(once.entries);
+  });
+
+  it('reads an agent\'s count from a result too long to keep whole', () => {
+    const report = `${'x'.repeat(25_000)}\n<usage>subagent_tokens: 900\ntool_uses: 2\nduration_ms: 4000</usage>`;
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1', content: report }] } },
+    ]);
+    expect(transcript.entries[0]).toMatchObject({ usage: { tokens: 900, tools: 2, seconds: 4 } });
+  });
+
+  it('keeps only the newest started agents\' conversations', () => {
+    const said = (id: string) => ({ ...assistant([{ type: 'text', text: id }]), parent_tool_use_id: id });
+    const ids = Array.from({ length: KEPT_CONVERSATIONS + 1 }, (_, index) => `a${index}`);
+    const transcript = fold([...ids.map(said), said('a1')]);
+    expect(Object.keys(transcript.agents)).toEqual(ids.slice(1));
+  });
+
+  it('never drops a running agent\'s conversation to keep the newest', () => {
+    const said = (id: string) => ({ ...assistant([{ type: 'text', text: id }]), parent_tool_use_id: id });
+    const ids = Array.from({ length: KEPT_CONVERSATIONS + 1 }, (_, index) => `a${index}`);
+    const running = ids.map((id) => ({ type: 'system', subtype: 'task_started', task_id: `t${id}`, tool_use_id: id, subagent_type: 'general-purpose' }));
+    const transcript = fold([...running, ...ids.map(said), ...ids.map(said)]);
+    expect(transcript.agents.a0).toHaveLength(2);
   });
 
   it('reads a prompt from a saved session as what you said', () => {
@@ -229,10 +317,12 @@ describe('applyEvent', () => {
     expect(transcript.entries.at(-1)).toEqual({ kind: 'notice', text: 'The session ended: spawn ENOENT' });
   });
 
-  it('drops the tasks the ended session was running', () => {
+  it('moves the tasks the ended session was running to the finished list, as ended', () => {
     const running = applyMessage(prompted('hi'), { type: 'system', subtype: 'task_started', task_id: 'a', description: 'Review a' });
     expect(running.tasks).toHaveLength(1);
-    expect(applyEvent(running, { kind: 'ended', error: null }).tasks).toEqual([]);
+    const ended = applyEvent(running, { kind: 'ended', error: null });
+    expect(ended.tasks).toEqual([]);
+    expect(ended.finished.map((task) => [task.id, task.status])).toEqual([['a', 'ended']]);
   });
 });
 

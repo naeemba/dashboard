@@ -9,7 +9,7 @@ import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, writ
 import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
-import { replaceFile, TEMPORARY_SUFFIX } from '../app/replace-file';
+import { TEMPORARY_SUFFIX } from '../app/replace-file';
 import { posixQuoted } from '../../shared/panes/shell';
 import { isRecord } from '../../shared/app/is-record';
 import {
@@ -477,9 +477,6 @@ export function boardSnapshot(projectPath: string): string | null {
   const folder = boardFolderSnapshot(boardFolderPath(projectPath));
   return legacy === null && folder === null ? null : `${legacy ?? ''}\0\0${folder ?? ''}`;
 }
-
-// The app's one atomic write lives in app/replace-file.ts; the stores outside app/ import it from here.
-export { replaceFile };
 
 // Answers with the snapshot of what it wrote. Main keeps the last of them per project and compares them against
 // what the folder watcher finds, which is how the app's own saves are told apart from the command
