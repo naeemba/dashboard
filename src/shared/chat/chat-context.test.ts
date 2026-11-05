@@ -13,6 +13,7 @@ const usage: ContextUsageParts = {
   memoryFiles: [{ path: '/a/CLAUDE.md', type: 'Project', tokens: 1_000 }, { path: '/b/CLAUDE.md', type: 'User', tokens: 3_000 }],
   mcpTools: Array.from({ length: LIST_CAP + 2 }, (_, index) => ({ name: `tool${index}`, serverName: 'server', tokens: (index + 1) * 100 }))
     .concat({ name: 'unloaded', serverName: 'server', tokens: 50_000, isLoaded: false } as never),
+  agents: [],
 };
 
 describe('contextBreakdown', () => {

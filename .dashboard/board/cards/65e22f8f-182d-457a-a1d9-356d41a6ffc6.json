@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T14:52:35.071Z",
-  "updatedAt": "2026-11-05T15:11:42.872Z",
-  "column": "Doing",
-  "order": 2
+  "updatedAt": "2026-11-05T15:45:31.277Z",
+  "branch": "work-board-card-65e22f8f-182d-457a-a1d9-356",
+  "pullRequest": 214,
+  "comments": [
+    {
+      "at": "2026-11-05T15:45:31.277Z",
+      "body": "Shipped in PR #214: context popup rows open a level down (memory file in the doc viewer via docs:read limited to measured memory paths, MCP servers and their tools, skills, custom agents, largest turns with Enter jumping to the prompt); Escape goes back a level."
+    }
+  ],
+  "column": "Done",
+  "order": 169
 }

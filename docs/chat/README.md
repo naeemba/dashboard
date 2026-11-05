@@ -157,12 +157,21 @@ from the last measure, after each turn; the popup says when they were taken and
 follows a new one while it is open. The refresh button after the meters, or the
 refresh key, measures again now: it turns while the read runs and ignores
 presses until it ends, and a read that fails or finds no session running says so
-on the notice line and keeps the last numbers. The arrows walk its rows and Escape closes
-it. The model key walks the models and the edits key walks asking, accepting,
-planning and auto, both for the next thing Claude does; the foot follows a mode
-Claude moves to by itself, such as accepting edits once a plan is approved. A
-second screen on the same page shows the same conversation, questions and
-choices, and either can answer.
+on the notice line and keeps the last numbers. The arrows walk its rows; Enter
+or a click opens what is behind one, a level down. A memory file opens in the
+drawer's doc viewer. The MCP tools row, or its `N more`, lists the servers by
+what their tools hold, and a server, or one of its tools, lists that server's
+tools. The skills and custom agents rows list them by size. The messages row
+lists the conversation's ten largest turns, each weighed by what it added to the
+window as the transcript's usage says, and Enter selects that turn's prompt in
+the conversation. A row with nothing behind it is only read. Escape goes back a
+level, onto the row that opened it, and closes the top one; putting a memory
+file away comes back to its row too. A click beside the popup closes it. The
+model key walks the models and the edits key walks asking, accepting, planning
+and auto, both for the next thing Claude does; the foot follows a mode Claude
+moves to by itself, such as accepting edits once a plan is approved. A second
+screen on the same page shows the same conversation, questions and choices, and
+either can answer.
 
 The conversation outlives the app: the next launch shows it again and carries on
 from it once the screen is shown. The new conversation key starts over; the old one
@@ -187,7 +196,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
   `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
-  `chat-context.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
+  `chat-context.ts`, `chat-context-levels.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
   `src/shared/usage/cache-warmth.ts`); the popup it opens is `src/renderer/app/anchored-popup.ts`
   with `popup-placement.ts`
 - Styles: `chat.css`
@@ -212,6 +221,8 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given Claude has answered, when the foot is drawn, then beside the meters it says `warm 42m` in green, an hour or five minutes from the last reply that wrote or read the prompt cache by the tier that reply's session last wrote; yellow under five minutes, seconds in the last minute, `cold` once expired. It counts down while the screen is on view and stops at the first tick that finds it off view, until it is shown again; a worker's row in the workers popup says the same of its own session (chat-decision-12).
 - Given main has workers open, when the foot is drawn, then between what Claude is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a click on it or Alt+W opens a list of them (the manager's across every project) that updates while open, the arrows walk it, Enter lands on the pane and Escape closes it.
 - Given a turn has been measured, when you click the context meter, press Alt+U or send `/context`, then a popup opens just above the meter, lined up with its right edge, listing each part of the window (system prompt, tools, memory files, skills, messages, free space and the rest) with its tokens, share and a bar in its colour, then the memory files and the MCP tools biggest first, five each and an `N more` row; deferred tool schemas are left out. Its heading says when the numbers were measured, it follows a new measure while open, the arrows walk its rows and Escape puts the keyboard back in the box (chat-decision-10). Before any measure it says so instead of opening.
+- Given the context popup is open, when you press Enter on the messages row, then it lists the largest turns biggest first, Enter on one closes the popup with that turn's prompt selected, and Escape on the list goes back to the top level instead (chat-decision-14).
+- Given the context popup is open, when you press Enter on a memory file, then it opens in the doc viewer, read by main because the last measure named that path; putting the viewer away comes back to the popup (chat-decision-14).
 - Given the meters are showing, when you click the refresh button after them or press Alt+Shift+U, then the context, the model and the plan's limits are read from the session now; the button turns until the read ends and presses meanwhile do nothing. A read that fails says `Usage not refreshed:` and why, one with no session running says so, and either way the meters keep their last numbers. The next reading that lands, from the key or a turn ending, clears that message.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.

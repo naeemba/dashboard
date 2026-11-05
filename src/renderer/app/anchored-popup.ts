@@ -9,7 +9,8 @@ import { placeAbove } from './popup-placement';
 //
 // The arrows walk every row of every section; Enter takes the highlighted row's choice and a click on
 // a row moves the highlight there, then does what Enter does. A row with no choice is only read, so
-// Enter leaves the popup open on it. Escape closes. Undefined is the popup being closed.
+// Enter leaves the popup open on it. Escape closes, answering `escape` when given, the way a popup
+// with levels goes back one; a click beside it always closes. Undefined is the popup being closed.
 
 export type PopupRow<Choice> = {
   // What the highlight follows when the rows are read again, so a refresh that reorders them keeps it
@@ -30,6 +31,9 @@ export function anchoredPopup<Choice>(options: {
   // For rows that change while it is open: called once with the way to read them again, and answers
   // with the way to stop, which closing calls.
   watch?: (changed: () => void) => () => void;
+  escape?: Choice;
+  // The key of the row it opens on; the first row when it is not there.
+  start?: string;
 }): Promise<Choice | undefined> {
   let sections: PopupSection<Choice>[] = [];
   let highlighted = 0;
@@ -96,7 +100,7 @@ export function anchoredPopup<Choice>(options: {
     }
 
     function read(): void {
-      const was = rows()[highlighted]?.key;
+      const was = rows()[highlighted]?.key ?? options.start;
       sections = options.sections();
       highlighted = heldIndex(rows().map((row) => row.key), was, highlighted);
       draw();
@@ -109,7 +113,7 @@ export function anchoredPopup<Choice>(options: {
       draw();
     }
 
-    answerKeys(dialog, (key) => (key === 'Enter' ? take() : finish(undefined)));
+    answerKeys(dialog, (key) => (key === 'Enter' ? take() : finish(options.escape)));
     dialog.addEventListener('keydown', (event) => {
       if (isModified(event)) return;
       switch (event.key) {

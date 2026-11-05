@@ -616,6 +616,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       bridge: options.bridge,
       slot,
       projectName: page.project.name,
+      projectPath: page.project.path,
       paneId: terminalId(slot, MAIN_INDEX),
       onError: (message) => options.onError(`chat:${slot}`, message),
       onNotice: (message) => options.onNotice(`chat:${slot}`, message),
