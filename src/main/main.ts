@@ -786,7 +786,7 @@ const workerAnswers = sessionRequests({
     const reading = paneReadingsIn(slot).find((pane) => pane.index === index);
     return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
   },
-  directoryOf: (id) => terminalCommands.get(id)?.directory,
+  directoryOf: (id) => workerScreens.folder(id) ?? terminalCommands.get(id)?.directory,
   mainsWorkerIn: (id) => mainsWorkers.has(id),
   shellCommand: () => shellCommand,
   openWorker,

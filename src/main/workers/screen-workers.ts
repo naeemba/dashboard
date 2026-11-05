@@ -131,6 +131,8 @@ export function screenWorkers(ports: ScreenPorts) {
     },
     ids: (): string[] => [...live.keys()],
     directoryOf: (key: number): string | undefined => byKey.get(key)?.saved.directory,
+    // Where the worker works, which is not where the hidden shell under it stands.
+    folder: (id: string): string | undefined => live.get(id)?.saved.directory,
     session: (key: number): ScreenSession | undefined => byKey.get(key),
     // Called on every event of every session, a streamed token included, so the cheap test goes first.
     observe(key: number, event: ChatEvent): void {

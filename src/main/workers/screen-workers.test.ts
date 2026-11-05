@@ -44,6 +44,7 @@ describe('screenWorkers', () => {
     expect(said).toEqual(['changed', `tell ${screenKey('2:1')} fix it`]);
     expect(screens.ids()).toEqual(['2:1']);
     expect(screens.directoryOf(screenKey('2:1'))).toBe('/work/api.worktrees/fix');
+    expect(screens.folder('2:1')).toBe('/work/api.worktrees/fix');
     expect(screens.session(screenKey('2:1'))).toMatchObject({ session: SESSION, resume: false, name: 'api-terminal-2' });
     expect(screens.session(screenKey('2:2'))).toBeUndefined();
   });
