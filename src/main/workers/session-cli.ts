@@ -109,6 +109,13 @@ export function stopInputArguments(input: string): string[] {
   return ['--background', String(background.length), '--scheduled', String(scheduled.length)];
 }
 
+// The arguments the app is sent for what was typed, with the Stop hook's input read from stdin when
+// it asked for that: `input` is undefined when there was none to read, a terminal, which sends no counts.
+export function stopHookArguments(given: readonly string[], input: string | undefined): string[] {
+  if (!readsStopInput(given)) return [...given];
+  return [...given.slice(0, 3), ...(input === undefined ? [] : stopInputArguments(input))];
+}
+
 export function parseSessionCommand(commandArguments: readonly string[]): Parsed {
   const [verb, ...rest] = commandArguments;
   switch (verb) {

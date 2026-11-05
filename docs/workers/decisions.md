@@ -70,10 +70,18 @@ The three-minute grace (`STOP_GRACE_MS`) stays only for a stop that sends neithe
 older than the fields, whose input lacks them, or a worker started before this whose hook still runs
 plain `notify <id> done`. Dropping it would bring back a notice per turn end for those.
 
-Watch for: a main busy for longer than the settle reads a worker's report only after it, so that stop is
-noticed as well as reported. Under the grace period this needed a main busy for three minutes; now ten
-seconds is enough, so it happens more often. If it does, withdrawing the queued notice when the report
-is read (chat-decision-7's `cancelAsyncMessage`) is the fix, not a longer settle.
+A main busy for longer than the settle reads a worker's report only after the notice was queued, and
+a main mid-turn for ten seconds is its normal state while it dispatches. So the notice is taken back
+when the report is read: `tell` answers with the queued prompt's uuid, and `heard` withdraws it through
+chat-decision-7's `cancelAsyncMessage`, which does nothing once main has taken the prompt.
+
+A pause has a ceiling, `PAUSE_CEILING_MS`, thirty minutes: a worker that leaves a dev server, a watcher
+or a hung `gh pr checks --watch` running and forgets to report is never woken, so no later stop would
+come. Past the ceiling main is told once, as for a stop, unless a report covered it.
+
+Watch for: a report main reads only after it has already taken the notice into a turn. The notice
+cannot be withdrawn then, and main reads both; that needs a main that finishes its turn between the
+settle and the report arriving.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and

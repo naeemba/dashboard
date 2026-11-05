@@ -24,6 +24,8 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const marked: string[] = [];
   const removed: string[] = [];
   const told: string[] = [];
+  // The told messages taken back, by their place in `told`.
+  const withdrawn: string[] = [];
   const typed: string[] = [];
   const ports: SessionPorts = {
     slotOf: (directory) => (directory.startsWith('/work/api') ? 2 : -1),
@@ -57,7 +59,8 @@ function project(overrides: Partial<SessionPorts> = {}) {
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
     type: (id, text) => { typed.push(`${id} ${text}`); },
-    tell: (slot, text) => { told.push(`${slot} ${text}`); },
+    tell: (slot, text) => String(told.push(`${slot} ${text}`) - 1),
+    withdraw: (slot, messageId) => { withdrawn.push(`${slot} ${messageId}`); },
     cardWorktree: (_projectPath, cardId) => ({
       'card-1': { worktreePath: '/work/api.worktrees/card-one', working: false },
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
@@ -68,7 +71,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
-  return { ports, ask, open, agents, workers, started, closed, marked, removed, told, typed };
+  return { ports, ask, open, agents, workers, started, closed, marked, removed, told, withdrawn, typed };
 }
 
 describe('sessionRequests', () => {
@@ -252,6 +255,18 @@ describe('sessionRequests', () => {
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
     expect(told).toEqual([]);
+  });
+
+  it('takes back a notice already queued when main reads the report only after it', async () => {
+    const { ports, told, withdrawn } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toHaveLength(1);
+    answer.heard(2, 'api-terminal-2');
+    expect(withdrawn).toEqual(['2 0']);
   });
 
   it('takes no report signed by another session, or read by another main, for the worker\'s', async () => {

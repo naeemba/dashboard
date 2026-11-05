@@ -6,14 +6,18 @@ function clock() {
   let now = 0;
   const timers: { at: number; run: () => void; cancelled: boolean }[] = [];
   const noticed: string[] = [];
+  const takenBack: string[] = [];
   const notices = stopNotices({
     after(ms, run) {
       const timer = { at: now + ms, run, cancelled: false };
       timers.push(timer);
       return () => { timer.cancelled = true; };
     },
-    notice: (id) => { noticed.push(id); },
-  }, 100, 10);
+    notice: (id) => {
+      noticed.push(id);
+      return () => { takenBack.push(id); };
+    },
+  }, 100, 10, 1000);
   function pass(ms: number) {
     now += ms;
     for (const timer of timers.filter((each) => !each.cancelled && each.at <= now)) {
@@ -21,7 +25,7 @@ function clock() {
       timer.run();
     }
   }
-  return { notices, noticed, pass };
+  return { notices, noticed, takenBack, pass };
 }
 
 describe('stopNotices', () => {
@@ -122,7 +126,7 @@ describe('stopNotices', () => {
       const { notices, noticed, pass } = clock();
       notices.state('2:1', 'done', { background: 2, scheduled: 0 });
       notices.state('2:2', 'done', { background: 0, scheduled: 1 });
-      pass(1000);
+      pass(900);
       expect(noticed).toEqual([]);
       // The task woke it and it ended again without running a tool.
       notices.state('2:1', 'done', nothing);
@@ -140,6 +144,31 @@ describe('stopNotices', () => {
       notices.state('2:2', 'done', nothing);
       pass(100);
       expect(noticed).toEqual([]);
+    });
+
+    it('tells main once a pause has lasted the ceiling, since nothing may ever wake it', () => {
+      const { notices, noticed, pass } = clock();
+      notices.state('2:1', 'done', { background: 1, scheduled: 0 });
+      notices.reported('2:2');
+      notices.state('2:2', 'done', { background: 1, scheduled: 0 });
+      pass(1000);
+      expect(noticed).toEqual(['2:1']);
+      // Woken at last and ended with nothing in flight: the same stop, already told.
+      notices.state('2:1', 'done', nothing);
+      pass(1000);
+      expect(noticed).toEqual(['2:1']);
+    });
+
+    it('takes back a notice main has queued when the report is read after it', () => {
+      const { notices, noticed, takenBack, pass } = clock();
+      notices.state('2:1', 'done', nothing);
+      pass(10);
+      notices.reported('2:1');
+      expect(noticed).toEqual(['2:1']);
+      expect(takenBack).toEqual(['2:1']);
+      // Taken back once: a second read of a report has nothing left to take back.
+      notices.reported('2:1');
+      expect(takenBack).toEqual(['2:1']);
     });
   });
 });

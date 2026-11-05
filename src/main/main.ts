@@ -824,6 +824,7 @@ const workerAnswers = sessionRequests({
   type: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
   tell: chats.tell,
+  withdraw: (slot, messageId) => { chats.withdraw(slot, messageId).catch(() => undefined); },
   cardWorktree(projectPath, cardId) {
     const entry = entryForCard(worktrees.entries(), cardId);
     if (entry?.projectPath !== projectPath) return undefined;

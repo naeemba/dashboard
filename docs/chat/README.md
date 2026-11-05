@@ -123,7 +123,7 @@ When a worker this session dispatched finishes its turn, the app tells Claude so
 in the conversation, queued behind whatever it is doing.
 
 While the session has workers open the foot counts them by how they stand,
-working, blocked, done or idle; a click on the count or the workers key opens a
+working, paused (waiting on its own background work), blocked, done or idle; a click on the count or the workers key opens a
 list of them, the manager's across every project, that keeps up while it is
 open: the arrows walk it, Enter lands on the pane and Escape closes it. Above
 the working line, a strip lists the agents, workflows and background commands

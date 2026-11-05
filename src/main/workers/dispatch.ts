@@ -59,7 +59,7 @@ export function mainPrompt(projectPath: string): string {
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so; `list` says done the moment"
-    + ' its turn ends, or paused while it waits on its own background work.',
+      + ' its turn ends, or paused while it waits on its own background work.',
   ].join('\n');
 }
 

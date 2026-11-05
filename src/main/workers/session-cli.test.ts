@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outsidePaneRefusal, parseSessionCommand, readsStopInput, stopInputArguments } from './session-cli';
+import { outsidePaneRefusal, parseSessionCommand, readsStopInput, stopHookArguments, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -89,6 +89,14 @@ describe('stopInputArguments', () => {
     expect(stopInputArguments(JSON.stringify({ hook_event_name: 'Stop', background_tasks: [] }))).toEqual([]);
     expect(stopInputArguments('')).toEqual([]);
     expect(stopInputArguments('null')).toEqual([]);
+  });
+
+  it('sends the app the counts in place of the flag, and a notify the parser takes', () => {
+    const sent = stopHookArguments(['notify', '2:3', 'done', '--stop-input'], input);
+    expect(sent).toEqual(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0']);
+    expect(parseSessionCommand(sent).ok).toBe(true);
+    expect(stopHookArguments(['notify', '2:3', 'done', '--stop-input'], undefined)).toEqual(['notify', '2:3', 'done']);
+    expect(stopHookArguments(['list', '--all'], undefined)).toEqual(['list', '--all']);
   });
 });
 
