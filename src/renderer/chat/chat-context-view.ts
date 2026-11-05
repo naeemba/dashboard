@@ -11,9 +11,8 @@ import { failureText } from '../../shared/errors/failure';
 
 // The Claude screen's measure of its session, and the context popup that breaks it down. The view
 // asks for a measure when the screen is first shown, a turn ends, a model is picked or the refresh key
-// is pressed; the latest one asked
-// for is the one kept, the foot draws it, and an open popup reads it again when it lands. How the
-// rows are shaped is chat-context.ts's; this only asks main and draws.
+// is pressed; the latest one asked for is the one kept, the foot draws it, and an open popup reads it
+// again when it lands. How the rows are shaped is chat-context.ts's; this only asks main and draws.
 
 export type Measures = {
   latest(): ChatMeasure | null;

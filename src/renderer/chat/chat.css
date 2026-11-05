@@ -488,7 +488,8 @@
   background: none;
   cursor: pointer;
 }
-.chat-foot-refresh:hover { color: var(--white); }
+.chat-foot-refresh:hover,
+.chat-foot-refresh:focus-visible { color: var(--white); }
 .chat-foot-refresh.busy { cursor: default; }
 .chat-foot-refresh .icon svg {
   width: 12px;

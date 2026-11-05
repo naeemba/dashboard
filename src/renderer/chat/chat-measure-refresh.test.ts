@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { NOT_RUNNING, createMeasureRefresh } from './chat-measure-refresh';
 
 describe('createMeasureRefresh', () => {
-  it('says so when no session is running, and nothing when a reading lands', async () => {
+  it('says so when no session is running, and clears it when a reading lands', async () => {
     const say = vi.fn();
     const busy = vi.fn();
     createMeasureRefresh(() => Promise.resolve(null), busy, say, vi.fn())();
@@ -12,7 +12,7 @@ describe('createMeasureRefresh', () => {
     busy.mockClear();
     createMeasureRefresh(() => Promise.resolve({}), busy, say, vi.fn())();
     await vi.waitFor(() => expect(busy).toHaveBeenLastCalledWith(false));
-    expect(say).not.toHaveBeenCalled();
+    expect(say).toHaveBeenCalledWith('');
   });
 
   it('hands a failed read on, and stops spinning', async () => {

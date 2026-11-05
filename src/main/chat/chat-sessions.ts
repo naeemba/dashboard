@@ -544,7 +544,9 @@ export function registerChatSessions(
   // than counted again, the model by its shown name, and the plan's limits. The limits come from an
   // experimental call; a release that drops it leaves the line without them and nothing else. A screen
   // shown for the first time asks with `start`, which is what starts a page's session; any other
-  // measure, a model picked after the session ended say, reads null rather than starting a CLI.
+  // measure, a model picked after the session ended say, reads null rather than starting a CLI. Null
+  // means no session to measure and nothing else: the renderer prints it as NOT_RUNNING
+  // (chat-measure-refresh.ts).
   table.handle('chat:measure', async (_screen, slot: number, start: boolean): Promise<ChatMeasure | null> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return null;
