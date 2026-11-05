@@ -9,6 +9,7 @@ import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
 import type { PermissionAsk } from './chat-elicitation';
 import { cacheUseOf, type CacheUse } from '../usage/cache-warmth';
+import { tokensOf } from '../usage/usage';
 import { isDoneReport } from '../workers/done-report';
 
 // A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
@@ -135,11 +136,10 @@ export type Transcript = {
 // `input` is what the message read, cached or not; `total` adds what it wrote.
 export type Reading = { after: number; input: number; total: number };
 
-function readingOf(usage: unknown, after: number): Reading[] {
-  if (!isRecord(usage) || typeof usage.input_tokens !== 'number') return [];
-  const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
-  const input = usage.input_tokens + count(usage.cache_creation_input_tokens) + count(usage.cache_read_input_tokens);
-  return [{ after, input, total: input + count(usage.output_tokens) }];
+function readingOf(usage: unknown, after: number): Reading | null {
+  if (!isRecord(usage) || typeof usage.input_tokens !== 'number') return null;
+  const total = tokensOf(usage);
+  return { after, input: total - (typeof usage.output_tokens === 'number' ? usage.output_tokens : 0), total };
 }
 
 // A turn's count before anything has come down.
@@ -375,7 +375,8 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     case 'assistant': {
       const stamp = stampOf(message, inner);
       const said = assistant(transcript, inner.content, stamp);
-      const readings = [...transcript.readings, ...readingOf(inner.usage, said.entries.length)];
+      const reading = readingOf(inner.usage, said.entries.length);
+      const readings = reading ? [...transcript.readings, reading] : transcript.readings;
       return { ...said, cache: cacheUseOf(inner.usage, stamp.at, transcript.cache), readings };
     }
     case 'user': return userMessage(transcript, message);

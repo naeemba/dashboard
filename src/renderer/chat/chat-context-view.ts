@@ -1,5 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
-import { contextLevel, type ContextChoice, type ContextLevel, type ContextList, type Conversation, type LevelRow } from '../../shared/chat/chat-context-levels';
+import type { DocReply } from '../../shared/drawer/drawer';
+import { contextLevel, levelTitle, nextStep, type ContextLevel, type ContextList, type Conversation, type LevelRow, type Picked } from '../../shared/chat/chat-context-levels';
 import { clockTime, statusMeters, type ChatMeasure } from '../../shared/chat/chat-status';
 import { formatTokens } from '../../shared/usage/usage';
 import { failureText } from '../../shared/errors/failure';
@@ -30,8 +31,7 @@ export type Measures = {
 };
 
 // What Escape answers on a level below the top: go back one.
-const BACK = { kind: 'back' } as const;
-type Picked = ContextChoice | typeof BACK;
+const BACK: Picked = { kind: 'back' };
 
 function row(each: LevelRow): PopupRow<Picked> {
   const bar = piece('chat-meter-bar', '');
@@ -79,14 +79,16 @@ export function createMeasures(bridge: DashboardBridge, slot: number, projectPat
 
   // A memory file in the drawer's doc viewer, which main reads because the measure named it; resolves
   // once the viewer is put away, or at once when main refuses or fails.
-  function readMemory(file: string): Promise<void> {
-    return bridge.readDoc(projectPath, file).then((reply) => new Promise<void>((resolve) => {
-      if ('refused' in reply) {
-        say(reply.refused);
-        return resolve();
-      }
-      docOverlay(file, reply.text, reply.images, null, (url) => bridge.openExternal(url), resolve);
-    }), (error: unknown) => say(`Could not read ${file}: ${failureText(error)}`));
+  async function readMemory(file: string): Promise<void> {
+    let reply: DocReply;
+    try {
+      reply = await bridge.readDoc(projectPath, file);
+    } catch (error: unknown) {
+      return say(`Could not read ${file}: ${failureText(error)}`);
+    }
+    if ('refused' in reply) return say(reply.refused);
+    const { text, images } = reply;
+    await new Promise<void>((resolve) => docOverlay(file, text, images, null, (url) => bridge.openExternal(url), resolve));
   }
 
   return {
@@ -113,13 +115,13 @@ export function createMeasures(bridge: DashboardBridge, slot: number, projectPat
         return contextLevel(measure.breakdown, list, conversation(), measure.context.size);
       };
       // The levels open, deepest last. Escape pops one; a click beside the popup closes every level.
-      const trail: ContextList[] = [];
+      let trail: ContextList[] = [];
       for (;;) {
         const open = anchor();
         if (!open) return;
         const list = trail.at(-1) ?? null;
         const picked = await anchoredPopup<Picked>({
-          name: 'chat-context', anchor: open, heading: () => heading(current(), level(list).title), sections: () => sections(level(list)),
+          name: 'chat-context', anchor: open, heading: () => heading(current(), levelTitle(list)), sections: () => sections(level(list)),
           watch: (changed) => {
             redraw = changed;
             return () => { redraw = undefined; };
@@ -127,11 +129,11 @@ export function createMeasures(bridge: DashboardBridge, slot: number, projectPat
           escape: list === null ? undefined : BACK,
         });
         if (picked === undefined) return;
-        if (picked.kind === 'back') trail.pop();
-        else if (picked.kind === 'list') trail.push(picked.list);
-        else if (picked.kind === 'entry') return jump(picked.index);
+        const step = nextStep(trail, picked);
+        if ('jump' in step) return jump(step.jump);
         // The viewer is over the popup's place; putting it away comes back to the same level.
-        else await readMemory(picked.path);
+        if ('read' in step) await readMemory(step.read);
+        trail = step.trail;
       }
     },
   };

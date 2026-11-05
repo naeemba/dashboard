@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contextBreakdown, LIST_CAP, type ContextUsageParts } from './chat-context';
-import { contextLevel, largestTurns, TURN_CAP, type Conversation } from './chat-context-levels';
+import { contextLevel, largestTurns, nextStep, TURN_CAP, type Conversation } from './chat-context-levels';
 import type { ChatEntry } from './chat-transcript';
 
 const SIZE = 100_000;
@@ -89,5 +89,20 @@ describe('contextLevel', () => {
   it('lists the custom agents by size, read only', () => {
     const agents = contextLevel(breakdown, { kind: 'agents' }, conversation, SIZE).sections[0].rows;
     expect(agents.map((row) => [row.name, row.detail, row.choice])).toEqual([['explorer', 'plugin', undefined], ['reviewer', 'userSettings', undefined]]);
+  });
+});
+
+describe('nextStep', () => {
+  const servers = { kind: 'mcpServers' } as const;
+  const alpha = { kind: 'mcpTools', server: 'alpha' } as const;
+
+  it('opens a list a level down and goes back one on Escape', () => {
+    expect(nextStep([servers], { kind: 'list', list: alpha })).toEqual({ trail: [servers, alpha] });
+    expect(nextStep([servers, alpha], { kind: 'back' })).toEqual({ trail: [servers] });
+  });
+
+  it('leaves the levels for a turn, and comes back to the same level after a file', () => {
+    expect(nextStep([{ kind: 'turns' }], { kind: 'entry', index: 4 })).toEqual({ jump: 4 });
+    expect(nextStep([{ kind: 'memoryFiles' }], { kind: 'file', path: '/m.md' })).toEqual({ read: '/m.md', trail: [{ kind: 'memoryFiles' }] });
   });
 });

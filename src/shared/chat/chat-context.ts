@@ -30,7 +30,7 @@ const CATEGORY_TONES: Partial<Record<CategoryId, ThemeColour>> = {
   autocompact_buffer: 'brightBlack', compact_buffer: 'brightBlack',
 };
 
-function toneOf(id: string | undefined): ThemeColour | null {
+export function toneOf(id: string | undefined): ThemeColour | null {
   return (id ? CATEGORY_TONES[id as CategoryId] : undefined) ?? null;
 }
 
@@ -38,17 +38,24 @@ function share(tokens: number, size: number): number {
   return size > 0 ? (tokens / size) * 100 : 0;
 }
 
+export function breakdownRow(key: string, name: string, detail: string | null, tokens: number, size: number, tone: ThemeColour | null): BreakdownRow {
+  return { key, name, detail, tokens, percentage: share(tokens, size), tone };
+}
+
+// The key of a capped list's "N more" row, which opens the whole list.
+export const moreKey = (list: 'memoryFiles' | 'mcpTools'): string => `more:${list}`;
+
 export function biggestFirst(rows: BreakdownRow[]): BreakdownRow[] {
   return [...rows].sort((a, b) => b.tokens - a.tokens);
 }
 
 // Biggest first, at most LIST_CAP rows, then one row counting the rest and what they hold together.
 // The popup keeps its highlight by key across every list at once, so the "more" row carries its list's.
-function capped(list: string, sorted: BreakdownRow[], size: number): BreakdownRow[] {
+function capped(list: 'memoryFiles' | 'mcpTools', sorted: BreakdownRow[], size: number): BreakdownRow[] {
   if (sorted.length <= LIST_CAP) return sorted;
   const rest = sorted.slice(LIST_CAP);
   const tokens = rest.reduce((sum, row) => sum + row.tokens, 0);
-  return [...sorted.slice(0, LIST_CAP), { key: `more:${list}`, name: `${rest.length} more`, detail: null, tokens, percentage: share(tokens, size), tone: null }];
+  return [...sorted.slice(0, LIST_CAP), breakdownRow(moreKey(list), `${rest.length} more`, null, tokens, size, null)];
 }
 
 // The categories keep the session's own order, the order Claude Code's /context lists them in. A
@@ -57,7 +64,7 @@ function capped(list: string, sorted: BreakdownRow[], size: number): BreakdownRo
 export function contextBreakdown(usage: ContextUsageParts): ContextBreakdown {
   const size = usage.maxTokens;
   const row = (key: string, name: string, detail: string | null, tokens: number, tone: ThemeColour | null): BreakdownRow =>
-    ({ key, name, detail, tokens, percentage: share(tokens, size), tone });
+    breakdownRow(key, name, detail, tokens, size, tone);
   const memoryFiles = biggestFirst(usage.memoryFiles.map((file) => row(file.path, file.path, null, file.tokens, toneOf('memory_files'))));
   // A tool the session has not loaded is deferred in the same way, and is not counted in the window.
   const mcpTools = biggestFirst(usage.mcpTools.filter((tool) => tool.isLoaded !== false)

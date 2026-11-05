@@ -1,4 +1,4 @@
-import { biggestFirst, type BreakdownRow, type ContextBreakdown } from './chat-context';
+import { biggestFirst, breakdownRow, moreKey, toneOf, type BreakdownRow, type ContextBreakdown } from './chat-context';
 import type { ChatEntry, Reading } from './chat-transcript';
 
 // What is behind each row of the Claude screen's context popup. The popup opens on the session's
@@ -30,8 +30,6 @@ const CATEGORY_LISTS: Record<string, ContextList> = {
   skills: { kind: 'skills' }, custom_agents: { kind: 'agents' }, messages: { kind: 'turns' },
 };
 
-const share = (tokens: number, size: number): number => (size > 0 ? (tokens / size) * 100 : 0);
-
 // Where a turn starts: a prompt, a command run with `!`, or a message that opens a turn as one does.
 function startsTurn(entry: ChatEntry): boolean {
   return entry.kind === 'user' || (entry.kind === 'event' && entry.startsTurn === true);
@@ -47,29 +45,37 @@ function turnName(entry: ChatEntry): string {
 // shrank, so the turn is counted from what its own first message read instead. A turn none of whose
 // messages carried a usage, or one that added nothing, is left out.
 export function largestTurns(conversation: Conversation, size: number): LevelRow[] {
-  const starts = conversation.entries.flatMap((entry, index) => (startsTurn(entry) ? [index] : []));
+  const { entries, readings } = conversation;
+  const starts = entries.flatMap((entry, index) => (startsTurn(entry) ? [index] : []));
+  const rows: LevelRow[] = [];
   let before: number | null = null;
-  const rows = starts.flatMap((start, at): LevelRow[] => {
+  // Readings are in entry order, so one walk hands each turn its own.
+  let next = 0;
+  for (const [at, start] of starts.entries()) {
     const end = starts[at + 1] ?? Infinity;
-    const own = conversation.readings.filter((reading) => reading.after > start && reading.after <= end);
-    if (own.length === 0) return [];
-    const baseline = Math.min(before ?? own[0].input, own[0].input);
-    const last = own[own.length - 1].total;
-    before = last;
-    const tokens = last - baseline;
-    if (tokens <= 0) return [];
-    const name = turnName(conversation.entries[start]);
-    return [{ key: `turn:${start}`, name, detail: null, tokens, percentage: share(tokens, size), tone: 'brightBlue', choice: { kind: 'entry', index: start } }];
-  });
+    while (next < readings.length && readings[next].after <= start) next++;
+    const first = readings[next];
+    let last: Reading | undefined;
+    while (next < readings.length && readings[next].after <= end) last = readings[next++];
+    if (last === undefined) continue;
+    const tokens = last.total - Math.min(before ?? first.input, first.input);
+    before = last.total;
+    if (tokens <= 0) continue;
+    const row = breakdownRow(`turn:${start}`, turnName(entries[start]), null, tokens, size, toneOf('messages'));
+    rows.push({ ...row, choice: { kind: 'entry', index: start } });
+  }
   return biggestFirst(rows).slice(0, TURN_CAP);
 }
+
+const fileRow = (row: BreakdownRow): LevelRow => ({ ...row, choice: { kind: 'file', path: row.key } });
 
 function servers(tools: BreakdownRow[], size: number): LevelRow[] {
   const byServer = Map.groupBy(tools, (tool) => tool.detail ?? '');
   return biggestFirst([...byServer].map(([server, own]) => {
     const tokens = own.reduce((sum, tool) => sum + tool.tokens, 0);
     const detail = own.length === 1 ? '1 tool' : `${own.length} tools`;
-    return { key: `server:${server}`, name: server, detail, tokens, percentage: share(tokens, size), tone: own[0].tone, choice: { kind: 'list', list: { kind: 'mcpTools', server } } };
+    const row = breakdownRow(`server:${server}`, server, detail, tokens, size, own[0].tone);
+    return { ...row, choice: { kind: 'list', list: { kind: 'mcpTools', server } } };
   }));
 }
 
@@ -77,7 +83,7 @@ function servers(tools: BreakdownRow[], size: number): LevelRow[] {
 function listRows(list: ContextList, breakdown: ContextBreakdown, conversation: Conversation, size: number): LevelRow[] {
   const { all } = breakdown;
   switch (list.kind) {
-    case 'memoryFiles': return all.memoryFiles.map((row) => ({ ...row, choice: { kind: 'file', path: row.key } }));
+    case 'memoryFiles': return all.memoryFiles.map(fileRow);
     case 'mcpServers': return servers(all.mcpTools, size);
     case 'mcpTools': return all.mcpTools.filter((row) => row.detail === list.server).map((row) => ({ ...row, detail: null }));
     case 'skills': return all.skills;
@@ -90,30 +96,50 @@ const LIST_TITLES: Record<ContextList['kind'], string> = {
   memoryFiles: 'Memory files', mcpServers: 'MCP servers', mcpTools: 'MCP tools', skills: 'Skills', agents: 'Custom agents', turns: 'Largest turns',
 };
 
-function listTitle(list: ContextList): string {
+// The heading's name for the level `list` opens; null is the top.
+export function levelTitle(list: ContextList | null): string | null {
+  if (list === null) return null;
   return list.kind === 'mcpTools' ? `${LIST_TITLES.mcpTools} of ${list.server}` : LIST_TITLES[list.kind];
 }
 
-// A row that would open an empty list opens nothing: an older CLI that names no skills, or a
-// conversation this screen holds no usage for.
-function opening(row: BreakdownRow, list: ContextList | undefined, breakdown: ContextBreakdown, conversation: Conversation, size: number): LevelRow {
-  return list && listRows(list, breakdown, conversation, size).length > 0 ? { ...row, choice: { kind: 'list', list } } : row;
+// Whether a list has a row, read off what the breakdown already counted where it can: an older CLI
+// names no skills, and a conversation this screen holds no usage for has no turns.
+function holdsRows(list: ContextList, breakdown: ContextBreakdown, conversation: Conversation, size: number): boolean {
+  switch (list.kind) {
+    case 'memoryFiles': return breakdown.all.memoryFiles.length > 0;
+    case 'mcpServers': return breakdown.all.mcpTools.length > 0;
+    case 'skills': return breakdown.all.skills.length > 0;
+    case 'agents': return breakdown.all.agents.length > 0;
+    default: return listRows(list, breakdown, conversation, size).length > 0;
+  }
 }
 
-// The level `list` opens, or the top with none.
+// The level `list` opens, or the top with none. A row that would open an empty list opens nothing.
 export function contextLevel(breakdown: ContextBreakdown, list: ContextList | null, conversation: Conversation, size: number): ContextLevel {
-  if (list !== null) return { title: listTitle(list), sections: [{ title: null, rows: listRows(list, breakdown, conversation, size) }] };
-  const open = (row: BreakdownRow, list: ContextList | undefined): LevelRow => opening(row, list, breakdown, conversation, size);
+  if (list !== null) return { title: levelTitle(list), sections: [{ title: null, rows: listRows(list, breakdown, conversation, size) }] };
+  const open = (row: BreakdownRow, opened: ContextList | undefined): LevelRow =>
+    (opened && holdsRows(opened, breakdown, conversation, size) ? { ...row, choice: { kind: 'list', list: opened } } : row);
   const sections: LevelSection[] = [
     { title: null, rows: breakdown.categories.map((row) => open(row, CATEGORY_LISTS[row.key])) },
-    {
-      title: 'Memory files',
-      rows: breakdown.memoryFiles.map((row) => (row.key.startsWith('more:') ? open(row, { kind: 'memoryFiles' }) : { ...row, choice: { kind: 'file', path: row.key } })),
-    },
+    { title: 'Memory files', rows: breakdown.memoryFiles.map((row) => (row.key === moreKey('memoryFiles') ? open(row, { kind: 'memoryFiles' }) : fileRow(row))) },
     {
       title: 'MCP tools',
-      rows: breakdown.mcpTools.map((row) => open(row, row.key.startsWith('more:') ? { kind: 'mcpServers' } : { kind: 'mcpTools', server: row.detail ?? '' })),
+      rows: breakdown.mcpTools.map((row) => open(row, row.key === moreKey('mcpTools') ? { kind: 'mcpServers' } : { kind: 'mcpTools', server: row.detail ?? '' })),
     },
   ];
   return { title: null, sections: sections.filter((section) => section.rows.length > 0) };
+}
+
+// Where the popup goes once a row is picked: a list a level down, back one level, or out of the levels
+// to jump to an entry or read a file, after which the reading comes back to the same level.
+export type Picked = ContextChoice | { kind: 'back' };
+export type Step = { trail: ContextList[] } | { jump: number } | { read: string; trail: ContextList[] };
+
+export function nextStep(trail: readonly ContextList[], picked: Picked): Step {
+  switch (picked.kind) {
+    case 'back': return { trail: trail.slice(0, -1) };
+    case 'list': return { trail: [...trail, picked.list] };
+    case 'entry': return { jump: picked.index };
+    case 'file': return { read: picked.path, trail: [...trail] };
+  }
 }
