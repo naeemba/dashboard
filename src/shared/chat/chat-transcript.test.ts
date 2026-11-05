@@ -120,6 +120,17 @@ describe('applyMessage', () => {
     expect(done.finished.map((task) => [task.id, task.status, task.tokens])).toEqual([['t', 'completed', 28_590]]);
   });
 
+  it('keeps the count a progress message leaves out at the one the Agent call shows', () => {
+    const progress = (usage: Record<string, number>) => ({ type: 'system', subtype: 'task_progress', task_id: 't', tool_use_id: 'a1', usage });
+    const transcript = fold([
+      { type: 'system', subtype: 'task_started', task_id: 't', tool_use_id: 'a1', description: 'look' },
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      progress({ total_tokens: 10, tool_uses: 3, duration_ms: 2000 }),
+      progress({ total_tokens: 12_000 }),
+    ]);
+    expect(transcript.entries[0]).toMatchObject({ usage: { tokens: 12_000, tools: 3, seconds: 2 } });
+  });
+
   it('folds a subagent\'s own steps into the call that started it, and its subagent\'s into its call', () => {
     const under = (id: string, message: Record<string, unknown>) => ({ ...message, parent_tool_use_id: id });
     const transcript = fold([

@@ -304,11 +304,15 @@ function skillOf(entries: ChatEntry[], id: unknown): string | undefined {
 function withTasks(transcript: Transcript, message: Record<string, unknown>): Transcript {
   const tasks = applyTaskMessage(transcript.tasks, message);
   const finished = finishedAfter(transcript.finished, transcript.tasks, tasks, message);
-  const usage = messageUsage(message);
   const call = text(message.tool_use_id);
-  const same = (entry: ToolEntry) => entry.usage !== undefined && usage !== null
-    && entry.usage.tokens === usage.tokens && entry.usage.tools === usage.tools && entry.usage.seconds === usage.seconds;
-  const entries = usage && call ? withCall(transcript.entries, call, (entry) => (same(entry) ? entry : { ...entry, usage })) : transcript.entries;
+  // A count the message leaves out stays the one the call shows.
+  const counted = (entry: ToolEntry): ToolEntry => {
+    const usage = messageUsage(message, entry.usage);
+    const same = usage === null || (entry.usage !== undefined
+      && entry.usage.tokens === usage.tokens && entry.usage.tools === usage.tools && entry.usage.seconds === usage.seconds);
+    return same ? entry : { ...entry, usage };
+  };
+  const entries = call && messageUsage(message) ? withCall(transcript.entries, call, counted) : transcript.entries;
   if (tasks === transcript.tasks && finished === transcript.finished && entries === transcript.entries) return transcript;
   return { ...transcript, tasks, finished, entries };
 }
