@@ -71,7 +71,10 @@ export function createMeasures(
     const ask = ++asked;
     return bridge.chatMeasure(slot, start).then((reading) => {
       if (ask !== asked) return reading;
-      if (reading !== null) measured = reading;
+      if (reading !== null) {
+        measured = reading;
+        usage.landed();
+      }
       drawn();
       redraw?.();
       return reading;
@@ -79,10 +82,10 @@ export function createMeasures(
   }
   const quietly = (start = false): void => void take(start).catch(() => undefined);
 
-  const button = iconOnlyButton('chat-foot-refresh', 'refresh', 'Refresh the usage meters', () => refresh());
+  const button = iconOnlyButton('chat-foot-refresh', 'refresh', 'Refresh the usage meters', () => usage.refresh());
   // A click leaves the keyboard in the box rather than on the button.
   button.addEventListener('mousedown', (event) => event.preventDefault());
-  const refresh = createMeasureRefresh(
+  const usage = createMeasureRefresh(
     take, (busy) => button.classList.toggle('busy', busy), say,
     (error) => warn(`Usage not refreshed: ${failureText(error)}`),
   );
@@ -90,7 +93,7 @@ export function createMeasures(
   return {
     latest: () => measured,
     take: () => quietly(),
-    refresh,
+    refresh: usage.refresh,
     button,
     shown() {
       if (firstShown.take()) quietly(true);

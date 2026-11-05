@@ -5,14 +5,35 @@ import { singleFlight } from '../app/single-flight';
 //
 // - A press while a read is running does nothing, and the button spins until it ends (single-flight.ts).
 // - A read that fails, or finds no session running, says so. The meters keep the numbers they had:
-//   only a reading that came back replaces them (chat-context-view.ts). A reading that lands clears
-//   whatever an earlier press said.
+//   only a reading that came back replaces them (chat-context-view.ts). A reading that lands, from this
+//   key or from a turn ending (`landed`), clears what a press put up, and only that: a turn ending
+//   leaves an unrelated message on the bar alone.
 // - `null` from `chatMeasure` means no session to measure and nothing else (bridge.ts); a new reason
 //   for main to answer null changes that contract and this sentence with it.
 export const NOT_RUNNING = 'Nothing to refresh: the session is not running.';
 
+export type MeasureRefresh = {
+  refresh: () => void;
+  // A reading came back from any ask: clear what a press left on the bar, if anything.
+  landed: () => void;
+};
+
 export function createMeasureRefresh(
   read: () => Promise<unknown>, onBusy: (busy: boolean) => void, say: (message: string) => void, fail: (error: unknown) => void,
-): () => void {
-  return singleFlight(() => read().then((reading) => say(reading === null ? NOT_RUNNING : ''), fail), onBusy);
+): MeasureRefresh {
+  let posted = false;
+  const post = (message: string): void => {
+    posted = message !== '';
+    say(message);
+  };
+  const failed = (error: unknown): void => {
+    posted = true;
+    fail(error);
+  };
+  return {
+    refresh: singleFlight(() => read().then((reading) => post(reading === null ? NOT_RUNNING : ''), failed), onBusy),
+    landed() {
+      if (posted) post('');
+    },
+  };
 }
