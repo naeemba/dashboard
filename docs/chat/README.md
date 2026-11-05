@@ -106,9 +106,10 @@ and gives up on anything it was asking; with the command list open it only
 closes the list.
 
 While Claude works, a line over the box says whether it is thinking, for how
-long and roughly how many tokens have come down, and its answer flows in a few
-characters at a time. What it thought is folded to a Thinking line in the
-conversation, unfolding to a summary of it.
+long and how many tokens have come down, a tool's input included: an estimate
+while a message streams, its real count once it ends (chat-decision-13). Its
+answer flows in a few characters at a time. What it thought is folded to a
+Thinking line in the conversation, unfolding to a summary of it.
 
 A pane named in the conversation — what pane run printed, a worker's report — is
 a link: a click lands on that pane, on its own project's page, or says the pane
@@ -231,5 +232,6 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given a conversation is on the screen, when you send `/rename Board drag fix`, then it is renamed and `/resume` lists it by that name; with no name or no conversation yet, it is refused.
 - Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.
 - Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both words come back as one; Alt+Y straight after swaps them for the kill before, and Ctrl+U and Ctrl+K kill to the line's start and end the same way.
+- Given a turn writes a large file, when its Write streams in, then the working line's `↓ N tokens` counts the file as it comes, and once each message ends it shows that message's real output tokens, summed over the turn: a turn whose Write Claude Code reports at 735 tokens says 735, where text and thinking alone said 1 (chat-decision-13).
 - Given a hook runs during a turn, when it starts, then the working line says `Running PreToolUse:Bash hook…` until it answers; a hook that fails leaves a folded `PreToolUse:Bash hook failed (exit 2)` line that unfolds to what it printed as terminal text (not markdown), and one that succeeds leaves nothing. A SessionStart hook failing before a resumed conversation is read back goes under that conversation, not in place of it.
 - Given a conversation on the screen, when you send `/export` and pick Copy to clipboard, then its text is on the clipboard, prompts behind `>` and each tool call one line; Save to file writes it to a dated `.txt` in the project's folder, and `/export notes` writes `notes.txt` there; a name outside the folder or already taken is refused and nothing is written.

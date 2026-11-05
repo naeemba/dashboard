@@ -1,11 +1,13 @@
 {
   "id": "416d99ee-573a-46f3-8e5a-00eace87c54f",
   "title": "Count tool input and real output tokens in the Claude screen's working line",
-  "notes": "The Claude screen's working line (\"↓ N tokens\") reads far lower than Claude Code's for the same turn. It counts only streamed text_delta and thinking_delta characters / 4 (STREAMED_DELTAS in src/shared/chat/chat-transcript.ts) and skips tool input (input_json_delta), so a turn that writes a large file or a long command barely counts.\n- Count input_json_delta characters too, while streaming.\n- When the message's usage arrives (message_delta / the assistant message's usage.output_tokens), switch the count to the real output tokens for that message; sum across the turn's messages.\n- Check against Claude Code on the same prompt and put both numbers in the PR. Tests in chat-transcript.test.ts.",
+  "notes": "The Claude screen's working line (\"↓ N tokens\") reads far lower than Claude Code's for the same turn. It counts only streamed text_delta and thinking_delta characters / 4 (STREAMED_DELTAS in src/shared/chat/chat-transcript.ts) and skips tool input (input_json_delta), so a turn that writes a large file or a long command barely counts.\n- Count input_json_delta characters too, while streaming.\n- When the message's usage arrives (message_delta / the assistant message's usage.output_tokens), switch the count to the real output tokens for that message; sum across the turn's messages.\n- Check against Claude Code on the same prompt and put both numbers in the PR. Tests in chat-transcript.test.ts.\n\nShipped in #212: the working line counts input_json_delta while a message streams and takes each message's cumulative message_delta usage.output_tokens, summed over the turn. A Write turn read 1 token before, 735 after, matching Claude Code's 735. Not done: a subagent's output tokens are still left out.",
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T14:52:34.927Z",
-  "updatedAt": "2026-11-05T14:52:34.927Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-05T15:06:53.397Z",
+  "branch": "work-board-card-416d99ee-573a-46f3-8e5a-00e",
+  "pullRequest": 212,
+  "column": "Done",
+  "order": 167
 }

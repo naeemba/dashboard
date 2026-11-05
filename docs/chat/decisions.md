@@ -238,3 +238,25 @@ rather than stamped with when it arrived. The pill redraws once a minute, once a
 minute. A tick that finds the screen off view redraws nothing and sets no further timer; showing the
 screen again wakes the clock and redraws it. The workers
 popup reads the time when its rows are drawn and does not count down while open.
+
+## chat-decision-13: The working line counts tool input, then takes each message's real output tokens
+
+Checked against Anthropic's streaming page
+(https://platform.claude.com/docs/en/build-with-claude/streaming) on 2026-11-05:
+
+- "One or more `message_delta` events, indicating top-level changes to the final `Message` object."
+- "The token counts shown in the `usage` field of the `message_delta` event are *cumulative*."
+- A tool call's input streams as `content_block_delta` events of type `input_json_delta`, each with a
+  `partial_json` piece.
+
+So `chat-transcript.ts` counts `input_json_delta` characters with text and thinking while a message
+streams, four characters to a token, and when that message's `message_delta` carries
+`usage.output_tokens` it drops the estimate for that number (`turnTokens`). A message may send more
+than one, each cumulative, so a later one replaces the earlier; the last joins the turn's total when
+the next message's first block starts. Main
+relays both events (`relayed` in `chat-sessions.ts`); before, it kept tool input back and the count
+left it out, so a turn whose Write held a 40-line poem read `↓ 1 tokens` where Claude Code said 735.
+
+What it gets wrong, on purpose: the assistant message's own usage is not read, only the stream's, so
+a message that ends without a `message_delta` (an interrupted one) keeps its estimate. A subagent's
+stream is still left out, as its steps are drawn only once each arrives whole.
