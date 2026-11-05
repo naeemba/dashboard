@@ -598,6 +598,8 @@ const chats = registerChatSessions(table, {
   send: (slot, event) => sendToRenderer('chat:receive', slot, event),
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
+  // Called only once a session runs, by which time the session command's answers are set up below.
+  heard: (sender) => workerAnswers.heard(sender),
 });
 // The manager's main, opened at launch the way a project's is when it opens, and started the same way:
 // shown, told something, or a worker it dispatched kept through a restart. Its folder is made first, since
@@ -822,6 +824,10 @@ const workerAnswers = sessionRequests({
   type: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
   tell: chats.tell,
+  after(ms, run) {
+    const timer = setTimeout(run, ms);
+    return () => clearTimeout(timer);
+  },
   cardWorktree(projectPath, cardId) {
     const entry = entryForCard(worktrees.entries(), cardId);
     if (entry?.projectPath !== projectPath) return undefined;

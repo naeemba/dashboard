@@ -9,6 +9,7 @@ import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
 import type { PermissionAsk } from './chat-elicitation';
 import { cacheUseOf, type CacheUse } from '../usage/cache-warmth';
+import { isDoneReport } from '../workers/done-report';
 
 // A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
 // it with. The session reports each one's lifecycle by that id: queued, then started (the next turn
@@ -199,6 +200,11 @@ function user(transcript: Transcript, content: unknown, stamp: Stamp): Transcrip
       const printed = localCommandOutput(text(block.text));
       if (printed !== null) {
         if (printed) entries = [...entries, { kind: 'notice', text: printed }];
+        continue;
+      }
+      // The app telling main a worker stopped is a status line, not something you said.
+      if (isDoneReport(text(block.text))) {
+        entries = [...entries, { kind: 'notice', text: text(block.text) }];
         continue;
       }
       const shell = shellExchange(text(block.text));

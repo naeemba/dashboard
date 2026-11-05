@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { doneReport, projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
+import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
+import { doneReport } from '../../shared/workers/done-report';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -51,6 +52,8 @@ function project(overrides: Partial<SessionPorts> = {}) {
     mark: (id, state) => { marked.push(`${id} ${state}`); },
     type: (id, text) => { typed.push(`${id} ${text}`); },
     tell: (slot, text) => { told.push(`${slot} ${text}`); },
+    // The grace period passes at once here; stop-notices.test.ts holds what it waits for.
+    after: (_ms, run) => { run(); return () => undefined; },
     cardWorktree: (_projectPath, cardId) => ({
       'card-1': { worktreePath: '/work/api.worktrees/card-one', working: false },
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
@@ -231,6 +234,17 @@ describe('sessionRequests', () => {
     agents.add('2:2');
     await answer({ directory: '/anywhere', args: ['notify', '2:2', 'done'] });
     expect(told).toHaveLength(1);
+  });
+
+  it('tells main nothing for a stop the worker already reported to it', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    answer.heard('somebody-else');
+    answer.heard('api-terminal-2');
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    expect(told).toEqual([]);
   });
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.

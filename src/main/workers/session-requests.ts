@@ -9,6 +9,8 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { WorkerState } from '../../shared/app/bridge';
 import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
+import { doneReport } from '../../shared/workers/done-report';
+import { stopNotices } from './stop-notices';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
@@ -49,6 +51,8 @@ export type SessionPorts = {
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   tell(slot: number, text: string): void;
+  // Runs `run` once after `ms`, unless the answer is called first: the grace period stop-notices.ts waits.
+  after(ms: number, run: () => void): () => void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
@@ -70,13 +74,6 @@ export function projectOfFolder(
   ));
 }
 
-// What main is told when a worker it dispatched ends its turn: which worker, and that the worker's own
-// report, if it wrote one, says what it did. The hook knows nothing of what the worker did.
-export function doneReport(name: string, id: string): string {
-  return `${name} in pane ${id} (${paneLink(id)}) has finished its turn. If it sent you a report, that says what it did;`
-    + ' `pane list` shows where every worker stands.';
-}
-
 // Who is asking: the open project the command's folder is in, or, from a folder outside every one —
 // a plain terminal — the project of the pane the words name, since the id says which. A command
 // naming no pane stays -1, and is refused unless its words name the target some other way.
@@ -96,6 +93,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
   // called when only the agent exits: that worker stays listed, idle, until it is released.
   forget(id: string): void;
+  // A main session read a message from the session called `sender`: when that is a worker main
+  // dispatched, its next stop needs no notice.
+  heard(sender: string): void;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -117,6 +117,18 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // report, and what it was asked. Kept apart from `dispatchers`, which is who may run the pane, not
   // who did.
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
+  // Only a worker main started: a card's agent a ship started reports through the board, and a Claude
+  // opened by hand reports to nobody. The main that claimed it hears, which is another project's when
+  // it was claimed with --project. Asked again when the grace period ends, since the pane may have been
+  // given to something else by then.
+  const notices = stopNotices({
+    after: ports.after,
+    notice(id) {
+      if (!mainsWorker(id)) return;
+      const { slot, index } = paneFromId(id);
+      ports.tell(dispatched.get(id)?.dispatcher ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), id));
+    },
+  });
 
   // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
   // or one it claimed elsewhere. Main and the editor are never a worker: one is where the asking
@@ -185,6 +197,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const { index } = paneFromId(id);
     states.delete(id);
+    notices.forget(id);
     const session = ports.newSession(projectPath, directory, card);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card, dispatcherPath);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
@@ -200,6 +213,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
+    notices.forget(id);
     dispatchers.delete(id);
     dispatched.delete(id);
     const throwaway = throwaways.get(id);
@@ -257,12 +271,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (command.state === 'running') states.delete(command.id);
       else states.set(command.id, command.state);
       ports.mark(command.id, command.state);
-      // Only a worker main started: a card's agent a ship started reports through the board, and a
-      // Claude opened by hand reports to nobody. The main that claimed it hears, which is another
-      // project's when it was claimed with --project.
-      if (command.state === 'done' && mainsWorker(command.id)) {
-        ports.tell(dispatched.get(command.id)?.dispatcher ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), command.id));
-      }
+      if (mainsWorker(command.id)) notices.state(command.id, command.state);
       return answered('');
     }
     const folderSlot = ports.slotOf(request.directory);
@@ -286,5 +295,16 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
     }
-  }, { workers, forget: (id: string) => { dispatched.delete(id); } });
+  }, {
+    workers,
+    forget: (id: string) => { dispatched.delete(id); notices.forget(id); },
+    heard(sender: string) {
+      for (const { slot } of ports.openSlots()) {
+        for (const index of ports.openPanes(slot)) {
+          const id = terminalId(slot, index);
+          if (mainsWorker(id) && workerSessionName(ports.projectPath(slot) ?? '', index) === sender) notices.reported(id);
+        }
+      }
+    },
+  });
 }
