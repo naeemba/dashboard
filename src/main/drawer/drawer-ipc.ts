@@ -9,7 +9,7 @@ import type { DrawerReply, ResumeReply } from '../../shared/drawer/drawer';
 import type { OpenProjects } from '../../shared/app/bridge';
 import { MANAGER_FOLDER, sessionsFolder } from '../manager/manager-terminals';
 
-// The folders the manager's page lists the markdown of: its own and Claude's.
+// The folders the manager's page lists the docs of: its own and Claude's.
 const MANAGER_DOC_ROOTS = [MANAGER_FOLDER, path.join(homedir(), '.claude')];
 
 // The drawer's channels. Main-process wiring only, out of main.ts because main is at its ceiling; what

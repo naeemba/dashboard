@@ -1,12 +1,12 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { imageDataUrl, type ImageType } from '../../shared/chat/chat-transcript';
-import type { DocEntry, DocReply } from '../../shared/drawer/drawer';
+import { docKind, type DocEntry, type DocReply } from '../../shared/drawer/drawer';
 import { isManagerPath } from '../../shared/manager/manager';
 import { isInside } from '../panes/shell-directory';
 
-// The markdown files the drawer lists, and one of them read for its viewer: a project's docs/ folder,
-// or on the manager's page its roots, the manager's folder and Claude's, which drawer-ipc.ts passes in
+// The doc files the drawer lists, markdown, YAML and JSON (docKind says which), and one of them read
+// for its viewer: a project's docs/ folder, or on the manager's page its roots, the manager's folder and Claude's, which drawer-ipc.ts passes in
 // as `roots` so where the manager's folder lives is said once, in manager-terminals.ts. A project with
 // no docs/ lists none rather than failing.
 //
@@ -14,7 +14,7 @@ import { isInside } from '../panes/shell-directory';
 // time, as each is opened, never walked. Each root is named by its folder's name and what is in it by
 // its path from there: `.claude/rules/naming.md`.
 
-const isMarkdown = (name: string): boolean => name.toLowerCase().endsWith('.md');
+const isDoc = (name: string): boolean => docKind(name) !== null;
 const rowName = (root: string, file: string): string => path.relative(path.dirname(root), file).split(path.sep).join('/');
 
 // The order the rows print in: by folder, each folder's README before the rest of it, so the index of a
@@ -33,13 +33,13 @@ async function projectDocs(projectPath: string): Promise<DocEntry[]> {
     return [];
   }
   return names
-    .filter(isMarkdown)
+    .filter(isDoc)
     .map((name) => name.split(path.sep).join('/'))
     .sort(docOrder)
     .map((name) => ({ path: path.join(root, name), name }));
 }
 
-// What a folder of one of the roots holds, the folder named as its rows are: its markdown files and its
+// What a folder of one of the roots holds, the folder named as its rows are: its doc files and its
 // folders, which may hold none. A folder reached through a link counts as one (~/.claude's rules/ and
 // commands/ are often links into a dotfiles repository); a broken link is dropped. A name outside the
 // roots lists nothing.
@@ -54,7 +54,7 @@ async function managerFolder(roots: readonly string[], folder: string): Promise<
     const isFolder = entry.isSymbolicLink() ? await stat(file).then((found) => found.isDirectory(), () => null) : entry.isDirectory();
     if (isFolder === null) return [];
     if (isFolder) return [{ path: file, name: rowName(root, file), folder: true }];
-    return isMarkdown(entry.name) ? [{ path: file, name: rowName(root, file) }] : [];
+    return isDoc(entry.name) ? [{ path: file, name: rowName(root, file) }] : [];
   }));
   return rows.flat();
 }
@@ -89,11 +89,11 @@ function scopes(projectPath: string, roots: readonly string[]): DocScope[] {
   return roots.map((root) => ({ root, images: root }));
 }
 
-// The scope a file is a doc of, the only files the viewer reads: markdown under the project's docs/,
+// The scope a file is a doc of, the only files the viewer reads: a doc file under the project's docs/,
 // or under the manager's roots on its page. A path from anywhere else is refused, so the channel
 // cannot be asked for ~/.ssh/id_rsa.
 export function docScope(projectPath: string, file: string, roots: readonly string[]): DocScope | null {
-  if (!isMarkdown(file)) return null;
+  if (!isDoc(file)) return null;
   return scopes(projectPath, roots).find(({ root }) => file !== root && isInside(file, root)) ?? null;
 }
 
@@ -136,9 +136,11 @@ export function imageUrls(text: string, file: string, imageRoot: string, images:
 export async function readDoc(projectPath: string, file: string, roots: readonly string[]): Promise<DocReply> {
   const scope = docScope(projectPath, file, roots);
   if (scope === null) {
-    return { refused: isManagerPath(projectPath) ? 'Only a markdown file under ~/.dashboard or ~/.claude opens here' : 'Only a file under the project\'s docs/ folder opens here' };
+    return { refused: isManagerPath(projectPath) ? 'Only a markdown, YAML or JSON file under ~/.dashboard or ~/.claude opens here' : 'Only a markdown, YAML or JSON file under the project\'s docs/ folder opens here' };
   }
   const text = await readFile(file, 'utf8');
+  // Only markdown shows images; a YAML or JSON file is drawn as text.
+  if (docKind(file) !== 'markdown') return { text, images: {} };
   const wanted = imageSources(text).flatMap((source) => imageFile(source, file, scope.images)?.image ?? []);
   const read = await Promise.all([...new Set(wanted)].map(async (image) => [image, await readFile(image).catch(() => null)] as const));
   const images = new Map(read.flatMap(([image, bytes]) => (bytes === null ? [] : [[image, bytes] as const])));
