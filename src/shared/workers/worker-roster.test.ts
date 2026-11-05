@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { workerAbout, workerCount, workerRows, workerStatus, type DispatchedWorker, type WorkerStatus } from './worker-roster';
+import { waitingText, workerAbout, workerCount, workerRows, workerStatus, type DispatchedWorker, type WorkerStatus } from './worker-roster';
 import { paneLink, splitAtPaneLinks } from './pane-link';
 
 const worker = (id: string, status: WorkerStatus): DispatchedWorker => ({ id, dispatcher: 2, project: 'api', name: `api-${id}`, about: 'go', status });
@@ -29,6 +29,15 @@ describe('worker roster', () => {
     expect(workerStatus(true, undefined)).toBe('working');
     expect(workerStatus(true, 'running')).toBe('working');
     expect(workerStatus(true, 'blocked')).toBe('blocked');
+    expect(workerStatus(true, 'done', true)).toBe('paused');
+    expect(workerStatus(false, 'done', true)).toBe('idle');
+  });
+
+  it('says what a paused worker waits on, in place of its state', () => {
+    expect(waitingText({ background: 2, scheduled: 0 })).toBe('waiting on 2 background tasks');
+    expect(waitingText({ background: 1, scheduled: 1 })).toBe('waiting on 1 background task and 1 wakeup');
+    const paused = { ...worker('2:1', 'paused'), waiting: waitingText({ background: 0, scheduled: 2 }) };
+    expect(workerRows([worker('2:2', 'done'), paused], '', {}, 0).map((row) => row.detail)).toEqual(['waiting on 2 wakeups · go', 'done · go']);
   });
 
   it('keeps the first words of the prompt', () => {

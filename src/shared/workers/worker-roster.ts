@@ -7,7 +7,28 @@ import { cacheWarmth, type CacheUse } from '../usage/cache-warmth';
 // workers popup lists them. Main builds the list from what `pane list` already reads
 // (session-requests.ts); the decisions about it are here so both ends agree.
 
-export type WorkerStatus = 'working' | 'blocked' | 'done' | 'idle';
+export type WorkerStatus = 'working' | 'paused' | 'blocked' | 'done' | 'idle';
+
+// What a worker's Stop hook said its session still waits on: background tasks in flight (shells,
+// subagents, monitors, workflows) and wakeups scheduled (CronCreate, ScheduleWakeup, /loop). Claude
+// Code's StopHookInput carries both as `background_tasks` and `session_crons`; an older one, neither.
+export type StopWaiting = { background: number; scheduled: number };
+
+// Anything in either is a turn that ends to be woken again, not the worker done.
+export function isPaused(waiting: StopWaiting): boolean {
+  return waiting.background > 0 || waiting.scheduled > 0;
+}
+
+const counted = (count: number, one: string): string => `${count} ${one}${count === 1 ? '' : 's'}`;
+
+// `waiting on 2 background tasks and 1 wakeup`, as `pane list` and the workers popup say a pause.
+export function waitingText(waiting: StopWaiting): string {
+  const parts = [
+    waiting.background > 0 ? counted(waiting.background, 'background task') : '',
+    waiting.scheduled > 0 ? counted(waiting.scheduled, 'wakeup') : '',
+  ].filter(Boolean);
+  return `waiting on ${parts.join(' and ')}`;
+}
 
 export type DispatchedWorker = {
   id: string;
@@ -19,10 +40,12 @@ export type DispatchedWorker = {
   // The first words of the prompt it was given.
   about: string;
   status: WorkerStatus;
+  // What a paused worker waits on, as waitingText says it.
+  waiting?: string;
 };
 
 // The order the count and the popup give the states in: what still runs first, what is finished last.
-const ORDER: readonly WorkerStatus[] = ['working', 'blocked', 'done', 'idle'];
+const ORDER: readonly WorkerStatus[] = ['working', 'paused', 'blocked', 'done', 'idle'];
 
 const ABOUT_WORDS = 8;
 
@@ -32,9 +55,11 @@ export function workerAbout(prompt: string): string {
 }
 
 // What a worker is doing now. Its agent gone, it is idle whatever its hooks last said: the pane is a
-// shell again. Running, its hooks' last word; none yet is the agent at work.
-export function workerStatus(agentRunning: boolean, said: WorkerState | undefined): WorkerStatus {
+// shell again. Running, its hooks' last word, a done that waits on something being a pause; none yet
+// is the agent at work.
+export function workerStatus(agentRunning: boolean, said: WorkerState | undefined, paused = false): WorkerStatus {
   if (!agentRunning) return 'idle';
+  if (said === 'done' && paused) return 'paused';
   return said === 'blocked' || said === 'done' ? said : 'working';
 }
 
@@ -58,7 +83,7 @@ export function workerRows(workers: DispatchedWorker[], query: string, caches: R
     const cache = caches[worker.id];
     return {
       name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
-      detail: [worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
+      detail: [worker.waiting ?? worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
       choice: worker.id,
     };
   });

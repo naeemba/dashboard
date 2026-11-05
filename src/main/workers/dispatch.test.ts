@@ -58,7 +58,7 @@ describe('workerSettings', () => {
   // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
   it('hooks the end of the turn and the permission prompt to the session command', () => {
     const settings = JSON.parse(workerSettings('2:3'));
-    expect(settings.hooks.Stop[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 done');
+    expect(settings.hooks.Stop[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 done --stop-input');
     expect(settings.hooks.Notification[0].matcher).toBe('permission_prompt');
     expect(settings.hooks.Notification[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 blocked');
   });

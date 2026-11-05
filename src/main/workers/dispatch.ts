@@ -58,13 +58,15 @@ export function mainPrompt(projectPath: string): string {
       + ' reads this checkout.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
-      + " worker stops for a few minutes without writing, the app tells you so; `list` says done the moment its turn ends.",
+      + " worker stops with nothing left running and has not written, the app tells you so; `list` says done the moment"
+    + ' its turn ends, or paused while it waits on its own background work.',
   ].join('\n');
 }
 
 // The hooks a worker runs under, beside whatever the user's own settings hold. Stop is the end of the
 // worker's turn, which for a worker given one task is the task finished or given up on — so main
-// hears about a worker that crashed or forgot to write. permission_prompt is the one Notification
+// hears about a worker that crashed or forgot to write — or a pause while its own background work
+// runs, which the hook's input tells apart (stop-notices.ts). permission_prompt is the one Notification
 // that needs a person; the app marks the pane and raises a banner. A prompt submitted, or a tool that
 // has run (so any permission was granted), is the worker back at work, which takes either mark off.
 // None of them reads the pane's screen.
@@ -75,7 +77,7 @@ export function workerSettings(id: string): string {
   // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
   return '{ ' + JSON.stringify({
     hooks: {
-      Stop: [{ hooks: [notify('done')] }],
+      Stop: [{ hooks: [notify('done --stop-input')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
       UserPromptSubmit: [{ hooks: [notify('running')] }],
       PostToolUse: [{ hooks: [notify('running')] }],

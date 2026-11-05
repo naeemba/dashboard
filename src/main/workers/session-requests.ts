@@ -7,7 +7,7 @@ import type { ProjectNamed } from '../projects/project-named';
 import { namesItsTarget, parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { WorkerState } from '../../shared/app/bridge';
-import { workerAbout, workerStatus, type DispatchedWorker } from '../../shared/workers/worker-roster';
+import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
@@ -100,6 +100,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
   // because a worker run a second time has not finished the second task.
   const states = new Map<string, WorkerState>();
+  // A done whose Stop hook said the session still waits on something: what, as waitingText says it.
+  // Gone with the next word from the hooks.
+  const pauses = new Map<string, string>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
@@ -143,7 +146,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const program = ports.busyWith(id);
       return program === null ? 'idle' : `busy ${program}`;
     }
-    return states.get(id) ?? 'running';
+    const paused = pauses.get(id);
+    return paused === undefined ? states.get(id) ?? 'running' : `paused, ${paused}`;
   }
 
   // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
@@ -195,6 +199,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const { index } = paneFromId(id);
     states.delete(id);
+    pauses.delete(id);
     notices.forget(id);
     const session = ports.newSession(projectPath, directory, card);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card, dispatcherPath);
@@ -211,6 +216,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
+    pauses.delete(id);
     notices.forget(id);
     dispatchers.delete(id);
     dispatched.delete(id);
@@ -251,9 +257,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const { slot, index } = paneFromId(id);
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];
+      const status = workerStatus(mainsWorker(id), states.get(id), pauses.has(id));
       return [{
         id, dispatcher, project: page.name, name: nameOfPane(id),
-        about, status: workerStatus(mainsWorker(id), states.get(id)),
+        about, status, ...(status === 'paused' && { waiting: pauses.get(id) }),
       }];
     });
   }
@@ -268,8 +275,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (!ports.openPanes(slot).includes(index)) return refused(`${command.id} is not open`);
       if (command.state === 'running') states.delete(command.id);
       else states.set(command.id, command.state);
+      const { waiting } = command;
+      if (waiting !== undefined && isPaused(waiting)) pauses.set(command.id, waitingText(waiting));
+      else pauses.delete(command.id);
       ports.mark(command.id, command.state);
-      if (mainsWorker(command.id)) notices.state(command.id, command.state);
+      if (mainsWorker(command.id)) notices.state(command.id, command.state, waiting);
       return answered('');
     }
     const folderSlot = ports.slotOf(request.directory);

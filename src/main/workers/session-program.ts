@@ -1,4 +1,4 @@
-import { outsidePaneRefusal, parseSessionCommand } from './session-cli';
+import { outsidePaneRefusal, parseSessionCommand, stopInputArguments } from './session-cli';
 import { askRunningApp } from './session-socket';
 
 // The whole of the `session` program outside session-cli.ts and the app: the arguments and the folder
@@ -17,5 +17,16 @@ export async function runSessionProgram(commandArguments: readonly string[]): Pr
     process.stderr.write(`${refusal}\n`);
     return 1;
   }
+  // A Stop hook hands its input on stdin. The app is sent the counts, never the input itself.
+  if (parsed.command.kind === 'notify' && parsed.command.stopInput) {
+    return askRunningApp([...commandArguments.slice(0, 3), ...stopInputArguments(await readStdin())]);
+  }
   return askRunningApp(commandArguments);
+}
+
+async function readStdin(): Promise<string> {
+  let text = '';
+  process.stdin.setEncoding('utf8');
+  for await (const chunk of process.stdin) text += String(chunk);
+  return text;
 }

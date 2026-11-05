@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
 import { doneReport } from '../../shared/workers/done-report';
-import { STOP_GRACE_MS } from './stop-notices';
+import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -264,6 +264,23 @@ describe('sessionRequests', () => {
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
     expect(told).toHaveLength(1);
+  });
+
+  it('lists a worker that waits on its own background work as paused and tells main once it waits on nothing', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '2', '--scheduled', '0'] });
+    stayStopped();
+    expect(told).toEqual([]);
+    expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2])
+      .toBe('paused, waiting on 2 background tasks');
+    expect(answer.workers()[0]).toMatchObject({ status: 'paused', waiting: 'waiting on 2 background tasks' });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    expect(answer.workers()[0]).toEqual(expect.not.objectContaining({ waiting: expect.anything() }));
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.
