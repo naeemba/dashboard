@@ -509,7 +509,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function select(index: number | null): void {
-    // Only a move resets the walks: the copy and link keys' own clicks bubble here and select the same entry.
+    // Only a move resets the walks: the copy key's own click bubbles here and selects the same entry,
+    // and a link's click never gets here.
     if (index !== selected) copied = followed = null;
     drawn[selected ?? -1]?.element.classList.remove('selected');
     selected = index === null || drawn.length === 0 ? null : clampIndex(index, drawn.length - 1);
@@ -716,12 +717,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
         if (image) imageOverlay(image.src);
         else if (tile) openPdf(tile);
       }
-      // The same button a click on the block presses, so the tick shows which block was copied.
+      // Both walks press only what you can see: a block or link inside a folded tool call or message
+      // would be copied or opened with nothing on screen saying which. The copy key presses the same
+      // button a click on the block does, so the tick shows which block was copied.
       if (command === 'copy' && selected !== null) {
-        const buttons = [...drawn[selected].element.querySelectorAll<HTMLElement>('.chat-copy')];
+        const buttons = [...drawn[selected].element.querySelectorAll<HTMLElement>('.chat-copy')].filter((button) => button.checkVisibility());
         copied = pressNext(buttons, selected, copied, () => options.onNotice('This entry has no block to copy. A tool call or message shows its blocks once unfolded.'));
       }
-      // Only a link you can see: one inside a folded tool call would open with nothing on screen saying which.
       if (command === 'link' && selected !== null) {
         const links = [...drawn[selected].element.querySelectorAll('a')].filter((link) => link.checkVisibility());
         followed = pressNext(links, selected, followed, () => options.onNotice('This entry has no link to follow. A tool call shows its links once unfolded.'));

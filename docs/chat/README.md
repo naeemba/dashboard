@@ -13,7 +13,7 @@ blurb for it; this is where the rest lives.
 A Claude Code conversation drawn as a page rather than a terminal: tables as
 tables, code highlighted with a copy button in each block's corner (the copy key
 copies the selected entry's first block, then the next on each press; a tool
-call's or message's blocks once it is unfolded), a command run with ! as the
+call's or message's blocks only while it is unfolded), a command run with ! as the
 line typed and a block of what it printed, a message Claude Code put in the
 conversation itself — an agent finishing, a subagent's report — as one folded
 line that a click or the unfold key opens, a long message you sent — a pasted
@@ -114,7 +114,7 @@ A pane named in the conversation — what pane run printed, a worker's report �
 a link: a click lands on that pane, on its own project's page, or says the pane
 is not open; numbers are reused, so a link to a pane closed and opened again
 lands on whatever holds the number now. It is drawn in the screen's link colour
-wherever it sits, a message you sent and a tool's output included. The link key
+wherever it sits, a message you sent, a tool's output and a /btw answer included. The link key
 (Alt+G) follows the selected entry's first link you can see, a pane link or a
 web one, and the next on each press while that entry stays selected; a link
 inside a folded tool call waits until it is unfolded.
