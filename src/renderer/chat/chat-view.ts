@@ -26,7 +26,8 @@ import {
 import { promptParts, withdrawable } from './chat-queue';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
-import { backgroundTarget, stopTarget } from '../../shared/chat/chat-tasks';
+import { createAgentsView } from './chat-agents-view';
+import { runTaskCommand, type TaskScreen } from './chat-task-commands';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from '../app/overlay';
@@ -116,7 +117,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  const tasks = createTaskStrip();
+  const agents = createAgentsView(() => transcript, options, () => focus());
+  const tasks = createTaskStrip(agents.open);
   const queue = createQueueStrip();
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
 
@@ -235,6 +237,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const placeholder = transcript.suggestion ?? PLACEHOLDER;
     if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
+    agents.update();
     queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
   }
@@ -529,20 +532,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
   }
 
-  function stopTask(): void {
-    const target = stopTarget(tasks.picked());
-    if (target.kind === 'refused') return options.onNotice(target.reason);
-    bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
-  }
-
-  function backgroundTask(): void {
-    const target = backgroundTarget(tasks.picked());
-    if (target.kind === 'refused') return options.onNotice(target.reason);
-    bridge.chatBackgroundTasks(slot, target.kind === 'one' ? target.toolUseId : undefined).then((matched) => {
-      if (!matched) options.onNotice(target.kind === 'one' ? 'That task is no longer in the foreground.' : 'Claude has no task running.');
-    }, (error: unknown) => options.onError(`Not sent to the background: ${failureText(error)}`));
-  }
-
   function choose(change: ChatPreferences): void {
     // A model picked here or on another screen shows over the measured name until the next measure.
     if ('model' in change && (change.model ?? null) !== model) {
@@ -640,6 +629,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
+  const taskScreen: TaskScreen = { options, slot, strip: tasks, agents };
   const commandScreen: CommandScreen = {
     bridge, slot, options, prompt, configure, focus, showContext,
     transcript: () => transcript,
@@ -702,9 +692,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'suggestion') acceptSuggestion();
       if (command === 'editor') editPrompt();
       if (command === 'history') showHistory();
-      if (command === 'task-select') tasks.step();
-      if (command === 'task-stop') stopTask();
-      if (command === 'task-background') backgroundTask();
+      runTaskCommand(command, taskScreen);
       if (command === 'stash') {
         stashed = stashDraft(stashed, stashedText(prompt.value, draft, recalled));
         emptyBox();

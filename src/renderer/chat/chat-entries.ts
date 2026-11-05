@@ -6,6 +6,7 @@ import { pdfMentions, pdfOfTool } from '../../shared/chat/chat-pdf';
 import { foldedMessage } from './chat-fold';
 import { stampText } from './chat-stamp';
 import { linkPanes } from './chat-pane-links';
+import { usageParts } from '../../shared/chat/chat-tasks';
 import { imageDataUrl, type ChatEntry, type ChatImage, type Stamp, type ToolResult } from '../../shared/chat/chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
@@ -183,7 +184,8 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   return parts;
 }
 
-// A call's one line: whether it finished, its name, and what it was about.
+// A call's one line: whether it finished, its name, what it was about, and for an Agent call what its
+// agent has done, live while it runs and kept once it ends.
 function toolLine(tag: 'summary' | 'div', entry: Extract<ChatEntry, { kind: 'tool' }>): HTMLElement {
   const line = document.createElement(tag);
   if (tag === 'div') line.className = 'chat-step-tool';
@@ -197,6 +199,13 @@ function toolLine(tag: 'summary' | 'div', entry: Extract<ChatEntry, { kind: 'too
   about.className = 'chat-tool-summary';
   about.textContent = toolSummary(entry.name, entry.input);
   line.append(state, name, about);
+  const usage = entry.usage ? usageParts(entry.usage).join(' · ') : '';
+  if (usage) {
+    const done = document.createElement('span');
+    done.className = 'chat-tool-usage';
+    done.textContent = usage;
+    line.append(done);
+  }
   return line;
 }
 
