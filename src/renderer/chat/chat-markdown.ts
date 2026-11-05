@@ -11,7 +11,7 @@ import { Marked, type Tokens } from 'marked';
 
 const LINK_PROTOCOLS = ['http:', 'https:', 'mailto:'];
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (character) => `&#${character.charCodeAt(0)};`);
 }
 

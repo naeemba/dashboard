@@ -1,10 +1,11 @@
 # Drawer
 
 A drawer on the left of a page listing the project's docs, as a tree, and the
-Claude conversations the app started for it; on the manager's page, the markdown
-under `~/.dashboard` and `~/.claude` and the manager's own conversations. Open,
-it pushes the page to its right; closed, it takes no room. A doc opens rendered
-in a full-screen viewer.
+Claude conversations the app started for it; on the manager's page, the docs
+under `~/.dashboard` and `~/.claude` and the manager's own conversations. A doc
+is a markdown, YAML or JSON file. Open, it pushes the page to its right; closed,
+it takes no room. A doc opens in a full-screen viewer: markdown rendered, YAML
+and JSON highlighted with every object and array foldable.
 
 ## Files
 
@@ -12,6 +13,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 
 - Lists and resume: `docs-list.ts`, `drawer-ipc.ts`, `drawer.ts`
 - On screen: `drawer-rows.ts`, `drawer-view.ts`, `doc-viewer.ts`, `drawer.css`
+- YAML and JSON: `data-folds.ts` (lines, folds, keys), `data-viewer.ts`
 - The viewer reuses the Claude screen's `chat-markdown.ts` and the sheet of
   `viewerOverlay` in `overlay.ts`; neither is this feature's
 - The session index it reads is the workers feature's: `session-index.ts`,
@@ -28,7 +30,12 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given a closed folder row, when you press Right or Enter, then it opens; Right again steps to its first row. Given an open folder, when you press Left or Enter, then it closes; Left on a row inside one steps to that folder.
 - Given a doc inside a closed folder, when you type part of its path, then it is listed, flat, by its whole path; Left and Right move the caret in the filter.
 - Given a doc row, when you press Enter or click it, then the doc is shown rendered as markdown, full screen, over the drawer: tables, highlighted code, and images the doc points at inside the project.
-- Given the doc viewer, when you press the arrows or the Page keys, then the doc scrolls; when you press Escape or click the dark margin, then the viewer goes and the keyboard is back in the drawer's filter.
+- Given a `.yaml`, `.yml` or `.json` file under docs/, or on the manager page under `~/.dashboard` or `~/.claude` (`projects.yaml`, `settings.json`), then the drawer lists it beside the markdown.
+- Given a YAML or JSON doc row, when you press Enter, then it is shown highlighted: keys, strings, numbers, booleans, null and YAML comments each in their colour; JSON pretty-printed with a two-space indent, YAML as written.
+- Given the YAML or JSON viewer, then every object and array (mapping and sequence) that spans lines has a fold marker on the line naming it; the arrows walk the Edit row and those lines, Right or Enter unfolds, Left or Enter folds, Left on a folded line steps out to the fold around it, and A folds all, or unfolds all once all are folded. A click on a fold line does what Enter does there.
+- Given a YAML or JSON doc over sixty lines, when it opens, then only its top level is in sight, every fold under it closed; a shorter one opens unfolded.
+- Given a YAML or JSON file that does not parse, when it opens, then it is shown as plain text under one line saying where reading it failed.
+- Given the doc viewer on a markdown doc, when you press the arrows or the Page keys, then the doc scrolls; when you press Escape or click the dark margin, then the viewer goes and the keyboard is back in the drawer's filter.
 - Given the doc viewer, when you press Enter or click its Edit row at the top, then the viewer and the drawer go and the file opens in the project's nvim.
 - Given a link in the doc viewer, when you click it, then it opens in the browser; a link to another doc is not followed.
 - Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in and `claude --resume <id>` is typed into it; the page goes to the terminals view with the keyboard in that pane; a busy pane is never used.
@@ -41,7 +48,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given the manager page, when you open the drawer, then its docs are two closed folders, `.dashboard` and `.claude`; opening one reads that folder alone, its markdown files and its folders, and the filter finds only files in folders read so far.
 - Given the manager page, when you press Enter on a doc, then it is shown in the viewer with no Edit row, and Enter or Escape closes it; the manager has no nvim.
 - Given the manager page, then its sessions are the manager's own conversations, or none with a line saying so.
-- Given a read asked from the manager page for a file that is not markdown under `~/.dashboard` or `~/.claude`, then it is refused, answered as a value.
+- Given a read asked from the manager page for a file that is not markdown, YAML or JSON under `~/.dashboard` or `~/.claude`, then it is refused, answered as a value.
 
 ## Open questions
 

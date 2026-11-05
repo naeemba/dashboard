@@ -58,9 +58,9 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'the foot of its page, and a click on a name goes there. On the manager the board and notes '
     + 'keys land on its own board and notes sections.',
   projects: 'The first tab is the manager; every tab after it is a project, in your order. Worker '
-    + 'shells run in a pane host outside the app, so a quit or a crash leaves them running. The close '
+    + 'shells run in a pane host outside the app, so a quit or crash leaves them running. The close '
     + 'key takes a project away, refused while a worker runs something. The drawer lists the '
-    + 'project\'s docs and its Claude conversations.',
+    + 'project\'s docs, YAML and JSON foldable, and its conversations.',
   log: 'What the app did and what went wrong, newest first. Type to filter: every word must appear, '
     + 'so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s data folder, '
     + LOG_FILE_COUNT + ' files of ' + LOG_FILE_LIMIT_SHOWN + '. Never what you type in a pane.',

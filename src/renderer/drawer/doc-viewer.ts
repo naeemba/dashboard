@@ -21,15 +21,7 @@ export function docOverlay(
     viewerOverlay('doc-viewer', shown);
     return;
   }
-  const row = document.createElement('div');
-  row.className = 'drawer-row highlighted doc-viewer-edit';
-  const label = document.createElement('span');
-  label.className = 'drawer-name';
-  label.textContent = `Edit ${name} in nvim`;
-  const keys = document.createElement('span');
-  keys.className = 'drawer-detail';
-  keys.textContent = 'Enter edits · ↑↓ scroll · Escape closes';
-  row.append(icon('editor'), label, keys);
+  const row = editRow(name, 'Enter edits · ↑↓ scroll · Escape closes');
   shown.append(row, body);
   const editing = (): void => {
     close();
@@ -37,4 +29,19 @@ export function docOverlay(
   };
   const close = viewerOverlay('doc-viewer', shown, { enter: editing });
   row.addEventListener('click', editing);
+}
+
+// The row at the top of a viewer that opens the doc in nvim, with the viewer's keys beside it. Kept in
+// sight while the doc scrolls under it.
+export function editRow(name: string, keysLine: string): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'drawer-row highlighted doc-viewer-edit';
+  const label = document.createElement('span');
+  label.className = 'drawer-name';
+  label.textContent = `Edit ${name} in nvim`;
+  const keys = document.createElement('span');
+  keys.className = 'drawer-detail';
+  keys.textContent = keysLine;
+  row.append(icon('editor'), label, keys);
+  return row;
 }
