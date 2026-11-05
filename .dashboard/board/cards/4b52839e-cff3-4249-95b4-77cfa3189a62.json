@@ -1,0 +1,11 @@
+{
+  "id": "4b52839e-cff3-4249-95b4-77cfa3189a62",
+  "title": "Tell main at once when a worker is truly done, using the Stop hook's background_tasks",
+  "notes": "PR #209 holds the 'worker stopped' notice for 3 minutes (STOP_GRACE_MS in src/main/workers/stop-notices.ts), because a worker's turn also ends while it waits on its own background work. The user wants instant notices instead of the timer.\n\nClaude Code's Stop hook input already says which case it is (Agent SDK 0.3.316 types, sdk.d.ts StopHookInput): background_tasks (BackgroundTaskSummary[]: id, type such as shell/subagent/monitor/workflow, status, description; \"Empty array when nothing is in flight\"), documented as \"Lets hooks distinguish 'session is done' from 'session is paused waiting for background work to wake it'\", and session_crons (CronCreate, ScheduleWakeup, /loop wakeups). Installed Claude Code is 2.1.318.\n\nChange:\n- The worker's Stop hook passes background_tasks and session_crons (or their counts) along with its 'session notify <id> done'.\n- The app decides: nothing in flight, nothing scheduled and no report sent this stop -> notify main at once; anything in flight or scheduled -> mark the pane paused (a distinct state in pane list and the workers popup, e.g. 'waiting on 2 background tasks') and notify nobody; the next Stop decides again.\n- Drop the 3-minute grace for hooks that send the fields. Keep it only as the fallback when the fields are absent (an older Claude Code), and say so in the decision entry.\n- The rule stays in stop-notices.ts with its test, extended for the three cases plus the fallback. docs/workers decision updated.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-05T11:12:54.013Z",
+  "updatedAt": "2026-11-05T11:12:54.013Z",
+  "column": "Doing",
+  "order": 3
+}
