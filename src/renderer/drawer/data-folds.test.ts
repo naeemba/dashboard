@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allToggled, dataKey, dataStep, dataView, enclosingHeader, FOLD_SIZE_LIMIT, OPEN_LINE_LIMIT, shownLines, splitLines, startClosed, walkedRows } from './data-folds';
+import { allToggled, dataKey, dataKeysLine, dataStep, dataView, enclosingHeader, FOLD_SIZE_LIMIT, OPEN_LINE_LIMIT, shownLines, splitLines, startClosed, walkedRows } from './data-folds';
 
 const YAML = [
   '# projects',      // 0
@@ -48,6 +48,14 @@ describe('dataView', () => {
       .toEqual([{ header: 0, to: 4 }, { header: 1, to: 3 }]);
     expect([...dataView('x:\n  -\n    a: 1\n    b: 2\n', 'yaml').folds.values()])
       .toEqual([{ header: 0, to: 3 }, { header: 1, to: 3 }]);
+    expect([...dataView('-\n  # run-tests\n  a: 1\n  b: 2\n', 'yaml').folds.values()]).toEqual([{ header: 0, to: 3 }]);
+  });
+
+  it('says only the keys that do something: fold keys when there are folds, Enter edits when there is an Edit row', () => {
+    expect(dataKeysLine(true, true)).toBe('Enter edits or folds · ↑↓ walk · ←→ fold · A folds all · Escape closes');
+    expect(dataKeysLine(true, false)).toBe('Enter folds · ↑↓ walk · ←→ fold · A folds all · Escape closes');
+    expect(dataKeysLine(false, true)).toBe('Enter edits · ↑↓ scroll · Escape closes');
+    expect(dataKeysLine(false, false)).toBe('↑↓ scroll · Enter or Escape closes');
   });
 
   it('shows a doc past the size limit as written, with no folds', () => {

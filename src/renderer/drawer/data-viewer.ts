@@ -1,7 +1,7 @@
 import { icon } from '../app/icons';
 import { viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
-import { dataKey, dataStep, dataView, shownLines, startClosed, type DataRow } from './data-folds';
+import { dataKey, dataKeysLine, dataStep, dataView, shownLines, startClosed, type DataRow } from './data-folds';
 import type { DataKind } from '../../shared/drawer/drawer';
 import { editRow } from './doc-viewer';
 
@@ -16,10 +16,7 @@ export function dataOverlay(name: string, text: string, kind: DataKind, edit: ((
   let closed: ReadonlySet<number> = startClosed(view);
   let current: DataRow | null = edit === null ? (view.folds.keys().next().value ?? null) : 'edit';
 
-  // With nothing to fold the fold keys do nothing and the arrows scroll, so the line says only that.
-  const keysLine = hasFolds
-    ? `${edit === null ? 'Enter folds' : 'Enter edits or folds'} · ↑↓ walk · ←→ fold · A folds all · Escape closes`
-    : edit === null ? '↑↓ scroll · Enter or Escape closes' : 'Enter edits · ↑↓ scroll · Escape closes';
+  const keysLine = dataKeysLine(hasFolds, edit !== null);
   const top = edit === null ? keysRow(keysLine) : editRow(name, keysLine);
   const body = document.createElement('pre');
   body.className = 'data-viewer-text';

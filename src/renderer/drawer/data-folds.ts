@@ -21,11 +21,32 @@ type Fold = { header: number; to: number };
 // it stopped.
 export type DataView = { lines: string[]; folds: ReadonlyMap<number, Fold>; failure: string | null };
 
+// The keys line of a viewer with an Edit row and nothing to fold; the markdown viewer's too.
+export const EDIT_SCROLL_KEYS = 'Enter edits · ↑↓ scroll · Escape closes';
+
+// What the data viewer's keys line says. With nothing to fold the fold keys do nothing and the arrows
+// scroll, so the line says only that.
+export function dataKeysLine(hasFolds: boolean, hasEdit: boolean): string {
+  if (hasFolds) return `${hasEdit ? 'Enter edits or folds' : 'Enter folds'} · ↑↓ walk · ←→ fold · A folds all · Escape closes`;
+  return hasEdit ? EDIT_SCROLL_KEYS : '↑↓ scroll · Enter or Escape closes';
+}
+
 // Longer than this and the doc opens with every fold closed: the top level in sight and nothing under it.
 export const OPEN_LINE_LIMIT = 60;
 
 function foldsOf(text: string, root: ParsedNode | null, lines: LineCounter): Fold[] {
   const lineAt = (offset: number): number => lines.linePos(offset).line - 1;
+  // The `-` naming the block sequence item at `offset`: the last one before it, looking back line by
+  // line past lines that hold only a comment or nothing, so a dash inside a comment is never taken.
+  const dashBefore = (offset: number): number => {
+    let end = offset;
+    for (;;) {
+      const start = text.lastIndexOf('\n', end - 1) + 1;
+      const dash = text.slice(start, end).split('#')[0].lastIndexOf('-');
+      if (dash >= 0 || start === 0) return start + Math.max(dash, 0);
+      end = start - 1;
+    }
+  };
   const folds: Fold[] = [];
   const add = (node: ParsedNode, headerOffset: number): void => {
     const header = lineAt(headerOffset);
@@ -46,7 +67,7 @@ function foldsOf(text: string, root: ParsedNode | null, lines: LineCounter): Fol
       }
     } else if (isSeq(node)) {
       for (const item of node.items as ParsedNode[]) {
-        if (isCollection(item)) add(item, node.flow ? item.range[0] : text.lastIndexOf('-', item.range[0] - 1));
+        if (isCollection(item)) add(item, node.flow ? item.range[0] : dashBefore(item.range[0]));
       }
     }
   };

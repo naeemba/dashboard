@@ -173,13 +173,13 @@ as written.
 **A fold is a collection that spans lines, under the line naming it**: the key
 or the `-` it is the value of. A sequence item whose first key holds a
 collection puts two folds on its `-` line; the item's own, the outer one, keeps
-it. A flow collection, `{ ... }` or `[ ... ]`, keeps
-its closing line in sight. The root never folds; folded, it would hide the whole
-doc behind its first line. A doc longer than sixty lines opens with every fold
-closed, which leaves the top level in sight. A doc over 500,000 characters
-(`FOLD_SIZE_LIMIT`) is shown as written, unhighlighted and with no folds, under
-a line saying so: pretty-printing, parsing and highlighting a few megabytes holds
-the window for seconds, and `~/.claude` has JSON files that size.
+it. A flow collection, `{ ... }` or `[ ... ]`, keeps its closing line in sight.
+The root never folds; folded, it would hide the whole doc behind its first
+line. A doc longer than sixty lines opens with every fold closed, which leaves
+the top level in sight. A doc over 500,000 characters (`FOLD_SIZE_LIMIT`) is
+shown as written, unhighlighted and with no folds, under a line saying so:
+pretty-printing, parsing and highlighting a few megabytes holds the window for
+seconds, and `~/.claude` has JSON files that size.
 
 The rows the arrows walk are the Edit row and the fold lines, so a fold is
 reachable without the mouse (conventions-rule-1); the arrows no longer scroll

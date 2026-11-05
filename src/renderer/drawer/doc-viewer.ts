@@ -1,6 +1,7 @@
 import { icon } from '../app/icons';
 import { viewerOverlay } from '../app/overlay';
 import { openLinksOutside, renderMarkdown } from '../chat/chat-markdown';
+import { EDIT_SCROLL_KEYS } from './data-folds';
 
 // A doc read as markdown, full screen on the sheet the Claude screen opens an image on, drawn by the
 // Claude screen's own renderer so tables, code and images read the way they do there. Its one row,
@@ -21,7 +22,7 @@ export function docOverlay(
     viewerOverlay('doc-viewer', shown);
     return;
   }
-  const row = editRow(name, 'Enter edits · ↑↓ scroll · Escape closes');
+  const row = editRow(name, EDIT_SCROLL_KEYS);
   shown.append(row, body);
   const editing = (): void => {
     close();
