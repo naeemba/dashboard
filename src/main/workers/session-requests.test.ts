@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
+import { projectOfFolder, sessionRequests, type SessionPorts, type WorkerLaunch } from './session-requests';
 import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
@@ -19,7 +19,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
   const agents = new Set<string>(['2:0']);
   // Main's record of its workers, which main.ts keeps: added by a run, gone with the agent or the pane.
   const workers = new Set<string>();
-  const started: { id: string; directory: string; agentArguments: string[]; cardId: string | null }[] = [];
+  const started: { id: string; directory: string; agentArguments: string[]; launch: WorkerLaunch; cardId: string | null }[] = [];
   const closed: string[] = [];
   const marked: string[] = [];
   const removed: string[] = [];
@@ -46,10 +46,10 @@ function project(overrides: Partial<SessionPorts> = {}) {
       return index;
     },
     newSession: () => SESSION,
-    startWorker: (id, directory, agentArguments, cardId) => {
+    startWorker: (id, directory, launch, cardId) => {
       agents.add(id);
       workers.add(id);
-      started.push({ id, directory, agentArguments, cardId });
+      started.push({ id, directory, agentArguments: 'terminal' in launch ? launch.terminal : [], launch, cardId });
     },
     closeWorker: (id) => {
       closed.push(id);
@@ -118,6 +118,21 @@ describe('sessionRequests', () => {
       .toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
     expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api', cardId: null });
     expect(started[0].agentArguments[1]).toContain('research the cache');
+  });
+
+  // The same worker on a Claude screen: the conversation the app chose, its name, and the prompt with
+  // who to tell, which the screen sends as its first message rather than an argument.
+  it('runs a worker as a Claude screen with --screen, and hears its hooks through notify', async () => {
+    const { ports, started, marked } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', '--screen', 'research the cache'] });
+    expect(started[0].launch).toEqual({ screen: {
+      session: SESSION, name: 'api-terminal-2', prompt: expect.stringMatching(/^research the cache\n\nSendMessage to main-api when done/),
+    } });
+    expect(answer.notify('2:1', 'blocked')).toEqual({ ok: true, output: '' });
+    expect(marked).toContain('2:1 blocked');
+    expect((await answer({ directory: '/work/api', args: ['list'] })).output).toContain('2:1\tterminal 2\tblocked');
   });
 
   it('runs a card task in the card\'s worktree, and refuses a card with none or one being worked', async () => {
@@ -445,9 +460,9 @@ function pages() {
     newSession: () => SESSION,
     agentIn: (id) => working.has(id),
     mainsWorkerIn: (id) => working.has(id),
-    startWorker: (id, directory, agentArguments) => {
+    startWorker: (id, directory, launch) => {
       working.add(id);
-      started.push({ id, directory, agentArguments });
+      started.push({ id, directory, agentArguments: 'terminal' in launch ? launch.terminal : [] });
     },
     closeWorker: (id) => {
       const [slot, index] = id.split(':').map(Number);
