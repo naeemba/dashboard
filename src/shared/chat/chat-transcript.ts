@@ -126,12 +126,15 @@ export type Transcript = {
   cache: CacheUse | null;
 };
 
+// A turn's count before anything has come down.
+const UNCOUNTED = { output: 0, streamed: 0, thinking: false } as const;
+
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, output: 0, streamed: 0, thinking: false, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
+  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
-const IDLE = { live: '', busy: false, output: 0, streamed: 0, thinking: false, started: null, hook: null, suggestion: null } as const;
+const IDLE = { live: '', busy: false, ...UNCOUNTED, started: null, hook: null, suggestion: null } as const;
 
 // A tool's input streams as JSON: a Write streams the whole file, and Claude Code counts it.
 const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking', input_json_delta: 'partial_json' };
@@ -145,9 +148,8 @@ export function turnTokens(transcript: Transcript): number {
 // A message's usage, in its closing message_delta, is cumulative for that message, so it replaces the
 // estimate of what the message streamed.
 function finished(transcript: Transcript, usage: unknown): Transcript {
-  const tokens = isRecord(usage) ? usage.output_tokens : undefined;
-  if (typeof tokens !== 'number') return transcript;
-  return { ...transcript, output: transcript.output + tokens, streamed: 0 };
+  if (!isRecord(usage) || typeof usage.output_tokens !== 'number') return transcript;
+  return { ...transcript, output: transcript.output + usage.output_tokens, streamed: 0 };
 }
 
 const text = stringOrEmpty;
@@ -398,7 +400,7 @@ function taken(transcript: Transcript, message: Record<string, unknown>): Transc
 // A prompt taken into a running turn joins it, so its count goes on.
 function joinTurn(transcript: Transcript, content: ChatContent): Transcript {
   const now = Date.now();
-  const fresh = transcript.busy ? {} : { output: 0, streamed: 0, thinking: false, started: now };
+  const fresh = transcript.busy ? {} : { ...UNCOUNTED, started: now };
   return { ...user(transcript, content, { at: now }), busy: true, suggestion: null, ...fresh };
 }
 
