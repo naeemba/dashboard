@@ -85,6 +85,17 @@ describe('stopNotices', () => {
     expect(noticed).toEqual(['2:1']);
   });
 
+  it('keeps no report read after its stop was noticed, so the next stop is still told', () => {
+    const { notices, noticed, pass } = clock();
+    notices.state('2:1', 'done');
+    pass(100);
+    notices.reported('2:1');
+    notices.state('2:1', 'running');
+    notices.state('2:1', 'done');
+    pass(100);
+    expect(noticed).toEqual(['2:1', '2:1']);
+  });
+
   it('says nothing for a stop that turns into a permission ask, or a worker forgotten', () => {
     const { notices, noticed, pass } = clock();
     notices.state('2:1', 'done');

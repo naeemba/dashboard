@@ -51,8 +51,6 @@ export type SessionPorts = {
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   tell(slot: number, text: string): void;
-  // Runs `run` once after `ms`, unless the answer is called first: the grace period stop-notices.ts waits.
-  after(ms: number, run: () => void): () => void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
@@ -93,9 +91,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
   // called when only the agent exits: that worker stays listed, idle, until it is released.
   forget(id: string): void;
-  // A main session read a message from the session called `sender`: when that is a worker main
-  // dispatched, its next stop needs no notice.
-  heard(sender: string): void;
+  // The main session in `slot` read a message from the session called `sender`: when that is a worker
+  // that main dispatched, its next stop needs no notice.
+  heard(slot: number, sender: string): void;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -122,7 +120,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it was claimed with --project. Asked again when the grace period ends, since the pane may have been
   // given to something else by then.
   const notices = stopNotices({
-    after: ports.after,
     notice(id) {
       if (!mainsWorker(id)) return;
       ports.tell(dispatched.get(id)?.dispatcher ?? paneFromId(id).slot, doneReport(nameOfPane(id), id));
@@ -300,10 +297,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     workers,
     forget: (id: string) => { dispatched.delete(id); notices.forget(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
-    heard(sender: string) {
+    // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
+    // projects in folders of one name give their workers one name.
+    heard(reader: number, sender: string) {
       const id = ports.openSlots()
         .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)))
-        .find((each) => nameOfPane(each) === sender && mainsWorker(each));
+        .find((each) => nameOfPane(each) === sender && mainsWorker(each)
+          && (dispatched.get(each)?.dispatcher ?? paneFromId(each).slot) === reader);
       if (id !== undefined) notices.reported(id);
     },
   });

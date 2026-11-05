@@ -56,8 +56,8 @@ export type ChatHost = {
   remembered(projectPath: string, id: string | undefined): void;
   // The worker pane running a conversation now, as a person names it, or null.
   runningInPane(id: string): string | null;
-  // The session read a message another session sent it, by that session's name: a worker's report.
-  heard(sender: string): void;
+  // The session in `slot` read a message another session sent it, by that session's name: a worker's report.
+  heard(slot: number, sender: string): void;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -345,7 +345,7 @@ export function registerChatSessions(
             if (after.reportedFast !== undefined) reportedFast.set(slot, after.reportedFast);
           }
           const sender = peerSender(record.origin);
-          if (sender !== undefined) host.heard(sender);
+          if (sender !== undefined) host.heard(slot, sender);
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
