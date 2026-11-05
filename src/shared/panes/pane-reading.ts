@@ -90,7 +90,9 @@ export function paneIsBusy(pane: PaneReading): boolean {
   return hasAnAgent(pane) || runsAProgram(pane.foreground, pane.shell);
 }
 
-function hasAnAgent(pane: PaneReading): boolean {
+// Whether an agent is in this pane: a worker on a Claude screen, or a pane asked to run one. main asks
+// it too, for the card's own pane, so the ship's pick and main's refusal cannot disagree on a pane.
+export function hasAnAgent(pane: Pick<PaneReading, 'command' | 'screen'>): boolean {
   return pane.screen === true || runsAnAgent(pane.command);
 }
 

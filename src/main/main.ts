@@ -61,6 +61,7 @@ import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from 
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
+  hasAnAgent,
   paneIsBusy,
   programIn,
   runsAnAgent,
@@ -230,7 +231,7 @@ function agentRunsIn(slot: number, pane: number | null): boolean {
   return pane !== null && agentIn(terminalId(slot, pane));
 }
 // A worker on a Claude screen runs no command in its pane, whose shell stays a plain one under it.
-const agentIn = (id: string): boolean => runsAnAgent(terminalCommands.get(id)) || workerScreens.has(id);
+const agentIn = (id: string): boolean => hasAnAgent({ command: terminalCommands.get(id), screen: workerScreens.has(id) });
 
 // What the renderer can see and main cannot: which panes still have an agent working in them. The
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.

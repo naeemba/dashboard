@@ -241,6 +241,14 @@ export function workerSessionStart(worker: ScreenSession): { resume: string } | 
   return worker.resume ? { resume: worker.session } : { sessionId: worker.session };
 }
 
+// The conversation running under a key: a worker screen's own once the session has written it, never
+// main's, which a worker in the project folder shares that folder with; or the page's remembered one.
+// Reading `remembered` for a worker would have /rename on a worker screen rename main's conversation.
+export function liveConversation(worker: ScreenSession | undefined, remembered: string | undefined): string | undefined {
+  if (worker) return worker.resume ? worker.session : undefined;
+  return remembered;
+}
+
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
@@ -455,19 +463,15 @@ export function registerChatSessions(
     return (await running(slot, projectPath)).query.supportedModels();
   });
 
-  // The conversation running under this key: a worker screen's own once the session has written it,
-  // never main's, which a worker in the project folder shares that folder with; or the page's.
-  function liveConversation(slot: number, projectPath: string): string | undefined {
-    const worker = host.worker(slot);
-    return worker ? (worker.resume ? worker.session : undefined) : remembered[projectPath];
-  }
+  const conversationOf = (slot: number, projectPath: string): string | undefined =>
+    liveConversation(host.worker(slot), remembered[projectPath]);
 
   // The conversation on screen. With a cut pending, the page's on screen is not the remembered one, so
   // picking that one in /resume goes through chat:resume and puts it back whole.
   function onScreen(slot: number): string | null {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined || (!host.worker(slot) && rewound.has(projectPath))) return null;
-    return liveConversation(slot, projectPath) ?? null;
+    return conversationOf(slot, projectPath) ?? null;
   }
 
   // The project's earlier conversations, as Claude Code's own /resume lists them for the folder:
@@ -522,7 +526,7 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     const { getSessionMessages, listSessions } = await import('@anthropic-ai/claude-agent-sdk');
-    const live = liveConversation(slot, projectPath);
+    const live = conversationOf(slot, projectPath);
     const found = (await listSessions({ dir: projectPath, includeWorktrees: false, limit: HISTORY_CONVERSATIONS }))
       .filter(({ sessionId }) => sessionId !== live);
     const kept = promptsRead.get(projectPath) ?? new Map<string, PromptsRead>();
@@ -601,7 +605,7 @@ export function registerChatSessions(
   async function conversation(slot: number): Promise<Record<string, unknown>[]> {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
-    const sessionId = liveConversation(slot, projectPath);
+    const sessionId = conversationOf(slot, projectPath);
     if (sessionId === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
     return rewoundTo(await getSessionMessages(sessionId, { dir: projectPath }), host.worker(slot) ? undefined : rewound.get(projectPath));

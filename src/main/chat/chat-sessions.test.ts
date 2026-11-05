@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, inputQueue, liveConversation, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -95,6 +95,20 @@ describe('workerSessionStart', () => {
     const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
     expect(workerSessionStart({ ...worker, resume: false })).toEqual({ sessionId: 'abc' });
     expect(workerSessionStart({ ...worker, resume: true })).toEqual({ resume: 'abc' });
+  });
+});
+
+describe('liveConversation', () => {
+  const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
+
+  it('names a worker its own conversation once written, and never main\'s', () => {
+    expect(liveConversation({ ...worker, resume: true }, 'main')).toBe('abc');
+    expect(liveConversation({ ...worker, resume: false }, 'main')).toBeUndefined();
+  });
+
+  it('names main the remembered conversation', () => {
+    expect(liveConversation(undefined, 'main')).toBe('main');
+    expect(liveConversation(undefined, undefined)).toBeUndefined();
   });
 });
 
