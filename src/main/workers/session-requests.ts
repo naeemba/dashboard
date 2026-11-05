@@ -98,11 +98,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
-  // because a worker run a second time has not finished the second task.
-  const states = new Map<string, WorkerState>();
-  // A done whose Stop hook said the session still waits on something: what, as waitingText says it.
-  // Gone with the next word from the hooks.
-  const pauses = new Map<string, string>();
+  // because a worker run a second time has not finished the second task. `waiting` is a done whose Stop
+  // hook said the session still waits on something: what, as waitingText says it.
+  const states = new Map<string, { state: WorkerState; waiting?: string }>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
@@ -146,8 +144,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const program = ports.busyWith(id);
       return program === null ? 'idle' : `busy ${program}`;
     }
-    const paused = pauses.get(id);
-    return paused === undefined ? states.get(id) ?? 'running' : `paused, ${paused}`;
+    const said = states.get(id);
+    return said?.waiting === undefined ? said?.state ?? 'running' : `paused, ${said.waiting}`;
   }
 
   // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
@@ -199,7 +197,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const { index } = paneFromId(id);
     states.delete(id);
-    pauses.delete(id);
     notices.forget(id);
     const session = ports.newSession(projectPath, directory, card);
     ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card, dispatcherPath);
@@ -216,7 +213,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
     ports.closeWorker(id);
     states.delete(id);
-    pauses.delete(id);
     notices.forget(id);
     dispatchers.delete(id);
     dispatched.delete(id);
@@ -257,10 +253,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const { slot, index } = paneFromId(id);
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];
-      const status = workerStatus(mainsWorker(id), states.get(id), pauses.has(id));
+      const said = states.get(id);
+      const status = workerStatus(mainsWorker(id), said?.state, said?.waiting !== undefined);
       return [{
         id, dispatcher, project: page.name, name: nameOfPane(id),
-        about, status, ...(status === 'paused' && { waiting: pauses.get(id) }),
+        about, status, ...(status === 'paused' && { waiting: said?.waiting }),
       }];
     });
   }
@@ -273,11 +270,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (command.kind === 'notify') {
       const { slot, index } = paneFromId(command.id);
       if (!ports.openPanes(slot).includes(index)) return refused(`${command.id} is not open`);
-      if (command.state === 'running') states.delete(command.id);
-      else states.set(command.id, command.state);
       const { waiting } = command;
-      if (waiting !== undefined && isPaused(waiting)) pauses.set(command.id, waitingText(waiting));
-      else pauses.delete(command.id);
+      if (command.state === 'running') states.delete(command.id);
+      else states.set(command.id, { state: command.state, ...(isPaused(waiting) && { waiting: waitingText(waiting) }) });
       ports.mark(command.id, command.state);
       if (mainsWorker(command.id)) notices.state(command.id, command.state, waiting);
       return answered('');

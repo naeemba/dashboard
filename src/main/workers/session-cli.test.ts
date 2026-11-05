@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outsidePaneRefusal, parseSessionCommand, stopInputArguments } from './session-cli';
+import { outsidePaneRefusal, parseSessionCommand, readsStopInput, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -48,11 +48,10 @@ describe('parseSessionCommand', () => {
   });
 
   it('reads what a done waits on, and refuses it on any other state or spelled any other way', () => {
-    expect(parseSessionCommand(['notify', '2:3', 'done', '--stop-input'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'done', stopInput: true } });
     expect(parseSessionCommand(['notify', '2:3', 'done', '--background', '2', '--scheduled', '0'])).toEqual({
       ok: true, command: { kind: 'notify', id: '2:3', state: 'done', waiting: { background: 2, scheduled: 0 } },
     });
-    expect(parseSessionCommand(['notify', '2:3', 'running', '--stop-input'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['notify', '2:3', 'running', '--background', '0', '--scheduled', '0'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['notify', '2:3', 'done', '--background', '2'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['notify', '2:3', 'done', '--background', 'two', '--scheduled', '0'])).toMatchObject({ ok: false });
   });
@@ -74,6 +73,12 @@ describe('stopInputArguments', () => {
     session_id: '4d756708', hook_event_name: 'Stop', stop_hook_active: false, last_assistant_message: 'started',
     background_tasks: [{ id: 'bsil5xrlv', type: 'shell', status: 'running', description: 'Run sleep 25', command: 'sleep 25' }],
     session_crons: [],
+  });
+
+  it('is read only for a done, the way the Stop hook spells it', () => {
+    expect(readsStopInput(['notify', '2:3', 'done', '--stop-input'])).toBe(true);
+    expect(readsStopInput(['notify', '2:3', 'running', '--stop-input'])).toBe(false);
+    expect(readsStopInput(['notify', '2:3', 'done'])).toBe(false);
   });
 
   it('counts what the session still waits on', () => {

@@ -14,9 +14,10 @@ export type WorkerStatus = 'working' | 'paused' | 'blocked' | 'done' | 'idle';
 // Code's StopHookInput carries both as `background_tasks` and `session_crons`; an older one, neither.
 export type StopWaiting = { background: number; scheduled: number };
 
-// Anything in either is a turn that ends to be woken again, not the worker done.
-export function isPaused(waiting: StopWaiting): boolean {
-  return waiting.background > 0 || waiting.scheduled > 0;
+// Anything in either is a turn that ends to be woken again, not the worker done. A stop that did not
+// say is not a pause.
+export function isPaused(waiting: StopWaiting | undefined): waiting is StopWaiting {
+  return waiting !== undefined && (waiting.background > 0 || waiting.scheduled > 0);
 }
 
 const counted = (count: number, one: string): string => `${count} ${one}${count === 1 ? '' : 's'}`;
@@ -55,11 +56,11 @@ export function workerAbout(prompt: string): string {
 }
 
 // What a worker is doing now. Its agent gone, it is idle whatever its hooks last said: the pane is a
-// shell again. Running, its hooks' last word, a done that waits on something being a pause; none yet
-// is the agent at work.
+// shell again. Running, a pause if its Stop hook said it waits on something, else its hooks' last
+// word; none yet is the agent at work.
 export function workerStatus(agentRunning: boolean, said: WorkerState | undefined, paused = false): WorkerStatus {
   if (!agentRunning) return 'idle';
-  if (said === 'done' && paused) return 'paused';
+  if (paused) return 'paused';
   return said === 'blocked' || said === 'done' ? said : 'working';
 }
 
@@ -71,7 +72,7 @@ export function workerCount(workers: readonly DispatchedWorker[]): string {
     const count = workers.filter((worker) => worker.status === status).length;
     return count === 0 ? [] : [`${count} ${status}`];
   });
-  return `${workers.length} worker${workers.length === 1 ? '' : 's'}: ${counts.join(', ')}`;
+  return `${counted(workers.length, 'worker')}: ${counts.join(', ')}`;
 }
 
 // The popup's rows: the workers matching what is typed, best first, and with nothing typed the states

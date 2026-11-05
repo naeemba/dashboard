@@ -4,6 +4,7 @@
 
 import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
+import { isRecord } from '../../shared/app/is-record';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -11,9 +12,8 @@ export type SessionCommand =
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
-  // `waiting` is what a Stop hook said its session waits on, when it said so. `stopInput` is the hook
-  // asking the command to read that from the hook's input; the app never sees it (session-program.ts).
-  | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; stopInput?: boolean };
+  // `waiting` is what a Stop hook said its session waits on, when it said so.
+  | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting };
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.
@@ -28,7 +28,7 @@ export const SESSION_USAGE = `session — the Dashboard panes of the project you
   session list [--all]
   session send <id> "<text>"
   session release <id>
-  session notify <id> running|blocked|done [--stop-input | --background <n> --scheduled <n>]
+  session notify <id> running|blocked|done [--stop-input]
 
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
@@ -78,15 +78,19 @@ const COUNT = /^\d+$/;
 // still heard: none is a Stop hook that said nothing, which the app gives the grace period.
 function parseNotify(id: string, state: WorkerState, words: readonly string[]): Parsed {
   if (words.length === 0) return { ok: true, command: { kind: 'notify', id, state } };
-  if (state === 'done' && words.length === 1 && words[0] === '--stop-input') {
-    return { ok: true, command: { kind: 'notify', id, state, stopInput: true } };
-  }
   const [backgroundFlag, background, scheduledFlag, scheduled] = words;
   if (state !== 'done' || words.length !== 4 || backgroundFlag !== '--background' || scheduledFlag !== '--scheduled'
     || !COUNT.test(background) || !COUNT.test(scheduled)) {
-    return refuse('session notify <id> done takes --stop-input, or --background <n> --scheduled <n>, and nothing else does');
+    return refuse('session notify takes nothing after its state, except --stop-input after done');
   }
   return { ok: true, command: { kind: 'notify', id, state, waiting: { background: Number(background), scheduled: Number(scheduled) } } };
+}
+
+// `notify <id> done --stop-input` is a Stop hook asking the command to read its input on stdin, which
+// session-program.ts does before parsing: the app is sent the counts, never the flag or the input.
+export function readsStopInput(commandArguments: readonly string[]): boolean {
+  return commandArguments.length === 4 && commandArguments[0] === 'notify' && commandArguments[2] === 'done'
+    && commandArguments[3] === '--stop-input';
 }
 
 // A Stop hook's input, read for what the session still waits on: the arguments the app is sent in
@@ -99,8 +103,8 @@ export function stopInputArguments(input: string): string[] {
   } catch {
     return [];
   }
-  if (typeof parsed !== 'object' || parsed === null) return [];
-  const { background_tasks: background, session_crons: scheduled } = parsed as Record<string, unknown>;
+  if (!isRecord(parsed)) return [];
+  const { background_tasks: background, session_crons: scheduled } = parsed;
   if (!Array.isArray(background) || !Array.isArray(scheduled)) return [];
   return ['--background', String(background.length), '--scheduled', String(scheduled.length)];
 }

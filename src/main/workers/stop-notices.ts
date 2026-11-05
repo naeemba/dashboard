@@ -65,18 +65,17 @@ export function stopNotices(ports: StopNoticePorts, graceMs = STOP_GRACE_MS, set
 
   return {
     state(id, state, waiting) {
+      // Back at work, or a second turn end before the first was noticed, which means the worker
+      // woke and worked in between: either way this one decides again.
+      callOff(id);
       if (state !== 'done') {
-        callOff(id);
         noticed.delete(id);
         stopped.delete(id);
         return;
       }
-      // A second turn end before the first was noticed means the worker woke and worked in between,
-      // so this one decides again.
-      callOff(id);
       // A pause is not the stop a report ends with, so a report heard before it still covers the
       // stop after the work it waits on.
-      if (waiting !== undefined && isPaused(waiting)) {
+      if (isPaused(waiting)) {
         stopped.delete(id);
         return;
       }
