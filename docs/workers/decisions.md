@@ -187,12 +187,28 @@ How it is built, so the chat code does not fork:
   them and brings shells back after a restart is unchanged. `screen-workers.json` in the user data
   holds each screen worker by project and pane number, so a restart opens it again on its conversation.
 
-What blocks making it the default (each its own Backlog card once seen on a real run):
+What the trial run showed (one real Backlog card, b96468cf, run with `--worktree --screen` in a
+throwaway clone on a second instance; it opened draft PR #216, left unmerged):
 
-- The real-card run's list in the pull request: anything there that did not work.
+- Worked: the prompt and folder, Bash, the board command, `/simplify` and `/pr-loop` with their
+  subagents, a background `pnpm test`, plugins' MCP servers, SendMessage to its main, the done report,
+  `pane send` as a prompt, an AskUserQuestion answered from the box with the pane marked blocked until
+  then, the foot's model, mode, context, seven-day limit and `warm 59m`, and a restart: the worker came
+  back as a screen on its conversation and answered from it.
+- Different: the screen skipped the folder-trust question a terminal worker asked in a new folder.
+- Memory after one short turn each: the terminal worker's Claude 205 MB PSS plus 112 MB of MCP
+  servers, the screen's 182 MB plus 86 MB; the screen's share of the renderer was not measured.
+
+What blocks making it the default, each a Backlog card:
+
+- A worker screen's Claude is the app's child, so a restart ends the turn it was in; a terminal
+  worker's keeps running in the pane host.
+- Auto mode refused `gh pr create` on the screen with nobody to ask; it went on only once told the
+  user approved. A terminal worker was not run on the same prompt to compare.
+- The working line once kept counting after the turn ended, and the real card's screen once showed no
+  reply after a `pane send` its transcript had. Neither was reproduced.
+- The task strip was never caught with a row in it, so it is unchecked on a worker screen.
 - A worker screen is not read by the working-panes sweep, so the review sweep counts it working until its
   Stop hook says done rather than by its spinner.
-- No scheduled wakeup reaches the done report beyond the Stop hook's `session_crons` count.
 - A screen started fresh in the project folder (no `--worktree` or `--card`) shares its folder with main;
   its /resume list shows main's conversations.
-
