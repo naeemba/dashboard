@@ -1,4 +1,5 @@
 import { isCollection, isMap, isSeq, LineCounter, parseAllDocuments, type ParsedNode } from 'yaml';
+import type { DataKind } from '../../shared/drawer/drawer';
 import { failureText } from '../../shared/errors/failure';
 import { escapeHtml, highlightCode } from '../chat/chat-markdown';
 
@@ -35,7 +36,8 @@ function foldsOf(text: string, root: ParsedNode | null, lines: LineCounter): Fol
     if (to > header) folds.push({ header, to });
     walk(node);
   };
-  // A fold is added before the folds inside it, so they come out in the doc's order.
+  // A fold is added before the folds inside it, so they come out in the doc's order. A block sequence
+  // item is named by its `-`, which may sit on the line before the item's first key or on the same one.
   const walk = (node: ParsedNode | null): void => {
     if (isMap(node)) {
       for (const pair of node.items) {
@@ -43,7 +45,9 @@ function foldsOf(text: string, root: ParsedNode | null, lines: LineCounter): Fol
         if (isCollection(value)) add(value, (pair.key as ParsedNode | null)?.range[0] ?? value.range[0]);
       }
     } else if (isSeq(node)) {
-      for (const item of node.items as ParsedNode[]) if (isCollection(item)) add(item, item.range[0]);
+      for (const item of node.items as ParsedNode[]) {
+        if (isCollection(item)) add(item, node.flow ? item.range[0] : text.lastIndexOf('-', item.range[0] - 1));
+      }
     }
   };
   // The root itself never folds: folded, it would hide the whole doc behind its first line.
@@ -75,8 +79,13 @@ export function splitLines(html: string): string[] {
 // source and a caret.
 const firstLine = (message: string): string => message.split('\n')[0];
 
-export function dataView(text: string, kind: 'yaml' | 'json'): DataView {
+// Larger than this, in characters, and the doc is shown as written, unhighlighted and with no folds:
+// pretty-printing, parsing and highlighting a few megabytes holds the window for seconds.
+export const FOLD_SIZE_LIMIT = 500_000;
+
+export function dataView(text: string, kind: DataKind): DataView {
   const plain = (failure: string): DataView => ({ lines: text.split('\n').map(escapeHtml), folds: new Map(), failure });
+  if (text.length > FOLD_SIZE_LIMIT) return plain('Too large to fold: shown as written.');
   let shown = text;
   if (kind === 'json') {
     try {
@@ -89,12 +98,14 @@ export function dataView(text: string, kind: 'yaml' | 'json'): DataView {
   const docs = parseAllDocuments(shown, { lineCounter });
   const error = docs.flatMap((doc) => doc.errors)[0];
   if (error !== undefined) return plain(`Not valid YAML: ${firstLine(error.message)}`);
-  const folds = docs.flatMap((doc) => foldsOf(shown, doc.contents as ParsedNode | null, lineCounter));
-  return {
-    lines: splitLines(highlightCode(shown, kind)),
-    folds: new Map(folds.map((fold) => [fold.header, fold])),
-    failure: null,
-  };
+  // Two folds on one line (`- a:` with a mapping under `a`): the outer one, added first, keeps the line.
+  const folds = new Map<number, Fold>();
+  for (const doc of docs) {
+    for (const fold of foldsOf(shown, doc.contents as ParsedNode | null, lineCounter)) {
+      if (!folds.has(fold.header)) folds.set(fold.header, fold);
+    }
+  }
+  return { lines: splitLines(highlightCode(shown, kind)), folds, failure: null };
 }
 
 // The headers of the folds that start closed: all of them in a long doc, none in a short one.

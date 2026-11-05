@@ -2,6 +2,7 @@ import { icon } from '../app/icons';
 import { viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
 import { dataKey, dataStep, dataView, shownLines, startClosed, type DataRow } from './data-folds';
+import type { DataKind } from '../../shared/drawer/drawer';
 import { editRow } from './doc-viewer';
 
 // A YAML or JSON doc, highlighted, on the sheet the markdown viewer uses, with every object and array
@@ -9,13 +10,16 @@ import { editRow } from './doc-viewer';
 // that fold; Enter edits on the first and folds or unfolds on the others, Right and Left unfold and fold,
 // A folds or unfolds them all. A click on a fold line moves the highlight there and folds it, as Enter
 // does (conventions-rule-1). What folds, what is open and what each key does is data-folds.ts's.
-export function dataOverlay(name: string, text: string, kind: 'yaml' | 'json', edit: (() => void) | null): void {
+export function dataOverlay(name: string, text: string, kind: DataKind, edit: (() => void) | null): void {
   const view = dataView(text, kind);
   const hasFolds = view.folds.size > 0;
   let closed: ReadonlySet<number> = startClosed(view);
   let current: DataRow | null = edit === null ? (view.folds.keys().next().value ?? null) : 'edit';
 
-  const keysLine = `${edit === null ? 'Enter folds' : 'Enter edits or folds'} · ↑↓ walk · ←→ fold · A folds all · Escape closes`;
+  // With nothing to fold the fold keys do nothing and the arrows scroll, so the line says only that.
+  const keysLine = hasFolds
+    ? `${edit === null ? 'Enter folds' : 'Enter edits or folds'} · ↑↓ walk · ←→ fold · A folds all · Escape closes`
+    : edit === null ? '↑↓ scroll · Enter or Escape closes' : 'Enter edits · ↑↓ scroll · Escape closes';
   const top = edit === null ? keysRow(keysLine) : editRow(name, keysLine);
   const body = document.createElement('pre');
   body.className = 'data-viewer-text';
@@ -56,7 +60,10 @@ export function dataOverlay(name: string, text: string, kind: 'yaml' | 'json', e
   }
 
   function draw(): void {
-    body.replaceChildren(...shownLines(view, closed).map(lineElement));
+    // Through a fragment, not spread as arguments: a doc of a few hundred thousand lines overflows the stack.
+    const fragment = document.createDocumentFragment();
+    for (const line of shownLines(view, closed)) fragment.append(lineElement(line));
+    body.replaceChildren(fragment);
     for (const header of view.folds.keys()) {
       const built = items.get(header);
       if (built === undefined) continue;

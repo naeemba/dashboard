@@ -6,9 +6,9 @@ import { isManagerPath } from '../../shared/manager/manager';
 import { isInside } from '../panes/shell-directory';
 
 // The doc files the drawer lists, markdown, YAML and JSON (docKind says which), and one of them read
-// for its viewer: a project's docs/ folder, or on the manager's page its roots, the manager's folder and Claude's, which drawer-ipc.ts passes in
-// as `roots` so where the manager's folder lives is said once, in manager-terminals.ts. A project with
-// no docs/ lists none rather than failing.
+// for its viewer: a project's docs/ folder, or on the manager's page its roots, the manager's folder
+// and Claude's, which drawer-ipc.ts passes in as `roots` so where the manager's folder lives is said
+// once, in manager-terminals.ts. A project with no docs/ lists none rather than failing.
 //
 // ~/.claude holds thousands of files (projects/, plugins/, caches), so a root is read a folder at a
 // time, as each is opened, never walked. Each root is named by its folder's name and what is in it by

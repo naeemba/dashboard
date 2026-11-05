@@ -26,6 +26,8 @@ export const SESSION_PAGE_SIZE = 50;
 // shows formatted and foldable. Main refuses a read of anything else, and the viewer picks how to draw
 // a file from the same answer, so the two cannot disagree on what a doc is.
 export type DocKind = 'markdown' | 'yaml' | 'json';
+// The kinds the data viewer draws, highlighted and foldable.
+export type DataKind = Exclude<DocKind, 'markdown'>;
 const DOC_KINDS: Record<string, DocKind> = { '.md': 'markdown', '.yaml': 'yaml', '.yml': 'yaml', '.json': 'json' };
 
 export function docKind(file: string): DocKind | null {

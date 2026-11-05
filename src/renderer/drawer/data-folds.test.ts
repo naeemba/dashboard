@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { docKind } from '../../shared/drawer/drawer';
-import { allToggled, dataKey, dataStep, dataView, enclosingHeader, OPEN_LINE_LIMIT, shownLines, splitLines, startClosed, walkedRows } from './data-folds';
+import { allToggled, dataKey, dataStep, dataView, enclosingHeader, FOLD_SIZE_LIMIT, OPEN_LINE_LIMIT, shownLines, splitLines, startClosed, walkedRows } from './data-folds';
 
 const YAML = [
   '# projects',      // 0
@@ -15,13 +14,6 @@ const YAML = [
   'e: { f: 1 }',     // 9
   '',
 ].join('\n');
-
-describe('docKind', () => {
-  it('names markdown, YAML and JSON by extension, any case, and nothing else', () => {
-    expect(['a/README.md', 'p.YAML', 'p.yml', '.claude/settings.json', 'shot.png', 'Makefile', 'a.md/x'].map(docKind))
-      .toEqual(['markdown', 'yaml', 'yaml', 'json', null, null, null]);
-  });
-});
 
 describe('dataView', () => {
   it('folds every YAML mapping and sequence that spans lines, under the line naming it, never the root', () => {
@@ -49,6 +41,20 @@ describe('dataView', () => {
     expect(json.failure).toMatch(/^Not valid JSON: .*position 11/);
     const yaml = dataView('a: [1,\nb: 2\n', 'yaml');
     expect(yaml.failure).toMatch(/^Not valid YAML: .*at line 2, column 1:$/);
+  });
+
+  it('folds a sequence item under its `-`, the item before the key on the same line', () => {
+    expect([...dataView('x:\n  - a:\n      b: 1\n    c: 2\n  - d\n', 'yaml').folds.values()])
+      .toEqual([{ header: 0, to: 4 }, { header: 1, to: 3 }]);
+    expect([...dataView('x:\n  -\n    a: 1\n    b: 2\n', 'yaml').folds.values()])
+      .toEqual([{ header: 0, to: 3 }, { header: 1, to: 3 }]);
+  });
+
+  it('shows a doc past the size limit as written, with no folds', () => {
+    const view = dataView(`{"a": [${'1,'.repeat(FOLD_SIZE_LIMIT / 2)}1]}`, 'json');
+    expect(view.folds.size).toBe(0);
+    expect(view.lines).toHaveLength(1);
+    expect(view.failure).toMatch(/^Too large to fold/);
   });
 
   it('reads every document of a multi-document YAML file', () => {
