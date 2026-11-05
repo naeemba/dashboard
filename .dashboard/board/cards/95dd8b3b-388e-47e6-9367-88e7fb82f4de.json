@@ -1,11 +1,11 @@
 {
   "id": "95dd8b3b-388e-47e6-9367-88e7fb82f4de",
   "title": "Try worker panes as Claude screens behind pane run --screen",
-  "notes": "Shipped in PR #218: pane run --screen (opt-in) runs a worker as a Claude screen in its pane, done detection from its own Stop hook, restart brings it back on its conversation. Real-card trial on b96468cf opened draft PR #216 (not merged). What did not hold up is four Backlog cards (workers-decision-5).",
+  "notes": "Try running worker panes as Claude screens (the Agent SDK pane) instead of the Claude Code CLI in a terminal. Staged, agreed with the user (2026-11-05): opt-in first, default only after it holds up.\nStage 1, this card: `pane run <id> --screen ...` (and the same for --card/--worktree) opens the worker as a Claude screen in the worker slot: same prompt, same worktree, same permission mode and settings the CLI worker gets, same session-id indexing. Done detection comes from the session itself (the turn's result and its background task state) instead of the Stop hook; the report to main and the workers popup use that. The terminal stays the default; nothing changes for a plain `pane run`.\nWhat must work for a real card (check each on one real card run with --screen and list the results in the PR): permission prompts and answering them, slash-command skills (/pr-loop, /simplify, /work-card) and plugins, background workflows and subagents, SendMessage to main, the task strip, usage and cache status, resuming after an app restart. Anything missing becomes its own Backlog card; do not switch the default in this PR.\nMemory: measure one --screen worker against one CLI worker and put the numbers in the PR. docs/workers decision entry: why opt-in, what blocks the default.\n\nShipped in PR #218: pane run --screen (opt-in) runs a worker as a Claude screen in its pane, done detection from its own Stop hook, restart brings it back on its conversation. Real-card trial on b96468cf opened draft PR #216 (not merged). What did not hold up is four Backlog cards (workers-decision-5).",
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-05T14:52:35.215Z",
-  "updatedAt": "2026-11-05T16:57:24.501Z",
+  "updatedAt": "2026-11-05T17:02:29.341Z",
   "branch": "work-board-card-95dd8b3b-388e-47e6-9367-88e",
   "pullRequest": 218,
   "column": "Done",
