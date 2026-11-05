@@ -726,7 +726,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       if (command === 'link' && selected !== null) {
         const links = [...drawn[selected].element.querySelectorAll('a')].filter((link) => link.checkVisibility());
-        followed = pressNext(links, selected, followed, () => options.onNotice('This entry has no link to follow. A tool call shows its links once unfolded.'));
+        followed = pressNext(links, selected, followed, () => options.onNotice('This entry has no link to follow. A tool call or message shows its links once unfolded.'));
       }
       if (command === 'model') configure({ model: next(MODELS, model) });
       if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });

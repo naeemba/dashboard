@@ -117,7 +117,7 @@ lands on whatever holds the number now. It is drawn in the screen's link colour
 wherever it sits, a message you sent, a tool's output and a /btw answer included. The link key
 (Alt+G) follows the selected entry's first link you can see, a pane link or a
 web one, and the next on each press while that entry stays selected; a link
-inside a folded tool call waits until it is unfolded.
+inside a folded tool call or message waits until it is unfolded.
 
 When a worker this session dispatched finishes its turn, the app tells Claude so
 in the conversation, queued behind whatever it is doing.
