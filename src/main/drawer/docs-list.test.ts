@@ -21,9 +21,13 @@ describe('listDocs', () => {
     writeFileSync(path.join(project, 'docs', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'shot.png'), '');
+    writeFileSync(path.join(project, 'docs', 'board', 'cards.yaml'), '');
+    writeFileSync(path.join(project, 'docs', 'board', 'schema.json'), '');
     expect(await listDocs(project, [], [])).toEqual([
       { path: path.join(project, 'docs', 'README.md'), name: 'README.md' },
       { path: path.join(project, 'docs', 'board', 'README.md'), name: 'board/README.md' },
+      { path: path.join(project, 'docs', 'board', 'cards.yaml'), name: 'board/cards.yaml' },
+      { path: path.join(project, 'docs', 'board', 'schema.json'), name: 'board/schema.json' },
     ]);
   });
 
@@ -38,6 +42,7 @@ describe('listDocs', () => {
     mkdirSync(path.join(home, 'dotfiles', 'rules'), { recursive: true });
     writeFileSync(path.join(home, '.claude', 'CLAUDE.md'), '');
     writeFileSync(path.join(home, '.claude', 'settings.json'), '');
+    writeFileSync(path.join(home, '.claude', '.credentials.json'), '');
     writeFileSync(path.join(home, 'dotfiles', 'rules', 'naming.md'), '');
     writeFileSync(path.join(home, 'Workspace', 'notes.md'), '');
     // A folder linked in from a dotfiles repository is a folder; a broken link is left out.
@@ -54,6 +59,7 @@ describe('listDocs', () => {
       { path: path.join(home, '.claude', 'commands'), name: '.claude/commands', folder: true },
       { path: path.join(home, '.claude', 'rules'), name: '.claude/rules', folder: true },
       { path: path.join(home, '.claude', 'rules', 'naming.md'), name: '.claude/rules/naming.md' },
+      { path: path.join(home, '.claude', 'settings.json'), name: '.claude/settings.json' },
     ]);
   });
 });
@@ -61,8 +67,9 @@ describe('listDocs', () => {
 describe('docScope', () => {
   const ROOTS = ['/h/.dashboard', '/h/.claude'];
 
-  posixPathsOnly('takes only markdown under the docs folder', () => {
+  posixPathsOnly('takes only markdown, YAML and JSON under the docs folder', () => {
     expect(docScope('/p', '/p/docs/board/README.md', [])).toEqual({ root: '/p/docs', images: '/p' });
+    expect(docScope('/p', '/p/docs/board/cards.yml', [])).toEqual({ root: '/p/docs', images: '/p' });
     expect(docScope('/p', '/p/docs/shot.png', [])).toBeNull();
     expect(docScope('/p', '/h/.claude/CLAUDE.md', ROOTS)).toBeNull();
   });
@@ -72,10 +79,11 @@ describe('docScope', () => {
     expect(docScope('/p', '/home/me/.ssh/id_rsa', [])).toBeNull();
   });
 
-  it("on the manager's page takes only markdown under ~/.dashboard and ~/.claude", () => {
+  it("on the manager's page takes only markdown, YAML and JSON under ~/.dashboard and ~/.claude", () => {
     expect(docScope('', '/h/.claude/rules/naming.md', ROOTS)).toEqual({ root: '/h/.claude', images: '/h/.claude' });
     expect(docScope('', '/h/.dashboard/notes.md', ROOTS)).toEqual({ root: '/h/.dashboard', images: '/h/.dashboard' });
-    for (const file of ['/h/.claude/settings.json', '/h/.claude/../.ssh/x.md', '/h/Workspace/a.md', '/p/docs/README.md']) {
+    expect(docScope('', '/h/.claude/settings.json', ROOTS)).toEqual({ root: '/h/.claude', images: '/h/.claude' });
+    for (const file of ['/h/.claude/.credentials.json', '/h/.claude/.credentials', '/h/.claude/../.ssh/x.json', '/h/Workspace/a.md', '/p/docs/README.md']) {
       expect(docScope('', file, ROOTS)).toBeNull();
     }
   });
@@ -107,5 +115,13 @@ describe('readDoc', () => {
     expect(await readDoc(project, path.join(project, 'docs', 'README.md'), []))
       .toEqual({ text: '# Docs ![a](a.png) ![b](gone.png)', images: { 'a.png': `data:image/png;base64,${Buffer.from('png').toString('base64')}` } });
     expect(await readDoc(project, path.join(project, 'secret.md'), [])).toHaveProperty('refused');
+  });
+
+  it('reads a YAML or JSON doc as text, with no images looked for', async () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'docs-read-'));
+    mkdirSync(path.join(project, 'docs'));
+    writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
+    writeFileSync(path.join(project, 'docs', 'cards.yaml'), 'shot: ![a](a.png)\n');
+    expect(await readDoc(project, path.join(project, 'docs', 'cards.yaml'), [])).toEqual({ text: 'shot: ![a](a.png)\n', images: {} });
   });
 });

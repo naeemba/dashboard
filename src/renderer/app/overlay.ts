@@ -103,9 +103,11 @@ let closeViewer: (() => void) | null = null;
 // Something shown on the sheet: Escape or Enter puts it away, and so does the dark margin. A click
 // inside is the shown thing's own, so a long read such as /diff's can be selected and copied; the
 // image, which has nothing to select, closes on its own click. A viewer with a row of its own, the doc
-// viewer's Edit, passes `enter` and Enter does that instead. Returns the close.
+// viewer's Edit, passes `enter` and Enter does that instead. One with keys of its own beyond those,
+// the YAML viewer's folds, passes `keys`, which sees every other key the dialog gets. Returns the close.
 export function viewerOverlay(
-  name: string, shown: HTMLElement, { closed, enter }: { closed?: () => void; enter?: () => void } = {},
+  name: string, shown: HTMLElement,
+  { closed, enter, keys }: { closed?: () => void; enter?: () => void; keys?: (event: KeyboardEvent) => void } = {},
 ): () => void {
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
@@ -122,6 +124,7 @@ export function viewerOverlay(
   const release = holdFocus(dialog);
   dialog.append(shown);
   answerKeys(dialog, (key) => (key === 'Enter' && enter !== undefined ? enter() : close()));
+  if (keys !== undefined) dialog.addEventListener('keydown', keys);
   closeViewer = close;
   dialog.focus();
   return close;

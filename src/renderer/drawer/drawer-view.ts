@@ -2,17 +2,18 @@ import type { DashboardBridge, OpenProjects } from '../../shared/app/bridge';
 import { relativeAge } from '../../shared/app/age';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
-import { SESSION_PAGE_SIZE, type DocEntry, type SessionList } from '../../shared/drawer/drawer';
+import { docKind, SESSION_PAGE_SIZE, type DocEntry, type SessionList } from '../../shared/drawer/drawer';
 import { isProjectPage } from '../../shared/manager/manager';
 import { icon, iconOnlyButton } from '../app/icons';
 import { promptOverlay } from '../app/overlay';
 import type { Page } from '../app/page';
 import { isModified } from '../keys/shortcuts';
+import { dataOverlay } from './data-viewer';
 import { docOverlay } from './doc-viewer';
 import { drawerFollows, drawerKey, drawerRows, sessionDetail, toggledFolders, treeStep, type DrawerRow } from './drawer-rows';
 
 // The drawer on the left of a page: the project's docs as a tree and the Claude sessions the app started
-// for it, or on the manager's page the markdown under ~/.dashboard and ~/.claude and the manager's own.
+// for it, or on the manager's page the docs under ~/.dashboard and ~/.claude and the manager's own.
 // Open, it pushes the page to its right and the panes are measured again; closed it takes no room.
 // It is opened and closed by its button in the title row, beside the tabs, or by its key.
 // A doc opens in the full-screen viewer (doc-viewer.ts), over the drawer, which is still there after.
@@ -273,15 +274,18 @@ export function createDrawer(ports: DrawerPorts): Drawer {
     fold(folder);
   }
 
-  // The doc, read now so it is shown as it is on the disk, in the viewer over the drawer. Escape there
-  // brings the keyboard back to the filter box; Edit puts the drawer away and opens the file in nvim.
-  // The manager's page has no nvim, so its viewer has no Edit.
+  // The doc, read now so it is shown as it is on the disk, in the viewer over the drawer: markdown
+  // rendered, YAML and JSON highlighted and foldable. Escape there brings the keyboard back to the
+  // filter box; Edit puts the drawer away and opens the file in nvim. The manager's page has no nvim,
+  // so its viewer has no Edit.
   function read(page: Page, doc: DocEntry): void {
     ports.bridge.readDoc(page.project.path, doc.path).then(
       (reply) => {
         if ('refused' in reply) return ports.report(reply.refused);
         if (shownFor !== page) return;
         const edit = isProjectPage(page) ? () => { close(); ports.openDoc(page, doc.path); } : null;
+        const kind = docKind(doc.path);
+        if (kind === 'yaml' || kind === 'json') return dataOverlay(doc.name, reply.text, kind, edit);
         docOverlay(doc.name, reply.text, reply.images, edit, (url) => ports.bridge.openExternal(url));
       },
       (error: unknown) => ports.report(`Could not read ${doc.name}: ${failureText(error)}`),
