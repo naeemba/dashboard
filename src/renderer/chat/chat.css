@@ -170,8 +170,19 @@
   color: var(--white);
 }
 
-.chat-text a {
+/* A link in a reply, and a pane link wherever it is drawn: a message you sent and a tool's output are
+   not .chat-text, and there a pane link was the browser's own dark blue, unreadable on the dark page.
+   The shipped theme's --blue clears WCAG AA (4.5:1) for this size on the page, a sent message's raised bubble and a
+   selected entry (4.57), and a tool's black output. No visited colour: a pane link's href is the
+   page's own, so it would mark every pane link visited or none, and pane numbers are reused. */
+.chat-text a,
+.chat-pane-link {
   color: var(--blue);
+}
+
+.chat-text a:hover,
+.chat-pane-link:hover {
+  color: var(--brightBlue);
 }
 
 /* An image in the conversation, a markdown one included, is a thumbnail of a fixed size; a click

@@ -284,9 +284,13 @@ export function copyTarget(entries: ChatEntry[], rest: string): { text: string; 
   return { text, notice: count === 1 ? "Copied Claude's last reply." : `Copied Claude's reply ${count} back.` };
 }
 
-// Which of an entry's blocks the copy key copies: the first, then the next on each press while the
-// same entry stays selected, round to the first again. Null when the entry has none.
-export function nextCopyBlock(previous: { entry: number; block: number } | null, entry: number, count: number): number | null {
+// Where the copy key or the link key last landed: which entry, and which of its blocks or links.
+export type Walked = { entry: number; place: number };
+
+// Which of an entry's blocks the copy key copies, or which of its links the link key follows: the
+// first, then the next on each press while the same entry stays selected, round to the first again.
+// Null when the entry has none.
+export function nextInEntry(previous: Walked | null, entry: number, count: number): number | null {
   if (count === 0) return null;
-  return previous?.entry === entry ? (previous.block + 1) % count : 0;
+  return previous?.entry === entry ? (previous.place + 1) % count : 0;
 }

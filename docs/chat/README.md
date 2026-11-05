@@ -113,7 +113,11 @@ conversation, unfolding to a summary of it.
 A pane named in the conversation — what pane run printed, a worker's report — is
 a link: a click lands on that pane, on its own project's page, or says the pane
 is not open; numbers are reused, so a link to a pane closed and opened again
-lands on whatever holds the number now.
+lands on whatever holds the number now. It is drawn in the screen's link colour
+wherever it sits, a message you sent and a tool's output included. The link key
+(Alt+G) follows the selected entry's first link you can see, a pane link or a
+web one, and the next on each press while that entry stays selected; a link
+inside a folded tool call waits until it is unfolded.
 
 When a worker this session dispatched finishes its turn, the app tells Claude so
 in the conversation, queued behind whatever it is doing.
@@ -176,7 +180,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-screen-dispatch.ts`, `chat-attachments.ts`,
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
-  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
+  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`, `chat-walk.ts`,
   `chat-context.ts`, `chat-context-view.ts`, `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
   `src/shared/usage/cache-warmth.ts`); the popup it opens is `src/renderer/app/anchored-popup.ts`
   with `popup-placement.ts`
@@ -198,7 +202,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
 - Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
-- Given main ran `pane run`, when its output or a reply names `dashboard://pane/<slot>:<index>`, then it is drawn as a `pane <id>` link; a click lands on that pane on its own project's page, and on a pane no longer open says so and goes nowhere. Pane numbers are reused, so a link to a pane closed and opened again lands on whatever holds that number now.
+- Given main ran `pane run`, when its output or a reply names `dashboard://pane/<slot>:<index>`, then it is drawn as a `pane <id>` link in the screen's link colour, in a reply, a message you sent or a tool's output alike; a click, or Alt+G on its selected entry, lands on that pane on its own project's page, and on a pane no longer open says so and goes nowhere. Pane numbers are reused, so a link to a pane closed and opened again lands on whatever holds that number now.
 - Given Claude has answered, when the foot is drawn, then beside the meters it says `warm 42m` in green, an hour or five minutes from the last reply that wrote or read the prompt cache by the tier that reply's session last wrote; yellow under five minutes, seconds in the last minute, `cold` once expired. It counts down while the screen is on view and stops at the first tick that finds it off view, until it is shown again; a worker's row in the workers popup says the same of its own session (chat-decision-12).
 - Given main has workers open, when the foot is drawn, then between what Claude is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a click on it or Alt+W opens a list of them (the manager's across every project) that updates while open, the arrows walk it, Enter lands on the pane and Escape closes it.
 - Given a turn has been measured, when you click the context meter, press Alt+U or send `/context`, then a popup opens just above the meter, lined up with its right edge, listing each part of the window (system prompt, tools, memory files, skills, messages, free space and the rest) with its tokens, share and a bar in its colour, then the memory files and the MCP tools biggest first, five each and an `N more` row; deferred tool schemas are left out. Its heading says when the numbers were measured, it follows a new measure while open, the arrows walk its rows and Escape puts the keyboard back in the box (chat-decision-10). Before any measure it says so instead of opening.

@@ -4,7 +4,8 @@ import type { ChatCommand } from '../../shared/keys/actions';
 import type { ChatContent, DashboardBridge, ChatPreferences } from '../../shared/app/bridge';
 import { createAskPanel } from './chat-ask-view';
 import { createAttachments } from './chat-attachments';
-import { completion, footEffort, nextCopyBlock, screenCommand, tabFill, type ChosenEffort, type CommandRow } from '../../shared/chat/chat-commands';
+import { completion, footEffort, screenCommand, tabFill, type ChosenEffort, type CommandRow, type Walked } from '../../shared/chat/chat-commands';
+import { pressNext } from './chat-walk';
 import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from '../../shared/chat/chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
@@ -123,8 +124,10 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let transcript: Transcript = EMPTY_TRANSCRIPT;
   let drawn: DrawnEntry[] = [];
   let selected: number | null = null;
-  // The block the copy key copied last, so the next press on the same entry copies the one after it.
-  let copied: { entry: number; block: number } | null = null;
+  // The block the copy key copied and the link the link key followed last, so the next press on the
+  // same entry takes the one after it.
+  let copied: Walked | null = null;
+  let followed: Walked | null = null;
   let asks: PermissionAsk[] = [];
   let model: string | null = null;
   let effort: ChosenEffort;
@@ -507,8 +510,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   }
 
   function select(index: number | null): void {
-    // Only a move resets the copy walk: the copy key's own click bubbles here and selects the same entry.
-    if (index !== selected) copied = null;
+    // Only a move resets the walks: the copy and link keys' own clicks bubble here and select the same entry.
+    if (index !== selected) copied = followed = null;
     drawn[selected ?? -1]?.element.classList.remove('selected');
     selected = index === null || drawn.length === 0 ? null : clampIndex(index, drawn.length - 1);
     if (selected === null) return;
@@ -716,13 +719,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       // The same button a click on the block presses, so the tick shows which block was copied.
       if (command === 'copy' && selected !== null) {
-        const buttons = drawn[selected].element.querySelectorAll<HTMLButtonElement>('.chat-copy');
-        const block = nextCopyBlock(copied, selected, buttons.length);
-        if (block === null) options.onNotice('This entry has no block to copy. A tool call or message shows its blocks once unfolded.');
-        else {
-          buttons[block].click();
-          copied = { entry: selected, block };
-        }
+        const buttons = [...drawn[selected].element.querySelectorAll<HTMLElement>('.chat-copy')];
+        copied = pressNext(buttons, selected, copied, () => options.onNotice('This entry has no block to copy. A tool call or message shows its blocks once unfolded.'));
+      }
+      // Only a link you can see: one inside a folded tool call would open with nothing on screen saying which.
+      if (command === 'link' && selected !== null) {
+        const links = [...drawn[selected].element.querySelectorAll('a')].filter((link) => link.checkVisibility());
+        followed = pressNext(links, selected, followed, () => options.onNotice('This entry has no link to follow. A tool call shows its links once unfolded.'));
       }
       if (command === 'model') configure({ model: next(MODELS, model) });
       if (command === 'permission-mode') configure({ permissionMode: next(MODES, mode) });
