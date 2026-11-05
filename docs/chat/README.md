@@ -108,9 +108,8 @@ closes the list.
 While Claude works, a line over the box says whether it is thinking, for how
 long and how many tokens have come down, a tool's input included: an estimate
 while a message streams, its real count once it ends (chat-decision-13). Its
-answer flows in a few
-characters at a time. What it thought is folded to a Thinking line in the
-conversation, unfolding to a summary of it.
+answer flows in a few characters at a time. What it thought is folded to a
+Thinking line in the conversation, unfolding to a summary of it.
 
 A pane named in the conversation — what pane run printed, a worker's report — is
 a link: a click lands on that pane, on its own project's page, or says the pane

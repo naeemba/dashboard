@@ -102,10 +102,12 @@ export type Transcript = {
   // The Claude Code version the session runs, for the status line.
   version: string | null;
   // The working line's token count (turnTokens). `output` is the real output tokens of the running
-  // turn's finished messages, as each message's usage says; `streamed` is what the message in flight
-  // has streamed so far, text, thinking and tool input alike, in characters. And whether the block
-  // streaming now is thinking.
+  // turn's finished messages, as each message's usage says; `reported` is the last usage the message
+  // in flight sent, folded into `output` when the next message starts; `streamed` is what the message
+  // in flight has streamed so far, text, thinking and tool input alike, in characters. And whether the
+  // block streaming now is thinking.
   output: number;
+  reported: number;
   streamed: number;
   thinking: boolean;
   // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
@@ -127,7 +129,7 @@ export type Transcript = {
 };
 
 // A turn's count before anything has come down.
-const UNCOUNTED = { output: 0, streamed: 0, thinking: false } as const;
+const UNCOUNTED = { output: 0, reported: 0, streamed: 0, thinking: false } as const;
 
 export const EMPTY_TRANSCRIPT: Transcript = {
   entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
@@ -142,14 +144,14 @@ const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_d
 // The running turn's output so far: the finished messages' real count, and the one in flight taken as
 // four characters a token, the estimate Claude Code shows until a message's usage arrives.
 export function turnTokens(transcript: Transcript): number {
-  return transcript.output + Math.round(transcript.streamed / 4);
+  return transcript.output + transcript.reported + Math.round(transcript.streamed / 4);
 }
 
-// A message's usage, in its closing message_delta, is cumulative for that message, so it replaces the
-// estimate of what the message streamed.
+// A message's usage, in each of its message_deltas, is cumulative for that message, so it replaces the
+// estimate of what the message streamed and any usage the message sent before.
 function finished(transcript: Transcript, usage: unknown): Transcript {
   if (!isRecord(usage) || typeof usage.output_tokens !== 'number') return transcript;
-  return { ...transcript, output: transcript.output + usage.output_tokens, streamed: 0 };
+  return { ...transcript, reported: usage.output_tokens, streamed: 0 };
 }
 
 const text = stringOrEmpty;
@@ -241,7 +243,9 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
   if (!isRecord(event)) return transcript;
   if (event.type === 'content_block_start') {
     const block = isRecord(event.content_block) ? event.content_block : {};
-    return { ...transcript, live: '', thinking: block.type === 'thinking' || block.type === 'redacted_thinking' };
+    // A block starts only after the last message's deltas, so its usage is final and joins the turn's.
+    const output = transcript.output + transcript.reported;
+    return { ...transcript, live: '', output, reported: 0, thinking: block.type === 'thinking' || block.type === 'redacted_thinking' };
   }
   if (event.type === 'message_delta') return finished(transcript, event.usage);
   const delta = event.delta;

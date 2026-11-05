@@ -10,9 +10,8 @@ const fold = (messages: Record<string, unknown>[], start: Transcript = EMPTY_TRA
   messages.reduce(applyMessage, start);
 
 const assistant = (content: unknown[]) => ({ type: 'assistant', parent_tool_use_id: null, message: { content } });
-const delta = (text: string) => ({
-  type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_delta', delta: { type: 'text_delta', text } },
-});
+const streamEvent = (event: Record<string, unknown>) => ({ type: 'stream_event', parent_tool_use_id: null, event });
+const delta = (text: string) => streamEvent({ type: 'content_block_delta', delta: { type: 'text_delta', text } });
 
 describe('applyMessage', () => {
   it('streams text into the live line, then swaps it for the finished block', () => {
@@ -315,8 +314,8 @@ describe('conversationChange', () => {
 });
 
 describe('the working line\'s count', () => {
-  const block = (type: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_start', content_block: { type } } });
-  const thought = (thinking: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking } } });
+  const block = (type: string) => streamEvent({ type: 'content_block_start', content_block: { type } });
+  const thought = (thinking: string) => streamEvent({ type: 'content_block_delta', delta: { type: 'thinking_delta', thinking } });
 
   it('counts thinking and text as they stream, says which is streaming, and starts over with the next turn', () => {
     const streaming = fold([block('thinking'), thought('abcd'), block('text'), delta('hello')], prompted('hi'));
@@ -326,7 +325,6 @@ describe('the working line\'s count', () => {
     expect([ended.streamed, ended.thinking, ended.started]).toEqual([0, false, null]);
   });
 
-  const streamEvent = (event: Record<string, unknown>) => ({ type: 'stream_event', parent_tool_use_id: null, event });
   const input = (partial_json: string) => streamEvent({ type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json } });
   const usage = (output_tokens: number) => streamEvent({ type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: { output_tokens } });
 
@@ -338,10 +336,14 @@ describe('the working line\'s count', () => {
   it('takes each message\'s real output tokens once its usage arrives, and adds them up over the turn', () => {
     const first = fold([delta('abcdefgh'), usage(40)], prompted('hi'));
     expect(turnTokens(first)).toBe(40);
-    const second = fold([input('abcd'), input('efgh')], first);
+    const second = fold([block('tool_use'), input('abcd'), input('efgh')], first);
     expect(turnTokens(second)).toBe(42);
     expect(turnTokens(fold([usage(25)], second))).toBe(65);
     expect(turnTokens(applyMessage(second, { type: 'result', subtype: 'success' }))).toBe(0);
+  });
+
+  it('takes a message\'s last usage when it sends more than one, as each is cumulative', () => {
+    expect(turnTokens(fold([delta('abcdefgh'), usage(300), usage(735)], prompted('hi')))).toBe(735);
   });
 
   it('keeps the estimate when a message\'s usage says no count', () => {
@@ -353,12 +355,13 @@ describe('the working line\'s count', () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(1_000);
-      const first = fold([delta('abcd')], prompted('hi'));
+      const first = fold([delta('abcd'), usage(40), block('text'), delta('abcd')], prompted('hi'));
       vi.setSystemTime(5_000);
       const waiting = applyEvent(first, { kind: 'prompt', content: [{ type: 'text', text: 'and this' }], id: 'q' });
       const joined = applyMessage(waiting, { type: 'command_lifecycle', command_uuid: 'q', state: 'started' });
       expect(joined.queued).toEqual([]);
-      expect([first.started, fold([delta('ef')], joined).streamed, joined.started]).toEqual([1_000, 6, 1_000]);
+      const after = fold([delta('ef')], joined);
+      expect([first.started, after.streamed, turnTokens(after), joined.started]).toEqual([1_000, 6, 42, 1_000]);
     } finally {
       vi.useRealTimers();
     }
