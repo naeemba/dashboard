@@ -101,9 +101,11 @@ export type Transcript = {
   model: string | null;
   // The Claude Code version the session runs, for the status line.
   version: string | null;
-  // What the running turn has streamed so far, text and thinking alike, in characters: the
-  // working line's token count, as Claude Code's estimates it while a response streams. And whether
-  // the block streaming now is thinking.
+  // The working line's token count (turnTokens). `output` is the real output tokens of the running
+  // turn's finished messages, as each message's usage says; `streamed` is what the message in flight
+  // has streamed so far, text, thinking and tool input alike, in characters. And whether the block
+  // streaming now is thinking.
+  output: number;
   streamed: number;
   thinking: boolean;
   // When the running turn began, for the working line's seconds; null with no turn. Kept here rather
@@ -125,13 +127,28 @@ export type Transcript = {
 };
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, streamed: 0, thinking: false, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
+  entries: [], live: '', busy: false, model: null, version: null, output: 0, streamed: 0, thinking: false, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
 };
 
 // No turn running: nothing streaming, nothing counted.
-const IDLE = { live: '', busy: false, streamed: 0, thinking: false, started: null, hook: null, suggestion: null } as const;
+const IDLE = { live: '', busy: false, output: 0, streamed: 0, thinking: false, started: null, hook: null, suggestion: null } as const;
 
-const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking' };
+// A tool's input streams as JSON: a Write streams the whole file, and Claude Code counts it.
+const STREAMED_DELTAS: Record<string, string> = { text_delta: 'text', thinking_delta: 'thinking', input_json_delta: 'partial_json' };
+
+// The running turn's output so far: the finished messages' real count, and the one in flight taken as
+// four characters a token, the estimate Claude Code shows until a message's usage arrives.
+export function turnTokens(transcript: Transcript): number {
+  return transcript.output + Math.round(transcript.streamed / 4);
+}
+
+// A message's usage, in its closing message_delta, is cumulative for that message, so it replaces the
+// estimate of what the message streamed.
+function finished(transcript: Transcript, usage: unknown): Transcript {
+  const tokens = isRecord(usage) ? usage.output_tokens : undefined;
+  if (typeof tokens !== 'number') return transcript;
+  return { ...transcript, output: transcript.output + tokens, streamed: 0 };
+}
 
 const text = stringOrEmpty;
 
@@ -224,6 +241,7 @@ function streamed(transcript: Transcript, event: unknown): Transcript {
     const block = isRecord(event.content_block) ? event.content_block : {};
     return { ...transcript, live: '', thinking: block.type === 'thinking' || block.type === 'redacted_thinking' };
   }
+  if (event.type === 'message_delta') return finished(transcript, event.usage);
   const delta = event.delta;
   if (event.type !== 'content_block_delta' || !isRecord(delta) || typeof delta.type !== 'string') return transcript;
   const field = STREAMED_DELTAS[delta.type];
@@ -380,7 +398,7 @@ function taken(transcript: Transcript, message: Record<string, unknown>): Transc
 // A prompt taken into a running turn joins it, so its count goes on.
 function joinTurn(transcript: Transcript, content: ChatContent): Transcript {
   const now = Date.now();
-  const fresh = transcript.busy ? {} : { streamed: 0, thinking: false, started: now };
+  const fresh = transcript.busy ? {} : { output: 0, streamed: 0, thinking: false, started: now };
   return { ...user(transcript, content, { at: now }), busy: true, suggestion: null, ...fresh };
 }
 

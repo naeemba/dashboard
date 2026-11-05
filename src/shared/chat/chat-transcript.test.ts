@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, IMAGE_LIMIT_SHOWN, imagesFit, preferencesOf, withEarlier, working, type Transcript,
+  afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, IMAGE_LIMIT_SHOWN, imagesFit, preferencesOf, turnTokens, withEarlier, working, type Transcript,
 } from './chat-transcript';
 import { doneReport } from '../workers/done-report';
 
@@ -324,6 +324,28 @@ describe('the working line\'s count', () => {
     expect(fold([block('thinking')], prompted('hi')).thinking).toBe(true);
     const ended = applyMessage(streaming, { type: 'result', subtype: 'success' });
     expect([ended.streamed, ended.thinking, ended.started]).toEqual([0, false, null]);
+  });
+
+  const input = (partial_json: string) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'content_block_delta', delta: { type: 'input_json_delta', partial_json } } });
+  const usage = (output_tokens: number) => ({ type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_delta', delta: { stop_reason: 'tool_use' }, usage: { output_tokens } } });
+
+  it('counts a tool\'s input as it streams, four characters to a token, without showing it as text', () => {
+    const streaming = fold([block('tool_use'), input('{"file_path":'), input('"/a"}')], prompted('hi'));
+    expect([turnTokens(streaming), streaming.live]).toEqual([5, '']);
+  });
+
+  it('takes each message\'s real output tokens once its usage arrives, and adds them up over the turn', () => {
+    const first = fold([delta('abcdefgh'), usage(40)], prompted('hi'));
+    expect(turnTokens(first)).toBe(40);
+    const second = fold([input('abcd'), input('efgh')], first);
+    expect(turnTokens(second)).toBe(42);
+    expect(turnTokens(fold([usage(25)], second))).toBe(65);
+    expect(turnTokens(applyMessage(second, { type: 'result', subtype: 'success' }))).toBe(0);
+  });
+
+  it('keeps the estimate when a message\'s usage says no count', () => {
+    const streaming = fold([delta('abcdefgh'), { type: 'stream_event', parent_tool_use_id: null, event: { type: 'message_delta', delta: {} } }], prompted('hi'));
+    expect(turnTokens(streaming)).toBe(2);
   });
 
   it('goes on counting, from the same start, when the running turn takes a queued prompt', () => {

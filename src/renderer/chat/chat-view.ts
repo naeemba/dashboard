@@ -21,7 +21,7 @@ import { PANE_LINK } from './chat-pane-links';
 import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
-  afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
+  afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, turnTokens, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from '../../shared/chat/chat-transcript';
 import { promptParts, withdrawable } from './chat-queue';
 import { createQueueStrip } from './chat-queue-view';
@@ -212,7 +212,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
     if (!ticking) ticking = window.setInterval(drawWorking, 1000);
     activity.hidden = false;
-    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), transcript.streamed, transcript.thinking, transcript.hook);
+    activityText.textContent = workingLine(Math.floor((Date.now() - started) / 1000), turnTokens(transcript), transcript.thinking, transcript.hook);
   }
 
   // The entries last drawn. A streamed token leaves them as they were, so the walk below is skipped.
