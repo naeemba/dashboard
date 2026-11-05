@@ -196,15 +196,12 @@ function user(transcript: Transcript, content: unknown, stamp: Stamp): Transcrip
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
     else if (block.type === 'text') {
-      // A slash command's output is the notice it is, not something you said.
-      const printed = localCommandOutput(text(block.text));
+      // A slash command's output, or the app telling main a worker stopped, is the notice it is, not
+      // something you said.
+      const body = text(block.text);
+      const printed = localCommandOutput(body) ?? (isDoneReport(body) ? body : null);
       if (printed !== null) {
         if (printed) entries = [...entries, { kind: 'notice', text: printed }];
-        continue;
-      }
-      // The app telling main a worker stopped is a status line, not something you said.
-      if (isDoneReport(text(block.text))) {
-        entries = [...entries, { kind: 'notice', text: text(block.text) }];
         continue;
       }
       const shell = shellExchange(text(block.text));

@@ -125,8 +125,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     after: ports.after,
     notice(id) {
       if (!mainsWorker(id)) return;
-      const { slot, index } = paneFromId(id);
-      ports.tell(dispatched.get(id)?.dispatcher ?? slot, doneReport(workerSessionName(ports.projectPath(slot) ?? '', index), id));
+      ports.tell(dispatched.get(id)?.dispatcher ?? paneFromId(id).slot, doneReport(nameOfPane(id), id));
     },
   });
 
@@ -172,6 +171,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // The pane's own project, which is where its worker works and whose cards and worktrees it takes.
   const paneProject = (id: string): string | undefined => ports.projectPath(paneFromId(id).slot);
+  // The session name of the worker in the pane, which its reports to main are signed with.
+  const nameOfPane = (id: string): string => workerSessionName(paneProject(id) ?? '', paneFromId(id).index);
 
   async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean): Promise<SessionReply> {
     const refusal = worker(id, slot);
@@ -254,7 +255,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];
       return [{
-        id, dispatcher, project: page.name, name: workerSessionName(ports.projectPath(slot) ?? '', index),
+        id, dispatcher, project: page.name, name: nameOfPane(id),
         about, status: workerStatus(mainsWorker(id), states.get(id)),
       }];
     });
@@ -298,13 +299,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }, {
     workers,
     forget: (id: string) => { dispatched.delete(id); notices.forget(id); },
+    // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     heard(sender: string) {
-      for (const { slot } of ports.openSlots()) {
-        for (const index of ports.openPanes(slot)) {
-          const id = terminalId(slot, index);
-          if (mainsWorker(id) && workerSessionName(ports.projectPath(slot) ?? '', index) === sender) notices.reported(id);
-        }
-      }
+      const id = ports.openSlots()
+        .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)))
+        .find((each) => nameOfPane(each) === sender && mainsWorker(each));
+      if (id !== undefined) notices.reported(id);
     },
   });
 }

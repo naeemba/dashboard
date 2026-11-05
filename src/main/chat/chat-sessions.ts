@@ -344,7 +344,7 @@ export function registerChatSessions(
             preferences.set(slot, after.chosen);
             if (after.reportedFast !== undefined) reportedFast.set(slot, after.reportedFast);
           }
-          const sender = message.type === 'user' ? peerSender(record.origin) : undefined;
+          const sender = peerSender(record.origin);
           if (sender !== undefined) host.heard(sender);
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
