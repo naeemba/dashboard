@@ -170,8 +170,21 @@
   color: var(--white);
 }
 
-.chat-text a {
+/* Every link on the screen, wherever it is drawn: a message you sent, a tool's output and a /btw
+   answer are not .chat-text, and there a link was the browser's own dark blue, unreadable on the page.
+   /btw's sheet hangs off document.body, outside .chat, so its answer is named on its own.
+   The shipped theme's --blue clears WCAG AA (4.5:1) for this size on the page, a sent message's
+   raised bubble and a selected entry (4.57), a tool's black output and the /btw sheet. No visited
+   colour: a pane link's href is the page's own, so it would mark every pane link visited or none, and
+   pane numbers are reused. */
+.chat a,
+.chat-btw-answer a {
   color: var(--blue);
+}
+
+.chat a:hover,
+.chat-btw-answer a:hover {
+  color: var(--brightBlue);
 }
 
 /* An image in the conversation, a markdown one included, is a thumbnail of a fixed size; a click
