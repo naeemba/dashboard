@@ -294,3 +294,17 @@ export function nextInEntry(previous: Walked | null, entry: number, count: numbe
   if (count === 0) return null;
   return previous?.entry === entry ? (previous.place + 1) % count : 0;
 }
+
+// The copy key and the link key press one of the selected entry's targets, a copy button or a link,
+// as a click would, so the screen's own click handling decides what happens: the copy button ticks,
+// a pane link lands on its pane, a web link opens in the browser. Says `none` and keeps the walk where
+// it was when the entry has nothing to press.
+export function pressNext(targets: { click(): void }[], entry: number, previous: Walked | null, none: () => void): Walked | null {
+  const place = nextInEntry(previous, entry, targets.length);
+  if (place === null) {
+    none();
+    return previous;
+  }
+  targets[place].click();
+  return { entry, place };
+}

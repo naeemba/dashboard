@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { asksUltrathink, commandMenu, copyCount, copyTarget, replyText, effortRows, footEffort, namedEffort, namedFast, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextInEntry, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import { describe, expect, it, vi } from 'vitest';
+import { asksUltrathink, commandMenu, copyCount, copyTarget, replyText, effortRows, footEffort, namedEffort, namedFast, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextInEntry, pressNext, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
 import type { ChatEntry } from './chat-transcript';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
@@ -236,6 +236,22 @@ describe('nextInEntry', () => {
 
   it('has nothing to press in an entry with no block or link', () => {
     expect(nextInEntry(null, 3, 0)).toBeNull();
+  });
+});
+
+describe('pressNext', () => {
+  it('presses the next target on the same entry and says where it landed', () => {
+    const [first, second] = [{ click: vi.fn() }, { click: vi.fn() }];
+    expect(pressNext([first, second], 4, { entry: 4, place: 0 }, vi.fn())).toEqual({ entry: 4, place: 1 });
+    expect(second.click).toHaveBeenCalledOnce();
+    expect(first.click).not.toHaveBeenCalled();
+  });
+
+  it('says so and keeps the walk when the entry has nothing to press', () => {
+    const none = vi.fn();
+    const previous = { entry: 4, place: 1 };
+    expect(pressNext([], 4, previous, none)).toBe(previous);
+    expect(none).toHaveBeenCalledOnce();
   });
 });
 
