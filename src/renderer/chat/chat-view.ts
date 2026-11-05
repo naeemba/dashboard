@@ -136,7 +136,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let fast = false;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
-  const measures = createMeasures(bridge, slot, options.projectPath, drawFoot, options.onNotice);
+  const measures = createMeasures(bridge, slot, options.projectPath, drawFoot, options.onNotice, options.onError);
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
@@ -185,7 +185,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (key === drawnFoot && measured === drawnMeasure) return;
     drawnFoot = key;
     drawnMeasure = measured;
-    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, cache, transcript.version, workers));
+    foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, cache, transcript.version, workers, measures.button));
   }
   let workers = '';
   followWorkers(bridge, slot, (list) => {
@@ -689,6 +689,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     runCommand(command) {
       if (command === 'workers') openWorkers();
       if (command === 'context') showContext();
+      if (command === 'refresh-usage') measures.refresh();
       if (command === 'select-up') select(selected === null ? drawn.length - 1 : selected - 1);
       if (command === 'select-down') select(selected === null ? null : selected + 1);
       if (command === 'unfold') {

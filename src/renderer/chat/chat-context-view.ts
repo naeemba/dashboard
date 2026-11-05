@@ -8,16 +8,21 @@ import { anchoredPopup, type PopupRow, type PopupSection } from '../app/anchored
 import { docOverlay } from '../drawer/doc-viewer';
 import { piece } from './chat-foot-view';
 import { firstShow } from './chat-first-show';
+import { createMeasureRefresh } from './chat-measure-refresh';
+import { iconOnlyButton } from '../app/icons';
 
 // The Claude screen's measure of its session, and the context popup that breaks it down. The view
-// asks for a measure when the screen is first shown, a turn ends or a model is picked; the latest one asked
-// for is the one kept, the foot draws it, and an open popup reads it again when it lands. How the
-// rows are shaped, and what each opens a level down, is chat-context.ts's and chat-context-levels.ts's;
-// this only asks main and draws.
+// asks for a measure when the screen is first shown, a turn ends, a model is picked or the refresh key
+// is pressed; the latest one asked for is the one kept, the foot draws it, and an open popup reads it
+// again when it lands. How the rows are shaped, and what each opens a level down, is chat-context.ts's
+// and chat-context-levels.ts's; this only asks main and draws.
 
 export type Measures = {
   latest(): ChatMeasure | null;
   take(): void;
+  // The refresh key and the button the foot draws after the meters: measure now (chat-measure-refresh.ts).
+  refresh(): void;
+  button: HTMLButtonElement;
   // The screen came into view: the first time in a conversation it measures with `start`, which starts
   // the page's session. Only once, so a session that fails to start waits for a prompt, not a visit.
   shown(): void;
@@ -58,24 +63,40 @@ function heading(measure: ChatMeasure, title: string | null): string {
   return title === null ? top : `${title} · Escape goes back`;
 }
 
-export function createMeasures(bridge: DashboardBridge, slot: number, projectPath: string, drawn: () => void, say: (message: string) => void): Measures {
+export function createMeasures(
+  bridge: DashboardBridge, slot: number, projectPath: string, drawn: () => void, say: (message: string) => void,
+  warn: (message: string) => void,
+): Measures {
   let measured: ChatMeasure | null = null;
   let asked = 0;
   const firstShown = firstShow();
   // The open popup's way to read the measure again; one popup is up at a time.
   let redraw: (() => void) | undefined;
 
-  // Shown, a turn ending and a model picked each measure, and the answers can come back out of order:
-  // only the latest one asked is kept.
-  function take(start = false): void {
+  // Shown, a turn ending, a model picked and a refresh each measure, and the answers can come back out
+  // of order: only the latest one asked is kept.
+  function take(start = false): Promise<ChatMeasure | null> {
     const ask = ++asked;
-    bridge.chatMeasure(slot, start).then((reading) => {
-      if (ask !== asked) return;
-      if (reading !== null) measured = reading;
+    return bridge.chatMeasure(slot, start).then((reading) => {
+      if (ask !== asked) return reading;
+      if (reading !== null) {
+        measured = reading;
+        usage.landed();
+      }
       drawn();
       redraw?.();
-    }, () => undefined);
+      return reading;
+    });
   }
+  const quietly = (start = false): void => void take(start).catch(() => undefined);
+
+  const button = iconOnlyButton('chat-foot-refresh', 'refresh', 'Refresh the usage meters', () => usage.refresh());
+  // A click leaves the keyboard in the box rather than on the button.
+  button.addEventListener('mousedown', (event) => event.preventDefault());
+  const usage = createMeasureRefresh(
+    take, (busy) => button.classList.toggle('busy', busy), say,
+    (error) => warn(`Usage not refreshed: ${failureText(error)}`),
+  );
 
   // A memory file in the drawer's doc viewer, which main reads because the measure named it; resolves
   // once the viewer is put away, or at once when main refuses or fails.
@@ -93,9 +114,11 @@ export function createMeasures(bridge: DashboardBridge, slot: number, projectPat
 
   return {
     latest: () => measured,
-    take: () => take(),
+    take: () => quietly(),
+    refresh: usage.refresh,
+    button,
     shown() {
-      if (firstShown.take()) take(true);
+      if (firstShown.take()) quietly(true);
     },
     forget() {
       measured = null;
