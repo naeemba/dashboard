@@ -111,6 +111,9 @@ refused as a value (errors-rule-2). The check is on the path as given, not on
 where a link points, because `~/.claude` files are often links into a dotfiles
 repository.
 
+The one other file `docs:read` takes is a memory file the context popup opens, and only one the
+latest context measure named (chat-decision-14).
+
 The manager has no nvim, so its viewer has no Edit row. Its sessions are the
 index's rows for `~/.dashboard`, where its main and workers run.
 

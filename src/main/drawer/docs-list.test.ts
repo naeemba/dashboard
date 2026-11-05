@@ -124,4 +124,14 @@ describe('readDoc', () => {
     writeFileSync(path.join(project, 'docs', 'cards.yaml'), 'shot: ![a](a.png)\n');
     expect(await readDoc(project, path.join(project, 'docs', 'cards.yaml'), [])).toEqual({ text: 'shot: ![a](a.png)\n', images: {} });
   });
+
+  it('reads a memory file the measure named, and only that one, with no images', async () => {
+    const home = mkdtempSync(path.join(tmpdir(), 'docs-memory-'));
+    writeFileSync(path.join(home, 'CLAUDE.md'), '# Rules ![a](a.png)');
+    writeFileSync(path.join(home, 'a.png'), 'png');
+    writeFileSync(path.join(home, 'other.md'), 'no');
+    const memory = new Set([path.join(home, 'CLAUDE.md')]);
+    expect(await readDoc('/p', path.join(home, 'CLAUDE.md'), [], memory)).toEqual({ text: '# Rules ![a](a.png)', images: {} });
+    expect(await readDoc('/p', path.join(home, 'other.md'), [], memory)).toHaveProperty('refused');
+  });
 });

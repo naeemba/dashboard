@@ -134,11 +134,16 @@ export function imageUrls(text: string, file: string, imageRoot: string, images:
   }));
 }
 
-export async function readDoc(projectPath: string, file: string, roots: readonly string[]): Promise<DocReply> {
+// A memory file the session's measure named (measured-memory.ts) is read too, wherever it is, as text
+// with no images: only the file itself was named, not its folder.
+export async function readDoc(
+  projectPath: string, file: string, roots: readonly string[], memory: ReadonlySet<string> = new Set(),
+): Promise<DocReply> {
+  if (memory.has(file)) return { text: await readFile(file, 'utf8'), images: {} };
   const scope = docScope(projectPath, file, roots);
   if (scope === null) {
     const where = isManagerPath(projectPath) ? '~/.dashboard or ~/.claude' : 'the project\'s docs/ folder';
-    return { refused: `Only a markdown, YAML or JSON file under ${where} opens here` };
+    return { refused: `Only a markdown, YAML or JSON file under ${where}, or a memory file the context measure named, opens here` };
   }
   const text = await readFile(file, 'utf8');
   // Only markdown shows images; a YAML or JSON file is drawn as text.

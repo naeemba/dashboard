@@ -27,6 +27,7 @@ import { failureText } from '../../shared/errors/failure';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
 import { unpacked } from '../app/unpacked';
+import { nameMemoryFiles } from '../drawer/measured-memory';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started the first time the page's Claude screen is shown (its measure asks), on the
@@ -555,6 +556,7 @@ export function registerChatSessions(
       session.query.supportedModels(),
       session.query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }).catch(() => null),
     ]);
+    nameMemoryFiles(projectPath, context.memoryFiles);
     return measureOf(context, models, usage, Date.now());
   });
 
