@@ -271,7 +271,8 @@ export type DashboardBridge = {
   // The answer to an ask, by the id it arrived with.
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;
-  // What the status line shows; null before the session has started.
+  // What the status line shows; null when there is no session to measure, and for no other reason
+  // (the refresh key prints that as NOT_RUNNING, chat-measure-refresh.ts).
   // `start` starts the page's session when it is not running; without it a page with none reads null.
   chatMeasure(slot: number, start?: boolean): Promise<ChatMeasure | null>;
   // What a screen opening the page catches up on: the conversation it would resume, the questions

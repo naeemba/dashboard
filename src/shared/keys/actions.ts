@@ -74,7 +74,7 @@ export type InkCommand = 'pen' | 'eraser' | 'color' | 'width' | 'undo' | 'clear'
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context' | 'refresh-usage';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -701,6 +701,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-context', description: 'Show what fills the context window, from the context meter',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'context' }, mac: 'Alt+U', other: 'Alt+U',
+  },
+  // Shift on the context key: the meters it opens from, read again now rather than after the next turn.
+  {
+    name: 'claude-refresh-usage', description: 'Read the context and plan usage meters again now',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'refresh-usage' }, mac: 'Alt+Shift+U', other: 'Alt+Shift+U',
   },
   // Ctrl+G, as in Claude Code, which opens the prompt in $EDITOR. Here the editor is the page's nvim.
   {

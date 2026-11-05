@@ -477,6 +477,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* After the meters, the button that reads them again; it turns while the read runs. */
+.chat-foot-refresh {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  background: none;
+  cursor: pointer;
+}
+.chat-foot-refresh:hover,
+.chat-foot-refresh:focus-visible { color: var(--white); }
+.chat-foot-refresh.busy { cursor: default; }
+.chat-foot-refresh .icon svg {
+  width: 12px;
+  height: 12px;
+}
+.chat-foot-refresh.busy svg { animation: chat-spin 1s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-foot-refresh.busy svg { animation: none; opacity: 0.5; }
+}
+
 .chat-foot-cache {
   color: var(--tone);
   font-variant-numeric: tabular-nums;

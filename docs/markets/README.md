@@ -11,7 +11,7 @@ four.
 Folders: `src/main/markets/`, `src/shared/markets/`, `src/renderer/markets/`.
 
 - `markets.ts`, `markets-fetch.ts`, `markets-view.ts`, `markets.css`
-- `market-refresh.ts` (beside `market-refresh.test.ts`): when one card reads again
+- `market-refresh.ts` (beside `market-refresh.test.ts`, its one-read-at-a-time guard in `src/renderer/app/single-flight.ts`): when one card reads again
 
 ## Scenarios
 
