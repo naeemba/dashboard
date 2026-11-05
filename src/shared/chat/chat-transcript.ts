@@ -126,13 +126,27 @@ export type Transcript = {
   // line's warm or cold (cache-warmth.ts); null until a reply says. A subagent's replies are its own
   // cache, so they are not counted.
   cache: CacheUse | null;
+  // What each of Claude's own messages read and wrote, as its usage says, for the context popup's
+  // largest turns (chat-context-levels.ts). `after` is how many entries there were once the message was
+  // folded in, so a reading belongs to the turn holding the entry before it.
+  readings: Reading[];
 };
+
+// `input` is what the message read, cached or not; `total` adds what it wrote.
+export type Reading = { after: number; input: number; total: number };
+
+function readingOf(usage: unknown, after: number): Reading[] {
+  if (!isRecord(usage) || typeof usage.input_tokens !== 'number') return [];
+  const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+  const input = usage.input_tokens + count(usage.cache_creation_input_tokens) + count(usage.cache_read_input_tokens);
+  return [{ after, input, total: input + count(usage.output_tokens) }];
+}
 
 // A turn's count before anything has come down.
 const UNCOUNTED = { output: 0, reported: 0, streamed: 0, thinking: false } as const;
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null,
+  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], hook: null, suggestion: null, queued: [], cache: null, readings: [],
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -360,7 +374,9 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
     case 'assistant': {
       const stamp = stampOf(message, inner);
-      return { ...assistant(transcript, inner.content, stamp), cache: cacheUseOf(inner.usage, stamp.at, transcript.cache) };
+      const said = assistant(transcript, inner.content, stamp);
+      const readings = [...transcript.readings, ...readingOf(inner.usage, said.entries.length)];
+      return { ...said, cache: cacheUseOf(inner.usage, stamp.at, transcript.cache), readings };
     }
     case 'user': return userMessage(transcript, message);
     case 'stream_event': return streamed(transcript, message.event);
@@ -480,8 +496,9 @@ export function reportedPreferences(message: Record<string, unknown>): ChatPrefe
 // what was read instead of in place of it.
 export function withEarlier(transcript: Transcript, messages: Record<string, unknown>[]): Transcript {
   if (transcript.entries.some((entry) => entry.kind !== 'event' || !entry.verbatim)) return transcript;
-  const read = messages.reduce(applyMessage, { ...transcript, entries: [] });
-  return { ...read, entries: [...read.entries, ...transcript.entries] };
+  const read = messages.reduce(applyMessage, { ...transcript, entries: [], readings: [] });
+  const later = transcript.readings.map((reading) => ({ ...reading, after: reading.after + read.entries.length }));
+  return { ...read, entries: [...read.entries, ...transcript.entries], readings: [...read.readings, ...later] };
 }
 
 // A turn running or a question waiting: what a new conversation is refused under, since the reset
