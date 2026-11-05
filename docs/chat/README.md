@@ -186,7 +186,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
   `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
-  `chat-context.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts`, `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
+  `chat-context.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
   `src/shared/usage/cache-warmth.ts`); the popup it opens is `src/renderer/app/anchored-popup.ts`
   with `popup-placement.ts`
 - Styles: `chat.css`

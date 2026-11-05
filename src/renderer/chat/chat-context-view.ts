@@ -80,18 +80,18 @@ export function createMeasures(
   }
   const quietly = (start = false): void => void take(start).catch(() => undefined);
 
-  const button = iconOnlyButton('chat-foot-refresh', 'refresh', 'Refresh the usage meters', () => refresher.refresh());
+  const button = iconOnlyButton('chat-foot-refresh', 'refresh', 'Refresh the usage meters', () => refresh());
   // A click leaves the keyboard in the box rather than on the button.
   button.addEventListener('mousedown', (event) => event.preventDefault());
-  const refresher = createMeasureRefresh(
-    () => take(), (busy) => button.classList.toggle('busy', busy), say,
+  const refresh = createMeasureRefresh(
+    take, (busy) => button.classList.toggle('busy', busy), say,
     (error) => warn(`Usage not refreshed: ${failureText(error)}`),
   );
 
   return {
     latest: () => measured,
     take: () => quietly(),
-    refresh: () => refresher.refresh(),
+    refresh,
     button,
     shown() {
       if (firstShown.take()) quietly(true);
