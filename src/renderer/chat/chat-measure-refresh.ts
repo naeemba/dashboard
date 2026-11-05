@@ -6,8 +6,8 @@ import { singleFlight } from '../app/single-flight';
 // - A press while a read is running does nothing, and the button spins until it ends (single-flight.ts).
 // - A read that fails, or finds no session running, says so. The meters keep the numbers they had:
 //   only a reading that came back replaces them (chat-context-view.ts). A reading that lands, from this
-//   key or from a turn ending (`landed`), clears what a press put up, and only that: a turn ending
-//   leaves an unrelated message on the bar alone.
+//   key or from a turn ending (`landed`), clears what a press put up and nothing else; a message
+//   written over it before the next reading goes too, since this cannot see who wrote the bar last.
 // - `null` from `chatMeasure` means no session to measure and nothing else (bridge.ts); a new reason
 //   for main to answer null changes that contract and this sentence with it.
 export const NOT_RUNNING = 'Nothing to refresh: the session is not running.';
@@ -30,10 +30,11 @@ export function createMeasureRefresh(
     posted = true;
     fail(error);
   };
+  const landed = (): void => {
+    if (posted) post('');
+  };
   return {
-    refresh: singleFlight(() => read().then((reading) => post(reading === null ? NOT_RUNNING : ''), failed), onBusy),
-    landed() {
-      if (posted) post('');
-    },
+    refresh: singleFlight(() => read().then((reading) => (reading === null ? post(NOT_RUNNING) : landed()), failed), onBusy),
+    landed,
   };
 }
