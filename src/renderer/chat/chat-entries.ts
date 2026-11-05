@@ -291,6 +291,33 @@ export function foldOf(element: HTMLElement): HTMLDetailsElement | null {
   return element.querySelector<HTMLDetailsElement>(':scope > details.chat-folded');
 }
 
+// The entries drawn again where the object at a place is no longer the one drawn there, a fold
+// that was open staying open. `insert` puts a new last entry on the page, and `later` takes an entry
+// whose expensive half is still to fill. The main log and an agent's conversation both draw so.
+export function redrawEntries(
+  drawn: DrawnEntry[], entries: ChatEntry[], selected: number | null,
+  insert: (element: HTMLElement) => void, later: (fresh: DrawnEntry & { fill: () => void }) => void,
+): void {
+  let previousAt: number | undefined;
+  entries.forEach((entry, index) => {
+    const before = previousAt;
+    if ('at' in entry && entry.at !== undefined) previousAt = entry.at;
+    if (drawn[index]?.entry === entry) return;
+    const fresh = drawEntry(entry, before);
+    const old = drawn[index];
+    if (old) {
+      const freshFold = foldOf(fresh.element);
+      if (freshFold && foldOf(old.element)?.open) freshFold.open = true;
+      old.element.replaceWith(fresh.element);
+    } else {
+      insert(fresh.element);
+    }
+    fresh.element.classList.toggle('selected', index === selected);
+    if (fresh.fill) later({ ...fresh, fill: fresh.fill });
+    drawn[index] = fresh;
+  });
+}
+
 // `previousAt` is the time of the last stamped entry above this one, for the date on its stamp.
 export function drawEntry(entry: ChatEntry, previousAt: number | undefined): DrawnEntry {
   if (entry.kind === 'tool') return toolEntry(entry);

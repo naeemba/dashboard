@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge, ChatPreferences } from '../../shared
 import { createAskPanel } from './chat-ask-view';
 import { createAttachments } from './chat-attachments';
 import { completion, footEffort, pressNext, screenCommand, tabFill, type ChosenEffort, type CommandRow, type Walked } from '../../shared/chat/chat-commands';
-import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { foldOf, PDF_TILE, redrawEntries, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from '../../shared/chat/chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
@@ -259,26 +259,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function drawEntries(): void {
     drawnEntries = transcript.entries;
-    let previousAt: number | undefined;
-    transcript.entries.forEach((entry, index) => {
-      const before = previousAt;
-      if ('at' in entry && entry.at !== undefined) previousAt = entry.at;
-      if (drawn[index]?.entry === entry) return;
-      const fresh = drawEntry(entry, before);
-      const old = drawn[index];
-      if (old) {
-        const freshFold = foldOf(fresh.element);
-        if (freshFold && foldOf(old.element)?.open) freshFold.open = true;
-        old.element.replaceWith(fresh.element);
-      } else {
-        log.insertBefore(fresh.element, live);
-      }
-      fresh.element.classList.toggle('selected', index === selected);
-      if (fresh.fill) {
-        unfilled.set(fresh.element, fresh.fill);
-        nearScreen.observe(fresh.element);
-      }
-      drawn[index] = fresh;
+    redrawEntries(drawn, transcript.entries, selected, (element) => log.insertBefore(element, live), (fresh) => {
+      unfilled.set(fresh.element, fresh.fill);
+      nearScreen.observe(fresh.element);
     });
   }
 

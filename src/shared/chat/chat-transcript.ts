@@ -305,7 +305,9 @@ function withTasks(transcript: Transcript, message: Record<string, unknown>): Tr
   const finished = finishedAfter(transcript.finished, transcript.tasks, tasks, message);
   const usage = messageUsage(message);
   const call = text(message.tool_use_id);
-  const entries = usage && call ? withCall(transcript.entries, call, (entry) => ({ ...entry, usage })) : transcript.entries;
+  const same = (entry: ToolEntry) => entry.usage !== undefined && usage !== null
+    && entry.usage.tokens === usage.tokens && entry.usage.tools === usage.tools && entry.usage.seconds === usage.seconds;
+  const entries = usage && call ? withCall(transcript.entries, call, (entry) => (same(entry) ? entry : { ...entry, usage })) : transcript.entries;
   if (tasks === transcript.tasks && finished === transcript.finished && entries === transcript.entries) return transcript;
   return { ...transcript, tasks, finished, entries };
 }

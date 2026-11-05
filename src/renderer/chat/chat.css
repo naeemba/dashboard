@@ -671,15 +671,9 @@
 
 /* One agent's conversation over the screen (chat-agents-view.ts): as wide as the screen's own, and
    scrolled by the keys, since the dialog has the keyboard. */
-.chat-agent {
-  padding-top: 0;
-}
-
 .chat-agent-dialog {
   display: block;
-  align-self: center;
   width: min(92vw, 110ch);
-  max-height: 90vh;
   padding: 0 14px 12px;
   overflow-y: auto;
 }

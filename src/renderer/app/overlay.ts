@@ -114,8 +114,9 @@ export function viewerOverlay(
     closeViewer = null;
     release();
     remove();
-    closed?.();
+    // Focus goes back first, so a `closed` that opens another sheet keeps the keyboard in it.
     previous?.focus();
+    closed?.();
   }
   const { dialog, remove } = openOverlay(name, close);
   // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks

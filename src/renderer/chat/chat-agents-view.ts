@@ -2,7 +2,7 @@ import { agentRows } from '../../shared/chat/chat-agents';
 import type { ChatTask } from '../../shared/chat/chat-tasks';
 import type { ChatEntry, Transcript } from '../../shared/chat/chat-transcript';
 import { clampIndex } from '../../shared/app/clamp-index';
-import { drawEntry, foldOf, type DrawnEntry } from './chat-entries';
+import { foldOf, redrawEntries, type DrawnEntry } from './chat-entries';
 import { PANE_LINK } from './chat-pane-links';
 import type { ChatViewOptions } from './chat-view';
 import { imageOverlay, searchOverlay, viewerOverlay } from '../app/overlay';
@@ -33,7 +33,10 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
       return back();
     }
     void searchOverlay({
-      name: 'chat-agents', placeholder: 'Search agents', rows: (query) => agentRows(transcript().tasks, transcript().finished, query),
+      name: 'chat-agents', placeholder: 'Search agents', rows: (query) => {
+        const now = transcript();
+        return agentRows(now.tasks, now.finished, query);
+      },
       empty: 'No agent matches.', glyph: () => 'claude',
       watch: (changed) => {
         listChanged = changed;
@@ -64,22 +67,15 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
       drawn[selected]?.element.scrollIntoView({ block: 'nearest' });
     }
 
-    // Entries redrawn by whether the object at each place is still the one drawn, as the main log is.
+    // Drawn as the main log is, filled at once: an agent's conversation is short beside the main one.
+    const conversationId = id;
     function draw(): void {
-      const list = transcript().agents[id ?? ''] ?? [];
+      const list = transcript().agents[conversationId] ?? [];
       if (list === drawnList) return;
       const box = log.parentElement;
       const stick = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
       drawnList = list;
-      list.forEach((entry, index) => {
-        if (drawn[index]?.entry === entry) return;
-        const fresh = drawEntry(entry, undefined);
-        fresh.fill?.();
-        fresh.element.classList.toggle('selected', index === selected);
-        if (drawn[index]) drawn[index].element.replaceWith(fresh.element);
-        else log.append(fresh.element);
-        drawn[index] = fresh;
-      });
+      redrawEntries(drawn, list, selected, (element) => log.append(element), (fresh) => fresh.fill());
       if (stick && box) box.scrollTop = box.scrollHeight;
     }
 
@@ -98,14 +94,14 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
 
     drawConversation = draw;
     viewerOverlay('chat-agent', log, {
-      // After the viewer gives focus back to what had it, so the list keeps the keyboard.
       closed: () => {
         drawConversation = null;
         drawn = [];
-        queueMicrotask(show);
+        show();
       },
       enter: () => {
-        const fold = drawn[selected ?? -1] ? foldOf(drawn[selected ?? -1].element) : null;
+        const current = drawn[selected ?? -1];
+        const fold = current ? foldOf(current.element) : null;
         if (fold) fold.open = !fold.open;
       },
       keys: (event) => {

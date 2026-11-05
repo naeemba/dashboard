@@ -52,11 +52,9 @@ export function finishedAfter(finished: FinishedTask[], running: ChatTasks, afte
   const closing = (task: ChatTask): FinishedTask => ({
     ...task, ...(usage ?? {}), summary: summary || task.summary, status: statusOf(message),
   });
-  let next = left.length > 0 ? [...left.map(closing).reverse(), ...finished] : finished;
-  if (message.subtype === 'task_notification' && left.length === 0) {
-    next = next.map((task) => (task.id === message.task_id ? closing(task) : task));
-  }
-  return next.every((task, index) => task === finished[index]) && next.length === finished.length ? finished : next;
+  if (left.length > 0) return [...left.map(closing).reverse(), ...finished];
+  if (message.subtype !== 'task_notification' || !finished.some((task) => task.id === message.task_id)) return finished;
+  return finished.map((task) => (task.id === message.task_id ? closing(task) : task));
 }
 
 export type AgentRow = SearchRow<ChatTask>;
