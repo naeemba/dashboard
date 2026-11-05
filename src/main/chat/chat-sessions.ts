@@ -72,7 +72,7 @@ export type ChatHost = {
 };
 
 // Why /resume is refused on a worker screen, which keeps the conversation the app started it on.
-export const WORKER_KEEPS_ITS_CONVERSATION = 'A worker screen stays on the conversation it was started on.';
+const WORKER_KEEPS_ITS_CONVERSATION = 'A worker screen stays on the conversation it was started on.';
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
 type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };
@@ -317,7 +317,7 @@ export function registerChatSessions(
         // has promptSuggestionEnabled: false.
         promptSuggestions: true,
         pathToClaudeCodeExecutable: executable,
-        systemPrompt: worker ? { type: 'preset', preset: 'claude_code' } : { type: 'preset', preset: 'claude_code', append: mainPrompt(projectPath) },
+        systemPrompt: { type: 'preset', preset: 'claude_code', append: worker ? undefined : mainPrompt(projectPath) },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
           toolName,
           input: toolInput,
@@ -582,9 +582,10 @@ export function registerChatSessions(
   // A worker screen's, once it has one on disk.
   async function conversation(slot: number): Promise<Record<string, unknown>[]> {
     const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) return [];
     const worker = host.worker(slot);
-    const sessionId = worker ? (worker.resume ? worker.session : undefined) : projectPath === undefined ? undefined : remembered[projectPath];
-    if (projectPath === undefined || sessionId === undefined) return [];
+    const sessionId = worker ? (worker.resume ? worker.session : undefined) : remembered[projectPath];
+    if (sessionId === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
     return rewoundTo(await getSessionMessages(sessionId, { dir: projectPath }), rewound.get(projectPath));
   }

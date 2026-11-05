@@ -11,6 +11,7 @@ import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
+import type { ScreenStart } from './screen-workers';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
@@ -20,7 +21,7 @@ import { stopNotices } from './stop-notices';
 // the pane on this conversation (screen-workers.ts), handed the prompt as its first message.
 export type WorkerLaunch =
   | { terminal: string[] }
-  | { screen: { session: string; name: string; prompt: string } };
+  | { screen: ScreenStart };
 
 export type SessionPorts = {
   // The open project a folder is in — its checkout or one of its worktrees — or -1.

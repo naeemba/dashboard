@@ -6,7 +6,7 @@ import { isRecord } from '../../shared/app/is-record';
 import { paneFromId, terminalId } from '../../shared/panes/terminals';
 import { screenKey } from '../../shared/workers/screen-key';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
-import { replaceFile } from '../board/board-store';
+import { replaceFile } from '../app/replace-file';
 import type { ScreenSession } from '../chat/chat-sessions';
 import { stopWaiting } from './session-cli';
 
@@ -26,7 +26,8 @@ type Saved = {
   dispatcherPath: string; cardId: string | null;
 };
 
-type Worker = Saved & { id: string; resume: boolean; done: boolean; hooks: Options['hooks'] };
+// What chat-sessions runs it on, beside what is saved of it and whether its last turn has ended.
+type Worker = ScreenSession & { id: string; saved: Saved; done: boolean };
 
 export type ScreenPorts = {
   file: string;
@@ -63,13 +64,13 @@ export function savedScreens(file: string): Saved[] {
 
 export function screenWorkers(ports: ScreenPorts) {
   const live = new Map<string, Worker>();
+  // The same workers by screen key, which every chat event and request names.
+  const byKey = new Map<number, Worker>();
   // Saved by a run before this launch, until its project opens.
   let waiting = savedScreens(ports.file);
 
   function save(): void {
-    const kept = [...live.values()].map(({ projectPath, index, directory, session, name, dispatcherPath, cardId }) => (
-      { projectPath, index, directory, session, name, dispatcherPath, cardId }
-    ));
+    const kept = [...live.values()].map((worker) => worker.saved);
     try {
       replaceFile(ports.file, JSON.stringify([...kept, ...waiting], null, 2));
     } catch {
@@ -101,10 +102,10 @@ export function screenWorkers(ports: ScreenPorts) {
   }
 
   function add(id: string, saved: Saved, resume: boolean): void {
-    live.set(id, { ...saved, id, resume, done: false, hooks: hooks(id) });
+    const worker = { session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done: false };
+    live.set(id, worker);
+    byKey.set(screenKey(id), worker);
   }
-
-  const byKey = (key: number): Worker | undefined => [...live.values()].find((worker) => screenKey(worker.id) === key);
 
   return {
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string): void {
@@ -124,23 +125,25 @@ export function screenWorkers(ports: ScreenPorts) {
     },
     // Whether the worker is at work, for a sweep that would take its worktree: until its turn ends.
     // Undefined for a pane that is not a worker screen.
-    working: (id: string): boolean | undefined => (live.has(id) ? !live.get(id)?.done : undefined),
-    ids: (): string[] => [...live.keys()],
-    directoryOf: (key: number): string | undefined => byKey(key)?.directory,
-    session(key: number): ScreenSession | undefined {
-      const worker = byKey(key);
-      return worker && { session: worker.session, resume: worker.resume, name: worker.name, hooks: worker.hooks };
+    working(id: string): boolean | undefined {
+      const worker = live.get(id);
+      return worker && !worker.done;
     },
+    ids: (): string[] => [...live.keys()],
+    directoryOf: (key: number): string | undefined => byKey.get(key)?.saved.directory,
+    session: (key: number): ScreenSession | undefined => byKey.get(key),
+    // Called on every event of every session, a streamed token included, so the cheap test goes first.
     observe(key: number, event: ChatEvent): void {
-      const worker = byKey(key);
-      const signal = worker && screenSignal(event);
-      if (!worker || !signal) return;
+      const signal = screenSignal(event);
+      const worker = signal && byKey.get(key);
+      if (!worker) return;
       if (signal === 'started') worker.resume = true;
       else report(worker.id, signal);
     },
     // The pane closed or released: the session goes with it.
     drop(id: string): void {
       if (!live.delete(id)) return;
+      byKey.delete(screenKey(id));
       ports.stop(screenKey(id));
       save();
     },

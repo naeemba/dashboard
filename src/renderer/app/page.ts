@@ -533,21 +533,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
   // session; arriving in it is arriving at the pane.
   function addScreen(pane: Pane, id: string, page: Page, onFocus?: () => void): void {
     const key = screenKey(id);
-    const chat = createChatView({
-      bridge: options.bridge,
-      slot: key,
-      projectName: page.project.name,
-      projectPath: page.project.path,
-      paneId: id,
-      onError: (message) => options.onError(`chat:${key}`, message),
-      onNotice: (message) => options.onNotice(`chat:${key}`, message),
-      onWaiting: options.onChanged,
-      showEditor: () => options.showEditor(page),
-      goToPane(target) {
-        if (panesById.has(target)) options.goToPane(target);
-        else options.onNotice(`chat:${key}`, `Pane ${target} is not open.`);
-      },
-    });
+    const chat = chatFor(page, key, id);
     pane.screen = chat;
     pane.element.classList.add('pane-screen');
     pane.element.append(chat.element);
@@ -558,6 +544,25 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     chatsBySlot.set(key, chat);
     chat.open();
     chat.shown();
+  }
+
+  // A Claude screen of the page under `key`: main's under its slot, a worker's under its screen key.
+  function chatFor(page: Page, key: number, paneId: string): ChatView {
+    return createChatView({
+      bridge: options.bridge,
+      slot: key,
+      projectName: page.project.name,
+      projectPath: page.project.path,
+      paneId,
+      onError: (message) => options.onError(`chat:${key}`, message),
+      onNotice: (message) => options.onNotice(`chat:${key}`, message),
+      onWaiting: options.onChanged,
+      showEditor: () => options.showEditor(page),
+      goToPane(id) {
+        if (panesById.has(id)) options.goToPane(id);
+        else options.onNotice(`chat:${key}`, `Pane ${id} is not open.`);
+      },
+    });
   }
 
   // The keyboard landing on main or a worker: the page remembers where, and the status bar follows.
@@ -666,21 +671,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     page.workers.className = 'workers';
     view.append(page.workers);
     for (const index of open) addPane(page, index);
-    const chat = createChatView({
-      bridge: options.bridge,
-      slot,
-      projectName: page.project.name,
-      projectPath: page.project.path,
-      paneId: terminalId(slot, MAIN_INDEX),
-      onError: (message) => options.onError(`chat:${slot}`, message),
-      onNotice: (message) => options.onNotice(`chat:${slot}`, message),
-      onWaiting: options.onChanged,
-      showEditor: () => options.showEditor(page),
-      goToPane(id) {
-        if (panesById.has(id)) options.goToPane(id);
-        else options.onNotice(`chat:${slot}`, `Pane ${id} is not open.`);
-      },
-    });
+    const chat = chatFor(page, slot, terminalId(slot, MAIN_INDEX));
     page.chat = chat;
     const main = document.createElement('div');
     main.className = 'main-chat';
