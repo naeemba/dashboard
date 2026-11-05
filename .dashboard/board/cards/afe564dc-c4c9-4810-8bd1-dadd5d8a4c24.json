@@ -1,0 +1,19 @@
+{
+  "id": "afe564dc-c4c9-4810-8bd1-dadd5d8a4c24",
+  "title": "Ship /create-task and its card script with the app",
+  "notes": "Move the /create-task command and its card-filing script into this repo, so the Dashboard app owns them instead of the user's dotfiles.\n\nToday they live in the dotfiles repo (~/Workspace/dotfiles, symlinked into ~/.claude): claude/commands/create-task.md and claude/scripts/create-task.js. Read both first. create-task.js files one card on a project's .dashboard/board.json and commits it to the default branch without leaving the current branch. It takes --title, --notes and --priority, plus --remote <name> for GitLab repos.\n\nGoals:\n1. Ship /create-task (the command) and the card script with the app. Build the script on the board CLI this repo already has (board add / board-cli-entry) rather than keeping a second copy of the board-writing logic. It must also work outside a Dashboard pane (no DASHBOARD_BOARD in env): plain terminals, other projects, and headless review agents call it.\n2. Install it for the user the way the app already installs its other ~/.claude integrations (or add such a step). The result must be a stable path, because claude-pr-loop calls it through the env var PR_LOOP_CARD_SCRIPT=<path> with --title/--notes/--priority (and --remote on GitLab). Keep that interface exactly, and document the path in the README.\n3. Keep the board's commit-to-default-branch behaviour: a board change is committed straight to main/master through a temporary worktree of origin, never ridden along in a feature branch.\n4. Tests for the script (title/notes/priority, --remote, no-board error message).\n\nDo not edit the dotfiles repo; the dotfiles side (removing its copies and pointing PR_LOOP_CARD_SCRIPT at the new path) is a separate change. Open a PR, run /pr-loop until clean, do not merge. Report the installed path of the script and the command, so the dotfiles change can point at them.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-02T12:54:37.733Z",
+  "updatedAt": "2026-11-02T13:52:53.215Z",
+  "branch": "work-board-card-afe564dc-c4c9-4810-8bd1-dad",
+  "pullRequest": 199,
+  "comments": [
+    {
+      "at": "2026-11-02T13:52:53.215Z",
+      "body": "Shipped in #199: /create-task skill and its program, installed at every launch to ~/.claude/skills/create-task/ (SKILL.md, create-task.js, package.json). PR_LOOP_CARD_SCRIPT should point at ~/.claude/skills/create-task/create-task.js. Not done: the dotfiles side (remove claude/commands/create-task.md and claude/scripts/create-task.js, repoint PR_LOOP_CARD_SCRIPT)."
+    }
+  ],
+  "column": "Done",
+  "order": 155
+}

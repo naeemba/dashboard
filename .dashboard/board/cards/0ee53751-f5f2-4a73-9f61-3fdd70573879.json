@@ -1,0 +1,18 @@
+{
+  "id": "0ee53751-f5f2-4a73-9f61-3fdd70573879",
+  "title": "Tell main when a worker finishes",
+  "notes": "The Stop hook's notify done only marks the pane. Queue a short message into main's SDK session (chat-decision-7 queue) for panes main dispatched. Cost small to medium. (docs/review/2026-11-01.md W4)",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-11-02T00:38:32.791Z",
+  "branch": "work-board-card-0ee53751-f5f2-4a73-9f61-3fd",
+  "pullRequest": 176,
+  "comments": [
+    {
+      "at": "2026-11-02T00:38:32.791Z",
+      "body": "Shipped in #176: a done from main's own worker queues a prompt naming the worker and its pane link into the dispatching main's session."
+    }
+  ],
+  "column": "Done",
+  "order": 139
+}

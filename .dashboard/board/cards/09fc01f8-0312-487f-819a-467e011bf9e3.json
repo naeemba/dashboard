@@ -1,0 +1,12 @@
+{
+  "id": "09fc01f8-0312-487f-819a-467e011bf9e3",
+  "title": "One row per project, and the lists live inside it",
+  "notes": "Shipped. One row per open project carrying what its panes want — `dashboard · 2 waiting · 1 exited`, or `quiet`. Enter opens a project to name those panes, Enter on a pane lands you there: right tab, right view, keyboard in the pane, and the bell clears on arrival as it always did. Up and Down walk the flat list. The rules are in manager.ts beside a test — managerRows, alertSummary, managerLines, canOpen, selectedLine — and the DOM is in manager-view.ts, the split board.ts and board-view.ts already have. canOpen is the one place deciding a quiet project cannot expand, so the arrow, the drawn lines and the key cannot disagree. The selection is held as what it is on rather than where it is, so a pane that starts asking pushes the highlight along instead of sliding it onto a different pane. Three ordinary rows in the action table under a new manager scope, so they rebind and the help dialog and settings screen print them untold. No age on the row yet — that needs a per-second redraw and belongs with the last-line card. PR #18.",
+  "priority": "high",
+  "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+  "updatedAt": "2026-09-08T10:35:01.361Z",
+  "branch": "manager-page-rows",
+  "pullRequest": 18,
+  "column": "Done",
+  "order": 15
+}

@@ -1,0 +1,12 @@
+{
+  "id": "f09cab97-5603-4367-bbaa-8ccfd91d16ea",
+  "title": "Stamp the build's commit in its version instead of bumping on every card",
+  "notes": "workflow-rule-3 bumps cost 13 package.json and 12 lockfile conflicts and still collide. Show v2.41.1+<sha> from build time; bump semver only on release. Cost small. (docs/review/2026-11-01.md W2)\n\nShipped in #168: builds show <version>+<commit> stamped by vite.build-version.ts (manager foot, log, About panel, remote handshake). workflow-rule-3 now says cards leave package.json version alone; it moves only on a release.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-11-01T23:41:30.922Z",
+  "branch": "work-board-card-f09cab97-5603-4367-bbaa-8cc",
+  "pullRequest": 168,
+  "column": "Done",
+  "order": 134
+}

@@ -1,0 +1,11 @@
+{
+  "id": "6bc82ed1-40f3-491a-b1fd-e415d264f3c5",
+  "title": "Skip xterm's selection redraw on scroll when nothing is selected",
+  "notes": "Left over from PR #179. On a shown terminal, every scroll asks the selection to redraw and the DOM renderer rebuilds every row, even with no selection. Skipping it when nothing is selected should cut shown renderer CPU while panes stream. Build on src/renderer/panes/paused-selection.ts; measure with docs/performance/ tooling before and after.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-02T01:02:00.310Z",
+  "updatedAt": "2026-11-02T01:02:00.310Z",
+  "column": "Backlog",
+  "order": 16
+}

@@ -1,0 +1,9 @@
+{
+  "id": "b7a4124e-af42-4f9f-9646-46a73124036a",
+  "title": "Agent state per pane from Claude Code hooks, answered from the manager list",
+  "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Todo",
+  "order": 4
+}

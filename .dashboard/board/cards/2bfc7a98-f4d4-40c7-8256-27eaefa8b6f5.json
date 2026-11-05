@@ -1,0 +1,22 @@
+{
+  "id": "2bfc7a98-f4d4-40c7-8256-27eaefa8b6f5",
+  "title": "Terminal drop types '' for a file with no path on disk",
+  "notes": "src/page.ts:300 maps every dropped file through getPathForFile, which returns '' for a File with no file system path (an image dragged out of a web page). quoteForShell('') turns that into '', so the pane receives '' and a space instead of nothing. Skip empty paths before quoting. Issue: https://github.com/naeemba/dashboard/issues/91 Review: https://github.com/naeemba/dashboard/pull/90#discussion_r4419537441",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-11-01T12:15:58.666Z",
+  "branch": "fix-github-issue-91-gh-issue-view-91-commen",
+  "pullRequest": 144,
+  "comments": [
+    {
+      "at": "2026-11-01T12:05:57.181Z",
+      "body": "PR #144: droppedPathsText skips empty paths, so a drop of a file with no path on disk types nothing. Version 2.32.11."
+    },
+    {
+      "at": "2026-11-01T12:15:58.666Z",
+      "body": "Shipped in PR #144: a dropped file with no path on disk is skipped instead of typing '' into the pane. Version 2.32.13."
+    }
+  ],
+  "column": "Done",
+  "order": 114
+}

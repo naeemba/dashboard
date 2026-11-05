@@ -1,0 +1,11 @@
+{
+  "id": "6a76293b-7b8c-42b3-bd2c-d5510656dcbc",
+  "title": "Cards remember when they were made and when they last changed",
+  "notes": "Shipped. A card carries `createdAt` and `updatedAt`, both ISO, both absent rather than null when nobody knows — a board written before the fields existed reads as unknown and stays that way, and nothing is written for a field a card does not have. `updatedAt` moves in editCard, the one funnel every field change goes through, so renaming one card does not stamp the other thirty. A move to another column ages the card; reordering a column does not. Format documented in .dashboard/CLAUDE.md and the copy in board-store.ts, pinned together by the existing test. PR #16.",
+  "priority": "medium",
+  "parent": null,
+  "branch": "card-timestamps-and-branch",
+  "pullRequest": 16,
+  "column": "Done",
+  "order": 17
+}

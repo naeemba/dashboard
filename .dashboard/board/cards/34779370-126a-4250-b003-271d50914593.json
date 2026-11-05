@@ -1,0 +1,9 @@
+{
+  "id": "34779370-126a-4250-b003-271d50914593",
+  "title": "Clicking a notification takes you to the pane that rang",
+  "notes": "The banner says `api . terminal 3 is waiting`, you click it, and the app comes forward on that project with that pane focused. Today the click brings the app up and then you go and find the pane yourself, which is the part the banner was supposed to save you.\n\nShipped: the pane's id travels with the notification, main hangs a click handler on it, and the renderer sets the view and the focused pane before showing the page. A slot whose project has since been closed is nowhere to go. paneFromId and modeOfPane moved into terminals.ts with tests. PR #15.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 30
+}

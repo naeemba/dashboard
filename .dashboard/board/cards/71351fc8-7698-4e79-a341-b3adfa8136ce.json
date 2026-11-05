@@ -1,0 +1,11 @@
+{
+  "id": "71351fc8-7698-4e79-a341-b3adfa8136ce",
+  "title": "Make dashboard://pane links readable on the Claude screen",
+  "notes": "Pane links in the Claude screen's transcript (the 'pane 0:5' link in worker notices and in tool output, from PR #176) render in the browser's default link blue on the dark bubble, which is hard to read (screenshot from the user, 2026-11-04). Give them the screen's own link colour from the theme, with a visited/hover state and enough contrast on both the dark prompt bubble and the transcript background (check WCAG AA, 4.5:1, for the text size used). Also make them reachable from the keyboard like other transcript links (card 5f5b62b8 lists that). CSS in the chat stylesheet; no test needed beyond the existing link parsing ones; check by hand in the app.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-04T10:30:49.401Z",
+  "updatedAt": "2026-11-05T10:28:46.113Z",
+  "column": "Doing",
+  "order": 1
+}

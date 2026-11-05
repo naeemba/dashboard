@@ -1,0 +1,12 @@
+{
+  "id": "a52024cf-46b1-4ace-a786-bc61ed721adb",
+  "title": "Open a typed folder path from the project picker",
+  "notes": "Shipped in PR #178: a path typed into the project picker (starting with / or ~) leads with a row that opens it, on a remote screen too; main refuses a relative path or one that is not a folder with 'No folder at …'. (docs/review/2026-11-01.md U3)",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-11-02T00:47:55.996Z",
+  "branch": "work-board-card-a52024cf-46b1-4ace-a786-bc6",
+  "pullRequest": 178,
+  "column": "Done",
+  "order": 142
+}

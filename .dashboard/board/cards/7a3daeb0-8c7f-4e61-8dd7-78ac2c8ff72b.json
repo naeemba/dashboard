@@ -1,0 +1,9 @@
+{
+  "id": "7a3daeb0-8c7f-4e61-8dd7-78ac2c8ff72b",
+  "title": "Stop the open-folder sheet deadlocking against the Quit confirm",
+  "notes": "The quit question was asked with showMessageBoxSync, which stops the whole main process until it is answered. A folder panel already open could never finish, so projects:open never replied and the renderer showed \"reply was never sent\". Measured: the main process sat dead for 4.3 seconds in a stripped-down copy of the window. It now asks with the async showMessageBox: the close is always stopped, and answering Quit calls destroy(), which raises no close to answer again. A second close request while the question is up is ignored instead of stacking another question. PR #14.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 20
+}

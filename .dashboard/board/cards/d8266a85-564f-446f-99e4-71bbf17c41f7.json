@@ -1,0 +1,11 @@
+{
+  "id": "d8266a85-564f-446f-99e4-71bbf17c41f7",
+  "title": "Persian typing in a pane was checked and is fine",
+  "notes": "Nothing to fix, written down so nobody investigates it twice. macOS's Persian-ISIRI 2901 layout puts ZWNJ -- the نیم‌فاصله, the one character Persian typing cannot do without -- on Shift+Space, and also on Shift+B. Neither is bound to anything in this app, so both reach the pane.\n\nWhat does sit on Option is ى, ٱ, two diacritics, and the Persian digits ۰-۹ on the numeric keypad. Those are the ones macOptionIsMeta turns into Esc+key, so they cannot be typed into a pane. None of them is standard Persian orthography and a laptop has no keypad, so macOptionIsMeta stays as it is -- turning it off would cost <A-l> in nvim, which is the reason it was set.\n\nAsked of macOS itself through UCKeyTranslate over every keycode and modifier combination, on 2026-09-09, rather than guessed at.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-09-09T00:00:00.000Z",
+  "updatedAt": "2026-09-09T00:00:00.000Z",
+  "column": "Done",
+  "order": 11
+}

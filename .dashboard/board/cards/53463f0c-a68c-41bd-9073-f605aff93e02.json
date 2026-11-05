@@ -1,0 +1,12 @@
+{
+  "id": "53463f0c-a68c-41bd-9073-f605aff93e02",
+  "title": "Search cards on the board",
+  "notes": "",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-09-20T11:27:30.575Z",
+  "branch": "search-cards-on-the-board",
+  "pullRequest": 57,
+  "column": "Done",
+  "order": 50
+}

@@ -1,0 +1,9 @@
+{
+  "id": "d0e0ed2d-b63b-434e-80ac-34c63156db93",
+  "title": "Search every open project at once",
+  "notes": "One box, ripgrep over every open project's folder, results grouped by project. Enter on a result opens that project's nvim at the line. Today `where did I write that` costs a guess about which project, a tab switch, and a search once you are there.\n\nSpawning ripgrep is the easy half. The results list is the work: grouping, showing the matching line, and what to do about four hundred hits. It also needs ripgrep on the machine, or something slower behind it.\n\nAn overlay you open from anywhere, like the picker -- not a corner of the manager page. Searching is something you want from the pane you are in, not somewhere you navigate to first.\n\nWhat it adds over `rg` in a pane, which already works and which your fingers know, is only the across-projects part. That is worth something with five open and nothing when you already know which one.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Todo",
+  "order": 1
+}

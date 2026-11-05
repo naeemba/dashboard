@@ -1,0 +1,12 @@
+{
+  "id": "d1db2920-6fad-478d-a4c6-7b01afbda0a5",
+  "title": "A board of the manager's own, kept in the home directory",
+  "notes": "Same idea as the manager's notes screen, for cards. Tasks that belong to the manager tab rather than to any one project, stored in the home directory's .dashboard rather than beside a project's board.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-09-28T12:00:10.819Z",
+  "branch": "a-board-of-the-manager-s-own-kept-in-the-ho",
+  "pullRequest": 63,
+  "column": "Done",
+  "order": 59
+}

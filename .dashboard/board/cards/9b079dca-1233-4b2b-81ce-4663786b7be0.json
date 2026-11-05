@@ -1,0 +1,18 @@
+{
+  "id": "9b079dca-1233-4b2b-81ce-4663786b7be0",
+  "title": "Effort level and ultrathink in the Claude pane",
+  "notes": "Claude Code: /effort low to max, the ultrathink keyword, an effort indicator. SDK: effort option (sdk.d.ts:1965), applyFlagSettings({effortLevel}) (3034). Pane: preferences hold only model and mode (chat-sessions.ts:42). Show the level in the foot. Size S.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-10-31T22:41:21.986Z",
+  "branch": "work-board-card-9b079dca-1233-4b2b-81ce-466",
+  "pullRequest": 105,
+  "comments": [
+    {
+      "at": "2026-10-31T22:41:21.986Z",
+      "body": "Shipped in PR #105: /effort command, effort level in the foot, ultrathink shown while its turn runs. Version 2.11.0."
+    }
+  ],
+  "column": "Done",
+  "order": 78
+}

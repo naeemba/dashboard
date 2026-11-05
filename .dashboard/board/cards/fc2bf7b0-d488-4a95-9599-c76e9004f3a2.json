@@ -1,0 +1,12 @@
+{
+  "id": "fc2bf7b0-d488-4a95-9599-c76e9004f3a2",
+  "title": "Panes name themselves",
+  "notes": "`api . dev server` instead of `api . terminal 3`. One small change and everything else reads better: the waiting list, the notification banner, the status bar, and which pane is on which worktree.\n\nShipped in PR #36, branch panes-name-themselves. Two sources rather than the card's three, and paneName is the one place that picks between them: a name you typed on Alt+N wins over the title the program set, because a title is a hint the shell rewrites on every prompt. Blank is not a name either way, which is what makes an empty box the way back to following the title. The number stays in front and the branch stays between it and the name, so a truncated status bar drops what you called a pane before it drops which checkout it is in.\n\nPane.name is deleted. It was the label worked out once when the pane was built, and the manager read it, so a name that moves could never have reached the list. paneLabel learned that pane six is nvim rather than terminal 6, which is the one place that was ever spelled.\n\nnvim names its own pane after the file it has open, through the same escape sequence, so the status bar says `nvim . board.json` where it said `nvim`. Without that the manager's row and the status bar are one pane under two names.\n\nThe dialog is promptOverlay, beside confirmOverlay: the same sheet and the same Enter-or-Escape guard with a box instead of a question. Both of CLAUDE.md's hand-kept lists name it.\n\nTyped names go in the session file. Titles do not -- one dies with the program that set it.\n\nLeft out on purpose: the third source, a name from the command that started the pane, because nothing starts commands in panes yet -- that is the startup-commands card. No debounce on the title: a shell writes two per command and the guard drops the repeats, so typing is free, but a program that rewrites its title as it works redraws at whatever rate it prints.\n\nWorth its own card: the manager's rows still show no branch, as before. Now that they carry names it reads worse than it did -- two agents in two worktrees both say `terminal 2 . claude`, and that list is the screen you go to precisely because you cannot see them all at once.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-09-14T12:06:55.643Z",
+  "branch": "panes-name-themselves",
+  "pullRequest": 36,
+  "column": "Done",
+  "order": 36
+}

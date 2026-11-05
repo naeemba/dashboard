@@ -1,0 +1,11 @@
+{
+  "id": "c4eb9028-3fca-4693-a957-cab74e70ddb6",
+  "title": "A card knows its branch and its pull request",
+  "notes": "Shipped. `branch` and `pullRequest` on a card, typed in with `b` and `r`, shown under the card's title so a Doing column says which of its cards is in flight. The number is a whole number above zero written with or without the `#`; isPullRequestNumber decides that for the file parser and for pullRequestFrom, which the commit and the message explaining the refusal both call. flightParts is the one place that says how the pair reads. Nothing fetches them. PR #16.",
+  "priority": "medium",
+  "parent": null,
+  "branch": "card-timestamps-and-branch",
+  "pullRequest": 16,
+  "column": "Done",
+  "order": 18
+}

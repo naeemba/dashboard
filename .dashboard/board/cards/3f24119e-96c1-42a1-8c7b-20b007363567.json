@@ -1,0 +1,22 @@
+{
+  "id": "3f24119e-96c1-42a1-8c7b-20b007363567",
+  "title": "Branch the Claude pane's conversation, keeping the original",
+  "notes": "Claude Code: /branch forks the conversation at this point. SDK: forkSession() (sdk.d.ts:862), option forkSession (1761). Pane: only /resume (chat-commands.ts:20). Size S.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-10-31T23:00:30.789Z",
+  "branch": "work-board-card-3f24119e-96c1-42a1-8c7b-20b",
+  "pullRequest": 112,
+  "comments": [
+    {
+      "at": "2026-10-31T22:39:49.154Z",
+      "body": "PR #112: /branch [name] forks the conversation with forkSession and the page carries on in the copy; the original stays in /resume. Version 2.9.0. Not hand-checked in the app yet."
+    },
+    {
+      "at": "2026-10-31T23:00:30.789Z",
+      "body": "Shipped in PR #112: /branch carries on in a copy of the conversation and leaves the original in /resume. Version 2.17.0."
+    }
+  ],
+  "column": "Done",
+  "order": 85
+}

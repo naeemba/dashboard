@@ -1,0 +1,27 @@
+{
+  "id": "5fe009e4-5e1e-4874-9768-cae0e2cd2d1c",
+  "title": "A review that cannot take the worktree yet must try again, not give up",
+  "notes": "The sweep read the pull request number out of the worktree's board.json in the half-second before the agent committed it. board.json was therefore uncommitted, git refused to remove the worktree, and the card was marked tried-and-failed for the rest of the run. PR 55 sat in Review with nobody reviewing it until someone asked why.\n\nTwo faults behind it.\n\nblockingChanges exempts .dashboard/, which is right for a ship — the Ship move that started the ship is uncommitted in the project checkout — and wrong for removeWorktree, because git counts that folder and refuses. So the app checked, found nothing in the way, and then got a raw `fatal: ... contains modified or untracked files` back from git. The d key on the worktree list fails the same way.\n\nAnd a swap refused for a dirty worktree is not an answer. The agent commits a second later; the next tick would have worked. Marked for good, it never runs again until the app restarts.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-09-19T15:09:45.344Z",
+  "updatedAt": "2026-09-20T10:52:35.488Z",
+  "branch": "a-refused-review-tries-again",
+  "pullRequest": 56,
+  "comments": [
+    {
+      "at": "2026-09-19T15:18:08.529Z",
+      "body": "Opened as PR #56. changedFiles is git's whole answer to \"what changed\" and blockingChanges is that minus the .dashboard/ exemption; removeWorktree and worktree:check ask the first one, because git is what refuses them. A swap refused for uncommitted files now un-marks the card so the next tick tries again — every other refusal still keeps the mark. /work-card writes the board and commits it in one command now. PR 55 itself still needs the loop run by hand: the running app marked that card before this fix existed."
+    },
+    {
+      "at": "2026-09-19T15:51:36.785Z",
+      "body": "Second commit on PR #56: the review agent now moves the card to Done on the branch and pushes it before merging, so the merge carries the column into main. It moved the project's board after the merge instead, and that board is never committed — so main went on saying Review for shipped cards. This repo's own board is in that state for PR #54. The board move and its commit are one command, skipped when nothing is staged and scoped to the board file, the way commitShipMove already does it."
+    },
+    {
+      "at": "2026-09-20T10:52:35.488Z",
+      "body": "PR #56 merged 19 Sep. changedFiles is the dirty check without the .dashboard exemption, which is the one git's own refusal matches, and a swap refused for uncommitted files un-marks the card so the next tick tries again."
+    }
+  ],
+  "column": "Done",
+  "order": 49
+}

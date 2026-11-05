@@ -1,0 +1,9 @@
+{
+  "id": "7b6df78b-baa7-4f03-a65a-5ae35b3317ab",
+  "title": "Find a pane by what is in it",
+  "notes": "Type `dev`, land in the pane running the dev server, whichever project it belongs to. The picker, but over panes rather than projects. Thirty panes across five projects is the size where a list stops working and a search starts.\n\nfuzzy.ts and the picker overlay are already there, so the work is small. It depends on the naming card: without names there is nothing to match on but `terminal 3`.\n\nWeigh it against the manager page first. If that page already lists every pane by name with Enter to jump, this is the same feature with a filter box on it, and the answer may be to put the filter there rather than build a second way in.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Todo",
+  "order": 0
+}

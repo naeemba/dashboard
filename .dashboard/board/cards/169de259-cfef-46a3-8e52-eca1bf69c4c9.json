@@ -1,0 +1,18 @@
+{
+  "id": "169de259-cfef-46a3-8e52-eca1bf69c4c9",
+  "title": "Split renderer.ts under 600 code lines",
+  "notes": "src refactoring audit, step 5. Plan: /tmp/claude-1000/src-audit.md (section 'Step 5').",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-11-01T11:47:40.454Z",
+  "branch": "work-board-card-169de259-cfef-46a3-8e52-eca",
+  "pullRequest": 139,
+  "comments": [
+    {
+      "at": "2026-11-01T11:47:40.454Z",
+      "body": "Merged via PR #139."
+    }
+  ],
+  "column": "Done",
+  "order": 108
+}

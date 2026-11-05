@@ -1,0 +1,18 @@
+{
+  "id": "3de88770-02fa-4d0c-aad6-9dc596ea134f",
+  "title": "Copy a whole Claude reply as markdown from the Claude pane",
+  "notes": "Claude Code: /copy [N]. Pane: Alt+C copies code blocks only (actions.ts:551). Size S.",
+  "priority": "low",
+  "parent": null,
+  "updatedAt": "2026-11-01T00:10:53.694Z",
+  "branch": "work-board-card-3de88770-02fa-4d0c-aad6-9dc",
+  "pullRequest": 128,
+  "comments": [
+    {
+      "at": "2026-11-01T00:10:53.694Z",
+      "body": "Shipped in PR #128: /copy [N] copies a whole reply as markdown. Version 2.32.0."
+    }
+  ],
+  "column": "Done",
+  "order": 99
+}

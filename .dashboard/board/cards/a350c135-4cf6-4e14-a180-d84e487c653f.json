@@ -1,0 +1,9 @@
+{
+  "id": "a350c135-4cf6-4e14-a180-d84e487c653f",
+  "title": "Give board cards subtasks",
+  "notes": "Any card can name another as its parent. A subtask is an ordinary card with its own column, priority and subtasks. Tab attaches, Shift+Tab detaches, o opens a card to see and add its children, and a parent shows a bar of where its subtasks have got to.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 23
+}

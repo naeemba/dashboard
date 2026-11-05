@@ -1,0 +1,12 @@
+{
+  "id": "e2383802-ed89-4a23-a882-74b2e1168bdd",
+  "title": "The waiting list, and Enter jumps to the pane",
+  "notes": "Shipped. Every pane asking for you, named under its project on the manager page, with Enter landing you in it. goToPane is one function now, shared with the notification click, so the two ways into a pane from elsewhere cannot land differently. isRinging moved to waiting.ts and both the tab strip and this list ask it — before, the rule was written twice and dropping `notified` from one would have stopped the tab going yellow while the manager still listed the pane. PR #18.",
+  "priority": "high",
+  "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+  "updatedAt": "2026-09-08T10:35:01.361Z",
+  "branch": "manager-page-rows",
+  "pullRequest": 18,
+  "column": "Done",
+  "order": 13
+}

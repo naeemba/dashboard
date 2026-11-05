@@ -1,0 +1,9 @@
+{
+  "id": "16db2233-dab5-48b9-82e2-1341331ff7f7",
+  "title": "Give the editor pane the PATH the terminals already have",
+  "notes": "Ctrl+N only ever showed [exited 1]. The pane spawned nvim by name, and an app launched from the Dock has no Homebrew on PATH. nvim now runs through a login shell. PR #8.",
+  "priority": "urgent",
+  "parent": null,
+  "column": "Done",
+  "order": 25
+}

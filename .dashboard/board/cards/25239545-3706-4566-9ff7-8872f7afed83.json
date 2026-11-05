@@ -1,0 +1,9 @@
+{
+  "id": "25239545-3706-4566-9ff7-8872f7afed83",
+  "title": "Make one rule say which column a finished card goes in",
+  "notes": "The global instructions and the work-card skill say Done; the project CLAUDE.md says Review. Have the skill read the project's rule. Change lives in dotfiles. (docs/review/2026-11-01.md W5)",
+  "priority": "low",
+  "parent": null,
+  "column": "Backlog",
+  "order": 5
+}

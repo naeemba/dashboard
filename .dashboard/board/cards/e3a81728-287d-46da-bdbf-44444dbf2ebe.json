@@ -1,0 +1,13 @@
+{
+  "id": "e3a81728-287d-46da-bdbf-44444dbf2ebe",
+  "title": "Install the create-task program as an executable",
+  "notes": "installCreateTask writes ~/.claude/skills/create-task/create-task.js with no shebang and mode 0644, but claude-pr-loop runs PR_LOOP_CARD_SCRIPT as an executable, so pointing it at that file fails with \"permission denied\". Prepend \"#!/usr/bin/env node\" to the written program and write it with mode 0755 (keep the replaceFile atomic write and the rewrite-only-when-content-differs rule; a mode change alone must also be applied). Add a test that the installed file is executable and runs with --help or a no-board error. Open a PR, run /pr-loop, do not merge.\n\nShipped in PR #200: the installed create-task.js starts with #!/usr/bin/env node and is mode 0755 (replaceFile takes an optional mode, set with fchmod before the rename; a mode-only drift is chmodded, not rewritten). Test builds the real program, installs it into a temporary HOME and runs it as a command to the no-board refusal.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-02T14:26:08.340Z",
+  "updatedAt": "2026-11-02T14:40:19.081Z",
+  "branch": "work-board-card-e3a81728-287d-46da-bdbf-444",
+  "pullRequest": 200,
+  "column": "Done",
+  "order": 156
+}

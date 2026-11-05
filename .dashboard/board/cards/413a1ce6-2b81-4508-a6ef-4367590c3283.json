@@ -1,0 +1,16 @@
+{
+  "id": "413a1ce6-2b81-4508-a6ef-4367590c3283",
+  "title": "Decide whether Windows is a target and drop the installer dependencies if not",
+  "notes": "electron-squirrel-startup, its types and the Forge makers are never run; CI is Ubuntu only and never runs make. Drop them and the win32 branches, or add a Windows CI job. (docs/review/2026-11-01.md D2)",
+  "priority": "low",
+  "parent": null,
+  "updatedAt": "2026-11-02T10:26:20.142Z",
+  "comments": [
+    {
+      "at": "2026-11-02T10:26:20.083Z",
+      "body": "Answered by PR #191 (Sana, merged): Windows is a target. The installer dependencies stay. A Windows CI job is its own card."
+    }
+  ],
+  "column": "Done",
+  "order": 153
+}

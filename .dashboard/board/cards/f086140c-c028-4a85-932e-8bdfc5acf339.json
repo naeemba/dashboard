@@ -1,0 +1,9 @@
+{
+  "id": "f086140c-c028-4a85-932e-8bdfc5acf339",
+  "title": "Search a pane's scrollback",
+  "notes": "Cmd+F on macOS opens a small search box at the top of the focused pane; Enter and Shift+Enter jump between matches, Escape closes. Uses the xterm.js search addon. The box gets dir=auto, the key is a row in the actions table, and the help dialog gets the row. Cmd rather than Ctrl because Ctrl+F is the shell's forward-char.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Todo",
+  "order": 7
+}

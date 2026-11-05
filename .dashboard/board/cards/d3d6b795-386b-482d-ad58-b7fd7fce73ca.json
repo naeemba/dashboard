@@ -1,0 +1,16 @@
+{
+  "id": "d3d6b795-386b-482d-ad58-b7fd7fce73ca",
+  "title": "Rename the chat:commands and chat:sessions IPC channels to <noun>:<verb>",
+  "notes": "The chat:commands and chat:sessions channels (src/chat-sessions.ts, src/preload.ts) break the <noun>:<verb> rule in CLAUDE.md: the part after the colon is a noun, so each name reads as two nouns. Cost: every new channel copies them, as chat:models did in #87. Issue: https://github.com/naeemba/dashboard/issues/88 Review: https://github.com/naeemba/dashboard/pull/87#discussion_r4419366661",
+  "priority": "low",
+  "parent": null,
+  "updatedAt": "2026-11-01T12:11:02.598Z",
+  "comments": [
+    {
+      "at": "2026-11-01T12:11:02.555Z",
+      "body": "Done in PR #141 (tracked there as card 5a6ac86c): chat:commands and chat:sessions renamed to chat-commands:read and chat-sessions:read."
+    }
+  ],
+  "column": "Done",
+  "order": 112
+}

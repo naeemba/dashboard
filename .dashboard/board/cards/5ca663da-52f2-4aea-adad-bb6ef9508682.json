@@ -1,0 +1,12 @@
+{
+  "id": "5ca663da-52f2-4aea-adad-bb6ef9508682",
+  "title": "A board whose first read fails is written over by the next keystroke",
+  "notes": "readBoard rethrows anything that is not ENOENT now, but the view starts on initialBoardState() -- emptyBoard(), which looks exactly like a project nobody has made a card in -- and readAgain set landedRead = token whether or not the read threw. So busy() said false and every key was live over a board nobody read. First Ctrl+B of the session, EMFILE with five ptys and an editor per project, board draws empty with \"Board not opened: ...\", press n and one card goes over the forty on disk.\n\nShipped in PR #48. BoardState gains showsTheFile, the name the notes page already gives the same fact. loadBoard is the only thing that sets it and the only way a read reaches the screen, so the failure path needs no code: a read that threw never assigns state, and neither does one that lost the staleness race. busy() asks the board rather than the view.\n\nIt began as a let in board-view.ts and moved onto the state because that file has no test and board-state.test.ts does. With it view-local, the line clearing the flag sat one line below the staleness guard; moving those two past each other hands the keys to a board that never went on screen, with npm test, tsc and eslint all still passing. Four tests now pin it.\n\nOut of scope and noted on the PR: a refused key says nothing -- n bounces silently and \"Board not opened: ...\" is wiped by the next status write. The notes screen has sayIfStranded for exactly this.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-09-16T11:05:38.383Z",
+  "branch": "board-first-read-refuses-keys",
+  "pullRequest": 48,
+  "column": "Done",
+  "order": 43
+}

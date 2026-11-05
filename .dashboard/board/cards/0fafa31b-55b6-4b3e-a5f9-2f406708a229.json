@@ -1,0 +1,22 @@
+{
+  "id": "0fafa31b-55b6-4b3e-a5f9-2f406708a229",
+  "title": "Manager terminals 2: one dashboard command with project, pane and board subcommands",
+  "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Replaces the separate board and session commands with one 'dashboard <noun> <verb>' command (project, pane, board), short and scriptable for agents. 'board' and 'session' stay as aliases so every running shell and skill keeps working. One env var for the entry, the old ones kept.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-11-01T13:14:37.997Z",
+  "branch": "work-board-card-0fafa31b-55b6-4b3e-a5f9-2f4",
+  "pullRequest": 154,
+  "comments": [
+    {
+      "at": "2026-11-01T13:05:08.280Z",
+      "body": "PR #154: dashboard command (DASHBOARD_COMMAND) with board and pane nouns, session as alias of pane; old DASHBOARD_BOARD/DASHBOARD_SESSION entries unchanged. Version 2.33.0."
+    },
+    {
+      "at": "2026-11-01T13:14:37.997Z",
+      "body": "Shipped in #154: one dashboard command with board and pane nouns."
+    }
+  ],
+  "column": "Done",
+  "order": 121
+}

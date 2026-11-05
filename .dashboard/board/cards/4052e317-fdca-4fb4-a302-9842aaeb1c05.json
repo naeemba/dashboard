@@ -1,0 +1,9 @@
+{
+  "id": "4052e317-fdca-4fb4-a302-9842aaeb1c05",
+  "title": "Notify when something in a pane is waiting on us",
+  "notes": "Out of the app: a system notification when something needs attention, like a Claude session waiting on an answer. In the app: a small in-app notification, and highlight the tab that is waiting. Shipped: the packaged app is re-signed ad hoc so macOS registers it with Notification Center under the same name as its Info.plist, the banner is raised from main instead of the renderer, and a waiting project gets a pulsing red dot on its tab that stops pulsing under reduced motion. PR #13.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 21
+}

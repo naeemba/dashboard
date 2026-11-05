@@ -1,0 +1,18 @@
+{
+  "id": "9cd31d20-59e2-46fd-a196-9d00dc895e5f",
+  "title": "Write the board as operations against a fresh read in main",
+  "notes": "board-view.ts:268 saves the whole in-memory board and can erase an agent's board move made just before. Send move/set/comment to main and apply them to a fresh read, like runBoardCommandOnLatest. Cost medium. (docs/review/2026-11-01.md R2)",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-11-02T01:39:11.565Z",
+  "branch": "work-board-card-9cd31d20-59e2-46fd-a196-9d0",
+  "pullRequest": 183,
+  "comments": [
+    {
+      "at": "2026-11-02T01:39:11.565Z",
+      "body": "Shipped in PR #183: board:write takes the screen's last-read board beside the new one, and main replays the card-by-card change onto a fresh read (rebaseBoardChange in board-merge.ts), so a card the board command moved is no longer erased by the app's next save. board.json format unchanged."
+    }
+  ],
+  "column": "Done",
+  "order": 148
+}

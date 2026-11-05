@@ -1,0 +1,22 @@
+{
+  "id": "474e613a-513d-40fb-a985-3fc55bee0b21",
+  "title": "Make the file-link-open test buffer keep written spaces the way xterm does",
+  "notes": "src/file-link-open.test.ts:24 models xterm's trim as trimEnd(), stripping spaces a program wrote. xterm keeps those. Cost: removing .trimEnd() from bufferLine leaves every visibleLinks test green, which is how the bug fixed in #79 went unseen. Fix: return the row as written whatever the flag, as wrapped-links.test.ts does after #79. Issue: https://github.com/naeemba/dashboard/issues/80 Review: https://github.com/naeemba/dashboard/pull/79#discussion_r4348398931",
+  "priority": "low",
+  "parent": null,
+  "updatedAt": "2026-11-01T12:11:33.587Z",
+  "branch": "fix-github-issue-80-gh-issue-view-80-commen",
+  "pullRequest": 142,
+  "comments": [
+    {
+      "at": "2026-11-01T12:11:33.515Z",
+      "body": "PR #142: mock returns rows as written; new visibleLinks test fails without bufferLine's trimEnd."
+    },
+    {
+      "at": "2026-11-01T12:11:33.587Z",
+      "body": "Shipped in PR #142 (https://github.com/naeemba/dashboard/pull/142). Version 2.32.12."
+    }
+  ],
+  "column": "Done",
+  "order": 0
+}

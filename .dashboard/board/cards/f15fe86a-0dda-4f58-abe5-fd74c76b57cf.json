@@ -1,0 +1,19 @@
+{
+  "id": "f15fe86a-0dda-4f58-abe5-fd74c76b57cf",
+  "title": "pane commands hang forever when the CLI is newer than the running app",
+  "notes": "Seen 2026-11-02 right after a rebuild, before the app restart: `node \"$DASHBOARD_COMMAND\" pane list` (and claim, run) hang with no output. $DASHBOARD_COMMAND points into the installed app, so a rebuild swaps the CLI under the still-running old app. Since #196 the CLI ends its request at a newline and waits for the answer without half-closing; the old app waits for the half close, so neither side moves. Fix: the CLI times out (a few seconds) with a line saying the running app is older than the command and needs a restart; the request carries the build stamp so the app can refuse a mismatched CLI as a value (errors-rule-2). Test the timeout with a server that never answers.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-02T12:59:21.133Z",
+  "updatedAt": "2026-11-04T10:06:39.967Z",
+  "branch": "work-board-card-f15fe86a-0dda-4f58-abe5-fd7",
+  "pullRequest": 203,
+  "comments": [
+    {
+      "at": "2026-11-04T10:06:39.967Z",
+      "body": "PR #203. A pane command now gives up after 5 seconds when the app has not taken its request, saying the app is likely older and needs a restart; the request carries the build stamp and the app refuses another build as a value (notify excepted, so worker hooks keep working after a rebuild). The timeout, acceptance and version check are in src/main/workers/app-handshake.ts for the dashboard command card. Needs a rebuild and restart of the installed app."
+    }
+  ],
+  "column": "Done",
+  "order": 160
+}

@@ -1,0 +1,12 @@
+{
+  "id": "9ec3aa79-428a-4c8f-9d92-25284434e79d",
+  "title": "Say which panes have died",
+  "notes": "Shipped. A pane that exits now shows up on the manager page as `terminal 1 · exited`, red, and Enter on that row takes you to it to press Enter again. The exited flag has always existed and nothing ever read it; onExit redraws now, which is the whole of what was missing. Dead beats asking: a shell that rings on its way out is listed as exited, not waiting, because answering it finds nothing to answer. The tab does not go yellow for a dead pane — yellow means asking today, and giving it a second meaning is a change to the terminals screen, not this page. PR #18.",
+  "priority": "high",
+  "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+  "updatedAt": "2026-09-08T10:35:01.361Z",
+  "branch": "manager-page-rows",
+  "pullRequest": 18,
+  "column": "Done",
+  "order": 14
+}

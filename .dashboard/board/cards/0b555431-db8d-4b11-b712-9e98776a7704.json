@@ -1,0 +1,17 @@
+{
+  "id": "0b555431-db8d-4b11-b712-9e98776a7704",
+  "title": "A pane you typed in should be free again when its shell is",
+  "notes": "Any keystroke adds a pane to typedPanes in main.ts, and nothing takes it out except closing the project, opening a project into the slot, or removing the worktree the pane sat in. So typing 'clear' or pressing Ctrl+L in the five terminals marks all five as busy for the rest of the session, and the ship refuses with 'every pane in <project> is in use — free one and ship again' while the screen shows five empty prompts. Today the only way out is closing the project and opening it again. The mark is right for a pane where you answered an agent's prompt and your work is still in it — the app just cannot tell that apart from a pane you pressed Enter in once.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-09-20T10:52:35.448Z",
+  "pullRequest": 52,
+  "comments": [
+    {
+      "at": "2026-09-20T10:52:35.448Z",
+      "body": "PR #52 merged 18 Sep. A pane is read against the shell it was spawned with, so a pane you only typed in is free again once its shell is."
+    }
+  ],
+  "column": "Done",
+  "order": 47
+}

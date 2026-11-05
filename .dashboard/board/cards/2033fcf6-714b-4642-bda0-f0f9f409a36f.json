@@ -1,0 +1,11 @@
+{
+  "id": "2033fcf6-714b-4642-bda0-f0f9f409a36f",
+  "title": "A command line for the board, so agents can work it",
+  "notes": "Shipped in PR #33. `DASHBOARD_BOARD` is on every pane the app opens: the path to a command that lists cards and moves them from a shell — list, add, move, set — over the board of the project you are in. Every decision it makes is a call into board.ts, so a card it writes is a card the app wrote.\n\nThe second half is that the app notices. Main watches each open project's .dashboard folder and sends board:change, and the board on screen re-reads without moving your selection. The folder, not the file, because a save renames a temporary file over board.json; and against the bytes the app itself last wrote, or every keystroke on a board would redraw it under your cursor.\n\nFour rules stopped being written twice on the way: columnNamed, isTitle, branchFrom and openBoard. The seeded .dashboard/CLAUDE.md prints the command's own usage rather than retyping it.\n\nNot verified: npm run package. The asar-unpack path is reasoned from the config, not seen — worth one packaged run before merging.",
+  "priority": "high",
+  "parent": null,
+  "branch": "board-command-line",
+  "pullRequest": 33,
+  "column": "Done",
+  "order": 2
+}

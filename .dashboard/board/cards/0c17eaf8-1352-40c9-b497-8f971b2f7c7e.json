@@ -1,0 +1,9 @@
+{
+  "id": "0c17eaf8-1352-40c9-b497-8f971b2f7c7e",
+  "title": "Give board cards a priority",
+  "notes": "urgent, high, medium or low. p cycles it, a colour down the card's left edge shows it, the status bar names it, and s sorts the column urgent first. Sorting is stable, so Shift+up and Shift+down still hold within a priority.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 28
+}

@@ -1,0 +1,11 @@
+{
+  "id": "5864b231-b04b-436c-9680-c721a740b335",
+  "title": "Read a project's file in a view that does bidi",
+  "notes": "Persian prose cannot be read in a pane and never will be, so the way to read a Persian roadmap or README is a screen the app draws itself -- Chromium lays it out correctly there, and the one rule in index.css already covers every element outside a pane.\n\nThe open question the design turns on is how the file is chosen: a picker over the project's folder, or whatever file nvim currently has open.\n\nKeyboard-first, so it is a row in actions.ts and a section in help.ts.\n\nRelated: the notes mode card is this same screen for a file the app owns. This one is for a file the project owns.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-09-09T00:00:00.000Z",
+  "updatedAt": "2026-09-09T00:00:00.000Z",
+  "column": "Todo",
+  "order": 3
+}

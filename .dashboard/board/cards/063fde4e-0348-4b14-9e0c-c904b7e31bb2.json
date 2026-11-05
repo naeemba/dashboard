@@ -1,0 +1,18 @@
+{
+  "id": "063fde4e-0348-4b14-9e0c-c904b7e31bb2",
+  "title": "Rewind the Claude pane to an earlier prompt: code, conversation or both",
+  "notes": "Claude Code: Esc Esc or /rewind restores code, conversation, or both, and can summarize from or up to a prompt (code.claude.com/docs/en/checkpointing). SDK: enableFileCheckpointing (sdk.d.ts:1745), rewindFiles(uuid,{dryRun}) (3218), resumeSessionAt (2153) for the conversation half. Pane: option not set in chat-sessions.ts:196-218. Size L.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-10-31T22:35:28.992Z",
+  "branch": "work-board-card-063fde4e-0348-4b14-9e0c-c90",
+  "pullRequest": 106,
+  "comments": [
+    {
+      "at": "2026-10-31T22:35:28.992Z",
+      "body": "Merged in PR #106: /rewind lists prompts, restores code (rewindFiles with checkpointing on), conversation (forked resumeSessionAt) or both. Left out: summarize, Esc Esc."
+    }
+  ],
+  "column": "Done",
+  "order": 76
+}

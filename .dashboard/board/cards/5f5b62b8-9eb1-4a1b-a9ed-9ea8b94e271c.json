@@ -1,0 +1,17 @@
+{
+  "id": "5f5b62b8-9eb1-4a1b-a9ed-9ea8b94e271c",
+  "title": "Workers popup follow-ups: anchor it to the count, keyboard pane links, live refresh",
+  "notes": "Left over from PR #176. (1) The workers list opens in the shared search dialog; the user asked for a small popup anchored to the count in the status line. (2) dashboard://pane links work by mouse only; reach them from the keyboard like other transcript links. (3) The count does not refresh when a worker's agent exits until the next hook mark or pane change. (4) The done report does not carry the worker's last message. (5) pane claim prints the bare id with no link.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-02T00:40:52.538Z",
+  "updatedAt": "2026-11-02T08:53:07.402Z",
+  "comments": [
+    {
+      "at": "2026-11-02T08:53:07.402Z",
+      "body": "Seen in use: the 'has finished its turn' prompt to main fires on every Stop of the worker, including mid-task pauses (pr-loop waiting on subagents, CI waits), and the pane is back to running moments later. Main gets woken for nothing. Report only when the worker stays stopped (a short grace period, re-checked) or when it sent its own report."
+    }
+  ],
+  "column": "Backlog",
+  "order": 13
+}

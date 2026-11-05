@@ -1,0 +1,9 @@
+{
+  "id": "73b08c71-d792-4eab-b927-172365c242a4",
+  "title": "Use Promise.withResolvers in tests instead of hand-written deferred helpers",
+  "notes": "newest-read.test.ts:5, manager-reads.test.ts:8 and ship.test.ts:125 each hand-write a deferred promise helper that Promise.withResolvers() already provides (it typechecks and runs here: target ESNext, Node 24). Replace each copy with it. Cost if left: every new test that needs to control when a promise settles writes another copy under another name. Issue: https://github.com/naeemba/dashboard/issues/192 Review: https://github.com/naeemba/dashboard/pull/190#discussion_r4441187097",
+  "priority": "low",
+  "parent": null,
+  "column": "Backlog",
+  "order": 18
+}

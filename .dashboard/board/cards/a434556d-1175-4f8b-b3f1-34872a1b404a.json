@@ -1,0 +1,9 @@
+{
+  "id": "a434556d-1175-4f8b-b3f1-34872a1b404a",
+  "title": "A saved settings.json freezes every shipped default",
+  "notes": "Shipped in PR #26. writeSettings wrote the whole Settings object, so the first time you nudged a font size, every shipped key and every shipped colour went into ~/.config/dashboard/settings.json as if you had picked it — and parseSettings read them back as your choices forever after.\n\nWhat it cost: PR #23 moves the manager board's project keys to Cmd+Up / Cmd+Down on macOS, because the system takes Ctrl with an arrow for Mission Control. Anyone who had ever set a font size kept Ctrl+Up. The only way out was deleting the settings file, which took the font and the colours with it.\n\nchosenSettings now leaves out anything equal to what this build ships — keys, theme, font and shellCommand, not just the keys the bug was found through — which is what parseSettings has always assumed a missing line means. An explicit null key stays: it means no key at all.\n\nIt also gives `written` its meaning back. A file naming every action made every line written, so the written-first sort in withoutDuplicates settled nothing and ACTIONS row order decided who lost a clashing key.\n\nhttps://github.com/naeemba/dashboard/pull/26\nhttps://github.com/naeemba/dashboard/issues/24",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 8
+}

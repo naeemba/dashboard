@@ -1,0 +1,22 @@
+{
+  "id": "956f502a-609d-4ed4-bae5-5d3d8bb73917",
+  "title": "Manager terminals 6: first projects.yaml from the open and recent projects",
+  "notes": "Part of the parent card 'Manager terminals: ask the dashboard about any project and dispatch work into it'. Generate a starting ~/.dashboard/projects.yaml from the open and recent projects (name and path filled, aka, site, about and deploy left for the owner). Never overwrites an existing file.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-11-01T14:04:51.295Z",
+  "branch": "work-board-card-956f502a-609d-4ed4-bae5-5d3",
+  "pullRequest": 157,
+  "comments": [
+    {
+      "at": "2026-11-01T13:55:00.322Z",
+      "body": "PR #157: dashboard project init writes a first ~/.dashboard/projects.yaml (name and path) from the open and recent projects; never overwrites. Panes carry DASHBOARD_USER_DATA."
+    },
+    {
+      "at": "2026-11-01T14:04:51.295Z",
+      "body": "Shipped in PR #157: dashboard project init writes a first projects.yaml from the open and recent projects, and refuses outside a pane."
+    }
+  ],
+  "column": "Done",
+  "order": 124
+}

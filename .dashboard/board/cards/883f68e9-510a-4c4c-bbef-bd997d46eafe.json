@@ -1,0 +1,18 @@
+{
+  "id": "883f68e9-510a-4c4c-bbef-bd997d46eafe",
+  "title": "Give each card its own file so parallel pull requests stop conflicting on board.json",
+  "notes": "board.json is in 82 of 115 conflicted merges. Every card branch rewrites the one file. Alternative: .dashboard/cards/<id>.json plus a small board.json for columns and order. Cost large. (docs/review/2026-11-01.md W1)",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-11-04T12:44:21.074Z",
+  "branch": "work-board-card-883f68e9-510a-4c4c-bbef-bd9",
+  "pullRequest": 206,
+  "comments": [
+    {
+      "at": "2026-11-04T12:44:21.074Z",
+      "body": "Shipped in #206: board kept as .dashboard/board/columns.json + cards/<id>.json with an order field; board.json read forever, moved on first write; create-task, ship and review commit through BOARD_PATHSPECS; watcher recursive with snapshot compare. Migration tested on this repo's 202-card board; add/add and move/move merges proven conflict-free. Running app needs rebuild and restart after merge."
+    }
+  ],
+  "column": "Done",
+  "order": 163
+}

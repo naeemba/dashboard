@@ -1,0 +1,12 @@
+{
+  "id": "251a424c-0e3c-429b-93ed-915201bc057c",
+  "title": "A first tab that is not a project",
+  "notes": "Shipped. The manager sits at the front of the tab strip where a project sits, with no folder, no five shells, no editor and no board. Ctrl+1 lands on it, Ctrl+O comes back to it, a launch with nothing saved opens on it, and nothing can be dragged in front of it. `manager` is a fourth Mode no key selects, and that one fact carries the change: setMode refuses a view the page does not have, which replaces the dead-project check it used to make, and isProjectPage reads the mode so the session file, the picker, the tab drag and the launch landing all ask one question instead of four. Page.views is a Partial record — three views, one, or none. Not written to session.json, and the empty path is a second lock since parseSession already drops a page with no path. The empty window is gone: that state is the manager, and the sentence saying how to open a project moved to its status bar, reading the key and the wording off the action table. Ctrl+H has its own section for it. Nothing is on the page yet — the lists are their own cards. PR #17.",
+  "priority": "high",
+  "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+  "updatedAt": "2026-09-08T09:34:46.793Z",
+  "branch": "manager-first-tab",
+  "pullRequest": 17,
+  "column": "Done",
+  "order": 16
+}

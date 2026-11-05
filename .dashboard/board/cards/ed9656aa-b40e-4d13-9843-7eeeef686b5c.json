@@ -1,0 +1,12 @@
+{
+  "id": "ed9656aa-b40e-4d13-9843-7eeeef686b5c",
+  "title": "Let pane shells outlive the app",
+  "notes": "Shipped in #174: worker pane shells run in a pane host (a detached node process holding the ptys) and come back in their panes after a quit, crash or update, screen and job intact. tmux -C weighed and turned down in panes-decision-1. Left for Backlog card \"Finish what the pane host left\": stale DASHBOARD_SOCKET in kept shells, keeping the editor, orphaned shells, protocol-version orphans, double screen parse.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-11-02T00:44:04.552Z",
+  "branch": "work-board-card-ed9656aa-b40e-4d13-9843-7ee",
+  "pullRequest": 174,
+  "column": "Done",
+  "order": 141
+}

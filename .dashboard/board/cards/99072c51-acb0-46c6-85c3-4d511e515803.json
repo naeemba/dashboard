@@ -1,0 +1,12 @@
+{
+  "id": "99072c51-acb0-46c6-85c3-4d511e515803",
+  "title": "Show a waiting pane's tail, and answer it with a keystroke",
+  "notes": "Shipped. A waiting row on the manager carries the last five lines that pane has on screen, and a character typed on that row goes straight to its pty — three agents asking at once are cleared without switching tabs. Five lines, not one: an agent asks with a numbered menu whose options move around. The bell comes off as the key goes out, so the row leaving the list is the sign it landed.\n\nEnter still takes you to the pane; keys with names never reach the pty, since the window's lookup claims them first and a word typed at a pane that has stopped asking is a command the shell runs. A dead pane takes no keys — it wants Enter in the pane. tailLines and takesAnswer are the rules, in manager.ts with tests; isBareCharacter went beside isModified in shortcuts.ts, because whether a keystroke is a typed character is a keyboard question; reading the xterm buffer stayed in renderer.ts as wiring, off the live screen rather than the scrollback. help.ts has the blurb and an `Any single key` row, and the keys no binding names are one table now, shared with nvim's.\n\nKnown edge: a capital needs Shift, and Shift is a modifier, so `Y` cannot be sent. Digits and lowercase can. PR #22.",
+  "priority": "high",
+  "parent": "0f01a439-eab1-43d2-90a0-39c4161fed10",
+  "updatedAt": "2026-09-09T10:37:09.267Z",
+  "branch": "waiting-pane-tail",
+  "pullRequest": 22,
+  "column": "Done",
+  "order": 9
+}

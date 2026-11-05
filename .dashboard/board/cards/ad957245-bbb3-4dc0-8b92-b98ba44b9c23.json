@@ -1,0 +1,9 @@
+{
+  "id": "ad957245-bbb3-4dc0-8b92-b98ba44b9c23",
+  "title": "Give board cards a description",
+  "notes": "e opens the card's notes in a textarea. Enter is a newline, Escape commits. The description shows on the card, dimmed, under the title.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 29
+}

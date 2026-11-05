@@ -1,0 +1,18 @@
+{
+  "id": "3a33c1fb-da53-4dc7-b46a-299bdd94c4cb",
+  "title": "Stash and restore drafts in the Claude pane's box",
+  "notes": "Claude Code: Ctrl+S stashes a draft; Up brings back a cleared draft (last 10). Pane: Up keeps only the one draft from before the history walk (chat-view.ts:345). Size S.",
+  "priority": "low",
+  "parent": null,
+  "updatedAt": "2026-10-31T23:34:31.521Z",
+  "branch": "work-board-card-3a33c1fb-da53-4dc7-b46a-299",
+  "pullRequest": 123,
+  "comments": [
+    {
+      "at": "2026-10-31T23:34:31.521Z",
+      "body": "Shipped in #123: Alt+S stashes the box's draft and empties it; Up walks the stash (newest first, last 10 kept) before the prompts sent. Released as 2.27.0. Needs app rebuild and a hand check."
+    }
+  ],
+  "column": "Done",
+  "order": 94
+}

@@ -1,0 +1,9 @@
+{
+  "id": "e18e837c-34f1-4c95-9096-7ccb07ace4d0",
+  "title": "Ctrl+H opens help for the screen you are on",
+  "notes": "Ctrl+H pops up a dialog listing the shortcuts for the screen you are on: the terminal grid, nvim and the board each have their own set. PR #9.",
+  "priority": "high",
+  "parent": null,
+  "column": "Done",
+  "order": 24
+}

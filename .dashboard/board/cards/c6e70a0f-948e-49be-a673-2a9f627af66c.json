@@ -1,0 +1,11 @@
+{
+  "id": "c6e70a0f-948e-49be-a673-2a9f627af66c",
+  "title": "Stop waking main for a worker that only paused",
+  "notes": "Since PR #176, every time a worker's turn ends the app queues a prompt into its main: '<worker> in pane <id> has finished its turn. If it sent you a report...'. A worker's turn also ends while it waits on its own background work (pr-loop, /simplify reviewers, CI), so main gets dozens of these per card, each one a full main turn spent checking pane list and saying 'still waiting' (seen 2026-11-04 on dashboard and new-crm, four in a few minutes). It costs tokens, buries real reports, and fills the user's chat.\n\nFix: tell main only when it means something.\n- A worker that sent main a report (SendMessage) is already heard; no extra notice for that turn end.\n- Otherwise notify only when the pane stays out of 'running' for a grace period (a few minutes, re-checked), so mid-task pauses never reach main; one notice per stop, not one per turn end.\n- Keep a done notice for a worker that truly stopped without reporting, which is the case #176 was built for.\n- Show it on the Claude screen as a compact status line rather than a user-coloured prompt bubble, so it does not read as something the user typed.\nRelated: card 5f5b62b8 carries the same comment; close that part there. The rule (grace period, report seen, one notice per stop) is a small module with a test (workflow-rule-2). docs/workers decision updated.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-04T10:30:49.341Z",
+  "updatedAt": "2026-11-05T10:28:44.296Z",
+  "column": "Doing",
+  "order": 0
+}

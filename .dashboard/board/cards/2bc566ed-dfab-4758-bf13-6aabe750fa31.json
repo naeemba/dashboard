@@ -1,0 +1,9 @@
+{
+  "id": "2bc566ed-dfab-4758-bf13-6aabe750fa31",
+  "title": "Ask before closing the window",
+  "notes": "Closing killed every shell on every page, including anything still running. The window asks first, with Cancel as the default. PR #8.",
+  "priority": "high",
+  "parent": null,
+  "column": "Done",
+  "order": 26
+}

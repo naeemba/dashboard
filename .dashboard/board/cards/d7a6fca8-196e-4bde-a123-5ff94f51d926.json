@@ -1,0 +1,11 @@
+{
+  "id": "d7a6fca8-196e-4bde-a123-5ff94f51d926",
+  "title": "Use one read-or-null helper instead of six hand-rolled ENOENT checks",
+  "notes": "notes-store.ts:29, ink-store.ts:23, worktree-store.ts:60, projects-file.ts:179, log-store.ts:48 and pane-host-protocol.ts:69 each hand-roll the same try / ENOENT / rethrow. Once readText moves to src/main/app/ (asked for in #206), they can call it, and a change to how a missing file is treated then happens in one place instead of six. Issue: https://github.com/naeemba/dashboard/issues/207 Review: https://github.com/naeemba/dashboard/pull/206#discussion_r4467375251",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-04T12:23:02.192Z",
+  "updatedAt": "2026-11-04T12:23:02.193Z",
+  "column": "Backlog",
+  "order": 24
+}

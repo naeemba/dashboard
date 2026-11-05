@@ -1,0 +1,18 @@
+{
+  "id": "938570a0-e098-4918-9d58-96b0266f0952",
+  "title": "Show Claude's thinking in the Claude pane",
+  "notes": "Claude Code: thinking is visible in the transcript view. SDK: thinking.display (sdk.d.ts:10135), setMaxThinkingTokens(..., display) (3006). Pane: thinking blocks are dropped, only \"Thinking…\" on the working line (chat-transcript.ts:133,182). Draw thinking as a folded entry. Size S.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-10-31T22:26:15.794Z",
+  "branch": "work-board-card-938570a0-e098-4918-9d58-96b",
+  "pullRequest": 104,
+  "comments": [
+    {
+      "at": "2026-10-31T22:26:15.794Z",
+      "body": "PR #104: Claude's thinking blocks show in the Claude pane as a folded entry; the help dialog and docs describe it."
+    }
+  ],
+  "column": "Done",
+  "order": 75
+}

@@ -1,0 +1,18 @@
+{
+  "id": "d455a505-c7dc-4a82-8042-79b25bc81642",
+  "title": "Search prompt history in the Claude pane, across sessions",
+  "notes": "Claude Code: Ctrl+R reverse search; history kept across sessions. Pane: Up/Down walk only this transcript's prompts (chat-view.ts:341). No SDK need. Size S.",
+  "priority": "medium",
+  "parent": null,
+  "updatedAt": "2026-10-31T22:51:14.324Z",
+  "branch": "work-board-card-d455a505-c7dc-4a82-8042-79b",
+  "pullRequest": 108,
+  "comments": [
+    {
+      "at": "2026-10-31T22:51:14.324Z",
+      "body": "Shipped in PR #108: Ctrl+R searches every prompt sent in the project's 20 most recent conversations and puts the picked one in the box. Version 2.14.0."
+    }
+  ],
+  "column": "Done",
+  "order": 81
+}

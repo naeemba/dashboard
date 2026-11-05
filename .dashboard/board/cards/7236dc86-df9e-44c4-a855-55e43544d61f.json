@@ -1,0 +1,12 @@
+{
+  "id": "7236dc86-df9e-44c4-a855-55e43544d61f",
+  "title": "Move the board selection without rebuilding the whole board",
+  "notes": "Measured: on 153 cards each arrow key is 88-128 ms median input-to-paint, worst 152 ms; handler 44-114 ms. Where: src/renderer/board/board-view.ts:884 board-select calls render() (replaceChildren line 688) then renderStatus. Fix (small): a selection move toggles the selected class on two cards and scrolls. Rerun: measure.mjs keys. From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+  "priority": "high",
+  "parent": null,
+  "updatedAt": "2026-11-02T00:00:45.805Z",
+  "branch": "work-board-card-7236dc86-df9e-44c4-a855-55e",
+  "pullRequest": 171,
+  "column": "Done",
+  "order": 136
+}

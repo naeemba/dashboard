@@ -1,0 +1,9 @@
+{
+  "id": "7ad53d2c-11ea-461e-bb42-97fc36d5e1f6",
+  "title": "Open on the projects the last run was left on",
+  "notes": "The layout is saved to session.json and read back at startup: same projects, same order, same view, same focused pane. The shells still start empty. PR #8.",
+  "priority": "high",
+  "parent": null,
+  "column": "Done",
+  "order": 27
+}

@@ -1,0 +1,11 @@
+{
+  "id": "f0c1d251-d7a3-4c71-a04a-b16d6ce7e5db",
+  "title": "Zoom the focused pane to fill the page, and back, like tmux",
+  "notes": "Option+F makes the focused pane take the whole terminals grid; pressing it again puts it back in place. Same as tmux prefix+z. The key is a row in the actions table and the help dialog gets the row.\n\nShipped in #31, branch zoom-the-focused-pane. Alt+F marks the terminals view and the CSS gives the whole grid to whichever pane holds the keyboard, so the zoom follows the keyboard and no pane takes your keystrokes from underneath another one. The four below keep their cells and so keep their size — zooming resizes one shell, not five. The refit sits on the pane's own focus handler, the one place every way in lands: a click on a pane never goes through focusTerminal, and neither does coming back from the board. Not remembered across a restart.\n\nKnown cost: renderer.ts is at 596 code lines against the 600 ceiling. The next feature touching it needs the file split first.\n\nhttps://github.com/naeemba/dashboard/pull/31",
+  "priority": "medium",
+  "parent": null,
+  "branch": "zoom-the-focused-pane",
+  "pullRequest": 31,
+  "column": "Done",
+  "order": 3
+}

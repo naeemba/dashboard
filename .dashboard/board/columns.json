@@ -1,0 +1,10 @@
+{
+  "columns": [
+    "Backlog",
+    "Todo",
+    "Ship",
+    "Doing",
+    "Review",
+    "Done"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "5ab46333-ccde-4921-b84a-1e8630dd8a96",
+  "title": "Timestamp and model on each message in the Claude pane",
+  "notes": "Claude Code: the transcript view shows timestamp and model per message and expands MCP calls. SDK: uuid and model are on messages. Pane: Alt+O unfolds one entry (actions.ts:543); tool output is cut at RESULT_LIMIT 20k chars. Size S.",
+  "priority": "low",
+  "parent": null,
+  "updatedAt": "2026-10-31T22:57:24.083Z",
+  "branch": "work-board-card-5ab46333-ccde-4921-b84a-1e8",
+  "pullRequest": 115,
+  "comments": [
+    {
+      "at": "2026-10-31T22:57:24.083Z",
+      "body": "Shipped in #115: grey line above each user and Claude text message with its time, the date on the first message of each day, and the model for Claude's (Claude Code's own <synthetic> notices get the time alone). Version 2.16.0. Not yet looked at in the running app."
+    }
+  ],
+  "column": "Done",
+  "order": 83
+}

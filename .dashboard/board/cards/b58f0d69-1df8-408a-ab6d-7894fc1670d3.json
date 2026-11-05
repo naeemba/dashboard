@@ -1,0 +1,9 @@
+{
+  "id": "b58f0d69-1df8-408a-ab6d-7894fc1670d3",
+  "title": "Review a card's worktree diff in tig",
+  "notes": "On a card that has a worktree, one key spawns tig <base>..<branch> in the lowest free pane with the worktree as its working directory, reusing the ship's pane picking. tig comes from Homebrew, so the spawn goes through the login shell like nvim. If no pane is free the key refuses and says so, the same way ship does.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Todo",
+  "order": 8
+}

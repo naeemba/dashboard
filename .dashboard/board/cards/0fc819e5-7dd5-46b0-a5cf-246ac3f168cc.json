@@ -1,0 +1,9 @@
+{
+  "id": "0fc819e5-7dd5-46b0-a5cf-246ac3f168cc",
+  "title": "Turn off the terminal cursor blink that costs idle CPU",
+  "notes": "Measured: focused terminal, nothing happening: renderer 3.7-5% CPU, ~70 style recalcs/s, +1% main, +1% GPU; 0.1% with xterm's animation off. Where: cursorBlink: true at src/renderer/app/page.ts:318; xterm DOM renderer blinks via CSS keyframes on background-color. Fix (small): cursorBlink off, or a setting defaulting off. Rerun: measure.mjs keys (last step). From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
+  "priority": "low",
+  "parent": null,
+  "column": "Backlog",
+  "order": 9
+}

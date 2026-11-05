@@ -1,0 +1,9 @@
+{
+  "id": "60951a88-3bfd-4ad8-bd3c-02b0bd5ecab5",
+  "title": "Fix \"Open a new project...\" doing nothing in the Ctrl+S picker",
+  "notes": "Hit Ctrl+S, click \"Open a new project...\", and the folder dialog opens. Confirmed by hand on 2026-09-07 in a build carrying PR #14. There was never a second cause: the quit question was asked with showMessageBoxSync, which stopped the whole main process, so a folder panel already open could never finish. PR #14 asks it with the async showMessageBox and the panel comes back. No code of its own.",
+  "priority": "medium",
+  "parent": null,
+  "column": "Done",
+  "order": 19
+}
