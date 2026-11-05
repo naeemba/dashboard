@@ -258,5 +258,35 @@ relays both events (`relayed` in `chat-sessions.ts`); before, it kept tool input
 left it out, so a turn whose Write held a 40-line poem read `↓ 1 tokens` where Claude Code said 735.
 
 What it gets wrong, on purpose: the assistant message's own usage is not read, only the stream's, so
-a message that ends without a `message_delta` (an interrupted one) keeps its estimate. A subagent's
-stream is still left out, as its steps are drawn only once each arrives whole.
+a message that ends without a `message_delta` (an interrupted one) keeps its estimate. What
+subagents wrote is chat-decision-14.
+
+## chat-decision-14: Agents are a list behind a key, their tokens are Claude Code's figure, and the working line estimates theirs
+
+Checked against Claude Code 2.1.318 on 2026-11-05, one Agent call that lists `/etc/X11` and reads
+`/etc/hostname`, run both in the terminal and as `claude -p --output-format stream-json --verbose
+--include-partial-messages`:
+
+- The terminal's agent row read `40.3k tokens` going to `45.8k`: the `total_tokens` that
+  `task_progress` and `task_notification` carry, which is the agent's last request's whole context
+  plus its output (2 + 4,662 + 28,295 + 116 = 33,075 in the stream-json run). So the Agent call's
+  line and the strip show that number, not output alone. The call's result ends with
+  `<usage>subagent_tokens: 33075 tool_uses: 3 duration_ms: 5329</usage>`, which is where a
+  conversation read back from disk gets it (`resultUsage` in `chat-agents.ts`).
+- The SDK sends no `stream_event` for a subagent at all, and each subagent message's
+  `usage.output_tokens` is its count when it started (7, 7, 24 where the agent's real output was
+  hundreds). The only true figure is the result's `modelUsage`, after the turn. So the working line
+  adds what each subagent message wrote, text, thinking and tool input, four characters a token, the
+  same estimate the main thread gets while it streams. In that run it adds 64 tokens for the
+  subagent's 424 real output tokens (835 for the session less the main thread's 411): its thinking
+  never reaches the SDK, so the estimate runs low.
+- The terminal 2.1.318 backgrounded the agent on its own and its spinner said "Waiting for 1
+  background agent" rather than counting it; there is no terminal figure for a foreground agent's
+  share of the working line to match.
+
+The list of agents is a search sheet behind the agents key rather than keys that walk the strip in
+place: the strip is a status line over the box that the box's own arrows (history, the queue) already
+use, and a sheet is how every other list on this screen is walked. The conversation opens over the
+screen rather than replacing it, so Escape lands back on the list and the main conversation keeps its
+place. Only an agent has a conversation to open; a workflow or a background command says so.
+
