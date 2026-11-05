@@ -16,6 +16,8 @@ export type ChatTask = {
   backgrounded: boolean;
   // The tool call that started it, which backgrounding one task names; null when the session gave none.
   toolUseId: string | null;
+  // An agent, whose own conversation the agents key opens; a workflow or background command has none.
+  agent: boolean;
   tools: number;
   tokens: number;
   seconds: number;
@@ -26,6 +28,17 @@ export type ChatTask = {
 export type ChatTasks = readonly ChatTask[];
 
 const ENDED = new Set(['completed', 'failed', 'killed', 'stopped']);
+
+const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+
+// The count a task_progress or task_notification carries, or null when it carries none.
+export function messageUsage(message: Record<string, unknown>): AgentUsage | null {
+  const usage = isRecord(message.usage) ? message.usage : null;
+  if (!usage || typeof usage.total_tokens !== 'number') return null;
+  return { tools: count(usage.tool_uses), tokens: usage.total_tokens, seconds: Math.round(count(usage.duration_ms) / 1000) };
+}
+
+const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
 
 // A task the strip leaves out: Claude Code's own housekeeping, which it marks as not being activity.
 function quiet(message: Record<string, unknown>): boolean {
@@ -43,8 +56,9 @@ function merged(task: ChatTask, message: Record<string, unknown>): ChatTask {
   const description = text(message.description) || task.description;
   const kind = text(message.subagent_type) || text(message.workflow_name) || task.kind;
   const parent = text(message.parent_task_id) || task.parent;
-  if (description === task.description && kind === task.kind && parent === task.parent) return task;
-  return { ...task, description, kind, parent };
+  const agent = task.agent || isAgent(message);
+  if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent) return task;
+  return { ...task, description, kind, parent, agent };
 }
 
 function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
@@ -56,19 +70,16 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   }
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
-    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
+    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, agent: isAgent(message), tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
   }];
 }
 
 function progressed(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
-  const usage = isRecord(message.usage) ? message.usage : {};
-  const count = (value: unknown, fallback: number) => (typeof value === 'number' ? value : fallback);
+  const usage = messageUsage(message);
   return tasks.map((task) => (task.id !== message.task_id ? task : {
     ...task,
+    ...usage,
     description: text(message.description) || task.description,
-    tools: count(usage.tool_uses, task.tools),
-    tokens: count(usage.total_tokens, task.tokens),
-    seconds: Math.round(count(usage.duration_ms, task.seconds * 1000) / 1000),
     lastTool: text(message.last_tool_name) || task.lastTool,
     summary: text(message.summary) || task.summary,
   }));

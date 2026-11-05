@@ -151,8 +151,12 @@ it, and Enter opens that agent's whole conversation over the screen, its prompt,
 thinking, tool calls and their output, drawn like the main one and kept up while
 it runs. Up and Down walk its entries, Enter unfolds the one picked, and Escape
 goes back to the list; the list's Escape gives the keyboard back to the box. A
-workflow or background command has no conversation to open, and says so
-(chat-decision-14).
+click in it does what it does in the main log: an image or PDF opens over it,
+and a pane link puts the conversation away and lands on the pane. An agent that
+has said nothing yet opens empty and fills as it goes; only the last 20 agents'
+conversations are kept, and a session that ends lists what it was running as
+ended. A workflow or background command has no conversation to open, and says
+so (chat-decision-14).
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default
@@ -194,7 +198,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-start.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
-  `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`
+  `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`, `chat-screen-click.ts`
 - Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`, `chat-task-commands.ts`,
   `chat-agents.ts`, `chat-agents-view.ts`,

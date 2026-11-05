@@ -3,8 +3,8 @@ import type { ChatContent, ChatPreferences } from '../app/bridge';
 import { localCommandOutput, shellExchange, typedCommand } from './chat-commands';
 import { notTypedMessage } from './chat-events';
 import { rateLimitNotice, retryNotice } from './chat-notices';
-import { applyTaskMessage, type AgentUsage, type ChatTasks } from './chat-tasks';
-import { finishedAfter, messageUsage, resultUsage, type FinishedTask } from './chat-agents';
+import { applyTaskMessage, messageUsage, type AgentUsage, type ChatTasks } from './chat-tasks';
+import { finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
 import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
@@ -124,7 +124,8 @@ export type Transcript = {
   finished: FinishedTask[];
   // Each subagent's whole conversation so far, by the id of the tool call that started it, for the
   // agents key's view of it; the call's own steps keep only its lines. Only what arrived while the
-  // screen was open: a saved session keeps a subagent's conversation in a file of its own.
+  // screen was open, and only the newest started KEPT_CONVERSATIONS: a saved session keeps a subagent's
+  // conversation in a file of its own.
   agents: Record<string, ChatEntry[]>;
   // The hook running now, for the working line (chat-hooks.ts); null with none.
   hook: string | null;
@@ -201,8 +202,8 @@ function toolResult(block: Record<string, unknown>): ToolResult {
 }
 
 // An Agent call's result ends with the agent's final count, which is all a conversation read back has.
-function withResult(entries: ChatEntry[], id: string, result: ToolResult): ChatEntry[] {
-  const usage = resultUsage(result.text);
+// It is read from the whole result, since a long report's end, where the count sits, is cut.
+function withResult(entries: ChatEntry[], id: string, result: ToolResult, usage: AgentUsage | null): ChatEntry[] {
   return entries.map((entry) => (entry.kind === 'tool' && entry.id === id ? { ...entry, result, ...(usage && { usage }) } : entry));
 }
 
@@ -234,7 +235,7 @@ function user(transcript: Transcript, content: unknown, stamp: Stamp): Transcrip
   const images: ChatImage[] = [];
   let ran = false;
   for (const block of blocksOf(content)) {
-    if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
+    if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block), resultUsage(textOf(block.content)));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
     else if (block.type === 'text') {
       // A slash command's output, or the app telling main a worker stopped, is the notice it is, not
@@ -363,7 +364,9 @@ function subagentMessage(transcript: Transcript, id: string, message: Record<str
   const own = { ...EMPTY_TRANSCRIPT, entries: transcript.agents[id] ?? [] };
   const after = message.type === 'assistant' ? assistant(own, inner.content, stampOf(message, inner)) : userMessage(own, message);
   const subagents = transcript.subagents + (message.type === 'assistant' ? writtenLength(inner.content) : 0);
-  return { ...transcript, entries, subagents, agents: { ...transcript.agents, [id]: after.entries } };
+  // An agent already kept stays where it was in the order, so the oldest started is the one dropped.
+  const agents = Object.fromEntries(Object.entries({ ...transcript.agents, [id]: after.entries }).slice(-KEPT_CONVERSATIONS));
+  return { ...transcript, entries, subagents, agents };
 }
 
 // A step's tool output is never drawn, only whether it failed, so it is not kept. Plain text in the
@@ -461,8 +464,10 @@ export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript
   if (event.kind === 'ended') {
     const said = event.error ? `The session ended: ${event.error}` : 'The session ended.';
     // The tasks and the queued prompts went with the process that held them, and the next one never
-    // reports their end.
-    return { ...transcript, ...IDLE, tasks: [], queued: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
+    // reports their end: the tasks move to the finished list as ended, so an agent's conversation is
+    // still listed.
+    const finished = [...transcript.tasks.map((task) => ({ ...task, status: 'ended' })).reverse(), ...transcript.finished];
+    return { ...transcript, ...IDLE, tasks: [], finished, queued: [], entries: [...transcript.entries, { kind: 'notice', text: said }] };
   }
   return transcript;
 }

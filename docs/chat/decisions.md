@@ -289,4 +289,7 @@ place: the strip is a status line over the box that the box's own arrows (histor
 use, and a sheet is how every other list on this screen is walked. The conversation opens over the
 screen rather than replacing it, so Escape lands back on the list and the main conversation keeps its
 place. Only an agent has a conversation to open; a workflow or a background command says so.
+Each kept conversation holds its tools' output, up to 20,000 characters a result, so only the last 20
+agents started keep one: a manager session running agents all day would otherwise hold megabytes of
+output for conversations nobody opens. A finished agent past that says so when picked.
 

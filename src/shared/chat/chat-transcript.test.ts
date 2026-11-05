@@ -3,6 +3,7 @@ import {
   afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, IMAGE_LIMIT_SHOWN, imagesFit, preferencesOf, turnTokens, withEarlier, working, type Transcript,
 } from './chat-transcript';
 import { doneReport } from '../workers/done-report';
+import { KEPT_CONVERSATIONS } from './chat-agents';
 
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
 
@@ -163,6 +164,32 @@ describe('applyMessage', () => {
     expect(applyMessage(start, { ...assistant([{ type: 'thinking', thinking: 'hm' }]), parent_tool_use_id: 'a1' }).entries).toBe(start.entries);
   });
 
+  it('leaves the Agent call as it was when a task message repeats its count', () => {
+    const progress = { type: 'system', subtype: 'task_progress', task_id: 't', tool_use_id: 'a1', usage: { total_tokens: 10, tool_uses: 1, duration_ms: 1000 } };
+    const once = fold([
+      { type: 'system', subtype: 'task_started', task_id: 't', tool_use_id: 'a1', description: 'look' },
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      progress,
+    ]);
+    expect(applyMessage(once, progress).entries).toBe(once.entries);
+  });
+
+  it('reads an agent\'s count from a result too long to keep whole', () => {
+    const report = `${'x'.repeat(25_000)}\n<usage>subagent_tokens: 900\ntool_uses: 2\nduration_ms: 4000</usage>`;
+    const transcript = fold([
+      assistant([{ type: 'tool_use', id: 'a1', name: 'Agent', input: {} }]),
+      { type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: 'a1', content: report }] } },
+    ]);
+    expect(transcript.entries[0]).toMatchObject({ usage: { tokens: 900, tools: 2, seconds: 4 } });
+  });
+
+  it('keeps only the newest started agents\' conversations', () => {
+    const said = (id: string) => ({ ...assistant([{ type: 'text', text: id }]), parent_tool_use_id: id });
+    const ids = Array.from({ length: KEPT_CONVERSATIONS + 1 }, (_, index) => `a${index}`);
+    const transcript = fold([...ids.map(said), said('a1')]);
+    expect(Object.keys(transcript.agents)).toEqual(ids.slice(1));
+  });
+
   it('reads a prompt from a saved session as what you said', () => {
     const transcript = applyMessage(EMPTY_TRANSCRIPT, { type: 'user', parent_tool_use_id: null, message: { content: 'hi' } });
     expect(transcript.entries).toEqual([{ kind: 'user', text: 'hi', images: [] }]);
@@ -271,10 +298,12 @@ describe('applyEvent', () => {
     expect(transcript.entries.at(-1)).toEqual({ kind: 'notice', text: 'The session ended: spawn ENOENT' });
   });
 
-  it('drops the tasks the ended session was running', () => {
+  it('moves the tasks the ended session was running to the finished list, as ended', () => {
     const running = applyMessage(prompted('hi'), { type: 'system', subtype: 'task_started', task_id: 'a', description: 'Review a' });
     expect(running.tasks).toHaveLength(1);
-    expect(applyEvent(running, { kind: 'ended', error: null }).tasks).toEqual([]);
+    const ended = applyEvent(running, { kind: 'ended', error: null });
+    expect(ended.tasks).toEqual([]);
+    expect(ended.finished.map((task) => [task.id, task.status])).toEqual([['a', 'ended']]);
   });
 });
 

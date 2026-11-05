@@ -88,10 +88,17 @@ export function pdfOverlay(pdf: Blob): void {
   viewerOverlay('pdf-viewer', frame, { closed: () => URL.revokeObjectURL(frame.src) });
 }
 
-// Focus that leaves the dialog comes back to it. Returns the way to stop, which closing calls.
+// Focus that leaves the dialog comes back to it, unless it went to a sheet opened over this one, such
+// as an image opened from an agent's conversation: only the topmost sheet holds, or the two would pull
+// the focus back and forth. Returns the way to stop, which closing calls.
 export function holdFocus(dialog: HTMLElement): () => void {
+  const sheet = dialog.closest(`.${OVERLAY_CLASS}`);
   function hold(event: FocusEvent): void {
-    if (!(event.target instanceof Node && dialog.contains(event.target))) dialog.focus();
+    if (!(event.target instanceof Element)) return dialog.focus();
+    if (dialog.contains(event.target)) return;
+    const over = event.target.closest(`.${OVERLAY_CLASS}`);
+    if (sheet && over && sheet.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) return;
+    dialog.focus();
   }
   document.addEventListener('focusin', hold);
   return () => document.removeEventListener('focusin', hold);

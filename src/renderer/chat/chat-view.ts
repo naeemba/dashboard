@@ -17,7 +17,7 @@ import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
 import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
 import { createCacheClock } from './chat-cache-clock';
-import { PANE_LINK } from './chat-pane-links';
+import { screenClick } from './chat-screen-click';
 import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
@@ -117,7 +117,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  const agents = createAgentsView(() => transcript, options, () => focus());
+  const agents = createAgentsView(() => transcript, { ...options, openPdf }, () => focus());
   const tasks = createTaskStrip(agents.open);
   const queue = createQueueStrip();
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
@@ -447,32 +447,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   });
 
-  // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
-  // decides what is safe to hand the system, never in this window.
-  // An image, in the log or attached, opens full size over the app, and a PDF's tile in the viewer.
-  element.addEventListener('click', (event) => {
-    if (event.target instanceof HTMLImageElement) {
-      event.preventDefault();
-      imageOverlay(event.target.src);
-      return;
-    }
-    const target = event.target instanceof Element ? event.target : null;
-    const tile = target?.closest<HTMLElement>(`.${PDF_TILE}`);
-    if (tile) {
-      openPdf(tile);
-      return;
-    }
-    const pane = target?.closest<HTMLElement>(`.${PANE_LINK}`);
-    if (pane) {
-      event.preventDefault();
-      options.goToPane(pane.dataset.pane ?? '');
-      return;
-    }
-    const link = target?.closest('a');
-    if (!link) return;
-    event.preventDefault();
-    bridge.openExternal(link.href);
-  });
+  // A link anywhere on the screen, the log or a plan in the ask box, and an image, in the log or
+  // attached, or a PDF's tile (chat-screen-click.ts).
+  element.addEventListener('click', (event) => screenClick(event, { openPdf, goToPane: options.goToPane, openExternal: (url) => bridge.openExternal(url) }));
 
   // A click on an entry moves the selection there; a tool call's own summary unfolds it, which is what
   // the unfold key does on a selected one.

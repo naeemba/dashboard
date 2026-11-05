@@ -1,6 +1,6 @@
 import { isRecord, stringOrEmpty as text } from '../app/is-record';
 import { ranked, type SearchRow } from '../app/fuzzy';
-import { taskDetail, taskOrder, type AgentUsage, type ChatTask, type ChatTasks } from './chat-tasks';
+import { messageUsage, taskDetail, taskOrder, type AgentUsage, type ChatTask, type ChatTasks } from './chat-tasks';
 
 // The agents, workflows and background commands that ended this conversation, for the agents key's
 // list, and what each agent did, for the Agent call that started it. The strip (chat-tasks.ts) drops a
@@ -10,13 +10,20 @@ import { taskDetail, taskOrder, type AgentUsage, type ChatTask, type ChatTasks }
 // left the set of background tasks without one.
 export type FinishedTask = ChatTask & { status: string };
 
-const count = (value: unknown): number => (typeof value === 'number' ? value : 0);
+// How many agents' whole conversations the transcript keeps, the newest started: each holds its tools'
+// output, and a session that runs agents all day would hold every one of them for nobody.
+export const KEPT_CONVERSATIONS = 20;
 
-// The count a task_progress or task_notification carries, or null when it carries none.
-export function messageUsage(message: Record<string, unknown>): AgentUsage | null {
-  const usage = isRecord(message.usage) ? message.usage : null;
-  if (!usage || typeof usage.total_tokens !== 'number') return null;
-  return { tools: count(usage.tool_uses), tokens: usage.total_tokens, seconds: Math.round(count(usage.duration_ms) / 1000) };
+export type AgentConversation = { kind: 'open'; id: string } | { kind: 'refused'; reason: string };
+
+// The conversation the agents key opens for a task. An agent still running that has said nothing yet
+// opens empty and fills as it goes; a finished one without a conversation ran before the screen opened
+// or was dropped for newer ones.
+export function agentConversation(task: ChatTask | FinishedTask, agents: Record<string, unknown>): AgentConversation {
+  const name = task.description || task.kind;
+  if (!task.agent || task.toolUseId === null) return { kind: 'refused', reason: `${name} has no conversation to show: only an agent has one.` };
+  if (task.toolUseId in agents || !('status' in task)) return { kind: 'open', id: task.toolUseId };
+  return { kind: 'refused', reason: `${name} has no conversation to show: only the last ${KEPT_CONVERSATIONS} agents' are kept, from when the screen opened.` };
 }
 
 // The count an Agent call's result ends with, `<usage>subagent_tokens: 33075 tool_uses: 3

@@ -316,6 +316,8 @@ export function redrawEntries(
     if (fresh.fill) later({ ...fresh, fill: fresh.fill });
     drawn[index] = fresh;
   });
+  // A list shorter than what is drawn, an agent's conversation gone with a reset, takes the rest away.
+  for (const gone of drawn.splice(entries.length)) gone.element.remove();
 }
 
 // `previousAt` is the time of the last stamped entry above this one, for the date on its stamp.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentRows, finishedAfter, resultUsage, type FinishedTask } from './chat-agents';
+import { agentConversation, agentRows, finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 
 // Shaped as Claude Code 2.1.318 sent them for one Agent call.
@@ -83,5 +83,30 @@ describe('agentRows', () => {
     const { finished } = fold([started, progress, updated, notified]);
     expect(agentRows([], finished, 'zzz')).toEqual([]);
     expect(agentRows([], finished, 'hostname')).toHaveLength(1);
+  });
+});
+
+describe('agentConversation', () => {
+  const agent = fold([started]).tasks[0];
+  const workflow = fold([{ type: 'system', subtype: 'task_started', task_id: 'w', tool_use_id: 'call-w', description: 'Spec', task_type: 'local_workflow', workflow_name: 'spec' }]).tasks[0];
+  const command = fold([{ type: 'system', subtype: 'task_started', task_id: 'b', tool_use_id: 'call-b', description: 'npm test', task_type: 'local_bash' }]).tasks[0];
+
+  it('opens an agent that has said something', () => {
+    expect(agentConversation(agent, { 'call-a': [] })).toEqual({ kind: 'open', id: 'call-a' });
+  });
+
+  it('opens a running agent that has said nothing yet, to fill as it goes', () => {
+    expect(agentConversation(agent, {})).toEqual({ kind: 'open', id: 'call-a' });
+  });
+
+  it('refuses a finished agent whose conversation is not kept, and says how many are', () => {
+    const answer = agentConversation({ ...agent, status: 'completed' }, {});
+    expect(answer).toMatchObject({ kind: 'refused' });
+    expect(answer.kind === 'refused' && answer.reason).toContain(`last ${KEPT_CONVERSATIONS} agents'`);
+  });
+
+  it('refuses a workflow and a background command, which have no conversation', () => {
+    expect(agentConversation(workflow, { 'call-w': [] })).toMatchObject({ kind: 'refused' });
+    expect(agentConversation(command, {})).toMatchObject({ kind: 'refused' });
   });
 });

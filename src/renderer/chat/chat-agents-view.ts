@@ -1,11 +1,11 @@
-import { agentRows } from '../../shared/chat/chat-agents';
-import type { ChatTask } from '../../shared/chat/chat-tasks';
+import { agentConversation, agentRows, type FinishedTask } from '../../shared/chat/chat-agents';
+import type { ChatTask, ChatTasks } from '../../shared/chat/chat-tasks';
 import type { ChatEntry, Transcript } from '../../shared/chat/chat-transcript';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { foldOf, redrawEntries, type DrawnEntry } from './chat-entries';
-import { PANE_LINK } from './chat-pane-links';
+import { screenClick } from './chat-screen-click';
 import type { ChatViewOptions } from './chat-view';
-import { imageOverlay, searchOverlay, viewerOverlay } from '../app/overlay';
+import { searchOverlay, viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
 
 // The agents key's list of what ran this conversation, running first, then finished, and one agent's
@@ -19,12 +19,13 @@ export type AgentsView = {
   update(): void;
 };
 
-type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'>;
+type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'> & { openPdf(tile: HTMLElement): void };
 
 export function createAgentsView(transcript: () => Transcript, say: Say, back: () => void): AgentsView {
   let listChanged: (() => void) | null = null;
   let drawConversation: (() => void) | null = null;
-  let listed: unknown[] = [];
+  let listedTasks: ChatTasks | null = null;
+  let listedFinished: FinishedTask[] | null = null;
 
   function show(): void {
     const { tasks, finished } = transcript();
@@ -45,12 +46,13 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
     }).then((task) => (task ? open(task) : back()));
   }
 
-  function open(task: ChatTask): void {
-    const id = task.toolUseId;
-    if (id === null || !transcript().agents[id]) {
-      say.onNotice(`${task.description || task.kind} has no conversation to show: only an agent's is kept, from when the screen opened.`);
+  function open(task: ChatTask | FinishedTask): void {
+    const target = agentConversation(task, transcript().agents);
+    if (target.kind === 'refused') {
+      say.onNotice(target.reason);
       return back();
     }
+    const { id } = target;
     const log = document.createElement('div');
     const title = document.createElement('div');
     title.className = 'chat-agent-title';
@@ -68,9 +70,8 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
     }
 
     // Drawn as the main log is, filled at once: an agent's conversation is short beside the main one.
-    const conversationId = id;
     function draw(): void {
-      const list = transcript().agents[conversationId] ?? [];
+      const list = transcript().agents[id] ?? [];
       if (list === drawnList) return;
       const box = log.parentElement;
       const stick = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
@@ -79,25 +80,30 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
       if (stick && box) box.scrollTop = box.scrollHeight;
     }
 
-    // A link opens in the browser and a pane link lands on its pane, as in the main log; an image opens full size.
+    // A click selects its entry and does what it does in the main log. A pane link puts the
+    // conversation away without going back to the list: the pane cannot be reached under a dialog.
+    let leaving = false;
     log.addEventListener('click', (event) => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (target instanceof HTMLImageElement) return imageOverlay(target.src);
-      const index = drawn.findIndex((entry) => entry.element.contains(target));
+      const clicked = event.target instanceof Element ? event.target : null;
+      const index = drawn.findIndex((entry) => entry.element.contains(clicked));
       if (index !== -1) select(index);
-      const link = target?.closest('a');
-      if (!link) return;
-      event.preventDefault();
-      if (link.classList.contains(PANE_LINK)) say.goToPane(link.dataset.pane ?? '');
-      else say.bridge.openExternal(link.href);
+      screenClick(event, {
+        openPdf: say.openPdf,
+        openExternal: (url) => say.bridge.openExternal(url),
+        goToPane: (pane) => {
+          leaving = true;
+          close();
+          say.goToPane(pane);
+        },
+      });
     });
 
     drawConversation = draw;
-    viewerOverlay('chat-agent', log, {
+    const close = viewerOverlay('chat-agent', log, {
       closed: () => {
         drawConversation = null;
         drawn = [];
-        show();
+        if (!leaving) show();
       },
       enter: () => {
         const current = drawn[selected ?? -1];
@@ -121,8 +127,9 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
     update() {
       drawConversation?.();
       const { tasks, finished } = transcript();
-      if (listed[0] === tasks && listed[1] === finished) return;
-      listed = [tasks, finished];
+      if (listedTasks === tasks && listedFinished === finished) return;
+      listedTasks = tasks;
+      listedFinished = finished;
       listChanged?.();
     },
   };
