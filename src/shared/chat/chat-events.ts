@@ -15,6 +15,12 @@ const HIDDEN_TAGS = new Set(['summary', 'task-id', 'tool-use-id']);
 // never a skill's instructions, which sit inside the turn that loaded them.
 export type InjectedMessage = { title: string; body: string; startsTurn?: true };
 
+// The session a message from another session names as its sender, or undefined for any other origin.
+export function peerSender(origin: unknown): string | undefined {
+  if (!isRecord(origin) || origin.kind !== 'peer') return undefined;
+  return [origin.name, origin.from].find((value): value is string => typeof value === 'string');
+}
+
 // What a user message is when Claude Code injected it, or null when a person typed it. A message with
 // no origin is a person's: text pasted from elsewhere can hold the same tags, and must stay theirs.
 export function injectedMessage(origin: unknown, text: string): InjectedMessage | null {
@@ -43,7 +49,7 @@ export function injectedMessage(origin: unknown, text: string): InjectedMessage 
     };
   }
   if (origin.kind === 'peer') {
-    const sender = [origin.name, origin.from].find((value): value is string => typeof value === 'string') ?? 'another session';
+    const sender = peerSender(origin) ?? 'another session';
     // With no body of its own, the message is the text inside its envelope. A subagent's hand-back is
     // a preamble, then the report with every line indented by two spaces; any other message keeps its
     // own indentation.

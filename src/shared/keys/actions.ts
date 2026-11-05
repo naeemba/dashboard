@@ -74,7 +74,7 @@ export type InkCommand = 'pen' | 'eraser' | 'color' | 'width' | 'undo' | 'clear'
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -626,6 +626,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-copy', description: 'Copy the selected entry\'s next code block',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'copy' }, mac: 'Alt+C', other: 'Alt+C',
+  },
+  // Alt+G, for go. Alt+L would read better, but this screen also hears the terminals' Alt+L to the workers.
+  {
+    name: 'claude-link', description: 'Follow the selected entry\'s next link: a pane link lands on the pane, a web link opens in the browser',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'link' }, mac: 'Alt+G', other: 'Alt+G',
   },
   {
     name: 'claude-interrupt', description: 'Stop Claude, declining anything it is asking',

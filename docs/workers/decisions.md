@@ -34,13 +34,26 @@ SendMessage to `main` with two of them open names two sessions. dispatch.ts spel
 **The Stop hook goes through the app, not to main directly.** A hook is a shell command, and Claude
 Code has no command that sends a message to a named session; the mailbox under `~/.claude/sessions` is
 its own undocumented business. So the hook runs `session notify <id> done`: the pane gets a green edge,
-`session list` says `done`, and for a pane main's worker is in, the app queues a short prompt into the
-session of the main that dispatched it (the claimer's, for a pane claimed with `--project`): the
-worker's name, its pane, and that its own report says what it did. It goes through the session's own
-queue (chat-decision-7), so a main mid-turn reads it after the turn. That is the report main can count
-on when a worker forgot to write or died before it could. The worker's own prompt still ends by telling
-it to SendMessage main, since the hook knows nothing of what the worker did. A card's agent a ship
-started and a Claude opened by hand never tell main: neither is main's worker.
+`session list` says `done`, and for a pane main's worker is in, the app may queue a short prompt into
+the session of the main that dispatched it (the claimer's, for a pane claimed with `--project`): the
+worker's name, its pane, and that it stopped without a report. It goes through the session's own queue
+(chat-decision-7), so a main mid-turn reads it after the turn. That is the report main can count on when
+a worker forgot to write or died before it could. The worker's own prompt still ends by telling it to
+SendMessage main, since the hook knows nothing of what the worker did. A card's agent a ship started and
+a Claude opened by hand never tell main: neither is main's worker.
+
+**A turn end is not a stop.** A worker's turn also ends while it waits on its own background work — a
+review subagent, `/pr-loop`, CI — and the next notification wakes it. Telling main at every Stop hook
+(#176) gave it dozens of prompts per card, each a turn spent checking `pane list` and saying "still
+waiting". So stop-notices.ts tells main only when the worker stays out of `running` for three minutes
+(`STOP_GRACE_MS`), the period starting again at each turn end, and only once until the worker runs
+again. A stop the worker's own SendMessage covers gets no notice at all: chat-sessions.ts sees the
+message arrive in main by its sender's name, before the stop or during the grace period. The Claude
+screen draws the notice as a status line, not a prompt bubble, since nobody typed it; the older
+wording, still in conversations saved before this, is drawn the same way.
+
+Watch for: a main busy for longer than the grace period reads a worker's report only after it, so that
+stop is noticed as well as reported.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and

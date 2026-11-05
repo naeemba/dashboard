@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { doneReport, projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { projectOfFolder, sessionRequests, type SessionPorts } from './session-requests';
+import { doneReport } from '../../shared/workers/done-report';
+import { STOP_GRACE_MS } from './stop-notices';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
+
+// A stop is told only once it has lasted the grace period; stop-notices.test.ts holds what it waits for.
+beforeEach(() => { vi.useFakeTimers(); });
+afterEach(() => { vi.useRealTimers(); });
+const stayStopped = () => vi.advanceTimersByTime(STOP_GRACE_MS);
 
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
 
@@ -213,6 +220,7 @@ describe('sessionRequests', () => {
     workers.add('2:1');
     const answer = sessionRequests(ports);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    stayStopped();
     expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
@@ -225,11 +233,36 @@ describe('sessionRequests', () => {
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'blocked'] });
     expect(told).toEqual([]);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    stayStopped();
     expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
     // A Claude opened by hand in the other pane runs the same hooks only if somebody gave it them; its
     // done is still nobody's report to main.
     agents.add('2:2');
     await answer({ directory: '/anywhere', args: ['notify', '2:2', 'done'] });
+    stayStopped();
+    expect(told).toHaveLength(1);
+  });
+
+  it('tells main nothing for a stop the worker already reported to it', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    answer.heard(2, 'api-terminal-2');
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    stayStopped();
+    expect(told).toEqual([]);
+  });
+
+  it('takes no report signed by another session, or read by another main, for the worker\'s', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    answer.heard(2, 'somebody-else');
+    answer.heard(3, 'api-terminal-2');
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    stayStopped();
     expect(told).toHaveLength(1);
   });
 
@@ -409,6 +442,27 @@ describe('sessionRequests across projects', () => {
     await ask(['claim', '--project', 'api']);
     await ask(['run', '2:1', 'fix the tests']);
     await ask(['notify', '2:1', 'done'], '/anywhere');
+    stayStopped();
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+  });
+
+  it('takes a report read by the main that claimed the pane from another page', async () => {
+    const { ask, answer, told } = pages();
+    await ask(['claim', '--project', 'api']);
+    await ask(['run', '2:1', 'fix the tests']);
+    answer.heard(-2, 'api-terminal-2');
+    await ask(['notify', '2:1', 'done'], '/anywhere');
+    stayStopped();
+    expect(told).toEqual([]);
+  });
+
+  it('takes no report read by the pane\'s own page main when another page claimed it', async () => {
+    const { ask, answer, told } = pages();
+    await ask(['claim', '--project', 'api']);
+    await ask(['run', '2:1', 'fix the tests']);
+    answer.heard(2, 'api-terminal-2');
+    await ask(['notify', '2:1', 'done'], '/anywhere');
+    stayStopped();
     expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
   });
 
