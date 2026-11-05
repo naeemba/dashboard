@@ -18,6 +18,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it: `worker-roster.ts`, `pane-link.ts`
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
+- A worker run as a Claude screen (`pane run --screen`): `screen-workers.ts`, `../../shared/workers/screen-key.ts`; the session is the [chat](../chat/README.md)'s `chat-sessions.ts`, the pane `src/renderer/app/page.ts` (workers-decision-5)
 
 ## Scenarios
 
@@ -45,6 +46,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given main dispatches a worker or a card is shipped, when its Claude starts, then it starts with `--session-id` the app chose and the app's session index has its row first (drawer-decision-1).
 - Given a worker's session has used the prompt cache, when the workers popup (Alt+W) is drawn, then the worker's row says `warm 42m` or `cold` for its own session, from the usage sweep (chat-decision-12).
 - Given a throwaway worktree with uncommitted work, when the worker is released, then the worktree is kept and the reply says why.
+- Given main runs `pane run <id> --screen "<prompt>"` (with `--card` or `--worktree` or neither), when the worker starts, then the pane shows a Claude screen instead of its terminal, in the same folder, in auto mode, named and indexed as a terminal worker is, with the prompt as its first message; a plain `pane run` is unchanged (workers-decision-5).
+- Given a worker on a Claude screen, when its turn ends, then its own Stop hook, called in the app rather than through `session notify`, reports done with what it still waits on, and main is told exactly as for a terminal worker; a question it asks marks the pane blocked until answered.
+- Given a worker on a Claude screen, when `pane send` names its pane, then the text goes in as its next prompt rather than into the hidden shell; `pane release` closes the pane and ends the session.
+- Given a worker on a Claude screen, when the app restarts, then its pane comes back as a Claude screen on the same conversation once its project opens, as main's worker; the conversation carries on from the next prompt.
 
 ## Open questions
 
