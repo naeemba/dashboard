@@ -4,14 +4,19 @@ import type { ThemeColour } from '../app/theme';
 // What fills the context window, as the Claude screen's context popup lists it: the session's own
 // breakdown from the same getContextUsage answer the status line's meter reads, shaped into rows.
 
-export type ContextUsageParts = Pick<SDKControlGetContextUsageResponse, 'categories' | 'memoryFiles' | 'mcpTools' | 'maxTokens'>;
+export type ContextUsageParts = Pick<SDKControlGetContextUsageResponse, 'categories' | 'memoryFiles' | 'mcpTools' | 'agents' | 'skills' | 'maxTokens'>;
 type Category = SDKControlGetContextUsageResponse['categories'][number];
 type CategoryId = NonNullable<Category['id']>;
 
 // A row of the popup. `tone` is a theme colour's name, for the row's bar; null is the plain line colour.
 export type BreakdownRow = { key: string; name: string; detail: string | null; tokens: number; percentage: number; tone: ThemeColour | null };
 
-export type ContextBreakdown = { categories: BreakdownRow[]; memoryFiles: BreakdownRow[]; mcpTools: BreakdownRow[] };
+// `all` is every file, tool, skill and agent, biggest first and not capped: what a row of the popup
+// opens (chat-context-levels.ts).
+export type ContextBreakdown = {
+  categories: BreakdownRow[]; memoryFiles: BreakdownRow[]; mcpTools: BreakdownRow[];
+  all: { memoryFiles: BreakdownRow[]; mcpTools: BreakdownRow[]; skills: BreakdownRow[]; agents: BreakdownRow[] };
+};
 
 // How many files or tools a list shows before the rest fold into one "N more" row.
 export const LIST_CAP = 5;
@@ -33,10 +38,13 @@ function share(tokens: number, size: number): number {
   return size > 0 ? (tokens / size) * 100 : 0;
 }
 
+export function biggestFirst(rows: BreakdownRow[]): BreakdownRow[] {
+  return [...rows].sort((a, b) => b.tokens - a.tokens);
+}
+
 // Biggest first, at most LIST_CAP rows, then one row counting the rest and what they hold together.
 // The popup keeps its highlight by key across every list at once, so the "more" row carries its list's.
-function capped(list: string, rows: BreakdownRow[], size: number): BreakdownRow[] {
-  const sorted = [...rows].sort((a, b) => b.tokens - a.tokens);
+function capped(list: string, sorted: BreakdownRow[], size: number): BreakdownRow[] {
   if (sorted.length <= LIST_CAP) return sorted;
   const rest = sorted.slice(LIST_CAP);
   const tokens = rest.reduce((sum, row) => sum + row.tokens, 0);
@@ -50,13 +58,21 @@ export function contextBreakdown(usage: ContextUsageParts): ContextBreakdown {
   const size = usage.maxTokens;
   const row = (key: string, name: string, detail: string | null, tokens: number, tone: ThemeColour | null): BreakdownRow =>
     ({ key, name, detail, tokens, percentage: share(tokens, size), tone });
+  const memoryFiles = biggestFirst(usage.memoryFiles.map((file) => row(file.path, file.path, null, file.tokens, toneOf('memory_files'))));
+  // A tool the session has not loaded is deferred in the same way, and is not counted in the window.
+  const mcpTools = biggestFirst(usage.mcpTools.filter((tool) => tool.isLoaded !== false)
+    .map((tool) => row(tool.name, tool.name, tool.serverName, tool.tokens, toneOf('mcp_tools'))));
+  // An older CLI sends no skills; an agent or a skill is keyed by its source too, as two can share a name.
+  const skills = biggestFirst((usage.skills?.skillFrontmatter ?? [])
+    .map((skill) => row(`skill:${skill.source}:${skill.name}`, skill.name, skill.pluginName ?? skill.source, skill.tokens, toneOf('skills'))));
+  const agents = biggestFirst((usage.agents ?? [])
+    .map((agent) => row(`agent:${agent.source}:${agent.agentType}`, agent.agentType, agent.source, agent.tokens, toneOf('custom_agents'))));
   return {
     categories: usage.categories
       .filter((category) => category.kind !== 'deferred' && category.tokens > 0)
       .map((category) => row(category.id ?? category.name, category.name, null, category.tokens, toneOf(category.id))),
-    memoryFiles: capped('memoryFiles', usage.memoryFiles.map((file) => row(file.path, file.path, null, file.tokens, toneOf('memory_files'))), size),
-    // A tool the session has not loaded is deferred in the same way, and is not counted in the window.
-    mcpTools: capped('mcpTools', usage.mcpTools.filter((tool) => tool.isLoaded !== false)
-      .map((tool) => row(tool.name, tool.name, tool.serverName, tool.tokens, toneOf('mcp_tools'))), size),
+    memoryFiles: capped('memoryFiles', memoryFiles, size),
+    mcpTools: capped('mcpTools', mcpTools, size),
+    all: { memoryFiles, mcpTools, skills, agents },
   };
 }

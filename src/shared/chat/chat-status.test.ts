@@ -6,8 +6,8 @@ const models = [
   { value: 'opus', resolvedModel: 'claude-opus-5-5', displayName: 'Opus 5.5', description: '' },
   { value: 'claude-opus-4-8', resolvedModel: 'claude-opus-4-8', displayName: 'Opus 4.8', description: '' },
 ];
-const context = { totalTokens: 70_400, maxTokens: 1_000_000, percentage: 7.4, model: 'claude-opus-4-8', categories: [], memoryFiles: [], mcpTools: [] };
-const empty = { categories: [], memoryFiles: [], mcpTools: [] };
+const context = { totalTokens: 70_400, maxTokens: 1_000_000, percentage: 7.4, model: 'claude-opus-4-8', categories: [], memoryFiles: [], mcpTools: [], agents: [] };
+const empty = { categories: [], memoryFiles: [], mcpTools: [], all: { memoryFiles: [], mcpTools: [], skills: [], agents: [] } };
 const window = (utilization: number | null) => ({ utilization, resets_at: '2026-10-30T03:50:00Z' });
 
 describe('measureOf', () => {
