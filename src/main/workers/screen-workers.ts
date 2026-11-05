@@ -21,9 +21,11 @@ import { stopWaiting } from './session-cli';
 
 export type ScreenStart = { session: string; name: string; prompt: string };
 
+// `started` is whether the session has written its conversation, so a restart resumes it rather than
+// starting it fresh. A file from before it was saved names none, and was resumed then too.
 type Saved = {
   projectPath: string; index: number; directory: string; session: string; name: string;
-  dispatcherPath: string; cardId: string | null;
+  dispatcherPath: string; cardId: string | null; started?: boolean;
 };
 
 // What chat-sessions runs it on, beside what is saved of it and whether its last turn has ended.
@@ -39,12 +41,17 @@ export type ScreenPorts = {
   notify(id: string, state: WorkerState, waiting?: StopWaiting): void;
 };
 
-// What a screen event says about its worker: a question waiting on you, the question gone, or the
-// session's conversation written, which is what a later start resumes rather than starts fresh.
-export function screenSignal(event: ChatEvent): WorkerState | 'started' | null {
+// What a screen event says about its worker: a question waiting on you, the question gone, the
+// session's conversation written, which is what a later start resumes rather than starts fresh, or its
+// turn over. The Stop hook does not run for a turn you interrupt or a session that dies, and the SDK's
+// result and the session's end come either way; they end the turn without telling main anything.
+export function screenSignal(event: ChatEvent): WorkerState | 'started' | 'turn-over' | null {
   if (event.kind === 'ask') return 'blocked';
   if (event.kind === 'ask-gone') return 'running';
-  if (event.kind === 'message' && event.message.type === 'system' && event.message.subtype === 'init') return 'started';
+  if (event.kind === 'ended') return 'turn-over';
+  if (event.kind !== 'message') return null;
+  if (event.message.type === 'result') return 'turn-over';
+  if (event.message.type === 'system' && event.message.subtype === 'init') return 'started';
   return null;
 }
 
@@ -56,6 +63,7 @@ export function savedScreens(file: string): Saved[] {
       isRecord(each) && typeof each.projectPath === 'string' && typeof each.index === 'number'
       && typeof each.directory === 'string' && typeof each.session === 'string' && typeof each.name === 'string'
       && typeof each.dispatcherPath === 'string' && (each.cardId === null || typeof each.cardId === 'string')
+      && (each.started === undefined || typeof each.started === 'boolean')
     )) : [];
   } catch {
     return [];
@@ -101,8 +109,10 @@ export function screenWorkers(ports: ScreenPorts) {
     };
   }
 
-  function add(id: string, saved: Saved, resume: boolean): void {
-    const worker = { session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done: false };
+  // One brought back after a restart had its turn ended by the restart.
+  function add(id: string, saved: Saved, back: boolean): void {
+    const resume = back && saved.started !== false;
+    const worker = { session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done: back };
     live.set(id, worker);
     byKey.set(screenKey(id), worker);
   }
@@ -110,7 +120,7 @@ export function screenWorkers(ports: ScreenPorts) {
   return {
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string): void {
       const { index } = paneFromId(id);
-      add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId }, false);
+      add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
       save();
       // Drawn first, so the screen is there for the prompt to land on.
       ports.changed();
@@ -130,6 +140,8 @@ export function screenWorkers(ports: ScreenPorts) {
       return worker && !worker.done;
     },
     ids: (): string[] => [...live.keys()],
+    // The pane whose screen runs this conversation, which nothing else running Claude can see.
+    paneRunning: (session: string): string | undefined => [...live.values()].find((worker) => worker.session === session)?.id,
     directoryOf: (key: number): string | undefined => byKey.get(key)?.saved.directory,
     // Where the worker works, which is not where the hidden shell under it stands.
     folder: (id: string): string | undefined => live.get(id)?.saved.directory,
@@ -139,8 +151,13 @@ export function screenWorkers(ports: ScreenPorts) {
       const signal = screenSignal(event);
       const worker = signal && byKey.get(key);
       if (!worker) return;
-      if (signal === 'started') worker.resume = true;
-      else report(worker.id, signal);
+      if (signal === 'turn-over') worker.done = true;
+      else if (signal !== 'started') report(worker.id, signal);
+      else if (!worker.resume) {
+        worker.resume = true;
+        worker.saved.started = true;
+        save();
+      }
     },
     // The pane closed or released: the session goes with it.
     drop(id: string): void {

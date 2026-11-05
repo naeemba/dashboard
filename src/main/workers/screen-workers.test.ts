@@ -33,7 +33,8 @@ describe('screenSignal', () => {
     expect(screenSignal({ kind: 'ask-gone', id: 'a' })).toBe('running');
     expect(screenSignal({ kind: 'message', message: { type: 'system', subtype: 'init' } })).toBe('started');
     expect(screenSignal({ kind: 'message', message: { type: 'assistant' } })).toBeNull();
-    expect(screenSignal({ kind: 'ended', error: null })).toBeNull();
+    expect(screenSignal({ kind: 'ended', error: null })).toBe('turn-over');
+    expect(screenSignal({ kind: 'message', message: { type: 'result', subtype: 'error_during_execution' } })).toBe('turn-over');
   });
 });
 
@@ -60,6 +61,18 @@ describe('screenWorkers', () => {
     expect(said.slice(-2)).toEqual(['2:1 running', '2:1 done 1/0']);
     expect(screens.working('2:1')).toBe(false);
     expect(screens.working('2:2')).toBeUndefined();
+  });
+
+  // Stop does not run for an interrupted turn or a session that dies; left working, the review sweep
+  // would never start that card's review.
+  it('ends the turn on the session result or its end, without telling main', async () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    const hooks = screens.session(screenKey('2:1'))?.hooks ?? {};
+    await hooks.UserPromptSubmit?.[0].hooks[0]({ hook_event_name: 'UserPromptSubmit' } as never, undefined, hookOptions);
+    screens.observe(screenKey('2:1'), { kind: 'message', message: { type: 'result', subtype: 'error_during_execution' } });
+    expect(screens.working('2:1')).toBe(false);
+    expect(said.at(-1)).toBe('2:1 running');
   });
 
   it('marks a question as blocked, and resumes the conversation once the session has started it', () => {
@@ -97,8 +110,19 @@ describe('screenWorkers', () => {
     const after = workers(before.file);
     expect(after.screens.comeBack(5, '/work/other')).toEqual([]);
     expect(after.screens.comeBack(4, '/work/api')).toMatchObject([{ index: 3, directory: '/work/api.worktrees/fix', dispatcherPath: '/work/desk', cardId: 'card-1' }]);
-    expect(after.screens.session(screenKey('4:3'))).toMatchObject({ session: SESSION, resume: true });
+    expect(after.screens.session(screenKey('4:3'))).toMatchObject({ session: SESSION, resume: false });
+    expect(after.screens.working('4:3')).toBe(false);
     expect(after.screens.comeBack(4, '/work/api')).toEqual([]);
+  });
+
+  // Resuming an id with no transcript fails every prompt after the restart.
+  it('resumes after a restart only a conversation the session wrote', () => {
+    const before = workers();
+    before.screens.start('2:3', '/work/api', '/work/api', START, null, '/work/api');
+    before.screens.observe(screenKey('2:3'), { kind: 'message', message: { type: 'system', subtype: 'init' } });
+    const after = workers(before.file);
+    after.screens.comeBack(4, '/work/api');
+    expect(after.screens.session(screenKey('4:3'))).toMatchObject({ resume: true });
   });
 
   it('reads a file that is missing or not its own as nobody to bring back', () => {

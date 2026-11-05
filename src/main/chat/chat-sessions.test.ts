@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, inputQueue, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('inputQueue', () => {
   it('hands over what was pushed before and after the reader started, in order, until closed', async () => {
@@ -88,6 +88,14 @@ describe('relayed', () => {
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
   it('relays the suggested next prompt', () => expect(relayed({ type: 'prompt_suggestion' })).toBe(true));
   it('relays a prompt\'s lifecycle', () => expect(relayed({ type: 'command_lifecycle' })).toBe(true));
+});
+
+describe('workerSessionStart', () => {
+  it('starts a new worker under its own id and resumes one whose conversation is written', () => {
+    const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
+    expect(workerSessionStart({ ...worker, resume: false })).toEqual({ sessionId: 'abc' });
+    expect(workerSessionStart({ ...worker, resume: true })).toEqual({ resume: 'abc' });
+  });
 });
 
 describe('mainSessionStart', () => {

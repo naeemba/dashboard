@@ -417,7 +417,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     };
     // Whether the keyboard is in this pane: its terminal, or the Claude screen drawn over it.
     const hasKeyboard = (): boolean => (pane.screen ? container.contains(document.activeElement) : terminal.textarea === document.activeElement);
-    if (isWorker(index) && screenPanes.has(id)) addScreen(pane, id, page, onFocus);
+    if (isWorker(index) && screenPanes.has(id)) addScreen(pane, id, page);
     terminal.onData((data) => {
       if (!pane.exited) {
         options.bridge.sendInput(id, data);
@@ -496,7 +496,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // page already called focused, which the caller's onFocus deliberately ignores.
     // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
     // before it would save a session naming the pane you just left.
-    terminal.textarea?.addEventListener('focus', () => {
+    // A worker screen's xterm is out of sight and never takes the keyboard: arriving anywhere in the
+    // screen drawn over it is arriving at the pane.
+    const arrive = (): void => {
       const wasRinging = isRinging(pane.bell);
       pane.bell = 'quiet';
       delete container.dataset.mark;
@@ -513,7 +515,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       // asked, so focusing the editor — built by this same function with the same page — does not refit
       // the grid behind it: the nvim view never carries the class.
       if (container.closest('.view')?.classList.contains('zoom')) fitPanes(page);
-    });
+    };
+    if (pane.screen) container.addEventListener('focusin', arrive);
+    else terminal.textarea?.addEventListener('focus', arrive);
     // A worker's hooks. Blocked is a question waiting on you, so it rings the way a bell that turned
     // out to be a question does; done is drawn on the box and nothing more — main is the one it is
     // for. The pane you are looking at is not marked, for the reason marksWaiting gives. Running is the
@@ -530,17 +534,13 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
 
   // A worker run as a Claude screen: the screen drawn over the pane's shell, which stays under it out of
   // sight, under the pane's screen key. Built the way main's is, and shown at once, which starts its
-  // session; arriving in it is arriving at the pane.
-  function addScreen(pane: Pane, id: string, page: Page, onFocus?: () => void): void {
+  // session.
+  function addScreen(pane: Pane, id: string, page: Page): void {
     const key = screenKey(id);
     const chat = chatFor(page, key, id);
     pane.screen = chat;
     pane.element.classList.add('pane-screen');
     pane.element.append(chat.element);
-    pane.element.addEventListener('focusin', () => {
-      delete pane.element.dataset.mark;
-      onFocus?.();
-    });
     chatsBySlot.set(key, chat);
     chat.open();
     chat.shown();

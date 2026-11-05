@@ -182,7 +182,11 @@ How it is built, so the chat code does not fork:
 - Done detection is the session's own Stop hook, as an SDK callback in the app, not a `session notify`
   command: its input carries `background_tasks` and `session_crons` natively, which feed the same
   `stop-notices.ts` rules (workers-decision-1). UserPromptSubmit and PostToolUse report running. A
-  permission question is the screen's own ask, which marks the pane blocked.
+  permission question is the screen's own ask, which marks the pane blocked. Stop does not run for an
+  interrupted turn or a session that dies, so the SDK's `result` and the session's end also end the turn
+  for the review sweep, without a report to main. A worker back from a restart starts with its turn over.
+- Pane readings carry `screen`, so `paneIsBusy` and every picker and refusal built on it count the pane
+  as an agent's; its hidden shell sits at a prompt and its command runs nothing.
 - The pane keeps its plain shell, hidden under the screen, so everything that counts panes, releases
   them and brings shells back after a restart is unchanged. `screen-workers.json` in the user data
   holds each screen worker by project and pane number, so a restart opens it again on its conversation.

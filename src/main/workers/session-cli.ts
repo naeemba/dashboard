@@ -35,9 +35,11 @@ claim opens a worker pane and prints its id: --project opens it on the page of t
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
-and neither in the project itself; --screen runs it as a Claude screen in the pane instead of a terminal. send types the text into the pane and presses Enter. notify is
-what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for how many background
-tasks and wakeups the session still waits on. list --all lists the panes of every open project and the manager.`;
+and neither in the project itself; --screen runs it as a Claude screen in the pane rather than its
+terminal. send types the text into the pane and presses Enter, or hands it to a Claude screen as its
+next prompt. notify is what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for
+how many background tasks and wakeups the session still waits on. list --all lists the panes of every
+open project and the manager.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 

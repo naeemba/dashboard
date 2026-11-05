@@ -37,6 +37,15 @@ describe('sessionIndexStore', () => {
     expect(store.runningIn(id)).toBeNull();
   });
 
+  // A worker screen's Claude is the app's child, which no sweep places; unnamed, the drawer would
+  // resume it in a second pane beside the screen still running it.
+  it('names the pane of a worker screen running the conversation', () => {
+    const store = sessionIndexStore(temporaryFile(), (id) => (id === 'live' ? '0:3' : undefined));
+    expect(store.runningIn('live')).toBe('terminal 4');
+    expect(store.inPane('live')).toBe('terminal 4');
+    expect(store.runningIn('other')).toBeNull();
+  });
+
   it('names the Claude screen before a pane, and drops it when main reports no conversation', () => {
     const store = sessionIndexStore(temporaryFile());
     const id = randomUUID();

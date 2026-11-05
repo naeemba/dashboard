@@ -740,7 +740,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
         options.onNotice('Claude is still working. Escape stops it; then start the new conversation.');
       } else if (command === 'new') {
         // The screen clears when main's reset event comes back, as every other screen does.
-        bridge.chatReset(slot);
+        bridge.chatReset(slot).then((reply) => {
+          if (reply !== null) options.onNotice(reply.refused);
+        }, (error: unknown) => options.onError(`No new conversation: ${failureText(error)}`));
         prompt.focus();
       }
     },

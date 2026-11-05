@@ -279,7 +279,8 @@ export type DashboardBridge = {
   // What a screen opening the page catches up on: the conversation it would resume, the questions
   // waiting, and the model and mode chosen.
   chatRead(slot: number): Promise<ChatState>;
-  chatReset(slot: number): void;
+  // A new conversation, or why the screen keeps its own.
+  chatReset(slot: number): Promise<{ refused: string } | null>;
   // The slash commands the session runs; asking starts the session if it is not running.
   chatCommands(slot: number): Promise<CommandRow[]>;
   // The project's files, for the list @ opens in the box.
@@ -295,14 +296,14 @@ export type DashboardBridge = {
   // The project's earlier conversations for /resume, and picking one of them.
   chatSessions(slot: number): Promise<ChatSessions>;
   chatResume(slot: number, sessionId: string): Promise<{ refused: string } | null>;
-  // /branch: the page carries on in a copy of its conversation, titled `title` when one is given.
-  // False when there is no conversation yet to copy.
-  chatBranch(slot: number, title: string): Promise<boolean>;
+  // /branch: the page carries on in a copy of its conversation, titled `title` when one is given. The
+  // refusal, or null once branched.
+  chatBranch(slot: number, title: string): Promise<{ refused: string } | null>;
   // /rename: the refusal, or null once the conversation is renamed.
   chatRename(slot: number, title: string): Promise<string | null>;
   // The prompts /rewind lists, and putting the code, the conversation or both back to before one;
-  // null for a page with no project.
-  chatPrompts(slot: number): Promise<RewindPoint[]>;
+  // null for a page with no project. The prompts are refused on a worker screen.
+  chatPrompts(slot: number): Promise<RewindPoint[] | { refused: string }>;
   chatRewind(slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null>;
   // The session's MCP servers for /mcp, and reconnecting, disabling or enabling one of them.
   chatMcpServers(slot: number): Promise<McpServer[]>;

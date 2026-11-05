@@ -86,6 +86,14 @@ export function paneFromId(id: string): { slot: number; index: number } {
   return { slot, index };
 }
 
+// The workers of one slot among these pane ids, ascending: main and the editor left out.
+export function workersOfSlot(ids: Iterable<string>, slot: number): number[] {
+  return [...ids].map(paneFromId)
+    .filter((pane) => pane.slot === slot && isWorker(pane.index))
+    .map((pane) => pane.index)
+    .sort((first, second) => first - second);
+}
+
 // The size a pty is born at. Main spawns every pty and cannot see the window, so the only size it has
 // is the last one the pane's terminal reported — a pane is measured in the renderer and says so on
 // `pty:resize`, and that is the same message that resizes the live pty, so the record and the pty can

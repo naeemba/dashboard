@@ -17,7 +17,7 @@ import { adoptedPane } from './panes/adopted-pane';
 import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, terminalId } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, terminalId, workersOfSlot } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
@@ -363,17 +363,24 @@ function spawnProject(project: Project, projectIndex: number): void {
     claudeSessions.moveResume(mainId, id);
     resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
-  // A worker screen comes back in its pane on its own conversation, the pane opened again if it closed.
-  for (const back of workerScreens.comeBack(projectIndex, project.path)) {
-    const id = terminalId(projectIndex, back.index);
+  screensComeBack(projectIndex, project.path);
+  terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
+  startMainsWaitedOn();
+}
+
+// The worker screens saved for this page come back in their panes on their own conversations, the
+// pane opened again if it closed, and a card's is named on its record again, as resumeIn does.
+function screensComeBack(slot: number, projectPath: string): void {
+  for (const back of workerScreens.comeBack(slot, projectPath)) {
+    const id = terminalId(slot, back.index);
     if (!terminalCommands.has(id)) {
       setPaneCommand(id, { args: [], directory: back.directory });
       panes.spawn(id);
     }
     mainsWorkers.set(id, back.dispatcherPath);
+    const card = agentToResume(worktrees.entries(), agentPanesBeforeLaunch, back, projectPath, back.index, realPath);
+    if (card !== undefined) recordWorktree({ ...card, pane: back.index });
   }
-  terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
-  startMainsWaitedOn();
 }
 
 // Every open page whose main a worker that came back after a restart reports to, started for its
@@ -544,7 +551,7 @@ table.handle('usage:read', () => tokenUsage.latest());
 // so a crash loses at most the change you were making, or half a minute of sessions.
 const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SESSION_FILE), slotOfProject, (id) => mainsWorkers.get(id));
 // Every Claude the app starts, by project, for the drawer to list and resume.
-const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'));
+const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'), (id) => workerScreens.paneRunning(id));
 registerDrawer(table, {
   sessions: sessionIndex,
   projectPath: (slot) => projectIn(slot)?.path, openProjects: () => openProjects(),
@@ -591,6 +598,7 @@ try {
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
   void shellHost.ready.then(() => {
     adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER);
+    screensComeBack(MANAGER_SLOT, MANAGER_FOLDER);
     startMainsWaitedOn();
   });
 } catch (error: unknown) {
@@ -622,10 +630,7 @@ const panesChanged = (): void => sendToRenderer('projects:change', openProjects(
 
 // The workers a project has open, ascending: every pane main holds a command for, less the editor.
 function openPanes(slot: number): number[] {
-  return [...terminalCommands.keys()].map(paneFromId)
-    .filter((pane) => pane.slot === slot && isWorker(pane.index))
-    .map((pane) => pane.index)
-    .sort((first, second) => first - second);
+  return workersOfSlot(terminalCommands.keys(), slot);
 }
 
 // A worker that is a plain shell in the project, at the lowest number going.
@@ -701,6 +706,7 @@ function paneReadingsIn(slot: number): PaneReading[] {
       shell: panes.startedWith.get(id),
       command,
       inWorktree: command !== undefined && command.directory !== projectPath,
+      screen: workerScreens.has(id),
     };
   });
 }
