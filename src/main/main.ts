@@ -598,6 +598,8 @@ const chats = registerChatSessions(table, {
   send: (slot, event) => sendToRenderer('chat:receive', slot, event),
   projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
+  // Called only once a session runs, by which time the session command's answers are set up below.
+  heard: (slot, sender) => workerAnswers.heard(slot, sender),
 });
 // The manager's main, opened at launch the way a project's is when it opens, and started the same way:
 // shown, told something, or a worker it dispatched kept through a restart. Its folder is made first, since

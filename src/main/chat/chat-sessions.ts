@@ -3,6 +3,7 @@ import { mainPrompt, mainSessionName } from '../workers/dispatch';
 import { stillRunning } from '../workers/session-index';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
+import { peerSender } from '../../shared/chat/chat-events';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -55,6 +56,8 @@ export type ChatHost = {
   remembered(projectPath: string, id: string | undefined): void;
   // The worker pane running a conversation now, as a person names it, or null.
   runningInPane(id: string): string | null;
+  // The session in `slot` read a message another session sent it, by that session's name: a worker's report.
+  heard(slot: number, sender: string): void;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -341,6 +344,8 @@ export function registerChatSessions(
             preferences.set(slot, after.chosen);
             if (after.reportedFast !== undefined) reportedFast.set(slot, after.reportedFast);
           }
+          const sender = peerSender(record.origin);
+          if (sender !== undefined) host.heard(slot, sender);
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {

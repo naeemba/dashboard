@@ -14,6 +14,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
 - What the command and the app agree on before an answer, the build stamp and the acceptance timeout: `app-handshake.ts`
+- When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it: `worker-roster.ts`, `pane-link.ts`
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
@@ -28,7 +29,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a request the app has taken, when its answer takes longer than 5 seconds (a `pane run --card` making its worktree), then the command keeps waiting and prints the answer.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose prompt holds double quotes, then the worker starts with its --settings JSON and its prompt exactly as they were written.
 - Given a worker's agent stops, when its Stop hook runs `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
-- Given main dispatched a worker, when the worker's Stop hook runs `session notify <id> done`, then the main that dispatched it (the claimer's main for a pane claimed with `--project`) gets a prompt naming the worker and its pane, queued behind its turn if it is busy; a card's agent or a Claude opened by hand tells nobody (workers-decision-1).
+- Given main dispatched a worker, when the worker's Stop hook runs `session notify <id> done` and the worker stays out of `running` for three minutes without having sent main a report, then the main that dispatched it (the claimer's main for a pane claimed with `--project`) gets one prompt naming the worker and its pane, queued behind its turn if it is busy, and the Claude screen draws it as a status line; a card's agent or a Claude opened by hand tells nobody (workers-decision-1).
+- Given a worker waiting on its own background work, when its turn ends and a notification wakes it within three minutes, then main is told nothing.
+- Given a worker that sent main a report, when its turn ends, then main is told nothing more.
 - Given a worker ran Claude Code, when the app restarts, then the pane comes back resumed as main's worker with the worker's flags.
 - Given a project folder called `My API`, when its sessions start, then main is `main-my-api` and its workers `my-api-terminal-<n>` (lower-case, every other run one hyphen, none at either end, never cut short); a folder name with no Latin letters gives `main-project`, and the manager's folder `~/.dashboard` gives `main-manager` (manager-decision-2).
 - Given the manager's main, when it runs `pane claim --project crm` and `crm` is an exact name or aka in `~/.dashboard/projects.yaml`, then a worker opens on that project's page (the project opened first if it was closed, its `~` expanded) and its id is printed; a word that is not an exact name or aka is refused with the projects it could be (workers-decision-2).

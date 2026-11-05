@@ -9,6 +9,7 @@ import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
 import type { PermissionAsk } from './chat-elicitation';
 import { cacheUseOf, type CacheUse } from '../usage/cache-warmth';
+import { isDoneReport } from '../workers/done-report';
 
 // A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
 // it with. The session reports each one's lifecycle by that id: queued, then started (the next turn
@@ -195,8 +196,10 @@ function user(transcript: Transcript, content: unknown, stamp: Stamp): Transcrip
     if (block.type === 'tool_result') entries = withResult(entries, text(block.tool_use_id), toolResult(block));
     if (block.type === 'text' && INTERRUPTED.test(text(block.text))) entries = [...entries, STOPPED];
     else if (block.type === 'text') {
-      // A slash command's output is the notice it is, not something you said.
-      const printed = localCommandOutput(text(block.text));
+      // A slash command's output, or the app telling main a worker stopped, is the notice it is, not
+      // something you said.
+      const body = text(block.text);
+      const printed = localCommandOutput(body) ?? (isDoneReport(body) ? body : null);
       if (printed !== null) {
         if (printed) entries = [...entries, { kind: 'notice', text: printed }];
         continue;

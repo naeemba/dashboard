@@ -291,6 +291,8 @@ export function drawEntry(entry: ChatEntry, previousAt: number | undefined): Dra
   element.className = `chat-entry chat-${entry.kind}`;
   if (entry.kind === 'notice') {
     element.textContent = entry.text;
+    // A worker's stop notice names its pane.
+    linkPanes(element);
     return { entry, element, fill: null };
   }
   if (entry.kind === 'shell') {

@@ -2,7 +2,7 @@
 // the Claude screen turns into a link to the pane. A pane id is `<slot>:<index>`, the manager's slot
 // negative; the address is spelled out so a bare `2:1` in a reply about times or ratios is never one.
 
-const PANE_ADDRESS = /dashboard:\/\/pane\/(-?\d+:\d+)/;
+export const PANE_ADDRESS = /dashboard:\/\/pane\/(-?\d+:\d+)/;
 
 export function paneLink(id: string): string {
   return `dashboard://pane/${id}`;
