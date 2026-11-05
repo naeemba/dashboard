@@ -139,8 +139,9 @@ export function imageUrls(text: string, file: string, imageRoot: string, images:
 export async function readDoc(
   projectPath: string, file: string, roots: readonly string[], memory: ReadonlySet<string> = new Set(),
 ): Promise<DocReply> {
-  if (memory.has(file)) return { text: await readFile(file, 'utf8'), images: {} };
   const scope = docScope(projectPath, file, roots);
+  // A memory file inside the roots is a doc like any other and keeps its images.
+  if (scope === null && memory.has(file)) return { text: await readFile(file, 'utf8'), images: {} };
   if (scope === null) {
     const where = isManagerPath(projectPath) ? '~/.dashboard or ~/.claude' : 'the project\'s docs/ folder';
     return { refused: `Only a markdown, YAML or JSON file under ${where}, or a memory file the context measure named, opens here` };

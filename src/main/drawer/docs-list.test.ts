@@ -134,4 +134,14 @@ describe('readDoc', () => {
     expect(await readDoc('/p', path.join(home, 'CLAUDE.md'), [], memory)).toEqual({ text: '# Rules ![a](a.png)', images: {} });
     expect(await readDoc('/p', path.join(home, 'other.md'), [], memory)).toHaveProperty('refused');
   });
+
+  it('keeps the images of a memory file that is also one of the docs', async () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'docs-memory-'));
+    mkdirSync(path.join(project, 'docs'));
+    const file = path.join(project, 'docs', 'CLAUDE.md');
+    writeFileSync(file, '![a](a.png)');
+    writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
+    expect(await readDoc(project, file, [], new Set([file])))
+      .toEqual({ text: '![a](a.png)', images: { 'a.png': `data:image/png;base64,${Buffer.from('png').toString('base64')}` } });
+  });
 });
