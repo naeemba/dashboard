@@ -41,4 +41,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #143 — The image-size notice and help blurb read the limit from IMAGE_LIMIT
 - 2026-11-02 #176 — Pane links, and the foot's workers count and popup (Alt+W)
 - 2026-11-05 #208 — Pane links in the screen's link colour, and Alt+G follows a selected entry's links
-- 2026-11-05 — The working line counts tool input and each message's real output tokens
+- 2026-11-05 #212 — The working line counts tool input and each message's real output tokens
