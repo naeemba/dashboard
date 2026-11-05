@@ -8,7 +8,8 @@ import { isRecord } from '../../shared/app/is-record';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
-  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean }
+  // `screen` runs the worker as a Claude screen in the pane rather than Claude Code in its terminal.
+  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; screen: boolean }
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
@@ -24,7 +25,7 @@ export type SessionReply = { ok: boolean; output: string };
 export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim [--project <name|aka>]
-  session run <id> [--card <card id> | --worktree] "<prompt>"
+  session run <id> [--card <card id> | --worktree] [--screen] "<prompt>"
   session list [--all]
   session send <id> "<text>"
   session release <id>
@@ -34,9 +35,11 @@ claim opens a worker pane and prints its id: --project opens it on the page of t
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
-and neither in the project itself. send types the text into the pane and presses Enter. notify is
-what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for how many background
-tasks and wakeups the session still waits on. list --all lists the panes of every open project and the manager.`;
+and neither in the project itself; --screen runs it as a Claude screen in the pane rather than its
+terminal. send types the text into the pane and presses Enter, or hands it to a Claude screen as its
+next prompt. notify is what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for
+how many background tasks and wakeups the session still waits on. list --all lists the panes of every
+open project and the manager.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 
@@ -59,9 +62,11 @@ function parseRun(words: readonly string[]): Parsed {
   if (typeof id !== 'string') return id;
   let card: string | null = null;
   let worktree = false;
+  let screen = false;
   const prompt: string[] = [];
   for (let at = 1; at < words.length; at++) {
     if (words[at] === '--worktree') worktree = true;
+    else if (words[at] === '--screen') screen = true;
     else if (words[at] === '--card') {
       card = words[++at] ?? '';
       if (card === '') return refuse('--card needs the card id, the one `board list` prints');
@@ -69,7 +74,7 @@ function parseRun(words: readonly string[]): Parsed {
   }
   if (card !== null && worktree) return refuse('a task runs in its card\'s worktree or a throwaway one, not both');
   if (prompt.join(' ').trim() === '') return refuse('session run needs a prompt for the worker');
-  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree } };
+  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, screen } };
 }
 
 const COUNT = /^\d+$/;
@@ -103,10 +108,17 @@ export function stopInputArguments(input: string): string[] {
   } catch {
     return [];
   }
-  if (!isRecord(parsed)) return [];
-  const { background_tasks: background, session_crons: scheduled } = parsed;
-  if (!Array.isArray(background) || !Array.isArray(scheduled)) return [];
-  return ['--background', String(background.length), '--scheduled', String(scheduled.length)];
+  const waiting = stopWaiting(parsed);
+  return waiting === undefined ? [] : ['--background', String(waiting.background), '--scheduled', String(waiting.scheduled)];
+}
+
+// What a Stop hook's input says its session still waits on, or undefined when it lacks either list.
+// A Claude screen's Stop hook is handed the input as an object (screen-workers.ts).
+export function stopWaiting(input: unknown): StopWaiting | undefined {
+  if (!isRecord(input)) return undefined;
+  const { background_tasks: background, session_crons: scheduled } = input;
+  if (!Array.isArray(background) || !Array.isArray(scheduled)) return undefined;
+  return { background: background.length, scheduled: scheduled.length };
 }
 
 // The arguments the app is sent for what was typed, with the Stop hook's input read from stdin when

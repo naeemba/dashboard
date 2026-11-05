@@ -43,7 +43,9 @@ function readIndex(file: string): SessionIndex {
   }
 }
 
-export function sessionIndexStore(file: string): SessionIndexStore {
+// `onScreen` is the worker pane whose Claude screen runs the conversation (screen-workers.ts): its Claude
+// is the app's child, not the pane shell's, so the usage sweep never places it.
+export function sessionIndexStore(file: string, onScreen: (id: string) => string | undefined = () => undefined): SessionIndexStore {
   let index = readIndex(file);
   let livePanes = new Map<string, string>();
   const mains = new Map<string, string>();
@@ -60,7 +62,7 @@ export function sessionIndexStore(file: string): SessionIndexStore {
   }
 
   function inPane(id: string): string | null {
-    const pane = livePanes.get(id);
+    const pane = livePanes.get(id) ?? onScreen(id);
     return pane === undefined ? null : paneLabel(paneFromId(pane).index);
   }
 

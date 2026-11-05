@@ -26,9 +26,9 @@ export const BLURB_WORD_LIMIT = 60;
 
 export const BLURBS: Record<Mode | ActionGroup, string> = {
   terminals: 'Main, the project\'s Claude Code session, on the left, dispatching your tasks into the '
-    + 'worker panes down the right. A yellow edge: a worker waits on you; green: its turn is over. '
-    + 'Panes keep running on other pages and through a restart. Ctrl+C is the shell\'s interrupt, so '
-    + 'off a mac copy and paste have keys of their own.',
+    + 'worker panes down the right: terminals, or Claude screens. A yellow edge: a worker waits on you; '
+    + 'green: its turn is over. Panes keep running on other pages and through a restart. Ctrl+C is the '
+    + 'shell\'s interrupt; off a mac copy and paste have keys.',
   nvim: 'One nvim filling the window, started the first time you press the nvim key here, not at '
     + 'launch. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',

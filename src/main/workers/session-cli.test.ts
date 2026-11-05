@@ -18,13 +18,16 @@ describe('parseSessionCommand', () => {
   // The prompt comes in as one quoted word or several; either way it is what the worker is handed.
   it('reads a run, its prompt and where it runs', () => {
     expect(parseSessionCommand(['run', '2:3', 'fix', 'the', 'tests'])).toEqual({
-      ok: true, command: { kind: 'run', id: '2:3', prompt: 'fix the tests', card: null, worktree: false },
+      ok: true, command: { kind: 'run', id: '2:3', prompt: 'fix the tests', card: null, worktree: false, screen: false },
     });
     expect(parseSessionCommand(['run', '2:3', '--card', 'abc', 'work the card'])).toMatchObject({
       ok: true, command: { card: 'abc', worktree: false, prompt: 'work the card' },
     });
     expect(parseSessionCommand(['run', '2:3', '--worktree', 'rename it'])).toMatchObject({
       ok: true, command: { card: null, worktree: true },
+    });
+    expect(parseSessionCommand(['run', '2:3', '--card', 'abc', '--screen', 'work the card'])).toMatchObject({
+      ok: true, command: { card: 'abc', screen: true, prompt: 'work the card' },
     });
   });
 

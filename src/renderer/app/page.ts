@@ -26,6 +26,7 @@ import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, te
 import { icon, type IconName } from './icons';
 import { isRinging, looksBusy, markRings, marksWaiting, raisesNotification, redrawsForBell } from '../../shared/panes/waiting';
 import type { FileLink, LinkSpan } from '../../shared/panes/links';
+import { screenKey } from '../../shared/workers/screen-key';
 
 // A page and the panes on it: what one is, how one is built, and how its panes are measured. Split out
 // of renderer.ts when that file reached its 600-line ceiling, along the seam the file itself named.
@@ -73,6 +74,11 @@ export const panesById = new Map<string, Pane>();
 const chatsBySlot = new Map<number, ChatView>();
 // What each pane does when its worker's hooks report, by terminal id, the way a pty's bytes find it.
 const markersById = new Map<string, (state: WorkerState) => void>();
+// The worker panes main draws as a Claude screen (pane run --screen), as its last list said.
+let screenPanes: ReadonlySet<string> = new Set();
+export function setScreenPanes(ids: readonly string[]): void {
+  screenPanes = new Set(ids);
+}
 
 // One pane let go of for good: the verdict its bell has pending, the terminal itself, and its place in
 // the maps above. The timer matters as much as the terminal: a bell rung a moment before the close still
@@ -80,6 +86,7 @@ const markersById = new Map<string, (state: WorkerState) => void>();
 // pane that is gone.
 function discardPane(id: string, pane: Pane): void {
   window.clearTimeout(pane.bellTimer);
+  if (pane.screen) chatsBySlot.delete(screenKey(id));
   pane.terminal.dispose();
   pane.element.remove();
   panesById.delete(id);
@@ -152,6 +159,11 @@ export function mainHasKeyboard(page: Page): boolean {
   return page.focused === MAIN_INDEX && page.chat !== null;
 }
 
+// The Claude screen the terminals view's keyboard is on: main's, or a worker's run with --screen.
+export function focusedChat(page: Page): ChatView | undefined {
+  return mainHasKeyboard(page) ? page.chat ?? undefined : focusedPane(page)?.screen;
+}
+
 // A worker folded to its name, or opened again. The workers left open share the room, so every pane
 // is measured again. A folded pane takes no keyboard: if the page named it, by key or by its button,
 // the keyboard goes to main. Asked of page.focused rather than document.activeElement, which the
@@ -187,6 +199,12 @@ export function focusTerminals(page: Page): void {
   const pane = focusedPane(page);
   if (pane?.folded) toggleFold(page, pane.index);
   if (mainHasKeyboard(page)) page.chat?.focus();
+  else focusPane(pane);
+}
+
+// A worker's keyboard: its Claude screen's box when it runs as one, its terminal otherwise.
+function focusPane(pane: Pane | undefined): void {
+  if (pane?.screen) pane.screen.focus();
   else pane?.terminal.focus();
 }
 
@@ -332,7 +350,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
         // Opened first, since a hidden terminal cannot take the keyboard; its focus listener then records
         // the arrival and redraws the status bar.
         toggleFold(page, index);
-        terminal.focus();
+        focusPane(pane);
       });
     }
 
@@ -397,6 +415,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       index, element: container, terminal, fit, exited: false, bell: 'quiet', lastPrintedAt: 0, printWidths: widths,
       flow: writeFlow((paused) => (paused ? options.bridge.pauseOutput(id) : options.bridge.resumeOutput(id))),
     };
+    // Whether the keyboard is in this pane: its terminal, or the Claude screen drawn over it.
+    const hasKeyboard = (): boolean => (pane.screen ? container.contains(document.activeElement) : terminal.textarea === document.activeElement);
+    if (isWorker(index) && screenPanes.has(id)) addScreen(pane, id, page);
     terminal.onData((data) => {
       if (!pane.exited) {
         options.bridge.sendInput(id, data);
@@ -475,7 +496,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // page already called focused, which the caller's onFocus deliberately ignores.
     // onFocus first: it is what sets page.focused, and the redraw writes the session file, so redrawing
     // before it would save a session naming the pane you just left.
-    terminal.textarea?.addEventListener('focus', () => {
+    // A worker screen's xterm is out of sight and never takes the keyboard: arriving anywhere in the
+    // screen drawn over it is arriving at the pane.
+    const arrive = (): void => {
       const wasRinging = isRinging(pane.bell);
       pane.bell = 'quiet';
       delete container.dataset.mark;
@@ -492,19 +515,54 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       // asked, so focusing the editor — built by this same function with the same page — does not refit
       // the grid behind it: the nvim view never carries the class.
       if (container.closest('.view')?.classList.contains('zoom')) fitPanes(page);
-    });
+    };
+    if (pane.screen) container.addEventListener('focusin', arrive);
+    else terminal.textarea?.addEventListener('focus', arrive);
     // A worker's hooks. Blocked is a question waiting on you, so it rings the way a bell that turned
     // out to be a question does; done is drawn on the box and nothing more — main is the one it is
     // for. The pane you are looking at is not marked, for the reason marksWaiting gives. Running is the
     // worker back at work, which takes either mark off wherever you are looking.
     markersById.set(id, (state) => {
       if (state === 'running') delete container.dataset.mark;
-      else if (marksWaiting(document.hasFocus(), terminal.textarea === document.activeElement)) container.dataset.mark = state;
+      else if (marksWaiting(document.hasFocus(), hasKeyboard())) container.dataset.mark = state;
       else return;
       if (markRings(state)) ring('is waiting on a permission');
       options.onChanged();
     });
     return pane;
+  }
+
+  // A worker run as a Claude screen: the screen drawn over the pane's shell, which stays under it out of
+  // sight, under the pane's screen key. Built the way main's is, and shown at once, which starts its
+  // session.
+  function addScreen(pane: Pane, id: string, page: Page): void {
+    const key = screenKey(id);
+    const chat = chatFor(page, key, id);
+    pane.screen = chat;
+    pane.element.classList.add('pane-screen');
+    pane.element.append(chat.element);
+    chatsBySlot.set(key, chat);
+    chat.open();
+    chat.shown();
+  }
+
+  // A Claude screen of the page under `key`: main's under its slot, a worker's under its screen key.
+  function chatFor(page: Page, key: number, paneId: string): ChatView {
+    return createChatView({
+      bridge: options.bridge,
+      slot: key,
+      projectName: page.project.name,
+      projectPath: page.project.path,
+      paneId,
+      onError: (message) => options.onError(`chat:${key}`, message),
+      onNotice: (message) => options.onNotice(`chat:${key}`, message),
+      onWaiting: options.onChanged,
+      showEditor: () => options.showEditor(page),
+      goToPane(id) {
+        if (panesById.has(id)) options.goToPane(id);
+        else options.onNotice(`chat:${key}`, `Pane ${id} is not open.`);
+      },
+    });
   }
 
   // The keyboard landing on main or a worker: the page remembers where, and the status bar follows.
@@ -529,12 +587,13 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
   // The page's terminals made to match main's list: a worker main opened is built, one it closed goes.
   // Closing the pane that had the keyboard hands it to main, since there is nowhere else it is sure to
   // be; the page with the keyboard is in front, so the move is one you can see.
+  // A worker that became a Claude screen, or stopped being one, is built again as what it is now.
   function syncPanes(page: Page, open: readonly number[]): void {
-    const have = page.panes.map((pane) => pane.index);
-    if (have.length === open.length && open.every((index) => have.includes(index))) return;
+    const asListed = (pane: Pane): boolean => open.includes(pane.index) && (pane.screen !== undefined) === screenPanes.has(terminalId(page.slot, pane.index));
+    if (page.panes.length === open.length && page.panes.every(asListed)) return;
     let lostFocus = false;
     for (const pane of [...page.panes]) {
-      if (open.includes(pane.index)) continue;
+      if (asListed(pane)) continue;
       lostFocus ||= pane.element.contains(document.activeElement);
       page.panes.splice(page.panes.indexOf(pane), 1);
       discardPane(terminalId(page.slot, pane.index), pane);
@@ -612,21 +671,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     page.workers.className = 'workers';
     view.append(page.workers);
     for (const index of open) addPane(page, index);
-    const chat = createChatView({
-      bridge: options.bridge,
-      slot,
-      projectName: page.project.name,
-      projectPath: page.project.path,
-      paneId: terminalId(slot, MAIN_INDEX),
-      onError: (message) => options.onError(`chat:${slot}`, message),
-      onNotice: (message) => options.onNotice(`chat:${slot}`, message),
-      onWaiting: options.onChanged,
-      showEditor: () => options.showEditor(page),
-      goToPane(id) {
-        if (panesById.has(id)) options.goToPane(id);
-        else options.onNotice(`chat:${slot}`, `Pane ${id} is not open.`);
-      },
-    });
+    const chat = chatFor(page, slot, terminalId(slot, MAIN_INDEX));
     page.chat = chat;
     const main = document.createElement('div');
     main.className = 'main-chat';

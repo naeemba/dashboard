@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PANE_SIZE, closeQuestion, EDITOR_INDEX, MAIN_INDEX, branchOfPane, isWorker, modeOfPane, paneFromId,
-  paneLabel, paneName, sizeOfPane, startsEditor, terminalId,
+  paneLabel, paneName, sizeOfPane, startsEditor, terminalId, workersOfSlot,
 } from './terminals';
 
 describe('paneLabel', () => {
@@ -120,6 +120,12 @@ describe('paneFromId', () => {
     expect(paneFromId(terminalId(3, 2))).toEqual({ slot: 3, index: 2 });
     expect(paneFromId(terminalId(12, 5))).toEqual({ slot: 12, index: 5 });
     expect(paneFromId(terminalId(4, EDITOR_INDEX))).toEqual({ slot: 4, index: EDITOR_INDEX });
+  });
+});
+
+describe('workersOfSlot', () => {
+  it("lists one slot's workers in number order, without main or the editor", () => {
+    expect(workersOfSlot(['2:3', '2:0', '1:1', '2:-1', '2:1'], 2)).toEqual([1, 3]);
   });
 });
 

@@ -85,6 +85,11 @@ export function workerSettings(id: string): string {
   }).slice(1);
 }
 
+// What a worker is handed, in a terminal or on a Claude screen: the task, and who to tell once it is done.
+export function workerPrompt(prompt: string, dispatcherPath: string): string {
+  return `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`;
+}
+
 // The prompt is the argument, never typed into a session already running: what a live prompt box
 // does with pasted text depends on what it was doing when it arrived. `dispatcherPath` is the project
 // whose main dispatched it, which is another project's when the pane was claimed with --project: the
@@ -97,7 +102,7 @@ export function workerArguments(
     '--name', workerSessionName(projectPath, index),
     '--permission-mode', 'auto',
     '--settings', workerSettings(id),
-    `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`,
+    workerPrompt(prompt, dispatcherPath),
   ]);
 }
 

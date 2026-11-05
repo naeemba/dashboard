@@ -1,0 +1,11 @@
+{
+  "id": "eb91abf1-e1ec-44b5-8a3f-45b1a0d3271e",
+  "title": "Worker screens: the working line kept counting after the turn ended",
+  "notes": "Seen once on the --screen trial: the worker screen's working line read 'Working… (336s · ↓ 7.1K tokens)' while its foot said ready and pane list said done. A background pnpm test was in flight at the time, which may be what the line counted.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-05T16:29:23.491Z",
+  "updatedAt": "2026-11-05T16:29:23.491Z",
+  "column": "Backlog",
+  "order": 32
+}

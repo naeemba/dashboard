@@ -1,0 +1,11 @@
+{
+  "id": "461bb646-07c8-4827-ab06-c464a4710373",
+  "title": "Worker screens die with the app; a terminal worker's Claude outlives it",
+  "notes": "A terminal worker runs in the pane host's shell and keeps working through an app restart. A worker screen's Claude is a child of the app, so a restart ends the turn it was in; it comes back on its conversation (checked on the --screen trial) but only carries on from the next prompt. One of the two things that block making --screen the default (workers-decision-5).",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-05T16:29:23.621Z",
+  "updatedAt": "2026-11-05T16:29:23.621Z",
+  "column": "Backlog",
+  "order": 34
+}

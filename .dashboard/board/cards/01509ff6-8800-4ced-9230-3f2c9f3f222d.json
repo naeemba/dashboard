@@ -1,0 +1,11 @@
+{
+  "id": "01509ff6-8800-4ced-9230-3f2c9f3f222d",
+  "title": "Worker screens: auto mode refuses gh pr create with nobody to ask",
+  "notes": "Seen on the --screen trial (card 95dd8b3b, PR #216): the worker's auto-mode check refused gh pr create as an external write and the turn ended with a Decision; a pane send saying the user approves let it carry on. A terminal worker under the same prompt was not run to compare. Find whether the terminal asks where the screen refuses, and give the screen the same path (a question in its box, or the user's allow rules).",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-05T16:29:23.417Z",
+  "updatedAt": "2026-11-05T16:29:23.417Z",
+  "column": "Backlog",
+  "order": 31
+}

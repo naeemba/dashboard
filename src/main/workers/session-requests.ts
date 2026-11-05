@@ -1,5 +1,5 @@
 import { baseName } from '../../shared/app/base-name';
-import { workerArguments, workerSessionName } from './dispatch';
+import { workerArguments, workerPrompt, workerSessionName } from './dispatch';
 import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
@@ -11,10 +11,17 @@ import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
+import type { ScreenStart } from './screen-workers';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
 // fake project behind them.
+
+// How a worker starts: Claude Code in the pane's terminal with these arguments, or a Claude screen in
+// the pane on this conversation (screen-workers.ts), handed the prompt as its first message.
+export type WorkerLaunch =
+  | { terminal: string[] }
+  | { screen: ScreenStart };
 
 export type SessionPorts = {
   // The open project a folder is in — its checkout or one of its worktrees — or -1.
@@ -44,7 +51,7 @@ export type SessionPorts = {
   // The id the worker's conversation starts with, recorded in the app's session index first.
   newSession(projectPath: string, directory: string, cardId: string | null): string;
   // `dispatcherPath` is the page whose main the worker reports to, saved so a restart starts that main.
-  startWorker(id: string, directory: string, agentArguments: string[], cardId: string | null, dispatcherPath: string): void;
+  startWorker(id: string, directory: string, launch: WorkerLaunch, cardId: string | null, dispatcherPath: string): void;
   closeWorker(id: string): void;
   // Types the text into the pane's shell, then presses Enter.
   type(id: string, text: string): void;
@@ -96,6 +103,8 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // The main session in `slot` read a message from the session called `sender`: when that is a worker
   // that main dispatched, its next stop needs no notice.
   heard(slot: number, sender: string): void;
+  // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
+  notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -177,7 +186,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // The session name of the worker in the pane, which its reports to main are signed with.
   const nameOfPane = (id: string): string => workerSessionName(paneProject(id) ?? '', paneFromId(id).index);
 
-  async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean): Promise<SessionReply> {
+  async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean, screen: boolean): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     const projectPath = paneProject(id);
@@ -203,7 +212,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     states.delete(id);
     notices.forget(id);
     const session = ports.newSession(projectPath, directory, card);
-    ports.startWorker(id, directory, workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session), card, dispatcherPath);
+    const launch: WorkerLaunch = screen
+      ? { screen: { session, name: workerSessionName(projectPath, index), prompt: workerPrompt(prompt, dispatcherPath) } }
+      : { terminal: workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session) };
+    ports.startWorker(id, directory, launch, card, dispatcherPath);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
@@ -267,21 +279,22 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     });
   }
 
+  // The hooks report from wherever their worker stands, so a pane id is all a notify needs.
+  function notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply {
+    const { slot, index } = paneFromId(id);
+    if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    if (state === 'running') states.delete(id);
+    else states.set(id, { state, waiting });
+    ports.mark(id, state);
+    if (mainsWorker(id)) notices.state(id, state, waiting);
+    return answered('');
+  }
+
   return Object.assign(async (request: SessionRequest): Promise<SessionReply> => {
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
-    // The hooks report from wherever their worker stands, so a pane id is all a notify needs.
-    if (command.kind === 'notify') {
-      const { slot, index } = paneFromId(command.id);
-      if (!ports.openPanes(slot).includes(index)) return refused(`${command.id} is not open`);
-      const { waiting } = command;
-      if (command.state === 'running') states.delete(command.id);
-      else states.set(command.id, { state: command.state, waiting });
-      ports.mark(command.id, command.state);
-      if (mainsWorker(command.id)) notices.state(command.id, command.state, waiting);
-      return answered('');
-    }
+    if (command.kind === 'notify') return notify(command.id, command.state, command.waiting);
     const folderSlot = ports.slotOf(request.directory);
     const slot = askingSlot(command, folderSlot);
     // From outside every project only words that name their target are answered: a claim --project
@@ -297,7 +310,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'claim': return claim(slot, command.project);
         case 'list': return list(slot, command.all);
         case 'send': return send(command.id, slot, command.text);
-        case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree);
+        case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.screen);
         case 'release': return await release(command.id, slot);
       }
     } catch (error: unknown) {
@@ -305,6 +318,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
   }, {
     workers,
+    notify,
     forget: (id: string) => { dispatched.delete(id); notices.forget(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two

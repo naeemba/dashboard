@@ -38,6 +38,9 @@ export type PaneReading = {
   shell: string | undefined;
   command: PaneCommand | undefined;
   inWorktree: boolean;
+  // A worker run as a Claude screen (pane run --screen). Its command runs nothing and its shell sits at
+  // a prompt under the screen, so neither says an agent is there; this does.
+  screen?: boolean;
 };
 
 // One pane as `panes:read` answers with it: the reading above with one field added, and both fields
@@ -84,7 +87,13 @@ function runsAProgram(foreground: string | undefined, shell: string | undefined)
 // Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: an agent
 // is recorded in it, or its shell is running something right now.
 export function paneIsBusy(pane: PaneReading): boolean {
-  return runsAnAgent(pane.command) || runsAProgram(pane.foreground, pane.shell);
+  return hasAnAgent(pane) || runsAProgram(pane.foreground, pane.shell);
+}
+
+// Whether an agent is in this pane: a worker on a Claude screen, or a pane asked to run one. main asks
+// it too, for the card's own pane, so the ship's pick and main's refusal cannot disagree on a pane.
+export function hasAnAgent(pane: Pick<PaneReading, 'command' | 'screen'>): boolean {
+  return pane.screen === true || runsAnAgent(pane.command);
 }
 
 // What a ship counts as free, which is the whole of its pick apart from the order. Spelled here
@@ -130,5 +139,5 @@ export function freePane<Pane extends { index: number; inWorktree: boolean }>(
 // The close prints it in close-refusal.ts. The empty string is unreachable for a pane paneIsBusy called
 // busy, which is the only pane that refusal asks about.
 export function programIn(pane: PaneReading): string {
-  return runsAnAgent(pane.command) ? 'an agent' : pane.foreground ?? '';
+  return hasAnAgent(pane) ? 'an agent' : pane.foreground ?? '';
 }

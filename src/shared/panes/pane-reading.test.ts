@@ -105,4 +105,13 @@ describe('programIn', () => {
     expect(programIn(agent)).toBe('an agent');
     expect(programIn(running('npm'))).toBe('npm');
   });
+
+  // A worker screen's pane runs no command and its hidden shell is at a prompt: only the flag says an
+  // agent is there. Read as free, a ship would kill the shell under a screen still drawn over it.
+  it('reads a worker screen as an agent, so no ship or command takes its pane', () => {
+    const screen: PaneReading = { ...idle, screen: true };
+    expect(paneIsBusy(screen)).toBe(true);
+    expect(shipCanTake(screen)).toBe(false);
+    expect(programIn(screen)).toBe('an agent');
+  });
 });

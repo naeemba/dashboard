@@ -12,6 +12,10 @@ export async function rewind(
 ): Promise<string | undefined> {
   try {
     const points = await bridge.chatPrompts(slot);
+    if (!Array.isArray(points)) {
+      say.onNotice(points.refused);
+      return undefined;
+    }
     if (points.length === 0) {
       say.onNotice('This conversation has no prompt to rewind to.');
       return undefined;

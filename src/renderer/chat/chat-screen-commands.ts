@@ -35,7 +35,8 @@ export async function resume(bridge: DashboardBridge, slot: number, say: Say): P
 // stays in /resume.
 export async function branch(bridge: DashboardBridge, slot: number, title: string, say: Say): Promise<void> {
   try {
-    if (!(await bridge.chatBranch(slot, title))) say.onNotice('Nothing to branch yet: send a prompt first.');
+    const reply = await bridge.chatBranch(slot, title);
+    if (reply !== null) say.onNotice(reply.refused);
   } catch (error) {
     say.onError(`Conversation not branched: ${failureText(error)}`);
   }

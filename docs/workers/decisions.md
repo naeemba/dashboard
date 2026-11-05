@@ -163,3 +163,56 @@ Watch for: an app too busy to read its socket for 5 seconds is reported as older
 request is already written when the command gives up, so that app, or an older one that answers without
 accepting, may still claim or dispatch; the line says to check `pane list` after restarting before
 asking again, or a card can end up with a second worktree and worker.
+
+## workers-decision-5: Worker screens are opt-in behind `pane run --screen`
+
+**A worker can run as a Claude screen, the Agent SDK pane main already is, but only when main asks with
+`--screen`.** Agreed with the user on 2026-11-05 in stages: opt-in first, the default only once it has
+held up on real cards. A plain `pane run` starts Claude Code in the terminal exactly as before.
+
+How it is built, so the chat code does not fork:
+
+- The screen runs in `chat-sessions.ts` under a key of its own, `screenKey(<pane id>)`, in the same
+  numbers the pages' slots use. Every chat channel and event already names a slot, so the renderer's
+  Claude screen (`createChatView`) is reused as it is; only the pane wiring knows it is a worker.
+- Its folder, conversation id (chosen by the app and in the session index, as for a terminal worker),
+  name, auto mode and hooks come from `screen-workers.ts` through `ChatHost.worker`. No dispatch prompt
+  is appended. /clear, /resume, /branch and /rewind are refused on it: it keeps the conversation it was
+  started on, which is what a restart resumes.
+- Done detection is the session's own Stop hook, as an SDK callback in the app, not a `session notify`
+  command: its input carries `background_tasks` and `session_crons` natively, which feed the same
+  `stop-notices.ts` rules (workers-decision-1). UserPromptSubmit and PostToolUse report running. A
+  permission question is the screen's own ask, which marks the pane blocked. Stop does not run for an
+  interrupted turn or a session that dies, so the SDK's `result` and the session's end also end the turn
+  for the review sweep, without a report to main. A worker back from a restart starts with its turn over.
+- Pane readings carry `screen`, so `paneIsBusy` and every picker and refusal built on it count the pane
+  as an agent's; its hidden shell sits at a prompt and its command runs nothing.
+- The pane keeps its plain shell, hidden under the screen, so everything that counts panes, releases
+  them and brings shells back after a restart is unchanged. `screen-workers.json` in the user data
+  holds each screen worker by project and pane number, so a restart opens it again on its conversation.
+
+What the trial run showed (one real Backlog card, b96468cf, run with `--worktree --screen` in a
+throwaway clone on a second instance; it opened draft PR #216, left unmerged):
+
+- Worked: the prompt and folder, Bash, the board command, `/simplify` and `/pr-loop` with their
+  subagents, a background `pnpm test`, plugins' MCP servers, SendMessage to its main, the done report,
+  `pane send` as a prompt, an AskUserQuestion answered from the box with the pane marked blocked until
+  then, the foot's model, mode, context, seven-day limit and `warm 59m`, and a restart: the worker came
+  back as a screen on its conversation and answered from it.
+- Different: the screen skipped the folder-trust question a terminal worker asked in a new folder.
+- Memory after one short turn each: the terminal worker's Claude 205 MB PSS plus 112 MB of MCP
+  servers, the screen's 182 MB plus 86 MB; the screen's share of the renderer was not measured.
+
+What blocks making it the default, each a Backlog card:
+
+- A worker screen's Claude is the app's child, so a restart ends the turn it was in; a terminal
+  worker's keeps running in the pane host.
+- Auto mode refused `gh pr create` on the screen with nobody to ask; it went on only once told the
+  user approved. A terminal worker was not run on the same prompt to compare.
+- The working line once kept counting after the turn ended, and the real card's screen once showed no
+  reply after a `pane send` its transcript had. Neither was reproduced.
+- The task strip was never caught with a row in it, so it is unchecked on a worker screen.
+- A worker screen is not read by the working-panes sweep, so the review sweep counts it working until its
+  Stop hook says done rather than by its spinner.
+- A screen started fresh in the project folder (no `--worktree` or `--card`) shares its folder with main;
+  its /resume list shows main's conversations.

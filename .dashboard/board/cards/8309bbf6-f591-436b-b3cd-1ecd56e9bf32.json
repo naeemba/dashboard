@@ -1,0 +1,11 @@
+{
+  "id": "8309bbf6-f591-436b-b3cd-1ecd56e9bf32",
+  "title": "Worker screens: check the last turn is drawn after a pane send",
+  "notes": "On the --screen trial the real-card screen's log ended at the prompt pane send typed, while the transcript held the full reply and the PR it opened. The small screen worker drew its later replies fine, so this may be the read itself (a long log only draws near the screen). Reproduce with a long conversation and a pane send.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-05T16:29:23.557Z",
+  "updatedAt": "2026-11-05T16:29:23.557Z",
+  "column": "Backlog",
+  "order": 33
+}

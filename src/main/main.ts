@@ -17,7 +17,7 @@ import { adoptedPane } from './panes/adopted-pane';
 import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, terminalId } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, terminalId, workersOfSlot } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { workerResumeArguments } from './workers/dispatch';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
@@ -45,6 +45,7 @@ import { startHost, type HeldByMain } from './remote-host/host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
 import { registerWorkerChannels } from './workers/worker-channels';
+import { screenWorkers } from './workers/screen-workers';
 import { channels, registerWithIpc } from './app/channels';
 import { agentStartEntry, paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
@@ -60,6 +61,7 @@ import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from 
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
+  hasAnAgent,
   paneIsBusy,
   programIn,
   runsAnAgent,
@@ -70,13 +72,9 @@ import { usageSweep } from './usage/usage-sweep';
 import {
   claimsPane,
   entryForCard,
-  livingEntries,
-  readWorktrees,
   withEntry,
   withoutPane,
-  panesAtLaunch,
   withoutPanes,
-  writeWorktrees,
 } from './ship/worktree-store';
 import type { Settings } from '../shared/settings/settings';
 import { reviewSweep } from './ship/review-flow';
@@ -84,6 +82,7 @@ import { worktreeKeeper } from './ship/worktree-keeper';
 import { shipFlow } from './ship/ship-flow';
 import type { OpenProjects, ProjectOpen, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
+import { worktreeRecordAtLaunch } from './ship/worktree-record-at-launch';
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
 const environmentFile = app.isPackaged
@@ -144,41 +143,9 @@ const projectIn = (slot: number): Project | undefined => projectInSlot(projects,
 // The recently opened projects live next to the app's other per-user state.
 const recentsFile = path.join(app.getPath('userData'), RECENTS_FILE);
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
-// Dropped on read, so a worktree removed by hand outside the app does not leave its card marked as in
-// flight forever with nothing able to clear it.
-//
-// Every pane comes back null with it. A shell the pane host kept is put back in its pane when its
-// project opens, and adoptSurvivors names it on its card again; any other pane is a plain shell in
-// the project a moment after launch, and a record
-// still naming it would put a branch name under the status bar of a checkout the pane is not in —
-// which is the wrong-checkout mistake the branch is printed there to prevent. A card's agent that a
-// restart resumes is in that pane again, and resumeIn names it on the record again. Clearing it also gives
-// the worktree back: a card with no pane is the one ship that is allowed to run again, and shipping
-// it hands the folder that is already there to a pane. Written out, so the file says what this says.
-//
-// The read throws rather than answering an unreadable file with an empty list, and readWorktrees says
-// why. Nothing below could carry on without the list, so the launch stops here: a box naming the file,
-// then exit. showErrorBox is the only dialog there is before the app is ready — every other one wants
-// a window, and there is not going to be one — and the message is all anyone gets, so it names the
-// file. exit rather than quit, because quit runs the ordinary shutdown over a main process that is
-// half built and has nothing to shut down yet.
-let recordAtLaunch: WorktreeEntry[] = [];
-// The pane each card's agent was in when the app last ran, kept from before the clearing so a restart
-// resumes the agent in that pane and nowhere else. agentToResume holds why.
-let agentPanesBeforeLaunch = new Map<string, number>();
-try {
-  const recorded = livingEntries(readWorktrees(worktreesFile), existsSync);
-  ({ entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = panesAtLaunch(recorded));
-} catch (error: unknown) {
-  dialog.showErrorBox(
-    'Dashboard cannot read its worktree record',
-    `${worktreesFile}\n\n${failureText(error)}\n\nNothing has been changed. Open Dashboard again once that file can be read.`,
-  );
-  app.exit(1);
-}
-// Outside the try: a failed write is worktree-store's to swallow, and inside it would read as a write
-// that can stop the launch.
-writeWorktrees(worktreesFile, recordAtLaunch);
+// The record as this launch starts it, every pane cleared; worktree-record-at-launch.ts says why, and
+// stops the launch on a record it cannot read.
+const { entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = worktreeRecordAtLaunch(worktreesFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
@@ -261,8 +228,10 @@ function tellOthers(screen: string, channel: string, ...payload: unknown[]): voi
 // finished, leave the sweep's alone, and five seconds later the sweep removes the folder out from
 // under that shell.
 function agentRunsIn(slot: number, pane: number | null): boolean {
-  return pane !== null && runsAnAgent(terminalCommands.get(terminalId(slot, pane)));
+  return pane !== null && agentIn(terminalId(slot, pane));
 }
+// A worker on a Claude screen runs no command in its pane, whose shell stays a plain one under it.
+const agentIn = (id: string): boolean => hasAnAgent({ command: terminalCommands.get(id), screen: workerScreens.has(id) });
 
 // What the renderer can see and main cannot: which panes still have an agent working in them. The
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
@@ -300,7 +269,7 @@ function paneUsesIn(slot: number): PaneUse[] {
 // card sits in Ship reading `shipped · fix-login · terminal 3` all day with nothing on screen saying
 // the app is waiting on you.
 function agentWorksIn(slot: number, pane: number | null): boolean {
-  return pane !== null && agentRunsIn(slot, pane) && agentsAtWork.works(terminalId(slot, pane), Date.now());
+  return pane !== null && agentRunsIn(slot, pane) && (workerScreens.working(terminalId(slot, pane)) ?? agentsAtWork.works(terminalId(slot, pane), Date.now()));
 }
 
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
@@ -395,8 +364,24 @@ function spawnProject(project: Project, projectIndex: number): void {
     claudeSessions.moveResume(mainId, id);
     resumeIn(id, project.path, MAIN_INDEX, first.worker);
   }
+  screensComeBack(projectIndex, project.path);
   terminalCommands.set(terminalId(projectIndex, EDITOR_INDEX), { args: 'editor', directory: project.path });
   startMainsWaitedOn();
+}
+
+// The worker screens saved for this page come back in their panes on their own conversations, the
+// pane opened again if it closed, and a card's is named on its record again, as resumeIn does.
+function screensComeBack(slot: number, projectPath: string): void {
+  for (const back of workerScreens.comeBack(slot, projectPath)) {
+    const id = terminalId(slot, back.index);
+    if (!terminalCommands.has(id)) {
+      setPaneCommand(id, { args: [], directory: back.directory });
+      panes.spawn(id);
+    }
+    mainsWorkers.set(id, back.dispatcherPath);
+    const card = agentToResume(worktrees.entries(), agentPanesBeforeLaunch, back, projectPath, back.index, realPath);
+    if (card !== undefined) recordWorktree({ ...card, pane: back.index });
+  }
 }
 
 // Every open page whose main a worker that came back after a restart reports to, started for its
@@ -567,7 +552,7 @@ table.handle('usage:read', () => tokenUsage.latest());
 // so a crash loses at most the change you were making, or half a minute of sessions.
 const claudeSessions = sessionStore(table, path.join(app.getPath('userData'), SESSION_FILE), slotOfProject, (id) => mainsWorkers.get(id));
 // Every Claude the app starts, by project, for the drawer to list and resume.
-const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'));
+const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'session-index.json'), (id) => workerScreens.paneRunning(id));
 registerDrawer(table, {
   sessions: sessionIndex,
   projectPath: (slot) => projectIn(slot)?.path, openProjects: () => openProjects(),
@@ -594,9 +579,13 @@ table.handle('settings:write', (_screen, next: Settings) => {
 registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal: panes.spawn, window: liveWindow });
 // The Claude screen's sessions. chat-sessions.ts holds what one is; main hands over the way to every
 // screen and which project a slot holds.
+const workerScreens = screenWorkers({
+  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(),
+  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
+});
 const chats = registerChatSessions(table, {
-  send: (slot, event) => sendToRenderer('chat:receive', slot, event),
-  projectPath: (slot) => projectIn(slot)?.path, environment: paneEnvironment, userData: app.getPath('userData'),
+  send: (slot, event) => { sendToRenderer('chat:receive', slot, event); workerScreens.observe(slot, event); },
+  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, environment: paneEnvironment, userData: app.getPath('userData'),
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => workerAnswers.heard(slot, sender),
@@ -610,6 +599,7 @@ try {
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
   void shellHost.ready.then(() => {
     adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER);
+    screensComeBack(MANAGER_SLOT, MANAGER_FOLDER);
     startMainsWaitedOn();
   });
 } catch (error: unknown) {
@@ -634,16 +624,14 @@ const openProjects = (): OpenProjects => ({
   projects: projects.map((project) => project ?? null),
   panes: projects.map((_project, slot) => openPanes(slot)),
   manager: openPanes(MANAGER_SLOT),
+  screens: workerScreens.ids(),
 });
 // Every screen redraws its pages from the list, so a worker opening or closing is the list again.
 const panesChanged = (): void => sendToRenderer('projects:change', openProjects());
 
 // The workers a project has open, ascending: every pane main holds a command for, less the editor.
 function openPanes(slot: number): number[] {
-  return [...terminalCommands.keys()].map(paneFromId)
-    .filter((pane) => pane.slot === slot && isWorker(pane.index))
-    .map((pane) => pane.index)
-    .sort((first, second) => first - second);
+  return workersOfSlot(terminalCommands.keys(), slot);
 }
 
 // A worker that is a plain shell in the project, at the lowest number going.
@@ -665,6 +653,7 @@ function setPaneCommand(id: string, command: PaneCommand): void {
 
 // One pane let go of for good.
 function dropPane(id: string): void {
+  workerScreens.drop(id);
   mainsWorkers.delete(id);
   workerAnswers.forget(id);
   panes.drop(id);
@@ -718,6 +707,7 @@ function paneReadingsIn(slot: number): PaneReading[] {
       shell: panes.startedWith.get(id),
       command,
       inWorktree: command !== undefined && command.directory !== projectPath,
+      screen: workerScreens.has(id),
     };
   });
 }
@@ -797,13 +787,13 @@ const workerAnswers = sessionRequests({
   folderExists,
   openProject: (folder) => openProject(folder).index,
   openPanes,
-  agentIn: (id) => runsAnAgent(terminalCommands.get(id)),
+  agentIn,
   busyWith(id) {
     const { slot, index } = paneFromId(id);
     const reading = paneReadingsIn(slot).find((pane) => pane.index === index);
     return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
   },
-  directoryOf: (id) => terminalCommands.get(id)?.directory,
+  directoryOf: (id) => workerScreens.folder(id) ?? terminalCommands.get(id)?.directory,
   mainsWorkerIn: (id) => mainsWorkers.has(id),
   shellCommand: () => shellCommand,
   openWorker,
@@ -811,17 +801,19 @@ const workerAnswers = sessionRequests({
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.
-  startWorker(id, directory, agentArguments, cardId, dispatcherPath) {
+  startWorker(id, directory, launch, cardId, dispatcherPath) {
     const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
     const { slot, index } = paneFromId(id);
     takePane(projectIn(slot)?.path ?? '', index, cardId ?? '');
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
-    startAgent(id, directory, agentArguments);
+    if ('terminal' in launch) startAgent(id, directory, launch.terminal);
+    else workerScreens.start(id, projectIn(slot)?.path ?? directory, directory, launch.screen, cardId, dispatcherPath);
     mainsWorkers.set(id, dispatcherPath);
   },
   closeWorker,
-  type: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
+  // A worker screen takes the text as a prompt; its hidden shell would only swallow it.
+  type: (id, text) => { if (!workerScreens.send(id, text)) typeIntoPane((data) => shells.get(id)?.write(data), text); },
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
   tell: chats.tell,
   withdraw: (slot, messageId) => { chats.withdraw(slot, messageId).catch(() => undefined); },
