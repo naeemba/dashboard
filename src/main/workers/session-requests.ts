@@ -123,10 +123,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
   const notices = stopNotices({
-    notice(id) {
+    notice(id, paused) {
       if (!mainsWorker(id)) return;
       const slot = dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
-      const messageId = ports.tell(slot, doneReport(nameOfPane(id), id));
+      const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused));
       return () => ports.withdraw(slot, messageId);
     },
   });

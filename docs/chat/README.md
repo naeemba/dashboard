@@ -120,12 +120,14 @@ web one, and the next on each press while that entry stays selected; a link
 inside a folded tool call or message waits until it is unfolded.
 
 When a worker this session dispatched finishes its turn, the app tells Claude so
-in the conversation, queued behind whatever it is doing.
+in the conversation, queued behind whatever it is doing; one paused on its own
+background work for thirty minutes is told as paused, not stopped.
 
 While the session has workers open the foot counts them by how they stand,
-working, paused (waiting on its own background work), blocked, done or idle; a click on the count or the workers key opens a
-list of them, the manager's across every project, that keeps up while it is
-open: the arrows walk it, Enter lands on the pane and Escape closes it. Above
+working, paused (waiting on its own background work), blocked, done or idle; a
+click on the count or the workers key opens a list of them, the manager's across
+every project, that keeps up while it is open: the arrows walk it, Enter lands
+on the pane and Escape closes it. Above
 the working line, a strip lists the agents, workflows and background commands
 Claude has running, each under the one that started it, with its tool calls,
 tokens, time and last tool so far; a task leaves the strip when it ends. It

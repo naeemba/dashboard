@@ -1,4 +1,5 @@
 import type { WorkerState } from '../../shared/app/bridge';
+import { PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { isPaused, type StopWaiting } from '../../shared/workers/worker-roster';
 
 // When main hears that a worker it dispatched has stopped. A worker's turn ends whenever it waits on
@@ -22,17 +23,14 @@ export const STOP_GRACE_MS = 3 * 60 * 1000;
 // once it reads it. Long enough for an idle main to read it, short enough to still be at once.
 export const REPORT_SETTLE_MS = 10 * 1000;
 
-// How long a pause may last before main is told anyway: a worker that left a dev server or a watcher
-// running and forgot to report is never woken, so no later stop would come.
-export const PAUSE_CEILING_MS = 30 * 60 * 1000;
-
 export type StopNoticePorts = {
   // Runs `run` once after `ms`, unless the answer is called first. A real timer unless a test moves
   // its own clock.
   after?(ms: number, run: () => void): () => void;
-  // The worker stopped for good and nothing reported its stop. Answers with a way to take the notice
-  // back, if it can be, for a report main reads only after it was queued.
-  notice(id: string): (() => void) | void;
+  // The worker stopped for good and nothing reported its stop, or, `paused`, it has waited on its own
+  // background work for the whole ceiling. Answers with a way to take the notice back, if it can be,
+  // for a report main reads only after it was queued.
+  notice(id: string, paused: boolean): (() => void) | void;
 };
 
 export type StopNotices = {
@@ -64,6 +62,9 @@ export function stopNotices(
   // Noticed already and not at work since: a turn ending again without the worker running in between
   // is the same stop, not a new one.
   const noticed = new Set<string>();
+  // Told it is paused and not at work since: the same pause is not told twice, but the stop after it
+  // still is, since main heard only that the worker waits.
+  const pauseNoticed = new Set<string>();
   // How to take back the notice of the stop the worker is in now, until it works again.
   const takeBacks = new Map<string, () => void>();
 
@@ -72,11 +73,11 @@ export function stopNotices(
     pending.delete(id);
   }
 
-  function tell(id: string, ms: number) {
+  function tell(id: string, ms: number, paused = false) {
     pending.set(id, wait(ms, () => {
       pending.delete(id);
-      noticed.add(id);
-      const takeBack = ports.notice(id);
+      (paused ? pauseNoticed : noticed).add(id);
+      const takeBack = ports.notice(id, paused);
       if (takeBack) takeBacks.set(id, takeBack);
     }));
   }
@@ -88,6 +89,7 @@ export function stopNotices(
       callOff(id);
       if (state !== 'done') {
         noticed.delete(id);
+        pauseNoticed.delete(id);
         stopped.delete(id);
         takeBacks.delete(id);
         return;
@@ -96,7 +98,7 @@ export function stopNotices(
       // stop after the work it waits on, and one heard during it calls off the ceiling.
       if (isPaused(waiting)) {
         stopped.delete(id);
-        if (!reports.has(id) && !noticed.has(id)) tell(id, ceilingMs);
+        if (!reports.has(id) && !noticed.has(id) && !pauseNoticed.has(id)) tell(id, ceilingMs, true);
         return;
       }
       stopped.add(id);
@@ -116,6 +118,7 @@ export function stopNotices(
       takeBacks.delete(id);
       reports.delete(id);
       noticed.delete(id);
+      pauseNoticed.delete(id);
       stopped.delete(id);
     },
   };

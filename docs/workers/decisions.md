@@ -77,7 +77,10 @@ chat-decision-7's `cancelAsyncMessage`, which does nothing once main has taken t
 
 A pause has a ceiling, `PAUSE_CEILING_MS`, thirty minutes: a worker that leaves a dev server, a watcher
 or a hung `gh pr checks --watch` running and forgets to report is never woken, so no later stop would
-come. Past the ceiling main is told once, as for a stop, unless a report covered it.
+come. Past the ceiling main is told once, unless a report covered it, in its own words: the worker is
+paused, waiting on its own background work, not stopped. Told it had stopped, main may release it and
+kill the work it waits on, while `pane list` says paused. The stop that ends the pause is still told,
+since main heard only that the worker waits.
 
 Watch for: a report main reads only after it has already taken the notice into a turn. The notice
 cannot be withdrawn then, and main reads both; that needs a main that finishes its turn between the

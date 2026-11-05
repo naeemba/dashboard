@@ -6,6 +6,7 @@ function clock() {
   let now = 0;
   const timers: { at: number; run: () => void; cancelled: boolean }[] = [];
   const noticed: string[] = [];
+  const paused: string[] = [];
   const takenBack: string[] = [];
   const notices = stopNotices({
     after(ms, run) {
@@ -13,8 +14,9 @@ function clock() {
       timers.push(timer);
       return () => { timer.cancelled = true; };
     },
-    notice: (id) => {
+    notice: (id, pause) => {
       noticed.push(id);
+      if (pause) paused.push(id);
       return () => { takenBack.push(id); };
     },
   }, 100, 10, 1000);
@@ -25,7 +27,7 @@ function clock() {
       timer.run();
     }
   }
-  return { notices, noticed, takenBack, pass };
+  return { notices, noticed, paused, takenBack, pass };
 }
 
 describe('stopNotices', () => {
@@ -147,16 +149,22 @@ describe('stopNotices', () => {
     });
 
     it('tells main once a pause has lasted the ceiling, since nothing may ever wake it', () => {
-      const { notices, noticed, pass } = clock();
+      const { notices, noticed, paused, pass } = clock();
       notices.state('2:1', 'done', { background: 1, scheduled: 0 });
       notices.reported('2:2');
       notices.state('2:2', 'done', { background: 1, scheduled: 0 });
       pass(1000);
-      expect(noticed).toEqual(['2:1']);
-      // Woken at last and ended with nothing in flight: the same stop, already told.
-      notices.state('2:1', 'done', nothing);
+      expect(paused).toEqual(['2:1']);
+      // Still the same pause: told once.
+      notices.state('2:1', 'done', { background: 1, scheduled: 0 });
       pass(1000);
       expect(noticed).toEqual(['2:1']);
+      // Woken at last and ended with nothing in flight: main heard only that it waits, so this stop
+      // is told too, as a stop.
+      notices.state('2:1', 'done', nothing);
+      pass(10);
+      expect(noticed).toEqual(['2:1', '2:1']);
+      expect(paused).toEqual(['2:1']);
     });
 
     it('takes back a notice main has queued when the report is read after it', () => {
