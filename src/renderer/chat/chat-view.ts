@@ -5,7 +5,7 @@ import type { ChatContent, DashboardBridge, ChatPreferences } from '../../shared
 import { createAskPanel } from './chat-ask-view';
 import { createAttachments } from './chat-attachments';
 import { completion, footEffort, pressNext, screenCommand, tabFill, type ChosenEffort, type CommandRow, type Walked } from '../../shared/chat/chat-commands';
-import { drawEntry, foldOf, PDF_TILE, pdfTileState, type DrawnEntry } from './chat-entries';
+import { foldOf, PDF_TILE, redrawEntries, pdfTileState, type DrawnEntry } from './chat-entries';
 import { historyRows, onEdgeLine, promptHistory, recall, sentPrompts, stashDraft, stashedText } from '../../shared/chat/chat-history';
 import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
@@ -17,7 +17,7 @@ import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
 import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
 import { createCacheClock } from './chat-cache-clock';
-import { PANE_LINK } from './chat-pane-links';
+import { screenClick } from './chat-screen-click';
 import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
@@ -26,7 +26,8 @@ import {
 import { promptParts, withdrawable } from './chat-queue';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
-import { backgroundTarget, stopTarget } from '../../shared/chat/chat-tasks';
+import { createAgentsView } from './chat-agents-view';
+import { runTaskCommand, type TaskScreen } from './chat-task-commands';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from '../app/overlay';
@@ -118,7 +119,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  const tasks = createTaskStrip();
+  const agents = createAgentsView(() => transcript, { ...options, openPdf }, () => focus());
+  const tasks = createTaskStrip(agents.open);
   const queue = createQueueStrip();
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
 
@@ -237,6 +239,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const placeholder = transcript.suggestion ?? PLACEHOLDER;
     if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
+    agents.update();
     queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
   }
@@ -258,26 +261,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function drawEntries(): void {
     drawnEntries = transcript.entries;
-    let previousAt: number | undefined;
-    transcript.entries.forEach((entry, index) => {
-      const before = previousAt;
-      if ('at' in entry && entry.at !== undefined) previousAt = entry.at;
-      if (drawn[index]?.entry === entry) return;
-      const fresh = drawEntry(entry, before);
-      const old = drawn[index];
-      if (old) {
-        const freshFold = foldOf(fresh.element);
-        if (freshFold && foldOf(old.element)?.open) freshFold.open = true;
-        old.element.replaceWith(fresh.element);
-      } else {
-        log.insertBefore(fresh.element, live);
-      }
-      fresh.element.classList.toggle('selected', index === selected);
-      if (fresh.fill) {
-        unfilled.set(fresh.element, fresh.fill);
-        nearScreen.observe(fresh.element);
-      }
-      drawn[index] = fresh;
+    redrawEntries(drawn, transcript.entries, selected, (element) => log.insertBefore(element, live), (fresh) => {
+      unfilled.set(fresh.element, fresh.fill);
+      nearScreen.observe(fresh.element);
     });
   }
 
@@ -463,32 +449,9 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   });
 
-  // A link anywhere on the screen — the log, a plan in the ask box — opens in the browser, where main
-  // decides what is safe to hand the system, never in this window.
-  // An image, in the log or attached, opens full size over the app, and a PDF's tile in the viewer.
-  element.addEventListener('click', (event) => {
-    if (event.target instanceof HTMLImageElement) {
-      event.preventDefault();
-      imageOverlay(event.target.src);
-      return;
-    }
-    const target = event.target instanceof Element ? event.target : null;
-    const tile = target?.closest<HTMLElement>(`.${PDF_TILE}`);
-    if (tile) {
-      openPdf(tile);
-      return;
-    }
-    const pane = target?.closest<HTMLElement>(`.${PANE_LINK}`);
-    if (pane) {
-      event.preventDefault();
-      options.goToPane(pane.dataset.pane ?? '');
-      return;
-    }
-    const link = target?.closest('a');
-    if (!link) return;
-    event.preventDefault();
-    bridge.openExternal(link.href);
-  });
+  // A link anywhere on the screen, the log or a plan in the ask box, and an image, in the log or
+  // attached, or a PDF's tile (chat-screen-click.ts).
+  element.addEventListener('click', (event) => screenClick(event, { openPdf, goToPane: options.goToPane, openExternal: (url) => bridge.openExternal(url) }));
 
   // A click on an entry moves the selection there; a tool call's own summary unfolds it, which is what
   // the unfold key does on a selected one.
@@ -529,20 +492,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
     bridge.chatConfigure(slot, change).then(() => {
       if ('model' in change) measures.take();
     }, (error: unknown) => options.onError(`Claude setting not changed: ${failureText(error)}`));
-  }
-
-  function stopTask(): void {
-    const target = stopTarget(tasks.picked());
-    if (target.kind === 'refused') return options.onNotice(target.reason);
-    bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
-  }
-
-  function backgroundTask(): void {
-    const target = backgroundTarget(tasks.picked());
-    if (target.kind === 'refused') return options.onNotice(target.reason);
-    bridge.chatBackgroundTasks(slot, target.kind === 'one' ? target.toolUseId : undefined).then((matched) => {
-      if (!matched) options.onNotice(target.kind === 'one' ? 'That task is no longer in the foreground.' : 'Claude has no task running.');
-    }, (error: unknown) => options.onError(`Not sent to the background: ${failureText(error)}`));
   }
 
   function choose(change: ChatPreferences): void {
@@ -642,6 +591,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
+  const taskScreen: TaskScreen = { options, slot, strip: tasks, agents };
   const commandScreen: CommandScreen = {
     bridge, slot, options, prompt, configure, focus, showContext,
     transcript: () => transcript,
@@ -704,9 +654,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
       if (command === 'suggestion') acceptSuggestion();
       if (command === 'editor') editPrompt();
       if (command === 'history') showHistory();
-      if (command === 'task-select') tasks.step();
-      if (command === 'task-stop') stopTask();
-      if (command === 'task-background') backgroundTask();
+      runTaskCommand(command, taskScreen);
       if (command === 'stash') {
         stashed = stashDraft(stashed, stashedText(prompt.value, draft, recalled));
         emptyBox();

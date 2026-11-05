@@ -6,6 +6,7 @@ import { pdfMentions, pdfOfTool } from '../../shared/chat/chat-pdf';
 import { foldedMessage } from './chat-fold';
 import { stampText } from './chat-stamp';
 import { linkPanes } from './chat-pane-links';
+import { usageParts } from '../../shared/chat/chat-tasks';
 import { imageDataUrl, type ChatEntry, type ChatImage, type Stamp, type ToolResult } from '../../shared/chat/chat-transcript';
 
 // One entry of the conversation as DOM. What it draws was decided in chat-transcript.ts, chat-tools.ts
@@ -183,7 +184,8 @@ export function toolBody(name: string, input: Record<string, unknown>, result: T
   return parts;
 }
 
-// A call's one line: whether it finished, its name, and what it was about.
+// A call's one line: whether it finished, its name, what it was about, and for an Agent call what its
+// agent has done, live while it runs and kept once it ends.
 function toolLine(tag: 'summary' | 'div', entry: Extract<ChatEntry, { kind: 'tool' }>): HTMLElement {
   const line = document.createElement(tag);
   if (tag === 'div') line.className = 'chat-step-tool';
@@ -197,6 +199,13 @@ function toolLine(tag: 'summary' | 'div', entry: Extract<ChatEntry, { kind: 'too
   about.className = 'chat-tool-summary';
   about.textContent = toolSummary(entry.name, entry.input);
   line.append(state, name, about);
+  const usage = entry.usage ? usageParts(entry.usage).join(' · ') : '';
+  if (usage) {
+    const done = document.createElement('span');
+    done.className = 'chat-tool-usage';
+    done.textContent = usage;
+    line.append(done);
+  }
   return line;
 }
 
@@ -280,6 +289,35 @@ function userEntry(entry: Extract<ChatEntry, { kind: 'user' }>, previousAt: numb
 export function foldOf(element: HTMLElement): HTMLDetailsElement | null {
   if (element instanceof HTMLDetailsElement) return element;
   return element.querySelector<HTMLDetailsElement>(':scope > details.chat-folded');
+}
+
+// The entries drawn again where the object at a place is no longer the one drawn there, a fold
+// that was open staying open. `insert` puts a new last entry on the page, and `later` takes an entry
+// whose expensive half is still to fill. The main log and an agent's conversation both draw so.
+export function redrawEntries(
+  drawn: DrawnEntry[], entries: ChatEntry[], selected: number | null,
+  insert: (element: HTMLElement) => void, later: (fresh: DrawnEntry & { fill: () => void }) => void,
+): void {
+  let previousAt: number | undefined;
+  entries.forEach((entry, index) => {
+    const before = previousAt;
+    if ('at' in entry && entry.at !== undefined) previousAt = entry.at;
+    if (drawn[index]?.entry === entry) return;
+    const fresh = drawEntry(entry, before);
+    const old = drawn[index];
+    if (old) {
+      const freshFold = foldOf(fresh.element);
+      if (freshFold && foldOf(old.element)?.open) freshFold.open = true;
+      old.element.replaceWith(fresh.element);
+    } else {
+      insert(fresh.element);
+    }
+    fresh.element.classList.toggle('selected', index === selected);
+    if (fresh.fill) later({ ...fresh, fill: fresh.fill });
+    drawn[index] = fresh;
+  });
+  // A list shorter than what is drawn, an agent's conversation gone with a reset, takes the rest away.
+  for (const gone of drawn.splice(entries.length)) gone.element.remove();
 }
 
 // `previousAt` is the time of the last stamped entry above this one, for the date on its stamp.

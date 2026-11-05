@@ -16,6 +16,8 @@ export type ChatTask = {
   backgrounded: boolean;
   // The tool call that started it, which backgrounding one task names; null when the session gave none.
   toolUseId: string | null;
+  // An agent, whose own conversation the agents key opens; a workflow or background command has none.
+  agent: boolean;
   tools: number;
   tokens: number;
   seconds: number;
@@ -26,6 +28,20 @@ export type ChatTask = {
 export type ChatTasks = readonly ChatTask[];
 
 const ENDED = new Set(['completed', 'failed', 'killed', 'stopped']);
+
+const NO_USAGE: AgentUsage = { tools: 0, tokens: 0, seconds: 0 };
+
+// The count a task_progress or task_notification carries, or null when it carries none. A count it
+// leaves out is the one in `known`, the task's own so far.
+export function messageUsage(message: Record<string, unknown>, known: AgentUsage = NO_USAGE): AgentUsage | null {
+  const usage = isRecord(message.usage) ? message.usage : null;
+  if (!usage || typeof usage.total_tokens !== 'number') return null;
+  const seconds = typeof usage.duration_ms === 'number' ? Math.round(usage.duration_ms / 1000) : known.seconds;
+  const tools = typeof usage.tool_uses === 'number' ? usage.tool_uses : known.tools;
+  return { tools, tokens: usage.total_tokens, seconds };
+}
+
+const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
 
 // A task the strip leaves out: Claude Code's own housekeeping, which it marks as not being activity.
 function quiet(message: Record<string, unknown>): boolean {
@@ -43,8 +59,9 @@ function merged(task: ChatTask, message: Record<string, unknown>): ChatTask {
   const description = text(message.description) || task.description;
   const kind = text(message.subagent_type) || text(message.workflow_name) || task.kind;
   const parent = text(message.parent_task_id) || task.parent;
-  if (description === task.description && kind === task.kind && parent === task.parent) return task;
-  return { ...task, description, kind, parent };
+  const agent = task.agent || isAgent(message);
+  if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent) return task;
+  return { ...task, description, kind, parent, agent };
 }
 
 function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
@@ -56,19 +73,15 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   }
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
-    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
+    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, agent: isAgent(message), tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
   }];
 }
 
 function progressed(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
-  const usage = isRecord(message.usage) ? message.usage : {};
-  const count = (value: unknown, fallback: number) => (typeof value === 'number' ? value : fallback);
   return tasks.map((task) => (task.id !== message.task_id ? task : {
     ...task,
+    ...messageUsage(message, task),
     description: text(message.description) || task.description,
-    tools: count(usage.tool_uses, task.tools),
-    tokens: count(usage.total_tokens, task.tokens),
-    seconds: Math.round(count(usage.duration_ms, task.seconds * 1000) / 1000),
     lastTool: text(message.last_tool_name) || task.lastTool,
     summary: text(message.summary) || task.summary,
   }));
@@ -118,12 +131,20 @@ export function taskOrder(tasks: ChatTasks): { task: ChatTask; depth: number }[]
 
 // One row's text after its description: what kind of task, then what it has done so far.
 export function taskDetail(task: ChatTask): string {
-  const parts = [task.kind];
-  if (task.tools > 0) parts.push(`${task.tools} ${task.tools === 1 ? 'tool' : 'tools'}`);
-  if (task.tokens > 0) parts.push(`${formatTokens(task.tokens)} tokens`);
-  if (task.seconds > 0) parts.push(`${task.seconds}s`);
-  if (task.lastTool) parts.push(task.lastTool);
-  return parts.join(' · ');
+  return [task.kind, ...usageParts(task), ...(task.lastTool ? [task.lastTool] : [])].join(' · ');
+}
+
+// What an agent has done, as its strip row and the Agent call that started it both say it: its tool
+// calls, its tokens and its time, each left out while it is nought. The tokens are the session's
+// total_tokens, its last request's whole context and output, which is the figure Claude Code shows.
+export type AgentUsage = { tools: number; tokens: number; seconds: number };
+
+export function usageParts(usage: AgentUsage): string[] {
+  const parts: string[] = [];
+  if (usage.tools > 0) parts.push(`${usage.tools} ${usage.tools === 1 ? 'tool' : 'tools'}`);
+  if (usage.tokens > 0) parts.push(`${formatTokens(usage.tokens)} tokens`);
+  if (usage.seconds > 0) parts.push(`${usage.seconds}s`);
+  return parts;
 }
 
 // The row the task key picks next, in the strip's order: the first with none picked, then each in

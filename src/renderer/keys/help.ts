@@ -48,9 +48,9 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'where it prints as it goes. The last line is a guess, and the command and its results '
     + 'are gone on restart.',
   claude: 'Claude Code as a page: tables, code, diffs, and tool calls folded, which the unfold key '
-    + 'opens; the link key follows links. The project\'s main session: its CLAUDE.md, skills and MCP '
-    + 'servers. A slash lists commands, @ mentions a file. The foot shows usage and cache warmth; the '
-    + 'refresh key rereads usage, the context key lists it, Enter opens rows.',
+    + 'opens; the link key follows links. The project\'s main session. A slash lists commands, @ '
+    + 'mentions a file, the agents key opens agents\' conversations. The foot shows usage and cache '
+    + 'warmth; the refresh key rereads it, the context key lists it, Enter opens rows.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',
