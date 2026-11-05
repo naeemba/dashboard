@@ -44,6 +44,8 @@ export type ChatViewOptions = {
   bridge: DashboardBridge;
   slot: number;
   projectName: string;
+  // Where main reads a memory file from for the context popup (docs:read).
+  projectPath: string;
   // The id the notification carries back, so a click on it lands on this screen.
   paneId: string;
   onError(message: string): void;
@@ -136,7 +138,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let fast = false;
   // Main starts in auto mode; chat-sessions.ts seeds it so, and this agrees until the read says.
   let mode: PermissionMode = 'auto';
-  const measures = createMeasures(bridge, slot, drawFoot, options.onNotice, options.onError);
+  const measures = createMeasures(bridge, slot, options.projectPath, drawFoot, options.onNotice, options.onError);
   let earlierRead = false;
   // The session's slash commands, asked for the first time a slash is typed; null until they arrive.
   let commands: CommandRow[] | null = null;
@@ -193,7 +195,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     drawFoot();
   });
   const openWorkers = (): void => void showWorkers(bridge, slot, options.goToPane).then((landed) => { if (!landed) focus(); });
-  const showContext = (): void => void measures.show(foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`)).then(focus);
+  const showContext = (): void => void measures.show(() => foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`), () => transcript, select).then(focus);
   foot.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest(`.${FOOT_WORKERS}`)) openWorkers();

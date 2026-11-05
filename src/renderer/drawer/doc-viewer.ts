@@ -8,9 +8,10 @@ import { EDIT_SCROLL_KEYS } from './data-folds';
 // Edit, leads it and is always the highlighted one: Enter or a click on it puts the viewer away and
 // opens the file in the project's nvim. The arrows and Page keys scroll the doc, Escape puts it away.
 // A link opens in the browser, the way one on the Claude screen does. With no `edit`, the manager's
-// page, there is no row and Enter closes it as Escape does.
+// page, there is no row and Enter closes it as Escape does. `closed` hears it put away.
 export function docOverlay(
   name: string, text: string, images: Record<string, string>, edit: (() => void) | null, openLink: (url: string) => void,
+  closed?: () => void,
 ): void {
   const body = document.createElement('div');
   body.className = 'chat-text doc-viewer-text';
@@ -19,7 +20,7 @@ export function docOverlay(
   const shown = document.createElement('div');
   if (edit === null) {
     shown.append(body);
-    viewerOverlay('doc-viewer', shown);
+    viewerOverlay('doc-viewer', shown, { closed });
     return;
   }
   const row = editRow(name, EDIT_SCROLL_KEYS);
@@ -28,7 +29,7 @@ export function docOverlay(
     close();
     edit();
   };
-  const close = viewerOverlay('doc-viewer', shown, { enter: editing });
+  const close = viewerOverlay('doc-viewer', shown, { enter: editing, closed });
   row.addEventListener('click', editing);
 }
 

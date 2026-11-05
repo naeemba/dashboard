@@ -554,3 +554,19 @@ describe('the suggested next prompt', () => {
     expect(applyMessage(EMPTY_TRANSCRIPT, { type: 'prompt_suggestion', suggestion: '  ' }).suggestion).toBeNull();
   });
 });
+
+describe('readings', () => {
+  const usage = { input_tokens: 10, cache_read_input_tokens: 900, cache_creation_input_tokens: 90, output_tokens: 50 };
+  const answer = (said: string, counted: unknown) => ({ type: 'assistant', message: { content: [{ type: 'text', text: said }], usage: counted } });
+
+  it("keeps what each of Claude's messages read and wrote, after the entries it left", () => {
+    const transcript = [answer('one', usage), answer('two', undefined)].reduce(applyMessage, EMPTY_TRANSCRIPT);
+    expect(transcript.readings).toEqual([{ after: 1, input: 1_000, total: 1_050 }]);
+  });
+
+  it('moves the readings already held past the earlier conversation read back', () => {
+    const held = { ...EMPTY_TRANSCRIPT, readings: [{ after: 0, input: 5, total: 6 }] };
+    const earlier = withEarlier(held, [answer('before', usage)]);
+    expect(earlier.readings).toEqual([{ after: 1, input: 1_000, total: 1_050 }, { after: 1, input: 5, total: 6 }]);
+  });
+});

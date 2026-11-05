@@ -11,7 +11,7 @@ and JSON highlighted with every object and array foldable.
 
 Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 
-- Lists and resume: `docs-list.ts`, `drawer-ipc.ts`, `drawer.ts`
+- Lists and resume: `docs-list.ts`, `drawer-ipc.ts`, `drawer.ts`, `measured-memory.ts` (the memory files the context popup may open)
 - On screen: `drawer-rows.ts`, `drawer-view.ts`, `doc-viewer.ts`, `drawer.css`
 - YAML and JSON: `data-folds.ts` (lines, folds, keys), `data-viewer.ts`
 - The viewer reuses the Claude screen's `chat-markdown.ts` and the sheet of

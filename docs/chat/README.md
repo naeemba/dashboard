@@ -108,7 +108,7 @@ closes the list.
 While Claude works, a line over the box says whether it is thinking, for how
 long and how many tokens have come down, a tool's input included: an estimate
 while a message streams, its real count once it ends (chat-decision-13), plus
-what the turn's subagents wrote, estimated from their messages (chat-decision-14). Its
+what the turn's subagents wrote, estimated from their messages (chat-decision-15). Its
 answer flows in a few characters at a time. What it thought is folded to a
 Thinking line in the conversation, unfolding to a summary of it.
 
@@ -156,7 +156,7 @@ and a pane link puts the conversation away and lands on the pane. An agent that
 has said nothing yet opens empty and fills as it goes; only the last 20 agents'
 conversations are kept, besides any still running, and a session that ends lists
 what it was running as ended. A workflow or background command has no
-conversation to open, and says so (chat-decision-14).
+conversation to open, and says so (chat-decision-15).
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default
@@ -176,12 +176,21 @@ from the last measure, after each turn; the popup says when they were taken and
 follows a new one while it is open. The refresh button after the meters, or the
 refresh key, measures again now: it turns while the read runs and ignores
 presses until it ends, and a read that fails or finds no session running says so
-on the notice line and keeps the last numbers. The arrows walk its rows and Escape closes
-it. The model key walks the models and the edits key walks asking, accepting,
-planning and auto, both for the next thing Claude does; the foot follows a mode
-Claude moves to by itself, such as accepting edits once a plan is approved. A
-second screen on the same page shows the same conversation, questions and
-choices, and either can answer.
+on the notice line and keeps the last numbers. The arrows walk its rows; Enter
+or a click opens what is behind one, a level down. A memory file opens in the
+drawer's doc viewer. The MCP tools row, or its `N more`, lists the servers by
+what their tools hold, and a server, or one of its tools, lists that server's
+tools. The skills and custom agents rows list them by size. The messages row
+lists the conversation's ten largest turns, each weighed by what it added to the
+window as the transcript's usage says, and Enter selects that turn's prompt in
+the conversation. A row with nothing behind it is only read. Escape goes back a
+level, onto the row that opened it, and closes the top one; putting a memory
+file away comes back to its row too. A click beside the popup closes it. The
+model key walks the models and the edits key walks asking, accepting, planning
+and auto, both for the next thing Claude does; the foot follows a mode Claude
+moves to by itself, such as accepting edits once a plan is approved. A second
+screen on the same page shows the same conversation, questions and choices, and
+either can answer.
 
 The conversation outlives the app: the next launch shows it again and carries on
 from it once the screen is shown. The new conversation key starts over; the old one
@@ -207,7 +216,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
   `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
-  `chat-context.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
+  `chat-context.ts`, `chat-context-levels.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
   `src/shared/usage/cache-warmth.ts`); the popup it opens is `src/renderer/app/anchored-popup.ts`
   with `popup-placement.ts`
 - Styles: `chat.css`
@@ -232,6 +241,8 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given Claude has answered, when the foot is drawn, then beside the meters it says `warm 42m` in green, an hour or five minutes from the last reply that wrote or read the prompt cache by the tier that reply's session last wrote; yellow under five minutes, seconds in the last minute, `cold` once expired. It counts down while the screen is on view and stops at the first tick that finds it off view, until it is shown again; a worker's row in the workers popup says the same of its own session (chat-decision-12).
 - Given main has workers open, when the foot is drawn, then between what Claude is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a click on it or Alt+W opens a list of them (the manager's across every project) that updates while open, the arrows walk it, Enter lands on the pane and Escape closes it.
 - Given a turn has been measured, when you click the context meter, press Alt+U or send `/context`, then a popup opens just above the meter, lined up with its right edge, listing each part of the window (system prompt, tools, memory files, skills, messages, free space and the rest) with its tokens, share and a bar in its colour, then the memory files and the MCP tools biggest first, five each and an `N more` row; deferred tool schemas are left out. Its heading says when the numbers were measured, it follows a new measure while open, the arrows walk its rows and Escape puts the keyboard back in the box (chat-decision-10). Before any measure it says so instead of opening.
+- Given the context popup is open, when you press Enter on the messages row, then it lists the largest turns biggest first, Enter on one closes the popup with that turn's prompt selected, and Escape on the list goes back to the top level instead (chat-decision-14).
+- Given the context popup is open, when you press Enter on a memory file, then it opens in the doc viewer, read by main because the last measure named that path; putting the viewer away comes back to the popup (chat-decision-14).
 - Given the meters are showing, when you click the refresh button after them or press Alt+Shift+U, then the context, the model and the plan's limits are read from the session now; the button turns until the read ends and presses meanwhile do nothing. A read that fails says `Usage not refreshed:` and why, one with no session running says so, and either way the meters keep their last numbers. The next reading that lands, from the key or a turn ending, clears that message.
 - Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
 - Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.
@@ -248,8 +259,8 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given Claude ran an agent, when its call is on screen, then the call's line reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting while the agent runs and kept after it ends or the conversation is read back.
-- Given an agent is running or has finished this conversation, when you press Alt+A, then a list shows it, running ones first, finished ones with `completed`, their count and the first line of their report; Enter opens its conversation, which grows as the agent works, Escape goes back to the list, and a click on its strip row opens the same view (chat-decision-14).
-- Given a turn's agent writes, when it sends each message, then the working line's `↓ N tokens` grows by what it wrote, four characters a token (chat-decision-14).
+- Given an agent is running or has finished this conversation, when you press Alt+A, then a list shows it, running ones first, finished ones with `completed`, their count and the first line of their report; Enter opens its conversation, which grows as the agent works, Escape goes back to the list, and a click on its strip row opens the same view (chat-decision-15).
+- Given a turn's agent writes, when it sends each message, then the working line's `↓ N tokens` grows by what it wrote, four characters a token (chat-decision-15).
 - Given a half-written prompt in the box, when you press Alt+S, then the box empties and Up from the empty box brings the draft back before any sent prompt; the last 10 stashed are kept until they are sent.
 - Given Up showing an earlier prompt over a half-written draft, when you press Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question keeps the keyboard.
 - Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.

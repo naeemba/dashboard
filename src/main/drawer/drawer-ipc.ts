@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import type { Channels } from '../app/channels';
 import { listDocs, readDoc } from './docs-list';
+import { memoryFilesOf } from './measured-memory';
 import { resumeChoice } from '../workers/session-index';
 import type { SessionIndexStore } from '../workers/session-index-store';
 import type { DrawerReply, ResumeReply } from '../../shared/drawer/drawer';
@@ -23,7 +24,7 @@ export function registerDrawer(table: Channels, main: {
   openProjects(): OpenProjects;
 }): void {
   table.handle('docs:list', (_screen, projectPath: string, open: string[]) => listDocs(projectPath, open, MANAGER_DOC_ROOTS));
-  table.handle('docs:read', (_screen, projectPath: string, file: string) => readDoc(projectPath, file, MANAGER_DOC_ROOTS));
+  table.handle('docs:read', (_screen, projectPath: string, file: string) => readDoc(projectPath, file, MANAGER_DOC_ROOTS, memoryFilesOf(projectPath)));
   table.handle('sessions:list', (_screen, projectPath: string, count: number) => main.sessions.page(sessionsFolder(projectPath), count));
   table.handle('sessions:rename', (_screen, projectPath: string, id: string, label: string): DrawerReply => {
     const refused = main.sessions.rename(sessionsFolder(projectPath), id, label);

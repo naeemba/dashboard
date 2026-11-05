@@ -124,4 +124,24 @@ describe('readDoc', () => {
     writeFileSync(path.join(project, 'docs', 'cards.yaml'), 'shot: ![a](a.png)\n');
     expect(await readDoc(project, path.join(project, 'docs', 'cards.yaml'), [])).toEqual({ text: 'shot: ![a](a.png)\n', images: {} });
   });
+
+  it('reads a memory file the measure named, and only that one, with no images', async () => {
+    const home = mkdtempSync(path.join(tmpdir(), 'docs-memory-'));
+    writeFileSync(path.join(home, 'CLAUDE.md'), '# Rules ![a](a.png)');
+    writeFileSync(path.join(home, 'a.png'), 'png');
+    writeFileSync(path.join(home, 'other.md'), 'no');
+    const memory = new Set([path.join(home, 'CLAUDE.md')]);
+    expect(await readDoc('/p', path.join(home, 'CLAUDE.md'), [], memory)).toEqual({ text: '# Rules ![a](a.png)', images: {} });
+    expect(await readDoc('/p', path.join(home, 'other.md'), [], memory)).toHaveProperty('refused');
+  });
+
+  it('keeps the images of a memory file that is also one of the docs', async () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'docs-memory-'));
+    mkdirSync(path.join(project, 'docs'));
+    const file = path.join(project, 'docs', 'CLAUDE.md');
+    writeFileSync(file, '![a](a.png)');
+    writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
+    expect(await readDoc(project, file, [], new Set([file])))
+      .toEqual({ text: '![a](a.png)', images: { 'a.png': `data:image/png;base64,${Buffer.from('png').toString('base64')}` } });
+  });
 });

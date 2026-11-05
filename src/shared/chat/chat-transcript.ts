@@ -10,6 +10,7 @@ import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
 import type { PermissionAsk } from './chat-elicitation';
 import { cacheUseOf, type CacheUse } from '../usage/cache-warmth';
+import { tokensOf } from '../usage/usage';
 import { isDoneReport } from '../workers/done-report';
 
 // A prompt sent while Claude was busy, waiting in the session's own queue under the id main stamped
@@ -138,13 +139,26 @@ export type Transcript = {
   // line's warm or cold (cache-warmth.ts); null until a reply says. A subagent's replies are its own
   // cache, so they are not counted.
   cache: CacheUse | null;
+  // What each of Claude's own messages read and wrote, as its usage says, for the context popup's
+  // largest turns (chat-context-levels.ts). `after` is how many entries there were once the message was
+  // folded in, so a reading belongs to the turn holding the entry before it.
+  readings: Reading[];
 };
+
+// `input` is what the message read, cached or not; `total` adds what it wrote.
+export type Reading = { after: number; input: number; total: number };
+
+function readingOf(usage: unknown, after: number): Reading | null {
+  if (!isRecord(usage) || typeof usage.input_tokens !== 'number') return null;
+  const total = tokensOf(usage);
+  return { after, input: total - (typeof usage.output_tokens === 'number' ? usage.output_tokens : 0), total };
+}
 
 // A turn's count before anything has come down.
 const UNCOUNTED = { output: 0, reported: 0, streamed: 0, subagents: 0, thinking: false } as const;
 
 export const EMPTY_TRANSCRIPT: Transcript = {
-  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], finished: [], agents: {}, hook: null, suggestion: null, queued: [], cache: null,
+  entries: [], live: '', busy: false, model: null, version: null, ...UNCOUNTED, started: null, tasks: [], finished: [], agents: {}, hook: null, suggestion: null, queued: [], cache: null, readings: [],
 };
 
 // No turn running: nothing streaming, nothing counted.
@@ -409,7 +423,10 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
     case 'prompt_suggestion': return { ...transcript, suggestion: text(message.suggestion).trim() || null };
     case 'assistant': {
       const stamp = stampOf(message, inner);
-      return { ...assistant(transcript, inner.content, stamp), cache: cacheUseOf(inner.usage, stamp.at, transcript.cache) };
+      const said = assistant(transcript, inner.content, stamp);
+      const reading = readingOf(inner.usage, said.entries.length);
+      const readings = reading ? [...transcript.readings, reading] : transcript.readings;
+      return { ...said, cache: cacheUseOf(inner.usage, stamp.at, transcript.cache), readings };
     }
     case 'user': return userMessage(transcript, message);
     case 'stream_event': return streamed(transcript, message.event);
@@ -531,8 +548,9 @@ export function reportedPreferences(message: Record<string, unknown>): ChatPrefe
 // what was read instead of in place of it.
 export function withEarlier(transcript: Transcript, messages: Record<string, unknown>[]): Transcript {
   if (transcript.entries.some((entry) => entry.kind !== 'event' || !entry.verbatim)) return transcript;
-  const read = messages.reduce(applyMessage, { ...transcript, entries: [] });
-  return { ...read, entries: [...read.entries, ...transcript.entries] };
+  const read = messages.reduce(applyMessage, { ...transcript, entries: [], readings: [] });
+  const later = transcript.readings.map((reading) => ({ ...reading, after: reading.after + read.entries.length }));
+  return { ...read, entries: [...read.entries, ...transcript.entries], readings: [...read.readings, ...later] };
 }
 
 // A turn running or a question waiting: what a new conversation is refused under, since the reset

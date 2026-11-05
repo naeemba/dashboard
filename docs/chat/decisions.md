@@ -259,9 +259,31 @@ left it out, so a turn whose Write held a 40-line poem read `↓ 1 tokens` where
 
 What it gets wrong, on purpose: the assistant message's own usage is not read, only the stream's, so
 a message that ends without a `message_delta` (an interrupted one) keeps its estimate. What
-subagents wrote is chat-decision-14.
+subagents wrote is chat-decision-15.
 
-## chat-decision-14: Agents are a list behind a key, their tokens are Claude Code's figure, and the working line estimates theirs
+## chat-decision-14: The context popup opens a level per row, and weighs a turn by what it added
+
+Enter on a row of the context popup opens a list a level down, in the same popup over the meter;
+Escape goes back a level and closes the top one, and a click beside it closes every level at once.
+What a row opens is decided in `chat-context-levels.ts` on the row's stable key (a category's `id`, a
+file's path, a tool's server), never on its English name, and a row that would open an empty list,
+the skills row from a CLI that names none, opens nothing.
+
+A memory file opens in the drawer's doc viewer. Memory files live outside the roots `docs:read`
+takes (`~/.claude/CLAUDE.md`, a project's own `CLAUDE.md`, an auto-memory folder), so main keeps the
+paths the latest measure of each project's session named (`measured-memory.ts`) and `docs:read`
+reads exactly those as well, as text with no images: only the file was named, not its folder. A
+widening to the folders would let the channel read any markdown beside them.
+
+The messages row lists the largest turns from the usage each of Claude's messages carries, which
+the transcript already folds in (`Transcript.readings`), so it asks main for nothing. A turn weighs
+what it added to the window: the last total its messages read and wrote, less the previous turn's
+last total. After a compaction the window shrank, so that turn is counted from what its own first
+message read instead. The first turn's weight therefore leaves out the system prompt and tools, which
+its first message already read. A live message's usage carries the output only partly until the
+stream ends, so the running turn reads a little low until the next measure.
+
+## chat-decision-15: Agents are a list behind a key, their tokens are Claude Code's figure, and the working line estimates theirs
 
 Checked against Claude Code 2.1.318 on 2026-11-05, one Agent call that lists `/etc/X11` and reads
 `/etc/hostname`, run both in the terminal and as `claude -p --output-format stream-json --verbose
@@ -294,4 +316,3 @@ agents started keep one: a manager session running agents all day would otherwis
 output for conversations nobody opens. A running agent's is never the one dropped: dropping it would
 start it again from its next message, with nothing saying its beginning was cut. A finished agent past
 that says so when picked.
-
