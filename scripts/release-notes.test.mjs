@@ -12,6 +12,14 @@ describe('changelogWith', () => {
       '# Changelog\n\n## v2.42.1 (2026-11-07)\n\n* Second\n\n## v2.42.0 (2026-11-06)\n\n* First\n',
     );
   });
+
+  it('keeps a changelog whose header was edited by hand, below the new header', () => {
+    expect(changelogWith('Old notes\n', 'v1', 'd', '* A')).toBe('# Changelog\n\n## v1 (d)\n\n* A\n\nOld notes\n');
+  });
+
+  it("nests the notes' headings under their version", () => {
+    expect(changelogWith('', 'v1', 'd', "## What's Changed\n* A\n")).toBe("# Changelog\n\n## v1 (d)\n\n### What's Changed\n* A\n");
+  });
 });
 
 describe('downloadsSection', () => {
@@ -37,7 +45,9 @@ describe('downloadsSection', () => {
   });
 
   it('leaves out a platform with no file', () => {
-    expect(downloadsSection(['dashboard_2.42.0_amd64.deb'], 'o/r', 'v1')).not.toContain('macOS');
+    const section = downloadsSection(['dashboard_2.42.0_amd64.deb'], 'o/r', 'v1');
+    expect(section).not.toContain('macOS');
+    expect(section).toContain('- Linux (x64): [deb](https://github.com/o/r/releases/download/v1/dashboard_2.42.0_amd64.deb)');
   });
 });
 
@@ -46,5 +56,6 @@ describe('releaseBody', () => {
     const body = releaseBody("## What's Changed\n* A\n", ['x.dmg'], 'o/r', 'v1');
     expect(body.indexOf('## Downloads')).toBeLessThan(body.indexOf('## Unsigned builds'));
     expect(body.indexOf('## Unsigned builds')).toBeLessThan(body.indexOf("## What's Changed"));
+    expect(body).toContain('https://github.com/o/r#install');
   });
 });

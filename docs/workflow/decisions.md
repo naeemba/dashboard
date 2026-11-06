@@ -71,7 +71,7 @@ two npm copies of the same packages were 1.4 GB.
 `.github/workflows/release.yml` is the only place a version moves (workflow-rule-3). Agreed on 2026-11-06:
 
 - Unsigned. There is no Apple Developer ID or Windows code-signing certificate, so each system warns once
-  before the first launch; the release body and README.md say what to click. A mac build still gets an
+  before the first launch; README.md says what to click and the release body links to it. A mac build still gets an
   ad hoc signature (`DASHBOARD_SIGNING_IDENTITY=-`, read by `forge.config.ts`): Apple silicon refuses to
   run an app with none, and a runner has no `Dashboard Local` certificate.
 - No Forge publisher and no DMG maker. Each leg runs `pnpm run make` and `gh release upload`; the `.dmg`

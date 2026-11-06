@@ -15,25 +15,25 @@ on:
   push:
     tags: ['v*-*']
 
-# One release at a time: two would both bump from the same version.
+# One release at a time. A dispatch queued behind a running one still checks out the main it was
+# dispatched on, so it bumps to the same version and fails at the push instead of racing: dispatch
+# again once the first finishes.
 concurrency: release
 
-# Actions pinned to a commit: this workflow's token can push to main.
+# Actions pinned to a commit: this workflow's token can push to main. GH_TOKEN goes only to the steps
+# that call gh, never to the build's install and make, which run every dependency's scripts.
 permissions:
   contents: write
-
-env:
-  GH_TOKEN: ${{ github.token }}
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       notes: ${{ steps.notes.outputs.notes }}
     env:
       BUMP: ${{ inputs.bump }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -49,6 +49,9 @@ jobs:
               echo "::error::Tag $tag points at a commit whose package.json says $version. Bump it to ${tag#v} in that commit first."
               exit 1
             fi
+          elif [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Release runs from main; this run was started on $GITHUB_REF_NAME."
+            exit 1
           else
             tag=$(npm version "$BUMP" --no-git-tag-version)
           fi
@@ -66,6 +69,12 @@ jobs:
       - name: Commit and tag the release
         if: github.event_name == 'workflow_dispatch'
         run: |
+          # A re-run after the push checks out the same commit and works out the same tag: go straight
+          # on to the release.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "$TAG is already on main."
+            exit 0
+          fi
           node scripts/release-notes-step.mjs changelog "$TAG" "$(date -u +%F)" "$RUNNER_TEMP/notes.md"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -137,9 +146,15 @@ jobs:
       - name: Make the disk image
         if: runner.os == 'macOS'
         run: |
-          hdiutil create -volname Dashboard -srcfolder out/Dashboard-darwin-arm64/Dashboard.app -ov -format UDZO \
+          # The app beside an Applications link, the window a person drags it across.
+          mkdir "$RUNNER_TEMP/dmg"
+          cp -R out/Dashboard-darwin-arm64/Dashboard.app "$RUNNER_TEMP/dmg/"
+          ln -s /Applications "$RUNNER_TEMP/dmg/Applications"
+          hdiutil create -volname Dashboard -srcfolder "$RUNNER_TEMP/dmg" -ov -format UDZO \
             "out/make/Dashboard-${TAG#v}-arm64.dmg"
       - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # Node lists the files: a mac's bash 3.2 has no globstar, and Squirrel's Setup.exe has a space.
           node -e 'const { readdirSync } = require("node:fs"); const { join } = require("node:path");
@@ -159,6 +174,7 @@ jobs:
     env:
       TAG: ${{ needs.prepare.outputs.tag }}
       NOTES: ${{ needs.prepare.outputs.notes }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Stop if a build leg failed
         if: needs.build.result != 'success'
