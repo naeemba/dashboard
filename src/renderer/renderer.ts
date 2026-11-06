@@ -13,6 +13,7 @@ import './drawer/drawer.css';
 import './usage/usage.css';
 import './manager/manager.css';
 import { openHelp } from './keys/help';
+import { openWhatsNew, whatsNewAtLaunch } from './app/whats-new-view';
 import { preloadFont } from './app/font-preload';
 import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
 import { createDrawer } from './drawer/drawer-view';
@@ -646,6 +647,7 @@ function apply(action: Action): void {
   if (action.kind === 'project-picker') return report(showPicker());
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
+  if (action.kind === 'whats-new') return void openWhatsNew(bridge).then(() => showPage(activeIndex));
   if (action.kind === 'project-drawer') return drawer.toggle();
   if (action.kind === 'needs-you-next') return showNotice('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {
@@ -951,6 +953,8 @@ async function start(): Promise<void> {
   applyAppearance();
   // Said whether or not the restore threw: a launch with `--remote` joins its host only after this.
   await restore(session).finally(() => bridge.sessionRestored());
+  // Over the restored page, so closing it lands where the session left you.
+  void whatsNewAtLaunch(bridge, () => showPage(activeIndex));
 }
 
 start().catch((error: unknown) => {

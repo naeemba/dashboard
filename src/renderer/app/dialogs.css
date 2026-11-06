@@ -141,8 +141,10 @@
   color: var(--muted);
 }
 
-/* Help: sections of key/action rows, scrolling as one if the screen is short. */
-.help-dialog {
+/* Help: sections of key/action rows, scrolling as one if the screen is short. What's new is the same
+   shape, a day per section and a pull request per row. */
+.help-dialog,
+.whats-new-dialog {
   width: min(680px, 92vw);
   max-height: 74vh;
   overflow-y: auto;
@@ -150,12 +152,25 @@
   outline: none;
 }
 
-.help-dialog h2:not(.dialog-title) {
+.help-dialog h2:not(.dialog-title),
+.whats-new-dialog h2:not(.dialog-title) {
   margin: 18px 0 4px;
   padding: 0 20px;
   color: var(--brightWhite);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* Each day's list is as tall as its rows; the dialog scrolls, not every list inside it. */
+.whats-new-dialog .search-list {
+  flex: none;
+  overflow: visible;
+  padding: 0 10px;
+}
+
+/* The number stays whole beside a title long enough to wrap. */
+.whats-new-dialog .search-detail {
+  flex: none;
 }
 
 /* Sits between the heading and its keys, so the section says what it is before it says how to work it. */
