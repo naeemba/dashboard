@@ -63,11 +63,15 @@ Every shell command you run starts a fresh shell: a variable set in one is
 empty in the next, and a \`cd\` does not carry over. So the worktree gets a
 fixed path, written out in full every time. Run:
 
-    git rev-parse --path-format=absolute --git-common-dir
+    git rev-parse --show-toplevel
 
-and call that path followed by \`/adopt-docs\` \`<worktree>\`
-(\`/home/me/app/.git/adopt-docs\`, say). Print it once, then write the literal
-path wherever \`<worktree>\` appears below, never a shell variable:
+and call that path followed by \`/.adopt-docs\` \`<worktree>\`
+(\`/home/me/app/.adopt-docs\`, say). It sits inside the working directory, so
+writing there asks no permission, and outside \`.git\`, which is guarded more
+strictly than any other path. The starting checkout's \`git status\` shows it as
+untracked until step 8 removes it; that is the only mark this run leaves there.
+Print it once, then write the literal path wherever \`<worktree>\` appears
+below, never a shell variable:
 
     git worktree add --no-track -b docs/adopt-docs <worktree> origin/<default branch>
 
@@ -85,11 +89,11 @@ those runs in the checkout you started in, on someone else's branch.
   outside \`node_modules\`.
 - The source tree: folders, entry points, routes, the schema, what each module
   exports. Enough to say what each feature does and which files are its.
-- History: \`git log --merges --first-parent --format='%ad %s' --date=short\` on the
-  default branch, and the merged pull requests (\`gh pr list --state merged
+- History: \`git -C <worktree> log --merges --first-parent --format='%ad %s' --date=short\`
+  (the worktree is on the default branch), and the merged pull requests (\`gh pr list --state merged
   --limit 200 --json number,title,mergedAt,body\`, or \`glab mr list --merged\`
   on GitLab), and the commits pushed straight to the default branch
-  (\`git log --first-parent --no-merges\`). Commit messages and pull request
+  (\`git -C <worktree> log --first-parent --no-merges\`). Commit messages and pull request
   bodies are where decisions and rules come from. A pull request's body can be
   overtaken by a later commit in it: its final diff is what was decided.
 
@@ -166,7 +170,7 @@ commit date and short hash:
 Every existing doc either moves into a feature (or a cross-cutting folder) or
 stays where it is. Nothing is lost:
 
-- Move with \`git mv\` to the feature's \`README.md\` when a whole file belongs to
+- Move with \`git -C <worktree> mv\` to the feature's \`README.md\` when a whole file belongs to
   one feature, then reshape it, moving its settled questions out to
   \`decisions.md\`. Text that splits across features is copied into each, word
   for word, in a commit of its own before the commit that reshapes it, so the
