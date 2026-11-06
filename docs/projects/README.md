@@ -60,9 +60,13 @@ reached through a symlink is the same one; a relative path is read from the
 folder the command runs in, and a path under home is written from `~`. With no
 `--name`, `add` takes the folder's name, with `-2`, `-3` after it when another
 project has it. `add` leaves every byte already in the file as it was and puts
-the new entry after it; `set` and `remove` reprint the file, never folding a
-long line. The comment above an entry `remove` takes out stays, moved to the
-entry after it. With no file, `add` writes the first one.
+the new entry after it, unless that text would not read (a list indented from
+the left edge, a `...` end marker, a `[...]` list), when it reprints the file
+with the entry in it; an empty `[]` is written as a `- name:` list again. `set`
+and `remove` reprint the file, never folding a long line. The comment above an
+entry `remove` takes out stays where it was in the file, moved onto the entry
+after it, or above the file's closing comment when it was the last. With no
+file, `add` writes the first one.
 
 On `set`, `--aka` adds names beside the ones there, `--deploy` adds a deploy or
 changes the one with that name, in any case (only the fields given; the other deploys stay),

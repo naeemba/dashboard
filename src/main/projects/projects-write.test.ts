@@ -67,6 +67,19 @@ describe('addProject', () => {
     expect(addProject('- name: a\n', 'projects.yaml', '/work/api', {}, HOME, asWritten))
       .toEqual({ ok: false, message: 'projects.yaml:1: project a has no path\nnothing was written; fix the file first' });
   });
+
+  posixPathsOnly('reprints a list the appended text would break: indented, or ended with ...', () => {
+    for (const file of ['  - name: a\n    path: /a\n', '- name: a\n  path: /a\n...\n']) {
+      const written = text(addProject(file, 'p.yaml', '/b', {}, HOME, asWritten));
+      expect(written).toContain('- name: b\n  path: /b\n');
+      expect(readProjects(written)).toMatchObject({ ok: true, projects: [{ name: 'a' }, { name: 'b' }] });
+    }
+  });
+
+  posixPathsOnly('writes a block list again once remove has emptied the file to []', () => {
+    const emptied = text(removeProject('# header\n- name: a\n  path: /a\n', 'p.yaml', 'a'));
+    expect(text(addProject(emptied, 'p.yaml', '/b', { aka: ['x'] }, HOME, asWritten))).toBe('# header\n\n- name: b\n  aka: [x]\n  path: /b\n');
+  });
 });
 
 describe('setProject', () => {
@@ -123,6 +136,14 @@ describe('removeProject', () => {
     const written = text(removeProject(file, 'projects.yaml', 'a'));
     expect(written.startsWith(file.slice(0, file.indexOf('- name: a')))).toBe(true);
     expect(readProjects(written)).toMatchObject({ ok: true, projects: [{ name: 'b' }] });
+  });
+
+  it('keeps a moved comment in file order: above the footer, and apart from the next one', () => {
+    const footer = '- name: a\n  path: /a\n# about b\n- name: b\n  path: /b\n# add new projects above this line\n';
+    expect(text(removeProject(footer, 'p.yaml', 'b'))).toBe('- name: a\n  path: /a\n# about b\n# add new projects above this line\n');
+    const sections = '# header line\n- name: a\n  path: /a\n\n# side projects\n- name: b\n  path: /b\n';
+    expect(text(removeProject(sections, 'p.yaml', 'a'))).toBe('# header line\n\n# side projects\n- name: b\n  path: /b\n');
+    expect(text(removeProject('# header line\n- name: a\n  path: /a\n', 'p.yaml', 'a'))).toBe('# header line\n\n[]\n');
   });
 });
 

@@ -114,13 +114,17 @@ export function addProject(
   if (fields.site !== undefined) entry.set('site', fields.site);
   if (fields.about !== undefined) entry.set('about', fields.about);
   // A file that is a block list, or only comments, keeps every byte it had: the entry's own text goes
-  // after it. Anything else (a flow list) is reprinted with the entry in it.
+  // after it. When that text does not read back (a list indented from column 0, a `...` end marker)
+  // or the list is a flow one, the document is reprinted with the entry in it instead.
   if (text !== null && (document.contents === null || (isSeq(document.contents) && !document.contents.flow))) {
     const single = new Document([]);
     (single.contents as YAMLSeq).items.push(entry);
     const separator = text === '' || text.endsWith('\n') ? '' : '\n';
-    return written(text + separator + printed(single), filePath, name);
+    const appended = written(text + separator + printed(single), filePath, name);
+    if (appended.ok) return appended;
   }
+  // An empty list, `[]` once remove has taken the last project out, is written as a block list again.
+  if (isSeq(document.contents) && document.contents.items.length === 0) document.contents.flow = false;
   entries(document).push(entry);
   return written(printed(document), filePath, name);
 }
@@ -174,20 +178,28 @@ const joined = (first: string | null | undefined, second: string | null | undefi
 
 // `project remove`: the entry the word names, and nothing else. The parser hangs the comment above an
 // entry on that entry, and above the first one that is the file's header, so it moves to the entry
-// after it, or to the file's start or end when there is none.
+// after it, or to the file's start or end when there is none, keeping its place in file order.
 export function removeProject(text: string | null, filePath: string, word: string): ProjectsWrite {
   const found = located(text, filePath, word);
   if ('ok' in found) return found;
   const { document, index } = found;
   const items = entries(document);
+  const list = document.contents as YAMLSeq;
   const [removed] = items.splice(index, 1);
   if (removed.commentBefore) {
     const next = items[index];
     if (next !== undefined) {
-      next.commentBefore = joined(removed.commentBefore, next.commentBefore);
-      next.spaceBefore = next.spaceBefore || removed.spaceBefore;
+      // The blank line that stood between the two comments stays between them, not above both.
+      const gap = next.spaceBefore ? '\n' : '';
+      next.commentBefore = next.commentBefore ? `${removed.commentBefore}\n${gap}${next.commentBefore}` : removed.commentBefore;
+      next.spaceBefore = removed.spaceBefore;
     } else if (index === 0) document.commentBefore = joined(document.commentBefore, removed.commentBefore) ?? null;
-    else document.comment = joined(document.comment, removed.commentBefore) ?? null;
+    else {
+      // Above the file's closing comment, which is printed after a blank line of its own when it is
+      // the document's, so both go on the list's end.
+      list.comment = joined(joined(list.comment, removed.commentBefore), document.comment) ?? null;
+      document.comment = null;
+    }
   }
   return written(printed(document), filePath, found.project.name);
 }
